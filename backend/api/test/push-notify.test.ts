@@ -90,7 +90,8 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
     expect((await call("/scans", { method: "POST", token: p.token, json: scanBody })).status).toBe(201);
     await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
     expect((await call("/scans", { method: "POST", token: g.token, json: scanBody })).status).toBe(201);
-    await new Promise((res) => setTimeout(res, 300));
-    expect(await pushRows(0)).toEqual([]);
+    // Negative check: a later protected scan's row proves earlier waitUntil work has settled.
+    await call("/scans", { method: "POST", token: p.token, json: scanBody });
+    expect((await pushRows(1)).map((r) => r.result)).toEqual(["logged"]);
   });
 });

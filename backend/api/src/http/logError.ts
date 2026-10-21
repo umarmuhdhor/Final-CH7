@@ -4,6 +4,6 @@
  */
 export function errorInfo(err: unknown): { name: string; code?: string } {
   const e = err as { name?: unknown; code?: unknown } | null;
-  const name = typeof e?.name === "string" ? e.name : "Error";
+  const name = typeof e?.name === "string" && /^[A-Za-z]{1,64}$/.test(e.name) ? e.name : "Error";
   return typeof e?.code === "string" && /^[0-9A-Z]{5}$/.test(e.code) ? { name, code: e.code } : { name };
 }

@@ -109,6 +109,28 @@ describe("ApnsSender results", () => {
     expect(await sender.send(message)).toEqual({ result: "failed:400" });
   });
 
+  it("a real AbortSignal timeout maps to failed:timeout", async () => {
+    const { config } = await setup();
+    // Fetch that only ends when its signal aborts; the 5 s timeout is shortened to 10 ms.
+    const hang: typeof fetch = (_u, init) =>
+      new Promise((_, reject) => init!.signal!.addEventListener("abort", () => reject(init!.signal!.reason)));
+    const real = AbortSignal.timeout.bind(AbortSignal);
+    const spy = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => real(10));
+    expect(await new ApnsSender(config, { fetch: hang }).send(message)).toEqual({ result: "failed:timeout" });
+    expect(spy).toHaveBeenCalledWith(5000);
+  });
+
+  it("a broken key is retried with the next send, not cached", async () => {
+    const { config } = await setup();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const { fetch, calls } = fakeFetch(apns(200));
+    const broken = { ...config, keyP8B64: btoa("not a key") };
+    expect(await new ApnsSender(broken, { fetch }).send(message)).toEqual({ result: "failed:config" });
+    // Rotated to a good key under the same key id.
+    expect(await new ApnsSender(config, { fetch }).send(message)).toEqual({ result: "sent" });
+    expect(calls).toHaveLength(1);
+  });
+
   it("timeout, network error and a broken key never throw", async () => {
     const { config } = await setup();
     const timeout = new DOMException("The operation timed out.", "TimeoutError");
@@ -117,6 +139,7 @@ describe("ApnsSender results", () => {
     expect(await sender.send(message)).toEqual({ result: "failed:timeout" });
     expect(await sender.send(message)).toEqual({ result: "failed:network" });
 
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const broken = await setup({ keyP8B64: btoa("not a key") });
     const { fetch: f2, calls } = fakeFetch(apns(200));
     expect(await new ApnsSender(broken.config, { fetch: f2 }).send(message)).toEqual({ result: "failed:config" });
@@ -157,6 +180,46 @@ describe("ApnsSender provider token cache", () => {
     expect(headers(calls[1]!).get("authorization")).toBe(headers(calls[0]!).get("authorization"));
   });
 
+  it("a stale JWT is refreshed once for parallel sends", async () => {
+    const { config } = await setup();
+    let now = Date.UTC(2026, 9, 22, 1);
+    const { fetch, calls } = fakeFetch(apns(200));
+    const sender = new ApnsSender(config, { fetch, now: () => now });
+    await sender.send(message);
+    now += 51 * 60_000;
+    await Promise.all([sender.send(message), sender.send(message)]);
+    const auth = calls.map((c) => headers(c).get("authorization"));
+    expect(auth[1]).not.toBe(auth[0]);
+    expect(auth[2]).toBe(auth[1]);
+  });
+
+  it("403 ExpiredProviderToken on an old JWT keeps the newer one", async () => {
+    const { config } = await setup();
+    let now = Date.UTC(2026, 9, 22, 1);
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const calls: string[] = [];
+    const fetch = (async (_u: RequestInfo | URL, init?: RequestInit) => {
+      const auth = new Headers(init?.headers).get("authorization")!;
+      calls.push(auth);
+      if (calls.length === 1) {
+        await gate;
+        return apns(403, "ExpiredProviderToken");
+      }
+      return apns(200);
+    }) as typeof globalThis.fetch;
+    const sender = new ApnsSender(config, { fetch, now: () => now });
+    const slow = sender.send(message);
+    await new Promise((r) => setTimeout(r, 10));
+    now += 51 * 60_000; // a parallel send signs a new token while the first one waits on APNs
+    await sender.send(message);
+    release();
+    await slow;
+    await sender.send(message);
+    expect(calls[1]).not.toBe(calls[0]);
+    expect(calls[2]).toBe(calls[1]);
+  });
+
   it("403 ExpiredProviderToken drops the cached JWT", async () => {
     const { config } = await setup();
     const { fetch, calls } = fakeFetch(apns(403, "ExpiredProviderToken"), apns(200));
@@ -164,24 +227,6 @@ describe("ApnsSender provider token cache", () => {
     expect(await sender.send(message)).toEqual({ result: "failed:403 ExpiredProviderToken" });
     expect(await sender.send(message)).toEqual({ result: "sent" });
     expect(headers(calls[1]!).get("authorization")).not.toBe(headers(calls[0]!).get("authorization"));
-  });
-});
-
-describe("ApnsSender logs (SECURITY §3 P6, D-alief-40)", () => {
-  it("never logs the device token, JWT, key or text", async () => {
-    const lines: string[] = [];
-    for (const m of ["log", "info", "warn", "error"] as const) {
-      vi.spyOn(console, m).mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
-    }
-    const { config } = await setup();
-    const { fetch, calls } = fakeFetch(apns(410, "Unregistered"), new TypeError(`fail ${TOKEN}`), apns(200));
-    const sender = new ApnsSender(config, { fetch });
-    await sender.send(message);
-    await sender.send(message);
-    await sender.send(message);
-    const jwt = headers(calls[0]!).get("authorization")!.slice(7);
-    const all = lines.join("\n");
-    for (const secret of [TOKEN, jwt, config.keyP8B64, "Mom", "scan-1"]) expect(all).not.toContain(secret);
   });
 });
 

@@ -128,7 +128,9 @@ scans.post("/scans", async (c) => {
       console.error(JSON.stringify({ event: "screenshot_dropped", reason: "error", error: errorInfo(err) }));
     }
   }
-  // DB lookup now, while the request's connection is open; only the send runs after the response.
+  // Guardian lookup now; the send, the token clear and the push_log row run in waitUntil after the
+  // response. The Hyperdrive connection lives for the whole invocation, waitUntil included (checked
+  // locally with wrangler dev; cloud check in fase 11 LANGKAH MANUAL step 6).
   // Like the screenshot, a push problem never fails a stored scan (a retry would duplicate it).
   try {
     const push = await guardianPush(sql, principal, { id, status: body.status, score: body.score });

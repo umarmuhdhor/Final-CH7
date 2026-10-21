@@ -1,4 +1,5 @@
 import type { Env } from "../../env";
+import { errorInfo } from "../../http/logError";
 import { apnsJwt, importApnsKey } from "./jwt";
 import type { PushMessage, PushSender, SendResult } from "./sender";
 
@@ -35,8 +36,9 @@ const REASON = /^[A-Za-z]{1,64}$/;
 interface CacheEntry {
   keyP8B64: string;
   key: Promise<CryptoKey>;
-  jwt?: Promise<{ value: string; iatMs: number }>;
+  jwt?: JwtPromise;
 }
+type JwtPromise = Promise<{ value: string; iatMs: number }>;
 const cache = new Map<string, CacheEntry>();
 
 function entry(config: ApnsConfig): CacheEntry {
@@ -68,30 +70,35 @@ export class ApnsSender implements PushSender {
     this.now = deps.now ?? Date.now;
   }
 
-  /** Cached provider token; parallel sends share one signature (single flight). */
-  private async providerToken(e: CacheEntry): Promise<string> {
+  /**
+   * The cached provider token promise (wrapped, so it is not flattened); parallel sends share one
+   * signature (single flight). The caller keeps the reference to drop only that token later.
+   */
+  private async tokenRef(e: CacheEntry): Promise<{ ref: JwtPromise }> {
     const now = this.now();
     const pending = e.jwt;
     if (pending) {
       const current = await pending.catch(() => undefined);
-      if (current && now - current.iatMs < JWT_MAX_AGE_MS) return current.value;
+      if (current && now - current.iatMs < JWT_MAX_AGE_MS) return { ref: pending };
       // Another send replaced the stale token while this one waited: use that one.
-      if (e.jwt !== pending) return this.providerToken(e);
+      if (e.jwt !== pending) return this.tokenRef(e);
     }
-    e.jwt = e.key.then(async (key) => ({ value: await apnsJwt(key, this.config.keyId, this.config.teamId, now), iatMs: now }));
-    return (await e.jwt).value;
+    const fresh: JwtPromise = e.key.then(async (key) => ({ value: await apnsJwt(key, this.config.keyId, this.config.teamId, now), iatMs: now }));
+    e.jwt = fresh;
+    return { ref: fresh };
   }
 
   async send(message: PushMessage): Promise<SendResult> {
     if (!HEX.test(message.apnsToken)) return { result: "failed:400 BadDeviceToken" };
     const e = entry(this.config);
+    const { ref } = await this.tokenRef(e);
     let jwt: string;
-    let used: CacheEntry["jwt"];
     try {
-      jwt = await this.providerToken(e);
-      used = e.jwt;
-    } catch {
-      e.jwt = undefined;
+      jwt = (await ref).value;
+    } catch (err) {
+      if (e.jwt === ref) e.jwt = undefined;
+      // Name only: a bad key secret and a WebCrypto failure both land here.
+      console.error(JSON.stringify({ event: "push_key_failed", error: errorInfo(err) }));
       return { result: "failed:config" };
     }
 
@@ -115,7 +122,11 @@ export class ApnsSender implements PushSender {
       // Never log the error: its message can carry the URL, which carries the device token.
       return { result: (err as { name?: string })?.name === "TimeoutError" ? "failed:timeout" : "failed:network" };
     }
-    if (res.status === 200) return { result: "sent" };
+    if (res.status === 200) {
+      // An unread body holds the connection in Workers.
+      await res.body?.cancel().catch(() => {});
+      return { result: "sent" };
+    }
 
     let reason: string | undefined;
     try {
@@ -125,7 +136,7 @@ export class ApnsSender implements PushSender {
       // Not JSON: status only.
     }
     // Only drop the token this send used: a newer one from a parallel send stays (no refresh storm).
-    if (res.status === 403 && reason === "ExpiredProviderToken" && e.jwt === used) e.jwt = undefined;
+    if (res.status === 403 && reason === "ExpiredProviderToken" && e.jwt === ref) e.jwt = undefined;
     const result = `failed:${res.status}${reason ? ` ${reason}` : ""}`;
     return res.status === 410 ? { result, clearToken: true } : { result };
   }

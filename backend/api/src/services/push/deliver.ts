@@ -13,8 +13,12 @@ export async function deliverPush(sql: Sql, sender: PushSender, message: PushMes
     console.error(JSON.stringify({ event: "push_send_threw", error: errorInfo(err) }));
     r = { result: "failed:network" };
   }
-  if (r.clearToken) await clearApnsToken(sql, message.toDeviceId, message.apnsToken);
-  await recordPush(sql, message.toDeviceId, message.scanId, r.result);
+  try {
+    if (r.clearToken) await clearApnsToken(sql, message.toDeviceId, message.apnsToken);
+  } finally {
+    // The row also feeds PUSH_CAP, so it is written even if clearing the token failed.
+    await recordPush(sql, message.toDeviceId, message.scanId, r.result);
+  }
   console.log(JSON.stringify({ event: "push", result: r.result }));
   return r.result;
 }

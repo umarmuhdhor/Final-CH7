@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApnsSender } from "../src/services/push/apns";
 import { deliverPush } from "../src/services/push/deliver";
 import type { PushMessage, PushSender, SendResult } from "../src/services/push/sender";
 import { resetDb, testSql } from "./helpers/resetDb";
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
+afterEach(() => vi.restoreAllMocks());
 
 const OLD = "aa".repeat(32);
 const NEW = "bb".repeat(32);
@@ -64,5 +66,34 @@ describe("deliverPush (send → clear token → push_log)", () => {
       return { result: "sent" };
     }), message);
     expect(await rows()).toEqual([]);
+  });
+
+  it("logs (ApnsSender + deliverPush) carry no token, JWT, key, name or ids (SECURITY §3 P6)", async () => {
+    await world();
+    const lines: string[] = [];
+    for (const m of ["log", "info", "warn", "error"] as const) {
+      vi.spyOn(console, m).mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
+    }
+    const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"])) as CryptoKeyPair;
+    const der = new Uint8Array((await crypto.subtle.exportKey("pkcs8", pair.privateKey)) as ArrayBuffer);
+    const p8 = btoa(`-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der))}\n-----END PRIVATE KEY-----\n`);
+    const auths: string[] = [];
+    const responses = [
+      () => new Response(JSON.stringify({ reason: "BadDeviceToken" }), { status: 400 }),
+      () => { throw new TypeError(`connect failed /3/device/${OLD}`); },
+      () => new Response(null, { status: 200 }),
+    ];
+    const fetch = (async (_u: RequestInfo | URL, init?: RequestInit) => {
+      auths.push(new Headers(init?.headers).get("authorization")!.slice(7));
+      return responses.shift()!();
+    }) as typeof globalThis.fetch;
+    const apns = new ApnsSender({ keyP8B64: p8, keyId: "LOGTEST001", teamId: "TEAM123456", topic: "com.example.shoo", env: "sandbox" }, { fetch });
+    for (let i = 0; i < 3; i++) await deliverPush(sql, apns, message);
+    await deliverPush(sql, new ApnsSender({ keyP8B64: btoa("bad"), keyId: "LOGTEST002", teamId: "TEAM123456", topic: "t", env: "sandbox" }, { fetch }), message);
+
+    expect(lines.length).toBeGreaterThanOrEqual(5);
+    const all = lines.join("\n");
+    for (const secret of [OLD, auths[0]!, p8, "Mom", "scan-1", "dev_g"]) expect(all).not.toContain(secret);
+    expect((await rows()).map((r) => r.result)).toEqual(["failed:400 BadDeviceToken", "failed:network", "sent", "failed:config"]);
   });
 });
