@@ -122,7 +122,7 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
   curl -s -X POST $U/debug/apns-spike -H "x-spike-key: <SPIKE_KEY>"
   ```
   Tempel JSON hasilnya. Lulus = `"reached":true` dengan `status` 403 + body `InvalidProviderToken`/`ExpiredProviderToken` atau 400 `BadDeviceToken`. Gagal = `"reached":false` (error koneksi/protokol) atau respons bukan JSON APNs. Setelah itu matikan: `"APNS_SPIKE": "0"` di `wrangler.jsonc`, lalu `pnpm -C backend/api run deploy` lagi, dan cek `curl -s -o /dev/null -w "%{http_code}" -X POST $U/debug/apns-spike -H "x-spike-key: <SPIKE_KEY>"` → `404`.
-- [ ] 7. **C7 + B9.** Kirim ke Imelda (teks TODO C7) URL `$U/blocklist`. Pasang monitor uptime: `$U/healthz` tiap 5 menit, `$U/healthz/db` tiap 1 hari.
+- [x] 7. **DITUNDA oleh Alief (21 Okt 2026), bukan blocker (PROMPT 6h); tetap terbuka di TODO C7/B9.** **C7 + B9.** Kirim ke Imelda (teks TODO C7) URL `$U/blocklist`. Pasang monitor uptime: `$U/healthz` tiap 5 menit, `$U/healthz/db` tiap 1 hari.
 - [x] 8. Commit perubahan `wrangler.jsonc` (`id` Hyperdrive, `INVITE_BASE_URL`, `APNS_SPIKE: "0"`), lalu ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent akan menulis `D-alief-B01` dari hasil butir 6, menjalankan review keamanan, dan membuka PR.
 
 ### Hasil LANGKAH MANUAL (21 Okt 2026 ±21:35 WITA, dijalankan agent coordinator atas permintaan Alief; password diketik Alief sendiri)
@@ -133,7 +133,7 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
 - 4: `SPIKE_KEY` (acak, tidak pernah dicetak) di-set; `INVITE_BASE_URL = https://shoo-api.afindo-mi01.workers.dev`; deploy OK.
 - 5: `/healthz` → `{"ok":true}`; `/healthz/db` → `{"ok":true}`; `/blocklist` → `{"domains":[],"nextSince":null}`. Satu device uji `Smoke` (guardian) tertinggal di DB cloud.
 - 6: `{"reached":true,"status":403,"body":"{\"reason\":\"InvalidProviderToken\"}","ms":1242,"colo":"CDG"}` → **lulus** (Worker fetch mencapai APNs sandbox lewat HTTP/2). Lalu `APNS_SPIKE: "0"`, deploy ulang, `POST /debug/apns-spike` → `404`. Secret `SPIKE_KEY` masih ada di Worker sampai fase 11.
-- 7: **belum** — Alief kirim C7 ke Imelda dan pasang monitor uptime B9.
+- 7: **ditunda** — Alief kirim C7 ke Imelda dan pasang monitor uptime B9 nanti. Agent tidak berhenti karena butir ini. Selama itu, semua input dari Imelda (ScanResult: `score`, `signals`, label EN/ID) dimock dari `contracts/fixtures/*.json` (aturan 3 CLAUDE.md) — fase 08–10 seed dan test memakai fixture itu, bukan data detector/AI asli.
 - 8: `wrangler.jsonc` di-commit (id Hyperdrive, `INVITE_BASE_URL`, `APNS_SPIKE: "0"`).
 
 ## Catatan handoff
