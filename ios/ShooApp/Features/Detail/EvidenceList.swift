@@ -23,9 +23,14 @@ struct Evidence: Identifiable, Equatable, Sendable {
         "+" + Formatters.percent(weight, language: language)
     }
 
-    /// "Domain age 3 days · +30%" — also the VoiceOver label of the row.
+    /// "Domain age 3 days · +30%" as shown.
     func line(language: AppLanguage) -> String {
         "\(text) · \(weightText(language: language))"
+    }
+
+    /// VoiceOver: "Domain age 3 days, adds 30 percent to the risk score".
+    func spokenLine(language: AppLanguage) -> String {
+        L10n.string("\(text), adds \(weight) percent to the risk score", language: language)
     }
 }
 
@@ -52,10 +57,9 @@ struct EvidenceList: View {
                     Text(verbatim: item.weightText(language: language))
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
-                        .foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text(verbatim: item.line(language: language)))
+                .accessibilityLabel(Text(verbatim: item.spokenLine(language: language)))
                 .accessibilityIdentifier("detail.evidence.\(index)")
             }
         }

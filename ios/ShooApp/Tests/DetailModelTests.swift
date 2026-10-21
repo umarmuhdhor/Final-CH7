@@ -162,6 +162,12 @@ struct DetailModelTests {
             == "Situs ini baru dibuat 3 hari lalu · +30%")
     }
 
+    @Test func voiceOverReadsTheWeightInWords() async {
+        let item = await loaded(FixtureScan.blocked92).evidence(language: .english)[0]
+        #expect(item.spokenLine(language: .english) == "Domain age 3 days, adds 30 percent to the risk score")
+        #expect(item.spokenLine(language: .indonesian) == "Domain age 3 days, menambah 30 persen ke skor risiko")
+    }
+
     @Test func equalWeightsKeepContractOrder() {
         let scan = FixtureLoader.scan("blocked-marked-safe")
         let evidence = Evidence.top(scan.signals, mode: .guardian, language: .english)

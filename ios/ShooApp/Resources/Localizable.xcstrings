@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@, adds %lld percent to the risk score": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, menambah %lld persen ke skor risiko"
+          }
+        }
+      }
+    },
     "A Guardian looks after up to 3 family members who are Protected.": {
       "localizations": {
         "id": {
@@ -47,6 +57,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Izinkan notifikasi"
+          }
+        }
+      }
+    },
+    "Applies right away. You can change it later.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langsung berlaku. Kamu bisa mengubahnya nanti."
           }
         }
       }
@@ -167,16 +187,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Selesai"
-          }
-        }
-      }
-    },
-    "Double-tap to zoom": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ketuk dua kali untuk memperbesar"
           }
         }
       }
@@ -437,6 +447,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dibuka oleh"
+          }
+        }
+      }
+    },
+    "Opens a larger view": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membuka tampilan lebih besar"
           }
         }
       }
@@ -901,12 +921,22 @@
         }
       }
     },
-    "Zoom": {
+    "Zoom in": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Perbesar"
+          }
+        }
+      }
+    },
+    "Zoom out": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perkecil"
           }
         }
       }

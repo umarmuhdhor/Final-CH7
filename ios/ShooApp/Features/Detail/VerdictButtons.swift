@@ -4,22 +4,28 @@ import SwiftUI
 /// The current verdict is shown as selected; tapping the other one changes it.
 struct VerdictButtons: View {
     let current: Verdict.Value?
-    let isSubmitting: Bool
     let failed: Bool
     let onDecide: (Verdict.Value) -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Side by side; stacked at accessibility sizes so the words never wrap per letter.
+    private var layout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+    }
+
     var body: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 12) {
+            // Not disabled while sending: the model ignores a second tap, and VoiceOver keeps the selected state.
+            layout {
                 button(.safe, title: "It's safe", systemImage: "checkmark.seal.fill", tint: .green)
                     .accessibilityIdentifier("detail.verdict.safe")
                 button(.notSafe, title: "Not safe", systemImage: "xmark.octagon.fill", tint: .red)
                     .accessibilityIdentifier("detail.verdict.notSafe")
             }
-            .disabled(isSubmitting)
             if failed {
                 Label("Couldn't save. Check your connection and try again.", systemImage: "exclamationmark.triangle.fill")
-                    .font(.footnote)
+                    .font(.subheadline)
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .accessibilityIdentifier("detail.verdictError")
@@ -41,10 +47,12 @@ struct VerdictButtons: View {
                     .foregroundStyle(tint)
             }
             .font(.body.weight(.semibold))
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(VerdictButtonStyle(tint: tint, selected: current == value))
         .accessibilityAddTraits(current == value ? .isSelected : [])
+        .accessibilityHint(Text("Applies right away. You can change it later."))
     }
 }
 
@@ -55,7 +63,7 @@ private struct VerdictButtonStyle: ButtonStyle {
     let tint: Color
     let selected: Bool
 
-    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -65,8 +73,7 @@ private struct VerdictButtonStyle: ButtonStyle {
             .padding(.vertical, 6)
             .background(tint.opacity(selected ? 0.3 : 0.12), in: shape)
             .overlay(shape.strokeBorder(tint, lineWidth: selected ? 2.5 : 0))
-            .opacity(isEnabled ? 1 : 0.6)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
