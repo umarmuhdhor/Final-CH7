@@ -7,7 +7,7 @@ Single source of truth for data shared between teams. **Owner: lead.** Everyone 
 | [scan-result.schema.json](scan-result.schema.json) | One detection result (score, status, signals) | Extension → Backend → App |
 | [detector-interface.md](detector-interface.md) | `PageSnapshot` in, `Signal[]` out, scoring rules | Detector/AI ↔ Extension |
 | [api.md](api.md) | HTTP endpoints | Backend/AI ↔ App/Extension |
-| [app-group-keys.md](app-group-keys.md) | App Group keys + native messages | App ↔ Extension |
+| [app-group-keys.md](app-group-keys.md) | App Group keys, native messages, deep links | App ↔ Extension |
 | [fixtures/](fixtures/) | Example payloads — use as mocks | Everyone |
 
 ## Thresholds (PRD §5)
