@@ -30,30 +30,43 @@ struct VerdictButtons: View {
         .background(.bar)
     }
 
-    @ViewBuilder
     private func button(_ value: Verdict.Value, title: LocalizedStringKey, systemImage: String, tint: Color) -> some View {
-        let selected = current == value
         Button {
             onDecide(value)
         } label: {
-            Label(title, systemImage: systemImage)
-                .font(.body.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 44)
-        }
-        .tint(tint)
-        .modify { view in
-            if selected {
-                view.buttonStyle(.borderedProminent)
-            } else {
-                view.buttonStyle(.bordered)
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: systemImage)
+                    .foregroundStyle(tint)
             }
+            .font(.body.weight(.semibold))
+            .frame(maxWidth: .infinity, minHeight: 44)
         }
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .buttonStyle(VerdictButtonStyle(tint: tint, selected: current == value))
+        .accessibilityAddTraits(current == value ? .isSelected : [])
     }
 }
 
-private extension View {
-    func modify<Content: View>(@ViewBuilder _ transform: (Self) -> Content) -> some View {
-        transform(self)
+/// Text stays `.primary` for full contrast (green or red text on a pale tint is about 2:1);
+/// the colour sits on the icon and the background. The chosen verdict gets a stronger fill and
+/// a border, so the selection never depends on colour alone.
+private struct VerdictButtonStyle: ButtonStyle {
+    let tint: Color
+    let selected: Bool
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        configuration.label
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(tint.opacity(selected ? 0.3 : 0.12), in: shape)
+            .overlay(shape.strokeBorder(tint, lineWidth: selected ? 2.5 : 0))
+            .opacity(isEnabled ? 1 : 0.6)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
