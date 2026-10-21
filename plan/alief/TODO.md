@@ -78,7 +78,7 @@ Catatan password DB (21 Okt): password role `postgres` dibuat acak oleh Supabase
 | D1 | Pasang/cek tool: Xcode terbaru + simulator iOS 17+, `brew install xcodegen supabase/tap/supabase gitleaks jq`, Docker Desktop jalan, Node 24 (`nvm use 24`), `npm i -g pnpm` | sebelum fase 01/07 | [ ] |
 | D2 | Pasang plugin: ECC (`/plugin install ecc@ecc`) + Superpowers, cek `/plugin list` | sebelum fase 01/07 | [ ] |
 | D3 | Deploy cloud pertama (blocklist awal): blok LANGKAH MANUAL di log fase 07 | akhir fase 07 | [x] fase 07 deploy, 21 Okt 2026 |
-| D4 | Deploy per fase backend (08–12): blok LANGKAH MANUAL di masing-masing log | akhir tiap fase be | [~] 07 + 08 ter-deploy 21 Okt (Worker `a9807b02`); 09 ter-deploy 21 Okt (Worker `c6ba8556`, smoke (c) hijau); 10–12 menyusul |
+| D4 | Deploy per fase backend (08–12): blok LANGKAH MANUAL di masing-masing log | akhir tiap fase be | [x] 07–12 ter-deploy dari branch fase masing-masing: 07 + 08 21 Okt (Worker `a9807b02`); 09 21 Okt (`c6ba8556`, smoke (c) hijau); 10 22 Okt (`781cf277`); 11 22 Okt (`ac2025ec`); 12 22 Okt (`bdc661e8`, cron `0 19 * * *`, smoke hijau). Deploy dari `main` setelah merge = D8 |
 | D5 | Uji spike S1/S2 di iPhone Alief (checklist LANGKAH MANUAL log fase 01S) | fase 01S, setelah signing (B6/L0) | [ ] |
 | D6 | Dua iPhone (Guardian + Protected) dengan build TestFlight untuk QA-E2E (`APNS_ENV=production` sebelum build) | fase 16 | [ ] |
 | D7 | Satu iPhone Alief dengan build Debug (Xcode, sandbox APNs) untuk uji push nyata | fase 11 → 15 / G7 | [ ] pending B6/B7/C3; jalur server siap (fase 11, Worker ac2025ec, `push_log` `logged`), butir 5–6 LANGKAH MANUAL fase 11 |

@@ -52,8 +52,8 @@ Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk J
 - [x] **Verdicts:** `POST /verdicts` (berlaku per domain), `GET /verdicts?domain=`
 - [x] **Blocklist:** `GET /blocklist` (dibutuhkan Imelda untuk layer 1, jadi kerjakan lebih awal kalau bisa)
 - [x] **Push (APNs):** dikirim saat device Protected memanggil `POST /scans`. Payload sesuai `contracts/api.md`.
-- [ ] **Retensi:** data scan + screenshot otomatis dihapus setelah 14 hari
-- [ ] **Keamanan:** Guardian hanya bisa melihat data perangkat yang terhubung dengannya. Kode join dibatasi jumlah percobaannya.
+- [x] **Retensi:** data scan + screenshot otomatis dihapus setelah 14 hari
+- [x] **Keamanan:** Guardian hanya bisa melihat data perangkat yang terhubung dengannya. Kode join dibatasi jumlah percobaannya.
 
 ### Fase C · Sambungkan app ke backend
 - [ ] `ApiRepository` menggantikan `MockRepository`

@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` kode + review selesai lokal; berhenti di LANGKAH MANUAL (db push, secret `RATE_KEY_SECRET`, deploy, uji asap cloud, bukti cron) |
+| Status | `[r]` LANGKAH MANUAL 1–3, 5, 7 selesai di cloud (22 Okt, Worker `bdc661e8`); PR stacked on #17, **pending: bukti run cron 03:00 WITA (butir 6, coordinator), screenshot Triggers + toggle Data API (butir 3/4, butuh login dashboard Alief)** |
 | Track / branch | be · `feat/BE-retention-hardening` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-push` (PR #17, stacked on #15) → PR nanti menulis "Stacked on #17" |
 | Mulai | 22 Okt 2026 ±01:15 WITA |
@@ -41,7 +41,7 @@ Rencana lengkap: [`fase-12-plan.md`](fase-12-plan.md) (`ecc:planner`). Keputusan
 
 - [x] Retensi terbukti di test (umur 15/13 hari, path dedupe bersama, backlog, Storage gagal → baris tetap terhapus + tombstone, lock verdict `55P03`, tiap tabel, heartbeat, `scheduled()` di-await) + trigger lokal. Cron terdaftar di cloud + satu run di `ops_heartbeat` = LANGKAH MANUAL 3 + 6.
 - [x] Tidak ada temuan CRITICAL/HIGH terbuka (HIGH `service_role` diperbaiki di migrasi `20261022130000`).
-- [ ] Uji asap cloud (deploy branch fase 12) = LANGKAH MANUAL 5.
+- [x] Uji asap cloud (deploy branch fase 12) lulus (LANGKAH MANUAL 5, Worker `bdc661e8`). Latensi `GET /verdicts` p95 317 ms vs target 300 ms: deviasi kecil diterima (D-alief-B12 k).
 - [x] `gitleaks` 0 temuan.
 - [x] C2 tertulis untuk Umar (TODO C2, dikirim Alief).
 
