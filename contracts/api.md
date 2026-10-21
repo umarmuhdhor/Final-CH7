@@ -44,13 +44,13 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 |---|---|---|---|---|
 | POST | `/scans` | ScanResult without `id`/`verdict`, + `screenshotBase64?` | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
 | GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` is always `null` in lists | PR-05, GD-05 |
-| GET | `/scans/{id}` | — | ScanResult, `screenshotUrl` = signed URL valid 1 h | DT-* |
+| GET | `/scans/{id}` | — | ScanResult, `screenshotUrl` = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 
 Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
 The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. So one page = one Activity item = one push.
 
-`screenshotBase64` (optional — some Safari builds can't capture): JPEG, base64, **no `data:` prefix**, longest side ≤ 1280 px, ≤ 150 KB (the backend drops larger screenshots and still stores the scan). Evidence area only (the sensitive form, else the visible screen), every text field blurred before capture (PRD §10). Backend stores it and returns it as `screenshotUrl`.
+`screenshotBase64` (optional — some Safari builds can't capture; `null` = absent): JPEG or PNG, base64, **no `data:` prefix**, longest side ≤ 1280 px, ≤ 150 KB (the backend drops larger screenshots and still stores the scan). Evidence area only (the sensitive form, else the visible screen), every text field blurred before capture (PRD §10). Backend stores it and returns it as `screenshotUrl`.
 
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |
