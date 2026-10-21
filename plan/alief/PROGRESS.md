@@ -11,7 +11,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [r] | 21 Okt 2026 | 22 Okt 2026 | #8 (merged), #14 | Tab Shield/Activity, ShooRepository + MockRepository, EN/ID, komponen, privacy manifest; 53 unit + 3 UI test hijau | log/fase-01.md |
 | 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension | [ ] | | | | | log/fase-01S.md |
 | 02 | Onboarding ON-01..05 | app | feat/ON-01-05-onboarding | [r] | 22 Okt 2026 | 22 Okt 2026 | #16 (stacked on #14) | ON-01..05 di Mock: splash, nama, mode permanen + avatar, ON-04 + video PiP, ON-05 + banner; 78 unit + 10 UI test hijau; pending C3/C15, ON-04 di iPhone | log/fase-02.md |
-| 03 | Detail DT-01..06 | app | feat/DT-detail | [r] | 22 Okt 2026 | 22 Okt 2026 | #18 | Detail semua mode: ring, label, link salin-saja, 3 bukti (labelSimple untuk Protected), screenshot tanpa cache + zoom, verdict optimistic + rollback, catatan "by"; 91 unit + 9 UI test hijau | log/fase-03.md |
+| 03 | Detail DT-01..06 | app | feat/DT-detail | [r] | 22 Okt 2026 | 22 Okt 2026 | #18 | Detail semua mode: ring, label, link salin-saja, 3 bukti (labelSimple untuk Protected), screenshot tanpa cache + zoom, verdict optimistic + rollback, catatan "by"; 116 unit + 16 UI test hijau (di atas main setelah #14/#16) | log/fase-03.md |
 | 04 | Protected PR-04/05 | app | feat/PR-04-05-shield-activity | [ ] | | | | | log/fase-04.md |
 | 05 | Guardian & Family GD-01/02/03/05 | app | feat/GD-family-mode | [ ] | | | | | log/fase-05.md |
 | 06 | Profile PF-01 | app | feat/PF-01-profile | [ ] | | | | | log/fase-06.md |
