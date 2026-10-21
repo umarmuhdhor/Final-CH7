@@ -455,3 +455,33 @@ Format:
 - Keputusan: `DetailView` dan layar zoom screenshot memakai `.privacyCover()`: saat `scenePhase != .active`, isi ditutup latar polos + ikon perisai. Snapshot app switcher yang ditulis iOS ke disk (`Library/SplashBoard/Snapshots`) tidak memuat URL penipuan, nama pemilik, atau screenshot bukti. Dicek di simulator: snapshot `.ktx` dikonversi ke PNG = hanya penutup (`qa/img/ui-03/app-switcher-snapshot-on-disk.png`).
 - Alasan: review keamanan M3 (SECURITY §3 P9 + P13): snapshot di disk tidak ikut terhapus saat data dihapus/diputus. Layar lain (Activity, Shield) memuat data serupa → usulan untuk fase 04/05 (catatan handoff log fase 03).
 - File: `Features/Detail/PrivacyCover.swift`, `DetailView.swift`, `ScreenshotView.swift`.
+
+## D-alief-A10 · 22 Okt 2026 · app (fase 04) · Activity Guardian sudah memakai `ActivityView` (owner `.family`)
+
+- Keputusan: `ActivityPlaceholderView` dihapus. Tab Activity Guardian memakai `ActivityView(owner: .family, showsOwner: true)` (nama pemilik di baris); Shield Guardian tetap placeholder sampai fase 05. Filter per orang (GD-05) menyusul di fase 05.
+- Alasan: `ActivityModel` memang dirancang dipakai ulang GD-05; placeholder kosong lebih buruk daripada daftar yang sudah benar. `MainTabView` memberi `.id(ObjectIdentifier(env.repository))` ke akar tab supaya model layar dibuat ulang saat repository diganti (ganti mode, nanti sesi baru).
+- File: `Features/Main/MainTabView.swift`, `Features/Activity/ActivityView.swift`.
+
+## D-alief-A11 · 22 Okt 2026 · app (fase 04) · Baris Activity: host + path saja
+
+- Keputusan: baris Activity menampilkan `host/path` (`ActivityRow.displayLink`), tanpa scheme, query, dan fragment. Link lengkap hanya di Detail (DT-03). VoiceOver membaca satu stop: domain, status, (pemilik), waktu.
+- Alasan: SECURITY §3 P9: query/fragment halaman phishing sering membawa email, OTP, atau token; daftar terlihat oleh siapa pun yang melihat layar. Opsi paling menjaga privasi yang tetap memenuhi PR-05 ("link, domain tebal").
+- File: `Features/Activity/ActivityView.swift`, test `ActivityModelTests.rowLinkHidesQueryAndFragment`.
+
+## D-alief-A12 · 22 Okt 2026 · app (fase 04) · Gagal refresh tidak menghapus yang sudah tampil
+
+- Keputusan: pull to refresh / refresh saat foreground yang gagal mempertahankan daftar dan kartu Shield (`refreshFailed` + baris "Couldn't refresh…", diumumkan VoiceOver); layar error hanya bila belum ada data. Halaman berikut yang gagal → baris "Retry". `URLError(.cancelled)` dan `CancellationError` bukan kegagalan (`Error.isCancellation`). `generation` dinaikkan saat permintaan halaman pertama mulai **dan** saat diterapkan, jadi halaman berikut untuk daftar lama dibuang. Ketuk chip yang sudah aktif tidak memuat ulang.
+- Alasan: review `ecc:swift-reviewer` fase 04 (2 HIGH). Orang tua di jaringan lemah tidak boleh kehilangan riwayat karena satu tarikan gagal.
+- File: `Features/Activity/ActivityModel.swift`, `Features/Shield/ShieldModel.swift`, `Support/Cancellation.swift`, test di `ActivityModelTests`/`ShieldModelTests`.
+
+## D-alief-A13 · 22 Okt 2026 · app (fase 04) · Kontras teks sekunder dan isian status
+
+- Keputusan: teks sekunder yang bermakna (waktu, "Protected by", link, subjudul status) memakai `.readableSecondary` = `Color(.label).opacity(0.72)` (≥ 4,5:1 terang/gelap), bukan `.secondary` (±3,5:1 di mode terang). Lingkaran status: hijau `#1A783D` / abu `#6B6B70` tanpa gradient (ikon putih ≥ 3:1). Chip terpilih: isian `#0061CC` + ikon centang (bukan hanya warna). Di ukuran aksesibilitas: chip bertumpuk lebar penuh, lingkaran dibatasi 160 pt, kartu blokir ring di atas teks.
+- Alasan: review `ecc:a11y-architect` fase 04 (3 HIGH), persona 45–65 tahun. Komponen bersama fase 01 (`EmptyStateView` deskripsi, `StatusChip` `.caption`) belum diubah → dicatat untuk 06Q.
+- File: `Components/ReadableSecondary.swift`, `Features/Shield/ProtectedShieldView.swift`, `Features/Activity/ActivityView.swift`.
+
+## D-alief-A14 · 22 Okt 2026 · app (fase 04) · "Turn on" sementara membuka Settings; `-debug.activityFilter`
+
+- Keputusan: saat Off, "Turn on" membuka `UIApplication.openSettingsURLString` (hint VoiceOver "Opens Settings"); sheet panduan `TurnOnExtensionView` fase 02 dipasang saat 02 digabung ke rantai sebelum 06Q (`TODO(sync:alief)`). Banner pengingat notifikasi tidak dipasang di PR-04 (hanya Guardian, D-alief-A08 di cabang fase 02). Launch argument DEBUG `-debug.activityFilter warning|blocked` membuka filter untuk screenshot gerbang UI.
+- Alasan: fase 02 belum ada di rantai 01 → 03 → 04; tidak boleh menyalin layar 02 ke sini (konflik saat merge).
+- File: `Features/Shield/ProtectedShieldView.swift`, `Features/Activity/ActivityView.swift`.
