@@ -90,8 +90,6 @@ struct DetailView: View {
             ScoreRing(score: scan.score, size: 160, lineWidth: 16)
             if let badge = model.badge {
                 StatusChip(badge: badge)
-                    .scaleEffect(1.2)
-                    .padding(.vertical, 4)
             }
             if let verdict = scan.verdict, let note = model.verdictNote(language: language) {
                 VerdictNoteView(text: note, value: verdict.value)

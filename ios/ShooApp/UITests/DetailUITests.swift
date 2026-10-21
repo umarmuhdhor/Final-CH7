@@ -86,4 +86,30 @@ final class DetailUITests: XCTestCase {
         XCTAssertTrue((header.value as? String ?? "").contains("Ditandai aman oleh Adhella"), header.debugDescription)
         XCTAssertTrue(app.navigationBars["Detail"].exists)
     }
+
+    /// Screens below the fold for the UI gate (attached to the result bundle, `keepAlways`).
+    @MainActor
+    func testBelowTheFoldScreens() {
+        let app = openDetail(Self.blocked92)
+        attach(app, "blocked-92-guardian-en-top")
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["detail.screenshot"].waitForExistence(timeout: 5))
+        attach(app, "blocked-92-guardian-en-bottom")
+        app.buttons["detail.screenshot"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
+        attach(app, "blocked-92-guardian-en-zoom")
+        app.buttons["detail.screenshotClose"].tap()
+        app.buttons["detail.verdict.notSafe"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 5))
+        app.swipeDown()
+        attach(app, "blocked-92-guardian-en-after-not-safe")
+    }
+
+    @MainActor
+    private func attach(_ app: XCUIApplication, _ name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }
