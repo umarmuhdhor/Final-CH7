@@ -62,7 +62,7 @@ describe("every rate limit has a 429 test (fase 12 hardening)", () => {
       devices_create: "devices.test.ts", healthz_db: "health.test.ts", family_code: "family.test.ts",
       scans_create: "scans.test.ts", screenshots_view: "screenshots.test.ts", verdicts_create: "verdicts.test.ts",
       verdicts_get: "verdicts.test.ts", auth_fail: "security-headers.test.ts",
-      devices_create_all: "security-review.test.ts",
+      devices_create_all: "security-review.test.ts", scans_create_all: "security-review.test.ts",
     };
     expect(Object.values(limits).map((l) => l.bucket).sort()).toEqual(Object.keys(tested).sort());
     // Not in `limits`: join attempts (family.test.ts "too_many_attempts") and the push cap (push-notify.test.ts).

@@ -3,7 +3,7 @@ import type { Env } from "../env";
 import { clearScreenshotPath, reserveScreenshot, scanExists, type ScanRow } from "../db/repo/scans";
 import { decodeBase64, sniffImage } from "./images";
 import { screenshotLink } from "./screenshotLinks";
-import { discardScreenshot, screenshotStore } from "./screenshots";
+import { abandonUpload, screenshotStore } from "./screenshots";
 import { usableSecret } from "../http/crypto";
 import { errorInfo } from "../http/logError";
 
@@ -35,7 +35,7 @@ export function toScanResult(row: ScanRow, screenshotUrl: string | null) {
   };
 }
 
-type Drop = "invalid" | "too_large" | "not_image" | "too_wide" | "bad_size" | "quota" | "global_quota" | "no_storage" | "upload_failed";
+type Drop = "invalid" | "too_large" | "not_image" | "too_wide" | "bad_size" | "quota" | "global_quota" | "no_storage" | "scan_gone" | "upload_failed";
 
 const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "screenshot_dropped", reason }));
 
@@ -62,21 +62,24 @@ export async function attachScreenshot(
   if (!store) return dropped("no_storage");
 
   const path = `${scan.ownerId}/${scan.id}.${image.type === "png" ? "png" : "jpg"}`;
+  // Reserving also tombstones the path (D-alief-B12): whatever happens to this Worker from here,
+  // the cron can find and remove the object once no scan points at it.
   const slot = await reserveScreenshot(sql, scan, path, { owner: DAILY_QUOTA, global: GLOBAL_DAILY_QUOTA });
   if ("reuse" in slot) return;
+  if ("gone" in slot) return dropped("scan_gone");
   if ("quota" in slot) return dropped(slot.quota === "owner" ? "quota" : "global_quota");
 
   try {
     await store.put(path, bytes, image.type === "png" ? "image/png" : "image/jpeg");
   } catch (err) {
     console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: errorInfo(err) }));
-    // A timed-out upload may still land in Storage: remove it so no object is left without a row.
+    // A timed-out upload may still land in Storage: no row points at it now, the cron removes it.
     await clearScreenshotPath(sql, scan.ownerId, path);
-    await discardScreenshot(sql, store, path);
+    await abandonUpload(sql, store, path);
     return;
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
-  if (!(await scanExists(sql, scan.id))) await discardScreenshot(sql, store, path);
+  if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
 }
 
 /**

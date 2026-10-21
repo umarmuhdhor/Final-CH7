@@ -1,6 +1,6 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
-import { addTombstones, dropTombstones } from "../db/repo/tombstones";
+import { addTombstones, dropTombstones, markTombstonesTried } from "../db/repo/tombstones";
 import { errorInfo } from "../http/logError";
 
 const BUCKET = "screenshots";
@@ -88,39 +88,54 @@ export function screenshotStore(env: Env): ScreenshotStore | undefined {
   return new SupabaseStorageStore(env.SUPABASE_URL.replace(/\/+$/, ""), env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+export interface RemoveResult {
+  removed: number;
+  failed: number;
+  error?: unknown;
+}
+
 /**
- * Removes screenshot objects whose paths are tombstoned (DELETE /devices/me, failed uploads).
- * Each tombstone goes only after Storage confirmed its batch; what fails stays for the daily
- * cron (D-alief-B12), so no object outlives its rows unnoticed (SECURITY §3 P13).
+ * Removes screenshot objects whose paths are tombstoned (DELETE /devices/me, failed uploads, the
+ * cron). Each batch's tombstones go only after Storage confirmed that batch; a failed batch is
+ * marked tried and the next batch still runs (D-alief-B12), so no object outlives its rows
+ * unnoticed (SECURITY §3 P13).
  */
-export async function removeTombstoned(sql: Sql, store: ScreenshotStore | undefined, paths: string[]): Promise<number> {
-  if (paths.length === 0) return 0;
-  if (!store) throw new Error("storage not configured");
-  let removed = 0;
+export async function removeTombstoned(sql: Sql, store: ScreenshotStore | undefined, paths: string[]): Promise<RemoveResult> {
+  const result: RemoveResult = { removed: 0, failed: 0 };
+  if (paths.length === 0) return result;
+  if (!store) return { removed: 0, failed: paths.length, error: new Error("storage not configured") };
   for (let i = 0; i < paths.length; i += REMOVE_BATCH) {
     const batch = paths.slice(i, i + REMOVE_BATCH);
-    await store.remove(batch);
-    await dropTombstones(sql, batch);
-    removed += batch.length;
+    try {
+      await store.remove(batch);
+      await dropTombstones(sql, batch);
+      result.removed += batch.length;
+    } catch (err) {
+      result.failed += batch.length;
+      result.error ??= err;
+      await markTombstonesTried(sql, batch).catch(() => undefined);
+    }
   }
-  return removed;
+  return result;
 }
 
 /** After DELETE /devices/me committed (its transaction tombstoned the paths). Never throws. */
 export async function deleteScreenshots(sql: Sql, env: Env, paths: string[]): Promise<void> {
-  try {
-    await removeTombstoned(sql, screenshotStore(env), paths);
-  } catch (err) {
-    // Count only: paths contain device ids.
-    console.error(JSON.stringify({ event: "screenshots_delete_failed", count: paths.length, error: errorInfo(err) }));
-  }
+  const { failed, error } = await removeTombstoned(sql, screenshotStore(env), paths);
+  // Count only: paths contain device ids. The tombstones stay for the cron.
+  if (failed) console.error(JSON.stringify({ event: "screenshots_delete_failed", count: failed, error: errorInfo(error) }));
 }
 
-/** One object that must not stay (failed or orphaned upload): tombstone, then remove. Never throws. */
-export async function discardScreenshot(sql: Sql, store: ScreenshotStore, path: string): Promise<void> {
+/**
+ * An object no row points at (failed or orphaned upload): keep it tombstoned (DELETE /devices/me
+ * may have dropped the tombstone before this object landed) and try a remove now. The tombstone
+ * stays young, so the cron removes the path again later in case the upload lands after this.
+ * Never throws.
+ */
+export async function abandonUpload(sql: Sql, store: ScreenshotStore, path: string): Promise<void> {
   try {
     await addTombstones(sql, [path]);
-    await removeTombstoned(sql, store, [path]);
+    await store.remove([path]);
   } catch (err) {
     console.error(JSON.stringify({ event: "screenshot_discard_failed", error: errorInfo(err) }));
   }

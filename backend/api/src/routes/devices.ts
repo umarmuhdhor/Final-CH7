@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import postgres from "postgres";
 import { z } from "zod";
 import type { AppEnv } from "../env";
 import { deleteDevice, findProfile, insertDevice, updateDevice } from "../db/repo/devices";
@@ -91,7 +92,18 @@ devices.get("/devices/me", requireDevice, async (c) => {
  * Storage objects go after the DB commit; a Storage failure never brings the data back.
  */
 devices.delete("/devices/me", requireDevice, async (c) => {
-  const paths = await deleteDevice(c.get("sql"), c.get("principal").deviceId);
+  let paths: string[] | undefined;
+  for (let attempt = 1; !paths; attempt++) {
+    try {
+      paths = await deleteDevice(c.get("sql"), c.get("principal").deviceId);
+    } catch (err) {
+      const code = err instanceof postgres.PostgresError ? err.code : undefined;
+      // A rare deadlock or lock timeout with a concurrent writer (e.g. retention): Postgres rolled
+      // back, retry once. Deleting your data must not fail on a race (SECURITY §3 P3).
+      if ((code === "40P01" || code === "40001" || code === "55P03") && attempt < 2) continue;
+      throw err;
+    }
+  }
   c.executionCtx.waitUntil(deleteScreenshots(c.get("sql"), c.env, paths));
   return c.json({ ok: true });
 });

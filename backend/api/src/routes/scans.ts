@@ -5,7 +5,7 @@ import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/sc
 import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
-import { hit, limits } from "../http/rateLimit";
+import { hit, hitLight, limits } from "../http/rateLimit";
 import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
 import { guardianPush } from "../services/push/notify";
@@ -107,6 +107,7 @@ scans.post("/scans", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hit(sql, limits.createScan, principal.deviceId);
+  await hitLight(sql, limits.createScanAll, "all");
   const body = await readJson(c, scanBody, MAX_BODY);
 
   const id = await insertScan(sql, {

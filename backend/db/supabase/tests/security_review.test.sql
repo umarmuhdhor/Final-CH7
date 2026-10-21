@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(9);
+select plan(12);
 
 select is(
   (select count(*)::int from information_schema.role_table_grants
@@ -12,7 +12,11 @@ select ok(not has_table_privilege('service_role', 'blocklist_entries', 'UPDATE')
 
 select has_table('public', 'storage_tombstones', 'storage_tombstones exists');
 select table_privs_are('public', 'storage_tombstones', 'shoo_api', array['SELECT', 'INSERT', 'DELETE'], 'shoo_api SELECT/INSERT/DELETE on tombstones');
-select throws_ok($$insert into storage_tombstones (path) values ('../etc/passwd')$$, '23514', null, 'tombstone path format is checked');
+select ok(has_column_privilege('shoo_api', 'storage_tombstones', 'attempts', 'UPDATE')
+  and not has_column_privilege('shoo_api', 'storage_tombstones', 'path', 'UPDATE'), 'shoo_api updates only the retry columns');
+select throws_ok($$insert into storage_tombstones (path) values (repeat('a', 301))$$, '23514', null, 'tombstone path length is checked');
+select has_index('public', 'scans', 'scans_original_shot', 'partial index on original uploads');
+select has_index('public', 'scans', 'scans_shot_path', 'index for path lookups per owner');
 
 -- The test runner cannot switch to shoo_api, so the policies are checked in the catalog.
 select policies_are('public', 'blocklist_entries',

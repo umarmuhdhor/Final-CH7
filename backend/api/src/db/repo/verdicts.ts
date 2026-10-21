@@ -130,6 +130,8 @@ export async function dropVerdicts(
     .map((r) => r.domain);
   if (domains.length === 0) return;
   for (const d of domains) await lockDomain(tx, d);
+  // Rows in (owner_id, domain) order, as retention locks them (database review fase 12).
+  await tx`select 1 from verdicts where ${where} order by owner_id, domain for update`;
   await tx`delete from verdicts where ${where}`;
   for (const d of domains) await recountFamilies(tx, d);
 }

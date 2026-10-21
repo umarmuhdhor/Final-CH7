@@ -1,7 +1,7 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { errorInfo } from "../http/logError";
-import { oldestTombstones } from "../db/repo/tombstones";
+import { dueTombstones } from "../db/repo/tombstones";
 import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../services/screenshots";
 
 /**
@@ -10,6 +10,13 @@ import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../serv
  */
 const BATCH = 100;
 const MAX_BATCHES = 10;
+/**
+ * Scans without a screenshot need no Storage call: 2000 per transaction, up to 25 per run
+ * (50 000/day, above the global POST /scans cap of 2000/h), so retention keeps up with the
+ * busiest possible day instead of only the 1000 scans the Storage-bound loop allows.
+ */
+const PLAIN_CHUNK = 2000;
+const PLAIN_CHUNKS = 25;
 /** Tombstones per run: 5 more Storage DELETEs at most. */
 const TOMBSTONES = 500;
 /** rate_limit_hits per run: 50 × 20000 = 1 M rows, ~30 days of GET /verdicts polling at 1 rps. */
@@ -18,6 +25,7 @@ const HIT_CHUNKS = 50;
 
 export interface RetentionResult {
   scans: number;
+  plainScans: number;
   objects: number;
   backlog: boolean;
   tombstones: number;
@@ -32,6 +40,7 @@ export interface RetentionOptions {
   maxBatches?: number;
   /** Overrides screenshotStore(env); tests only. */
   store?: ScreenshotStore;
+  plainChunk?: number;
   lockTimeoutMs?: number;
 }
 
@@ -43,7 +52,7 @@ export interface RetentionOptions {
  */
 export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = {}): Promise<RetentionResult> {
   const result: RetentionResult = {
-    scans: 0, objects: 0, backlog: false, tombstones: 0, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0,
+    scans: 0, plainScans: 0, objects: 0, backlog: false, tombstones: 0, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0,
   };
   const errors: unknown[] = [];
   const step = async (name: string, run: () => Promise<void>) => {
@@ -59,10 +68,13 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
     await sql`insert into ops_heartbeat (source, at) values ('cron', now()) on conflict (source) do update set at = now()`;
   });
   const store = opts.store ?? screenshotStore(env);
+  await step("plain_scans", () => deleteOldPlainScans(sql, opts, result));
   await step("scans", () => deleteOldScans(sql, store, opts, result));
   await step("tombstones", async () => {
-    // Objects whose rows are already gone (DELETE /devices/me, failed uploads) and whose remove failed.
-    result.tombstones = await removeTombstoned(sql, store, await oldestTombstones(sql, TOMBSTONES));
+    // Objects no row points at any more (deleted device, failed or orphaned upload, retention).
+    const { removed, error } = await removeTombstoned(sql, store, await dueTombstones(sql, TOMBSTONES));
+    result.tombstones = removed;
+    if (error) throw error;
   });
   await step("family_codes", async () => {
     result.familyCodes = (await sql`delete from family_codes where expires_at < now() - interval '1 hour'`).count;
@@ -130,13 +142,39 @@ async function deleteOldScans(
 
     // Lock order verdict → scan, as in decideVerdict and deleteDevice (fase 10 handoff).
     // A lock timeout or deadlock rolls the batch back; the error stops the loop and is retried tomorrow.
-    const deleted = await sql.begin(async (tx) => {
-      await tx`select set_config('lock_timeout', ${lockTimeout}, true), set_config('statement_timeout', '20s', true)`;
-      await tx`update verdicts set scan_id = null where scan_id in ${tx(ids)}`;
-      return (await tx`delete from scans where id in ${tx(ids)} and created_at < now() - interval '14 days'`).count;
-    });
+    const deleted = await deleteScans(sql, ids, lockTimeout);
     result.scans += deleted;
     if (rows.length < batch) return;
     if (b === maxBatches - 1) result.backlog = true;
   }
+}
+
+/** Scans without a screenshot: no Storage call, so in large chunks (D-alief-B12). */
+async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: RetentionResult): Promise<void> {
+  const chunk = opts.plainChunk ?? PLAIN_CHUNK;
+  const lockTimeout = `${opts.lockTimeoutMs ?? 3000}ms`;
+  for (let i = 0; i < PLAIN_CHUNKS; i++) {
+    const ids = (await sql<{ id: string }[]>`
+      select id from scans where created_at < now() - interval '14 days' and screenshot_path is null
+      order by created_at, id limit ${chunk}`).map((r) => r.id);
+    if (ids.length === 0) return;
+    result.plainScans += await deleteScans(sql, ids, lockTimeout, sql`and screenshot_path is null`);
+    if (ids.length < chunk) return;
+  }
+  result.backlog = true;
+}
+
+/**
+ * One transaction per batch. Rows are locked in a fixed order — verdicts by (owner_id, domain),
+ * then scans by id — the same order deleteDevice uses, so the two cannot deadlock on each other
+ * (database review fase 12). Verdicts keep their row with scan_id null (D-alief-14).
+ */
+async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra = sql``): Promise<number> {
+  return sql.begin(async (tx) => {
+    await tx`select set_config('lock_timeout', ${lockTimeout}, true), set_config('statement_timeout', '20s', true)`;
+    await tx`select 1 from verdicts where scan_id in ${tx(ids)} order by owner_id, domain for update`;
+    await tx`update verdicts set scan_id = null where scan_id in ${tx(ids)}`;
+    await tx`select 1 from scans where id in ${tx(ids)} order by id for update`;
+    return (await tx`delete from scans where id in ${tx(ids)} and created_at < now() - interval '14 days' ${extra}`).count;
+  });
 }

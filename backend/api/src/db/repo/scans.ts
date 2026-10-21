@@ -1,4 +1,5 @@
 import type { Sql, TransactionSql } from "postgres";
+import { addTombstones } from "./tombstones";
 
 export interface NewScan {
   ownerId: string;
@@ -21,7 +22,7 @@ export async function insertScan(sql: Sql, s: NewScan): Promise<string> {
   return row!.id;
 }
 
-export type ScreenshotSlot = { reuse: string } | { upload: string } | { quota: "owner" | "global" };
+export type ScreenshotSlot = { reuse: string } | { upload: string } | { quota: "owner" | "global" } | { gone: true };
 
 /**
  * Picks the screenshot for a new scan in one transaction, locked per owner so parallel scans
@@ -29,7 +30,8 @@ export type ScreenshotSlot = { reuse: string } | { upload: string } | { quota: "
  * 24 h (dedupe), else reserve `path` when fewer than `quota.owner` were stored in 24 h by this
  * owner and fewer than `quota.global` by everyone (D-alief-B12; not locked across owners, so
  * parallel scans may overshoot the global count by a few).
- * The path is written before the upload; clearScreenshotPath undoes it on failure.
+ * The path is written and tombstoned before the upload (D-alief-B12); clearScreenshotPath undoes
+ * the path on failure.
  */
 export async function reserveScreenshot(
   sql: Sql,
@@ -37,16 +39,19 @@ export async function reserveScreenshot(
   path: string,
   quota: { owner: number; global: number },
 ): Promise<ScreenshotSlot> {
-  return sql.begin(async (tx) => {
+  return sql.begin(async (tx): Promise<ScreenshotSlot> => {
     await tx`select pg_advisory_xact_lock(3, hashtext(${scan.ownerId}))`;
     const reuse = await recentScreenshot(tx, scan.ownerId, scan.domain);
-    if (reuse) {
-      await tx`update scans set screenshot_path = ${reuse} where id = ${scan.id}`;
-      return { reuse };
+    const chosen = reuse ?? path;
+    if (!reuse) {
+      if ((await screenshotsToday(tx, scan.ownerId)) >= quota.owner) return { quota: "owner" };
+      if ((await allScreenshotsToday(tx)) >= quota.global) return { quota: "global" };
     }
-    if ((await screenshotsToday(tx, scan.ownerId)) >= quota.owner) return { quota: "owner" as const };
-    if ((await allScreenshotsToday(tx)) >= quota.global) return { quota: "global" as const };
-    await tx`update scans set screenshot_path = ${path} where id = ${scan.id}`;
+    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
+    const updated = await tx`update scans set screenshot_path = ${chosen} where id = ${scan.id} returning id`;
+    if (updated.length === 0) return { gone: true };
+    if (reuse) return { reuse };
+    await addTombstones(tx, [path]);
     return { upload: path };
   });
 }
@@ -64,6 +69,10 @@ export async function scanExists(sql: Sql, id: string): Promise<boolean> {
 
 type Q = Sql | TransactionSql;
 
+// Original uploads only: the path names the scan's own id. Must match the predicate of index
+// scans_original_shot verbatim (migration 20261022130000) for the planner to use it.
+const ORIGINAL = "(screenshot_path = owner_id || '/' || id || '.jpg' or screenshot_path = owner_id || '/' || id || '.png')";
+
 /**
  * Dedupe (R3 §4): a screenshot of the same owner + domain from the last 24 h. Only the scan that
  * uploaded it counts (its path names its own id), so reuse never chains past that scan's age and
@@ -73,25 +82,25 @@ export async function recentScreenshot(sql: Q, ownerId: string, domain: string):
   const [row] = await sql<{ path: string }[]>`
     select screenshot_path as path from scans
     where owner_id = ${ownerId} and domain = ${domain} and screenshot_path is not null
-      and screenshot_path in (owner_id || '/' || id || '.jpg', owner_id || '/' || id || '.png')
+      and ${sql.unsafe(ORIGINAL)}
       and created_at > now() - interval '24 hours'
     order by created_at desc limit 1`;
   return row?.path;
 }
 
-/** Quota (R3 §4): distinct screenshots this owner stored in the last 24 h. */
+/** Quota (R3 §4): screenshots this owner uploaded in the last 24 h (reuses are not new objects). */
 export async function screenshotsToday(sql: Q, ownerId: string): Promise<number> {
   const [row] = await sql<{ n: number }[]>`
-    select count(distinct screenshot_path)::int as n from scans
-    where owner_id = ${ownerId} and screenshot_path is not null and created_at > now() - interval '24 hours'`;
+    select count(*)::int as n from scans
+    where owner_id = ${ownerId} and created_at > now() - interval '24 hours' and ${sql.unsafe(ORIGINAL)}`;
   return row!.n;
 }
 
-/** Global quota: distinct screenshots everyone stored in the last 24 h (index scans_created). */
+/** Global quota: screenshots everyone uploaded in the last 24 h (index-only on scans_original_shot). */
 export async function allScreenshotsToday(sql: Q): Promise<number> {
   const [row] = await sql<{ n: number }[]>`
-    select count(distinct screenshot_path)::int as n from scans
-    where created_at > now() - interval '24 hours' and screenshot_path is not null`;
+    select count(*)::int as n from scans
+    where created_at > now() - interval '24 hours' and ${sql.unsafe(ORIGINAL)}`;
   return row!.n;
 }
 

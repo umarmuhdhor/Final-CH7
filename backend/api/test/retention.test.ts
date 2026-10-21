@@ -77,9 +77,10 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
 
   it("at most maxBatches × batch per run; the rest goes on the next run (backlog logged)", async () => {
     await device("dev_p");
-    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at)
+    // With a screenshot: these go through the Storage-bound loop (plain scans have their own, larger one).
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at, screenshot_path)
       select 'bulk_' || lpad(g::text, 4, '0'), 'dev_p', 'https://x.example/', 'x.example', 92, 'blocked', now(),
-             now() - interval '20 days' + make_interval(secs => g)
+             now() - interval '20 days' + make_interval(secs => g), 'dev_p/bulk_' || lpad(g::text, 4, '0') || '.jpg'
       from generate_series(1, 25) g`;
     const lines: string[] = [];
     vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
@@ -93,7 +94,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     expect(await runRetention(sql, env, { batch: 10, maxBatches: 2 })).toMatchObject({ scans: 0, backlog: false });
   });
 
-  it("Storage failure keeps the rows (objects are never orphaned) and still prunes the other tables", async () => {
+  it("Storage failure keeps the rows with a screenshot (objects are never orphaned) and still prunes the rest", async () => {
     await device("dev_p");
     await scan("s_old", "dev_p", 15, "dev_p/old.jpg");
     await scan("s_noshot", "dev_p", 15);
@@ -102,7 +103,8 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     const failing = { ...store, remove: async () => { throw new Error("storage remove 503 dev_p/old.jpg"); } };
 
     await expect(runRetention(sql, env, { store: failing })).rejects.toThrow();
-    expect(await scanIds()).toEqual(["s_noshot", "s_old"]);
+    // The scan without a screenshot needs no Storage call, so it is deleted anyway.
+    expect(await scanIds()).toEqual(["s_old"]);
     expect((await sql`select 1 from family_codes`).length).toBe(0);
     expect((await sql`select 1 from ops_heartbeat where source = 'cron'`).length).toBe(1);
   });

@@ -212,8 +212,9 @@ describe("POST /scans screenshot", () => {
 
   it("quota holds under parallel uploads", async () => {
     const p = await createDevice("Mom");
-    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, screenshot_path)
-      select ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
+    // Original uploads: the path names the scan's own id (reuses do not count, D-alief-B12).
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, screenshot_path)
+      select 'seed' || g, ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
              ${p.deviceId} || '/seed' || g || '.jpg'
       from generate_series(1, 48) g`;
     const ids = await Promise.all(
@@ -239,8 +240,9 @@ describe("POST /scans screenshot", () => {
 
   it("quota: at most 50 uploads per owner per 24 h", async () => {
     const p = await createDevice("Mom");
-    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, screenshot_path)
-      select ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
+    // Original uploads: the path names the scan's own id (reuses do not count, D-alief-B12).
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, screenshot_path)
+      select 'seed' || g, ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
              ${p.deviceId} || '/seed' || g || '.jpg'
       from generate_series(1, 50) g`;
     const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));

@@ -3,21 +3,41 @@ import type { Sql, TransactionSql } from "postgres";
 type Q = Sql | TransactionSql;
 
 /**
- * storage_tombstones (D-alief-B12, SECURITY §3 P13): screenshot objects still to remove from
- * Storage. Written before or with the rows' delete, dropped only after Storage confirmed, so a
- * failed remove is retried by the daily cron instead of leaving an object behind.
+ * storage_tombstones (D-alief-B12, SECURITY §3 P13): an intent log of every screenshot object.
+ * Written in the transaction that reserves an upload (before the object can exist) and with the
+ * rows' delete; dropped only after Storage confirmed a remove of a path no scan points at, and
+ * only once it is older than 10 minutes (an upload, 5 s timeout, may still be landing). So a
+ * failed remove or a late-landing upload is retried by the daily cron instead of left behind.
  */
 export async function addTombstones(sql: Q, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   await sql`insert into storage_tombstones ${sql(paths.map((path) => ({ path })))} on conflict (path) do nothing`;
 }
 
+/** After a confirmed remove. Young tombstones stay: their upload may land after the remove. */
 export async function dropTombstones(sql: Q, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  await sql`delete from storage_tombstones where path in ${sql(paths)}`;
+  await sql`delete from storage_tombstones where path in ${sql(paths)} and created_at < now() - interval '10 minutes'`;
 }
 
-export async function oldestTombstones(sql: Sql, limit: number): Promise<string[]> {
-  const rows = await sql<{ path: string }[]>`select path from storage_tombstones order by created_at, path limit ${limit}`;
+/** A remove failed: try these later than the ones never tried (one bad batch cannot stall the rest). */
+export async function markTombstonesTried(sql: Sql, paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  await sql`update storage_tombstones set attempts = attempts + 1, last_try_at = now() where path in ${sql(paths)}`;
+}
+
+/**
+ * What the cron may remove: no scan points at the path (a live scan or a dedupe reuse keeps its
+ * object; no new scan can start pointing at it, recentScreenshot reuses originals of live scans
+ * only) and older than 10 minutes.
+ */
+export async function dueTombstones(sql: Sql, limit: number): Promise<string[]> {
+  const rows = await sql<{ path: string }[]>`
+    select t.path from storage_tombstones t
+    where t.created_at < now() - interval '10 minutes'
+      and not exists (
+        select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.screenshot_path = t.path)
+    order by t.last_try_at nulls first, t.created_at, t.path
+    limit ${limit}`;
   return rows.map((r) => r.path);
 }
