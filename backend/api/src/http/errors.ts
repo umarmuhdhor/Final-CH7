@@ -21,6 +21,14 @@ export const errors = {
   invalidBody: (message: string) => new ApiError(422, "invalid_body", message),
   rateLimited: (retryAfter: number) => new ApiError(429, "rate_limited", "Too many requests", retryAfter),
   internal: () => new ApiError(500, "internal", "Internal error"),
+  // Family (contracts/api.md "Join errors", R3 §1)
+  codeInvalid: () => new ApiError(404, "code_invalid", "Unknown family code"),
+  codeExpired: () => new ApiError(410, "code_expired", "Family code expired"),
+  familyFull: () => new ApiError(409, "family_full", "Guardian already has 3 protected devices"),
+  alreadyConnected: () => new ApiError(409, "already_connected", "Device already has a guardian"),
+  tooManyAttempts: (retryAfter: number) =>
+    new ApiError(429, "too_many_attempts", "Too many join attempts", retryAfter),
+  codeUnavailable: () => new ApiError(503, "code_unavailable", "No free family code, try again"),
 };
 
 export function errorResponse(c: Context, err: ApiError): Response {

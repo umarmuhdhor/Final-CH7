@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from "hono";
-import type { AppEnv } from "../env";
+import type { AppEnv, DeviceMode } from "../env";
 import { findByTokenHash, touchLastSeen } from "../db/repo/devices";
 import { sha256 } from "./crypto";
 import { errors } from "./errors";
@@ -24,3 +24,11 @@ export const requireDevice: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (device.stale) await touchLastSeen(sql, device.id);
   await next();
 };
+
+/** After requireDevice: 403 forbidden unless the device has this mode (R3 §3). */
+export const requireMode =
+  (mode: DeviceMode): MiddlewareHandler<AppEnv> =>
+  async (c, next) => {
+    if (c.get("principal").mode !== mode) throw errors.forbidden();
+    await next();
+  };

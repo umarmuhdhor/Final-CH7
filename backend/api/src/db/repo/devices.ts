@@ -58,3 +58,31 @@ export async function updateDevice(sql: Sql, id: string, p: DevicePatch): Promis
                               else ext_last_seen_at end
     where id = ${id}`;
 }
+
+export interface DeviceProfile {
+  deviceId: string;
+  name: string;
+  avatarId: string;
+  mode: DeviceMode;
+  language: Language;
+}
+
+export async function findProfile(sql: Sql, id: string): Promise<DeviceProfile | undefined> {
+  const [row] = await sql<DeviceProfile[]>`
+    select id as "deviceId", name, avatar_id as "avatarId", mode, language from devices where id = ${id}`;
+  return row;
+}
+
+/**
+ * Deletes the device and, through `on delete cascade`, its family links (either side),
+ * codes, join attempts, scans, verdicts on its scans or made by it, and push log rows.
+ * Returns the screenshot paths of its scans, to remove from Storage after commit.
+ */
+export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
+  return sql.begin(async (tx) => {
+    const shots = await tx<{ path: string }[]>`
+      select distinct screenshot_path as path from scans where owner_id = ${id} and screenshot_path is not null`;
+    await tx`delete from devices where id = ${id}`;
+    return shots.map((s) => s.path);
+  });
+}
