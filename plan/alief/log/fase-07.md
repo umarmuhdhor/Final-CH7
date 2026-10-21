@@ -78,12 +78,12 @@ Catatan TDD: pgTAP dan vitest ditulis sebelum/bersama kode; satu bug nyata ditem
 
 Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). Password dan secret **diketik di terminal / SQL editor**, tidak pernah di file atau chat. Centang tiap butir dan tempel hasilnya (tanpa password/token) di bawah butir itu.
 
-- [ ] 1. **B1–B3.** Buat proyek Supabase `shoo-demo` (region Singapore, plan Free; simpan password DB di password manager). Lalu:
+- [x] 1. **B1–B3.** Buat proyek Supabase `shoo-demo` (region Singapore, plan Free; simpan password DB di password manager). Lalu:
   ```bash
   (cd backend/db && supabase login && supabase link --project-ref <ref>)
   pnpm -C backend/api exec wrangler login
   ```
-- [ ] 2. **Migrasi cloud** + password role Worker:
+- [x] 2. **Migrasi cloud** + password role Worker:
   ```bash
   (cd backend/db && supabase db push)
   ```
@@ -92,7 +92,7 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
   alter role shoo_api password '<password kuat>';
   ```
   Cek cepat di SQL editor: `select count(*) from blocklist_entries;` → `0`, dan `select public from storage.buckets where id = 'screenshots';` → `false`.
-- [ ] 3. **B4 Hyperdrive (cache mati).** Ambil host Direct connection di Dashboard → Connect:
+- [x] 3. **B4 Hyperdrive (cache mati).** Ambil host Direct connection di Dashboard → Connect:
   ```bash
   pnpm -C backend/api exec wrangler hyperdrive create shoo-db --connection-string="postgres://shoo_api:<password>@db.<ref>.supabase.co:5432/postgres" --caching-disabled
   ```
@@ -101,7 +101,7 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
   pnpm -C backend/api exec wrangler hyperdrive get shoo-db
   ```
   → pastikan caching `disabled`.
-- [ ] 4. **Secret spike + var + deploy.**
+- [x] 4. **Secret spike + var + deploy.**
   ```bash
   pnpm -C backend/api exec wrangler secret put SPIKE_KEY     # ketik nilai acak, simpan sementara untuk butir 6
   ```
@@ -109,7 +109,7 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
   ```bash
   pnpm -C backend/api run deploy
   ```
-- [ ] 5. **Uji asap cloud** (`U=https://shoo-api.<akun>.workers.dev`):
+- [x] 5. **Uji asap cloud** (`U=https://shoo-api.<akun>.workers.dev`):
   ```bash
   curl -s $U/healthz
   curl -s $U/healthz/db
@@ -117,13 +117,24 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
   curl -s $U/blocklist -H "authorization: Bearer $T"
   ```
   Harapan: `{"ok":true}`, `{"ok":true}`, `{"domains":[],"nextSince":null}`. Tempel ketiga hasil (jangan tempel `$T`).
-- [ ] 6. **Spike APNs dari Worker cloud** (D-alief-16):
+- [x] 6. **Spike APNs dari Worker cloud** (D-alief-16):
   ```bash
   curl -s -X POST $U/debug/apns-spike -H "x-spike-key: <SPIKE_KEY>"
   ```
   Tempel JSON hasilnya. Lulus = `"reached":true` dengan `status` 403 + body `InvalidProviderToken`/`ExpiredProviderToken` atau 400 `BadDeviceToken`. Gagal = `"reached":false` (error koneksi/protokol) atau respons bukan JSON APNs. Setelah itu matikan: `"APNS_SPIKE": "0"` di `wrangler.jsonc`, lalu `pnpm -C backend/api run deploy` lagi, dan cek `curl -s -o /dev/null -w "%{http_code}" -X POST $U/debug/apns-spike -H "x-spike-key: <SPIKE_KEY>"` → `404`.
 - [ ] 7. **C7 + B9.** Kirim ke Imelda (teks TODO C7) URL `$U/blocklist`. Pasang monitor uptime: `$U/healthz` tiap 5 menit, `$U/healthz/db` tiap 1 hari.
-- [ ] 8. Commit perubahan `wrangler.jsonc` (`id` Hyperdrive, `INVITE_BASE_URL`, `APNS_SPIKE: "0"`), lalu ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent akan menulis `D-alief-B01` dari hasil butir 6, menjalankan review keamanan, dan membuka PR.
+- [x] 8. Commit perubahan `wrangler.jsonc` (`id` Hyperdrive, `INVITE_BASE_URL`, `APNS_SPIKE: "0"`), lalu ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent akan menulis `D-alief-B01` dari hasil butir 6, menjalankan review keamanan, dan membuka PR.
+
+### Hasil LANGKAH MANUAL (21 Okt 2026 ±21:35 WITA, dijalankan agent coordinator atas permintaan Alief; password diketik Alief sendiri)
+
+- 1: org Supabase baru `Shoo` (`oxsfyebspuymhtegwizi`), proyek `shoo-demo` ref `nmekxihgjszgcibqytyj`, `ap-southeast-1`, Free. `supabase link` OK; CLI dan wrangler sudah login.
+- 2: `supabase db push` → `Applying migration 20261021130000_init.sql... Finished supabase db push.` Password `shoo_api` di-set lewat `supabase db query --linked` (Management API, file SQL sementara mode 600 lalu dihapus) — bukan SQL editor. Cek: `blocklist_rows 0`, `screenshots_public false`, `shoo_api_login true`. Catatan: password `postgres` dibuat acak oleh Supabase dan tidak disimpan siapa pun; reset di Dashboard → Settings → Database kalau dibutuhkan.
+- 3: Hyperdrive `shoo-db` id `f6c9b58d147c457ab5691d47d85f8309`, host direct `db.<ref>.supabase.co:5432` (tidak perlu pooler), user `shoo_api`, `caching.disabled: true`.
+- 4: `SPIKE_KEY` (acak, tidak pernah dicetak) di-set; `INVITE_BASE_URL = https://shoo-api.afindo-mi01.workers.dev`; deploy OK.
+- 5: `/healthz` → `{"ok":true}`; `/healthz/db` → `{"ok":true}`; `/blocklist` → `{"domains":[],"nextSince":null}`. Satu device uji `Smoke` (guardian) tertinggal di DB cloud.
+- 6: `{"reached":true,"status":403,"body":"{\"reason\":\"InvalidProviderToken\"}","ms":1242,"colo":"CDG"}` → **lulus** (Worker fetch mencapai APNs sandbox lewat HTTP/2). Lalu `APNS_SPIKE: "0"`, deploy ulang, `POST /debug/apns-spike` → `404`. Secret `SPIKE_KEY` masih ada di Worker sampai fase 11.
+- 7: **belum** — Alief kirim C7 ke Imelda dan pasang monitor uptime B9.
+- 8: `wrangler.jsonc` di-commit (id Hyperdrive, `INVITE_BASE_URL`, `APNS_SPIKE: "0"`).
 
 ## Catatan handoff
 
