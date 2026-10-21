@@ -6,12 +6,9 @@ import { requireDevice } from "../http/auth";
 import { base64url, randomBytes, sha256 } from "../http/crypto";
 import { errors } from "../http/errors";
 import { clientIp, hit, limits } from "../http/rateLimit";
-import { codePoints, readJson } from "../http/validate";
+import { displayName, isoTime, readJson } from "../http/validate";
 
-const name = z
-  .string()
-  .trim()
-  .refine((s) => codePoints(s) >= 1 && codePoints(s) <= 20, "must be 1-20 characters");
+const name = displayName;
 // APNs device tokens are hex; Apple says not to assume a fixed length.
 const apnsToken = z.string().regex(/^[0-9a-fA-F]{32,200}$/, "must be a hex APNs token");
 
@@ -25,8 +22,16 @@ const patchBody = z.object({
   name: name.optional(),
   apnsToken: apnsToken.nullable().optional(),
   language: z.enum(["en", "id"]).optional(),
-  extensionLastSeenAt: z.iso.datetime({ offset: true }).optional(),
+  extensionLastSeenAt: isoTime.optional(),
 });
+
+/** 1–12 without modulo bias (256 % 12 != 0): reject bytes ≥ 252. */
+function randomAvatar(): number {
+  for (;;) {
+    const b = randomBytes(1)[0]!;
+    if (b < 252) return (b % 12) + 1;
+  }
+}
 
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
 
@@ -38,7 +43,7 @@ devices.post("/devices", async (c) => {
   const body = await readJson(c, createBody);
 
   const token = `shoo_${base64url(randomBytes(32))}`;
-  const avatarId = `avatar_${String((randomBytes(1)[0]! % 12) + 1).padStart(2, "0")}`;
+  const avatarId = `avatar_${String(randomAvatar()).padStart(2, "0")}`;
   const deviceId = await insertDevice(sql, {
     name: body.name,
     mode: body.mode,

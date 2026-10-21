@@ -3,9 +3,9 @@ import { z } from "zod";
 import type { AppEnv } from "../env";
 import { blocklistEvents } from "../db/repo/blocklist";
 import { requireDevice } from "../http/auth";
-import { parse } from "../http/validate";
+import { isoTime, parse } from "../http/validate";
 
-const query = z.object({ since: z.iso.datetime({ offset: true }).optional() });
+const query = z.object({ since: isoTime.optional() });
 
 export const blocklist = new Hono<AppEnv>();
 

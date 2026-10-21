@@ -44,6 +44,10 @@ describe("POST /devices", () => {
     [{ name: "Mom", mode: "admin" }],
     [{ name: "Mom" }],
     [{ name: "Mom", mode: "guardian", apnsToken: "not-hex" }],
+    [{ name: "Mom", mode: "guardian", apnsToken: null }],
+    [{ name: "Mo\u0000m", mode: "guardian" }],
+    [{ name: "Mo\u0007m", mode: "guardian" }],
+    [{ name: "Mom\u202Egnp.exe", mode: "guardian" }],
     [[]],
   ])("422 invalid_body for %j", async (json) => {
     const res = await call("/devices", { method: "POST", json });
@@ -61,6 +65,47 @@ describe("POST /devices", () => {
     const res = await call("/devices", { method: "POST", json: { name: "Mom", mode: "guardian", pad: "x".repeat(20_000) } });
     expect(res.status).toBe(413);
     expect(await errorCode(res)).toBe("too_large");
+  });
+
+  it("413 too_large for a streamed body without content-length", async () => {
+    const chunk = new TextEncoder().encode("x".repeat(4096));
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(ctrl) {
+        if (sent++ < 6) ctrl.enqueue(chunk);
+        else ctrl.close();
+      },
+    });
+    const res = await call("/devices", {
+      method: "POST",
+      body,
+      headers: { "content-type": "application/json" },
+      duplex: "half",
+    } as RequestInit);
+    expect(res.status).toBe(413);
+    expect(await errorCode(res)).toBe("too_large");
+  });
+
+  it("rate limit holds under parallel requests", async () => {
+    const ip = "203.0.113.9";
+    const results = await Promise.all(
+      Array.from({ length: 14 }, (_, i) =>
+        call("/devices", { method: "POST", ip, json: { name: `P${i}`, mode: "protected" } }).then((r) => r.status),
+      ),
+    );
+    expect(results.filter((s) => s === 201)).toHaveLength(10);
+    expect(results.filter((s) => s === 429)).toHaveLength(4);
+  });
+
+  it("IPv6 addresses in one /64 share a bucket", async () => {
+    for (let i = 0; i < 10; i++) {
+      const ip = `2001:db8:1:2::${(i + 1).toString(16)}`;
+      expect((await call("/devices", { method: "POST", ip, json: { name: `V${i}`, mode: "protected" } })).status).toBe(201);
+    }
+    const res = await call("/devices", { method: "POST", ip: "2001:db8:1:2:ffff::1", json: { name: "V10", mode: "protected" } });
+    expect(res.status).toBe(429);
+    const other = await call("/devices", { method: "POST", ip: "2001:db8:1:3::1", json: { name: "W", mode: "protected" } });
+    expect(other.status).toBe(201);
   });
 
   it("rate limits 10 per hour per IP with Retry-After", async () => {
@@ -123,7 +168,8 @@ describe("PATCH /devices/me", () => {
     expect(row!.apns_token).toBeNull();
   });
 
-  it.each([[{ name: "" }], [{ name: "x".repeat(21) }], [{ language: "fr" }], [{ extensionLastSeenAt: "yesterday" }]])(
+  it.each([[{ name: "" }], [{ name: "x".repeat(21) }], [{ language: "fr" }], [{ extensionLastSeenAt: "yesterday" }],
+    [{ extensionLastSeenAt: "0000-01-01T00:00:00Z" }], [{ name: "a\u0000b" }]])(
     "422 for %j",
     async (json) => {
       const me = await createDevice();

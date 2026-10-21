@@ -43,7 +43,7 @@ Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
 
 ## Schema summary
 
-Migration: `db/supabase/migrations/20261021130000_init.sql` (details: `plan/alief/ref/R2-skema-db.md`).
+Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql` (details: `plan/alief/ref/R2-skema-db.md`).
 
 | Table | Purpose |
 |---|---|
@@ -59,12 +59,14 @@ Migration: `db/supabase/migrations/20261021130000_init.sql` (details: `plan/alie
 
 Access: role `shoo_api` (no password in migrations) has CRUD on these tables only. `anon`/`authenticated` have no grants; RLS is on everywhere with a single `shoo_api` policy. No RPCs: the Worker uses plain SQL through postgres.js tagged templates.
 
-Approving a blocklist domain (Supabase SQL editor, one domain per run):
+Approving a blocklist domain (Supabase SQL editor). A trigger stamps `approved_at`/`removed_at` with `clock_timestamp()` on every UPDATE, so bulk approvals and re-approvals after a removal page correctly:
 
 ```sql
 select domain, families, first_seen_at from blocklist_entries
  where approved_at is null and removed_at is null and families > 0 order by families desc, first_seen_at;
-update blocklist_entries set approved_at = clock_timestamp(), approved_by = 'alief' where domain = 'example-scam.id';
+update blocklist_entries set approved_at = now(), approved_by = 'alief' where domain = 'example-scam.id';
+update blocklist_entries set removed_at = now() where domain = 'false-positive.id';       -- take one off
+update blocklist_entries set removed_at = null where domain = 'false-positive.id';        -- put it back (new addedAt)
 ```
 
 ## Env

@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(24);
+select plan(27);
 
 select has_table('public', t, 'table ' || t || ' exists')
 from unnest(array[
@@ -72,6 +72,18 @@ select throws_ok(
 select throws_ok(
   $$insert into blocklist_entries (domain) values ('Bad.Example')$$,
   '23514', null, 'I8: blocklist domain lowercase');
+
+-- blocklist review fields (D-alief-B05)
+select throws_ok(
+  $$insert into blocklist_entries (domain, removed_at) values ('r.example', now())$$,
+  '23514', null, 'blocklist: removed needs approved');
+select throws_ok(
+  $$insert into blocklist_entries (domain, approved_at) values ('n.example', now())$$,
+  '23514', null, 'blocklist: approved needs approved_by');
+insert into blocklist_entries (domain) values ('q.example');
+update blocklist_entries set approved_at = '2000-01-01', approved_by = 't' where domain = 'q.example';
+select ok((select approved_at > now() - interval '1 minute' from blocklist_entries where domain = 'q.example'),
+  'blocklist: approval by update uses clock_timestamp()');
 
 -- I6
 insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name)
