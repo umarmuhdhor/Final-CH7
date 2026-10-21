@@ -271,3 +271,26 @@ Format:
 - Keputusan: tambah SECURITY §3 (P1–P12): privacy manifest app (fase 01), label privasi App Store (fase 16), hapus data di dalam app lewat usulan `DELETE /devices/me` (fase 06/08/13, flag sampai C19), Keychain `AfterFirstUnlockThisDeviceOnly`, ATS tanpa pengecualian umum, `os.Logger` `.private`, izin just-in-time, pasteboard `.localOnly` + kedaluwarsa, screenshot tanpa cache disk, push tanpa URL, export compliance, kebijakan privasi. PROMPT langkah 6l mewajibkannya. Permintaan ke Umar: TODO C19.
 - Alasan: permintaan Alief (21 Okt): produk berjalan di ekosistem Apple dan memproses riwayat browsing berisiko, nama, dan screenshot; App Store Review 5.1.1 mewajibkan manifest, label, dan penghapusan akun.
 - File: SECURITY §3 (§ lama bergeser ke §4–§6), PROMPT 6l, fase-01, 06, 08, 13, 14, 16, TODO C19.
+
+## D-alief-B02 · 21 Okt 2026 · fase 07 · Tabel `rate_limit_hits` untuk batas umum
+
+- Keputusan: batas umum R3 §5 yang bukan join (`POST /devices` 10/jam per IP, `/healthz/db` 1/menit per IP, nanti `POST /family/code`, `POST /scans`) memakai satu tabel `rate_limit_hits(bucket, key_hash, hit_at)` dengan jendela geser. `key_hash = sha256('<bucket>:<ip atau device>')`, jadi IP mentah tidak pernah disimpan. Join tetap memakai `join_attempts` (R2). Baris > 1 hari dihapus cron retensi (fase 12).
+- Alasan: R3 §5 meminta batas berbasis Postgres, tetapi R2 §2 tidak punya tabel untuk batas per IP; menyimpan IP di `devices` = data pribadi tanpa guna (SECURITY §3).
+- Alternatif yang ditolak: kolom `created_ip` di `devices` (menyimpan IP), KV/Durable Object (ARCHITECTURE: tanpa KV di MVP).
+- Dampak ke tim lain / kontrak: tidak ada (bentuk 429 + `Retry-After` sesuai kontrak).
+- File yang diperbarui: `backend/db/supabase/migrations/20261021130000_init.sql`, `backend/api/src/http/rateLimit.ts`, `backend/README.md`. R2 §2 + §6 perlu baris tambahan saat fase 12 (catatan handoff).
+
+## D-alief-B03 · 21 Okt 2026 · fase 07 · Tanpa `sql.end()` per request; `since` lewat `::text`
+
+- Keputusan: (a) Worker membuat client postgres.js per request dan **tidak** memanggil `sql.end()`. (b) Parameter waktu yang butuh mikrodetik (`since` di `GET /blocklist`) dikirim sebagai `${since}::text::timestamptz`, dan waktu keluaran dibentuk di SQL dengan `to_char(... 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`.
+- Alasan: (a) docs Hyperdrive (connection lifecycle): koneksi Worker → Hyperdrive dibersihkan otomatis saat request selesai; `sql.end()` (polyfill socket postgres.js 3.4.9) menghasilkan unhandled rejection "This socket has been closed." di setiap request (67 error di vitest, test tetap lulus). (b) Ditemukan oleh test: postgres.js menyerialkan parameter bertipe `timestamptz` lewat `Date` JS, mikrodetik hilang, sehingga `approved_at > since` mengirim ulang domain lama. Cursor R2 §5 bergantung pada mikrodetik.
+- Alternatif yang ditolak: `ctx.waitUntil(sql.end())` (error sama), `dangerouslyIgnoreUnhandledErrors` di vitest (menyembunyikan error asli).
+- Dampak ke tim lain / kontrak: `nextSince`/`addedAt`/`removedAt` berformat ISO UTC dengan 6 digit pecahan detik (tetap ISO 8601).
+- File yang diperbarui: `backend/api/src/app.ts`, `backend/api/src/db/repo/blocklist.ts`, test `blocklist.test.ts`.
+
+## D-alief-B04 · 21 Okt 2026 · fase 07 · Detail kecil API fase 07
+
+- Keputusan: (a) `PATCH /devices/me {apnsToken: null}` mengosongkan token (app memanggilnya kalau izin notifikasi dicabut); string harus hex 32–200. (b) `GET /blocklist` memakai `Cache-Control: private, max-age=300` (bukan `max-age=300` saja), karena request membawa Bearer. (c) Respons blocklist tanpa `since` tidak memuat `removed` (kontrak: opsional; full refresh sudah membuang yang dihapus); dengan `since`, `removed` selalu ada (boleh `[]`). Halaman kosong mengembalikan `nextSince = since` (sesuai `lists.js`: `next === since` = sudah sinkron). Penambahan dan penghapusan dipaging bersama berdasarkan waktu kejadian (maks 1000), jadi halaman berikutnya tidak melewatkan apa pun. (d) `test/helpers/schema.ts` (ajv + `scan-result.schema.json`) ditunda ke fase 09, saat respons ScanResult pertama ada. BELUM DIVERIFIKASI: ajv `compile` memakai `new Function`, yang mungkin ditolak workerd; kalau begitu fase 09 memakai ajv standalone (dikompilasi di Node) atau validasi di file test Node terpisah.
+- Alasan: kontrak tidak mengatur detail ini; pilihan paling sederhana yang tetap sesuai `contracts/api.md`.
+- Dampak ke tim lain / kontrak: tidak ada perubahan bentuk JSON.
+- File yang diperbarui: `backend/api/src/routes/{devices,blocklist}.ts`, `backend/README.md`.
