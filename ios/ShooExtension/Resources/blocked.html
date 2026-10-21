@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- Owner: lead. Block screen (EX-06). Extension page: websites can't script it, so there's no bypass. -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Shoo</title>
+    <link rel="stylesheet" href="blocked.css">
+</head>
+<body>
+    <main class="screen" hidden>
+        <img class="logo" src="images/icon-96.png" alt="" width="64" height="64">
+        <h1 data-text="title"></h1>
+        <div class="score"><span class="score-value"></span><span class="score-label" data-text="score"></span></div>
+        <p class="link"></p>
+
+        <section class="reasons-box">
+            <h2 data-text="why"></h2>
+            <ul class="reasons"></ul>
+        </section>
+
+        <section class="waiting" hidden>
+            <div class="spinner" aria-hidden="true"></div>
+            <p class="waiting-text"></p>
+            <p class="hint" data-text="autoOpen"></p>
+        </section>
+
+        <p class="verified" hidden></p>
+        <a class="button" hidden></a>
+    </main>
+    <script src="block.js"></script>
+    <script src="blocked-page.js"></script>
+</body>
+</html>

@@ -20,9 +20,14 @@
     },
 
     "content_scripts": [{
-        "js": [ "detector.js", "pipeline.js", "popup.js", "content.js" ],
+        "js": [ "detector.js", "pipeline.js", "popup.js", "report.js", "block.js", "content.js" ],
         "matches": [ "<all_urls>" ],
         "run_at": "document_idle"
+    }],
+
+    "web_accessible_resources": [{
+        "resources": [ "blocked.html", "blocked.css", "block.js", "blocked-page.js", "images/icon-96.png" ],
+        "matches": [ "<all_urls>" ]
     }],
 
     "permissions": [ "nativeMessaging" ],

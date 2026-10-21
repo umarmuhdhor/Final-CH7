@@ -3,6 +3,7 @@
 
 import { PSL_RULES } from "./psl.js";
 import { parseRules, registrableDomain, naiveDomain } from "./domain.js";
+import { captureEvidence } from "./capture.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -10,6 +11,7 @@ const SESSION_TTL_MS = 30 * 1000; // onboarding can finish while Safari is open
 const VERDICT_TTL_MS = 60 * 1000;
 const ANALYZE_TIMEOUT_MS = 8 * 1000; // contracts/api.md
 const VERDICT_TIMEOUT_MS = 3 * 1000;
+const SCAN_TIMEOUT_MS = 15 * 1000; // includes the screenshot upload
 
 let lastHeartbeatAt = 0;
 
@@ -99,7 +101,45 @@ async function verdict(domain, { fresh = false } = {}) {
     }
 }
 
-browser.runtime.onMessage.addListener((message) => {
+const reports = new Map(); // report key → Promise<backend scan id | null>
+
+/**
+ * EX-07. Replies as soon as the screenshot is taken (report.js then unblurs the page / block.js navigates);
+ * the POST continues here, so it survives the page going away.
+ */
+async function startReport(message, sender) {
+    const session = await getSession();
+    if (!session?.apiBaseURL) return { ok: false, skipped: "no_api_url" }; // not onboarded → nothing leaves the phone
+
+    let screenshotBase64 = null;
+    try {
+        if (sender?.tab) screenshotBase64 = await captureEvidence(sender.tab.windowId, message.evidence);
+    } catch (error) {
+        console.warn("[Shoo] screenshot failed, sending without it", error);
+    }
+
+    const body = {
+        ...message.scan,
+        ownerDeviceId: session.deviceId,
+        ownerName: (session.name || "").slice(0, 20),
+        ...(screenshotBase64 ? { screenshotBase64 } : {}),
+    };
+    const post = fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
+        method: "POST",
+        token: session.token,
+        timeoutMs: SCAN_TIMEOUT_MS,
+        body: JSON.stringify(body),
+    })
+        .then((reply) => (typeof reply?.id === "string" ? reply.id : null))
+        .catch((error) => {
+            console.warn("[Shoo] POST /scans failed", error);
+            return null;
+        });
+    reports.set(message.key, post);
+    return { ok: true, screenshot: Boolean(screenshotBase64) };
+}
+
+browser.runtime.onMessage.addListener((message, sender) => {
     switch (message?.type) {
         case "heartbeat": {
             if (Date.now() - lastHeartbeatAt < HEARTBEAT_INTERVAL_MS) {
@@ -110,10 +150,22 @@ browser.runtime.onMessage.addListener((message) => {
         }
         case "getSession":
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
+        case "profile":
+            // What blocked.html needs to pick its wording. Never the token.
+            return getSession().then((s) => ({
+                ok: true,
+                onboarded: Boolean(s),
+                mode: s?.mode ?? null,
+                guardianName: s?.guardianName ?? null,
+            }));
         case "domain":
             return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
         case "analyze":
             return analyze(message.snapshot, message.localSignals ?? []);
+        case "report":
+            return startReport(message, sender);
+        case "recordId":
+            return Promise.resolve(reports.get(message.key) ?? null).then((recordId) => ({ ok: true, recordId }));
         case "verdict":
             return verdict(message.domain, { fresh: Boolean(message.fresh) });
         default:
