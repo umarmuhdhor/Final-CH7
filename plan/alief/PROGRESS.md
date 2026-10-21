@@ -16,7 +16,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 05 | Guardian & Family GD-01/02/03/05 | app | feat/GD-family-mode | [ ] | | | | | log/fase-05.md |
 | 06 | Profile PF-01 | app | feat/PF-01-profile | [ ] | | | | | log/fase-06.md |
 | 06Q | QA-A (UI fixtures) | app | fix/QA-A-* | [ ] | | | | | qa/QA-A-*.md |
-| 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [m] | 21 Okt 2026 | | | Kode + test lokal hijau (pgTAP 58, vitest 34); menunggu LANGKAH MANUAL deploy cloud + spike APNs (stacked on #7) | log/fase-07.md |
+| 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [r] | 21 Okt 2026 | 21 Okt 2026 | #9 | Worker + skema hidup di cloud, spike APNs lulus (D-alief-B01), review diperbaiki (pgTAP 61, vitest 48); stacked on #7; pending C7/B9 | log/fase-07.md |
 | 08 | Family | be | feat/BE-family | [ ] | | | | | log/fase-08.md |
 | 09 | Scans + screenshot | be | feat/BE-scans | [ ] | | | | | log/fase-09.md |
 | 10 | Verdicts + blocklist | be | feat/BE-verdicts | [ ] | | | | | log/fase-10.md |
@@ -66,7 +66,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | GD-07 Validasi tanpa konfirmasi | 03 (tombol) + 10 + 15 | [ ] | |
 | DT-01..06 Detail | 03 (+13) | [ ] | |
 | PF-01 Profile | 06 (+13, +14 menu Family code) | [ ] | |
-| BE Devices | 07 | [ ] | |
+| BE Devices | 07 | [r] | `backend/api/test/devices.test.ts`, PR #9 |
 | BE Family | 08 | [ ] | |
 | BE Scans | 09 | [ ] | |
 | BE Verdicts | 10 | [ ] | |
