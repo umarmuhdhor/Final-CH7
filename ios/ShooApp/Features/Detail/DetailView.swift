@@ -18,6 +18,7 @@ struct DetailView: View {
             .navigationTitle(localized: "Detail")
             .navigationBarTitleDisplayMode(.inline)
             .task(id: model.scanId) { await model.load() }
+            .privacyCover()
     }
 
     @ViewBuilder

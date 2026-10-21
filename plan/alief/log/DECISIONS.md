@@ -423,13 +423,13 @@ Format:
 
 ## D-alief-A31 · 22 Okt 2026 · app (fase 03) · Link tidak pernah dibuka dari app; salin = teks biasa, perangkat ini saja
 
-- Keputusan: DT-03 menampilkan URL lengkap sebagai teks (`Text(verbatim:)`, bukan link) untuk semua status, bukan hanya `blocked`. Tombol "Copy link" menulis `public.plain-text` saja ke `UIPasteboard` dengan `.localOnly: true` (tidak ke Universal Clipboard), tanpa tanggal kedaluwarsa.
+- Keputusan: DT-03 menampilkan URL lengkap sebagai teks (`Text(verbatim:)`, bukan link) untuk semua status, bukan hanya `blocked`. Tombol "Copy link" menulis `public.plain-text` saja ke `UIPasteboard` dengan `.localOnly: true` (tidak ke Universal Clipboard) dan `.expirationDate` = 5 menit (review keamanan L4: URL riwayat browsing tidak tinggal di pasteboard tanpa batas).
 - Alasan: membuka situs penipuan dari app melewati alur extension; plan meminta "tidak bisa dibuka langsung untuk scan blocked", dan item warning pun tetap berisiko. P8 (`localOnly`) diterapkan juga di sini karena URL termasuk riwayat browsing (P2).
 - File: `Features/Detail/{LinkCopy,DetailView}.swift`, `Tests/DetailPrivacyTests.swift`.
 
 ## D-alief-A32 · 22 Okt 2026 · app (fase 03) · Screenshot bukti: sesi ephemeral tanpa cache, tanpa share/simpan
 
-- Keputusan: `ScreenshotView` memuat `screenshotUrl` (link Worker, D-alief-B08) lewat `URLSessionScreenshotLoader`: `URLSessionConfiguration.ephemeral`, **tanpa `URLCache`** (`urlCache = nil`, `reloadIgnoringLocalAndRemoteCacheData`; gambar hanya ada selama view Detail memegangnya), tanpa cookie/kredensial/`Authorization`, HTTPS saja (HTTP hanya `localhost` di DEBUG), status 200 + body dibaca streaming dan berhenti di > 2 MB + harus bisa didekode sebagai gambar. Review swift (M5): cache memori 8 MB sempat dipakai, tapi itu menyimpan gambar sepanjang umur proses sehingga screenshot yang sudah dihapus/diputus masih bisa tampil saat Detail dibuka ulang (P13). Gagal/404 → "Screenshot isn't available anymore" + Try again (P13: setelah hapus/retensi/disconnect link langsung 404). `nil` → blok disembunyikan. Layar zoom (pinch, ketuk dua kali, tombol tutup) tanpa `ShareLink`, `contextMenu`, atau simpan. Untuk `MockRepository` (DEBUG) gambar diganti `FixtureScreenshotLoader` karena URL fixture `example.invalid` tidak pernah resolve.
+- Keputusan: `ScreenshotView` memuat `screenshotUrl` (link Worker, D-alief-B08) lewat `URLSessionScreenshotLoader`: `URLSessionConfiguration.ephemeral`, **tanpa `URLCache`** (`urlCache = nil`, `reloadIgnoringLocalAndRemoteCacheData`; gambar hanya ada selama view Detail memegangnya), tanpa cookie/kredensial/`Authorization`, hanya host `AppConfig.apiBaseURL` + path `/screenshots/` (review keamanan M2), redirect tidak diikuti, HTTPS saja (HTTP hanya `localhost` di DEBUG), status 200 + body dibaca streaming dan berhenti di > 2 MB + header gambar dibaca dulu: sisi > 4096 px ditolak (decompression bomb, review keamanan M1), lalu didekode sekali dengan downsampling `CGImageSourceCreateThumbnailAtIndex` (maks 2048 px). Review swift (M5): cache memori 8 MB sempat dipakai, tapi itu menyimpan gambar sepanjang umur proses sehingga screenshot yang sudah dihapus/diputus masih bisa tampil saat Detail dibuka ulang (P13). Gagal/404 → "Screenshot isn't available anymore" + Try again (P13: setelah hapus/retensi/disconnect link langsung 404). `nil` → blok disembunyikan. Layar zoom (pinch, ketuk dua kali, tombol tutup) tanpa `ShareLink`, `contextMenu`, atau simpan. Untuk `MockRepository` (DEBUG) gambar diganti `FixtureScreenshotLoader` karena URL fixture `example.invalid` tidak pernah resolve.
 - Alasan: SECURITY §3 P9 + P13. Server sudah mengirim `Cache-Control: private, no-store` (D-alief-B09); disk 0 di sisi app membuat itu tidak bergantung pada header.
 - File: `Features/Detail/ScreenshotView.swift`, `Tests/DetailPrivacyTests.swift`.
 
@@ -449,3 +449,9 @@ Format:
 
 - Keputusan: launch argument DEBUG `-debug.detail <scanId>` membuka Detail di tab aktif (UI test + screenshot), satu blok di `AppEnvironment.live`. Gerbang UI Protected memakai 3 fixture milik `dev_mom` (`warning-41`, `blocked-92`, `blocked-marked-safe`); `warning-63` (milik Guardian) dan `blocked-verified-scam` (milik Dad) memang 404 untuk Mom (T1), teks Protected untuk keduanya dibuktikan di unit test.
 - File: `App/AppEnvironment.swift`, `UITests/DetailUITests.swift`.
+
+## D-alief-A36 · 22 Okt 2026 · app (fase 03) · Penutup privasi saat app tidak aktif
+
+- Keputusan: `DetailView` dan layar zoom screenshot memakai `.privacyCover()`: saat `scenePhase != .active`, isi ditutup latar polos + ikon perisai. Snapshot app switcher yang ditulis iOS ke disk (`Library/SplashBoard/Snapshots`) tidak memuat URL penipuan, nama pemilik, atau screenshot bukti. Dicek di simulator: snapshot `.ktx` dikonversi ke PNG = hanya penutup (`qa/img/ui-03/app-switcher-snapshot-on-disk.png`).
+- Alasan: review keamanan M3 (SECURITY §3 P9 + P13): snapshot di disk tidak ikut terhapus saat data dihapus/diputus. Layar lain (Activity, Shield) memuat data serupa → usulan untuk fase 04/05 (catatan handoff log fase 03).
+- File: `Features/Detail/PrivacyCover.swift`, `DetailView.swift`, `ScreenshotView.swift`.
