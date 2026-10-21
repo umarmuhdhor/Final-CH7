@@ -44,4 +44,25 @@ final class QALayoutUITests: XCTestCase {
         XCTAssertLessThanOrEqual(invite.frame.maxY, tabBar.frame.minY + 1, "invite \(invite.frame) tab bar \(tabBar.frame)")
         XCTAssertTrue(invite.isHittable)
     }
+
+    /// P2-4 / P2-7: at accessibility sizes Invite scrolls with the content, and the notification banner scrolls too
+    /// (pinned, it left almost no room to scroll on an iPhone SE).
+    @MainActor
+    func testInviteButtonIsReachableAtAccessibilitySizes() {
+        let app = launch([
+            "-settings.onboardingCompleted", "YES",
+            "-settings.mode", "guardian",
+            "-settings.familyModeOn", "YES",
+            "-mock.scenario", "empty",
+            "-UITestNotifications", "denied",
+            "-UITestExtensionActive", "YES",
+        ])
+        let invite = app.buttons["family.invite"]
+        XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
+        for _ in 0..<4 where !invite.isHittable || invite.frame.maxY > app.tabBars.firstMatch.frame.minY {
+            app.swipeUp()
+        }
+        XCTAssertTrue(invite.isHittable, app.debugDescription)
+        XCTAssertLessThanOrEqual(invite.frame.maxY, app.tabBars.firstMatch.frame.minY + 1)
+    }
 }

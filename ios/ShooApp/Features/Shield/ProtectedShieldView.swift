@@ -20,14 +20,18 @@ struct ProtectedShieldView: View {
     @Environment(\.locale) private var locale
     @State private var model: ShieldModel
     let perspective: ShieldPerspective
+    /// Guardian only: the "Notifications are off" reminder at the top.
+    private let reminder: NotificationReminderBanner?
 
     init(
         repository: any ShooRepository,
         extensionStatus: @escaping () -> ExtensionStatus,
-        perspective: ShieldPerspective = .protected
+        perspective: ShieldPerspective = .protected,
+        reminder: NotificationReminderBanner? = nil
     ) {
         _model = State(initialValue: ShieldModel(repository: repository, extensionStatus: extensionStatus))
         self.perspective = perspective
+        self.reminder = reminder
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -35,6 +39,7 @@ struct ProtectedShieldView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                if let reminder { reminder }
                 ExtensionStatusCard(status: model.extensionStatus, perspective: perspective)
                 if perspective == .protected {
                     guardianRow

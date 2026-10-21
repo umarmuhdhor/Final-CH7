@@ -10,23 +10,25 @@ struct GuardianShieldView: View {
     var body: some View {
         Group {
             if env.settings.familyModeOn {
-                FamilyShieldView(repository: env.repository)
+                FamilyShieldView(repository: env.repository, reminder: reminder)
             } else {
-                ProtectedShieldView(repository: env.repository, extensionStatus: env.extensionStatus, perspective: .guardian)
-            }
-        }
-        // Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
-        .safeAreaInset(edge: .top) {
-            if NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) {
-                NotificationReminderBanner(status: notificationStatus) {
-                    Task { notificationStatus = await env.notifications.request() }
-                }
-                .padding(.horizontal, 16)
+                ProtectedShieldView(
+                    repository: env.repository, extensionStatus: env.extensionStatus, perspective: .guardian, reminder: reminder
+                )
             }
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             notificationStatus = await env.notifications.status()
+        }
+    }
+
+    /// Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
+    /// It scrolls with the screen: pinned, it filled most of a small iPhone at large text sizes (QA-A P2-7).
+    private var reminder: NotificationReminderBanner? {
+        guard NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) else { return nil }
+        return NotificationReminderBanner(status: notificationStatus) {
+            Task { notificationStatus = await env.notifications.request() }
         }
     }
 }
@@ -39,9 +41,11 @@ struct FamilyShieldView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var model: FamilyShieldModel
     @State private var isInvitePresented = false
+    private let reminder: NotificationReminderBanner?
 
-    init(repository: any ShooRepository) {
+    init(repository: any ShooRepository, reminder: NotificationReminderBanner? = nil) {
         _model = State(initialValue: FamilyShieldModel(repository: repository))
+        self.reminder = reminder
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -49,6 +53,7 @@ struct FamilyShieldView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                if let reminder { reminder }
                 content
             }
             .padding(16)
