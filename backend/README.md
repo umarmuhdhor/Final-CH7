@@ -44,6 +44,9 @@ pnpm -C backend/api dev                                    # http://localhost:87
 | DELETE | `/family/members/{deviceId}` | Bearer guardian | `{ ok: true }`, 404 if not my member |
 | DELETE | `/family/guardian` | Bearer protected | `{ ok: true }`, 404 if not connected |
 | GET | `/join?code=` | – | HTML invite page (EN/ID by Accept-Language) → `shoo://join?code=`; strict CSP; no DB lookup |
+| POST | `/scans` | Bearer | contract ScanResult body (+ `screenshotBase64?`) → `201 { id }`; owner = token device; 120/h per device. Screenshot: JPEG/PNG ≤ 150 KB, ≤ 1280 px, dedupe same domain 24 h, 50/24 h per device, otherwise dropped (scan still 201) |
+| GET | `/scans?owner=me\|family\|<deviceId>&status=&cursor=&limit=` | Bearer | `{ items, nextCursor }`, newest first, limit 1–50 (20); `family` guardian only (403), unknown member 404 |
+| GET | `/scans/{id}` | Bearer | one ScanResult, `screenshotUrl` signed for 1 h; 404 unless own scan or my member's scan |
 | GET | `/blocklist?since=` | Bearer | approved global domains; `removed[]` only with `since`; `nextSince` has microseconds |
 | POST | `/debug/apns-spike` | `x-spike-key` | fase 07 spike only, 404 unless `APNS_SPIKE=1` (removed in fase 11) |
 
@@ -51,14 +54,14 @@ Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
 
 ## Schema summary
 
-Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql`, `20261021160000_family.sql` (details: `plan/alief/ref/R2-skema-db.md`).
+Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql`, `20261021160000_family.sql`, `20261021170000_screenshot_bucket.sql` (details: `plan/alief/ref/R2-skema-db.md`).
 
 | Table | Purpose |
 |---|---|
 | `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt` |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 4-digit codes (60 s) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
-| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.` (fase 09) |
+| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path |
 | `verdicts` | one per (owner, domain), last decision wins (fase 10) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
@@ -85,6 +88,9 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 |---|---|---|
 | `DB` | Hyperdrive binding | `shoo-db` (id filled in at first deploy) |
 | `INVITE_BASE_URL` | var | Worker URL (used from fase 08) |
+| `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
+| `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
 | `APNS_SPIKE` | var | `"1"` only during the fase 07 spike |
 | `SPIKE_KEY` | secret | header `x-spike-key` for the spike |
 
@@ -92,4 +98,4 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 
 Cloud actions are always done by a person (plan/alief/README.md §6 rule 9). Step-by-step checklist: `plan/alief/log/fase-07.md` "LANGKAH MANUAL".
 
-Cloud URL: _filled in after the first deploy_ (shared with Imelda, TODO C7).
+Cloud URL: `https://shoo-api.afindo-mi01.workers.dev` (shared with Imelda, TODO C7).

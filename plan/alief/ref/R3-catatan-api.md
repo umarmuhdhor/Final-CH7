@@ -100,8 +100,8 @@ Var (bukan rahasia) ditulis di `vars` `backend/api/wrangler.jsonc` (ter-commit).
 | Nama | Jenis | Di mana diset | Contoh / catatan |
 |---|---|---|---|
 | `DB` | binding Hyperdrive | `wrangler.jsonc` (`id` + `localConnectionString`) | `shoo-db` (fase 07) |
-| `SUPABASE_URL` | secret | `wrangler secret put` · `.dev.vars` | cloud `https://nmekxihgjszgcibqytyj.supabase.co`, lokal `http://127.0.0.1:54321` (fase 09) |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | hanya untuk Storage API; lokal dari `supabase status` (fase 09) |
+| `SUPABASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · `.dev.vars` / `vitest.config.ts` (lokal, dari `supabase status`) | cloud `https://nmekxihgjszgcibqytyj.supabase.co`, lokal `http://127.0.0.1:54321`. URL proyek publik, bukan rahasia (D-alief-B07) |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | secret key Supabase (`sb_secret_…`, nama `shoo-worker`; atau JWT `service_role` legacy), hanya untuk Storage API; lokal dari `supabase status` (fase 09). Kosong → screenshot dibuang, scan tetap 201 |
 | `INVITE_BASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | URL Worker; lokal `http://localhost:8787` (fase 07) |
 | `APNS_TOPIC` | var | `supabase secrets set --env-file` (Edge Function) · `wrangler.jsonc` `vars` kalau sender langsung | bundle ID build yang diuji: build iPhone Alief (fase 11, D7) → build TestFlight (fase 16); test memakai nilai env |
 | `APNS_ENV` | var | `wrangler.jsonc` `vars` + `supabase secrets set` (Edge Function) | `sandbox` (fase 11) → `production` (fase 16) |
