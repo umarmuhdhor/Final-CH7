@@ -67,13 +67,17 @@ final class AppEnvironment {
 
     /// ON-03: registers the device and saves the mode for good. The repository then answers as this
     /// device (the mock adopts the name, avatar and mode; the API knows them from the token).
+    @MainActor
     func register(name: String, mode: UserMode) async throws -> DeviceRegistration {
         let registration = try await repository.registerDevice(name: name, mode: mode, apnsToken: nil)
+        // TODO(sync:alief): save registration.token in the Keychain (AfterFirstUnlockThisDeviceOnly, P4) and the
+        // App Group session keys before chooseMode — replace after fase 13
         settings.chooseMode(mode)
         return registration
     }
 
     /// After ON-05: the tabs replace onboarding.
+    @MainActor
     func finishOnboarding() {
         settings.onboardingCompleted = true
     }

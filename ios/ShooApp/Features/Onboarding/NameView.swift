@@ -4,6 +4,7 @@ import SwiftUI
 struct NameView: View {
     @Bindable var model: OnboardingModel
     @FocusState private var focused: Bool
+    @Environment(\.locale) private var locale
 
     var body: some View {
         OnboardingPage {
@@ -39,11 +40,20 @@ struct NameView: View {
                 .accessibilityIdentifier("name.continue")
         }
         .onAppear { focused = true }
+        .onChange(of: visibleProblem) { _, problem in
+            guard let problem else { return }
+            let key: String.LocalizationValue = problem == .empty ? "Enter your name." : "Use 20 characters or fewer."
+            AccessibilityNotification.Announcement(L10n.string(key, language: AppLanguage(locale: locale))).post()
+        }
+    }
+
+    private var visibleProblem: NameRule.Problem? {
+        model.name.isEmpty ? nil : model.nameProblem
     }
 
     /// Nothing typed yet is not an error; spaces only or too long is.
     private var problemMessage: LocalizedStringKey? {
-        guard !model.name.isEmpty, let problem = model.nameProblem else { return nil }
+        guard let problem = visibleProblem else { return nil }
         switch problem {
         case .empty: return "Enter your name."
         case .tooLong: return "Use 20 characters or fewer."

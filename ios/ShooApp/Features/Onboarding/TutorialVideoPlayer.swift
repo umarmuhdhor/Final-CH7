@@ -14,8 +14,14 @@ struct TutorialVideoPlayer: View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             if let url = Self.videoURL {
-                PlayerController(url: url, onRestore: {})
+                PlayerController(url: url)
                     .ignoresSafeArea()
+            } else {
+                Text("The video isn't available right now.")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(32)
             }
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
@@ -32,10 +38,10 @@ struct TutorialVideoPlayer: View {
 
 private struct PlayerController: UIViewControllerRepresentable {
     let url: URL
-    let onRestore: () -> Void
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         do {
+            // Needed for Picture in Picture; switched off again when the player closes.
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
         } catch {
             Log.app.error("Audio session for tutorial video failed", error)
@@ -52,6 +58,11 @@ private struct PlayerController: UIViewControllerRepresentable {
 
     static func dismantleUIViewController(_ controller: AVPlayerViewController, coordinator: Coordinator) {
         controller.player?.pause()
+        do {
+            try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            Log.app.error("Audio session deactivation failed", error)
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }

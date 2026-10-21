@@ -3,6 +3,9 @@ import SwiftUI
 /// ON-03: Guardian or Protected, saved for good. Saving registers the device.
 struct ModeView: View {
     @Bindable var model: OnboardingModel
+    @Environment(\.locale) private var locale
+
+    private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
         OnboardingPage {
@@ -42,6 +45,11 @@ struct ModeView: View {
             }
             .disabled(model.selectedMode == nil || model.isWorking)
             .accessibilityIdentifier("mode.continue")
+        }
+        .onChange(of: model.registrationFailed) { _, failed in
+            if failed {
+                AccessibilityNotification.Announcement(L10n.string("Couldn't save. Check your connection and try again.", language: language)).post()
+            }
         }
     }
 }

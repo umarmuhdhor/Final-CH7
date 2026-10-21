@@ -6,6 +6,7 @@ struct TurnOnExtensionView: View {
     let model: OnboardingModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var isVideoPresented = false
+    @ScaledMetric(relativeTo: .headline) private var badgeSize: CGFloat = 36
 
     private let steps = ExtensionSetup.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
 
@@ -22,12 +23,16 @@ struct TurnOnExtensionView: View {
                         HStack(alignment: .top, spacing: 16) {
                             Text(verbatim: "\(index + 1)")
                                 .font(.headline)
-                                .frame(width: 36, height: 36)
+                                .frame(width: badgeSize, height: badgeSize)
                                 .background(Color.accentColor.opacity(0.15), in: Circle())
-                                .accessibilityHidden(true)
-                            Label { Text(step.text) } icon: { Image(systemName: step.systemImage).foregroundStyle(.tint) }
-                                .font(.body)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityLabel(Text("Step \(index + 1)"))
+                            Label {
+                                Text(step.text)
+                            } icon: {
+                                Image(systemName: step.systemImage).foregroundStyle(.tint).accessibilityHidden(true)
+                            }
+                            .font(.body)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .accessibilityElement(children: .combine)
                     }

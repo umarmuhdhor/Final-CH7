@@ -14,13 +14,36 @@ struct OnboardingFlow: View {
             }
         }
         .onAppear {
-            if model == nil { model = OnboardingModel(environment: env) }
+            guard model == nil else { return }
+            let model = OnboardingModel(environment: env)
+            #if DEBUG
+            if let step = Self.screenshotStep { model.showForScreenshot(step) }
+            #endif
+            self.model = model
         }
     }
 }
 
+#if DEBUG
+extension OnboardingFlow {
+    /// `-debug.onboardingStep name|mode|greeting|connect|turnOnExtension|notifications`
+    static var screenshotStep: OnboardingStep? {
+        switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
+        case "name": .name
+        case "mode": .mode
+        case "greeting": .greeting
+        case "connect": .connect
+        case "turnOnExtension": .turnOnExtension
+        case "notifications": .notifications
+        default: nil
+        }
+    }
+}
+#endif
+
 private struct OnboardingStepView: View {
     let model: OnboardingModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -35,8 +58,12 @@ private struct OnboardingStepView: View {
             case .done: Color(.systemBackground)
             }
         }
-        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)).combined(with: .opacity))
-        .animation(.smooth, value: model.step)
+        .transition(
+            reduceMotion
+                ? .opacity
+                : .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)).combined(with: .opacity)
+        )
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: model.step)
     }
 }
 

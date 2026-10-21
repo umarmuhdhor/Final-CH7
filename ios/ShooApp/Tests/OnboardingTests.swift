@@ -42,6 +42,11 @@ struct NameRuleTests {
         #expect(NameRule.validate(" " + String(repeating: "c", count: 20) + " ") == .success(String(repeating: "c", count: 20)))
     }
 
+    @Test(arguments: ["\u{200B}", "\u{2060}\u{FEFF}", " \u{200B} ", "\u{0007}"])
+    func invisibleCharactersAreNotAName(name: String) {
+        #expect(NameRule.validate(name) == .failure(.empty))
+    }
+
     @Test func emojiCountsAsOneCharacter() {
         let family = "👨‍👩‍👧"
         #expect(NameRule.validate(String(repeating: family, count: 20)) == .success(String(repeating: family, count: 20)))
@@ -111,7 +116,7 @@ struct OnboardingModelTests {
     @Test func guardianPath() async {
         let model = await registered(.guardian)
         #expect(model.step == .greeting)
-        #expect(model.registration.map { AvatarCatalog.ids.contains($0.avatarId) } == true)
+        #expect(model.avatarId.map(AvatarCatalog.ids.contains) == true)
         #expect(settings.mode == .guardian)
         #expect(!settings.onboardingCompleted)
         model.continueFromGreeting()
@@ -157,9 +162,17 @@ struct OnboardingModelTests {
         _ = await registered(.protected)
         #expect(!settings.chooseMode(.guardian))
         #expect(settings.mode == .protected)
-        // Relaunch before onboarding finished: never back to ON-03.
+        // Relaunch before onboarding finished: never back to ON-03 (Protected resumes at Connect).
         let relaunched = model()
-        #expect(relaunched.step == .turnOnExtension)
+        #expect(relaunched.step == .connect)
+    }
+
+    @Test func protectedRelaunchResumesAtConnectUntilPassed() async {
+        let first = await registered(.protected)
+        #expect(model().step == .connect)
+        first.continueFromGreeting()
+        first.continueFromConnect()
+        #expect(model().step == .turnOnExtension)
     }
 
     @Test func extensionOffStaysActiveContinues() async {

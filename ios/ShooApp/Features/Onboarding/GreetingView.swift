@@ -7,7 +7,7 @@ struct GreetingView: View {
     var body: some View {
         OnboardingPage {
             VStack(spacing: 20) {
-                AvatarView(id: model.registration?.avatarId ?? "", size: 128, name: model.registeredName)
+                AvatarView(id: model.avatarId ?? "", size: 128, name: model.registeredName)
                     .accessibilityIdentifier("greeting.avatar")
                     .padding(.top, 32)
                 Text("Hi, \(model.registeredName)!")

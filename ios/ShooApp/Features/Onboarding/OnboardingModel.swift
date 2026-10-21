@@ -13,7 +13,11 @@ enum NameRule {
     /// The trimmed name, or why it is not allowed.
     static func validate(_ raw: String) -> Result<String, Problem> {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty { return .failure(.empty) }
+        // Zero-width and control characters would show as a blank name in "Hi, …" and the family list.
+        let invisible = trimmed.unicodeScalars.allSatisfy {
+            $0.properties.isWhitespace || [.format, .control].contains($0.properties.generalCategory)
+        }
+        if invisible { return .failure(.empty) }
         if trimmed.count > maxLength { return .failure(.tooLong) }
         return .success(trimmed)
     }
@@ -46,7 +50,8 @@ final class OnboardingModel {
     private(set) var step: OnboardingStep
     var name = ""
     var selectedMode: UserMode?
-    private(set) var registration: DeviceRegistration?
+    /// The random avatar from `POST /devices`. The token is not kept here (fase 13 stores it in the Keychain).
+    private(set) var avatarId: String?
     private(set) var registeredName = ""
     private(set) var isWorking = false
     private(set) var registrationFailed = false
@@ -55,8 +60,13 @@ final class OnboardingModel {
 
     init(environment: AppEnvironment) {
         self.environment = environment
-        // Registered earlier but onboarding not finished (app closed in between): continue at ON-04.
-        step = environment.settings.mode == nil ? .splash : .turnOnExtension
+        // Registered earlier but onboarding not finished (app closed in between): never back to ON-03.
+        // Protected continues at Connect until it was passed once, everyone else at ON-04.
+        switch environment.settings.mode {
+        case nil: step = .splash
+        case .protected where !environment.settings.onboardingConnectPassed: step = .connect
+        default: step = .turnOnExtension
+        }
     }
 
     var mode: UserMode? { environment.settings.mode }
@@ -87,7 +97,7 @@ final class OnboardingModel {
         registrationFailed = false
         defer { isWorking = false }
         do {
-            registration = try await environment.register(name: trimmed, mode: selectedMode)
+            avatarId = try await environment.register(name: trimmed, mode: selectedMode).avatarId
             registeredName = trimmed
             step = .greeting
         } catch {
@@ -103,6 +113,7 @@ final class OnboardingModel {
 
     func continueFromConnect() {
         guard step == .connect else { return }
+        environment.settings.onboardingConnectPassed = true
         step = .turnOnExtension
     }
 
@@ -127,6 +138,17 @@ final class OnboardingModel {
         guard step == .notifications, canSkipNotifications else { return }
         finish()
     }
+
+    #if DEBUG
+    /// UI-gate screenshots only (`-debug.onboardingStep greeting`): shows a step with sample data.
+    func showForScreenshot(_ step: OnboardingStep) {
+        name = "Rina"
+        registeredName = "Rina"
+        selectedMode = mode ?? .guardian
+        avatarId = "avatar_05"
+        self.step = step
+    }
+    #endif
 
     private func finish() {
         environment.finishOnboarding()

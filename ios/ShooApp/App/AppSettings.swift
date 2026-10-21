@@ -13,6 +13,7 @@ final class AppSettings {
         static let mode = "settings.mode"
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let familyModeOn = "settings.familyModeOn"
+        static let onboardingConnectPassed = "settings.onboardingConnectPassed"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -30,6 +31,11 @@ final class AppSettings {
         didSet { defaults.set(onboardingCompleted, forKey: Keys.onboardingCompleted) }
     }
 
+    /// Protected passed the Connect step of onboarding (resume point after a relaunch).
+    var onboardingConnectPassed: Bool {
+        didSet { defaults.set(onboardingConnectPassed, forKey: Keys.onboardingConnectPassed) }
+    }
+
     /// GD-02: the guardian's last Family mode toggle.
     var familyModeOn: Bool {
         didSet { defaults.set(familyModeOn, forKey: Keys.familyModeOn) }
@@ -42,6 +48,7 @@ final class AppSettings {
         mode = defaults.string(forKey: Keys.mode).flatMap(UserMode.init(rawValue:))
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
+        onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.
@@ -54,7 +61,7 @@ final class AppSettings {
 
     /// Removes every stored preference (fresh install), e.g. `-UITestReset YES` before launch.
     static func clear(defaults: UserDefaults) {
-        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn] {
+        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn, Keys.onboardingConnectPassed] {
             defaults.removeObject(forKey: key)
         }
     }
@@ -66,5 +73,6 @@ final class AppSettings {
         mode = nil
         onboardingCompleted = false
         familyModeOn = false
+        onboardingConnectPassed = false
     }
 }

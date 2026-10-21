@@ -289,3 +289,33 @@ Format:
 - Keputusan: `SiteIcon` menampilkan huruf pertama domain; `faviconUrl` dari kontrak tidak dimuat.
 - Alasan: memuat favicon berarti app menghubungi host yang dicurigai penipuan (bocor IP + "pernah dibuka" ke pelaku) dan menyimpan gambarnya di cache disk. Opsi paling privat (SECURITY §3, sejalan P9). Fase 01 langkah 7 mengizinkan "favicon atau huruf awal domain".
 - File: `Components/SiteIcon.swift`.
+
+## D-alief-A04 · 22 Okt 2026 · app (fase 02) · Alur onboarding hanya maju, titik lanjut setelah relaunch
+
+- Keputusan: `OnboardingModel` hanya maju: splash → nama → mode → sapaan → (Connect, Protected) → ON-04 → ON-05. Mode disimpan sekali lewat `AppSettings.chooseMode` (setter `mode` jadi `private(set)`). Relaunch sebelum selesai: mode belum ada → splash; Protected yang belum melewati Connect → Connect (`settings.onboardingConnectPassed`); selain itu → ON-04. Token registrasi tidak disimpan di model (fase 13: Keychain + App Group, `TODO(sync:alief)` di `AppEnvironment.register`).
+- Alasan: fase 02 langkah 3 ("tidak ada jalan kembali ke ON-03") + temuan review H2 (Protected yang menutup app di Connect tidak boleh melewatkannya).
+- File: `Features/Onboarding/OnboardingModel.swift`, `App/AppSettings.swift`, `App/AppEnvironment.swift`, `Tests/OnboardingTests.swift`.
+
+## D-alief-A05 · 22 Okt 2026 · app (fase 02) · Hook uji onboarding (DEBUG)
+
+- Keputusan: launch argument DEBUG `-UITestReset YES` (hapus preferensi app), `-UITestExtensionActive YES` (status extension dianggap Active tanpa menulis App Group asli), `-UITestNotifications granted|denied` (jawaban izin tetap, tanpa alert sistem), `-debug.onboardingStep <step>` (screenshot gerbang UI). Semua di dalam `#if DEBUG`.
+- Alasan: simulator tidak punya heartbeat extension, dan alert izin sistem tidak bisa direset per test untuk notifikasi; UI test harus deterministik. Catatan review: key `-settings.*` lewat domain argumen `UserDefaults` juga terbaca di Release, tapi hanya bisa diset oleh orang yang menjalankan app dari Xcode/`devicectl`.
+- File: `App/AppEnvironment.swift`, `Support/NotificationPermission.swift`, `Features/Onboarding/OnboardingFlow.swift`, `UITests/OnboardingUITests.swift`.
+
+## D-alief-A06 · 22 Okt 2026 · app (fase 02) · ON-04: langkah per versi iOS + `SFSafariSettings`
+
+- Keputusan: iOS 26.2+ → `SFSafariSettings.openExtensionsSettings(forIdentifiers: [bundleId + ".extension"])` (API dicek di header `SafariServices/SFSafariSettings.h` SDK iOS 27.1: `API_AVAILABLE(ios(26.2))`, dipanggil saat foreground); gagal atau iOS lebih lama → `UIApplication.openSettingsURLString`. Tidak ada `App-prefs:`. Langkah bergambar (SF Symbols) per versi: 26.2+ "Tap Turn on", 18+ "Settings › Apps › Safari › Extensions", 17 "Settings › Safari › Extensions". Nama menu Pengaturan berbahasa Indonesia dan perilaku di perangkat BELUM DIVERIFIKASI (01S / QA-E2E #17).
+- Alasan: fase 02 langkah 4; ID extension tidak di-hardcode (L0).
+- File: `Features/Onboarding/ExtensionSetup.swift`, `TurnOnExtensionView.swift`.
+
+## D-alief-A07 · 22 Okt 2026 · app (fase 02) · Video tutorial placeholder + PiP
+
+- Keputusan: `Resources/onboarding-tutorial-placeholder.mp4` (4 s warna polos, ±4 KB, dibuat dengan ffmpeg) sampai video PM ada (C15, `TODO(sync:umar)`). Pemutar `AVPlayerViewController` layar penuh, `allowsPictureInPicturePlayback`, `AVAudioSession .playback/.moviePlayback` saat dibuka dan dinonaktifkan saat ditutup. PiP di luar app (di atas Settings) butuh `UIBackgroundModes: [audio]` = TODO C3 butir 4 (Umar); sampai itu video hanya diputar di dalam app.
+- Alasan: fase 02 langkah 4, risiko "Video PM belum ada".
+- File: `Features/Onboarding/TutorialVideoPlayer.swift`, `Resources/onboarding-tutorial-placeholder.mp4`.
+
+## D-alief-A08 · 22 Okt 2026 · app (fase 02) · Izin notifikasi dan pengingat
+
+- Keputusan: izin diminta di ON-05 dengan `[.alert, .sound]` (payload push tanpa badge). Guardian tidak bisa melewati ON-05 tetapi tetap lanjut kalau menolak; Protected boleh "Nanti saja". Banner pengingat di Shield hanya untuk Guardian (hanya Guardian yang menerima push menurut kontrak); belum pernah ditanya → tombol memunculkan prompt, ditolak → membuka Settings notifikasi app. `registerForRemoteNotifications()` setelah izin diberikan; token dikirim di fase 15. Tidak ada dialog konfirmasi tambahan untuk mode permanen: PRD hanya meminta teks peringatan (saran review MEDIUM, dicek ulang di QA-A).
+- Alasan: fase 02 langkah 5, SECURITY §3 P7 (just-in-time, teks jujur).
+- File: `Support/NotificationPermission.swift`, `Components/NotificationReminderBanner.swift`, `Features/Onboarding/NotificationPermissionView.swift`, `Features/Shield/ShieldPlaceholderView.swift`.

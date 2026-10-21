@@ -5,7 +5,7 @@ struct ShieldPlaceholderView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @State private var status = ExtensionStatus.off(lastSeen: nil)
-    @State private var showsNotificationReminder = false
+    @State private var notificationStatus = NotificationAuthorization.authorized
 
     var body: some View {
         EmptyStateView(
@@ -15,16 +15,17 @@ struct ShieldPlaceholderView: View {
         )
         .navigationTitle(localized: "Shield")
         .safeAreaInset(edge: .top) {
-            if showsNotificationReminder {
-                NotificationReminderBanner().padding(.horizontal, 16)
+            if NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) {
+                NotificationReminderBanner(status: notificationStatus) {
+                    Task { notificationStatus = await env.notifications.request() }
+                }
+                .padding(.horizontal, 16)
             }
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             status = env.extensionStatus()
-            showsNotificationReminder = NotificationReminder.isShown(
-                status: await env.notifications.status(), mode: env.settings.mode
-            )
+            notificationStatus = await env.notifications.status()
         }
     }
 }

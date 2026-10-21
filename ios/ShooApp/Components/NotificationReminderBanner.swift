@@ -2,6 +2,10 @@ import SwiftUI
 
 /// ON-05 reminder on Home when a Guardian has not allowed notifications. Opens the app's notification settings.
 struct NotificationReminderBanner: View {
+    /// Never asked yet: show the system prompt. Denied: only Settings can change it.
+    let status: NotificationAuthorization
+    let requestPermission: () -> Void
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "bell.slash.fill")
@@ -14,7 +18,9 @@ struct NotificationReminderBanner: View {
                 Text("You won't hear when your family is at risk.")
                     .font(.subheadline)
                 Button {
-                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                    if status == .notDetermined {
+                        requestPermission()
+                    } else if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                         UIApplication.shared.open(url)
                     }
                 } label: {
@@ -33,5 +39,5 @@ struct NotificationReminderBanner: View {
 }
 
 #Preview {
-    NotificationReminderBanner().padding()
+    NotificationReminderBanner(status: .denied, requestPermission: {}).padding()
 }

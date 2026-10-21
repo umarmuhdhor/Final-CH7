@@ -411,6 +411,16 @@
         }
       }
     },
+    "Step %lld": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langkah %lld"
+          }
+        }
+      }
+    },
     "Still can't? Watch the video": {
       "localizations": {
         "id": {
@@ -437,6 +447,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ketuk Nyalakan di bawah."
+          }
+        }
+      }
+    },
+    "The video isn't available right now.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videonya belum tersedia."
           }
         }
       }

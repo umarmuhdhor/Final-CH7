@@ -43,6 +43,7 @@ struct SystemNotificationPermission: NotificationPermission {
     }
 }
 
+#if DEBUG
 /// Fixed answer for UI tests and screenshots (`-UITestNotifications granted|denied`, DEBUG only).
 @MainActor
 final class FixedNotificationPermission: NotificationPermission {
@@ -60,6 +61,7 @@ final class FixedNotificationPermission: NotificationPermission {
         return answer
     }
 }
+#endif
 
 /// The small "Notifications are off" banner on Home (ON-05).
 enum NotificationReminder {

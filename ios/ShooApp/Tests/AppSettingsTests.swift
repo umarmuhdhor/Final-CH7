@@ -52,7 +52,7 @@ struct AppSettingsTests {
         #expect(me.name == "Rina")
         #expect(me.avatarId == registration.avatarId)
         #expect(try await env.repository.scans(owner: .me, status: nil, cursor: nil).items.isEmpty)
-        env.finishOnboarding()
+        await env.finishOnboarding()
         #expect(settings.onboardingCompleted)
     }
 
