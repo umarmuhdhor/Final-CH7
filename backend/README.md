@@ -51,14 +51,15 @@ pnpm -C backend/api dev                                    # http://localhost:87
 | POST | `/verdicts` | Bearer guardian | `{ scanId, value: safe\|not_safe }` → `{ verdict }` for the scan's owner + domain; 404 unknown scan, 403 `verdict_not_allowed` (not mine and not my member's), 409 `verdict_not_allowed` (not blocked); 60/min. A `not_safe` on a connected member's scan queues the domain for review (allowlist excluded) |
 | GET | `/verdicts?domain=` | Bearer | `{ verdict \| null }` for (me, domain); domain normalized (case, `www.`); 30 per 10 s per device with `Retry-After`. Disconnect or device deletion removes the ex-guardian's verdicts for that member |
 | GET | `/blocklist?since=` | Bearer | approved global domains; `removed[]` only with `since`; `nextSince` has microseconds |
-| POST | `/debug/apns-spike` | `x-spike-key` | fase 07 spike only, 404 unless `APNS_SPIKE=1` (removed in fase 11) |
 
 Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
+
+Push (GD-06, fase 11): `POST /scans` from a protected device sends the guardian `{ aps: { alert: { body }, sound: "default" }, scanId }` straight from the Worker to APNs over HTTP/2 (D-alief-B01), text in the guardian's language, after the response (`waitUntil`). Only 410 `Unregistered`/`ExpiredToken` clears the guardian's `apns_token`; a push failure never fails the scan.
 Every response is `Cache-Control: private, no-store` (user data, SECURITY §3 P13) except `GET /blocklist` (`private, max-age=300`). Workers invocation logs are off; logs never carry ids, names, URLs or tokens.
 
 ## Schema summary
 
-Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql`, `20261021160000_family.sql`, `20261021170000_screenshot_bucket.sql`, `20261021180000_verdicts.sql` (details: `plan/alief/ref/R2-skema-db.md`).
+Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql`, `20261021160000_family.sql`, `20261021170000_screenshot_bucket.sql`, `20261021180000_verdicts.sql`, `20261022100000_push_log_privacy.sql` (details: `plan/alief/ref/R2-skema-db.md`).
 
 | Table | Purpose |
 |---|---|
@@ -69,7 +70,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
-| `push_log` | push results for debugging and QA (fase 11) |
+| `push_log` | one row per push: guardian, scan, result code (`sent`, `logged`, `failed:<status> <reason>`, `failed:timeout\|network\|config`; CHECK). No notification text (D-alief-B11) |
 | `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP |
 
 Access: role `shoo_api` (no password in migrations) has CRUD on these tables only. `anon`/`authenticated` have no grants; RLS is on everywhere with a single `shoo_api` policy. No RPCs: the Worker uses plain SQL through postgres.js tagged templates.
@@ -96,8 +97,9 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
 | `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot links (`openssl rand -base64 32`); unset → `screenshotUrl` null; changing it invalidates every link |
-| `APNS_SPIKE` | var | `"1"` only during the fase 07 spike |
-| `SPIKE_KEY` | secret | header `x-spike-key` for the spike |
+| `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | APNs token auth (`.p8` as one line of base64, B7). Any APNs value unset → pushes only logged (`push_log` `logged`) |
+| `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
+| `APNS_ENV` | var | `sandbox` (Debug builds) → `production` (TestFlight, fase 16) |
 
 ## Deploy (manual until the GitHub Action is on)
 

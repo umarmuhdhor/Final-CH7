@@ -30,8 +30,6 @@ export default defineConfig({
           INVITE_BASE_URL: "http://localhost:8787",
           SUPABASE_URL: storage.url,
           SUPABASE_SERVICE_ROLE_KEY: storage.key,
-          APNS_SPIKE: "0",
-          SPIKE_KEY: "test-spike-key",
           SCREENSHOT_URL_SECRET: "test-screenshot-url-secret",
         },
       },

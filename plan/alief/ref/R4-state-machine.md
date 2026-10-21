@@ -40,7 +40,8 @@ POST /scans (device X)
  2. Screenshot: lolos batas ukuran, dedupe, kuota → upload; selain itu dibuang
  3. Respons 201 { id }
  4. waitUntil: kalau X mode protected dan punya guardian G dengan apns_token:
-      kirim push ke G lewat PushSender (relay Edge Function → APNs, D-alief-16; teks bahasa G), tulis push_log
+      (lookup sebelum respons; maks 10 push / 10 menit per G) kirim push ke G lewat ApnsSender langsung
+      (D-alief-B01/B11; teks bahasa G), 410 → kosongkan apns_token (compare-and-clear), tulis push_log (kode hasil saja)
     kalau X mode guardian: tidak ada push (dia melihat popup sendiri)
 ```
 

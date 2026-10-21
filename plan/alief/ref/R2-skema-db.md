@@ -106,14 +106,16 @@ create table ops_heartbeat (                              -- ditulis /healthz/db
   at            timestamptz not null default now()
 );
 
-create table push_log (                                   -- untuk LogSender, debugging, dan QA
+create table push_log (                                   -- satu baris per push: debugging, QA, batas push per Guardian
   id            bigint generated always as identity primary key,
   to_device_id  text references devices(id) on delete cascade,
   scan_id       text references scans(id) on delete cascade,
-  body          text not null,
-  result        text not null,                            -- 'sent' | 'logged' | 'failed:<reason>'
+  -- body dihapus di fase 11 (D-alief-B11): teks push = pushText(bahasa, status, nama, skor), dibangun ulang dari scan_id
+  result        text not null                             -- CHECK push_log_result_format:
+    check (result ~ '^(sent|logged|failed:([0-9]{3}( [A-Za-z]{1,64})?|timeout|network|config))$'),
   created_at    timestamptz not null default now()
 );
+-- index push_log_device_created (to_device_id, created_at) untuk batas 10 push / 10 menit per Guardian; push_log_created untuk retensi
 ```
 
 ## 3. Role dan grant

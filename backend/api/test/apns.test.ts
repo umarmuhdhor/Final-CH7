@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { base64url } from "../src/http/crypto";
 import { apnsJwt, importApnsKey } from "../src/services/push/jwt";
-import { call } from "./helpers/seed";
 
 const decode = (part: string) => JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
 
@@ -34,9 +33,3 @@ describe("APNs JWT (ES256)", () => {
   });
 });
 
-describe("POST /debug/apns-spike", () => {
-  it("404 while APNS_SPIKE is off, even with the key", async () => {
-    const res = await call("/debug/apns-spike", { method: "POST", headers: { "x-spike-key": "test-spike-key" } });
-    expect(res.status).toBe(404);
-  });
-});
