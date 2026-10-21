@@ -65,6 +65,7 @@ Tap → open Detail for `scanId` (GD-06).
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/analyze` | `{ snapshot: PageSnapshot, localSignals: Signal[] }` | `{ signals: Signal[] }` — layer 3–4 only |
+| GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape as `GET /blocklist`. Downloaded by the extension every 6 h (full daily) |
 
 `/analyze` is **stateless**: it must not store the snapshot. Timeout on client: 8 s → treat as no signals.
 

@@ -20,7 +20,20 @@ globalThis.ShooDetector = {
   analyzeLocal: async (snapshot) => [],
 };
 ```
-Must be fast (< 50 ms typical), never throw (return `[]` on error), never make network calls except fetching/refreshing its own phishing list.
+Must be fast (< 50 ms typical), never throw (return `[]` on error), and **never make network calls**.
+
+### Layer-1 lists: `ShooLists` (provided by the extension)
+The extension's `background.js` downloads and refreshes the lists (`GET /blocklist`, `GET /public-blocklist`) and exposes
+one helper in the content-script scope, available before `analyzeLocal` runs:
+
+```js
+/** @returns {Promise<{ source: "shoo" | "public", domain: string, addedAt: string } | null>} */
+globalThis.ShooLists.match(hostname);
+```
+- Checks the hostname and each parent down to the registrable domain (never above it: no `vercel.app`, no `co.id`).
+- Resolves `null` when nothing matches, when lists aren't downloaded yet (app not set up), or on any error. Never rejects.
+- On a match the detector returns `db_match` (weight 100) with `evidence` = `source`.
+- Design and refresh timing: `docs/design/blocklist.md`.
 
 ## PageSnapshot (extension → detector / ai)
 ```ts
