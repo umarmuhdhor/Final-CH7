@@ -34,6 +34,7 @@ struct MainTabView: View {
         switch route {
         case .detail(let scanId):
             DetailView(scanId: scanId, repository: env.repository)
+                .id(scanId)
         }
     }
 }

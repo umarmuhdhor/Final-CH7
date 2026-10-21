@@ -17,7 +17,7 @@ struct DetailView: View {
         content
             .navigationTitle(localized: "Detail")
             .navigationBarTitleDisplayMode(.inline)
-            .task { await model.load() }
+            .task(id: model.scanId) { await model.load() }
     }
 
     @ViewBuilder
@@ -74,20 +74,23 @@ struct DetailView: View {
             if model.canValidate {
                 VerdictButtons(current: scan.verdict?.value, failed: model.verdictFailed) { value in
                     Task {
-                        await model.setVerdict(value)
-                        announceVerdictResult()
+                        let outcome = await model.setVerdict(value)
+                        announce(outcome)
                     }
                 }
             }
         }
-        .sensoryFeedback(.success, trigger: scan.verdict?.value) { _, new in new != nil }
+        .sensoryFeedback(.success, trigger: model.verdictSaves)
     }
 
     /// VoiceOver hears the result of a tap: the new note, or that it was rolled back.
-    private func announceVerdictResult() {
-        let text = model.verdictFailed
-            ? L10n.string("Couldn't save. Check your connection and try again.", language: language)
-            : model.verdictNote(language: language)
+    private func announce(_ outcome: DetailModel.VerdictOutcome) {
+        let text: String? = switch outcome {
+        case .saved: model.verdictNote(language: language)
+        case .rolledBack: L10n.string("Couldn't save. Check your connection and try again.", language: language)
+        case .gone: L10n.string("This item is gone", language: language)
+        case .ignored: nil
+        }
         if let text { AccessibilityNotification.Announcement(text).post() }
     }
 

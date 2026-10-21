@@ -14,6 +14,17 @@ final class DetailModel {
         case failed
     }
 
+    /// What `setVerdict` did, so the view announces and gives haptics only for real results.
+    enum VerdictOutcome: Equatable {
+        /// Not allowed here, or another verdict is still being sent.
+        case ignored
+        case saved
+        /// The server said no; the previous verdict is back.
+        case rolledBack
+        /// The scan no longer exists (retention, disconnect, deleted data).
+        case gone
+    }
+
     let scanId: String
     private(set) var state: LoadState = .loading
     private(set) var scan: ScanResult?
@@ -22,6 +33,8 @@ final class DetailModel {
     private(set) var isSubmittingVerdict = false
     /// The last verdict did not reach the server and was rolled back.
     private(set) var verdictFailed = false
+    /// Counts verdicts the server confirmed (drives the success haptic).
+    private(set) var verdictSaves = 0
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
@@ -70,36 +83,59 @@ final class DetailModel {
 
     func load() async {
         if scan == nil { state = .loading }
+        let epoch = verdictEpoch
         do {
-            async let scan = repository.scan(id: scanId)
-            async let viewer = repository.me()
-            (self.scan, self.viewer) = try await (scan, viewer)
+            async let fetchedScan = repository.scan(id: scanId)
+            async let fetchedViewer = repository.me()
+            var loadedScan = try await fetchedScan
+            let loadedViewer = try await fetchedViewer
+            // A verdict tapped while this load was in flight is newer than the snapshot.
+            if isSubmittingVerdict || epoch != verdictEpoch, let current = scan, current.id == loadedScan.id {
+                loadedScan.verdict = current.verdict
+            }
+            scan = loadedScan
+            viewer = loadedViewer
             state = .loaded
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound
-        } catch is CancellationError {
-            // The screen went away; keep whatever is shown.
         } catch {
+            // Leaving the screen cancels the load (`CancellationError`, or `URLError.cancelled` from URLSession).
+            guard !Self.isCancellation(error), !Task.isCancelled else { return }
             Log.ui.error("Detail load failed", error)
             if scan == nil { state = .failed }
         }
     }
 
     /// GD-07: applies at once, no confirmation. Optimistic; rolled back if the server says no.
-    func setVerdict(_ value: Verdict.Value) async {
-        guard canValidate, !isSubmittingVerdict, let viewer, let previous = scan else { return }
+    @discardableResult
+    func setVerdict(_ value: Verdict.Value) async -> VerdictOutcome {
+        guard canValidate, !isSubmittingVerdict, let viewer, let previous = scan else { return .ignored }
         isSubmittingVerdict = true
+        verdictEpoch += 1
         verdictFailed = false
         scan?.verdict = Verdict(value: value, byDeviceId: viewer.deviceId, byName: viewer.name, decidedAt: now())
         defer { isSubmittingVerdict = false }
         do {
             let verdict = try await repository.setVerdict(scanId: previous.id, value: value)
             scan?.verdict = verdict
+            verdictSaves += 1
+            return .saved
+        } catch RepositoryError.api(.notFound, _) {
+            scan = nil
+            state = .notFound
+            return .gone
         } catch {
             Log.ui.error("Verdict failed", error)
             scan?.verdict = previous.verdict
             verdictFailed = true
+            return .rolledBack
         }
+    }
+
+    @ObservationIgnored private var verdictEpoch = 0
+
+    private static func isCancellation(_ error: any Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 }
