@@ -80,9 +80,10 @@ export async function findProfile(sql: Sql, id: string): Promise<DeviceProfile |
  */
 export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
   return sql.begin(async (tx) => {
-    const shots = await tx<{ path: string }[]>`
-      select distinct screenshot_path as path from scans where owner_id = ${id} and screenshot_path is not null`;
+    // Deleting the scans first (with returning) leaves no window for an upload to slip in.
+    const shots = await tx<{ path: string | null }[]>`
+      delete from scans where owner_id = ${id} returning screenshot_path as path`;
     await tx`delete from devices where id = ${id}`;
-    return shots.map((s) => s.path);
+    return [...new Set(shots.flatMap((s) => (s.path ? [s.path] : [])))];
   });
 }

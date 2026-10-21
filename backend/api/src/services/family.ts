@@ -53,15 +53,19 @@ export async function joinFamily(sql: Sql, protectedId: string, ipHash: Uint8Arr
       }
 
       await lockGuardian(tx, found.guardianId);
+      // The guardian may have rotated the code while we waited for its lock.
+      const still = await findCode(tx, code);
+      if (!still || still.guardianId !== found.guardianId) return { fail: errors.codeInvalid };
       if ((await memberCount(tx, found.guardianId)) >= FAMILY_MAX) return { fail: errors.familyFull };
       await insertLink(tx, protectedId, found.guardianId);
       await recordAttempt(tx, protectedId, ipHash, true);
       return { ok: (await guardianSummary(tx, found.guardianId))! };
     });
   } catch (err) {
-    // Backstops for races the locks already prevent: PK (I2) and the I3 trigger.
+    // Backstops for races the locks already prevent: PK (I2), the I3 trigger, guardian FK.
     const e = err as { code?: string; message?: string };
     if (e.code === "23505") throw errors.alreadyConnected();
+    if (e.code === "23503") throw errors.codeInvalid(); // guardian deleted itself meanwhile
     if (e.code === "23514" && e.message === "family_full") throw errors.familyFull();
     throw err;
   }

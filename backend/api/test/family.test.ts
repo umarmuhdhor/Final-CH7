@@ -63,27 +63,16 @@ describe("POST /family/code", () => {
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
   });
 
-  it("takes over a colliding expired code and never an active one", async () => {
+  it("503 code_unavailable when every code is active; never steals one", async () => {
     const g1 = await createDevice("G1", "guardian");
     const g2 = await createDevice("G2", "guardian");
-    // Every code but 0042 is active for g1; 0042 is expired.
     await sql`insert into family_codes (code, guardian_id, expires_at)
-      select lpad(n::text, 4, '0'), ${g1.deviceId},
-             case when n = 42 then now() - interval '1 second' else now() + interval '60 seconds' end
-      from generate_series(0, 9999) n`;
-    const results = new Set<string>();
-    for (let i = 0; i < 3; i++) {
-      const res = await call("/family/code", { method: "POST", token: g2.token });
-      if (res.status === 200) results.add(((await res.json()) as { code: string }).code);
-      else {
-        expect(res.status).toBe(503);
-        expect(await errorCode(res)).toBe("code_unavailable");
-      }
-    }
-    // Only 0042 was free; any other code returned would have stolen an active one.
-    expect([...results].every((c) => c === "0042")).toBe(true);
-    const [row] = await sql`select guardian_id from family_codes where code = '0042'`;
-    if (results.size) expect(row!.guardian_id).toBe(g2.deviceId);
+      select lpad(n::text, 4, '0'), ${g1.deviceId}, now() + interval '60 seconds' from generate_series(0, 9999) n`;
+    const res = await call("/family/code", { method: "POST", token: g2.token });
+    expect(res.status).toBe(503);
+    expect(await errorCode(res)).toBe("code_unavailable");
+    const [row] = await sql<{ n: number }[]>`select count(*)::int as n from family_codes where guardian_id = ${g1.deviceId}`;
+    expect(row!.n).toBe(10000);
   });
 });
 
@@ -179,11 +168,11 @@ describe("POST /family/join", () => {
     expect((await join(await createDevice("Dad"), code)).status).toBe(200);
   });
 
-  it("5 failures per IP in 10 minutes → 429 for every device on that IP", async () => {
+  it("20 failures per IP in 10 minutes → 429 for every device on that IP (CGNAT-tolerant)", async () => {
     const g = await createDevice("G", "guardian");
     const { code } = await newCode(g);
     const ip = "198.51.100.200";
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 20; i++) {
       expect((await join(await createDevice(`P${i}`), otherCode(code), ip)).status).toBe(404);
     }
     const res = await join(await createDevice("Fresh"), code, ip);
@@ -193,7 +182,32 @@ describe("POST /family/join", () => {
     // Only hashes are stored, never the raw IP.
     const hash = await sha256(`join:${ip}`);
     const [row] = await sql<{ n: number }[]>`select count(*)::int as n from join_attempts where ip_hash = ${hash}`;
-    expect(row!.n).toBe(5);
+    expect(row!.n).toBe(20);
+  });
+
+  it("code_expired counts as a failure; family_full and already_connected do not", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    const { code } = await newCode(g);
+    await sql`update family_codes set expires_at = now() - interval '1 second' where code = ${code}`;
+    expect((await join(p, code)).status).toBe(410);
+
+    const fresh = (await newCode(g)).code;
+    for (const name of ["P1", "P2", "P3"]) expect((await join(await createDevice(name), fresh)).status).toBe(200);
+    expect((await join(p, fresh)).status).toBe(409); // family_full
+
+    const rows = await sql<{ success: boolean }[]>`select success from join_attempts where device_id = ${p.deviceId}`;
+    expect(rows.map((r) => r.success)).toEqual([false]);
+  });
+
+  it("already_connected does not record an attempt", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    const { code } = await newCode(g);
+    expect((await join(p, code)).status).toBe(200);
+    expect((await join(p, code)).status).toBe(409);
+    const rows = await sql<{ success: boolean }[]>`select success from join_attempts where device_id = ${p.deviceId}`;
+    expect(rows.map((r) => r.success)).toEqual([true]);
   });
 
   it("failures older than 10 minutes no longer count", async () => {

@@ -4,7 +4,7 @@
 
 drop index if exists join_attempts_ip_time;
 alter table join_attempts drop column ip;
-alter table join_attempts add column ip_hash bytea;
+alter table join_attempts add column ip_hash bytea not null;
 create index join_attempts_ip_time on join_attempts(ip_hash, attempted_at desc);
 
 -- Retention deletes (fase 12, R2 §6) filter on time only.

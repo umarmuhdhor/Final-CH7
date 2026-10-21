@@ -45,9 +45,14 @@ export function clientIp(header: (name: string) => string | undefined): string {
 }
 
 function ipv6Prefix64(ip: string): string {
-  const [head = "", tail] = ip.toLowerCase().split("::");
+  const lower = ip.toLowerCase();
+  // IPv4-mapped (::ffff:a.b.c.d) is really an IPv4 client.
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(lower);
+  if (mapped) return mapped[1]!;
+  const [head = "", tail] = lower.split("::");
   const left = head ? head.split(":") : [];
   const right = tail ? tail.split(":") : [];
-  const groups = tail === undefined ? left : [...left, ...Array(8 - left.length - right.length).fill("0"), ...right];
+  const fill = Math.max(0, 8 - left.length - right.length);
+  const groups = tail === undefined ? left : [...left, ...Array<string>(fill).fill("0"), ...right];
   return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":")}::/64`;
 }

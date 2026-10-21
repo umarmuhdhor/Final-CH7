@@ -1,6 +1,8 @@
 import type { TransactionSql } from "postgres";
 
-export const JOIN_MAX_FAILURES = 5;
+export const JOIN_MAX_FAILURES_DEVICE = 5;
+/** Higher than per device: mobile carriers put many households behind one CGNAT IP (D-alief-B06). */
+export const JOIN_MAX_FAILURES_IP = 20;
 export const JOIN_WINDOW_SECONDS = 600;
 
 /**
@@ -19,18 +21,18 @@ export async function attemptsRetryAfter(
   deviceId: string,
   ipHash: Uint8Array,
 ): Promise<number | null> {
-  const rows = await tx<{ n: number; retry: number | null }[]>`
-    select count(*)::int as n,
+  const rows = await tx<{ max: number; n: number; retry: number | null }[]>`
+    select ${JOIN_MAX_FAILURES_DEVICE}::int as max, count(*)::int as n,
            ceil(extract(epoch from (min(attempted_at) + make_interval(secs => ${JOIN_WINDOW_SECONDS}) - now())))::int as retry
     from join_attempts
     where not success and attempted_at > now() - make_interval(secs => ${JOIN_WINDOW_SECONDS})
       and device_id = ${deviceId}
     union all
-    select count(*)::int, ceil(extract(epoch from (min(attempted_at) + make_interval(secs => ${JOIN_WINDOW_SECONDS}) - now())))::int
+    select ${JOIN_MAX_FAILURES_IP}::int, count(*)::int, ceil(extract(epoch from (min(attempted_at) + make_interval(secs => ${JOIN_WINDOW_SECONDS}) - now())))::int
     from join_attempts
     where not success and attempted_at > now() - make_interval(secs => ${JOIN_WINDOW_SECONDS})
       and ip_hash = ${ipHash}`;
-  const over = rows.filter((r) => r.n >= JOIN_MAX_FAILURES);
+  const over = rows.filter((r) => r.n >= r.max);
   if (over.length === 0) return null;
   return Math.max(1, ...over.map((r) => r.retry ?? JOIN_WINDOW_SECONDS));
 }

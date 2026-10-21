@@ -53,7 +53,7 @@ describe("DELETE /devices/me (proposal C19)", () => {
       values ('s_del', ${p.deviceId}, 'https://x.example/', 'x.example', 92, 'blocked', now(), ${p.deviceId + "/s_del.jpg"})`;
     await sql`insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name)
       values (${p.deviceId}, 'x.example', 'not_safe', 's_del', ${g.deviceId}, 'G')`;
-    await sql`insert into join_attempts (device_id, success) values (${p.deviceId}, false)`;
+    await sql`insert into join_attempts (device_id, ip_hash, success) values (${p.deviceId}, '\\x00', false)`;
 
     const res = await call("/devices/me", { method: "DELETE", token: p.token });
     expect(res.status).toBe(200);
