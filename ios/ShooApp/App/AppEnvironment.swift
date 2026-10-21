@@ -61,6 +61,10 @@ final class AppEnvironment {
             environment.router.selectedTab = tab
         }
         environment.router.isProfilePresented = Self.value(after: "-debug.profile", in: arguments) == "YES"
+        // Detail (fase 03): `-debug.detail <scanId>` opens it on the selected tab.
+        if let scanId = Self.value(after: "-debug.detail", in: arguments) {
+            environment.router.showDetail(scanId: scanId)
+        }
         #endif
         return environment
     }

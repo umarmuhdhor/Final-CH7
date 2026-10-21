@@ -33,8 +33,7 @@ struct MainTabView: View {
     private func destination(_ route: Route) -> some View {
         switch route {
         case .detail(let scanId):
-            // TODO(sync:alief): DetailView — replace after fase 03
-            Text(verbatim: scanId)
+            DetailView(scanId: scanId, repository: env.repository)
         }
     }
 }

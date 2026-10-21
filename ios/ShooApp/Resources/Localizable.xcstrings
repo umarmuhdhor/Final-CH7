@@ -1,22 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "A family member looks after you.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anggota keluarga menjagamu."
-          }
-        }
-      }
-    },
     "A Guardian looks after up to 3 family members who are Protected.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Satu Guardian menjaga sampai 3 anggota keluarga yang Protected."
+          }
+        }
+      }
+    },
+    "A family member looks after you.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anggota keluarga menjagamu."
           }
         }
       }
@@ -61,6 +61,16 @@
         }
       }
     },
+    "Check your connection and try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Periksa koneksi, lalu coba lagi."
+          }
+        }
+      }
+    },
     "Choose Allow for every website.": {
       "localizations": {
         "id": {
@@ -101,12 +111,52 @@
         }
       }
     },
+    "Copied": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tersalin"
+          }
+        }
+      }
+    },
+    "Copy link": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salin link"
+          }
+        }
+      }
+    },
+    "Couldn't load this item": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item ini gagal dimuat"
+          }
+        }
+      }
+    },
     "Couldn't save. Check your connection and try again.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gagal menyimpan. Periksa koneksi lalu coba lagi."
+            "value": "Gagal menyimpan. Periksa koneksi, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Detail": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detail"
           }
         }
       }
@@ -117,6 +167,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Selesai"
+          }
+        }
+      }
+    },
+    "Double-tap to zoom": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ketuk dua kali untuk memperbesar"
           }
         }
       }
@@ -161,6 +221,26 @@
         }
       }
     },
+    "It's safe": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aman"
+          }
+        }
+      }
+    },
+    "Items are deleted after 14 days, or when the family is disconnected.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item dihapus setelah 14 hari, atau saat hubungan keluarga diputus."
+          }
+        }
+      }
+    },
     "Know when your family is at risk": {
       "localizations": {
         "id": {
@@ -181,6 +261,26 @@
         }
       }
     },
+    "Link": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link"
+          }
+        }
+      }
+    },
+    "Loading screenshot": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memuat tangkapan layar"
+          }
+        }
+      }
+    },
     "Look after each other": {
       "localizations": {
         "id": {
@@ -197,6 +297,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ditandai aman"
+          }
+        }
+      }
+    },
+    "Marked safe by %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ditandai aman oleh %@"
+          }
+        }
+      }
+    },
+    "Marked safe by you": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ditandai aman oleh kamu"
           }
         }
       }
@@ -231,22 +351,22 @@
         }
       }
     },
+    "Not safe": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidak aman"
+          }
+        }
+      }
+    },
     "Notifications are off": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Notifikasi mati"
-          }
-        }
-      }
-    },
-    "Open any website in Safari, then come back here.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka situs apa saja di Safari, lalu kembali ke sini."
           }
         }
       }
@@ -267,6 +387,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Buka Pengaturan › Safari › Ekstensi."
+          }
+        }
+      }
+    },
+    "Open any website in Safari, then come back here.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka situs apa saja di Safari, lalu kembali ke sini."
+          }
+        }
+      }
+    },
+    "Opened": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dibuka"
+          }
+        }
+      }
+    },
+    "Opened by": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dibuka oleh"
           }
         }
       }
@@ -347,6 +497,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ekstensi Safari mati"
+          }
+        }
+      }
+    },
+    "Screenshot": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tangkapan layar"
+          }
+        }
+      }
+    },
+    "Screenshot isn't available anymore": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tangkapan layar sudah tidak tersedia"
+          }
+        }
+      }
+    },
+    "Screenshot of the page": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tangkapan layar halaman"
           }
         }
       }
@@ -471,6 +651,26 @@
         }
       }
     },
+    "This item is gone": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item ini sudah tidak ada"
+          }
+        }
+      }
+    },
+    "Try again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coba lagi"
+          }
+        }
+      }
+    },
     "Turn on": {
       "localizations": {
         "id": {
@@ -481,22 +681,22 @@
         }
       }
     },
-    "Turn on notifications": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nyalakan notifikasi"
-          }
-        }
-      }
-    },
     "Turn on Shoo in Safari": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Nyalakan Shoo di Safari"
+          }
+        }
+      }
+    },
+    "Turn on notifications": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyalakan notifikasi"
           }
         }
       }
@@ -517,6 +717,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Penipuan terverifikasi"
+          }
+        }
+      }
+    },
+    "Verified scam by %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Penipuan terverifikasi oleh %@"
+          }
+        }
+      }
+    },
+    "Verified scam by you": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Penipuan terverifikasi oleh kamu"
           }
         }
       }
@@ -547,6 +767,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Siapa namamu?"
+          }
+        }
+      }
+    },
+    "Why Shoo flagged this": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kenapa Shoo menandai ini"
+          }
+        }
+      }
+    },
+    "You": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu"
           }
         }
       }
@@ -591,6 +831,16 @@
         }
       }
     },
+    "Your Shield screen is coming soon.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layar Perisai segera hadir."
+          }
+        }
+      }
+    },
     "Your family sees this name. Up to 20 characters.": {
       "localizations": {
         "id": {
@@ -621,12 +871,12 @@
         }
       }
     },
-    "Your Shield screen is coming soon.": {
+    "Zoom": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Layar Perisai segera hadir."
+            "value": "Perbesar"
           }
         }
       }
