@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (migrasi + deploy + uji cloud). Belum ada PR |
+| Status | `[r]` LANGKAH MANUAL 1–4 selesai di cloud (22 Okt), PR stacked on #13. Langkah 5 (kirim C8 ke Umar) tetap di Alief |
 | Track / branch | be · `feat/BE-verdicts` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-scans` (PR #13, stacked on #11) → PR nanti menulis "Stacked on #13" |
 | Mulai | 21 Okt 2026 ±23:55 WITA |
@@ -21,7 +21,7 @@ Rencana lengkap: [`fase-10-plan.md`](fase-10-plan.md). `POST /verdicts` (Guardia
 - [x] 5. `GET /blocklist`: integrasi verdict → antrean → disetujui → muncul; dihapus → `removed[]`, tidak dihidupkan lagi oleh verdict baru
 - [x] 6. ScanResult memakai verdict asli; cocok dua fixture
 - [x] 7. Review berurutan: security (T5, T10) → TypeScript → database → cek P1–P13 (tabel di bawah)
-- [ ] 8. LANGKAH MANUAL (di bawah) — menunggu Alief
+- [x] 8. LANGKAH MANUAL 1–4 (di bawah; 5 = Alief kirim C8)
 
 ## File dibuat / diubah
 
@@ -35,12 +35,13 @@ Rencana lengkap: [`fase-10-plan.md`](fase-10-plan.md). `POST /verdicts` (Guardia
 - `(cd backend/db && supabase db reset && supabase test db)` → **PASS, 77 test** (5 file; baru `verdicts.test.sql`: kolom `global_eligible`, default, index `verdicts_eligible_domain`, CHECK `verdicts_eligible_not_safe`).
 - `pnpm -C backend/api exec tsc --noEmit --noUnusedLocals` → bersih. `pnpm -C backend/api test` → **16 file, 242 test lulus** (baru: `verdicts.test.ts` 47, `allowlist.test.ts` 13).
 - Semua test wajib file fase ada: Protected → 403; Guardian lain → 403 `verdict_not_allowed`; scan tidak ada → 404; warning → 409; keputusan terakhir menang; berlaku untuk scan lain domain sama pemilik sama, tidak untuk pemilik lain; `www.Example.com` = `example.com`; not_safe Protected → antrean `approved_at` null, tidak di `/blocklist`; disetujui → muncul, `nextSince` maju; verdict lama disetujui belakangan muncul di refresh inkremental; Guardian + scan palsu sendiri → tanpa entri; Guardian + Protected penyerang → menunggu review; allowlist tidak pernah antre; `removed_at` → hilang dari penuh, muncul di `removed[]`; warning di domain ber-verdict tetap `null`. **Diubah** (D-alief-B10 d, privasi): "disconnect setelah verdict → `global_eligible` tetap" diganti "disconnect menghapus verdict Guardian lama; entri yang disetujui tetap tersaji".
-- Cloud: belum (LANGKAH MANUAL di bawah).
+- Cloud: LANGKAH MANUAL 1–4 hijau secara fungsi (hasil di bawah). Latensi: lihat deviasi.
 
 ## DoD
 
 - [x] Semua test hijau; bentuk `Verdict` cocok fixture (`verdicts.test.ts` "ScanResult verdicts match the two contract fixtures").
-- [ ] Uji cloud langkah 6: `safe` terlihat di `GET /verdicts` pertama setelah POST, p95 < 300 ms (LANGKAH MANUAL 3).
+- [x] Uji cloud langkah 6: `safe` terlihat di `GET /verdicts` pertama setelah POST (LANGKAH MANUAL 3).
+- [ ] p95 < 300 ms: **deviasi** (D-alief-B10 g). Dari klien uji di Indonesia p95 total 1547 ms, waktu server p95 741 ms; `/healthz` tanpa DB saja sudah p50 115 ms. Perbaikan dipindah ke fase 12.
 - [x] C8 tertulis (TODO C8, draf; dikirim Alief setelah uji cloud).
 
 ## Review
@@ -81,16 +82,16 @@ Ditunda (dicatat): 403 vs 404 membuka keberadaan UUID scan (urutan kontrak); `fa
 
 Dari root worktree, branch `feat/BE-verdicts`. Tidak ada secret baru. Domain uji memakai `.example` (tidak pernah domain nyata) dan dihapus lagi dari blocklist di akhir.
 
-- [ ] 1. Migrasi:
+- [x] 1. Migrasi:
   ```bash
   (cd backend/db && supabase migration list --linked)   # 20261021180000 hanya di kolom Local
   (cd backend/db && supabase db push)
   ```
-- [ ] 2. Deploy:
+- [x] 2. Deploy:
   ```bash
   pnpm -C backend/api run deploy
   ```
-- [ ] 3. Uji cloud (verdict langsung terlihat + latensi):
+- [x] 3. Uji cloud (verdict langsung terlihat + latensi):
   ```bash
   U=https://shoo-api.afindo-mi01.workers.dev
   tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])'; }
@@ -111,7 +112,7 @@ Dari root worktree, branch `feat/BE-verdicts`. Tidak ada secret baru. Domain uji
   echo "domain uji: $D"
   ```
   Harapan: `{"verdict":null}`; `post: safe`; `first get: safe`; `codes ['200'] p95 < 300 ms` (sleep 1.1 s menjaga di bawah 10/10 s); `cache-control: private, no-store`. Tempel angka (tanpa token).
-- [ ] 4. Review antrean + setujui domain uji, cek `/blocklist`, lalu hapus lagi:
+- [x] 4. Review antrean + setujui domain uji, cek `/blocklist`, lalu hapus lagi:
   ```bash
   (cd backend/db && supabase db query --linked "select domain, families, approved_at from blocklist_entries where domain = '$D'")
   (cd backend/db && supabase db query --linked "update blocklist_entries set approved_at = clock_timestamp(), approved_by = 'alief' where domain = '$D'")
@@ -123,8 +124,26 @@ Dari root worktree, branch `feat/BE-verdicts`. Tidak ada secret baru. Domain uji
   Harapan: satu baris `families 1`, `approved_at` kosong; lalu `True` (muncul setelah disetujui); `False` (hilang setelah `removed_at`); `{"ok":true}{"ok":true}`.
 - [ ] 5. Kirim TODO C8 ke Umar (teks siap). Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa angka, membuka PR `feat/BE-verdicts` (stacked on #13), lalu fase 11.
 
+### Hasil LANGKAH MANUAL (22 Okt 2026 ±00:10 WITA, dijalankan agent track be atas permintaan langsung Alief "do it for me")
+
+- 1: `supabase migration list --linked` → `20261021180000` hanya Local; `supabase db push --yes` → `Applying migration 20261021180000_verdicts.sql… Finished supabase db push.` Cek: `verdicts.global_eligible boolean default false`.
+- 2: deploy → `Current Version ID: 13fc6d26-e472-40d8-8e04-8d36a0c658a9`.
+- 3: percobaan pertama `POST /devices` → `429 rate_limited`, `Retry-After: 784` (batas 10/jam per IP habis oleh uji asap sebelumnya dari IP yang sama; batas bekerja). Diulang setelah jeda 800 s (skrip sama dengan di atas, token di file scratchpad mode 600, tidak pernah dicetak):
+  - `before: {"verdict":null}`; `post: safe`; `first get: safe`; `post: not_safe`; `cache-control: private, no-store`. Domain uji `shoo-smoke-11860.example`.
+  - Latensi `GET /verdicts` (20 request, 200 semua). Kolom server = `time_starttransfer − time_appconnect` (tanpa DNS/TLS klien, tetap termasuk satu RTT):
+    | Worker | Total p50 / p95 / max | Server p50 / p95 / max |
+    |---|---|---|
+    | `13fc6d26` (deploy pertama, cold) | 2969 / 7972 / 10134 ms | – |
+    | `13fc6d26` (hangat) | 487 / 1365 / 1580 ms | 362 / 1119 / 1328 ms |
+    | `781cf277` (`hitLight`, commit `178bb76`) | 435 / 1547 / 1713 ms | 310 / 741 / 845 ms |
+  - Pembanding (8 request, server p50 / max): `/healthz` 115 / 271 ms (tanpa DB), `/scans?limit=1` 177 / 558, `/verdicts` 305 / 636, `/devices/me` 326 / 696, `/blocklist` 350 / 931 ms. RTT klien → colo SIN ≈ 115 ms; tiap query Worker → Hyperdrive → Supabase (ap-southeast-1) ≈ 60–100 ms.
+  - Deploy kedua (perf `hitLight`, satu statement rate limit) → `Current Version ID: 781cf277-ffb1-4a4c-9864-3ec7ee7ea791`.
+- 4: antrean `families 1`, `approved_at` null → disetujui (`approved_by = 'alief'`) → `/blocklist` berisi domain uji `True` → `removed_at = now()` → `False`. `DELETE /devices/me` PT + GT → `{"ok":true}{"ok":true}`, token PT lalu `401`. Cek DB: `verdicts 0`, `scans 0` untuk domain uji, entri `families 0`, `removed` true (catatan reviewer tetap, D-alief-B10 f). File token scratchpad dihapus.
+- 5: kirim C8 ke Umar → **Alief** (pesan ke pihak lain tidak dikirim agent).
+
 ## Catatan handoff
 
 - Fase 11: `POST /verdicts` tidak mengirim push (kontrak hanya push untuk scan). `decideVerdict` mengembalikan verdict saja.
 - Fase 12: retensi tidak menghapus `verdicts` (D-alief-14); `scan_id` jadi null lewat `on delete set null`. **Urutan lock:** cron harus `update verdicts set scan_id = null where scan_id in (…)` **dulu**, baru `delete from scans` (urutan verdict → scan seperti `decideVerdict` dan `deleteDevice`), batch kecil + `lock_timeout`; tanpa itu bisa deadlock dengan `DELETE /devices/me` (review database fase 10 M1). Cek `pg_stat_user_indexes` untuk `verdicts_not_safe` (mungkin dihapus). Baris `rate_limit_hits` bucket `verdicts_get` tumbuh cepat (polling 5 s) → retensi 1 hari wajib.
 - D9 (review antrean harian) aktif sejak deploy fase 10.
+- Fase 12 (latensi, D-alief-B10 g): coba `placement: { mode: "smart" }` di `wrangler.jsonc` lalu ukur ulang setelah beberapa jam trafik; gabung query auth + rate limit + verdict jadi satu round trip; cek setelan Hyperdrive (pooler vs direct). Target p95 < 300 ms diukur ulang dari klien yang sama, angka di atas jadi baseline.

@@ -49,8 +49,8 @@ Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk J
 - [x] **Devices:** `POST /devices`, `PATCH /devices/me`, auth token per perangkat (tanpa login)
 - [x] **Family:** `POST /family/code` (4 digit, berlaku 60 detik, batas jumlah percobaan), `POST /family/join`, `GET/DELETE /family/members`, `DELETE /family/guardian`, maks. 3 orang per guardian
 - [x] **Scans:** `POST /scans` (+ upload screenshot), `GET /scans` dengan filter + cursor, `GET /scans/{id}`
-- [ ] **Verdicts:** `POST /verdicts` (berlaku per domain), `GET /verdicts?domain=`
-- [ ] **Blocklist:** `GET /blocklist` (dibutuhkan Imelda untuk layer 1, jadi kerjakan lebih awal kalau bisa)
+- [x] **Verdicts:** `POST /verdicts` (berlaku per domain), `GET /verdicts?domain=`
+- [x] **Blocklist:** `GET /blocklist` (dibutuhkan Imelda untuk layer 1, jadi kerjakan lebih awal kalau bisa)
 - [ ] **Push (APNs):** dikirim saat device Protected memanggil `POST /scans`. Payload sesuai `contracts/api.md`.
 - [ ] **Retensi:** data scan + screenshot otomatis dihapus setelah 14 hari
 - [ ] **Keamanan:** Guardian hanya bisa melihat data perangkat yang terhubung dengannya. Kode join dibatasi jumlah percobaannya.
