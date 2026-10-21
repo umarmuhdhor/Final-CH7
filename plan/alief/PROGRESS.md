@@ -16,7 +16,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 05 | Guardian & Family GD-01/02/03/05 | app | feat/GD-family-mode | [ ] | | | | | log/fase-05.md |
 | 06 | Profile PF-01 | app | feat/PF-01-profile | [ ] | | | | | log/fase-06.md |
 | 06Q | QA-A (UI fixtures) | app | fix/QA-A-* | [ ] | | | | | qa/QA-A-*.md |
-| 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [r] | 21 Okt 2026 | 21 Okt 2026 | #9 | Worker + skema hidup di cloud, spike APNs lulus (D-alief-B01), review diperbaiki (pgTAP 61, vitest 48); stacked on #7; pending C7/B9 | log/fase-07.md |
+| 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [r] | 21 Okt 2026 | 21 Okt 2026 | #9 | Worker + skema hidup di cloud, spike APNs lulus (D-alief-B01), review diperbaiki (pgTAP 61, vitest 48); di-rebase ke main setelah #7 merge; pending C7/B9 | log/fase-07.md |
 | 08 | Family | be | feat/BE-family | [ ] | | | | | log/fase-08.md |
 | 09 | Scans + screenshot | be | feat/BE-scans | [ ] | | | | | log/fase-09.md |
 | 10 | Verdicts + blocklist | be | feat/BE-verdicts | [ ] | | | | | log/fase-10.md |

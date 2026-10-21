@@ -2,9 +2,9 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[r]` PR #9 terbuka (stacked on #7), menunggu review Umar |
+| Status | `[r]` PR #9 terbuka (basis `main`), menunggu review Umar |
 | Track / branch | be · `feat/BE-devices` (worktree sesi `track-be-776b81`, menggantikan `../Final-CH7-be`) |
-| Basis | ditumpuk di atas `docs/alief-plan-sync` (PR #7, belum di-merge) → PR nanti menulis "Stacked on #7", rebase ke `main` setelah #7 merge |
+| Basis | awalnya di atas `docs/alief-plan-sync` (PR #7); #7 di-merge (squash) 21 Okt 21:52 WITA → di-rebase ke `origin/main` 21 Okt ±22:30 WITA |
 | Mulai | 21 Okt 2026 21:04 WITA |
 | Model | Opus 5.5 |
 
