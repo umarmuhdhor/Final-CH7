@@ -13,8 +13,8 @@ export interface PushSender {
 
 /** Logs instead of sending. The APNs sender comes in fase 11 (D-alief-B01: straight from the Worker). */
 export class LogSender implements PushSender {
-  async send(message: PushMessage): Promise<{ result: string }> {
-    console.log(JSON.stringify({ event: "push_logged", scanId: message.scanId }));
+  async send(_message: PushMessage): Promise<{ result: string }> {
+    console.log(JSON.stringify({ event: "push_logged" }));
     return { result: "logged" };
   }
 }

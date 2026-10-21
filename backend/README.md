@@ -52,6 +52,7 @@ pnpm -C backend/api dev                                    # http://localhost:87
 | POST | `/debug/apns-spike` | `x-spike-key` | fase 07 spike only, 404 unless `APNS_SPIKE=1` (removed in fase 11) |
 
 Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
+Every response is `Cache-Control: private, no-store` (user data, SECURITY §3 P13) except `GET /blocklist` (`private, max-age=300`). Workers invocation logs are off; logs never carry ids, names, URLs or tokens.
 
 ## Schema summary
 

@@ -151,6 +151,28 @@ Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migra
 - Review `ecc:security-reviewer` (satu subagent): 0 CRITICAL, 0 HIGH, 2 MEDIUM, 4 LOW; syarat "langsung tidak bisa dilihat" terpenuhi di semua skenario. Diperbaiki (test merah dulu): fetch Worker → Storage `cache: "no-store"` + `cache-control: no-cache` (path dedupe bisa hidup lebih lama dari satu scan); rate limit `screenshots_view` 120/menit per viewer (429 juga `no-store`); origin link = `INVITE_BASE_URL` (URL Worker yang dipatok, bukan Host request); hanya encoding base64url kanonik untuk `sig`. Ditunda (dicatat D-alief-B08): device id viewer + sig terlihat di log URL Cloudflare (link bearer ≤ 1 jam, tetap dicek DB); signed URL Supabase lama sebelum deploy (c) hidup ≤ 1 jam (satu kali, semua data smoke sudah dihapus); app harus membuang cache memori gambar saat disconnect/hapus (SECURITY P9, fase 13).
 - Catatan kontrak untuk Umar: TODO C20 (draf, belum dikirim).
 
+### Cek privasi Apple P1–P13 (D-alief-40, PR #12)
+
+Aturan baru Alief ("everything we do must follow apple security & privacy"): setiap diff dicek terhadap SECURITY §3 P1–P13 (teks P13 dari branch `docs/alief-apple-privacy-rule`, belum merge). Diff yang dicek: `94f1b03..HEAD` di `backend/` + `plan/alief/`.
+
+| # | Hasil | Bukti |
+|---|---|---|
+| P1 Privacy manifest | N/A (tanpa perubahan iOS) | — |
+| P2 Label privasi | OK: data baru = Browsing History (URL/domain scan), Other User Content (screenshot), Name (sudah ada); semua untuk fungsi app; tidak ada SDK pihak ketiga di runtime (`ajv` hanya devDependency test) | `package.json` |
+| P3 Hapus data | OK: `DELETE /devices/me` menghapus scan + objek Storage (batch 100), link screenshot langsung 404 | `devices-me.test.ts`, `screenshots.test.ts` |
+| P4 Keychain | N/A (app, fase 13) | — |
+| P5 ATS / HTTPS | OK: link screenshot dari `INVITE_BASE_URL` (`https://…workers.dev`), tidak dari Host request | `scans.test.ts` |
+| P6 Log | **Diperbaiki:** log tidak lagi memuat `scanId` (pakai `requestId`), error handler mencatat pola route (`/scans/:id`) bukan path berisi id, `push_logged` tanpa id; invocation logs Workers dimatikan (`observability.logs.invocation_logs: false`) karena mencatat URL lengkap (`v`/`sig` link screenshot, `?code=` undangan). Tidak ada log token, nama, URL, domain, base64 | `src/app.ts`, `routes/scans.ts`, `push/sender.ts`, `wrangler.jsonc` |
+| P7 Izin | N/A | — |
+| P8 Pasteboard | N/A | — |
+| P9 Screenshot di app | OK backend: `screenshotUrl` = link Worker `no-store`; sisi app (cache memori saja, buang saat disconnect/hapus) = fase 13 | D-alief-B08 |
+| P10 Push | OK: teks hanya nama + kata kerja + skor, tanpa URL/domain | `push-messages.test.ts` |
+| P11 Export compliance | N/A (HTTPS standar) | — |
+| P12 Kebijakan privasi | N/A (fase 12/16); isi akan menyebut screenshot privat + retensi 14 hari | — |
+| P13 Hapus = langsung hilang | **Pelanggaran ditemukan (TINGGI) dan diperbaiki:** semua respons API (`/scans`, `/scans/{id}`, `/devices/me`, `/family/*`, `POST /devices` dengan token, error) tidak punya `Cache-Control`, jadi `URLCache` iOS bisa menulisnya ke disk. Sekarang default `Cache-Control: private, no-store` di middleware; hanya `GET /blocklist` (data global, bukan data pengguna) tetap `private, max-age=300`. Screenshot: link Worker dicek DB per request (D-alief-B08) | `cache-headers.test.ts` (merah dulu), `screenshots.test.ts` |
+
+Verifikasi setelah perbaikan: `pnpm typecheck` (+ `--noUnusedLocals --noUnusedParameters`) bersih; `pnpm test` → **14 file, 184 test lulus**; `wrangler deploy --dry-run` (lokal, tanpa upload) menerima config `observability` baru tanpa peringatan. Detail: D-alief-B09.
+
 ## LANGKAH MANUAL (c) (Alief) — secret link screenshot + deploy + uji asap
 
 Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migrasi baru. Nilai secret **tidak pernah** ditempel di chat atau file.
@@ -159,7 +181,7 @@ Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migra
   ```bash
   openssl rand -base64 32 | pnpm -C backend/api exec wrangler secret put SCREENSHOT_URL_SECRET
   ```
-- [ ] 2. Deploy:
+- [ ] 2. Deploy (ikut membawa `invocation_logs: false`, D-alief-B09):
   ```bash
   pnpm -C backend/api run deploy
   ```
@@ -171,6 +193,7 @@ Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migra
   curl -s -o /dev/null -w "screenshot guardian: %{http_code} %{content_type}
 " "$GURL"
   curl -s -D - -o /dev/null "$GURL" | grep -i '^cache-control'
+  curl -s -D - -o /dev/null $U/scans/$ID -H "authorization: Bearer $GT" | grep -i '^cache-control'
   curl -s -o /dev/null -w "IDOR other guardian: %{http_code}
 " $U/scans/$ID -H "authorization: Bearer $(curl -s -X POST $U/devices -H 'content-type: application/json' -d '{"name":"Smoke X","mode":"guardian"}' | tok)"
   curl -s -X DELETE $U/family/guardian -H "authorization: Bearer $PT"; echo
@@ -182,7 +205,7 @@ Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migra
   curl -s -o /dev/null -w "screenshot after delete: %{http_code}
 " "$PURL"
   ```
-  Harapan: `worker url: ok`; `screenshot guardian: 200 image/jpeg`; `cache-control: private, no-store`; `IDOR other guardian: 404`; `{"ok":true}`; **`screenshot guardian after disconnect: 404`**; `screenshot owner before delete: 200`; `{"ok":true}{"ok":true}`; **`screenshot after delete: 404`**. Tempel hasilnya (tanpa token dan tanpa URL). Device `Smoke X` tertinggal (tanpa data).
+  Harapan: `worker url: ok`; `screenshot guardian: 200 image/jpeg`; `cache-control: private, no-store` (dua kali: gambar dan JSON `GET /scans/{id}`); `IDOR other guardian: 404`; `{"ok":true}`; **`screenshot guardian after disconnect: 404`**; `screenshot owner before delete: 200`; `{"ok":true}{"ok":true}`; **`screenshot after delete: 404`**. Tempel hasilnya (tanpa token dan tanpa URL). Device `Smoke X` tertinggal (tanpa data).
 - [ ] 4. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11, sertakan catatan C20), dan lanjut ke fase 10.
 
 ## Catatan handoff

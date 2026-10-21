@@ -17,6 +17,9 @@ app.use("*", async (c, next) => {
   const requestId = crypto.randomUUID();
   c.set("requestId", requestId);
   c.header("x-request-id", requestId);
+  // SECURITY §3 P13 (D-alief-40): responses carry user data, so no client, proxy or CDN keeps a copy.
+  // A route that serves no user data may override it (GET /blocklist).
+  c.header("Cache-Control", "private, no-store");
 
   // postgres.js connects on the first query, so /healthz never opens a connection.
   // No sql.end(): Hyperdrive closes the client connection when the request ends
@@ -39,6 +42,7 @@ app.notFound((c) => errorResponse(c, errors.notFound()));
 app.onError((err, c) => {
   if (err instanceof ApiError) return errorResponse(c, err);
   // Never log request bodies or headers: they carry tokens and names (SECURITY §3 P6, T3).
-  console.error(JSON.stringify({ requestId: c.get("requestId"), path: c.req.path, error: String(err) }));
+  // The route pattern, not the path: paths carry scan and device ids (D-alief-40).
+  console.error(JSON.stringify({ requestId: c.get("requestId"), route: c.req.routePath, error: String(err) }));
   return errorResponse(c, errors.internal());
 });

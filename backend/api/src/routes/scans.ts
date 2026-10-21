@@ -135,12 +135,12 @@ scans.post("/scans", async (c) => {
       const sender = pushSender(c.env);
       c.executionCtx.waitUntil(
         (async () => sender.send(push))().catch((err) =>
-          console.error(JSON.stringify({ event: "push_failed", scanId: id, error: String(err) })),
+          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: String(err) })),
         ),
       );
     }
   } catch (err) {
-    console.error(JSON.stringify({ event: "push_lookup_failed", scanId: id, error: String(err) }));
+    console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: String(err) }));
   }
   return c.json({ id }, 201);
 });
