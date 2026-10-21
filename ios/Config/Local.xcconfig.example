@@ -1,0 +1,11 @@
+// Copy to Local.xcconfig (same folder, gitignored), fill in, then run `xcodegen` and build.
+// Bundle ID and App Group must be unique to YOUR Apple account — use your own reverse domain.
+
+// Team ID: Xcode > Settings > Accounts > your team, or developer.apple.com > Membership.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// App bundle ID. Extensions become $(SHOO_BUNDLE_ID).extension and .liveactivity.
+SHOO_BUNDLE_ID = com.yourname.shoo
+
+// Must start with "group.". Xcode registers it on first build (Automatic signing).
+SHOO_APP_GROUP = group.com.yourname.shoo

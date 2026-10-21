@@ -1,0 +1,9 @@
+// Owner: lead. Signing + identifiers shared by every target (wired in project.yml > configFiles).
+// Each developer signs with their own Apple account: copy Local.xcconfig.example to
+// Local.xcconfig (gitignored) and fill it in. Never put a personal Team ID here.
+
+DEVELOPMENT_TEAM =
+SHOO_BUNDLE_ID = com.shoo.app
+SHOO_APP_GROUP = group.com.shoo.app
+
+#include? "Local.xcconfig"

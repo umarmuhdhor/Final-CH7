@@ -27,5 +27,7 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).SafariWebExtensionHandler</string>
 	</dict>
+	<key>ShooAppGroup</key>
+	<string>$(SHOO_APP_GROUP)</string>
 </dict>
 </plist>

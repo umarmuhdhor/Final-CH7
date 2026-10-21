@@ -1,7 +1,7 @@
 # App ↔ Extension
 
 App and extension are separate processes. They share data only through:
-1. **App Group** `group.com.shoo.app` (UserDefaults suite) — Swift side, both read/write.
+1. **App Group** `group.com.shoo.app` by default, overridable per developer (`SHOO_APP_GROUP` in `ios/Config/`) — UserDefaults suite, Swift side, both read/write. Always use `AppGroup.id`.
 2. **Native messaging** — extension JS calls `browser.runtime.sendNativeMessage`, `SafariWebExtensionHandler.swift` answers by reading the App Group.
 
 Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, never raw strings.

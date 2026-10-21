@@ -25,6 +25,14 @@ docs/                 PRD notes + spike results
 brew install xcodegen
 cd ios && xcodegen && open Shoo.xcodeproj
 ```
+
+### Running on your own iPhone
+Each developer signs with their own Apple account. Don't touch `project.yml` — use a local override:
+```bash
+cp ios/Config/Local.xcconfig.example ios/Config/Local.xcconfig
+```
+Fill in your Team ID, a bundle ID and an App Group unique to your account, then `cd ios && xcodegen`.
+`Local.xcconfig` is gitignored. Without it, the defaults in `ios/Config/Shoo.xcconfig` are used (`com.shoo.app`, no team), which builds for the simulator only.
 Run `xcodegen` again after every `git pull` that changes `ios/project.yml`, or after adding files to a new folder.
 `Shoo.xcodeproj` is generated — it is gitignored, never commit it.
 
