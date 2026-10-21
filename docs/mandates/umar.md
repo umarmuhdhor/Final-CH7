@@ -58,7 +58,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - Teks mencurigakan: stabilo tebal. Form PIN/OTP/kartu/KTP: dicoret + "Don't enter your PIN here", input tetap bisa diketik.
   - Protected: tidak bisa dihapus. Guardian: bisa ditutup.
   - Butuh posisi bukti dari sinyal → kalau Signal belum punya field itu, usulkan perubahan kontrak (opsional, aditif).
-- [ ] **U4 · EX-06** Layar blokir. Branch: `feat/EX-06-block-screen`
+- [x] **U4 · EX-06** Layar blokir. Branch: `feat/EX-06-block-screen`
   - Ganti seluruh halaman, tidak bisa di-bypass (tahan back/scroll/inspect di sisi user biasa).
   - "Shoo! This page is blocked" + skor + alasan.
   - Protected: "Waiting for [guardianName] to check", poll `GET /verdicts?domain=` tiap 5 s → `safe` → buka halaman.

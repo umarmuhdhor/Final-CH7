@@ -110,6 +110,14 @@ browser.runtime.onMessage.addListener((message) => {
         }
         case "getSession":
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
+        case "profile":
+            // What blocked.html needs to pick its wording. Never the token.
+            return getSession().then((s) => ({
+                ok: true,
+                onboarded: Boolean(s),
+                mode: s?.mode ?? null,
+                guardianName: s?.guardianName ?? null,
+            }));
         case "domain":
             return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
         case "analyze":
