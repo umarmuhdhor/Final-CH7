@@ -20,7 +20,7 @@
     },
 
     "content_scripts": [{
-        "js": [ "detector.js", "content.js" ],
+        "js": [ "detector.js", "pipeline.js", "content.js" ],
         "matches": [ "<all_urls>" ],
         "run_at": "document_idle"
     }],

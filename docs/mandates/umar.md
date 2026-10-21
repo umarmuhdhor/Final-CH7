@@ -44,7 +44,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [ ] **S3** Dynamic Island dari extension → isi `docs/spikes/dynamic-island.md`. Coba jalur A → B → C, kalau semua gagal: pill in-page. Kabari Alief kalau jalur push dipilih (butuh endpoint tambahan).
 
 ### Extension · bisa mulai tanpa device (pakai fixtures + mock)
-- [ ] **U1 · EX-02** Pipeline scan. Branch: `feat/EX-02-scan-pipeline`
+- [x] **U1 · EX-02** Pipeline scan. Branch: `feat/EX-02-scan-pipeline`
   - `registrableDomain` pakai Public Suffix List (`a.b.co.id` → `b.co.id`).
   - Ambil sesi lewat `getSession` (cache di background). Belum onboarding → tetap scan lokal, tanpa kirim apa pun.
   - Verdict domain dulu: `safe` → skor 0, berhenti. `not_safe` → blocked 100.
@@ -75,4 +75,3 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [ ] Ubah kontrak hanya lewat PR `contracts/` sendiri. Perubahan aditif saja kalau bisa.
 - [ ] Setiap Imelda merge `detector/`, jalankan `detector/scripts/sync-to-extension.sh`.
 - [ ] Tanyakan ke PM pertanyaan terbuka di `docs/README.md` (scope MVP vs Fase 2).
-- [ ] Nanti: signing & Apple account per tim (ditunda).
