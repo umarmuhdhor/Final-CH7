@@ -78,17 +78,17 @@ Diperiksa reviewer dan aman: urutan lock device → IP → guardian tanpa deadlo
 
 Dijalankan dari root worktree ini, di branch `feat/BE-family` (D-alief-27). Tidak ada secret baru. Centang tiap butir dan tempel hasilnya (tanpa token) di bawah butir itu.
 
-- [ ] 1. **Migrasi cloud** (menerapkan `20261021150000_blocklist_times.sql` dari review fase 07 dan `20261021160000_family.sql`):
+- [x] 1. **Migrasi cloud** (menerapkan `20261021150000_blocklist_times.sql` dari review fase 07 dan `20261021160000_family.sql`):
   ```bash
   (cd backend/db && supabase migration list --linked)   # dua migrasi baru tampil di kolom Local saja
   (cd backend/db && supabase db push)
   ```
   Tempel output `db push`.
-- [ ] 2. **Deploy Worker:**
+- [x] 2. **Deploy Worker:**
   ```bash
   pnpm -C backend/api run deploy
   ```
-- [ ] 3. **Uji asap cloud** (`U=https://shoo-api.afindo-mi01.workers.dev`):
+- [x] 3. **Uji asap cloud** (`U=https://shoo-api.afindo-mi01.workers.dev`):
   ```bash
   U=https://shoo-api.afindo-mi01.workers.dev
   tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])'; }
@@ -104,8 +104,15 @@ Dijalankan dari root worktree ini, di branch `feat/BE-family` (D-alief-27). Tida
   curl -s -o /dev/null -w "%{http_code}\n" $U/devices/me -H "authorization: Bearer $GT"
   ```
   Harapan: `{"guardian":{…"name":"Smoke G"…}}`, `{"members":[{…"name":"Smoke P","extensionActive":true,"lastScan":null}]}`, `GET /devices/me` dengan `guardian` terisi, `200 200`, `{"domains":[],"nextSince":null}`, `{"ok":true}{"ok":true}`, `401`. Tempel hasilnya (jangan tempel `$GT`/`$PT`). Dua device uji itu terhapus oleh `DELETE /devices/me`.
-- [ ] 4. Buka `$U/join?code=1234` di Safari iPhone (opsional): halaman tampil, tombol "Open Shoo"/"Buka Shoo" ada (app belum menangani `shoo://` sampai fase 14).
-- [ ] 5. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-family` (stacked on #9), dan lanjut ke fase 09.
+- [ ] 4. (opsional, belum — dilewati, tidak memblokir) Buka `$U/join?code=1234` di Safari iPhone (opsional): halaman tampil, tombol "Open Shoo"/"Buka Shoo" ada (app belum menangani `shoo://` sampai fase 14).
+- [x] 5. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-family` (stacked on #9), dan lanjut ke fase 09.
+
+### Hasil LANGKAH MANUAL (21 Okt 2026 ±22:25 WITA, dijalankan agent coordinator atas permintaan Alief)
+
+- 1: `supabase link` ulang di worktree ini (tanpa password). `supabase db push --yes` → `"migrations":["20261021150000_blocklist_times.sql","20261021160000_family.sql"] … Finished supabase db push.` (stack trace `pg-delta connectWithRetry` di output hanya dari helper diff, bukan kegagalan). `migration list --linked`: ketiga migrasi Local = Remote. Cek: kolom `join_attempts.ip_hash` ada.
+- 2: `pnpm -C backend/api run deploy` → Version `a9807b02-1354-4c1e-94b3-bdde8c5bd9b9`, binding `DB` = Hyperdrive `f6c9b58d…`, `APNS_SPIKE "0"`.
+- 3: join → `{"guardian":{…"name":"Smoke G","avatarId":"avatar_08"}}`; members → `{"members":[{…"name":"Smoke P","avatarId":"avatar_07","extensionActive":true,"lastScan":null}]}`; `GET /devices/me` (P) → `mode:"protected"`, `language:"en"`, `guardian` terisi; `/join` → `200 200`; `/blocklist` → `{"domains":[],"nextSince":null}`; delete → `{"ok":true}{"ok":true}`; setelah delete → `401`. Semua sesuai harapan; dua device uji terhapus.
+- 4: dilewati (opsional).
 
 ## Catatan handoff
 
