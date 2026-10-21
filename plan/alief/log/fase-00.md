@@ -13,6 +13,7 @@
 
 | Run | Sesi | Verdict | Temuan KRITIS/TINGGI | Diperbaiki |
 |---|---|---|---|---|
+| 01 | sesi baru (read-only) | BELUM SIAP | 1 KRITIS, 6 TINGGI (+ SEDANG/RENDAH) | Semua KRITIS/TINGGI dan sebagian besar SEDANG/RENDAH diperbaiki; keputusan baru D-alief-17..24. Laporan: `log/verify/run-01.md` |
 
 ## Catatan handoff
 

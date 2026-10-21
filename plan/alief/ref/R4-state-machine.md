@@ -40,7 +40,7 @@ POST /scans (device X)
  2. Screenshot: lolos batas ukuran, dedupe, kuota → upload; selain itu dibuang
  3. Respons 201 { id }
  4. waitUntil: kalau X mode protected dan punya guardian G dengan apns_token:
-      kirim push ke G (teks bahasa G), tulis push_log
+      kirim push ke G lewat PushSender (relay Edge Function → APNs, D-alief-16; teks bahasa G), tulis push_log
     kalau X mode guardian: tidak ada push (dia melihat popup sendiri)
 ```
 
@@ -55,8 +55,8 @@ stateDiagram-v2
   NotSafe --> Safe: Guardian berubah pikiran (upsert)
 ```
 
-- Verdict berlaku per `(owner_id, domain)` (kontrak). Semua scan pemilik itu di domain yang sama ikut menampilkan verdict tersebut.
-- `safe` → extension Protected (polling `GET /verdicts?domain=` tiap 5 s) membuka halaman. Halaman yang diblokir tidak pernah terbuka otomatis tanpa verdict.
+- Verdict berlaku per `(owner_id, domain)` (kontrak). Semua scan **blocked** pemilik itu di domain yang sama ikut menampilkan verdict tersebut; scan warning tetap `verdict: null`.
+- `safe` → extension Protected (polling `GET /verdicts?domain=` tiap 5 s) membuka halaman. Target: `GET /verdicts` mencerminkan keputusan ≤ 1 s setelah `POST /verdicts` (cache Hyperdrive dimatikan, D-alief-17); halaman terbuka ≤ 10 s ujung ke ujung. Diukur di Worker cloud, bukan hanya lokal. Halaman yang diblokir tidak pernah terbuka otomatis tanpa verdict.
 - `not_safe` → domain masuk `GET /blocklist` (layer 1 detector Imelda) dan Detail menampilkan "Verified scam by [nama]".
 - Tidak ada layar konfirmasi di app (GD-07). App menerapkan optimistic update lalu rollback kalau request gagal, dengan pesan error.
 
@@ -65,9 +65,11 @@ stateDiagram-v2
 ```text
 1. Ambil batch 500 scan created_at < now() - 14 hari (returning id, screenshot_path)
 2. Hapus objek Storage untuk path yang tidak dipakai scan lain yang lebih baru (dedupe!)
-3. Hapus baris scan batch itu; ulangi sampai kosong atau 20 batch
+3. Hapus baris scan batch itu (satu `DELETE /storage/v1/object/screenshots` dengan `prefixes` per batch); ulangi sampai kosong atau 10 batch (Workers Free: 10 ms CPU + 50 subrequest per Cron)
 4. Hapus family_codes, join_attempts, push_log lama (R2 §6)
-5. Log jumlah yang dihapus
+5. Upsert `ops_heartbeat`, log jumlah yang dihapus
 ```
+
+Uji lokal: `curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=0+19+*+*+*"` saat `wrangler dev` jalan.
 
 Karena dedupe screenshot memakai ulang `screenshot_path`, objek hanya dihapus kalau tidak ada scan tersisa yang menunjuk ke path itu.

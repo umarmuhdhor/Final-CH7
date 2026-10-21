@@ -36,6 +36,7 @@ Layar Profile untuk semua mode: identitas, bahasa, status extension, dan kontrol
 ## Verifikasi
 
 ```bash
+source plan/alief/ref/sim.sh
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" -only-testing:ShooAppTests/ProfileModelTests -only-testing:ShooAppUITests/ProfileUITests
 ```
 

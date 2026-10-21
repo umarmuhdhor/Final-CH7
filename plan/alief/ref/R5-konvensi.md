@@ -29,12 +29,12 @@
 
 | Lapis | Tool | Lokasi | Perintah |
 |---|---|---|---|
-| Logika app | Swift Testing | `ios/ShooApp/Tests/` | `xcodebuild test -scheme Shoo -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:ShooAppTests` |
+| Logika app | Swift Testing | `ios/ShooApp/Tests/` | `xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" -only-testing:ShooAppTests` |
 | Alur UI | XCUITest | `ios/ShooApp/UITests/` | `… -only-testing:ShooAppUITests` |
-| API | vitest 4 + `@cloudflare/vitest-plugin` | `backend/api/test/` | `pnpm -C backend/api test` |
+| API | vitest `^4.1.0` + `@cloudflare/vitest-plugin` (`cloudflareTest()` di `vitest.config.ts`, binding Hyperdrive lewat `miniflare.hyperdrives`) | `backend/api/test/` | `pnpm -C backend/api test`; satu file: `pnpm -C backend/api exec vitest run <pola>` |
 | SQL | pgTAP | `backend/db/supabase/tests/` | `cd backend/db && supabase test db` |
 
-Nama simulator diambil dari `xcrun simctl list devices available` (pakai iPhone terbaru yang ada) dan disimpan sebagai `SIM` (perintah di fase 01 §Verifikasi); semua perintah `$SIM` di file fase memakai variabel ini. Test API memakai Supabase lokal (`supabase start`) dan reset data per file lewat helper `resetDb()`.
+Semua perintah dijalankan dari **root repo**. Setiap blok Verifikasi iOS diawali `source plan/alief/ref/sim.sh` yang mengisi `$SIM` (nama iPhone simulator yang tersedia, tanpa spasi di akhir). Perintah backend memakai subshell `(cd backend/db && …)` atau `pnpm -C backend/api …` supaya direktori tidak berpindah. Test API memakai Supabase lokal (`supabase start`) dan reset data per file lewat helper `test/helpers/resetDb.ts`. Server lokal ditunggu dengan `npx wait-on tcp:8787` sebelum `curl`.
 
 ## 5. Waktu & bahasa dokumen
 
@@ -43,7 +43,7 @@ Nama simulator diambil dari `xcrun simctl list devices available` (pakai iPhone 
 ## 6. Env & file contoh
 
 - `backend/.env.example`, `backend/api/.dev.vars.example`: nama variabel saja.
-- `api.baseURL` app: Debug = `http://localhost:8787`, Release = URL Worker cloud. Disimpan di `Info.plist` key `ShooAPIBaseURL` (diisi per konfigurasi lewat build setting di file kita sendiri, bukan project.yml) — kalau perlu project.yml, pakai konstanta Swift `#if DEBUG`.
+- `api.baseURL` app: konstanta Swift di `ios/ShooApp/App/AppConfig.swift` dengan `#if DEBUG` (Debug = `http://localhost:8787`, Release = URL Worker cloud). **Bukan** `Info.plist`: Info.plist dan entitlements di-generate XcodeGen dari `ios/project.yml` (milik Umar) dan ditulis ulang setiap `xcodegen`, jadi edit manual hilang. Key Info.plist/entitlement baru = permintaan ke Umar (TODO C3).
 
 ## 7. Placeholder
 

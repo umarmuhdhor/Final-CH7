@@ -28,20 +28,20 @@ Guardian membuat kode yang berganti tiap 60 detik, Protected bergabung dengan ko
 
 1. `POST /family/code` (guardian): R4 §1. `{ code, expiresAt, inviteUrl }`, `inviteUrl = ${INVITE_BASE_URL}/join?code=` (D-alief-03).
 2. `POST /family/join` (protected): R4 §2, error kontrak `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` + `already_connected`. Kunci rate limit dari `CF-Connecting-IP` (lokal: header uji).
-3. `GET /family/members` (guardian): `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan? }] }` sesuai fixture; `extensionActive` sementara sesuai R3 §4 (D-alief-15).
+3. `GET /family/members` (guardian): `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan? }] }` sesuai fixture; `extensionActive` sesuai R3 §4 (D-alief-15/24: tanpa data → `true`; kalau C11 disetujui, `ext_last_seen_at` dari `PATCH /devices/me` dalam `AppGroup.extensionActiveWindow` 24 jam).
 4. `DELETE /family/members/{deviceId}` (guardian) dan `DELETE /family/guardian` (protected).
-5. `GET /join?code=` HTML EN/ID kecil (tanpa JS pihak ketiga, CSP ketat) → tombol `shoo://join?code=`, kode besar, teks "Belum punya Shoo? Install dulu" (link App Store placeholder).
-6. Usulan kontrak: D-alief-03 (`inviteUrl` https) dan D-alief-15 (`extensionLastSeenAt`) → tulis di PR "Contract proposals" + TODO C5.
-7. `ecc:security-reviewer` fokus T2, T11, T12.
+5. `GET /join?code=` HTML EN/ID kecil sesuai R3 §4: validasi `^\d{4}$`, escape HTML, CSP `default-src 'none'; style-src 'unsafe-inline'`, `nosniff` → tombol `shoo://join?code=`, kode besar, teks "Belum punya Shoo? Install dulu" (link App Store placeholder). Test XSS (SECURITY T13).
+6. Usulan kontrak: D-alief-03 (`inviteUrl` https) dan D-alief-15 (`extensionLastSeenAt`) → tulis di PR "Contract proposals" + TODO C5, C11.
+7. `ecc:security-reviewer` fokus T2, T11, T12, T13.
 
 ## Verifikasi
 
 ```bash
-cd backend/db && supabase db reset && supabase test db
-pnpm -C backend/api test -- family
+(cd backend/db && supabase db reset && supabase test db)
+pnpm -C backend/api exec vitest run family join
 ```
 
-Test wajib: kode 4 digit + kedaluwarsa 60 s (jam disuntik), kode multi-pakai, Protected ke-4 → `family_full`, 5 gagal → `too_many_attempts` (device dan IP terpisah), Guardian memanggil join → 403, Protected memanggil code → 403, sudah terhubung → 409, hapus member bukan milik → 404, setelah disconnect Guardian tidak melihat member itu, dua join paralel ke slot terakhir → hanya satu sukses (advisory lock).
+Test wajib: kode 4 digit + kedaluwarsa 60 s (jam disuntik), kode multi-pakai, Protected ke-4 → `family_full`, 5 gagal → `too_many_attempts` (device dan IP terpisah), Guardian memanggil join → 403, Protected memanggil code → 403, sudah terhubung → 409, hapus member bukan milik → 404, setelah disconnect Guardian tidak melihat member itu, dua join paralel ke slot terakhir → hanya satu sukses (advisory lock), `/join?code=<script>` dan `?code=12345` tidak memantulkan input.
 
 ## Kriteria selesai (DoD)
 

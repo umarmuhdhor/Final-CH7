@@ -37,6 +37,7 @@ Satu layar Detail yang dipakai semua mode dan semua sumber (Activity, Shield car
 ## Verifikasi
 
 ```bash
+source plan/alief/ref/sim.sh
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" -only-testing:ShooAppTests/DetailModelTests
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" -only-testing:ShooAppUITests/DetailUITests
 ```

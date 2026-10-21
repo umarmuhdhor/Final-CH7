@@ -19,7 +19,7 @@ Laporan QA End-to-End berformat Catalyst atas sistem nyata (app TestFlight + Wor
 
 ## Langkah kerja
 
-1. Persiapan: build TestFlight (LANGKAH MANUAL B6, B8), dua iPhone (D6), data cloud bersih (`truncate` tabel uji lewat SQL editor — LANGKAH MANUAL), catat commit/build.
+1. Persiapan (LANGKAH MANUAL, tulis di log, berhenti sampai Alief selesai): build TestFlight (B6, B8), **set `APNS_ENV=production` di Edge Function `push` (`supabase secrets set`) dan Worker sebelum uji** (TestFlight = APNs production, B7), dua iPhone (D6), data cloud bersih (`truncate` tabel uji lewat SQL editor), catat commit/build.
 2. Jalankan matriks QA-E2E `ref/R7` §5 (16 skenario) + skenario keamanan API (IDOR, brute force, scan palsu, token salah) dengan `curl`.
 3. Batasan ditulis jujur di header (mis. extension Umar belum final → scan dikirim lewat `curl` meniru extension).
 4. Tulis `qa/QA-E2E-<YYYY-MM-DD>.md`, bukti di `qa/img/QA-E2E/`.
@@ -29,8 +29,10 @@ Laporan QA End-to-End berformat Catalyst atas sistem nyata (app TestFlight + Wor
 ## Verifikasi
 
 ```bash
+source plan/alief/ref/sim.sh
+(cd ios && xcodegen)
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
-pnpm -C backend/api test && (cd backend/db && supabase test db)
+(cd backend/db && supabase start && supabase test db) && pnpm -C backend/api test
 ```
 
 ## Kriteria selesai (DoD)

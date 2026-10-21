@@ -77,7 +77,7 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
 | 17 | Ditahan | – | nanti | ON-04, Live Activity lewat push | ON-04, EX-03 | – |
 
-**Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah 06Q dan 12 `[x]` · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6).
+**Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6).
 
 ---
 
@@ -87,11 +87,11 @@ Satu worktree + satu sesi Claude per track (`superpowers:using-git-worktrees`):
 
 | Track | Worktree | Folder yang boleh diubah |
 |---|---|---|
-| app | `../Final-CH7-app` | `ios/ShooApp/`, `plan/alief/` (baris fase app saja) |
-| be | `../Final-CH7-be` | `backend/`, `plan/alief/` (baris fase be saja) |
-| c | repo utama `Final-CH7` | `ios/ShooApp/`, `backend/`, `plan/alief/` |
+| app | `../Final-CH7-app` | `ios/ShooApp/`, `plan/alief/` (baris fase app saja, keputusan `D-alief-A…`) |
+| be | `../Final-CH7-be` | `backend/`, `plan/alief/` (baris fase be saja, keputusan `D-alief-B…`) |
+| c | repo utama `Final-CH7` | `ios/ShooApp/`, `backend/`, `plan/alief/` (keputusan `D-alief-C…`) |
 
-Pengecualian sekali: PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.yml` hanya untuk menambah target test (D-alief-02).
+Pengecualian: (1) PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.yml` hanya dengan diff yang tertulis di D-alief-02; (2) `plan/alief/` sendiri berada di luar folder Team App (D-alief-20); (3) checkbox `docs/mandates/alief.md` (diizinkan CODEOWNERS).
 
 ---
 
@@ -132,7 +132,7 @@ Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.
 ## 7. Definisi selesai (MVP Alief)
 
 Diambil dari mandat:
-1. Semua requirement P0 di PRD 8.1–8.4 dan 8.6 (kecuali ON-04 yang ditahan) lolos "Selesai kalau", dengan bukti di log fase.
+1. Semua requirement P0 di PRD 8.1–8.4 dan 8.6 lolos "Selesai kalau", dengan bukti di log fase. ON-04 ditahan sesuai mandat ("Ditahan dulu"); MVP Alief dianggap selesai tanpa ON-04 hanya setelah Umar mengonfirmasi (TODO C14).
 2. Keluarga terhubung lewat kode 4 digit atau QR, dan Guardian menerima push saat orang tuanya membuka situs berbahaya.
 3. Guardian menekan **It's safe** → layar blokir di HP orang tua terbuka (EX-06) tanpa layar konfirmasi.
 4. Semua teks tersedia EN + ID.

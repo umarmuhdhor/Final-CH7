@@ -1,6 +1,8 @@
 # Progress — Shoo · Alief (Team App + Backend)
 
-Legenda status: `[ ]` belum · `[~]` sedang dikerjakan / menunggu langkah manual · `[x]` selesai · `[!]` terblokir
+Legenda status: `[ ]` belum · `[~]` sedang dikerjakan / menunggu LANGKAH MANUAL · `[r]` PR terbuka, menunggu review/merge Umar · `[x]` PR **sudah di-merge** ke `main` (cek `gh pr view <no> --json state`) · `[!]` terblokir
+
+Mode auto memilih fase pertama berstatus `[ ]`. Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged.
 Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya PR paralel tidak bentrok).
 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
@@ -33,9 +35,10 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | G2 · Target test ada | PR `chore/APP-test-targets` di-merge | [ ] | Sampai merge, fase app ditumpuk di atas PR ini |
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
 | G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Akhir fase 10 |
-| G5 · Track app selesai | 01–06 + 06Q `[x]` | [ ] | Syarat track c |
-| G6 · Track be selesai | 07–12 `[x]`, deploy cloud hijau | [ ] | Syarat track c |
-| G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8) |
+| G5 · Track app selesai | 01–06 + 06Q `[x]` (semua PR merged) | [ ] | Syarat track c |
+| G6 · Track be selesai | 07–12 `[x]` (semua PR merged), deploy cloud hijau | [ ] | Syarat track c |
+| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`), C14 (MVP tanpa ON-04) | [ ] | C3 dibutuhkan sebelum fase 14/15; C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
+| G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8); uji push sandbox ke satu iPhone sudah di fase 11 |
 | G8 · MVP Alief | Definisi selesai README §7 | [ ] | |
 
 ## Status requirement P0 (PRD §8)
@@ -68,7 +71,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | BE Blocklist | 07 (awal) + 10 | [ ] | |
 | BE Push APNs | 11 | [ ] | |
 | BE Retensi 14 hari | 12 | [ ] | |
-| BE Keamanan (akses Guardian, batas percobaan kode) | 08, 09, 10, 12 | [ ] | |
+| BE Keamanan (akses Guardian, batas percobaan kode) | 08, 09, 10, 12 (checkbox mandat dicentang di 12) | [ ] | |
 | EN + ID semua teks | 01–06, 13–15 | [ ] | |
 
 ## QA

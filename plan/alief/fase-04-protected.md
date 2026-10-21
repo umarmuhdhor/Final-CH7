@@ -27,13 +27,14 @@ Home dan riwayat untuk orang tua (mode Protected): status perlindungan, guardian
 ## Langkah kerja
 
 1. **PR-04**: ikon profile kanan atas; lingkaran status extension (Active/Off) + avatar guardian (nama guardian dari sesi; mock: "Adhella"); card "Blocked!" terakhir (skor, link, alasan 1–2 kalimat dari sinyal teratas `labelSimple`); tap → Detail; kosong → ilustrasi + "Nothing blocked yet". Banner pengingat notifikasi (fase 02) kalau izin ditolak.
-2. Ambang "Active": `extensionLastSeenAt` dalam 10 menit terakhir (konstanta satu tempat, dicatat di DECISIONS bila berubah). Refresh saat app kembali ke foreground.
+2. Ambang "Active": `extensionLastSeenAt` lebih baru dari `AppGroup.extensionActiveWindow` (24 jam, `ShooShared`) — jangan membuat konstanta sendiri (D-alief-23). Refresh saat app kembali ke foreground.
 3. **PR-05**: chip filter All / Warning / Blocked; item: ikon situs, link (domain tebal), waktu relatif, chip status; terbaru di atas; tap → Detail; scroll tak berujung dengan `nextCursor`; pull to refresh; empty state per filter.
 4. Gerbang UI dengan teks besar (persona 45–65 tahun): Dynamic Type XL tanpa terpotong.
 
 ## Verifikasi
 
 ```bash
+source plan/alief/ref/sim.sh
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" -only-testing:ShooAppTests/ShieldModelTests -only-testing:ShooAppTests/ActivityModelTests
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" -only-testing:ShooAppUITests/ProtectedUITests
 ```

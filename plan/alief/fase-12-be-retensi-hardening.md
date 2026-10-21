@@ -19,10 +19,10 @@ Data scan + screenshot hilang otomatis setelah 14 hari, semua endpoint lolos rev
 
 ## Langkah kerja
 
-1. `cron/retention.ts` (R4 §5) + `triggers.crons: ["0 19 * * *"]` di `wrangler.jsonc`. Test dengan `scheduled()` + data mundur 15 hari: scan terhapus, objek Storage terhapus, path dedupe yang masih dipakai tidak terhapus.
+1. `cron/retention.ts` (R4 §5: maks 10 batch per run, satu `DELETE /storage/v1/object/screenshots` dengan `prefixes` per batch, lalu upsert `ops_heartbeat`) + `triggers.crons: ["0 19 * * *"]` di `wrangler.jsonc`. Test vitest memanggil handler `scheduled()` + data mundur 15 hari: scan terhapus, objek Storage terhapus (Storage lokal Supabase), path dedupe yang masih dipakai scan < 14 hari tidak terhapus, > 10 batch → sisa dihapus run berikutnya. Uji lokal: `curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=0+19+*+*+*"` (butuh `wrangler dev --test-scheduled`).
 2. Hardening: body limit global, header keamanan (`x-content-type-options`, CSP di `/join`), CORS ditutup (klien native tidak butuh CORS), semua rate limit R3 §5 diuji, log tanpa PII/token (grep test).
 3. Review penuh: `ecc:security-reviewer` + `ecc:database-reviewer` atas seluruh `backend/`. Tutup CRITICAL/HIGH. Ringkas di log.
-4. Cek kuota: hitung ukuran DB + Storage di Supabase lokal untuk 1000 scan seed; ekstrapolasi terhadap 500 MB / 1 GB. Cek apakah query lewat pooler dihitung aktivitas (tanya docs Supabase "project pausing"); kalau tidak, monitor B9 diarahkan ke endpoint yang memakai Storage API.
+4. Cek kuota: hitung ukuran DB + Storage di Supabase lokal untuk 1000 scan seed; ekstrapolasi terhadap 500 MB DB / 1 GB Storage / 5 GB egress. Pemicu migrasi ke R2 (`ScreenshotStore`): Storage > 700 MB atau egress > 3,5 GB (ARCHITECTURE §3). Anti-pause: cron harian + `/healthz/db` sama-sama menulis `ops_heartbeat` (bukan `select 1`), monitor B9 memanggil `/healthz/db`.
 5. Finalisasi `backend/ci/backend.yml` + `backend/ci/README.md`; tulis C2.
 6. `backend/README.md` final: setup lokal, env, deploy manual, rollback (`wrangler rollback`, migrasi maju saja), cara mengecek kuota.
 7. LANGKAH MANUAL deploy final + uji asap cloud (semua endpoint dengan dua device uji).
@@ -30,14 +30,17 @@ Data scan + screenshot hilang otomatis setelah 14 hari, semua endpoint lolos rev
 ## Verifikasi
 
 ```bash
-cd backend/db && supabase db reset && supabase test db
+(cd backend/db && supabase db reset && supabase test db)
 pnpm -C backend/api typecheck && pnpm -C backend/api test
-gitleaks detect --source . --no-banner || true
+(pnpm -C backend/api exec wrangler dev --test-scheduled > /tmp/shoo-dev.log 2>&1 &) && npx wait-on tcp:8787
+curl -s "http://localhost:8787/cdn-cgi/local/scheduled?cron=0+19+*+*+*"
+gitleaks detect --source . --no-banner   # harus 0 temuan
 ```
 
 ## Kriteria selesai (DoD)
 
-- [ ] Retensi terbukti (test) dan cron terdaftar di cloud (`wrangler deployments`/dashboard).
+- [ ] Retensi terbukti (test + trigger lokal) dan cron terdaftar di cloud (`wrangler triggers`/dashboard), satu run cloud tercatat di `ops_heartbeat`.
 - [ ] Tidak ada temuan CRITICAL/HIGH terbuka.
 - [ ] Uji asap cloud lulus; G6 `[x]`.
+- [ ] `gitleaks` 0 temuan.
 - [ ] C2 tertulis untuk Umar.

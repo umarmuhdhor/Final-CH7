@@ -81,8 +81,14 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
 <langkah>
 1. TEMUKAN FASE.
    - "Saya Alief, track <x>" → TRACK = x, FASE = auto.
-   - FASE = auto: ambil fase pertama milik TRACK (tabel "Urutan fase") yang di plan/alief/PROGRESS.md belum [x].
-     Track c: cek dulu 06Q dan 12 sudah [x]. Kalau belum, berhenti dan laporkan apa yang kurang.
+   - Status PROGRESS: [ ] belum · [~] dikerjakan / LANGKAH MANUAL · [r] PR terbuka menunggu review · [x] PR MERGED.
+     Sebelum memilih, segarkan status: untuk setiap baris [r] milik TRACK jalankan `gh pr view <no> --json state` →
+     MERGED berarti ubah ke [x] (commit kecil "docs(plan): mark fase NN merged").
+   - FASE = auto: ambil fase pertama milik TRACK (tabel "Urutan fase") yang berstatus [ ] (bukan [r]/[x]).
+     Kalau fase sebelumnya [r], fase baru DITUMPUK di atas branch fase itu (langkah 3c).
+   - Track c: syaratnya SEMUA PR fase 01–06Q dan 07–12 sudah MERGED: jalankan `gh pr view <no> --json state -q .state`
+     untuk setiap nomor PR di kolom PR PROGRESS (termasuk `chore/APP-test-targets` dan `fix/QA-A-*`); semua harus `MERGED`.
+     Kalau belum, berhenti dan laporkan PR yang masih menunggu review.
    - FASE = nomor: buka plan/alief/fase-<FASE>-*.md. Kalau tidak ada, berhenti dan tampilkan daftar fase.
    Pastikan fase ini milik TRACK. Kalau bukan, berhenti dan tanya user.
 
@@ -97,12 +103,14 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
       belum di-merge, buat dari branch fase itu (STACKED) dan tulis "Stacked on #<no>" di isi PR.
    d. Prasyarat dari tim lain yang belum ada (endpoint AI, extension, capability Xcode): JANGAN menunggu.
       Pakai fixture/mock dan beri penanda yang bisa dicari:
-        `// TODO(sync:<umar|imelda|alief>): <apa yang diganti> — replace after <PR/fase>`
+        `// TODO(sync:<umar|imelda|alief>): <what> — replace after <PR/fase>`
       Simpan placeholder di file sendiri bila bisa. Catat di log fase bagian "Placeholder aktif".
 
 4. RENCANAKAN. Panggil agent `ecc:planner` dengan isi "Langkah kerja" fase, lalu skill
    `superpowers:writing-plans`. Simpan rencana lengkap ke plan/alief/log/fase-<FASE>-plan.md (BUKAN docs/superpowers/).
    Tulis ringkasan ≤ 15 baris ke log fase. Tandai PROGRESS.md baris fase [~] + tanggal mulai.
+   Cek gate G0 di PROGRESS: kalau fase ini butuh jawaban Umar yang belum ada (C3 untuk fase 14/15), pakai default
+   yang tertulis di file fase; kalau file fase berkata "berhenti", tulis LANGKAH MANUAL dan berhenti.
    Jangan menunggu konfirmasi user kecuali planner menemukan konflik dengan contracts/.
    Layar dengan UX yang belum jelas di PRD: jalankan superpowers:brainstorming SINGKAT, putuskan opsi paling sederhana,
    catat di DECISIONS.
@@ -125,13 +133,17 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
    f. Tidak ada perintah destruktif (rm -rf di luar folder build, reset history, push --force) tanpa izin eksplisit.
       Pengecualian: `git push --force-with-lease` ke branch fase MILIKMU sendiri setelah rebase stacked (langkah 13).
    g. Keputusan produk yang tidak dijawab PRD/mandat/plan: pilih opsi paling sederhana yang tetap memenuhi
-      "Selesai kalau" di PRD, catat di DECISIONS (D-alief-NN), lanjutkan.
+      "Selesai kalau" di PRD, catat di DECISIONS, lanjutkan. ID keputusan per track supaya worktree paralel tidak bentrok:
+      app = `D-alief-A01, A02, …`, be = `D-alief-B01, …`, c = `D-alief-C01, …` (nomor plan `D-alief-NN` hanya untuk fase 00).
    h. Aksi CLOUD (supabase link/db push/secrets, wrangler deploy/secret/hyperdrive, Storage bucket di cloud,
       App Store Connect, TestFlight): JANGAN dijalankan sendiri. Siapkan perintahnya, lalu tulis checklist bernomor
       "LANGKAH MANUAL" di log fase dan berhenti di titik itu.
    i. Test merah yang tidak jelas sebabnya → superpowers:systematic-debugging sebelum mengubah kode.
    j. Butuh perubahan kontrak, capability Xcode, model ShooShared, atau file milik tim lain → tulis usulan di
       DECISIONS + TODO §C, pakai placeholder, lanjutkan tanpa menyentuh file itu.
+   k. `ios/ShooApp/Info.plist` dan `ios/ShooApp/Shoo.entitlements` DI-GENERATE XcodeGen dari `ios/project.yml`: jangan diedit
+      (perubahan hilang di `xcodegen` berikutnya). Key baru = permintaan ke Umar (TODO C3). Satu-satunya edit project.yml
+      yang diizinkan adalah diff D-alief-02 (fase 01).
 
 7. GERBANG UI (wajib kalau diff menyentuh ios/ShooApp/**/*.swift yang menghasilkan tampilan):
    a. Build + jalankan di simulator iPhone (iOS Simulator tool: launch, screenshot). Ambil screenshot setiap layar
@@ -154,7 +166,8 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
 10. DOKUMENTASI. Tulis/perbarui plan/alief/log/fase-<FASE>.md:
     Status · ringkasan planner · checklist langkah · file dibuat/diubah · hasil verifikasi · DoD + bukti ·
     gerbang UI (kalau ada) · temuan review · deviasi (+ link DECISIONS) · Placeholder aktif · LANGKAH MANUAL ·
-    Catatan handoff. Perbarui baris fase ini saja di PROGRESS.md (+ tabel requirement P0 yang disentuh).
+    Catatan handoff. Perbarui baris fase ini saja di PROGRESS.md (+ tabel requirement P0 yang disentuh):
+    status [r] + nomor PR setelah PR dibuka (BUKAN [x]; [x] hanya setelah merge, langkah 1).
 
 11. COMMIT & PR. `superpowers:finishing-a-development-branch` (pilih opsi "push + PR", jangan merge sendiri).
     a. Commit kecil per langkah, pesan Conventional Commits (R5 §3), mis. `feat(ON-02): name input with 1–20 char validation`.
@@ -167,7 +180,7 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
 12. SIMPAN SESI. Jalankan /ecc:save-session dengan nama "alief-<TRACK>-fase<FASE>".
 
 13. LANJUT atau LAPOR.
-    - FASE = auto: tulis ringkasan 3 baris, lalu KEMBALI ke langkah 1 untuk fase berikutnya track ini.
+    - FASE = auto: tulis ringkasan 3 baris, lalu KEMBALI ke langkah 1 untuk fase berikutnya track ini (fase [r] dilewati, bukan diulang).
       Berhenti hanya kalau: (a) LANGKAH MANUAL, (b) blocker P0 yang butuh keputusan user, (c) semua fase track selesai,
       (d) konteks hampir habis (simpan log + /ecc:save-session dulu).
       Sebelum fase baru, SINKRON:

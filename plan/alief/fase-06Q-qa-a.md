@@ -29,6 +29,7 @@ Laporan QA berformat Catalyst (`ref/R7`, `qa/README.md`) untuk semua layar app s
 ## Verifikasi
 
 ```bash
+source plan/alief/ref/sim.sh
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
 ls plan/alief/qa/img/QA-A | wc -l
 ```

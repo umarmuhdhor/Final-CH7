@@ -21,7 +21,7 @@ Kerangka app yang semua layar Fase A pakai: tab Shield / Activity, satu protocol
 
 ## Output
 
-1. **PR `chore/APP-test-targets`** (pengecualian D-alief-02, satu-satunya edit `ios/project.yml`):
+1. **PR `chore/APP-test-targets`** (pengecualian D-alief-02, satu-satunya edit `ios/project.yml`; diff persis di D-alief-24 — kunci lain, termasuk `info`/`entitlements`, tidak disentuh):
    - target `ShooAppTests` (bundle.unit-test, sources `ShooApp/Tests`, host app Shoo) dan `ShooAppUITests` (bundle.ui-testing, sources `ShooApp/UITests`)
    - target Shoo: tambah `excludes: ["CLAUDE.md", "Tests/**", "UITests/**", "ci/**"]`
    - scheme Shoo: test targets ditambahkan
@@ -40,7 +40,7 @@ Kerangka app yang semua layar Fase A pakai: tab Shield / Activity, satu protocol
    `registerDevice(name:mode:)`, `updateMe(name:language:apnsToken:)`, `createFamilyCode()`, `joinFamily(code:)`, `familyMembers()`, `removeMember(_:)`, `leaveGuardian()`, `scans(owner:status:cursor:)`, `scan(id:)`, `setVerdict(scanId:value:)`. Tipe pendukung di `Data/Models.swift` (`FamilyMember`, `FamilyCode`, `GuardianInfo`, `ScanPage`, `ScanOwnerFilter`, `RepositoryError` dengan `code` kontrak).
 3. **MockRepository**: baca `Data/Fixtures/*.json` (salinan `contracts/fixtures`, plus `activity-family.json` di-inline), simulasi latensi 300 ms (bisa dimatikan di test), state verdict di memori, mode Guardian/Protected bisa dipilih untuk preview. Error kontrak bisa dipicu lewat kode khusus (mis. join `0000` → `code_invalid`, `9999` → `code_expired`) untuk preview dan test.
 4. **Navigasi**: `RootView` → kalau onboarding belum selesai: placeholder Onboarding (diisi fase 02); selain itu `TabView` Shield / Activity, tombol profile kanan atas, `Router` untuk push Detail(scanId).
-5. **Lokalisasi**: `Localizable.xcstrings` (source EN, terjemahan ID). Uji apakah `.environment(\.locale, Locale(identifier: "id"))` mengubah `Text` dari String Catalog di iOS 17. Kalau tidak, pakai helper `L10n` (R5 §1) dan catat di DECISIONS.
+5. **Lokalisasi**: `Localizable.xcstrings` (source EN, terjemahan ID). Uji (BELUM DIVERIFIKASI) apakah `.environment(\.locale, Locale(identifier: "id"))` mengubah tiga kasus: `Text("literal")`, `Text(variabelString)`, dan `String(localized:)` di view model. Sumber komunitas: hanya kasus pertama yang ikut. Kasus yang tidak ikut → helper `L10n.string(_:locale:)` (`String(localized:bundle:locale:)`) dan catat `D-alief-A…`.
 6. **Avatar**: 12 avatar placeholder (SF Symbol hewan/objek di lingkaran warna palet), `AvatarView(id:)` memetakan `avatar_01..12`. Catat "re-skin saat desain final datang".
 7. **Komponen**: `ScoreRing` (0–100, warna per ambang `ScoreThreshold`), `StatusChip` (Warning / Blocked / Verified scam / Marked safe), `SiteIcon` (favicon atau huruf awal domain), `EmptyStateView`.
 8. **Draf CI iOS**: `ios/ShooApp/ci/ios-app.yml` (`on: pull_request` paths `ios/ShooApp/**`, macOS runner, `brew install xcodegen`, `xcodegen`, `xcodebuild test`). Inert sampai Umar memindahkan (C2).
@@ -49,10 +49,11 @@ Kerangka app yang semua layar Fase A pakai: tab Shield / Activity, satu protocol
 ## Verifikasi
 
 ```bash
-cd ios && xcodegen
-SIM=$(xcrun simctl list devices available | grep -m1 -o 'iPhone [0-9a-zA-Z ]*' | head -1)
-xcodebuild test -project Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" | tail -20
-grep -rn "TODO(sync" ShooApp || true
+source plan/alief/ref/sim.sh
+(cd ios && xcodegen)
+xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" | tail -20
+git diff origin/main -- ios/project.yml   # di PR 1 saja: harus persis diff D-alief-02/D-alief-24
+grep -rn "TODO(sync" ios/ShooApp || true
 ```
 
 ## Kriteria selesai (DoD)

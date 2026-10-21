@@ -83,12 +83,17 @@ create table verdicts (
   domain        text not null,
   value         verdict_value not null,
   scan_id       text references scans(id) on delete set null,
-  by_device_id  text references devices(id) on delete set null,
+  by_device_id  text not null references devices(id) on delete cascade,   -- wajib string di kontrak Verdict; device tidak dihapus di MVP
   by_name       text not null,                            -- snapshot nama saat memutuskan (DT-06)
   decided_at    timestamptz not null default now(),
   primary key (owner_id, domain)
 );
 create index verdicts_not_safe on verdicts(decided_at) where value = 'not_safe';
+
+create table ops_heartbeat (                              -- ditulis /healthz/db + cron, supaya Supabase Free tidak pause
+  id            int primary key default 1 check (id = 1),
+  at            timestamptz not null default now()
+);
 
 create table push_log (                                   -- untuk LogSender, debugging, dan QA
   id            bigint generated always as identity primary key,
@@ -103,9 +108,9 @@ create table push_log (                                   -- untuk LogSender, de
 ## 3. Role dan grant
 
 ```sql
-create role shoo_api login password :'shoo_api_password' noinherit;   -- password diisi saat migrasi lewat psql var, bukan di file
+create role shoo_api login noinherit;   -- TANPA password di migrasi (lihat paragraf di bawah)
 grant usage on schema public to shoo_api;
-grant select, insert, update, delete on devices, family_links, family_codes, join_attempts, scans, verdicts, push_log to shoo_api;
+grant select, insert, update, delete on devices, family_links, family_codes, join_attempts, scans, verdicts, push_log, ops_heartbeat to shoo_api;
 grant usage on all sequences in schema public to shoo_api;
 revoke all on all tables in schema public from anon, authenticated;
 alter default privileges in schema public revoke all on tables from anon, authenticated;
@@ -114,7 +119,7 @@ alter table devices enable row level security;   -- … sama untuk semua tabel
 create policy shoo_api_all on devices for all to shoo_api using (true) with check (true);   -- … sama untuk semua tabel
 ```
 
-Password role `shoo_api` tidak pernah ada di file migrasi. Lokal: diset di `seed.sql` dengan nilai dev `shoo_api_local` (tidak rahasia). Cloud: `alter role shoo_api password '...'` dijalankan Alief lewat SQL editor (LANGKAH MANUAL fase 07).
+Password role `shoo_api` tidak pernah ada di file migrasi (migrasi `supabase db reset`/`db push` tidak memproses variabel psql). Lokal: `seed.sql` menjalankan `alter role shoo_api password 'shoo_api_local';` (nilai dev, tidak rahasia). Cloud: `alter role shoo_api password '...'` dijalankan Alief lewat SQL editor (LANGKAH MANUAL fase 07). pgTAP: `select has_role('shoo_api');`. Setiap file test pgTAP diawali `create extension if not exists pgtap with schema extensions;`.
 
 ## 4. Invariant (diuji pgTAP)
 
@@ -128,10 +133,29 @@ Password role `shoo_api` tidak pernah ada di file migrasi. Lokal: diset di `seed
 | I6 | Satu verdict per (pemilik, domain), keputusan terakhir menang | PK + `on conflict do update` |
 | I7 | `anon`/`authenticated` tidak bisa membaca tabel mana pun | grant + test `has_table_privilege` |
 | I8 | `domain` lowercase tanpa `www.` | check constraint |
+| I9 | Role `shoo_api` ada dan hanya punya grant di tabel kita | `has_role`, `table_privs_are` |
 
 ## 5. Blocklist
 
-`GET /blocklist?since=` = `select domain, max(decided_at) as added_at from verdicts where value = 'not_safe' and decided_at > $since group by domain order by added_at limit 1000`. `nextSince` = `added_at` terakhir. Lihat risiko peracunan (SECURITY T5, D-alief-06).
+Kontrak: "all domains with a `not_safe` verdict from any family". Karena risiko peracunan (SECURITY T5, D-alief-06), fase 10 menerapkan **filter bawaan** sampai Umar + Imelda memutuskan (TODO C6):
+
+1. Hanya verdict `not_safe` atas scan milik device **Protected** yang terhubung ke Guardian yang memutuskan saat itu (`scans.owner_id` mode protected dan `family_links` aktif) — verdict Guardian atas scan miliknya sendiri tidak masuk global.
+2. Domain di allowlist statis (`backend/api/src/data/allowlist.ts`: domain resmi brand Indonesia + domain populer) tidak pernah masuk.
+3. `BLOCKLIST_MIN_FAMILIES` (default 1) — jumlah keluarga berbeda minimal.
+
+```sql
+select v.domain, max(v.decided_at) as added_at
+from verdicts v
+join devices o on o.id = v.owner_id and o.mode = 'protected'
+join family_links l on l.protected_id = v.owner_id and l.guardian_id = v.by_device_id
+where v.value = 'not_safe' and v.decided_at > $since
+group by v.domain
+having count(distinct v.by_device_id) >= $minFamilies
+order by added_at limit 1000;
+-- lalu buang domain yang ada di allowlist
+```
+
+`nextSince` = `added_at` terakhir. Penghapusan (not_safe → safe, atau dibersihkan) tidak terkirim lewat `since`: usulan kontrak `removed: [{ domain, removedAt }]` (TODO C6, D-alief-18). Sampai disetujui, detector disarankan full refresh (`since` kosong) sekali sehari.
 
 ## 6. Retensi
 
@@ -141,5 +165,6 @@ delete from scans where created_at < now() - interval '14 days' returning screen
 delete from family_codes where expires_at < now() - interval '1 hour';
 delete from join_attempts where attempted_at < now() - interval '1 day';
 delete from push_log where created_at < now() - interval '14 days';
+insert into ops_heartbeat (id, at) values (1, now()) on conflict (id) do update set at = now();
 ```
-Verdict tidak dihapus (D-alief-14).
+Verdict tidak dihapus (D-alief-14). Batas per run: maks 10 batch × 500 scan (Workers Free: 10 ms CPU dan 50 subrequest per Cron).

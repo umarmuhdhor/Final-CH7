@@ -123,6 +123,59 @@ Format:
 - Dampak: perubahan kontrak kecil (Umar).
 - File: ref/R3 §4, fase-05, fase-08.
 
-## D-alief-16 · (diisi fase 07) · Jalur push APNs
+## D-alief-16 · 21 Okt 2026 · plan (direvisi setelah verify run 01) · Jalur push APNs: relay dulu
 
-- Keputusan: _menunggu spike fase 07_ — `ApnsSender` langsung dari Worker, atau `RelaySender` → Edge Function Supabase `push`.
+- Keputusan: **jalur utama yang direncanakan = `RelaySender`** → Edge Function Supabase `push` (Deno) dengan shared secret. `ApnsSender` langsung dari Worker hanya dipakai kalau spike di Worker **yang sudah di-deploy** (bukan `wrangler dev`) membuktikan HTTP/2 ke APNs berhasil. Hasil spike ditulis sebagai entri baru `D-alief-B…` di fase 07.
+- Alasan: tidak ada dokumen resmi Cloudflare bahwa `fetch()` Worker memakai HTTP/2 ke origin; laporan komunitas menyebut HTTP/1.1; APNs hanya HTTP/2. Spike lokal tidak mewakili jaringan edge.
+- Dampak: tambah Edge Function di `backend/db/supabase/functions/push/` (folder kita); Supabase Free 500.000 invocation/bulan.
+- File: ARCHITECTURE §1–§2, ref/R1, ref/R3 §6–§7, fase-07, fase-11.
+
+## D-alief-17 · 21 Okt 2026 · plan (verify run 01) · Hyperdrive tanpa cache + Direct connection
+
+- Keputusan: Hyperdrive dibuat dengan `--caching-disabled`. Connection string = Direct connection Supabase (role `shoo_api`); fallback session pooler port 5432 (user `shoo_api.<ref>`), bukan transaction pooler 6543. postgres.js `^3.4.5` dengan opsi `{ max: 5, fetch_types: false }`, `prepare` default (tidak `false`).
+- Alasan: cache Hyperdrive aktif default (`max_age` 60 s + 15 s stale) → verdict, otorisasi, dan rate limit basi di cloud, sementara test lokal tidak memakai cache. Docs Cloudflare untuk Supabase menyarankan Direct connection dan melarang `prepare: false`.
+- Alternatif yang ditolak: dua binding (cache hanya untuk `/blocklist`) — menambah konfigurasi untuk manfaat kecil (blocklist sudah punya `Cache-Control`).
+- File: ARCHITECTURE §2–§3, ref/R1, ref/R3 §5, TODO B4, SECURITY T14, fase-07, fase-10.
+
+## D-alief-18 · 21 Okt 2026 · plan (verify run 01) · Penghapusan dari blocklist (usulan kontrak)
+
+- Keputusan: usulkan field `removed: [{ domain, removedAt }]` di respons `GET /blocklist?since=` untuk domain yang tidak lagi memenuhi syarat (not_safe → safe, atau dibersihkan). Sampai disetujui: detector disarankan full refresh (`since` kosong) 1×/hari.
+- Alasan: `since` hanya mengirim penambahan; domain yang batal diblokir tetap terblokir selamanya di detector.
+- Dampak: kontrak Umar + detector Imelda (TODO C6).
+- File: ref/R2 §5, TODO C6.
+
+## D-alief-19 · 21 Okt 2026 · plan (verify run 01) · `owner=family` termasuk Guardian sendiri
+
+- Keputusan: `GET /scans?owner=family` = scan milik saya + Protected aktif saya, mengikuti fixture `contracts/fixtures/activity-family.json` (memuat `dev_me`). Dikonfirmasi ke Umar (TODO C13); kalau Umar bilang tidak, cukup ubah satu filter + MockRepository.
+- Alasan: fixture adalah kontrak.
+- File: ref/R3 §3, fase-05, fase-09.
+
+## D-alief-20 · 21 Okt 2026 · plan (verify run 01) · `plan/alief/` di luar folder Team App
+
+- Keputusan: `plan/alief/` (dokumen plan Alief) adalah pengecualian tertulis atas hard rule 1. Isinya hanya dokumen; perubahan di-review Umar lewat CODEOWNERS `*` (gate G1).
+- Alasan: Alief meminta plan di `plan/alief/` mengikuti struktur proyek IBM.
+- File: README §4.
+
+## D-alief-21 · 21 Okt 2026 · plan (verify run 01) · Status Protected (usulan kontrak `GET /devices/me`)
+
+- Keputusan: usulkan `GET /devices/me` → `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } | null }`. Sampai disetujui: app menyimpan guardian (nama + avatar) dari respons join; `leaveGuardian()` atau 404 di endpoint keluarga menghapus `guardian.name` dari App Group; pemutusan oleh Guardian tidak terdeteksi Protected (celah tercatat).
+- Alasan: kontrak tidak punya cara bagi Protected mengetahui guardian-nya setelah join atau bahwa ia sudah dihapus (PR-04, PF-01, EX-06 "Waiting for [nama]").
+- File: TODO C12, fase-13, fase-14.
+
+## D-alief-22 · 21 Okt 2026 · plan (verify run 01) · Avatar tampil setelah registrasi
+
+- Keputusan: ON-02 hanya nama. Setelah ON-03 (`registerDevice` → `avatarId`), layar "Hi, [nama]" menampilkan avatar acak dari server.
+- Alasan: `POST /devices` butuh `mode`, jadi avatar baru ada setelah ON-03; PRD hanya mensyaratkan avatar acak, bukan urutannya.
+- File: fase-02.
+
+## D-alief-23 · 21 Okt 2026 · plan (verify run 01) · Ambang Active = `AppGroup.extensionActiveWindow`
+
+- Keputusan: app memakai `AppGroup.extensionActiveWindow` (24 jam, `ios/ShooShared/AppGroup.swift`) tanpa konstanta sendiri; server memakai jendela yang sama.
+- Alasan: `ios/ShooApp/CLAUDE.md` "Do not invent another way". Nilai lain = usulan ke Umar setelah spike #2.
+- File: fase-04, ref/R3 §4.
+
+## D-alief-24 · 21 Okt 2026 · plan (verify run 01) · Revisi D-alief-02, D-alief-06, D-alief-15
+
+- D-alief-02: diff `ios/project.yml` yang diizinkan PERSIS: (1) target baru `ShooAppTests` (`type: bundle.unit-test`, `platform: iOS`, `sources: [ShooApp/Tests]`, `dependencies: [{target: Shoo}]`), (2) target baru `ShooAppUITests` (`type: bundle.ui-testing`, `sources: [ShooApp/UITests]`, `dependencies: [{target: Shoo}]`), (3) di target `Shoo` source `ShooApp`: `excludes` ditambah `Tests/**`, `UITests/**`, `ci/**` (tetap `CLAUDE.md`), (4) scheme `Shoo`: `test.targets` = kedua target. Kunci lain tidak disentuh. Alief memutuskan agent boleh langsung membuat PR ini dan cukup memberi tahu Umar (C1); Umar tetap approver lewat CODEOWNERS. Key Info.plist/entitlement (kamera, push, Team ID) BUKAN bagian pengecualian ini → permintaan ke Umar (C3).
+- D-alief-06: filter blocklist bawaan sudah diterapkan sebagai default fase 10 (R2 §5) sambil menunggu keputusan C6.
+- D-alief-15: fallback diubah: tanpa data `extensionActive: true` (tidak pernah "Not connected" tanpa bukti); yang mengirim `extensionLastSeenAt` adalah extension (maks 1×/jam) + app saat foreground (C11).
