@@ -253,3 +253,9 @@ Format:
 - Alasan: verify run 04 #S3, #R2–#R10.
 - File: fase-02, fase-12, fase-15, fase-00, R2, PROMPT, ARCHITECTURE, SECURITY, README, log/fase-00.
 
+## D-alief-37 · 21 Okt 2026 · plan (verify run 05) · Perbaikan SEDANG/RENDAH run 05
+
+- Keputusan: (a) `POST /scans` memvalidasi `domain` sebagai registrable domain (kontrak + PSL di EX-02): lowercase, tanpa `www.`, host `url` = domain atau `*.domain`; server tidak menghitung ulang PSL. (b) API status iOS 26.2 = `SFSafariExtensionManager.stateOfExtension(withIdentifier:)` / `getStateOfExtension` (`getStateOfSafariExtension` hanya macOS); merevisi D-alief-34(b). (c) Kunci APNs per environment: Sandbox untuk D7, Production untuk QA-E2E (B7). (d) Deep link mengikuti kontrak PR #1 Umar: `scan/{id}`, `activity`, `join`, default Shield; merevisi D-alief-32, C16 jadi permintaan merge. (e) Rekomendasi ON-04 dari spike ditulis di `docs/spikes/open-extension-settings.md` (ikut PR spike ke `main`), dibaca fase 02/06/06Q/16. (f) `ops_heartbeat` satu baris per `source`; mode REVIEW memakai komentar PR "Review handled @<sha> <ISO>" dan endpoint re-request reviewer; rate limit `GET /verdicts` token bucket 10/10 s + `Retry-After`; `xcodegen` sebelum `source sim.sh`; QA-E2E #18 deep link, #19 subdomain.
+- Alasan: verify run 05 #S1–#S5, #R1–#R10 (verdict run 05 SIAP).
+- File: R1, R2, R3, R7, SECURITY, ARCHITECTURE, PROMPT, PROGRESS, README, TODO, ref/sim.sh, fase-01S, 02, 06, 06Q, 09, 10, 11, 12, 13, 14, 15, 16.
+

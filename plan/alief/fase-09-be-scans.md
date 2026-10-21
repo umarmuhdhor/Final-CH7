@@ -26,7 +26,7 @@ Extension bisa mengirim hasil scan (skor ≥ 30) beserta screenshot bukti, app b
 
 ## Langkah kerja
 
-1. `POST /scans`: validasi zod sesuai skema (R3 §4), `ownerDeviceId`/`ownerName` di body diterima tapi diabaikan, `owner = principal`, simpan, screenshot (ukuran ≤ `SCREENSHOT_MAX_BYTES`, magic bytes JPEG/PNG, dedupe pemilik+domain 24 jam, kuota 50/24 jam) → `201 { id }`. Hook push (fase 11) dipanggil lewat interface `PushSender` yang di fase ini adalah `LogSender`.
+1. `POST /scans`: validasi zod sesuai skema (R3 §4), `ownerDeviceId`/`ownerName` di body diterima tapi diabaikan, validasi `domain` R3 §4 (registrable domain; test: `url` `https://login.bca-verifikasi.site/x` + `domain` `bca-verifikasi.site` → 201, `domain` lain → 422), `owner = principal`, simpan, screenshot (ukuran ≤ `SCREENSHOT_MAX_BYTES`, magic bytes JPEG/PNG, dedupe pemilik+domain 24 jam, kuota 50/24 jam) → `201 { id }`. Hook push (fase 11) dipanggil lewat interface `PushSender` yang di fase ini adalah `LogSender`.
 2. `GET /scans?owner=me|family|{deviceId}&status=&cursor=&limit=`: R3 §3–§4 (`family` = saya + Protected aktif, D-alief-19), `screenshotUrl: null` di daftar (D-alief-04), `verdict` dari join hanya untuk scan `blocked`, `pageTitle` null dihilangkan, `nextCursor`. Setiap respons divalidasi `test/helpers/schema.ts` (ajv + `contracts/scan-result.schema.json`).
 3. `GET /scans/{id}`: otorisasi R3 §3, signed URL 1 jam.
 4. Usulan kontrak D-alief-07 (batas screenshot) + D-alief-04 (`screenshotUrl` daftar null) + catatan C10 → PR "Contract proposals" + TODO C4, C10.

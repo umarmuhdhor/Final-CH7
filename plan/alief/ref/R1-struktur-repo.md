@@ -67,7 +67,7 @@ ios/ShooApp/
 ├── App/
 │   ├── AppEnvironment.swift      repository + settings + router (DI)
 │   ├── RootView.swift            onboarding vs TabView
-│   ├── Router.swift              navigasi ke Detail(scanId), Profile, Family code; deep link shoo://join (fase 14) + shoo://scan/<id> (fase 15)
+│   ├── Router.swift              navigasi ke Detail(scanId), Profile, Family code; deep link kontrak: shoo://join (fase 14), shoo://scan/<id> + shoo://activity (fase 15), lainnya → Shield
 │   ├── AppSettings.swift         bahasa, Family mode terakhir (GD-02), onboarding selesai
 │   └── AppConfig.swift           base URL API `#if DEBUG` localhost / Release cloud, flag `cameraEnabled` (R5 §6)
 ├── Data/

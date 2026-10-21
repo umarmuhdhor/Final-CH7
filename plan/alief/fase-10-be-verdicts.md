@@ -21,7 +21,7 @@ Guardian memutuskan Safe / Not safe untuk satu domain milik pemilik scan, extens
 ## Langkah kerja
 
 1. `POST /verdicts { scanId, value }` (guardian): scan harus milik saya atau Protected aktif saya (selain itu 404), status `blocked` (selain itu 409 `verdict_not_allowed`), dalam satu transaksi: upsert `(owner_id, domain)` dengan `global_eligible` (R2 §5 butir 1) lalu upsert/hitung ulang `blocklist_entries` (butir 2–3) → `{ verdict }`. Migrasi: kolom `verdicts.global_eligible` saja (tabel `blocklist_entries` + grant `shoo_api` sudah dibuat di migrasi awal fase 07; pgTAP fase ini menambah test kolom baru).
-2. `GET /verdicts?domain=` (semua): normalisasi domain (lowercase, tanpa `www.`), `{ verdict: Verdict | null }` untuk `owner = me`. Rate limit 1 req/2 s.
+2. `GET /verdicts?domain=` (semua): normalisasi domain (lowercase, tanpa `www.`; registrable domain dari extension, R3 §4), `{ verdict: Verdict | null }` untuk `owner = me`. Rate limit token bucket 10 req / 10 s per device + `Retry-After`.
 3. `GET /blocklist` membaca `blocklist_entries` yang sudah disetujui (R2 §5 butir 5). Kalau Umar/Imelda sudah menjawab C6, ikuti jawabannya (mis. persetujuan otomatis). Usulan `removed` (D-alief-18) ditulis di PR. Query review (R2 §5 butir 4) ditulis di `backend/README.md` sebagai prosedur LANGKAH MANUAL berkala.
 4. Mapping `verdict` ke ScanResult (fase 09) memakai data asli, hanya untuk scan `blocked`; test cocok dengan dua fixture verdict.
 5. `ecc:security-reviewer` fokus T5, T10.

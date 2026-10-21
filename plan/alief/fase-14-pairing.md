@@ -24,7 +24,7 @@ Keluarga terhubung lewat QR, kode 4 digit, atau link undangan WhatsApp.
 - `Features/Pairing/FamilyCodeView` (Guardian): QR (`CoreImage.CIQRCodeGenerator` berisi `inviteUrl`), kode besar, hitung mundur 60 s lalu kode baru otomatis, "Copy invite link" (teks undangan EN/ID + `inviteUrl`), daftar terhubung x/3 + hapus
 - `Features/Pairing/ConnectView` (Protected): tab Scan QR (`AVCaptureSession` / `DataScannerViewController`) dan Enter code (4 kotak digit), pesan error jelas per kode error kontrak + coba lagi
 - `Features/Pairing/ProtectedByView`: "You're protected by [nama]" + avatar guardian dari respons join (disimpan `SessionStore`) → lanjut ke ON-04 → ON-05 (alur fase 02), lalu Home
-- `onOpenURL` untuk `shoo://join?code=` → ConnectView dengan kode terisi + konfirmasi (T11)
+- `onOpenURL` untuk `shoo://join?code=` → ConnectView dengan kode terisi + konfirmasi (T11); link lain/rusak → Shield (kontrak "Deep links"; `scan`/`activity` dirutekan di fase 15)
 - Test: hitung mundur + refresh, parsing URL/QR (`https://…/join?code=` dan `shoo://join?code=`), pemetaan error ke pesan EN/ID, daftar x/3
 
 ## Langkah kerja

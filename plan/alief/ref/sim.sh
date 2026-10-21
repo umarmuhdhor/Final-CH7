@@ -11,4 +11,6 @@ if [ -d ios/Shoo.xcodeproj ]; then
   APP_GROUP=$(printf '%s\n' "$BUILD_SETTINGS" | awk -F' = ' '/ SHOO_APP_GROUP = /{print $2; exit}')
   export BUNDLE_ID APP_GROUP
   echo "BUNDLE_ID=$BUNDLE_ID APP_GROUP=$APP_GROUP"
+else
+  echo "BUNDLE_ID/APP_GROUP kosong: jalankan (cd ios && xcodegen) dulu, lalu source ulang" >&2
 fi

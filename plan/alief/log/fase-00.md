@@ -17,6 +17,7 @@
 | 02 | sesi baru (read-only) | BELUM SIAP | 0 KRITIS, 2 TINGGI (N1 regresi status auto, N2 peracunan blocklist) + 4 SEDANG, 9 RENDAH | Semua N1–N15 diperbaiki; keputusan baru D-alief-25..28 (antrean blocklist + review manual, status `[m]`, deploy dari branch fase, Info.plist target test). Laporan: `log/verify/run-02.md` |
 | 03 | sesi baru (read-only) | BELUM SIAP | 0 KRITIS, 2 TINGGI (T1 plan tertinggal mandat `981ad73`: ON-04 + S1/S2; T2 fase 12 melingkar) + 7 SEDANG, 11 RENDAH | `main` di-merge ke branch plan; semua T1–T2, S1–S7, R1–R11 diperbaiki; keputusan baru D-alief-29..33 (fase 01S spike, ON-04 di fase 02, deploy fase 12 dari branch + D8, transisi status lengkap, deep link `shoo://scan`). Laporan: `log/verify/run-03.md` |
 | 04 | sesi baru (read-only) | BELUM SIAP | 0 KRITIS, 3 TINGGI (T1 plan tertinggal L0 `495c792` + bundle ID/App Group hardcode; T2 API extension iOS 26.2 diabaikan; T3 mode REVIEW berputar) + 4 SEDANG, 10 RENDAH | `main` di-merge lagi; semua T1–T3, S1–S4, R1–R10 diperbaiki; keputusan baru D-alief-34..36. Laporan: `log/verify/run-04.md` |
+| 05 | sesi baru (read-only) | **SIAP** | 0 KRITIS, 0 TINGGI + 5 SEDANG, 10 RENDAH | `main` (EX-04 `597a6d1`) di-merge; semua S1–S5, R1–R10 diperbaiki (D-alief-37). Loop selesai: tidak ada KRITIS/TINGGI. Laporan: `log/verify/run-05.md` |
 
 ## Catatan handoff
 

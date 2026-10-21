@@ -4,7 +4,7 @@
 |---|---|
 | Track | c |
 | Branch | `feat/GD-06-07-push-validation` |
-| Prasyarat | 14; 11 (relay); C3 (`aps-environment` + capability Push + Team ID di `project.yml`, oleh Umar) untuk uji perangkat |
+| Prasyarat | 14; 11 (relay); C3 (`aps-environment` + capability Push, oleh Umar) + B6 (L0 signing) untuk uji perangkat |
 | Requirement | GD-06, GD-07, ON-05 (token APNs ke server), EX-06 (bagian app) |
 | Model | Opus 5.5 · `ecc:swift-concurrency-6-2` |
 | Fase berikutnya | 16 |
@@ -22,15 +22,15 @@ Guardian menerima push, tap membuka Detail yang benar, dan It's safe / Not safe 
 
 - `UIApplicationDelegateAdaptor` di `ShooApp.swift`: `didRegisterForRemoteNotificationsWithDeviceToken` → `updateMe(apnsToken:)`; `UNUserNotificationCenterDelegate` → baca `scanId` → `Router.openDetail(scanId)` (juga saat app cold start)
 - Tidak ada edit `Shoo.entitlements`/Info.plist (di-generate XcodeGen dari `project.yml` milik Umar). `aps-environment` = permintaan C3; tanpa entitlement itu `registerForRemoteNotifications` gagal (`didFailToRegister…`, cukup log, sama dengan fase 02), tetapi `simctl push` tetap bisa diuji karena tidak butuh token. Uji `PATCH apnsToken` asli setelah C3
-- `Support/NotificationRouter.swift`: fungsi murni `route(userInfo:) -> Route?` (dibaca `scanId`) dan `route(url:) -> Route?` untuk deep link `shoo://scan/<scanId>` (popup "See detail" EX-04 dan "Review in Shoo" EX-06, mandat Umar U2; D-alief-32, usulan kontrak C16), dipakai delegate, `onOpenURL` (di samping `shoo://join` fase 14), dan test
+- `Support/NotificationRouter.swift`: fungsi murni `route(userInfo:) -> Route?` (dibaca `scanId`) dan `route(url:) -> Route` untuk semua deep link kontrak (`contracts/app-group-keys.md` bagian "Deep links", PR #1 Umar): `shoo://scan/{scanId}` → Detail, `shoo://activity` → tab Activity (terbaru di atas), `shoo://join?code=` → Connect (fase 14), link tak dikenal/rusak → Shield (D-alief-32/37). Dipakai delegate, `onOpenURL`, dan test
 - `plan/alief/qa/push-blocked.apns` dan `push-warning.apns`: payload kontrak saja (tanpa `Simulator Target Bundle`; bundle ID diberikan di argumen `simctl push`)
 - Detail: tombol memanggil `POST /verdicts` asli; error → rollback + pesan
-- Test (Swift Testing): `NotificationRouter` untuk payload blocked/warning/tanpa `scanId`/`scanId` rusak, URL `shoo://scan/<id>` valid/rusak/host lain, token hex encoding, optimistic verdict + rollback, Detail dimuat dari `scanId` yang belum ada di cache
+- Test (Swift Testing): `NotificationRouter` untuk payload blocked/warning/tanpa `scanId`/`scanId` rusak, URL `shoo://scan/<id>` valid/rusak, `shoo://activity`, `shoo://join?code=`, host lain → Shield, token hex encoding, optimistic verdict + rollback, Detail dimuat dari `scanId` yang belum ada di cache
 
 ## Langkah kerja
 
 1. Registrasi APNs setelah izin (ON-05), kirim token hex via `PATCH /devices/me`.
-2. Tap push (foreground, background, terminated) → Detail `scanId`. Deep link `shoo://scan/<scanId>` dari extension → Detail yang sama (Protected: tanpa tombol validasi).
+2. Tap push (foreground, background, terminated) → Detail `scanId`. Deep link `shoo://scan/<scanId>` dari extension → Detail yang sama (Protected: tanpa tombol validasi); `shoo://activity` → tab Activity; lainnya → Shield. Popup EX-04 Umar sudah mengirim link ini sejak `597a6d1`; sebelum fase 15, `onOpenURL` fase 14 membuka Shield untuk link selain `join` (perilaku default kontrak).
 3. GD-07: It's safe / Not safe tanpa konfirmasi untuk item keluarga dan milik sendiri.
 4. Pakai UDID simulator (`GUARD_UDID`, `PROT_UDID`), bukan `booted`, karena dua simulator menyala. Uji ujung-ke-ujung lokal: `POST /scans` (curl dengan token Protected meniru extension) → `push_log` → `xcrun simctl push` dengan payload yang sama ke simulator Guardian di tiga kondisi (foreground, background, terminated) → Detail → It's safe → `curl GET /verdicts?domain=` sebagai Protected mengembalikan `safe`. Bukti manual: screenshot tiap kondisi + waktu (XCUITest tidak bisa memicu `simctl push` sendiri).
 5. Uji perangkat (kalau B6, B7, C3 siap): dua iPhone, push sandbox nyata lewat relay cloud. Target: notifikasi + tap + verdict → layar blokir terbuka ≤ 10 s end-to-end (polling extension 5 s); `GET /verdicts` sudah `safe` ≤ 1 s setelah POST.
@@ -39,11 +39,12 @@ Guardian menerima push, tap membuka Detail yang benar, dan It's safe / Not safe 
 ## Verifikasi
 
 ```bash
-source plan/alief/ref/sim.sh
 (cd ios && xcodegen)
+source plan/alief/ref/sim.sh   # setelah xcodegen: BUNDLE_ID / APP_GROUP dari build settings
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
 xcrun simctl push "${GUARD_UDID:-booted}" "$BUNDLE_ID" plan/alief/qa/push-blocked.apns   # dibuat di fase ini; GUARD_UDID dari `xcrun simctl list devices booted`
-xcrun simctl openurl "${GUARD_UDID:-booted}" "shoo://scan/6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"   # deep link Detail (D-alief-32); id scan blocked-92.json di seed lokal
+xcrun simctl openurl "${GUARD_UDID:-booted}" "shoo://scan/$SCAN_ID"   # SCAN_ID dari respons POST /scans di langkah 4 (curl … | jq -r .id)
+xcrun simctl openurl "${GUARD_UDID:-booted}" "shoo://activity"
 git diff --stat origin/main...HEAD -- ios/ShooApp/Info.plist ios/ShooApp/*.entitlements   # harus kosong
 ```
 

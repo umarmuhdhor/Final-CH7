@@ -102,9 +102,8 @@ create table blocklist_entries (                          -- antrean + isi block
 create index blocklist_approved on blocklist_entries(approved_at) where approved_at is not null and removed_at is null;
 
 create table ops_heartbeat (                              -- ditulis /healthz/db + cron, supaya Supabase Free tidak pause
-  id            int primary key default 1 check (id = 1),
-  at            timestamptz not null default now(),
-  source text not null default 'healthz' check (source in ('cron', 'healthz'))   -- bukti run cron vs monitor
+  source        text primary key check (source in ('cron', 'healthz')),   -- satu baris per penulis: bukti cron tidak tertimpa monitor
+  at            timestamptz not null default now()
 );
 
 create table push_log (                                   -- untuk LogSender, debugging, dan QA
@@ -157,7 +156,7 @@ Kontrak: "all domains with a `not_safe` verdict from any family". Filter otomati
 4. **Review manual (LANGKAH MANUAL berkala, Alief/Umar di SQL editor Supabase):**
    ```sql
    select domain, families, first_seen_at from blocklist_entries where approved_at is null and removed_at is null and families > 0 order by families desc, first_seen_at;
-   update blocklist_entries set approved_at = clock_timestamp(), approved_by = 'alief' where domain = 'contoh-scam.id';   -- satu domain per statement, autocommit (tanpa begin)
+   update blocklist_entries set approved_at = clock_timestamp(), approved_by = 'alief' where domain = 'contoh-scam.id';   -- satu domain per eksekusi: pilih satu baris lalu Run (SQL editor mengirim semua statement sebagai satu transaksi)
    update blocklist_entries set removed_at = now() where domain = 'salah-blokir.id';
    ```
 5. **`GET /blocklist?since=`** hanya membaca entri yang disetujui:
@@ -179,6 +178,6 @@ delete from scans where created_at < now() - interval '14 days' returning screen
 delete from family_codes where expires_at < now() - interval '1 hour';
 delete from join_attempts where attempted_at < now() - interval '1 day';
 delete from push_log where created_at < now() - interval '14 days';
-insert into ops_heartbeat (id, at, source) values (1, now(), $source) on conflict (id) do update set at = now(), source = excluded.source;   -- $source = 'cron' | 'healthz'
+insert into ops_heartbeat (source, at) values ($source, now()) on conflict (source) do update set at = now();   -- $source = 'cron' | 'healthz'
 ```
 Verdict tidak dihapus (D-alief-14). Batas per run: maks 10 batch × 500 scan (Workers Free: 10 ms CPU dan 50 subrequest per Cron).

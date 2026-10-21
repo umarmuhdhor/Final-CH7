@@ -71,4 +71,4 @@ xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=
 
 - Fase 13 mengganti `MockRepository.registerDevice` dengan API dan menulis key App Group.
 - Fase 14 mengisi layar Connect Protected (PR-02 lanjut ke ON-04).
-- Fase 01S / `feat/ON-04-refine` menyempurnakan langkah dan window dari hasil spike.
+- Hasil 01S menyempurnakan ON-04 lewat bagian "Recommendation for ON-04" di `docs/spikes/open-extension-settings.md`; kalau fase ini sudah lewat, fase 06 / 06Q / 16 yang menerapkannya (cek `git show origin/main:docs/spikes/open-extension-settings.md`).

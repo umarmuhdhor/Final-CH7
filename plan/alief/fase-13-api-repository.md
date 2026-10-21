@@ -39,8 +39,8 @@ App memakai backend asli tanpa mengubah view: `ApiRepository` menggantikan `Mock
 ## Verifikasi
 
 ```bash
-source plan/alief/ref/sim.sh
 (cd ios && xcodegen)
+source plan/alief/ref/sim.sh   # setelah xcodegen: BUNDLE_ID / APP_GROUP dari build settings
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
 # simulator + backend lokal
 (cd backend/db && supabase start) && (pnpm -C backend/api dev > /tmp/shoo-dev.log 2>&1 &) && pnpm -C backend/api exec wait-on tcp:8787

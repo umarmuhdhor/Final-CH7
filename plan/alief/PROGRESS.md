@@ -2,14 +2,14 @@
 
 Legenda status: `[ ]` belum · `[~]` sedang dikerjakan · `[m]` berhenti di LANGKAH MANUAL, belum ada PR (log fase berisi checklist) · `[r]` PR terbuka, menunggu review/merge Umar (catatan "pending C3/B6…" boleh di Ringkasan) · `[x]` PR **sudah di-merge** ke `main` (cek `gh pr view <no> --json state`) · `[!]` terblokir (diset agent saat berhenti karena blocker P0 / PR ditutup; dibuka kembali hanya oleh Alief)
 
-Mode auto: kalau ada fase `[r]` track dengan review/komentar Umar yang lebih baru dari catatan "review ditangani" di log → tangani dulu (sekali per review baru); kalau ada fase track berstatus `[~]`/`[m]` → lanjutkan fase itu dulu (`[m]`: berhenti lagi kalau checklist LANGKAH MANUAL belum dicentang Alief); kalau tidak ada → fase pertama berstatus `[ ]` (PROMPT langkah 1, D-alief-26). Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged; baris gate diperbarui di langkah 1 saat status disegarkan.
+Mode auto: kalau ada fase `[r]` track dengan review/komentar Umar yang lebih baru dari komentar PR "Review handled @<sha>" terakhir → tangani dulu (sekali per review baru); kalau ada fase track berstatus `[~]`/`[m]` → lanjutkan fase itu dulu (`[m]`: berhenti lagi kalau checklist LANGKAH MANUAL belum dicentang Alief); kalau tidak ada → fase pertama berstatus `[ ]` (PROMPT langkah 1, D-alief-26). Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged; baris gate diperbarui di langkah 1 saat status disegarkan.
 Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya PR paralel tidak bentrok).
 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
 |---|---|---|---|---|---|---|---|---|---|
 | 00 | Plan + tooling | – | docs/alief-plan | [~] | 21 Okt 2026 | | | Folder plan/alief dibuat dari hasil grilling; menunggu PR | log/fase-00.md |
 | 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [ ] | | | | | log/fase-01.md |
-| 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension (+ feat/ON-04-refine) | [ ] | | | | | log/fase-01S.md |
+| 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension | [ ] | | | | | log/fase-01S.md |
 | 02 | Onboarding ON-01..05 | app | feat/ON-01-05-onboarding | [ ] | | | | | log/fase-02.md |
 | 03 | Detail DT-01..06 | app | feat/DT-detail | [ ] | | | | | log/fase-03.md |
 | 04 | Protected PR-04/05 | app | feat/PR-04-05-shield-activity | [ ] | | | | | log/fase-04.md |

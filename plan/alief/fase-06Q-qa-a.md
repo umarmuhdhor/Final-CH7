@@ -39,3 +39,4 @@ ls plan/alief/qa/img/QA-A | wc -l
 - [ ] Laporan QA-A lengkap (header, ringkasan, daftar, detail, yang sudah baik, matriks).
 - [ ] P0 = 0 dan P1 = 0 setelah retest.
 - [ ] PR fase ini dibuka. G5 terpenuhi setelah semua PR 01–06Q di-merge Umar (diperbarui di PROMPT langkah 1, bukan di fase ini).
+- [ ] Kalau `origin/main:docs/spikes/open-extension-settings.md` punya `## Recommendation for ON-04` yang belum diterapkan fase 02/06: catat sebagai temuan QA-A dan perbaiki di `fix/QA-A-ON-04-refine` (fase 16 mengecek lagi).

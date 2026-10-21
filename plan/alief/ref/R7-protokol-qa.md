@@ -65,5 +65,7 @@ QA-E2E minimal:
 | 15b | Extension Off (anggota keluarga) | GD-03 "Not connected" — **hanya diuji kalau C11 sudah jalan** (extension mengirim `extensionLastSeenAt`). Kalau belum: tulis di "Batasan" header laporan dengan rujukan D-alief-15/24, bukan temuan P0 |
 | 16 | Retensi | scan > 14 hari (data uji dengan `created_at` mundur) hilang + objek Storage terhapus |
 | 17 | ON-04 di iPhone (Guardian + Protected) | Turn on membuka Settings; setelah extension On + satu halaman dimuat, kembali ke app → lanjut ke ON-05; Off → tetap di ON-04; video tutorial bisa PiP (kalau C3 butir 4 sudah ada, kalau belum tulis di "Batasan") |
+| 18 | Deep link dari extension | popup "See detail" / "Review in Shoo" membuka Detail scan yang benar; tanpa id → `shoo://activity` → Activity; link rusak → Shield |
+| 19 | Scan dari subdomain | scan dari `https://login.<domain>/…` tersimpan (201) dengan registrable domain, verdict berlaku untuk seluruh domain itu |
 
 Kolom **Waktu** (detik, opsional) diisi untuk skenario yang lulus berdasarkan waktu (#10, #17) dan untuk catatan performa.

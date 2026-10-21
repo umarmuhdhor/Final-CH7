@@ -62,7 +62,7 @@ Satu-satunya pintu ke data adalah Worker. Postgres tidak diekspos lewat PostgRES
 | Supabase DB | Free | 500 MB, 2 proyek aktif, pause setelah 7 hari tanpa aktivitas database | Retensi 14 hari; Cron retensi harian **menulis** ke DB; monitor uptime (B9) memanggil `/healthz/db` yang menulis `ops_heartbeat` (bukan `select 1`) |
 | Supabase Storage | Free | 1 GB file, 5 GB egress/bulan | ≤ 150 KB/screenshot, 1 per pemilik+domain per 24 jam, maks 50/device/hari, hanya dimuat di Detail, cache di app, retensi 14 hari. Ambang pindah ke R2: 700 MB atau 3,5 GB egress |
 | APNs | Termasuk Apple Developer Program | – | Sandbox dulu, production saat TestFlight |
-| TestFlight | Apple Developer Program | – | Butuh Team ID (B6) |
+| TestFlight | Apple Developer Program | – | Butuh tim berbayar + record App Store Connect (B8), kunci APNs Production (B7) |
 
 Perkiraan kasar: 150 KB × 50/hari × 14 hari = ±105 MB per device paling sibuk. Rata-rata jauh di bawah itu karena dedupe per domain.
 

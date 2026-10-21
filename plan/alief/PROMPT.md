@@ -63,7 +63,7 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
 <konteks>
 - Produk: PRD v1.5 (link di docs/README.md; salinan teks terakhir dibaca lewat Google Drive).
   Mandat: docs/mandates/alief.md. Plan: plan/alief/. Status: plan/alief/PROGRESS.md.
-  Keputusan: plan/alief/log/DECISIONS.md (ID per track: D-alief-A/B/C…, langkah 6g). Arsitektur: plan/alief/ARCHITECTURE.md.
+  Keputusan: plan/alief/log/DECISIONS.md (ID per track: D-alief-A/B/C/S…, langkah 6g). Arsitektur: plan/alief/ARCHITECTURE.md.
 - Kontrak WAJIB (read-only): contracts/api.md, contracts/app-group-keys.md, contracts/scan-result.schema.json,
   contracts/fixtures/*.json. Model Swift: ios/ShooShared/ (read-only, jangan didefinisikan ulang).
 - Kontrak internal: plan/alief/ref/R1..R7. Kalau R* bertentangan dengan contracts/, contracts/ menang.
@@ -92,8 +92,9 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
      [r] PR terbuka menunggu review (boleh dengan catatan "pending C3/B6/…" di kolom Ringkasan) · [x] PR MERGED · [!] terblokir.
      Sebelum memilih, segarkan status: untuk setiap baris [r] milik TRACK jalankan `gh pr view <no> --json state,reviews,comments,commits` →
      MERGED → [x] (commit kecil "docs(plan): mark fase NN merged"); CLOSED tanpa merge → [!] + tanya Alief;
-     OPEN + review `CHANGES_REQUESTED` atau komentar `umarmuhdhor` yang LEBIH BARU dari "review ditangani @<sha>" terakhir
-     di log fase (atau dari commit terakhir branch kalau belum pernah) → fase itu dipilih dulu (pilihan 0).
+     OPEN + review apa pun dari `umarmuhdhor` (`CHANGES_REQUESTED` atau `COMMENTED`, termasuk komentar baris) atau komentar
+     percakapan Umar yang `submittedAt`/`createdAt`-nya LEBIH BARU dari komentar PR terakhir agent "Review handled @<sha> <ISO>"
+     (atau dari commit terakhir branch kalau belum pernah) → fase itu dipilih dulu (pilihan 0).
      `reviewDecision` hanya sinyal tambahan (proteksi branch `main` belum aktif, nilainya bisa kosong; TODO C18).
      Baris fase 00 (track "–") juga disegarkan: nomor PR plan dicatat Alief saat PR dibuka, MERGED → [x] + G1.
      Setelah itu perbarui baris gate G0–G8 di PROGRESS yang syaratnya bisa dicek: G0 dari kolom Status TODO C3/C11/C13, PR MERGED (`gh pr view`), checklist
@@ -103,8 +104,9 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
    - FASE = auto, urutan pilihan:
      (0) ada fase TRACK [r] dengan review/komentar baru (lihat penyegaran di atas) → mode REVIEW: baca komentar
          (`gh pr view <no> --comments`), perbaiki di branch yang sama (TDD), push, balas komentar, rebase branch
-         stacked di atasnya (langkah 13 SINKRON), status tetap [r]. Tulis "review ditangani @<sha> <tanggal>" di log fase,
-         minta review ulang (`gh pr edit <no> --add-reviewer umarmuhdhor`). Fase itu tidak dipilih lagi sampai ada
+         stacked di atasnya (langkah 13 SINKRON), status tetap [r]. Tulis komentar PR "Review handled @<sha> <ISO time>"
+         (`gh pr comment <no>`) + ringkasan di log fase, minta review ulang
+         (`gh api -X POST repos/umarmuhdhor/Final-CH7/pulls/<no>/requested_reviewers -f 'reviewers[]=umarmuhdhor'`). Fase itu tidak dipilih lagi sampai ada
          review/komentar yang lebih baru dari catatan itu. Lalu kembali ke langkah 1.
      (1) ada fase TRACK berstatus [~] atau [m] → FASE = fase itu, mode LANJUT. Untuk [m]: buka checklist LANGKAH MANUAL
          di log/fase-<FASE>.md. Kalau masih ada butir yang belum dicentang Alief (atau Alief belum menempel hasilnya),

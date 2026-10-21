@@ -45,7 +45,7 @@ plan/alief/
 ├── fase-00 … fase-17 (+ fase-01S spike, fase-06Q QA-A)
 ├── qa/                  ← laporan QA (README = template) + img/ bukti
 └── log/
-    ├── DECISIONS.md     ← keputusan (plan: D-alief-NN; per track: D-alief-A/B/C…), append-only
+    ├── DECISIONS.md     ← keputusan (plan: D-alief-NN; per track: D-alief-A/B/C/S…), append-only
     ├── fase-XX.md       ← laporan per fase
     └── fase-XX-plan.md  ← output superpowers:writing-plans per fase
 ```
@@ -79,7 +79,7 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
 | 17 | Ditahan | – | nanti | Live Activity lewat push | EX-03 | – |
 
-**Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6).
+**Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6–B8).
 
 ---
 
