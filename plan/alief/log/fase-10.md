@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[r]` LANGKAH MANUAL 1–4 selesai di cloud (22 Okt), PR stacked on #13. Langkah 5 (kirim C8 ke Umar) tetap di Alief |
+| Status | `[r]` LANGKAH MANUAL 1–4 selesai di cloud (22 Okt), PR #15 (stacked on #13). Langkah 5 (kirim C8 ke Umar) tetap di Alief |
 | Track / branch | be · `feat/BE-verdicts` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-scans` (PR #13, stacked on #11) → PR nanti menulis "Stacked on #13" |
 | Mulai | 21 Okt 2026 ±23:55 WITA |
