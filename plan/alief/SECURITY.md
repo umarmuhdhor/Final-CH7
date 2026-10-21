@@ -30,7 +30,7 @@ Berlaku untuk `ios/ShooApp/`, `backend/`, dan `plan/alief/`. Repo bisa jadi publ
 | T7 | SQL injection | Akses DB penuh | Hanya tagged template `postgres.js` (parameter terikat). Tidak ada string SQL dari input. `ecc:database-reviewer` | 07–12 |
 | T8 | Kebocoran via PostgREST | Tabel terbaca publik dengan anon key | `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated`; RLS aktif tanpa policy sebagai lapis kedua; pgTAP mengecek grant | 07 |
 | T9 | Isi push terlalu banyak | Notifikasi di lock screen membocorkan URL | Push hanya nama + kata kerja + skor (kontrak), tanpa URL | 11 |
-| T10 | Spam/DoS endpoint | Kuota Free habis | Rate limit per device (scan, join, code), `GET /verdicts` 30 req / 10 s per device, `POST /verdicts` 60/menit per Guardian (D-alief-B10), body limit | 08, 09, 12 |
+| T10 | Spam/DoS endpoint | Kuota Free habis | Rate limit per device (scan, join, code), `GET /verdicts` 30 req / 10 s per device, `POST /verdicts` 60/menit per Guardian (D-alief-B10), body limit (413 dari `content-length` sebelum DB), token tidak dikenal 60 / 10 menit per IP, batas global 1000 device baru/hari + 300 screenshot/24 jam, `statement_timeout` role `shoo_api` (D-alief-B12) | 08, 09, 12 |
 | T11 | Deep link `shoo://join?code=` dipanggil situs jahat | Join tidak sengaja | App selalu menampilkan layar konfirmasi Connect berisi nama Guardian sebelum join (PR-01/02) | 14 |
 | T12 | Data setelah disconnect | Guardian lama masih melihat data | Akses dicek dari `family_links` aktif saat request, bukan dari histori. Cache query Hyperdrive dimatikan (D-alief-17) supaya cek tidak basi di cloud | 08, 09 |
 | T13 | Reflected XSS / injeksi link di `GET /join?code=` (domain sama dengan API) | Script berjalan di origin Worker | `code` harus `^\d{4}$`, escape HTML, CSP `default-src 'none'`, `nosniff`, test XSS | 08 |
@@ -54,7 +54,7 @@ Shoo memproses riwayat browsing berisiko, nama, dan screenshot. App Store Review
 | P9 | **Screenshot bukti di app:** dimuat dari link Worker `screenshotUrl` (D-alief-B08, `no-store`) dengan `URLSession` cache memori saja (tidak ditulis ke disk), tidak bisa dibagikan/disimpan dari Detail di MVP. | 03, 13 |
 | P10 | **Push:** isi hanya nama + kata kerja + skor (T9), tanpa URL/domain di lock screen. | 11, 15 |
 | P11 | **Export compliance:** app hanya memakai HTTPS standar → `ITSAppUsesNonExemptEncryption = NO` di Info.plist (lewat `project.yml`, TODO C19) supaya TestFlight tidak bertanya tiap build. BELUM DIVERIFIKASI untuk kasus ini, cek docs saat B8. | 16 |
-| P12 | **Kebijakan privasi:** URL kebijakan privasi wajib sebelum TestFlight eksternal / App Store (bukan untuk tester internal). Isi: data P2, retensi 14 hari, hapus data P3, tanpa tracking. Halaman statis di Worker (`GET /privacy`, EN/ID) atau dokumen tim → TODO E. | 12 (halaman), 16 |
+| P12 | **Kebijakan privasi:** URL kebijakan privasi wajib sebelum TestFlight eksternal / App Store (bukan untuk tester internal). Isi: data P2, retensi 14 hari, hapus data P3, tanpa tracking. Halaman statis di Worker (`GET /privacy`, EN/ID) atau dokumen tim → TODO E. **Fase 12:** `GET /privacy` EN/ID hidup (D-alief-B12 j); tinggal alamat kontak + domain sendiri (TODO E6). | 12 (halaman), 16 |
 
 ## 4. Memakai AI assistant dengan aman
 

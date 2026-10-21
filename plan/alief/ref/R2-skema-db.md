@@ -132,6 +132,24 @@ alter table devices enable row level security;   -- … sama untuk semua tabel
 create policy shoo_api_all on devices for all to shoo_api using (true) with check (true);   -- … sama untuk semua tabel
 ```
 
+Fase 12 (D-alief-B12, migrasi `20261022120000_hardening.sql` + `20261022130000_security_review.sql`):
+```sql
+alter role shoo_api set statement_timeout = '10s';            -- + idle_in_transaction_session_timeout 15s, lock_timeout 5s
+revoke insert, update on blocklist_entries from shoo_api;
+grant insert (domain, families) on blocklist_entries to shoo_api;
+grant update (families) on blocklist_entries to shoo_api;     -- Worker tidak bisa menyetujui/menghapus domain (T5)
+-- policy per perintah: insert/delete hanya baris approved_at is null and removed_at is null
+revoke all on all tables/sequences/functions in schema public from service_role;   -- + default privileges
+-- log niat setiap objek screenshot: ditulis saat reservasi upload + DELETE /devices/me, dihapus setelah remove
+-- terkonfirmasi dan umur > 10 menit (D-alief-B12 g)
+create table storage_tombstones (path text primary key check (char_length(path) between 3 and 300),
+  created_at timestamptz not null default now(), attempts int not null default 0, last_try_at timestamptz);
+grant select, insert, delete on storage_tombstones to shoo_api;   -- + update (attempts, last_try_at); RLS + policy shoo_api_all
+create index scans_original_shot on scans(created_at)             -- kuota + dedupe: upload asli saja
+  where screenshot_path = owner_id || '/' || id || '.jpg' or screenshot_path = owner_id || '/' || id || '.png';
+create index scans_shot_path on scans(owner_id, screenshot_path) where screenshot_path is not null;
+```
+
 Password role `shoo_api` tidak pernah ada di file migrasi (migrasi `supabase db reset`/`db push` tidak memproses variabel psql). Lokal: `seed.sql` menjalankan `alter role shoo_api password 'shoo_api_local';` (nilai dev, tidak rahasia). Cloud: `alter role shoo_api password '...'` dijalankan Alief lewat SQL editor (LANGKAH MANUAL fase 07). pgTAP: `select has_role('shoo_api');`. Setiap file test pgTAP diawali `create extension if not exists pgtap with schema extensions;`.
 
 ## 4. Invariant (diuji pgTAP)
@@ -181,5 +199,7 @@ delete from family_codes where expires_at < now() - interval '1 hour';
 delete from join_attempts where attempted_at < now() - interval '1 day';
 delete from push_log where created_at < now() - interval '14 days';
 insert into ops_heartbeat (source, at) values ($source, now()) on conflict (source) do update set at = now();   -- $source = 'cron' | 'healthz'
+delete from rate_limit_hits where id in (select id from rate_limit_hits where hit_at < now() - interval '1 day' limit 20000);  -- maks 50 chunk
+-- storage_tombstones: maks 500 path per run → hapus objek Storage → hapus tombstone (D-alief-B12 g)
 ```
-Verdict tidak dihapus (D-alief-14). Batas per run: maks 10 batch × 500 scan (Workers Free: 10 ms CPU dan 50 subrequest per Cron).
+Scan tanpa screenshot: chunk 2000 × maks 25 per run tanpa Storage. Urutan lock di retensi dan `deleteDevice`: verdicts `(owner_id, domain)` → scans `(id)`. Verdict tidak dihapus (D-alief-14). Batas per run (scan dengan screenshot): maks 10 batch × **100** scan (D-alief-B12: satu `DELETE` Storage per batch; Workers Free: 50 subrequest per Cron). Objek Storage dihapus **sebelum** barisnya; dedupe hanya memakai ulang upload asli, jadi objek hilang ≤ 15 hari setelah upload.
