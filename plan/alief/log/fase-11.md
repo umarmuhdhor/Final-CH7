@@ -82,19 +82,19 @@ Berurutan, satu per satu (aturan Alief).
 
 Dari root worktree, branch `feat/BE-push`. Butir 1–5 tidak butuh kunci Apple; butir 6–7 menunggu B6/B7/C3 (kalau belum ada, PR dibuka `[r]` "pending B6/B7/C3", uji perangkat diulang di fase 15 / G7).
 
-- [ ] 1. Migrasi:
+- [x] 1. Migrasi:
   ```bash
   (cd backend/db && supabase migration list --linked)   # 20261022100000 hanya di kolom Local
   (cd backend/db && supabase db push)
   (cd backend/db && supabase db query --linked "select count(*) from information_schema.columns where table_name = 'push_log' and column_name = 'body'")   # 0
   ```
-- [ ] 2. Deploy (route spike hilang, `ApnsSender` belum aktif karena `APNS_TOPIC` kosong → `LogSender`):
+- [x] 2. Deploy (route spike hilang, `ApnsSender` belum aktif karena `APNS_TOPIC` kosong → `LogSender`):
   ```bash
   pnpm -C backend/api run deploy
   curl -s -o /dev/null -w "%{http_code}\n" -X POST https://shoo-api.afindo-mi01.workers.dev/debug/apns-spike   # 404
   ```
-- [ ] 3. Hapus secret spike: `(cd backend/api && npx wrangler secret delete SPIKE_KEY)` (jawab `y`).
-- [ ] 4. Uji cloud `push_log` dari `waitUntil` lewat Hyperdrive (LogSender):
+- [x] 3. Hapus secret spike: `(cd backend/api && npx wrangler secret delete SPIKE_KEY)` (jawab `y`).
+- [x] 4. Uji cloud `push_log` dari `waitUntil` lewat Hyperdrive (LogSender):
   ```bash
   U=https://shoo-api.afindo-mi01.workers.dev
   tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])'; }
@@ -108,6 +108,12 @@ Dari root worktree, branch `feat/BE-push`. Butir 1–5 tidak butuh kunci Apple; 
   sleep 3; (cd backend/db && supabase db query --linked "select result from push_log where scan_id = '$ID'")   # logged
   ```
   Simpan `GT`/`PT` (jangan ditempel) untuk butir 5–6; hapus device di akhir: `curl -s -X DELETE $U/devices/me -H "authorization: Bearer $PT"; curl -s -X DELETE $U/devices/me -H "authorization: Bearer $GT"`.
+  Hasil butir 1–4 (22 Okt 2026 ±01:10 WITA, coordinator; mandat malam Alief "just do whatever u need"):
+  - 1: `db push` → `20261022100000_push_log_privacy.sql … Finished supabase db push.`; kolom `push_log.body` = `0`.
+  - 2: deploy Version `ac2025ec-2ebe-4eb5-9035-071b60cd44b0`; `POST /debug/apns-spike` → `404`.
+  - 3: `wrangler secret delete SPIKE_KEY` → `Success! Deleted secret SPIKE_KEY`; sisa secret: `SCREENSHOT_URL_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`.
+  - 4: `PATCH /devices/me` apnsToken dummy → `{"ok":true}`; `join 200`; `scan 5e6c625b-…`; `push_log.result` = `logged` (LogSender lewat `waitUntil` + Hyperdrive OK); dua device uji dihapus (`{"ok":true}` ×2).
+  - 5–6: **menunggu Alief** (B7 kunci `.p8`, B6, C3). Sesuai PROMPT 6h: bukan blocker kode → PR `[r]` "pending B6/B7/C3", uji perangkat di fase 15 / G7.
 - [ ] 5. **Butuh B7** (kunci `.p8` Sandbox). Secret Worker, nilai ditempel di prompt (tidak pernah sebagai argumen):
   ```bash
   cd backend/api
