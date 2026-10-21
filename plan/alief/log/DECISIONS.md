@@ -499,3 +499,21 @@ Format:
 - Keputusan: setelah #14, #16 dan #18 masuk main, rantai app di-rebase ke main dan merge commit fase 02 (A18) dibuang. #19 di-squash ke main sebelum resolusi ini sempat di-push, jadi bagian A18 yang menyentuh fase 04 menjadi commit pertama #21 (fase 05): `ExtensionStatus.live()` dihapus, `ProtectedShieldView(repository:extensionStatus:)` memakai `env.extensionStatus`, "Turn on" membuka `TurnOnExtensionView` sebagai sheet (menggantikan sementara D-alief-A14), dan `TurnOnExtensionView(refreshStatus:)` bisa dipakai di luar onboarding. Kunci "Opens Settings" dihapus dari katalog; UI test baru membuka dan menutup sheet.
 - Alasan: satu sumber status extension (override `-UITestExtensionActive` lewat `AppEnvironment`), dan tiap PR bisa direview sendiri di atas main tanpa merge commit.
 - File: `Features/Shield/ShieldModel.swift`, `Features/Shield/ProtectedShieldView.swift`, `Features/Main/MainTabView.swift`, `Features/Onboarding/TurnOnExtensionView.swift`, `Features/Onboarding/OnboardingFlow.swift`, `UITests/ProtectedUITests.swift`.
+
+## D-alief-A15 · 22 Okt 2026 · app (fase 05) · Family mode: tombol "Family: On/Off" di toolbar, judul ikut berganti
+
+- Keputusan: toggle GD-02 adalah tombol toolbar kiri atas (hanya Guardian, di tab Shield dan Activity) dengan teks terlihat "Family: On/Off" + ikon terisi/garis, VoiceOver "Family mode, On/Off" (trait toggle), dan pengumuman saat beralih. Disimpan di `AppSettings.familyModeOn` (sejak fase 01). Saat On judul layar "Family" / "Family activity"; saat Off layar Shield milik Guardian sendiri ("You're protected", tanpa baris "Protected by") dan Activity miliknya sendiri (`owner=me`). Pergantian membuat ulang model layar Guardian (`.id`), layar Protected tidak terpengaruh.
+- Alasan: review `ecc:a11y-architect` fase 05 HIGH: `Toggle(.button)` di toolbar hanya menampilkan ikon dan status hanya lewat warna. Activity mengikuti toggle supaya GD-02 "mengganti tampilan" berlaku di kedua tab.
+- File: `Features/Main/MainTabView.swift`, `Features/Shield/{FamilyShieldView,ProtectedShieldView}.swift`, `Features/Activity/ActivityView.swift`.
+
+## D-alief-A16 · 22 Okt 2026 · app (fase 05) · Kartu keluarga membuka scan yang ditampilkan
+
+- Keputusan: kontrak `lastScan` tidak punya id. `FamilyShieldModel` mengambil `scans(owner: .device(id))` per anggota (maks 3, paralel) dan memilih item yang `url` + `detectedAt`-nya sama dengan `lastScan`, atau item terbaru. Gagal untuk satu anggota → kartu itu saja tanpa tautan. Kartu tanpa situs bukan tombol (tidak diredupkan). "Not connected" hanya bila `extensionActive == false` (D-alief-15/24).
+- Alasan: review `ecc:swift-reviewer` fase 05 (H1, M2, M3). Usulan kecil untuk Umar (bukan blocker): `lastScan.id` di `GET /family/members` akan menghapus N panggilan tambahan → dicatat di PR.
+- File: `Features/Shield/FamilyShieldModel.swift`, `Features/Shield/FamilyShieldView.swift`.
+
+## D-alief-A17 · 22 Okt 2026 · app (fase 05) · Filter orang Family Activity
+
+- Keputusan: chip Everyone / You / nama anggota → `owner` `.family` / `.me` / `.device(id)`, digabung dengan chip status. Daftar orang dibaca ulang setiap load/refresh; anggota yang sudah dihapus → kembali ke Everyone. Skenario mock DEBUG `oneMember` dan `threeMembers` (anggota ketiga "Grandma" hanya di mock, bukan fixture kontrak) untuk gerbang 0/1/2/3 anggota.
+- Alasan: PRD GD-05 + review M4/M5. Fixture kontrak hanya punya 2 anggota.
+- File: `Features/Activity/{ActivityModel,ActivityView}.swift`, `Data/MockRepository.swift`.
