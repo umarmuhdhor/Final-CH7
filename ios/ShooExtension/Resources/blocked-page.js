@@ -61,6 +61,7 @@
     $(".score-value").textContent = `${payload.score}%`;
     $(".link").textContent = payload.url;
 
+    let mode = null;
     async function start() {
         let profile = null;
         try {
@@ -69,6 +70,7 @@
             profile = null;
         }
         const view = viewFor(profile, payload, lang);
+        mode = profile?.onboarded ? profile.mode : null;
 
         const list = $(".reasons");
         list.replaceChildren(...view.reasons.map((text) => Object.assign(document.createElement("li"), { textContent: text })));
@@ -85,6 +87,7 @@
             button.textContent = t(view.button.textKey);
             button.href = view.button.href;
             button.hidden = false;
+            linkToRecord(button);
         }
         // Only reopen the page this block is really about: a crafted link can't pair a scam URL
         // with some other domain that happens to be marked safe.
@@ -96,6 +99,13 @@
             domainMatches = false;
         }
         if (view.poll && domainMatches) poll();
+    }
+
+    // EX-07: the POST may still be running when this page opens; point "Review in Shoo" at the record once it exists.
+    async function linkToRecord(button) {
+        if (payload.recordId || !payload.reportKey || mode !== "guardian") return;
+        const reply = await send({ type: "recordId", key: payload.reportKey }).catch(() => null);
+        if (reply?.recordId) button.href = detailUrl({ recordId: reply.recordId });
     }
 
     let timer = null;

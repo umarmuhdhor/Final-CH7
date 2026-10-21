@@ -14,7 +14,7 @@ const state = { ...blocked92, scanId: 3, status: "blocked" };
 test("payload keeps the top 3 reasons by weight, both languages, nothing else", () => {
     const p = payloadFor(state);
     assert.deepEqual(p.reasons.map((r) => r.weight), [30, 25, 22]);
-    assert.deepEqual(Object.keys(p).sort(), ["domain", "reasons", "recordId", "score", "url"]);
+    assert.deepEqual(Object.keys(p).sort(), ["domain", "reasons", "recordId", "reportKey", "score", "url"]);
     assert.deepEqual(Object.keys(p.reasons[0]).sort(), ["id", "label", "labelSimple", "weight"]);
 });
 

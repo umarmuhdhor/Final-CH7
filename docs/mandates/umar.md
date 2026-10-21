@@ -63,7 +63,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - "Shoo! This page is blocked" + skor + alasan.
   - Protected: "Waiting for [guardianName] to check", poll `GET /verdicts?domain=` tiap 5 s → `safe` → buka halaman.
   - Guardian: tombol "Review in Shoo" → Detail.
-- [ ] **U5 · EX-07** Kirim hasil. Branch: `feat/EX-07-send-scan`
+- [x] **U5 · EX-07** Kirim hasil. Branch: `feat/EX-07-send-scan`
   - Skor ≥30 → `POST /scans` (ScanResult sesuai schema), sekali per halaman per status.
   - Screenshot area bukti saja, isi field di-blur. Cek dulu apakah `tabs.captureVisibleTab` jalan di Safari iOS; kalau tidak, kirim tanpa screenshot dan catat di PR.
 - [ ] **U6 · EX-03** Indikator live sesuai hasil S3. Branch: `feat/EX-03-live-score`

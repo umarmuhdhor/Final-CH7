@@ -12,6 +12,7 @@
             domain: state.domain,
             score: state.score,
             recordId: state.recordId ?? null,
+            reportKey: state.reportKey ?? null, // EX-07: blocked.html asks background for the record id
             reasons: [...state.signals]
                 .sort((a, b) => b.weight - a.weight)
                 .slice(0, MAX_REASONS)
@@ -44,10 +45,14 @@
     if (!pipeline || typeof browser === "undefined") return; // running inside blocked.html
 
     let blockedScanId = null;
-    pipeline.subscribe((state) => {
+    pipeline.subscribe(async (state) => {
         if (state.status !== "blocked" || state.scanId === blockedScanId) return;
         blockedScanId = state.scanId;
-        const target = `${browser.runtime.getURL("blocked.html")}#${encode(payloadFor(state))}`;
+        // EX-07 takes the evidence screenshot first — the page is gone once we leave (≤ 1.2 s).
+        const report = globalThis.ShooReport;
+        await report?.ready(state.scanId);
+        const reportKey = report?.keyFor(state.scanId) ?? null;
+        const target = `${browser.runtime.getURL("blocked.html")}#${encode(payloadFor({ ...state, reportKey }))}`;
         // replace(): Back skips the scam page instead of landing on it again.
         location.replace(target);
     });
