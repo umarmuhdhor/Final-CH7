@@ -75,7 +75,7 @@ Disimpan di Postgres (tidak ada KV), cukup untuk skala MVP. Karena cache Hyperdr
 | Kunci | Batas | Error |
 |---|---|---|
 | join gagal per device | 5 / 10 menit | 429 `too_many_attempts` |
-| join gagal per IP | 5 / 10 menit | 429 `too_many_attempts` |
+| join gagal per IP (IPv6: /64) | 20 / 10 menit (CGNAT, D-alief-B06) | 429 `too_many_attempts` + `Retry-After` |
 | `POST /devices` per IP | 10 / jam | 429 `rate_limited` |
 | `POST /family/code` per guardian | 6 / menit | 429 `rate_limited` |
 | `POST /scans` per device | 120 / jam | 429 `rate_limited` |
