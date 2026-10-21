@@ -17,12 +17,14 @@ final class FailingRepository: ShooRepository {
 }
 
 /// Wraps a repository; each `scans` call waits for the next delay in the list first.
-/// Lets a test make an older request answer after a newer one.
+/// Lets a test make an older request answer after a newer one. Setting `failure` makes
+/// `scans` and `me` throw it (a flaky network, or a cancelled URL request).
 final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     private let base: any ShooRepository
     private var delays: [Duration]
+    var failure: (any Error)?
 
-    init(base: any ShooRepository, delays: [Duration]) {
+    init(base: any ShooRepository, delays: [Duration] = []) {
         self.base = base
         self.delays = delays
     }
@@ -30,13 +32,17 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         let delay = delays.isEmpty ? .zero : delays.removeFirst()
         try await Task.sleep(for: delay)
+        if let failure { throw failure }
         return try await base.scans(owner: owner, status: status, cursor: cursor)
     }
 
     func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
         try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
     }
-    func me() async throws -> DeviceProfile { try await base.me() }
+    func me() async throws -> DeviceProfile {
+        if let failure { throw failure }
+        return try await base.me()
+    }
     func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
     func createFamilyCode() async throws -> FamilyCode { try await base.createFamilyCode() }
     func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }

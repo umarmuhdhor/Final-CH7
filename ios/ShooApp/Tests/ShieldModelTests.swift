@@ -82,4 +82,24 @@ struct ShieldModelTests {
         #expect(model.state == .failed)
         #expect(model.extensionStatus.isActive)
     }
+
+    @Test func failedForegroundRefreshKeepsWhatIsShown() async throws {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
+        let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) })
+        await model.refresh()
+        let blocked = try #require(model.lastBlocked)
+        repository.failure = RepositoryError.network
+        await model.refresh()
+        #expect(model.state == .loaded)
+        #expect(model.lastBlocked == blocked)
+        #expect(model.guardian?.name == "Adhella")
+    }
+
+    @Test func cancelledURLRequestIsNotAFailure() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
+        repository.failure = URLError(.cancelled)
+        let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
+        await model.refresh()
+        #expect(model.state == .loading)
+    }
 }

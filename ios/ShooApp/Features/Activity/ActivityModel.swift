@@ -41,10 +41,15 @@ final class ActivityModel {
     private(set) var filter: ActivityFilter = .all
     private(set) var items: [ScanResult] = []
     private(set) var isLoadingMore = false
+    /// The last pull to refresh failed; the list on screen is the previous one.
+    private(set) var refreshFailed = false
+    /// The last next-page request failed; the list shows a Retry row.
+    private(set) var loadMoreFailed = false
     private var nextCursor: String?
 
     @ObservationIgnored private let repository: any ShooRepository
-    /// Bumped on every new first-page request, so an older answer never overwrites a newer one.
+    /// Bumped when a first-page request starts and again when one is applied, so neither an older
+    /// first page nor a next page meant for the previous list can overwrite the newer one.
     @ObservationIgnored private var generation = 0
 
     init(repository: any ShooRepository, owner: ScanOwnerFilter, filter: ActivityFilter = .all) {
@@ -61,34 +66,50 @@ final class ActivityModel {
         await loadFirstPage()
     }
 
-    /// Pull to refresh: keeps the current items on screen until the new first page arrives.
+    /// Pull to refresh: keeps the current items on screen until the new first page arrives,
+    /// and keeps them if it fails.
     func refresh() async {
         await loadFirstPage()
     }
 
+    /// "Try again" on the error screen: shows the spinner while it retries.
+    func retry() async {
+        if items.isEmpty { state = .loading }
+        await loadFirstPage()
+    }
+
     func select(_ filter: ActivityFilter) async {
+        guard filter != self.filter || state == .failed else { return }
         self.filter = filter
         items = []
         nextCursor = nil
+        isLoadingMore = false
+        loadMoreFailed = false
+        refreshFailed = false
         state = .loading
         await loadFirstPage()
     }
 
-    /// Called when the last row appears.
+    /// Called when the last row appears, and by the Retry row.
     func loadMore() async {
         guard let cursor = nextCursor, state == .loaded, !isLoadingMore else { return }
         let request = generation
         isLoadingMore = true
-        defer { isLoadingMore = false }
+        loadMoreFailed = false
         do {
             let page = try await repository.scans(owner: owner, status: filter.status, cursor: cursor)
             guard request == generation else { return }
             let known = Set(items.map(\.id))
             items += page.items.filter { !known.contains($0.id) }
             nextCursor = page.nextCursor
+            isLoadingMore = false
         } catch {
-            // The list stays as it is; the next scroll to the end tries again.
+            // A newer list replaced this one: its own state is already right.
+            guard request == generation else { return }
+            isLoadingMore = false
+            if error.isCancellation { return }
             Log.ui.error("Activity next page failed", error)
+            loadMoreFailed = true
         }
     }
 
@@ -98,17 +119,23 @@ final class ActivityModel {
         do {
             let page = try await repository.scans(owner: owner, status: filter.status, cursor: nil)
             guard request == generation else { return }
+            generation += 1
             items = page.items
             nextCursor = page.nextCursor
+            isLoadingMore = false
+            loadMoreFailed = false
+            refreshFailed = false
             state = .loaded
-        } catch is CancellationError {
-            return
         } catch {
-            guard request == generation else { return }
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Activity load failed", error)
-            items = []
-            nextCursor = nil
-            state = .failed
+            if state == .loaded {
+                refreshFailed = true
+            } else {
+                items = []
+                nextCursor = nil
+                state = .failed
+            }
         }
     }
 }

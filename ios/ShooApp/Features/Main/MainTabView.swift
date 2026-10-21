@@ -9,6 +9,8 @@ struct MainTabView: View {
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.shieldPath) {
                 shieldRoot
+                    // A new repository (mode switch, later a new session) starts a fresh screen model.
+                    .id(ObjectIdentifier(env.repository))
                     .toolbar { ProfileButton() }
                     .navigationDestination(for: Route.self, destination: destination)
             }
@@ -17,6 +19,7 @@ struct MainTabView: View {
 
             NavigationStack(path: $router.activityPath) {
                 activityRoot
+                    .id(ObjectIdentifier(env.repository))
                     .toolbar { ProfileButton() }
                     .navigationDestination(for: Route.self, destination: destination)
             }

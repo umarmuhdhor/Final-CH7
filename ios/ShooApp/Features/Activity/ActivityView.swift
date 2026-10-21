@@ -41,7 +41,8 @@ struct ActivityView: View {
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
-        .task { if model.state == .loading { await model.load() } }
+        // First appearance, and coming back to the tab after a failed load.
+        .task { if model.state != .loaded { await model.retry() } }
     }
 
     @ViewBuilder
@@ -54,7 +55,7 @@ struct ActivityView: View {
         case .failed:
             VStack(spacing: 12) {
                 EmptyStateView(systemImage: "wifi.exclamationmark", title: "Couldn't load activity", message: "Check your connection and try again.")
-                Button { Task { await model.refresh() } } label: { Text("Try again").frame(minHeight: 44) }
+                Button { Task { await model.retry() } } label: { Text("Try again").frame(minHeight: 44) }
                     .buttonStyle(.borderedProminent)
             }
             .frame(maxWidth: .infinity)
@@ -65,6 +66,13 @@ struct ActivityView: View {
                 .listRowSeparator(.hidden)
                 .accessibilityIdentifier("activity.empty")
         case .loaded:
+            if model.refreshFailed {
+                Label { Text("Couldn't refresh. Pull down to try again.") } icon: { Image(systemName: "exclamationmark.circle") }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .listRowSeparator(.hidden)
+                    .accessibilityIdentifier("activity.refreshFailed")
+            }
             ForEach(model.items) { scan in
                 Button {
                     env.router.showDetail(scanId: scan.id)
@@ -80,6 +88,13 @@ struct ActivityView: View {
             }
             if model.isLoadingMore {
                 ProgressView().frame(maxWidth: .infinity).listRowSeparator(.hidden)
+            } else if model.loadMoreFailed {
+                Button { Task { await model.loadMore() } } label: {
+                    Label("Couldn't load more. Try again", systemImage: "arrow.clockwise")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .listRowSeparator(.hidden)
+                .accessibilityIdentifier("activity.loadMoreRetry")
             }
         }
     }
@@ -117,7 +132,7 @@ struct FilterChips: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityIdentifier("filter.\(filter)")
+                    .accessibilityIdentifier("filter.\(filter.rawValue)")
                 }
             }
         }
@@ -129,6 +144,15 @@ struct ActivityRow: View {
     let scan: ScanResult
     let language: AppLanguage
     var showsOwner = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Host and path only: query strings and fragments can carry personal data or tokens, and
+    /// the row is visible to anyone looking at the screen (SECURITY §3 P9). Detail shows the full link.
+    static func displayLink(_ url: URL) -> String {
+        let host = url.host() ?? ""
+        let path = url.path()
+        return path.isEmpty || path == "/" ? host : host + path
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -137,10 +161,10 @@ struct ActivityRow: View {
                 Text(verbatim: scan.domain)
                     .font(.headline)
                     .foregroundStyle(.primary)
-                Text(verbatim: scan.url.absoluteString)
+                Text(verbatim: Self.displayLink(scan.url))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                     .truncationMode(.middle)
                 HStack(spacing: 4) {
                     if showsOwner {

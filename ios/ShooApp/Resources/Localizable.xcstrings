@@ -191,6 +191,16 @@
         }
       }
     },
+    "Couldn't load more. Try again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat lagi. Coba lagi"
+          }
+        }
+      }
+    },
     "Couldn't load this item": {
       "localizations": {
         "id": {
@@ -207,6 +217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gagal memuat Perisai"
+          }
+        }
+      }
+    },
+    "Couldn't refresh. Pull down to try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memperbarui. Tarik ke bawah untuk mencoba lagi."
           }
         }
       }

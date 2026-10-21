@@ -20,6 +20,7 @@ final class ShieldModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let readExtensionStatus: () -> ExtensionStatus
+    @ObservationIgnored private var generation = 0
 
     init(repository: any ShooRepository, extensionStatus: @escaping () -> ExtensionStatus = ExtensionStatus.live) {
         self.repository = repository
@@ -27,22 +28,32 @@ final class ShieldModel {
     }
 
     /// On appear and every time the app comes back to the foreground.
+    /// Overlapping calls: only the newest one is applied.
     func refresh() async {
+        generation += 1
+        let request = generation
         // Local and instant: never waits for the network.
         extensionStatus = readExtensionStatus()
         do {
             async let profile = repository.me()
             async let blocked = repository.scans(owner: .me, status: .blocked, cursor: nil)
             let (me, page) = try await (profile, blocked)
+            guard request == generation else { return }
             guardian = me.guardian
             lastBlocked = page.items.first
             state = .loaded
-        } catch is CancellationError {
-            return
         } catch {
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Shield load failed", error)
-            state = .failed
+            // A failed foreground refresh keeps what is already on screen.
+            if state != .loaded { state = .failed }
         }
+    }
+
+    /// "Try again" on the error view: shows the spinner while it retries.
+    func retry() async {
+        state = .loading
+        await refresh()
     }
 
     /// "Why blocked" on the card: the one or two strongest signals in simple words.

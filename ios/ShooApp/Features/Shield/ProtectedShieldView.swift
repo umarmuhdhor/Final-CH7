@@ -70,7 +70,7 @@ struct ProtectedShieldView: View {
             VStack(spacing: 12) {
                 Text("Couldn't load your Shield").font(.headline)
                 Text("Check your connection and try again.").foregroundStyle(.secondary)
-                Button { Task { await model.refresh() } } label: { Text("Try again").frame(minHeight: 44) }
+                Button { Task { await model.retry() } } label: { Text("Try again").frame(minHeight: 44) }
                     .buttonStyle(.borderedProminent)
             }
             .multilineTextAlignment(.center)
