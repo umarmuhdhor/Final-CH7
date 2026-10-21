@@ -1,0 +1,6 @@
+# gitleaks false positives (fase 12). Used with: gitleaks detect --gitleaks-ignore-path backend/.gitleaksignore
+# - test/push-apns.test.ts: PEM header text around a key generated at test runtime (no key in the repo)
+# - README.md: local seed bearer shoo_local_dev_me (seed.sql, dev only)
+3244fdda5f8f72946000ca047b854caa3b56783f:backend/api/test/push-apns.test.ts:private-key:10
+93562ea2046b830ee1b9920be957157dc627529c:backend/README.md:curl-auth-header:29
+1ca63b00801178d925a1a46edb7ededf06eb0038:backend/README.md:curl-auth-header:29

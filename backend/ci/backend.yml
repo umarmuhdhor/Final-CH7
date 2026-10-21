@@ -41,6 +41,15 @@ jobs:
       - run: pnpm -C backend/api install --frozen-lockfile
       - run: pnpm -C backend/api typecheck
       - run: pnpm -C backend/api test
+      # Bundles the Worker exactly as a deploy would (config, cron trigger, bindings), without uploading.
+      - name: Worker build check
+        working-directory: backend/api
+        run: npx wrangler deploy --dry-run --outdir /tmp/shoo-worker
+      # Secrets in the files of this commit (the CLI is free for any repo; the action needs a licence for orgs).
+      - name: gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks dir . --no-banner --redact
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

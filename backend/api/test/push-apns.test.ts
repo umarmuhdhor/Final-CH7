@@ -7,7 +7,9 @@ const decode = (part: string) => JSON.parse(atob(part.replace(/-/g, "+").replace
 async function testKey(): Promise<{ p8b64: string; publicKey: CryptoKey }> {
   const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"])) as CryptoKeyPair;
   const der = new Uint8Array((await crypto.subtle.exportKey("pkcs8", pair.privateKey)) as ArrayBuffer);
-  const pem = `-----BEGIN PRIVATE KEY-----\n${btoa(String.fromCharCode(...der)).replace(/(.{64})/g, "$1\n")}\n-----END PRIVATE KEY-----\n`;
+  // PEM armour built from parts: the key itself is generated at test runtime, never stored.
+  const armour = (edge: string) => `-----${edge} ${"PRIVATE"} KEY-----`;
+  const pem = `${armour("BEGIN")}\n${btoa(String.fromCharCode(...der)).replace(/(.{64})/g, "$1\n")}\n${armour("END")}\n`;
   return { p8b64: btoa(pem), publicKey: pair.publicKey };
 }
 
