@@ -28,10 +28,10 @@ Guardian membuat kode yang berganti tiap 60 detik, Protected bergabung dengan ko
 
 1. `POST /family/code` (guardian): R4 §1. `{ code, expiresAt, inviteUrl }`, `inviteUrl = ${INVITE_BASE_URL}/join?code=` (D-alief-03).
 2. `POST /family/join` (protected): R4 §2, error kontrak `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` + `already_connected`. Kunci rate limit dari `CF-Connecting-IP` (lokal: header uji).
-3. `GET /family/members` (guardian): `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan? }] }` sesuai fixture; `extensionActive` sesuai R3 §4 (D-alief-15/24: tanpa data → `true`; kalau C11 disetujui, `ext_last_seen_at` dari `PATCH /devices/me` dalam `AppGroup.extensionActiveWindow` 24 jam).
+3. `GET /family/members` (guardian): `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan? }] }` sesuai fixture; `extensionActive` sesuai R3 §4 (kontrak: `ext_last_seen_at` dari `PATCH /devices/me` dalam 24 jam = `AppGroup.extensionActiveWindow`; tanpa data → `true`).
 4. `DELETE /family/members/{deviceId}` (guardian) dan `DELETE /family/guardian` (protected).
 5. `GET /join?code=` HTML EN/ID kecil sesuai R3 §4: validasi `^\d{4}$`, escape HTML, CSP `default-src 'none'; style-src 'unsafe-inline'`, `nosniff` → tombol `shoo://join?code=`, kode besar, teks "Belum punya Shoo? Install dulu" (link App Store placeholder). Test XSS (SECURITY T13).
-6. Usulan kontrak: D-alief-03 (`inviteUrl` https) dan D-alief-15 (`extensionLastSeenAt`) → tulis di PR "Contract proposals" + TODO C5, C11.
+6. **`GET /devices/me`** (semua mode, kontrak): `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } | null }`; `guardian` dari `family_links` aktif (Protected), selalu `null` untuk Guardian. Test: Protected terhubung → guardian terisi; setelah Guardian menghapusnya → `null`.
 7. `ecc:security-reviewer` fokus T2, T11, T12, T13.
 
 ## Verifikasi
@@ -47,4 +47,5 @@ Test wajib: kode 4 digit + kedaluwarsa 60 s (jam disuntik), kode multi-pakai, Pr
 
 - [ ] Semua test di atas hijau.
 - [ ] Respons cocok dengan `fixtures/family-members.json` (test snapshot bentuk).
-- [ ] LANGKAH MANUAL deploy fase 08 tertulis; usulan C5 masuk PR.
+- [ ] `GET /devices/me` sesuai kontrak (test).
+- [ ] LANGKAH MANUAL deploy fase 08 tertulis.

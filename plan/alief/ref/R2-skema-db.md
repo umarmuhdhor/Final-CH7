@@ -97,7 +97,7 @@ create table blocklist_entries (                          -- antrean + isi block
   first_seen_at    timestamptz not null default now(),
   approved_at      timestamptz,                           -- null = menunggu review manual; hanya yang terisi dikirim
   approved_by      text,
-  removed_at       timestamptz                            -- dibersihkan; dikirim lewat `removed` setelah C6 disetujui
+  removed_at       timestamptz                            -- dibersihkan; dikirim lewat `removed[]` (kontrak)
 );
 create index blocklist_approved on blocklist_entries(approved_at) where approved_at is not null and removed_at is null;
 
@@ -168,7 +168,7 @@ Kontrak: "all domains with a `not_safe` verdict from any family". Filter otomati
    ```
    `nextSince` = `added_at` terakhir (ISO dengan mikrodetik). Review menyetujui **satu domain per statement** dengan `clock_timestamp()` (bukan `now()`, yang sama untuk seluruh transaksi), jadi `approved_at` unik dan batas halaman 1000 tidak melewatkan domain. Karena waktu yang dipakai adalah `approved_at`, refresh inkremental tidak pernah melewatkan domain (beda dengan filter `decided_at` + `having`).
 
-Penghapusan (`removed_at`) tidak terkirim lewat `since`: usulan kontrak `removed: [{ domain, removedAt }]` (TODO C6, D-alief-18). Sampai disetujui, detector disarankan full refresh (`since` kosong) sekali sehari. Kalau C6 memilih persetujuan otomatis (mis. ≥ 2 keluarga + umur link ≥ 72 jam), cukup ubah langkah 2 menjadi mengisi `approved_at` saat syarat terpenuhi.
+Penghapusan: kontrak punya `removed?: [{ domain, removedAt }]` = `select domain, removed_at from blocklist_entries where approved_at is not null and removed_at > $since` (hanya kalau `since` diisi). Extension tetap full refresh 1×/hari. `nextSince` = maks(`approved_at`, `removed_at`) yang dikirim. Kalau nanti dipilih persetujuan otomatis, cukup ubah langkah 2 menjadi mengisi `approved_at` saat syarat terpenuhi.
 
 ## 6. Retensi
 

@@ -259,3 +259,9 @@ Format:
 - Alasan: verify run 05 #S1–#S5, #R1–#R10 (verdict run 05 SIAP).
 - File: R1, R2, R3, R7, SECURITY, ARCHITECTURE, PROMPT, PROGRESS, README, TODO, ref/sim.sh, fase-01S, 02, 06, 06Q, 09, 10, 11, 12, 13, 14, 15, 16.
 
+
+## D-alief-38 · 21 Okt 2026 · plan · Sinkron plan dengan kontrak yang di-merge lead
+
+- Keputusan: kontrak PR #1 (deep links), #3 (catatan extension), #4 (usulan backend), #6 (`/public-blocklist`) sudah di `main`. Plan mengikuti kontrak: `GET /devices/me` dibangun di fase 08 dan dipakai app (`me()`) di fase 13; `extensionLastSeenAt` di `PATCH /devices/me` disimpan sejak fase 07; `removed[]` di `GET /blocklist` (fase 10); Guardian lain → 403 `verdict_not_allowed` (bukan 404); kode umum `invalid_body`/`bad_json`/`too_large`/`rate_limited` + `Retry-After`/`internal`. TODO C4–C6, C9–C13, C16 ditandai diterima. Sisa izin dari Umar: C3.
+- Alasan: hard rule 3 (semua JSON wajib cocok `contracts/`); teks "kalau C11/C12 disetujui" sudah usang.
+- File: TODO §C, PROGRESS (fase 00, G0, G1), fase-01, 07, 08, 09, 10, 13, R2 §5, R3 §1/§4, R7 #15b.

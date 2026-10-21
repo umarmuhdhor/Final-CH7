@@ -62,7 +62,7 @@ QA-E2E minimal:
 | 13 | Disconnect dari kedua sisi | daftar x/3 berkurang, data lama tidak terlihat |
 | 14 | Ganti bahasa ke Indonesia | semua layar + push dalam ID |
 | 15a | Extension Off (HP sendiri) | Shield Protected/Guardian sendiri "Off" (dari `extension.lastSeenAt` App Group, selalu bisa diuji) |
-| 15b | Extension Off (anggota keluarga) | GD-03 "Not connected" — **hanya diuji kalau C11 sudah jalan** (extension mengirim `extensionLastSeenAt`). Kalau belum: tulis di "Batasan" header laporan dengan rujukan D-alief-15/24, bukan temuan P0 |
+| 15b | Extension Off (anggota keluarga) | GD-03 "Not connected" — butuh extension Umar mengirim `extensionLastSeenAt` (kontrak, mandat Umar C11). Kalau extension belum mengirimnya: tulis di "Batasan" header laporan, bukan temuan P0 |
 | 16 | Retensi | scan > 14 hari (data uji dengan `created_at` mundur) hilang + objek Storage terhapus |
 | 17 | ON-04 di iPhone (Guardian + Protected) | Turn on membuka Settings; setelah extension On + satu halaman dimuat, kembali ke app → lanjut ke ON-05; Off → tetap di ON-04; video tutorial bisa PiP (kalau C3 butir 4 sudah ada, kalau belum tulis di "Batasan") |
 | 18 | Deep link dari extension | popup "See detail" / "Review in Shoo" membuka Detail scan yang benar; tanpa id → `shoo://activity` → Activity; link rusak → Shield |
