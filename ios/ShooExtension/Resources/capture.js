@@ -1,21 +1,23 @@
 // Owner: lead. Evidence screenshot for EX-07 (PRD §10: evidence area only, typed input blurred by report.js).
 // ES module, used by background.js.
 
-const MAX_WIDTH = 900; // px of the stored image — enough for DT-04 zoom, small enough to upload
-const JPEG_QUALITY = 0.6;
+// contracts/api.md: longest side ≤ 1280 px, ≤ 150 KB, else the backend drops the screenshot.
+const MAX_SIDE = 1280;
+const MAX_BYTES = 150 * 1024;
+const QUALITIES = [0.6, 0.45, 0.3]; // try in order until it fits
 
 /**
  * Maps the evidence rect (viewport CSS px) onto the captured image (device px) and picks the output size.
  * @returns {{sx, sy, sw, sh, width, height} | null} null when the rect is empty
  */
-export function cropBox(evidence, imageWidth, imageHeight, maxWidth = MAX_WIDTH) {
+export function cropBox(evidence, imageWidth, imageHeight, maxSide = MAX_SIDE) {
     const scale = imageWidth / evidence.viewportWidth;
     const sx = Math.max(0, Math.round(evidence.x * scale));
     const sy = Math.max(0, Math.round(evidence.y * scale));
     const sw = Math.min(imageWidth - sx, Math.round(evidence.width * scale));
     const sh = Math.min(imageHeight - sy, Math.round(evidence.height * scale));
     if (!(sw > 0 && sh > 0)) return null;
-    const out = Math.min(1, maxWidth / sw);
+    const out = Math.min(1, maxSide / Math.max(sw, sh));
     return { sx, sy, sw, sh, width: Math.round(sw * out), height: Math.round(sh * out) };
 }
 
@@ -32,10 +34,21 @@ export async function captureEvidence(windowId, evidence) {
             ? new OffscreenCanvas(box.width, box.height)
             : Object.assign(document.createElement("canvas"), { width: box.width, height: box.height });
     canvas.getContext("2d").drawImage(bitmap, box.sx, box.sy, box.sw, box.sh, 0, 0, box.width, box.height);
-    const blob = canvas.convertToBlob
-        ? await canvas.convertToBlob({ type: "image/jpeg", quality: JPEG_QUALITY })
-        : await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY));
-    return toBase64(new Uint8Array(await blob.arrayBuffer()));
+    const encode = (quality) =>
+        canvas.convertToBlob
+            ? canvas.convertToBlob({ type: "image/jpeg", quality })
+            : new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    const blob = await smallestFitting(encode);
+    return blob ? toBase64(new Uint8Array(await blob.arrayBuffer())) : null;
+}
+
+/** First encoding that fits MAX_BYTES, trying lower JPEG qualities; null if none fits (send without screenshot). */
+export async function smallestFitting(encode, qualities = QUALITIES, maxBytes = MAX_BYTES) {
+    for (const quality of qualities) {
+        const blob = await encode(quality);
+        if (blob && blob.size <= maxBytes) return blob;
+    }
+    return null;
 }
 
 function toBase64(bytes) {

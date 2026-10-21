@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
-import { cropBox } from "../Resources/capture.js";
+import { cropBox, smallestFitting } from "../Resources/capture.js";
 const { shouldReport, scanBody, evidenceRect } = globalThis.ShooReport;
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -49,10 +49,23 @@ test("no form on screen → whole viewport", () => {
     assert.deepEqual(evidenceRect({ left: 0, top: 2000, right: 390, bottom: 2300 }, viewport), full); // scrolled away
 });
 
-test("crop maps CSS px to device px and caps the stored width", () => {
+test("crop maps CSS px to device px; a small form keeps full resolution", () => {
     // 3x iPhone: 390 CSS px → 1170 image px
     const box = cropBox({ x: 4, y: 284, width: 382, height: 252, viewportWidth: 390 }, 1170, 2532);
-    assert.deepEqual(box, { sx: 12, sy: 852, sw: 1146, sh: 756, width: 900, height: 594 });
+    assert.deepEqual(box, { sx: 12, sy: 852, sw: 1146, sh: 756, width: 1146, height: 756 });
+});
+
+test("longest side is capped at 1280 px (contract), also for tall full-screen crops", () => {
+    const full = cropBox({ x: 0, y: 0, width: 390, height: 844, viewportWidth: 390 }, 1170, 2532);
+    assert.equal(Math.max(full.width, full.height), 1280);
+    assert.equal(full.width, Math.round(1170 * (1280 / 2532)));
+});
+
+test("screenshot falls back to lower quality, then to none, to stay ≤ 150 KB", async () => {
+    const sizes = { 0.6: 200_000, 0.45: 140_000, 0.3: 90_000 };
+    const fits = await smallestFitting(async (q) => ({ size: sizes[q], q }));
+    assert.equal(fits.q, 0.45);
+    assert.equal(await smallestFitting(async () => ({ size: 500_000 })), null);
 });
 
 test("crop never reads outside the image", () => {
