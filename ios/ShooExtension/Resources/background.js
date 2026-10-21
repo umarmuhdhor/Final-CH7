@@ -4,6 +4,7 @@
 import { PSL_RULES } from "./psl.js";
 import { parseRules, registrableDomain, naiveDomain } from "./domain.js";
 import { captureEvidence } from "./capture.js";
+import { createLists } from "./lists.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -101,6 +102,19 @@ async function verdict(domain, { fresh = false } = {}) {
     }
 }
 
+// Layer 1 (docs/design/blocklist.md): download + keep the lists here, content scripts only ask match().
+const lists = createLists({
+    storage: browser.storage.local,
+    getSession,
+    fetchJSON: (url, init) => fetchJSON(url, init),
+    registrableDomain: domainFor,
+});
+lists.refresh();
+if (browser.alarms) {
+    browser.alarms.create("shoo-lists", { periodInMinutes: 60 });
+    browser.alarms.onAlarm.addListener((alarm) => alarm.name === "shoo-lists" && lists.refresh());
+}
+
 const reports = new Map(); // report key → Promise<backend scan id | null>
 
 /**
@@ -158,6 +172,8 @@ browser.runtime.onMessage.addListener((message, sender) => {
                 mode: s?.mode ?? null,
                 guardianName: s?.guardianName ?? null,
             }));
+        case "listMatch":
+            return lists.match(message.hostname).then((match) => ({ ok: true, match }));
         case "domain":
             return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
         case "analyze":
