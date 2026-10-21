@@ -22,7 +22,15 @@ final class AppEnvironment {
             .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
         // TODO(sync:alief): ApiRepository — replace after fase 13
         let repository = MockRepository(mode: settings.mode ?? .guardian, scenario: scenario)
-        return AppEnvironment(repository: repository, settings: settings)
+        let environment = AppEnvironment(repository: repository, settings: settings)
+        #if DEBUG
+        // Screenshots for the UI gate: `-debug.tab activity`, `-debug.profile YES`.
+        if let tab = Self.value(after: "-debug.tab", in: arguments).flatMap(AppTab.init(rawValue:)) {
+            environment.router.selectedTab = tab
+        }
+        environment.router.isProfilePresented = Self.value(after: "-debug.profile", in: arguments) == "YES"
+        #endif
+        return environment
     }
 
     /// Ends onboarding with the mode picked in ON-03 (permanent).

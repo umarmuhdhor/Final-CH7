@@ -7,8 +7,11 @@ struct ScoreRing: View {
     var lineWidth: CGFloat = 12
 
     @Environment(\.locale) private var locale
+    /// Grows the ring (and its number) with Dynamic Type, at most to twice the base size.
+    @ScaledMetric(relativeTo: .title) private var textScale: CGFloat = 1
 
     private var clamped: Int { min(max(score, 0), 100) }
+    private var side: CGFloat { size * min(textScale, 2) }
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
@@ -20,13 +23,13 @@ struct ScoreRing: View {
                 .stroke(ScoreLevel(score: clamped).color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text(verbatim: Formatters.percent(clamped, language: language))
-                .font(.system(size: size * 0.26, weight: .bold, design: .rounded))
+                .font(.system(size: side * 0.26, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
                 .padding(lineWidth)
         }
-        .frame(width: size, height: size)
+        .frame(width: side, height: side)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Risk score"))
         .accessibilityValue(Text(verbatim: Formatters.percent(clamped, language: language)))

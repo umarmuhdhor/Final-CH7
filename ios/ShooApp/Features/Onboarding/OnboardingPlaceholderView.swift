@@ -13,6 +13,7 @@ struct OnboardingPlaceholderView: View {
                 .accessibilityHidden(true)
             Text("Shoo")
                 .font(.largeTitle.bold())
+                .accessibilityAddTraits(.isHeader)
             Text("Scam sites, shooed away.")
                 .font(.title3)
                 .foregroundStyle(.secondary)

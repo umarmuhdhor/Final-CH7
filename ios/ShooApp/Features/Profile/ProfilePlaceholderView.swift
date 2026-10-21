@@ -11,7 +11,7 @@ struct ProfilePlaceholderView: View {
             Form {
                 Picker(selection: $settings.language) {
                     ForEach(AppLanguage.allCases) { language in
-                        Text(verbatim: language.nativeName).tag(language)
+                        Text(Self.spokenName(language)).tag(language)
                     }
                 } label: {
                     Text("Language")
@@ -26,5 +26,12 @@ struct ProfilePlaceholderView: View {
                 }
             }
         }
+    }
+
+    /// The language's own name, read by VoiceOver in that language.
+    private static func spokenName(_ language: AppLanguage) -> AttributedString {
+        var name = AttributedString(language.nativeName)
+        name.languageIdentifier = language.code
+        return name
     }
 }
