@@ -22,19 +22,20 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 | POST | `/devices` | `{ name, mode: "guardian"\|"protected", apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
 | GET | `/devices/me` | — | `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } \| null }` — Protected learns its guardian, or that it was disconnected | PR-04, PF-01, EX-06 |
 | PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` | `{ ok }` | ON-05, PF-01, GD-03 |
+| DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
 
 `extensionLastSeenAt` (ISO): sent by the **extension** at most once per hour with its heartbeat, and by the app when it comes to the foreground. The backend uses it for `extensionActive` in `GET /family/members` ("Not connected", GD-03). No data yet → `extensionActive: true` (never "Not connected" without evidence).
 
 ### Family (max 3 protected per guardian)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/family/code` | — (guardian) | `{ code: "4821", expiresAt, inviteUrl }` — 60 s validity | GD-04 |
+| POST | `/family/code` | — (guardian) | `{ code: "4821", expiresAt, inviteUrl }` — 60 s validity, replaces the guardian's previous code. `503 code_unavailable` when no free code is found: show "Try again" | GD-04 |
 | POST | `/family/join` | `{ code }` (protected) | `{ guardian: { deviceId, name, avatarId } }` | PR-01, PR-03 |
 | GET | `/family/members` | — (guardian) | `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan? }] }` | GD-03 |
 | DELETE | `/family/members/{deviceId}` | — (guardian) | `{ ok }` | GD-04 |
 | DELETE | `/family/guardian` | — (protected) | `{ ok }` | PF-01 |
 
-Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` (rate-limit attempts, PRD §10), `already_connected`.
+Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` (rate-limit attempts, PRD §10; HTTP 429 with `Retry-After`, like `rate_limited`), `already_connected`.
 
 `inviteUrl` is an **https** link, e.g. `https://<api host>/join?code=4821`: a small page that opens `shoo://join?code=4821` (contracts/app-group-keys.md "Deep links"). WhatsApp doesn't make `shoo://` links tappable.
 
