@@ -113,6 +113,8 @@ Dijalankan dari root worktree ini, di branch `feat/BE-family` (D-alief-27). Tida
 - 2: `pnpm -C backend/api run deploy` → Version `a9807b02-1354-4c1e-94b3-bdde8c5bd9b9`, binding `DB` = Hyperdrive `f6c9b58d…`, `APNS_SPIKE "0"`.
 - 3: join → `{"guardian":{…"name":"Smoke G","avatarId":"avatar_08"}}`; members → `{"members":[{…"name":"Smoke P","avatarId":"avatar_07","extensionActive":true,"lastScan":null}]}`; `GET /devices/me` (P) → `mode:"protected"`, `language:"en"`, `guardian` terisi; `/join` → `200 200`; `/blocklist` → `{"domains":[],"nextSince":null}`; delete → `{"ok":true}{"ok":true}`; setelah delete → `401`. Semua sesuai harapan; dua device uji terhapus.
 - 4: dilewati (opsional).
+- Tambahan (sesi `happy-mcnulty-9fc732`, ±22:22 WITA, atas permintaan Alief "deploy it for me" di sesi itu): `migration list --linked` = semua Local = Remote; dicek `join_attempts.ip_hash bytea NOT NULL`, trigger `blocklist_entries_times`, 2 CHECK, 2 indeks retensi ada. Deploy ulang kode yang sama (HEAD `62a8d77`) → Version `cf92f9f8-e3d2-43be-adf7-28fa195fc4ab`. Uji asap ulang hijau, plus `PATCH` nama berisi NUL → 422, `?code=<script>` tidak dipantulkan, CSP/`nosniff`/`no-store` ada, `/debug/apns-spike` → 404.
+- Setelah #7 di-merge (squash): `feat/BE-devices` dan `feat/BE-family` di-rebase ke `origin/main` (PROMPT 13), verifikasi ulang lokal pgTAP 67 PASS, vitest 100/100.
 
 ## Catatan handoff
 
