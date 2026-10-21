@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (migrasi bucket + secret Storage + deploy). Belum ada PR |
+| Status | `[m]` berhenti di LANGKAH MANUAL (b): deploy ulang perbaikan `cache-control` + cek ulang signed URL setelah delete. Belum ada PR |
 | Track / branch | be · `feat/BE-scans` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-family` (PR #11, stacked on #9) → PR nanti menulis "Stacked on #11" |
 | Mulai | 21 Okt 2026 22:40 WITA |
@@ -116,6 +116,29 @@ Dijalankan dari root worktree ini, di branch `feat/BE-scans`. Satu migrasi baru 
 - 1: kunci secret Supabase `shoo_worker` dibuat Alief, ditempel di prompt `wrangler secret put SUPABASE_SERVICE_ROLE_KEY` → `Success! Uploaded secret SUPABASE_SERVICE_ROLE_KEY`.
 - 2: deploy → Version `be621201-27f9-4f3a-8601-5c58d4967157` (binding `DB`, `SUPABASE_URL`, `SCREENSHOT_MAX_BYTES 153600`).
 - 3: `scan 3affdd87-…`; `1 Smoke P None None`; `signed url: 200 image/jpeg`; `IDOR other guardian: 404`; delete → `{"ok":true}` ×3 (Smoke X ikut dihapus); **`signed url after delete: 200` — tidak sesuai harapan.** Cek DB: `storage.objects` bucket `screenshots` kosong, `scans` = 0 → objek benar terhapus. Penyebab paling mungkin: upload tanpa `cache-control`, jadi Supabase memakai default `max-age=3600` dan CDN Storage menyajikan salinan cache sampai signed URL kedaluwarsa (≤ 1 jam). **Temuan untuk agent (TINGGI, privasi SECURITY §3):** set `cache-control: no-store` (atau `max-age=0`) saat upload screenshot dan tambahkan test; deploy ulang = LANGKAH MANUAL berikutnya.
+
+### Perbaikan temuan smoke (21 Okt 2026 ±23:35 WITA, agent track be)
+
+- Temuan (TINGGI, privasi SECURITY §3 P3 / T6): signed URL masih `200` setelah `DELETE /devices/me`. Penyebab: upload tanpa `cache-control` → Storage memakai `max-age=3600`, CDN menyajikan salinan.
+- Perbaikan: `SupabaseStorageStore.put` mengirim `cache-control: no-store` (disimpan sebagai `cache_control` objek, dikirim di setiap GET). D-alief-B07 (l), SECURITY T6.
+- Test (merah dulu, lalu hijau): `scans.test.ts` "owner gets a 1-hour signed URL" memeriksa `object/info` → `cache_control === "no-store"` (lokal default `no-cache`; Storage lokal tidak meneruskan header lewat Kong, jadi header nyata dicek di cloud). `pnpm test` → 12 file, **170 test lulus**; typecheck bersih.
+- Review: perubahan 1 header + 1 assertion, direview manual (tanpa subagent).
+- Objek lama di cloud: tidak ada (smoke sudah menghapus semuanya), jadi tidak ada objek dengan `max-age=3600` yang tersisa.
+
+## LANGKAH MANUAL (b) (Alief) — deploy ulang + cek ulang cache
+
+Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migrasi atau secret baru.
+
+- [ ] 1. Deploy:
+  ```bash
+  pnpm -C backend/api run deploy
+  ```
+- [ ] 2. Jalankan lagi blok uji asap langkah 3 di atas, lalu tambahan cek header (sebelum `DELETE`):
+  ```bash
+  curl -s -D - -o /dev/null "$SURL" | grep -i '^cache-control'
+  ```
+  Harapan: `cache-control: no-store`; semua harapan langkah 3 sama, dan **`signed url after delete` bukan 200**. Tempel hasilnya (tanpa token dan tanpa `$SURL`).
+- [ ] 3. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11), dan lanjut ke fase 10.
 
 ## Catatan handoff
 

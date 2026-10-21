@@ -426,6 +426,12 @@ describe("GET /scans/{id}", () => {
     expect(token.exp - token.iat).toBe(3600);
     const img = await fetch(item.screenshotUrl!);
     expect(img.status).toBe(200);
+    // No CDN or browser copy may outlive DELETE /devices/me or retention (SECURITY §3, D-alief-B07 l).
+    // Local Storage does not echo the header, so the stored object setting is checked.
+    const info = (await (await fetch(`${env.SUPABASE_URL}/storage/v1/object/info/screenshots/${await pathOf(id)}`, {
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+    })).json()) as { cache_control: string };
+    expect(info.cache_control).toBe("no-store");
     expect(new Uint8Array(await img.arrayBuffer())).toEqual(shot);
   });
 

@@ -41,7 +41,9 @@ export class SupabaseStorageStore implements ScreenshotStore {
   async put(path: string, bytes: Uint8Array, contentType: string): Promise<void> {
     const res = await fetch(`${this.baseUrl}/storage/v1/object/${BUCKET}/${this.object(path)}`, {
       method: "POST",
-      headers: this.headers(contentType),
+      // Stored with the object and sent on every signed GET. Without it Storage uses max-age=3600,
+      // and the CDN kept serving a screenshot for up to 1 h after it was deleted (fase 09 smoke).
+      headers: { ...this.headers(contentType), "cache-control": "no-store" },
       body: bytes,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
