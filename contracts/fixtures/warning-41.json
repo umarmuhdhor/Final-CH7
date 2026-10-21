@@ -7,9 +7,46 @@
   "score": 41,
   "status": "warning",
   "signals": [
-    { "id": "cheap_tld", "layer": 2, "weight": 15, "label": "Cheap domain ending (.click)", "labelSimple": "This website address looks cheap and unofficial" },
-    { "id": "brand_plus_keyword", "layer": 2, "weight": 14, "label": "Brand name + extra word: shopee + undian", "labelSimple": "Uses the Shopee name but isn't Shopee" },
-    { "id": "urgent_language", "layer": 3, "weight": 12, "label": "Urgent language: \"klaim dalam 1 jam\"", "labelSimple": "Rushes you to act fast", "evidence": "klaim dalam 1 jam" }
+    {
+      "id": "cheap_tld",
+      "layer": 2,
+      "weight": 15,
+      "label": {
+        "en": "Cheap domain ending (.click)",
+        "id": "Akhiran domain murah (.click)"
+      },
+      "labelSimple": {
+        "en": "This website address looks cheap and unofficial",
+        "id": "Alamat situs ini terlihat murahan dan tidak resmi"
+      }
+    },
+    {
+      "id": "brand_plus_keyword",
+      "layer": 2,
+      "weight": 14,
+      "label": {
+        "en": "Brand name + extra word: shopee + undian",
+        "id": "Nama brand + kata tambahan: shopee + undian"
+      },
+      "labelSimple": {
+        "en": "Uses the Shopee name but isn't Shopee",
+        "id": "Memakai nama Shopee, tapi bukan Shopee"
+      }
+    },
+    {
+      "id": "urgent_language",
+      "layer": 3,
+      "weight": 12,
+      "label": {
+        "en": "Urgent language: \"klaim dalam 1 jam\"",
+        "id": "Kalimat mendesak: \"klaim dalam 1 jam\""
+      },
+      "labelSimple": {
+        "en": "Rushes you to act fast",
+        "id": "Memaksa kamu cepat-cepat bertindak"
+      },
+      "evidence": "klaim dalam 1 jam"
+    }
   ],
   "screenshotUrl": null,
   "ownerDeviceId": "dev_mom",

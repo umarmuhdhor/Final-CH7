@@ -26,9 +26,20 @@ struct Signal: Codable, Hashable {
     var id: String
     var layer: Int
     var weight: Int
-    var label: String
-    var labelSimple: String
+    var label: LocalizedText
+    var labelSimple: LocalizedText
     var evidence: String?
+}
+
+/// Text in both app languages (contracts/scan-result.schema.json#/$defs/LocalizedText).
+struct LocalizedText: Codable, Hashable {
+    var en: String
+    var id: String
+
+    /// Picks the text for a language code ("id" → Bahasa Indonesia, anything else → English).
+    func text(for languageCode: String?) -> String {
+        languageCode == "id" ? id : en
+    }
 }
 
 struct Verdict: Codable, Hashable {

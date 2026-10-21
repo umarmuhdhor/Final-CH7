@@ -7,10 +7,59 @@
   "score": 63,
   "status": "warning",
   "signals": [
-    { "id": "asks_ktp", "layer": 3, "weight": 25, "label": "Form asks for KTP number", "labelSimple": "Asks for your ID card number", "evidence": "nik" },
-    { "id": "cheap_tld", "layer": 2, "weight": 15, "label": "Cheap domain ending (.site)", "labelSimple": "This website address looks cheap and unofficial" },
-    { "id": "brand_plus_keyword", "layer": 2, "weight": 13, "label": "Government name on non-official domain", "labelSimple": "Uses a government name but isn't a government site" },
-    { "id": "urgent_language", "layer": 3, "weight": 10, "label": "Urgent language: \"terakhir hari ini\"", "labelSimple": "Rushes you to act fast" }
+    {
+      "id": "asks_ktp",
+      "layer": 3,
+      "weight": 25,
+      "label": {
+        "en": "Form asks for KTP number",
+        "id": "Form meminta nomor KTP"
+      },
+      "labelSimple": {
+        "en": "Asks for your ID card number",
+        "id": "Meminta nomor KTP kamu"
+      },
+      "evidence": "nik"
+    },
+    {
+      "id": "cheap_tld",
+      "layer": 2,
+      "weight": 15,
+      "label": {
+        "en": "Cheap domain ending (.site)",
+        "id": "Akhiran domain murah (.site)"
+      },
+      "labelSimple": {
+        "en": "This website address looks cheap and unofficial",
+        "id": "Alamat situs ini terlihat murahan dan tidak resmi"
+      }
+    },
+    {
+      "id": "brand_plus_keyword",
+      "layer": 2,
+      "weight": 13,
+      "label": {
+        "en": "Government name on non-official domain",
+        "id": "Nama instansi pemerintah di domain tidak resmi"
+      },
+      "labelSimple": {
+        "en": "Uses a government name but isn't a government site",
+        "id": "Memakai nama pemerintah, tapi bukan situs pemerintah"
+      }
+    },
+    {
+      "id": "urgent_language",
+      "layer": 3,
+      "weight": 10,
+      "label": {
+        "en": "Urgent language: \"terakhir hari ini\"",
+        "id": "Kalimat mendesak: \"terakhir hari ini\""
+      },
+      "labelSimple": {
+        "en": "Rushes you to act fast",
+        "id": "Memaksa kamu cepat-cepat bertindak"
+      }
+    }
   ],
   "screenshotUrl": "https://example.invalid/screens/warning-63.png",
   "ownerDeviceId": "dev_me",

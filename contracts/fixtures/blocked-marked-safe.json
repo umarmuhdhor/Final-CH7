@@ -7,13 +7,54 @@
   "score": 81,
   "status": "blocked",
   "signals": [
-    { "id": "asks_card", "layer": 3, "weight": 30, "label": "Form asks for card number + CVV", "labelSimple": "Asks for your card details" },
-    { "id": "new_domain", "layer": 2, "weight": 30, "label": "Domain age 9 days", "labelSimple": "This site was made 9 days ago" },
-    { "id": "cheap_tld", "layer": 2, "weight": 21, "label": "Cheap domain ending (.xyz)", "labelSimple": "This website address looks cheap and unofficial" }
+    {
+      "id": "asks_card",
+      "layer": 3,
+      "weight": 30,
+      "label": {
+        "en": "Form asks for card number + CVV",
+        "id": "Form meminta nomor kartu + CVV"
+      },
+      "labelSimple": {
+        "en": "Asks for your card details",
+        "id": "Meminta data kartu kamu"
+      }
+    },
+    {
+      "id": "new_domain",
+      "layer": 2,
+      "weight": 30,
+      "label": {
+        "en": "Domain age 9 days",
+        "id": "Umur domain 9 hari"
+      },
+      "labelSimple": {
+        "en": "This site was made 9 days ago",
+        "id": "Situs ini baru dibuat 9 hari lalu"
+      }
+    },
+    {
+      "id": "cheap_tld",
+      "layer": 2,
+      "weight": 21,
+      "label": {
+        "en": "Cheap domain ending (.xyz)",
+        "id": "Akhiran domain murah (.xyz)"
+      },
+      "labelSimple": {
+        "en": "This website address looks cheap and unofficial",
+        "id": "Alamat situs ini terlihat murahan dan tidak resmi"
+      }
+    }
   ],
   "screenshotUrl": null,
   "ownerDeviceId": "dev_mom",
   "ownerName": "Mom",
   "detectedAt": "2026-10-19T08:00:00Z",
-  "verdict": { "value": "safe", "byDeviceId": "dev_me", "byName": "Adhella", "decidedAt": "2026-10-19T08:03:00Z" }
+  "verdict": {
+    "value": "safe",
+    "byDeviceId": "dev_me",
+    "byName": "Adhella",
+    "decidedAt": "2026-10-19T08:03:00Z"
+  }
 }

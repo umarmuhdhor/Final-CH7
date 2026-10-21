@@ -6,7 +6,7 @@ globalThis.ShooDetector = {
 
     /**
      * @param {object} snapshot PageSnapshot
-     * @returns {Promise<Array<{id: string, layer: number, weight: number, label: string, labelSimple: string, evidence?: string}>>}
+     * @returns {Promise<Array<{id: string, layer: number, weight: number, label: {en: string, id: string}, labelSimple: {en: string, id: string}, evidence?: string}>>}
      */
     analyzeLocal: async (snapshot) => {
         try {

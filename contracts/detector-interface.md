@@ -49,6 +49,13 @@ type PageSnapshot = {
 ## Signal
 Defined in `scan-result.schema.json#/$defs/Signal`.
 
+`label` and `labelSimple` are **bilingual objects** — Team AI writes both languages; the app only picks one:
+```json
+{ "id": "new_domain", "layer": 2, "weight": 30,
+  "label":       { "en": "Domain age 3 days",             "id": "Umur domain 3 hari" },
+  "labelSimple": { "en": "This site was made 3 days ago", "id": "Situs ini baru dibuat 3 hari lalu" } }
+```
+
 ## Scoring (owned by lead, implemented in extension)
 - `score = min(100, sum(signal.weight))`, recomputed every time a layer returns.
 - Any signal with `id: "db_match"` → score 100 immediately, skip remaining layers.

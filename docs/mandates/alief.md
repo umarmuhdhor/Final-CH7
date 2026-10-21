@@ -18,7 +18,7 @@ Setup: `brew install xcodegen`, lalu `cd ios && xcodegen && open Shoo.xcodeproj`
 1. Semua requirement **P0** di PRD bagian 8.1–8.4 dan 8.6 lolos kriteria "Selesai kalau".
 2. Keluarga bisa terhubung lewat kode 4 digit atau QR, lalu Guardian menerima push ketika orang tuanya membuka situs berbahaya.
 3. Saat Guardian menekan **It's safe**, layar blokir di HP orang tua langsung terbuka (EX-06), tanpa layar konfirmasi.
-4. Semua teks tersedia dalam English (default) dan Bahasa Indonesia.
+4. Semua teks tersedia dalam English (default) dan Bahasa Indonesia. Teks alasan deteksi sudah dikirim Imelda dalam 2 bahasa, jadi cukup pilih sesuai bahasa app: `signal.label.text(for: languageCode)`. Jangan diterjemahkan sendiri.
 
 ## Tugas
 

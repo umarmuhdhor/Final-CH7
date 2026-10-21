@@ -7,11 +7,28 @@
   "score": 100,
   "status": "blocked",
   "signals": [
-    { "id": "db_match", "layer": 1, "weight": 100, "label": "Listed as a verified scam", "labelSimple": "This site is a known scam" }
+    {
+      "id": "db_match",
+      "layer": 1,
+      "weight": 100,
+      "label": {
+        "en": "Listed as a verified scam",
+        "id": "Tercatat sebagai penipuan terverifikasi"
+      },
+      "labelSimple": {
+        "en": "This site is a known scam",
+        "id": "Situs ini sudah diketahui menipu"
+      }
+    }
   ],
   "screenshotUrl": null,
   "ownerDeviceId": "dev_dad",
   "ownerName": "Dad",
   "detectedAt": "2026-10-20T11:30:00Z",
-  "verdict": { "value": "not_safe", "byDeviceId": "dev_me", "byName": "Adhella", "decidedAt": "2026-10-20T11:32:10Z" }
+  "verdict": {
+    "value": "not_safe",
+    "byDeviceId": "dev_me",
+    "byName": "Adhella",
+    "decidedAt": "2026-10-20T11:32:10Z"
+  }
 }

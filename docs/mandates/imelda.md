@@ -17,7 +17,7 @@ Target awal ini bisa diubah oleh lead:
 1. **Tidak ada salah blokir di situs resmi.** Semua domain di `detector/data/brands.json` dan 100 situs populer Indonesia mendapat skor **< 30**.
 2. **Scam tertangkap.** ≥ 90% halaman scam di eval set mendapat skor **≥ 50**, dan ≥ 70% mendapat skor **≥ 80**.
 3. **Cepat.** `analyzeLocal` < 50 ms. `POST /analyze` < 8 detik (p95). Layer 3 tetap menjawab walaupun LLM sedang down.
-4. **Alasan bisa dimengerti orang tua.** Setiap sinyal punya `label` (untuk Guardian) dan `labelSimple` (bahasa sederhana, tanpa istilah teknis).
+4. **Alasan bisa dimengerti orang tua, dalam 2 bahasa.** Setiap sinyal punya `label` (untuk Guardian) dan `labelSimple` (bahasa sederhana, tanpa istilah teknis). Keduanya **wajib dalam English dan Bahasa Indonesia**: `{ "en": "...", "id": "..." }`. Contohnya ada di `contracts/fixtures/`.
 
 ## Tugas (kerjakan berurutan, centang kalau PR sudah di-merge)
 

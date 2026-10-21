@@ -7,10 +7,59 @@
   "score": 92,
   "status": "blocked",
   "signals": [
-    { "id": "new_domain", "layer": 2, "weight": 30, "label": "Domain age 3 days", "labelSimple": "This site was made 3 days ago" },
-    { "id": "asks_pin", "layer": 3, "weight": 25, "label": "Form asks for m-banking PIN", "labelSimple": "Asks for your bank PIN — banks never do this", "evidence": "pin" },
-    { "id": "unreasonable_request", "layer": 4, "weight": 22, "label": "Verification page asks for PIN + OTP", "labelSimple": "A real bank page would not ask this" },
-    { "id": "brand_plus_keyword", "layer": 2, "weight": 15, "label": "Brand name + extra word: bca + verifikasi", "labelSimple": "Uses the BCA name but isn't BCA" }
+    {
+      "id": "new_domain",
+      "layer": 2,
+      "weight": 30,
+      "label": {
+        "en": "Domain age 3 days",
+        "id": "Umur domain 3 hari"
+      },
+      "labelSimple": {
+        "en": "This site was made 3 days ago",
+        "id": "Situs ini baru dibuat 3 hari lalu"
+      }
+    },
+    {
+      "id": "asks_pin",
+      "layer": 3,
+      "weight": 25,
+      "label": {
+        "en": "Form asks for m-banking PIN",
+        "id": "Form meminta PIN m-banking"
+      },
+      "labelSimple": {
+        "en": "Asks for your bank PIN — banks never do this",
+        "id": "Meminta PIN bank kamu — bank tidak pernah meminta ini"
+      },
+      "evidence": "pin"
+    },
+    {
+      "id": "unreasonable_request",
+      "layer": 4,
+      "weight": 22,
+      "label": {
+        "en": "Verification page asks for PIN + OTP",
+        "id": "Halaman verifikasi meminta PIN + OTP"
+      },
+      "labelSimple": {
+        "en": "A real bank page would not ask this",
+        "id": "Halaman bank asli tidak akan meminta ini"
+      }
+    },
+    {
+      "id": "brand_plus_keyword",
+      "layer": 2,
+      "weight": 15,
+      "label": {
+        "en": "Brand name + extra word: bca + verifikasi",
+        "id": "Nama brand + kata tambahan: bca + verifikasi"
+      },
+      "labelSimple": {
+        "en": "Uses the BCA name but isn't BCA",
+        "id": "Memakai nama BCA, tapi bukan BCA"
+      }
+    }
   ],
   "screenshotUrl": "https://example.invalid/screens/blocked-92.png",
   "ownerDeviceId": "dev_mom",
