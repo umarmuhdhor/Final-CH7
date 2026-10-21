@@ -13,7 +13,7 @@ struct RootView: View {
             } else if env.settings.onboardingCompleted, env.settings.mode != nil {
                 MainTabView()
             } else {
-                OnboardingPlaceholderView()
+                OnboardingFlow()
             }
         }
         .environment(\.locale, env.settings.language.locale)

@@ -57,11 +57,6 @@ actor MockRepository: ShooRepository {
         }
     }
 
-    /// The same fixtures and settings, answering as `mode` (used when onboarding picks a mode).
-    nonisolated func switching(to mode: UserMode) -> MockRepository {
-        MockRepository(mode: mode, scenario: scenario, latency: latency, pageSize: pageSize, bundle: bundle, now: now)
-    }
-
     // MARK: Devices
 
     func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {

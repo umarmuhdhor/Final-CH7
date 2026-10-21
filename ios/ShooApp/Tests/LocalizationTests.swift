@@ -7,10 +7,19 @@ struct LocalizationTests {
         ("Activity", "Activity", "Aktivitas"),
         ("Shield", "Shield", "Perisai"),
         ("Verified scam", "Verified scam", "Penipuan terverifikasi"),
+        ("Continue", "Continue", "Lanjut"),
+        ("Turn on", "Turn on", "Nyalakan"),
+        ("Not now", "Not now", "Nanti saja"),
+        ("You can't change this later.", "You can't change this later.", "Pilihan ini tidak bisa diganti nanti."),
     ])
     func catalogLookupFollowsInAppLanguage(key: String, english: String, indonesian: String) {
         #expect(L10n.string(String.LocalizationValue(key), language: .english) == english)
         #expect(L10n.string(String.LocalizationValue(key), language: .indonesian) == indonesian)
+    }
+
+    @Test func greetingInterpolatesTheName() {
+        #expect(L10n.string("Hi, \("Rina")!", language: .english) == "Hi, Rina!")
+        #expect(L10n.string("Hi, \("Rina")!", language: .indonesian) == "Hai, Rina!")
     }
 
     @Test func everyCatalogKeyHasAnIndonesianTranslation() throws {
