@@ -30,7 +30,7 @@ targets:
     platform: iOS
     sources:
       - path: ShooApp
-        excludes: ["CLAUDE.md"]
+        excludes: ["CLAUDE.md", "Tests/**", "UITests/**", "ci/**"]
       - path: ShooShared
         excludes: ["CLAUDE.md"]
     info:
@@ -116,6 +116,26 @@ targets:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
 
+  ShooAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [ShooApp/Tests]
+    dependencies:
+      - target: Shoo
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+  ShooAppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [ShooApp/UITests]
+    dependencies:
+      - target: Shoo
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Shoo:
     build:
@@ -123,3 +143,7 @@ schemes:
         Shoo: all
     run:
       config: Debug
+    test:
+      targets:
+        - ShooAppTests
+        - ShooAppUITests
