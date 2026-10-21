@@ -50,7 +50,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - Verdict domain dulu: `safe` → skor 0, berhenti. `not_safe` → blocked 100.
   - Layer 1–2 (`ShooDetector.analyzeLocal`) → update skor → `POST /analyze` (timeout 8 s) → gabung sinyal → update skor.
   - `db_match` → 100, lewati layer lain. Reset skor di setiap perubahan URL; buang hasil scan lama yang datang terlambat.
-- [ ] **U2 · EX-04** Popup warning. Branch: `feat/EX-04-popup-warning`
+- [x] **U2 · EX-04** Popup warning. Branch: `feat/EX-04-popup-warning`
   - Muncul di 30 dan 50, masing-masing maks. sekali per halaman. Langsung ≥80 → tanpa popup.
   - Isi: status, skor, link, "See detail" → buka app (`shoo://scan/{id}`). Bisa ditutup.
   - Shadow DOM supaya CSS halaman tidak bocor. Teks EN + ID (`_locales`).

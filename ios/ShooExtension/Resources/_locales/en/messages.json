@@ -1,4 +1,11 @@
 {
     "extension_name": { "message": "Shoo", "description": "The display name for the extension." },
-    "extension_description": { "message": "Blocks scam sites. Blocked sites open after your family checks them.", "description": "Description of what the extension does." }
+    "extension_description": { "message": "Blocks scam sites. Blocked sites open after your family checks them.", "description": "Description of what the extension does." },
+    "popup_status_warning": { "message": "Warning", "description": "EX-04 status chip" },
+    "popup_title_1": { "message": "This site looks suspicious", "description": "EX-04 first warning (30%) title" },
+    "popup_body_1": { "message": "Be careful before entering any personal data here.", "description": "EX-04 first warning body" },
+    "popup_title_2": { "message": "Watch out: this is likely a scam site", "description": "EX-04 second, stronger warning (50%) title" },
+    "popup_body_2": { "message": "Don't enter your PIN, OTP, password, or card number on this page.", "description": "EX-04 second warning body" },
+    "popup_see_detail": { "message": "See detail", "description": "EX-04 button that opens Detail in the Shoo app" },
+    "popup_close": { "message": "Close", "description": "EX-04 close button (accessibility label)" }
 }

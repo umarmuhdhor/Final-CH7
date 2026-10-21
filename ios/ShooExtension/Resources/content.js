@@ -1,6 +1,6 @@
 // Owner: lead. Collects the page, runs the scan pipeline, publishes the score (EX-02).
 // Loaded last (manifest.json) so UI scripts have already called ShooPipeline.subscribe().
-// TODO(EX-04/05/06): popup at 30/50, highlight, block screen — subscribers in their own files.
+// TODO(EX-05/06): highlight, block screen — subscribers in their own files (popup.js = EX-04).
 // TODO(EX-07): if score >= 30, POST /scans.
 
 (() => {
