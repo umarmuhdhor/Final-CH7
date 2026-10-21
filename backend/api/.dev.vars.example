@@ -1,8 +1,12 @@
 # Copy to backend/api/.dev.vars (gitignored) for `pnpm -C backend/api dev`.
 # Local values only. Cloud values are set with `npx wrangler secret put <NAME>`.
 INVITE_BASE_URL=http://localhost:8787
-APNS_SPIKE=0
-SPIKE_KEY=
+# APNs (fase 11). Empty → pushes are only logged (LogSender). APNS_KEY_P8_B64 = base64 of the .p8 file, one line.
+APNS_KEY_P8_B64=
+APNS_KEY_ID=
+APNS_TEAM_ID=
+APNS_TOPIC=
+APNS_ENV=sandbox
 # Local Storage (fase 09): API_URL and SECRET_KEY from `(cd backend/db && supabase status)`.
 SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_ROLE_KEY=

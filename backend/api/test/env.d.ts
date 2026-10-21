@@ -3,8 +3,11 @@ declare namespace Cloudflare {
   interface Env {
     DB: Hyperdrive;
     INVITE_BASE_URL: string;
-    APNS_SPIKE?: string;
-    SPIKE_KEY?: string;
+    APNS_KEY_P8_B64?: string;
+    APNS_KEY_ID?: string;
+    APNS_TEAM_ID?: string;
+    APNS_TOPIC?: string;
+    APNS_ENV?: string;
     SUPABASE_URL?: string;
     SUPABASE_SERVICE_ROLE_KEY?: string;
     SCREENSHOT_MAX_BYTES?: string;

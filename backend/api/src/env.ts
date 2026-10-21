@@ -3,10 +3,16 @@ import type { Sql } from "postgres";
 export interface Env {
   DB: Hyperdrive;
   INVITE_BASE_URL: string;
-  /** "1" enables POST /debug/apns-spike (fase 07 only). */
-  APNS_SPIKE?: string;
-  /** Secret: header x-spike-key for /debug/apns-spike. */
-  SPIKE_KEY?: string;
+  /** Secret: APNs .p8 key (PEM) as one line of base64 (fase 11, D-alief-B01). */
+  APNS_KEY_P8_B64?: string;
+  /** Secret: APNs key id (10 chars). */
+  APNS_KEY_ID?: string;
+  /** Secret: Apple Developer team id. */
+  APNS_TEAM_ID?: string;
+  /** Bundle ID of the build that receives pushes. Empty → LogSender. */
+  APNS_TOPIC?: string;
+  /** "sandbox" (Debug builds) | "production" (TestFlight). */
+  APNS_ENV?: string;
   /** Supabase project URL, for Storage only (fase 09). */
   SUPABASE_URL?: string;
   /** Secret: Supabase secret/service key, for Storage only. */

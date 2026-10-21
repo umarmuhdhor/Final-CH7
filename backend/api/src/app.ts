@@ -3,7 +3,6 @@ import type { AppEnv } from "./env";
 import { createSql } from "./db/client";
 import { ApiError, errorResponse, errors } from "./http/errors";
 import { blocklist } from "./routes/blocklist";
-import { debugApns } from "./routes/debug-apns";
 import { devices } from "./routes/devices";
 import { family } from "./routes/family";
 import { health } from "./routes/health";
@@ -37,7 +36,6 @@ app.route("/", joinPage);
 app.route("/", scans);
 app.route("/", screenshots);
 app.route("/", verdicts);
-app.route("/", debugApns);
 
 app.notFound((c) => errorResponse(c, errors.notFound()));
 

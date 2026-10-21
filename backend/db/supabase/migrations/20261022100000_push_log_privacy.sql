@@ -1,0 +1,6 @@
+-- Fase 11 (D-alief-B11, D-alief-40): push_log keeps no notification text. The body repeated the
+-- protected person's name in a second table and went stale after a rename; it can be rebuilt from
+-- scan_id + pushText. result is limited to short codes, so a token or JWT can never be stored there.
+alter table push_log drop column body;
+alter table push_log add constraint push_log_result_format
+  check (result ~ '^(sent|logged|failed:([0-9]{3}( [A-Za-z]{1,64})?|timeout|network|config))$');

@@ -7,6 +7,7 @@ import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
 import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
+import { deliverPush } from "../services/push/deliver";
 import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
@@ -133,8 +134,9 @@ scans.post("/scans", async (c) => {
     if (push) {
       const sender = pushSender(c.env);
       c.executionCtx.waitUntil(
-        (async () => sender.send(push))().catch((err) =>
-          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: String(err) })),
+        deliverPush(sql, sender, push).catch((err) =>
+          // Name only: a DB error can quote values (D-alief-40).
+          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: (err as Error)?.name ?? "Error" })),
         ),
       );
     }
