@@ -17,7 +17,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 06 | Profile PF-01 | app | feat/PF-01-profile | [ ] | | | | | log/fase-06.md |
 | 06Q | QA-A (UI fixtures) | app | fix/QA-A-* | [ ] | | | | | qa/QA-A-*.md |
 | 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [r] | 21 Okt 2026 | 21 Okt 2026 | #9 | Worker + skema hidup di cloud, spike APNs lulus (D-alief-B01), review diperbaiki (pgTAP 61, vitest 48); di-rebase ke main setelah #7 merge; pending C7/B9 | log/fase-07.md |
-| 08 | Family | be | feat/BE-family | [m] | 21 Okt 2026 | | | Kode + test lokal hijau (pgTAP 67, vitest 100), review diperbaiki; menunggu LANGKAH MANUAL deploy fase 07+08 (stacked on #9) | log/fase-08.md |
+| 08 | Family | be | feat/BE-family | [r] | 21 Okt 2026 | 21 Okt 2026 | #11 | Family code/join/members/disconnect, `/join`, `GET`+`DELETE /devices/me` hidup di cloud (pgTAP 67, vitest 100); stacked on #9; usulan C19 + `code_unavailable` di PR | log/fase-08.md |
 | 09 | Scans + screenshot | be | feat/BE-scans | [ ] | | | | | log/fase-09.md |
 | 10 | Verdicts + blocklist | be | feat/BE-verdicts | [ ] | | | | | log/fase-10.md |
 | 11 | Push APNs | be | feat/BE-push | [ ] | | | | | log/fase-11.md |
@@ -67,7 +67,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | DT-01..06 Detail | 03 (+13) | [ ] | |
 | PF-01 Profile | 06 (+13, +14 menu Family code) | [ ] | |
 | BE Devices | 07 | [r] | `backend/api/test/devices.test.ts`, PR #9 |
-| BE Family | 08 | [ ] | |
+| BE Family | 08 | [r] | `backend/api/test/family.test.ts`, `join-page.test.ts`, `devices-me.test.ts`; PR #11 |
 | BE Scans | 09 | [ ] | |
 | BE Verdicts | 10 | [ ] | |
 | BE Blocklist | 07 (awal) + 10 | [ ] | |
