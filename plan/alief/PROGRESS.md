@@ -7,7 +7,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
 |---|---|---|---|---|---|---|---|---|---|
-| 00 | Plan + tooling | – | docs/alief-plan | [r] | 21 Okt 2026 | | #2 | Plan lengkap, verify run 05 SIAP; menunggu review Umar | log/fase-00.md |
+| 00 | Plan + tooling | – | docs/alief-plan | [x] | 21 Okt 2026 | 21 Okt 2026 | #2 | Plan merged; disinkronkan dengan kontrak PR #1/#3/#4/#6 | log/fase-00.md |
 | 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [ ] | | | | | log/fase-01.md |
 | 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension | [ ] | | | | | log/fase-01S.md |
 | 02 | Onboarding ON-01..05 | app | feat/ON-01-05-onboarding | [ ] | | | | | log/fase-02.md |
@@ -32,8 +32,8 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 
 | Titik | Syarat | Status | Catatan |
 |---|---|---|---|
-| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`) | [ ] | C3 dibutuhkan sebelum fase 14/15 (butir 4 `UIBackgroundModes` untuk PiP ON-04 di fase 02, ada fallback); C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
-| G1 · Plan disetujui | PR `docs/alief-plan` di-merge | [ ] | Umar approve (CODEOWNERS `*`) |
+| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`) — C11/C13 (+ C4–C6, C9, C10, C12) diterima lewat kontrak PR #1/#3/#4 (21 Okt); tinggal C3 | [ ] | C3 dibutuhkan sebelum fase 14/15 (butir 4 `UIBackgroundModes` untuk PiP ON-04 di fase 02, ada fallback); C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
+| G1 · Plan disetujui | PR `docs/alief-plan` di-merge | [x] | Umar approve (CODEOWNERS `*`) |
 | G2 · Target test ada | PR `chore/APP-test-targets` di-merge | [ ] | Sampai merge, fase app ditumpuk di atas PR ini |
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
 | G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Akhir fase 10 |

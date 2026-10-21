@@ -38,5 +38,6 @@ xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=
 ## Kriteria selesai (DoD)
 
 - [ ] Laporan lengkap; P0 = 0 dan P1 = 0 setelah retest.
+- [ ] Privasi Apple (SECURITY §3): Privacy Report dari Archive cocok dengan draf label P2; P11 dan P12 dicek; uji "Delete my data" (kalau C19 disetujui) menghapus data di Supabase cloud.
 - [ ] Semua baris P0 di PROGRESS `[x]` dengan bukti.
 - [ ] Checkbox mandat tercentang di PR terakhir. G8 terpenuhi setelah PR fix di-merge dan retest LULUS (diperbarui di PROMPT langkah 1).

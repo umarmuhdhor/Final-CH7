@@ -22,7 +22,7 @@ App memakai backend asli tanpa mengubah view: `ApiRepository` menggantikan `Mock
 
 - `Data/APIClient.swift` (URLSession, Bearer, `JSONDecoder.shoo`/`JSONEncoder.shoo`, decode `{ error: { code, message } }` → `RepositoryError`)
 - `Data/ApiRepository.swift` (semua operasi protocol)
-- `Data/SessionStore.swift` (Keychain untuk app + tulis key App Group lewat konstanta `AppGroup.Key` di `ShooShared`: `device.id`, `device.token`, `device.mode`, `device.name`, `guardian.name`, `api.baseURL`, `ai.baseURL`). Menyimpan juga guardian (nama + `avatarId`) untuk PR-04/PF-01. Aturan: tulis ulang `device.name` setelah `updateMe(name:)`; hapus `guardian.name` setelah `leaveGuardian()`, 404/`not_found` di endpoint keluarga, atau `GET /devices/me` → `guardian: null` (kalau C12 disetujui)
+- `Data/SessionStore.swift` (Keychain untuk app + tulis key App Group lewat konstanta `AppGroup.Key` di `ShooShared`: `device.id`, `device.token`, `device.mode`, `device.name`, `guardian.name`, `api.baseURL`, `ai.baseURL`). Menyimpan juga guardian (nama + `avatarId`) untuk PR-04/PF-01. Aturan: tulis ulang `device.name` setelah `updateMe(name:)`; hapus `guardian.name` setelah `leaveGuardian()`, 404/`not_found` di endpoint keluarga, atau `GET /devices/me` → `guardian: null` (kontrak; dipanggil saat app foreground dan saat Profile/Shield dibuka)
 - `App/AppConfig.swift`: base URL `#if DEBUG` = `http://localhost:8787` (simulator) / `#else` = URL Worker cloud (R5 §6, bukan Info.plist); `ai.baseURL` dari Imelda (placeholder `TODO(sync:imelda)` sampai ada)
 - Test: `APIClient` dengan `URLProtocol` stub (sukses, error kontrak, 401 → sesi rusak), `SessionStore` menulis semua key App Group (pakai suite uji), tulis ulang `device.name`, hapus `guardian.name` di tiga kondisi, pemilihan repository lewat `AppEnvironment`
 
@@ -34,7 +34,7 @@ App memakai backend asli tanpa mengubah view: `ApiRepository` menggantikan `Mock
 4. 401 dari server → tampilkan layar "Session expired" dengan tombol mulai ulang onboarding (P1, cukup pesan jelas untuk MVP).
 5. Uji manual melawan `wrangler dev` lokal dari simulator: onboarding Guardian + Protected, Activity kosong, Profile ganti nama/bahasa.
 6. `ecc:security-reviewer` fokus T3 (token tidak di-log, tidak di UserDefaults standar).
-7. Kalau C11 sudah disetujui: tambah parameter opsional `extensionLastSeenAt: Date?` ke `updateMe` (protocol + Mock + Api) dan panggil saat `scenePhase == .active` dengan nilai `ExtensionStatus`; kalau belum, tidak ada perubahan (D-alief-15).
+7. `updateMe` punya parameter opsional `extensionLastSeenAt: Date?` (kontrak); app memanggilnya saat `scenePhase == .active` dengan nilai `ExtensionStatus` (`extension.lastSeenAt` App Group) kalau ada. `me()` → `GET /devices/me` mengisi ulang `SessionStore` (nama, guardian).
 
 ## Verifikasi
 
@@ -54,3 +54,4 @@ pkill -f "wrangler dev" || true   # setelah uji manual selesai
 - [ ] Tidak ada view yang berubah karena pergantian repository (diff `Features/` hanya injeksi).
 - [ ] Semua key App Group terisi setelah onboarding (test + cek di simulator); `device.name` ikut berubah setelah ganti nama; `guardian.name` hilang setelah disconnect (test).
 - [ ] Alur onboarding → Shield berjalan melawan backend lokal (screenshot).
+- [ ] SECURITY §3: Keychain `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` (test atribut, P4), ATS tanpa pengecualian umum (P5), screenshot cache memori saja (P9), `deleteMe()` asli bila C19 disetujui (P3).

@@ -14,7 +14,8 @@ Selalu `{ "error": { "code": string, "message": string } }`. `message` bahasa In
 | 403 | `forbidden` | mode salah (mis. Protected memanggil `POST /family/code`) |
 | 404 | `not_found` | resource tidak ada **atau** tidak boleh dilihat (anti-enumerasi) |
 | 409 | `already_connected` | Protected yang sudah punya Guardian memanggil `POST /family/join` |
-| 409 | `verdict_not_allowed` | verdict untuk scan `warning` (skema: hanya item blocked bisa diberi verdict di MVP) |
+| 403 | `verdict_not_allowed` | Guardian bukan guardian pemilik scan (kontrak) |
+| 409 | `verdict_not_allowed` | verdict untuk scan `warning` (kontrak: hanya item blocked bisa diberi verdict di MVP) |
 | 410 | `code_expired` | kode join kedaluwarsa (kontrak) |
 | 404 | `code_invalid` | kode join tidak ada (kontrak) |
 | 409 | `family_full` | Guardian sudah punya 3 Protected (kontrak) |
@@ -25,7 +26,7 @@ Selalu `{ "error": { "code": string, "message": string } }`. `message` bahasa In
 | 503 | `code_unavailable` | `POST /family/code` tidak menemukan 4 digit bebas setelah 20 percobaan (R4 §1); app menampilkan "Coba lagi" |
 | 500 | `internal` | error tak dikenal (tanpa detail ke klien, detail di log Worker) |
 
-Kode di luar daftar kontrak (`bad_json`, `already_connected`, `verdict_not_allowed`, `rate_limited`, `code_unavailable`, dll.) dilaporkan ke Umar di PR fase yang memperkenalkannya.
+Kode umum kontrak: `invalid_body`, `bad_json`, `too_large`, `rate_limited` (429 + header `Retry-After` detik), `internal`. Kode di luar kontrak (`code_unavailable`, dll.) dilaporkan ke Umar di PR fase yang memperkenalkannya.
 
 ## 2. Auth
 
@@ -57,7 +58,7 @@ Kode di luar daftar kontrak (`bad_json`, `already_connected`, `verdict_not_allow
 - **`POST /devices`**: `avatarId` dipilih acak dari `avatar_01..avatar_12`. Rate limit 10/jam per IP.
 - **`POST /family/code`**: R4 §1. Respons `{ code, expiresAt, inviteUrl }` dengan `inviteUrl = ${INVITE_BASE_URL}/join?code=<code>` (D-alief-03).
 - **`GET /join?code=`** (HTML, tanpa auth): halaman kecil EN/ID berisi tombol "Open Shoo" → `shoo://join?code=<code>`, kode besar untuk diketik manual, dan link App Store (placeholder sampai ada). `code` **wajib** cocok `^\d{4}$`; selain itu halaman tampil tanpa kode dan tanpa tombol. Nilai di-escape HTML, header `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`. Tidak memeriksa apakah kode aktif (tidak membocorkan status). Test XSS: `?code=<script>`, `?code=1234"onclick=`, `?code=12345`.
-- **`GET /family/members`**: `extensionActive` = `ext_last_seen_at > now() - 24 h` (jendela sama dengan `AppGroup.extensionActiveWindow`). Kontrak belum punya jalur data dari extension ke server. Usulan D-alief-15 (TODO C11, dikirim sebelum fase 05/08): field opsional `extensionLastSeenAt` di `PATCH /devices/me`, dikirim **oleh extension** (punya token dari App Group) paling sering 1×/jam saat heartbeat, dan oleh app saat foreground. Sampai disetujui: `ext_last_seen_at` tidak diketahui → `extensionActive: true` (jangan pernah menampilkan "Not connected" tanpa bukti; deviasi PRD dicatat di D-alief-15). `lastScan` = scan terbaru pemilik itu (objek ringkas sesuai fixture `family-members.json`).
+- **`GET /family/members`**: `extensionActive` = `ext_last_seen_at > now() - 24 h` (jendela sama dengan `AppGroup.extensionActiveWindow`). Data dari kontrak: `extensionLastSeenAt` di `PATCH /devices/me`, dikirim **oleh extension** maks 1×/jam saat heartbeat dan oleh app saat foreground. Tanpa data → `extensionActive: true` (jangan pernah "Not connected" tanpa bukti). `lastScan` = scan terbaru pemilik itu (objek ringkas sesuai fixture `family-members.json`).
 - **`POST /scans`**: body = ScanResult tanpa `id`/`verdict` (kontrak) + `screenshotBase64?`. Field `ownerDeviceId`/`ownerName` **diterima tapi diabaikan** (server selalu memakai principal); schema zod tidak `.strict()` untuk dua field itu. Test: body berisi `ownerDeviceId` device lain → tersimpan sebagai milik principal, bukan 422. Validasi: skor 30–100, `status` konsisten, `domain` = registrable domain (kontrak `scan-result.schema.json`, dihitung extension dengan Public Suffix List): lowercase, tanpa `www.`, dan host `url` sama dengan `domain` atau berakhiran `.` + `domain` (server tidak menghitung ulang PSL), `signals` ≤ 20 item sesuai skema Signal, body ≤ 256 KB. Respons `{ id }` lalu push (R4 §3) dijalankan dengan `ctx.waitUntil`.
 - **Screenshot**: decode base64 → kalau > 150 KB atau bukan JPEG/PNG → dibuang (scan tetap disimpan, `metric` log). Dedupe: kalau ada scan pemilik+domain < 24 jam yang punya screenshot, pakai `screenshot_path` itu. Kuota: > 50 screenshot pemilik itu dalam 24 jam → dibuang. Upload ke `screenshots/<owner_id>/<scan_id>.jpg`.
 - **`GET /scans`**: cursor = base64url(`<detected_at ISO>|<id>`), `limit` default 20 maks 50, urutan `detected_at desc, id desc`. Filter `status`. `screenshotUrl` = `null` di daftar (D-alief-04). `ownerName` = nama device pemilik saat ini. `verdict` = join `verdicts` (owner, domain) **hanya untuk scan `blocked`**; scan `warning` selalu `verdict: null` (skema: hanya item blocked bisa diberi verdict di MVP). `pageTitle` null → field dihilangkan (skema: string). Setiap respons divalidasi dengan `contracts/scan-result.schema.json` (ajv) di test.
