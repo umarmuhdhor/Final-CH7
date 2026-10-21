@@ -1,6 +1,6 @@
 # Log fase 06 — Profile: PF-01 (Alief, track app)
 
-- **Status:** [r] — PR `feat/PF-01-profile`, reviewer @umarmuhdhor. **Stacked on #21** (fase 05) **+ merge fase 02 (#16)** di awal fase (D-alief-A18). Dengan ini rantai app berisi 01, 02, 03, 04, 05, 06.
+- **Status:** [r] — PR #22 `feat/PF-01-profile`, reviewer @umarmuhdhor. **Stacked on #21** (fase 05) **+ merge fase 02 (#16)** di awal fase (D-alief-A18). Dengan ini rantai app berisi 01, 02, 03, 04, 05, 06.
 - **Model:** Claude Opus 5.5, mode auto. Mulai dan selesai 22 Okt 2026.
 - **Rencana:** `log/fase-06-plan.md`. Sumber: `fase-06-profile.md`, PRD §8.6 PF-01, §10, `contracts/api.md` (`PATCH /devices/me`, `DELETE /family/guardian`).
 
