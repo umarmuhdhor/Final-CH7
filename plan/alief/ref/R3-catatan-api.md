@@ -1,7 +1,7 @@
 # R3 — Catatan implementasi API
 
 > **Kontrak = `contracts/api.md`.** File ini hanya menjelaskan detail yang tidak ditulis kontrak (error code tambahan, rate limit, cursor, otorisasi). Kalau ada selisih, kontrak menang dan file ini diperbaiki.
-> Base URL: `https://shoo-api.<akun>.workers.dev` (cloud), `http://localhost:8787` (lokal). Semua body JSON, waktu ISO 8601 UTC.
+> Base URL: `https://shoo-api.afindo-mi01.workers.dev` (cloud), `http://localhost:8787` (lokal). Semua body JSON, waktu ISO 8601 UTC.
 
 ## 1. Bentuk error
 
@@ -62,9 +62,9 @@ Kode umum kontrak: `invalid_body`, `bad_json`, `too_large`, `rate_limited` (429 
 - **`POST /scans`**: body = ScanResult tanpa `id`/`verdict` (kontrak) + `screenshotBase64?`. Field `ownerDeviceId`/`ownerName` **diterima tapi diabaikan** (server selalu memakai principal); schema zod tidak `.strict()` untuk dua field itu. Test: body berisi `ownerDeviceId` device lain → tersimpan sebagai milik principal, bukan 422. Validasi: skor 30–100, `status` konsisten, `domain` = registrable domain (kontrak `scan-result.schema.json`, dihitung extension dengan Public Suffix List): lowercase, tanpa `www.`, dan host `url` sama dengan `domain` atau berakhiran `.` + `domain` (server tidak menghitung ulang PSL), `signals` ≤ 20 item sesuai skema Signal, body ≤ 256 KB. Respons `{ id }` lalu push (R4 §3) dijalankan dengan `ctx.waitUntil`.
 - **Screenshot**: decode base64 → kalau > 150 KB atau bukan JPEG/PNG → dibuang (scan tetap disimpan, `metric` log). Dedupe: kalau ada scan pemilik+domain < 24 jam yang punya screenshot, pakai `screenshot_path` itu. Kuota: > 50 screenshot pemilik itu dalam 24 jam → dibuang. Upload ke `screenshots/<owner_id>/<scan_id>.jpg`.
 - **`GET /scans`**: cursor = base64url(`<detected_at ISO>|<id>`), `limit` default 20 maks 50, urutan `detected_at desc, id desc`. Filter `status`. `screenshotUrl` = `null` di daftar (D-alief-04). `ownerName` = nama device pemilik saat ini. `verdict` = join `verdicts` (owner, domain) **hanya untuk scan `blocked`**; scan `warning` selalu `verdict: null` (skema: hanya item blocked bisa diberi verdict di MVP). `pageTitle` null → field dihilangkan (skema: string). Setiap respons divalidasi dengan `contracts/scan-result.schema.json` (ajv) di test.
-- **`GET /scans/{id}`**: `screenshotUrl` = signed URL Storage 3600 s (satu subrequest).
+- **`GET /scans/{id}`**: `screenshotUrl` = link Worker `<INVITE_BASE_URL>/screenshots/{scanId}?v=<viewer>&exp=<unix>&sig=<HMAC-SHA256>` berlaku 3600 s (D-alief-B08, tanpa subrequest). `GET /screenshots/{scanId}` (tanpa Bearer): sig + exp dicek (konstan-waktu), lalu **setiap request** cek DB scan masih ada + viewer = pemilik atau Guardian saat ini, lalu objek dialirkan dari Storage (service key, fetch `no-store`) dengan `Cache-Control: private, no-store`; gagal apa pun → 404; 120/menit per viewer (429). Signed URL Supabase tidak dipakai (CDN meng-cache sampai kedaluwarsa).
 - **`POST /verdicts`**: upsert `(owner_id, domain)`; `by_name` = nama Guardian saat itu. Respons `{ verdict }` (bentuk `Verdict` kontrak).
-- **`GET /verdicts?domain=`**: `{ verdict: Verdict | null }`. Rate limit token bucket 10 req / 10 s per device (EX-02 lookup per halaman + polling EX-06 5 s di beberapa tab); 429 membawa `Retry-After`. Extension memperlakukan 429 sebagai "coba lagi", bukan "tanpa verdict" (C8).
+- **`GET /verdicts?domain=`**: `{ verdict: Verdict | null }`. Rate limit 30 req / 10 s per device (D-alief-B10) (EX-02 lookup per halaman + polling EX-06 5 s di beberapa tab); 429 membawa `Retry-After`. Extension memperlakukan 429 sebagai "coba lagi", bukan "tanpa verdict" (C8).
 - **`GET /blocklist?since=`**: R2 §5 (hanya entri `blocklist_entries` yang sudah disetujui manual). `since` kosong = dari awal. Header `Cache-Control: max-age=300`.
 - **`GET /healthz`**: `{ ok: true }` tanpa DB. **`GET /healthz/db`**: upsert `ops_heartbeat` (MENULIS, supaya dihitung aktivitas DB dan tidak terlayani cache), rate limit 1/menit per IP. Dipakai monitor harian (B9).
 
@@ -75,11 +75,13 @@ Disimpan di Postgres (tidak ada KV), cukup untuk skala MVP. Karena cache Hyperdr
 | Kunci | Batas | Error |
 |---|---|---|
 | join gagal per device | 5 / 10 menit | 429 `too_many_attempts` |
-| join gagal per IP | 5 / 10 menit | 429 `too_many_attempts` |
+| join gagal per IP (IPv6: /64) | 20 / 10 menit (CGNAT, D-alief-B06) | 429 `too_many_attempts` + `Retry-After` |
 | `POST /devices` per IP | 10 / jam | 429 `rate_limited` |
 | `POST /family/code` per guardian | 6 / menit | 429 `rate_limited` |
 | `POST /scans` per device | 120 / jam | 429 `rate_limited` |
-| `GET /verdicts` per device | 1 / 2 s (memori isolate, best effort) | 429 `rate_limited` |
+| `GET /verdicts` per device | 30 / 10 s (Postgres, sama dengan batas lain; beberapa tab layar blokir, T10, D-alief-B10) | 429 `rate_limited` + `Retry-After` |
+| `POST /verdicts` per Guardian | 60 / menit | 429 `rate_limited` |
+| `GET /screenshots/{id}` per viewer | 120 / menit (D-alief-B08) | 429 `rate_limited` |
 | `GET /healthz/db` per IP | 1 / menit | 429 `rate_limited` |
 
 ## 6. Push
@@ -100,14 +102,15 @@ Var (bukan rahasia) ditulis di `vars` `backend/api/wrangler.jsonc` (ter-commit).
 | Nama | Jenis | Di mana diset | Contoh / catatan |
 |---|---|---|---|
 | `DB` | binding Hyperdrive | `wrangler.jsonc` (`id` + `localConnectionString`) | `shoo-db` (fase 07) |
-| `SUPABASE_URL` | secret | `wrangler secret put` · `.dev.vars` | cloud `https://<ref>.supabase.co`, lokal `http://127.0.0.1:54321` (fase 09) |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | hanya untuk Storage API; lokal dari `supabase status` (fase 09) |
+| `SUPABASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · `.dev.vars` / `vitest.config.ts` (lokal, dari `supabase status`) | cloud `https://nmekxihgjszgcibqytyj.supabase.co`, lokal `http://127.0.0.1:54321`. URL proyek publik, bukan rahasia (D-alief-B07) |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | secret key Supabase (`sb_secret_…`, nama `shoo-worker`; atau JWT `service_role` legacy), hanya untuk Storage API; lokal dari `supabase status` (fase 09). Kosong → screenshot dibuang, scan tetap 201 |
 | `INVITE_BASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | URL Worker; lokal `http://localhost:8787` (fase 07) |
 | `APNS_TOPIC` | var | `supabase secrets set --env-file` (Edge Function) · `wrangler.jsonc` `vars` kalau sender langsung | bundle ID build yang diuji: build iPhone Alief (fase 11, D7) → build TestFlight (fase 16); test memakai nilai env |
 | `APNS_ENV` | var | `wrangler.jsonc` `vars` + `supabase secrets set` (Edge Function) | `sandbox` (fase 11) → `production` (fase 16) |
-| `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | `https://<ref>.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
+| `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | `https://nmekxihgjszgcibqytyj.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
 | `PUSH_RELAY_SECRET` | secret | `wrangler secret put` + `supabase secrets set` (nilai sama) · `.dev.vars` | jalur utama push (D-alief-16) |
 | `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | `supabase secrets set --env-file` (Edge Function) | hanya di Worker kalau `D-alief-B01` = spike lulus; kosong + tanpa relay → `LogSender` |
 | `SCREENSHOT_MAX_BYTES` | var | `wrangler.jsonc` `vars` | `153600` (fase 09) |
+| `SCREENSHOT_URL_SECRET` | secret | `wrangler secret put` · `.dev.vars` · `miniflare.bindings` (vitest) | kunci HMAC link screenshot (D-alief-B08), acak ≥ 32 byte (`openssl rand -base64 32`); kosong → `screenshotUrl` null. Mengganti nilai = semua link lama 404 (fase 09) |
 | `APNS_SPIKE` | var | `wrangler.jsonc` `vars` | `1` hanya saat spike fase 07; dihapus di fase 11 |
 | `SPIKE_KEY` | secret | `wrangler secret put` | header `x-spike-key` untuk `/debug/apns-spike` (fase 07); dihapus di fase 11 (`wrangler secret delete SPIKE_KEY`) |
