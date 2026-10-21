@@ -74,18 +74,31 @@ struct MainTabView: View {
 }
 
 /// Top-left Family mode switch, guardian only (GD-02). Remembered in `AppSettings.familyModeOn`.
+/// Visible text plus a filled/outlined icon, so the state is never colour only (WCAG 1.4.1, 2.5.3).
 private struct FamilyModeToggle: ToolbarContent {
     @Environment(AppEnvironment.self) private var env
 
     var body: some ToolbarContent {
         if env.settings.mode == .guardian {
             ToolbarItem(placement: .topBarLeading) {
-                @Bindable var settings = env.settings
-                Toggle(isOn: $settings.familyModeOn) {
-                    Label { Text("Family mode") } icon: { Image(systemName: "person.3.fill") }
+                let isOn = env.settings.familyModeOn
+                Button {
+                    env.settings.familyModeOn.toggle()
+                    AccessibilityNotification.Announcement(
+                        L10n.string(isOn ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
+                                    language: env.settings.language)
+                    ).post()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: isOn ? "person.3.fill" : "person.3")
+                        Text(isOn ? "Family: On" : "Family: Off")
+                    }
+                    .frame(minHeight: 44)
                 }
-                .toggleStyle(.button)
-                .labelStyle(.titleAndIcon)
+                .accessibilityLabel(Text("Family mode"))
+                .accessibilityValue(Text(isOn ? "On" : "Off"))
+                .accessibilityAddTraits(.isToggle)
+                .accessibilityHint(Text("Switches between your own Shield and your family's"))
                 .accessibilityIdentifier("familyModeToggle")
             }
         }

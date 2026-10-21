@@ -28,14 +28,14 @@ final class GuardianUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["shield.status.active"].waitForExistence(timeout: 10), app.debugDescription)
         // Guardian's own Shield has no "Protected by" row.
         XCTAssertFalse(app.descendants(matching: .any)["shield.guardian"].exists)
-        app.buttons["familyModeToggle"].tap()
+        app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["family.header"].waitForExistence(timeout: 5), app.debugDescription)
 
         app.terminate()
         app = launch(familyMode: nil)
         XCTAssertTrue(app.descendants(matching: .any)["family.header"].waitForExistence(timeout: 10), app.debugDescription)
         // Leave it off for the next run.
-        app.buttons["familyModeToggle"].tap()
+        app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["shield.status.active"].waitForExistence(timeout: 5))
     }
 

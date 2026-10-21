@@ -301,6 +301,26 @@
         }
       }
     },
+    "Family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga"
+          }
+        }
+      }
+    },
+    "Family activity": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivitas keluarga"
+          }
+        }
+      }
+    },
     "Family codes are coming soon.": {
       "localizations": {
         "id": {
@@ -317,6 +337,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mode keluarga"
+          }
+        }
+      }
+    },
+    "Family mode off. Showing your Shield.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode keluarga mati. Menampilkan Perisaimu."
+          }
+        }
+      }
+    },
+    "Family mode on. Showing your family.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode keluarga nyala. Menampilkan keluargamu."
+          }
+        }
+      }
+    },
+    "Family: Off": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga: Mati"
+          }
+        }
+      }
+    },
+    "Family: On": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga: Nyala"
           }
         }
       }
@@ -631,6 +691,16 @@
         }
       }
     },
+    "Off": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mati"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "id": {
@@ -641,12 +711,22 @@
         }
       }
     },
-    "Only your own history? Turn off Family mode.": {
+    "On": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hanya riwayatmu sendiri? Matikan Mode keluarga."
+            "value": "Nyala"
+          }
+        }
+      }
+    },
+    "Only your own history? Set Family to Off.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanya riwayatmu sendiri? Ubah Keluarga ke Mati."
           }
         }
       }
@@ -987,6 +1067,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nyalakan Shoo di Safari agar tetap aman."
+          }
+        }
+      }
+    },
+    "Switches between your own Shield and your family's": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beralih antara Perisaimu dan Perisai keluargamu"
           }
         }
       }

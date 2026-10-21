@@ -53,7 +53,8 @@ struct FamilyShieldView: View {
             .padding(16)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(localized: "Shield")
+        // Its own title, so it is clear which view Family mode shows.
+        .navigationTitle(localized: "Family")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
@@ -148,7 +149,9 @@ private struct FamilyHeader: View {
                 Label {
                     Text(verbatim: L10n.string("\(notConnected) not connected", language: language))
                 } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.warningIcon)
+                        .accessibilityHidden(true)
                 }
                 .font(.body)
                 .foregroundStyle(.primary)
@@ -177,7 +180,9 @@ struct FamilyMemberCard: View {
                 Text(verbatim: member.name).font(.headline)
                 if !member.isConnected {
                     Label { Text("Not connected") } icon: {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.warningIcon)
+                            .accessibilityHidden(true)
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
@@ -217,4 +222,9 @@ struct FamilyMemberCard: View {
 #Preview {
     NavigationStack { FamilyShieldView(repository: MockRepository(mode: .guardian, latency: .zero)) }
         .environment(AppEnvironment.preview())
+}
+
+private extension Color {
+    /// Darker orange: ≥ 3:1 on white cards (system orange is about 2.2:1), still clear on dark.
+    static var warningIcon: Color { Color(red: 0.72, green: 0.33, blue: 0) }
 }

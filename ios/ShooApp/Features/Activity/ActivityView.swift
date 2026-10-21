@@ -41,7 +41,7 @@ struct ActivityView: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 .listRowSeparator(.hidden)
                 if model.baseOwner == .family {
-                    Text("Only your own history? Turn off Family mode.")
+                    Text("Only your own history? Set Family to Off.")
                         .font(.footnote)
                         .foregroundStyle(.readableSecondary)
                         .listRowSeparator(.hidden)
@@ -51,7 +51,7 @@ struct ActivityView: View {
             content
         }
         .listStyle(.plain)
-        .navigationTitle(localized: "Activity")
+        .navigationTitle(localized: model.baseOwner == .family ? "Family activity" : "Activity")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
