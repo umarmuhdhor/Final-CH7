@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
-import { sha256 } from "../src/http/crypto";
 import { screenshotLink } from "../src/services/screenshotLinks";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -120,7 +121,7 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     const p = await createDevice("Mom");
     const id = await postShot(p);
     const link = await linkFor(p, id);
-    const hash = await sha256(`screenshots_view:${p.deviceId}`);
+    const hash = await keyHash(`screenshots_view:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select 'screenshots_view', ${hash} from generate_series(1, 120)`;
     const res = await get(link);
     expect(res.status).toBe(429);

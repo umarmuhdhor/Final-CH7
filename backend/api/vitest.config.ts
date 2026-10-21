@@ -33,6 +33,7 @@ export default defineConfig({
           SUPABASE_URL: storage.url,
           SUPABASE_SERVICE_ROLE_KEY: storage.key,
           SCREENSHOT_URL_SECRET: "test-screenshot-url-secret",
+          RATE_KEY_SECRET: "test-rate-key-secret",
         },
       },
     }),

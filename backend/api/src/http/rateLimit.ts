@@ -1,5 +1,5 @@
 import type { Sql } from "postgres";
-import { sha256 } from "./crypto";
+import { keyHash } from "./keyHash";
 import { errors } from "./errors";
 
 export interface Limit {
@@ -27,38 +27,38 @@ export const limits = {
  * a few. Never use it for limits that guard against guessing or abuse.
  */
 export async function hitLight(sql: Sql, limit: Limit, key: string): Promise<void> {
-  const keyHash = await sha256(`${limit.bucket}:${key}`);
+  const keyHashed = await keyHash(`${limit.bucket}:${key}`);
   const [row] = await sql<{ n: number; retry: number | null }[]>`
     with recent as (
       select count(*)::int as n,
              ceil(extract(epoch from (min(hit_at) + make_interval(secs => ${limit.windowSeconds}) - now())))::int as retry
       from rate_limit_hits
-      where bucket = ${limit.bucket} and key_hash = ${keyHash}
+      where bucket = ${limit.bucket} and key_hash = ${keyHashed}
         and hit_at > now() - make_interval(secs => ${limit.windowSeconds})
     ), added as (
       insert into rate_limit_hits (bucket, key_hash)
-      select ${limit.bucket}, ${keyHash} from recent where n < ${limit.max}
+      select ${limit.bucket}, ${keyHashed} from recent where n < ${limit.max}
     )
     select n, retry from recent`;
   if (row && row.n >= limit.max) throw errors.rateLimited(Math.max(1, row.retry ?? limit.windowSeconds));
 }
 
 /**
- * Sliding-window counter in Postgres (R3 §5). Only sha256('<bucket>:<key>') is
- * stored, never the raw IP. An advisory lock per key makes count + insert atomic.
+ * Sliding-window counter in Postgres (R3 §5). Only keyHash('<bucket>:<key>') (HMAC, D-alief-B12)
+ * is stored, never the raw IP. An advisory lock per key makes count + insert atomic.
  */
 export async function hit(sql: Sql, limit: Limit, key: string): Promise<void> {
-  const keyHash = await sha256(`${limit.bucket}:${key}`);
+  const keyHashed = await keyHash(`${limit.bucket}:${key}`);
   const retry = await sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(hashtextextended(encode(${keyHash}::bytea, 'hex'), 0))`;
+    await tx`select pg_advisory_xact_lock(hashtextextended(encode(${keyHashed}::bytea, 'hex'), 0))`;
     const [row] = await tx<{ n: number; retry: number | null }[]>`
       select count(*)::int as n,
              ceil(extract(epoch from (min(hit_at) + make_interval(secs => ${limit.windowSeconds}) - now())))::int as retry
       from rate_limit_hits
-      where bucket = ${limit.bucket} and key_hash = ${keyHash}
+      where bucket = ${limit.bucket} and key_hash = ${keyHashed}
         and hit_at > now() - make_interval(secs => ${limit.windowSeconds})`;
     if (row && row.n >= limit.max) return Math.max(1, row.retry ?? limit.windowSeconds);
-    await tx`insert into rate_limit_hits (bucket, key_hash) values (${limit.bucket}, ${keyHash})`;
+    await tx`insert into rate_limit_hits (bucket, key_hash) values (${limit.bucket}, ${keyHashed})`;
     return null;
   });
   if (retry !== null) throw errors.rateLimited(retry);

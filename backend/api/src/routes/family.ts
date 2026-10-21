@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { AppEnv } from "../env";
 import { deleteGuardianLink, deleteMember, listMembers } from "../db/repo/families";
 import { requireDevice, requireMode } from "../http/auth";
-import { sha256 } from "../http/crypto";
 import { errors } from "../http/errors";
+import { keyHash } from "../http/keyHash";
 import { clientIp, hit, limits } from "../http/rateLimit";
 import { readJson } from "../http/validate";
 import { issueCode, joinFamily } from "../services/family";
@@ -27,7 +27,7 @@ family.post("/family/code", requireMode("guardian"), async (c) => {
 /** PR-01, PR-03, R4 §2. Attempts are limited per device and per IP (/64 for IPv6), hashed. */
 family.post("/family/join", requireMode("protected"), async (c) => {
   const { code } = await readJson(c, joinBody);
-  const ipHash = await sha256(`join:${clientIp((n) => c.req.header(n))}`);
+  const ipHash = await keyHash(`join:${clientIp((n) => c.req.header(n))}`);
   const guardian = await joinFamily(c.get("sql"), c.get("principal").deviceId, ipHash, code);
   return c.json({ guardian });
 });

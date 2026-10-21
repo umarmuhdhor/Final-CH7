@@ -86,3 +86,17 @@ describe("repeated unknown tokens per IP (D-alief-B05)", () => {
     expect((await sql`select 1 from rate_limit_hits`).length).toBe(0);
   });
 });
+
+describe("rate-limit keys are keyed hashes (D-alief-B12)", () => {
+  it("the stored key is HMAC(RATE_KEY_SECRET), not a plain sha256 of the IP", async () => {
+    const { env } = await import("cloudflare:workers");
+    const { sha256 } = await import("../src/http/crypto");
+    const { keyHash, useRateKeySecret } = await import("../src/http/keyHash");
+    useRateKeySecret(env.RATE_KEY_SECRET);
+    await call("/devices", { method: "POST", json: { name: "A", mode: "guardian" }, ip: "203.0.113.77" });
+    const [row] = await sql<{ key_hash: Uint8Array }[]>`select key_hash from rate_limit_hits where bucket = 'devices_create'`;
+    const stored = Buffer.from(row!.key_hash);
+    expect(stored.equals(Buffer.from(await keyHash("devices_create:203.0.113.77")))).toBe(true);
+    expect(stored.equals(Buffer.from(await sha256("devices_create:203.0.113.77")))).toBe(false);
+  });
+});

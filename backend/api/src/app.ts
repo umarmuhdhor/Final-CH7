@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { AppEnv } from "./env";
 import { createSql } from "./db/client";
 import { ApiError, errorResponse, errors } from "./http/errors";
+import { useRateKeySecret } from "./http/keyHash";
 import { blocklist } from "./routes/blocklist";
 import { devices } from "./routes/devices";
 import { family } from "./routes/family";
@@ -33,6 +34,7 @@ app.use("*", async (c, next) => {
     return;
   }
 
+  useRateKeySecret(c.env.RATE_KEY_SECRET);
   c.set("sql", createSql(c.env));
   await next();
   setSecurityHeaders(c.res.headers);

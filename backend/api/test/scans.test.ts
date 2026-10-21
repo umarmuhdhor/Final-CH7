@@ -12,6 +12,8 @@ import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created } from "./helpers/seed";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -145,7 +147,7 @@ describe("POST /scans", () => {
 
   it("rate limits 120 per hour per device", async () => {
     const p = await createDevice("Mom");
-    const hash = await sha256(`scans_create:${p.deviceId}`);
+    const hash = await keyHash(`scans_create:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select 'scans_create', ${hash} from generate_series(1, 120)`;
     const res = await post(p, extensionBody(blocked92));
     expect(res.status).toBe(429);

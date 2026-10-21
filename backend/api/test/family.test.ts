@@ -1,10 +1,12 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import fixture from "../../../contracts/fixtures/family-members.json";
 import { claimCode } from "../src/db/repo/codes";
-import { sha256 } from "../src/http/crypto";
 import { randomCode } from "../src/services/family";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -180,7 +182,7 @@ describe("POST /family/join", () => {
     expect(await errorCode(res)).toBe("too_many_attempts");
 
     // Only hashes are stored, never the raw IP.
-    const hash = await sha256(`join:${ip}`);
+    const hash = await keyHash(`join:${ip}`);
     const [row] = await sql<{ n: number }[]>`select count(*)::int as n from join_attempts where ip_hash = ${hash}`;
     expect(row!.n).toBe(20);
   });

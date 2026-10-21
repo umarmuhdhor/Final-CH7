@@ -1,7 +1,10 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sha256 } from "../src/http/crypto";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice } from "./helpers/seed";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -121,8 +124,8 @@ describe("POST /devices", () => {
 
     const other = await call("/devices", { method: "POST", ip: "203.0.113.8", json: { name: "X", mode: "protected" } });
     expect(other.status).toBe(201);
-    // Only sha256('<bucket>:<ip>') is stored, never the raw IP.
-    const hash = await sha256("devices_create:203.0.113.7");
+    // Only keyHash('<bucket>:<ip>') (HMAC) is stored, never the raw IP.
+    const hash = await keyHash("devices_create:203.0.113.7");
     const [row] = await sql<{ n: number }[]>`select count(*)::int as n from rate_limit_hits where key_hash = ${hash}`;
     expect(row!.n).toBe(10);
   });
