@@ -46,7 +46,8 @@ pnpm -C backend/api dev                                    # http://localhost:87
 | GET | `/join?code=` | – | HTML invite page (EN/ID by Accept-Language) → `shoo://join?code=`; strict CSP; no DB lookup |
 | POST | `/scans` | Bearer | contract ScanResult body (+ `screenshotBase64?`) → `201 { id }`; owner = token device; 120/h per device. Screenshot: JPEG/PNG ≤ 150 KB, ≤ 1280 px, dedupe same domain 24 h, 50/24 h per device, otherwise dropped (scan still 201) |
 | GET | `/scans?owner=me\|family\|<deviceId>&status=&cursor=&limit=` | Bearer | `{ items, nextCursor }`, newest first, limit 1–50 (20); `family` guardian only (403), unknown member 404 |
-| GET | `/scans/{id}` | Bearer | one ScanResult, `screenshotUrl` signed for 1 h; 404 unless own scan or my member's scan |
+| GET | `/scans/{id}` | Bearer | one ScanResult, `screenshotUrl` = 1 h Worker link for this viewer; 404 unless own scan or my member's scan |
+| GET | `/screenshots/{scanId}?v=&exp=&sig=` | link signature | the image, `Cache-Control: private, no-store`; access re-checked in the DB on every request (deleted scan, disconnect → 404 at once) |
 | GET | `/blocklist?since=` | Bearer | approved global domains; `removed[]` only with `since`; `nextSince` has microseconds |
 | POST | `/debug/apns-spike` | `x-spike-key` | fase 07 spike only, 404 unless `APNS_SPIKE=1` (removed in fase 11) |
 
@@ -91,6 +92,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
+| `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot links (`openssl rand -base64 32`); unset → `screenshotUrl` null; changing it invalidates every link |
 | `APNS_SPIKE` | var | `"1"` only during the fase 07 spike |
 | `SPIKE_KEY` | secret | header `x-spike-key` for the spike |
 

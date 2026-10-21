@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (b): deploy ulang perbaikan `cache-control` + cek ulang signed URL setelah delete. Belum ada PR |
+| Status | `[m]` berhenti di LANGKAH MANUAL (c): secret `SCREENSHOT_URL_SECRET` + deploy + uji asap (screenshot setelah delete/disconnect = 404). Belum ada PR |
 | Track / branch | be · `feat/BE-scans` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-family` (PR #11, stacked on #9) → PR nanti menulis "Stacked on #11" |
 | Mulai | 21 Okt 2026 22:40 WITA |
@@ -34,7 +34,7 @@ Rencana lengkap: [`fase-09-plan.md`](fase-09-plan.md). Dua butir BELUM DIVERIFIK
 ## Hasil verifikasi (lokal)
 
 - `(cd backend/db && supabase db reset && supabase test db)` → **PASS, 71 test** (4 file; baru `storage.test.sql`: bucket privat, `file_size_limit 153600`, MIME JPEG/PNG, index `scans_owner_shot`).
-- `pnpm -C backend/api typecheck` → bersih. `pnpm -C backend/api test` → **12 file, 170 test lulus** (baru: `scans.test.ts`, `images.test.ts`, `push-notify.test.ts`, `push-messages.test.ts`; `devices-me.test.ts` + hapus objek Storage).
+- `pnpm -C backend/api typecheck` → bersih. `pnpm -C backend/api test` → **12 file, 170 test lulus** (setelah D-alief-B08: 13 file, 182) (baru: `scans.test.ts`, `images.test.ts`, `push-notify.test.ts`, `push-messages.test.ts`; `devices-me.test.ts` + hapus objek Storage).
 - Respons `GET /scans` dan `GET /scans/{id}` divalidasi dengan ajv terhadap `contracts/scan-result.schema.json` di setiap test list/detail.
 - Cloud: belum (LANGKAH MANUAL di bawah).
 
@@ -141,7 +141,49 @@ Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migra
   Hasil (21 Okt 2026 ±23:32 WITA, coordinator): deploy Version `5668ab54-a504-49fc-b7ee-339e52eebab4`. Uji asap: `scan d4bbcd74-…`; `1 Smoke P None None`; `signed url: 200 image/jpeg`; `IDOR other guardian: 404`; delete `{"ok":true}` ×3; **`signed url after delete: 200` — masih gagal.** Header `cache-control` **tidak dikirim** oleh Storage.
   Probe tambahan (scan baru, URL tidak dicetak): `storage.objects.metadata.cacheControl = "no-store"` (perbaikan tersimpan), tetapi respons signed URL dari `nmekxihgjszgcibqytyj.supabase.co/storage/v1/object/sign/…` hanya membawa `expires` = waktu upload + 1 jam (= TTL signed URL) dan `cf-cache-status: MISS`; setelah delete `cf-cache-status: HIT`, `age: 3`, `200`. Kesimpulan: CDN Supabase (Free, tanpa Smart CDN purge) meng-cache respons signed URL sampai URL kedaluwarsa, **mengabaikan `cacheControl` objek**. `no-store` saat upload tidak cukup.
   **Temuan untuk agent (TINGGI, tetap terbuka):** pilih dan catat di DECISIONS: (a) TTL signed URL pendek (mis. 60–300 s) untuk membatasi jendela, atau (b) Worker menyajikan screenshot sendiri (auth device, `Cache-Control: no-store`) lalu `screenshotUrl` menunjuk ke Worker; keduanya mungkin butuh catatan kontrak untuk Umar (kontrak menyebut signed URL 1 jam). Deploy ulang = LANGKAH MANUAL berikutnya.
-- [ ] 3. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11), dan lanjut ke fase 10.
+- [x] 3. Diganti oleh perbaikan D-alief-B08 + LANGKAH MANUAL (c) di bawah.
+
+### Perbaikan D-alief-B08 (21 Okt 2026 ±23:50 WITA, agent track be)
+
+- Keputusan Alief: "so lets follow apple privacy" → screenshot yang dihapus/diputus harus langsung tidak bisa dilihat. `screenshotUrl` = link Worker `/screenshots/{scanId}?v=&exp=&sig=` (HMAC 1 jam); route mengecek sig + exp lalu DB **setiap request** (scan ada, viewer = pemilik atau Guardian saat ini), lalu mengalirkan objek dengan `Cache-Control: private, no-store`. Detail: D-alief-B08.
+- Test baru `test/screenshots.test.ts` (merah dulu: modul belum ada, URL masih Supabase): gambar + `no-store` + `nosniff` tanpa header auth; PNG; Guardian setelah disconnect → 404; pemilik setelah `DELETE /devices/me` → 404; scan dihapus (retensi) → 404; sig salah/hilang/diubah, `exp` diubah, `v` diubah → 404; link kedaluwarsa → 404; link scan A tidak membuka scan B; viewer bukan pemilik/Guardian dengan link bertanda tangan sah → 404; tanpa screenshot / id asing / id buruk → 404. `scans.test.ts`: `screenshotUrl` = link Worker, `v` = viewer, TTL 3590–3600 s.
+- Verifikasi: `pnpm typecheck` (+ `--noUnusedLocals`) bersih; `pnpm test` → **13 file, 182 test lulus**.
+- Review `ecc:security-reviewer` (satu subagent): 0 CRITICAL, 0 HIGH, 2 MEDIUM, 4 LOW; syarat "langsung tidak bisa dilihat" terpenuhi di semua skenario. Diperbaiki (test merah dulu): fetch Worker → Storage `cache: "no-store"` + `cache-control: no-cache` (path dedupe bisa hidup lebih lama dari satu scan); rate limit `screenshots_view` 120/menit per viewer (429 juga `no-store`); origin link = `INVITE_BASE_URL` (URL Worker yang dipatok, bukan Host request); hanya encoding base64url kanonik untuk `sig`. Ditunda (dicatat D-alief-B08): device id viewer + sig terlihat di log URL Cloudflare (link bearer ≤ 1 jam, tetap dicek DB); signed URL Supabase lama sebelum deploy (c) hidup ≤ 1 jam (satu kali, semua data smoke sudah dihapus); app harus membuang cache memori gambar saat disconnect/hapus (SECURITY P9, fase 13).
+- Catatan kontrak untuk Umar: TODO C20 (draf, belum dikirim).
+
+## LANGKAH MANUAL (c) (Alief) — secret link screenshot + deploy + uji asap
+
+Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migrasi baru. Nilai secret **tidak pernah** ditempel di chat atau file.
+
+- [ ] 1. Secret HMAC (acak, langsung dipipe ke wrangler, tidak tampil di layar):
+  ```bash
+  openssl rand -base64 32 | pnpm -C backend/api exec wrangler secret put SCREENSHOT_URL_SECRET
+  ```
+- [ ] 2. Deploy:
+  ```bash
+  pnpm -C backend/api run deploy
+  ```
+- [ ] 3. Uji asap (sama dengan langkah 3 di atas sampai `ID=`, lalu):
+  ```bash
+  GURL=$(curl -s $U/scans/$ID -H "authorization: Bearer $GT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["screenshotUrl"])')
+  PURL=$(curl -s $U/scans/$ID -H "authorization: Bearer $PT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["screenshotUrl"])')
+  echo "$GURL" | grep -q "^$U/screenshots/$ID?" && echo "worker url: ok"
+  curl -s -o /dev/null -w "screenshot guardian: %{http_code} %{content_type}
+" "$GURL"
+  curl -s -D - -o /dev/null "$GURL" | grep -i '^cache-control'
+  curl -s -o /dev/null -w "IDOR other guardian: %{http_code}
+" $U/scans/$ID -H "authorization: Bearer $(curl -s -X POST $U/devices -H 'content-type: application/json' -d '{"name":"Smoke X","mode":"guardian"}' | tok)"
+  curl -s -X DELETE $U/family/guardian -H "authorization: Bearer $PT"; echo
+  curl -s -o /dev/null -w "screenshot guardian after disconnect: %{http_code}
+" "$GURL"
+  curl -s -o /dev/null -w "screenshot owner before delete: %{http_code}
+" "$PURL"
+  curl -s -X DELETE $U/devices/me -H "authorization: Bearer $PT"; curl -s -X DELETE $U/devices/me -H "authorization: Bearer $GT"; echo
+  curl -s -o /dev/null -w "screenshot after delete: %{http_code}
+" "$PURL"
+  ```
+  Harapan: `worker url: ok`; `screenshot guardian: 200 image/jpeg`; `cache-control: private, no-store`; `IDOR other guardian: 404`; `{"ok":true}`; **`screenshot guardian after disconnect: 404`**; `screenshot owner before delete: 200`; `{"ok":true}{"ok":true}`; **`screenshot after delete: 404`**. Tempel hasilnya (tanpa token dan tanpa URL). Device `Smoke X` tertinggal (tanpa data).
+- [ ] 4. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11, sertakan catatan C20), dan lanjut ke fase 10.
 
 ## Catatan handoff
 

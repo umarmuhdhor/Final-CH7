@@ -52,7 +52,9 @@ export class SupabaseStorageStore implements ScreenshotStore {
 
   async get(path: string): Promise<Response | undefined> {
     const res = await fetch(`${this.baseUrl}/storage/v1/object/authenticated/${BUCKET}/${this.object(path)}`, {
-      headers: { apikey: this.key, authorization: `Bearer ${this.key}` },
+      headers: { apikey: this.key, authorization: `Bearer ${this.key}`, "cache-control": "no-cache" },
+      // Never a cached copy: a path can outlive one of the scans that shares it (dedupe).
+      cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     // Storage answers a missing object with 400 or 404.

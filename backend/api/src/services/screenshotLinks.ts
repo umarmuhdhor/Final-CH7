@@ -39,7 +39,8 @@ export async function verifyScreenshotLink(
   const expiry = Number(exp);
   if (expiry <= nowSeconds || expiry > nowSeconds + LINK_TTL_SECONDS + SKEW_SECONDS) return undefined;
   const bytes = fromBase64url(sig);
-  if (!bytes) return undefined;
+  // Only the canonical encoding: the last character has 2 spare bits, so 4 spellings decode alike.
+  if (!bytes || base64url(bytes) !== sig) return undefined;
   // subtle.verify compares in constant time.
   const ok = await crypto.subtle.verify("HMAC", await hmacKey(secret, "verify"), bytes, message(scanId, v, expiry));
   return ok ? v : undefined;

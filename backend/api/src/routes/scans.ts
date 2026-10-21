@@ -189,6 +189,6 @@ scans.get("/scans/:id", async (c) => {
   const viewerId = c.get("principal").deviceId;
   const row = await findVisibleScan(c.get("sql"), id, viewerId);
   if (!row) throw errors.notFound();
-  return c.json(toScanResult(row, await screenshotUrl(c.env, new URL(c.req.url).origin, row, viewerId)));
+  return c.json(toScanResult(row, await screenshotUrl(c.env, row, viewerId)));
 });
 

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
+import { sha256 } from "../src/http/crypto";
 import { screenshotLink } from "../src/services/screenshotLinks";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -104,10 +105,32 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     }
   });
 
+  it("a non-canonical encoding of the right signature → 404", async () => {
+    const p = await createDevice("Mom");
+    const id = await postShot(p);
+    const u = new URL(`http://x${await linkFor(p, id)}`);
+    const sig = u.searchParams.get("sig")!;
+    // The last of 43 base64url characters carries 2 unused bits: flip one, same bytes.
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    u.searchParams.set("sig", sig.slice(0, -1) + alphabet[alphabet.indexOf(sig.at(-1)!) ^ 1]);
+    expect((await get(`${u.pathname}${u.search}`)).status).toBe(404);
+  });
+
+  it("rate limits 120 per minute per viewer", async () => {
+    const p = await createDevice("Mom");
+    const id = await postShot(p);
+    const link = await linkFor(p, id);
+    const hash = await sha256(`screenshots_view:${p.deviceId}`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select 'screenshots_view', ${hash} from generate_series(1, 120)`;
+    const res = await get(link);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
   it("expired link → 404", async () => {
     const p = await createDevice("Mom");
     const id = await postShot(p);
-    const old = await screenshotLink(env.SCREENSHOT_URL_SECRET!, "http://api.test", id, p.deviceId, Date.now() / 1000 - 3601);
+    const old = await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601);
     const u = new URL(old);
     expect((await get(`${u.pathname}${u.search}`)).status).toBe(404);
   });
@@ -124,7 +147,7 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     const p = await createDevice("Mom");
     const stranger = await createDevice("X", "guardian");
     const id = await postShot(p);
-    const forged = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, "http://api.test", id, stranger.deviceId, Date.now() / 1000));
+    const forged = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, stranger.deviceId, Date.now() / 1000));
     expect((await get(`${forged.pathname}${forged.search}`)).status).toBe(404);
   });
 
@@ -132,7 +155,7 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     const p = await createDevice("Mom");
     const res = await call("/scans", { method: "POST", token: p.token, json: body() });
     const { id } = (await res.json()) as { id: string };
-    const signed = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, "http://api.test", id, p.deviceId, Date.now() / 1000));
+    const signed = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
     expect((await get(`${signed.pathname}${signed.search}`)).status).toBe(404);
     expect((await get("/screenshots/00000000-0000-4000-8000-000000000000?v=a&exp=1&sig=x")).status).toBe(404);
     expect((await get("/screenshots/not-a-uuid")).status).toBe(404);

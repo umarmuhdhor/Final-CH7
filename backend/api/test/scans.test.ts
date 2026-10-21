@@ -420,7 +420,8 @@ describe("GET /scans/{id}", () => {
     expectScanResult(item);
     expect(item.id).toBe(id);
     const url = new URL(item.screenshotUrl!);
-    expect(`${url.origin}${url.pathname}`).toBe(`http://api.test/screenshots/${id}`);
+    // Pinned base URL, never the request Host (D-alief-B08).
+    expect(`${url.origin}${url.pathname}`).toBe(`${env.INVITE_BASE_URL}/screenshots/${id}`);
     expect(url.searchParams.get("v")).toBe(p.deviceId);
     const ttl = Number(url.searchParams.get("exp")) - Date.now() / 1000;
     expect(ttl).toBeGreaterThan(3590);

@@ -77,7 +77,6 @@ export async function attachScreenshot(
  */
 export async function screenshotUrl(
   env: Env,
-  origin: string,
   scan: { id: string; screenshotPath: string | null },
   viewerId: string,
 ): Promise<string | null> {
@@ -86,5 +85,7 @@ export async function screenshotUrl(
     console.error(JSON.stringify({ event: "screenshot_link_unavailable", reason: "no_secret" }));
     return null;
   }
+  // Pinned Worker URL, not the request Host (a custom domain without HTTPS would leak the link).
+  const origin = env.INVITE_BASE_URL.replace(/\/+$/, "");
   return screenshotLink(env.SCREENSHOT_URL_SECRET, origin, scan.id, viewerId, Date.now() / 1000);
 }
