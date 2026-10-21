@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[r]` LANGKAH MANUAL 1–3, 5, 7 selesai di cloud (22 Okt, Worker `bdc661e8`); PR stacked on #17, **pending: bukti run cron 03:00 WITA (butir 6, coordinator), screenshot Triggers + toggle Data API (butir 3/4, butuh login dashboard Alief)** |
+| Status | `[r]` LANGKAH MANUAL 1–3, 5, 7 selesai di cloud (22 Okt, Worker `bdc661e8`); PR #20 (stacked on #17), **pending: bukti run cron 03:00 WITA (butir 6, coordinator), screenshot Triggers + toggle Data API (butir 3/4, butuh login dashboard Alief)** |
 | Track / branch | be · `feat/BE-retention-hardening` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-push` (PR #17, stacked on #15) → PR nanti menulis "Stacked on #17" |
 | Mulai | 22 Okt 2026 ±01:15 WITA |
