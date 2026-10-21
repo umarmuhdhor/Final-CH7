@@ -10,7 +10,7 @@ Salin blok di bawah ke `qa/QA-A-<YYYY-MM-DD>.md` atau `qa/QA-E2E-<YYYY-MM-DD>.md
 | Item | Keterangan |
 | :-: | :-: |
 | Build | <commit / build TestFlight> |
-| Backend | <URL Worker> · Supabase <ref> · migrasi <versi> |
+| Backend | `https://shoo-api.afindo-mi01.workers.dev` · Supabase `nmekxihgjszgcibqytyj` · migrasi <versi> |
 | Perangkat | <simulator/iPhone, iOS> |
 | Metode | <simulator tool / perangkat fisik / curl>, bahasa EN + ID, <n> layar, <n> skenario |
 | Batasan | <apa yang tidak diuji dan kenapa> |

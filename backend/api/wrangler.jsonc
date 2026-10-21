@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shoo-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Our own JSON logs only: invocation logs record full request URLs, which carry
+  // screenshot link ids/signatures and invite codes (SECURITY §3, D-alief-40).
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } },
+  "hyperdrive": [
+    {
+      "binding": "DB",
+      // Hyperdrive `shoo-db` (caching disabled), created in fase 07 manual step 3.
+      // The id is not a secret. The cloud connection string never appears in this repo.
+      "id": "f6c9b58d147c457ab5691d47d85f8309",
+      // Local Supabase (supabase start). Dev-only password from db/supabase/seed.sql.
+      "localConnectionString": "postgres://shoo_api:shoo_api_local@127.0.0.1:54322/postgres"
+    }
+  ],
+  "vars": {
+    // Cloud Worker URL (fase 07 manual step 4).
+    "INVITE_BASE_URL": "https://shoo-api.afindo-mi01.workers.dev",
+    // "1" only during the fase 07 APNs spike; removed in fase 11.
+    "APNS_SPIKE": "0",
+    // Supabase project URL, for Storage only (not a secret). The key is a secret (wrangler secret put).
+    "SUPABASE_URL": "https://nmekxihgjszgcibqytyj.supabase.co",
+    // contracts/api.md: screenshots over 150 KB are dropped.
+    "SCREENSHOT_MAX_BYTES": "153600"
+  },
+  "triggers": { "crons": [] }
+}

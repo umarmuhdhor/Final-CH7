@@ -1,0 +1,14 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+db/supabase/.temp/
+db/supabase/.branches/
+db/supabase/functions/.env*
+*.p8
+*.pem
+*.key
+coverage/
