@@ -27,6 +27,13 @@ struct ProtectedShieldView: View {
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
+        // Coming back from Settings can flip Off → Active: say it (not on the first load).
+        .onChange(of: model.extensionStatus.isActive) { _, isActive in
+            guard model.state == .loaded else { return }
+            AccessibilityNotification.Announcement(
+                L10n.string(isActive ? "Protection is on" : "Protection is off", language: language)
+            ).post()
+        }
         // Status comes from the App Group heartbeat: re-read whenever the app is back in front.
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -41,7 +48,7 @@ struct ProtectedShieldView: View {
                 if let guardian = model.guardian {
                     AvatarView(id: guardian.avatarId, size: 52)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Protected by").font(.subheadline).foregroundStyle(.secondary)
+                        Text("Protected by").font(.subheadline).foregroundStyle(.readableSecondary)
                         Text(verbatim: guardian.name).font(.title3.bold())
                     }
                 } else {
@@ -65,11 +72,13 @@ struct ProtectedShieldView: View {
     private var lastBlockedSection: some View {
         switch model.state {
         case .loading:
-            ProgressView().frame(maxWidth: .infinity, minHeight: 120)
+            ProgressView()
+                .frame(maxWidth: .infinity, minHeight: 120)
+                .accessibilityLabel(Text("Loading"))
         case .failed:
             VStack(spacing: 12) {
                 Text("Couldn't load your Shield").font(.headline)
-                Text("Check your connection and try again.").foregroundStyle(.secondary)
+                Text("Check your connection and try again.").foregroundStyle(.primary)
                 Button { Task { await model.retry() } } label: { Text("Try again").frame(minHeight: 44) }
                     .buttonStyle(.borderedProminent)
             }
@@ -109,20 +118,31 @@ private struct ExtensionStatusCard: View {
     let status: ExtensionStatus
     @ScaledMetric(relativeTo: .largeTitle) private var circle: CGFloat = 96
 
+    /// Capped so "Turn on" stays on screen at accessibility sizes.
+    private var side: CGFloat { min(circle, 160) }
+    /// Dark enough for the white icon to keep 3:1 (WCAG 1.4.11).
+    private var fill: Color {
+        status.isActive ? Color(red: 0.10, green: 0.47, blue: 0.24) : Color(red: 0.42, green: 0.42, blue: 0.44)
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: status.isActive ? "checkmark.shield.fill" : "shield.slash.fill")
-                .font(.system(size: circle * 0.5))
+                .font(.system(size: side * 0.5))
                 .foregroundStyle(.white)
-                .frame(width: circle, height: circle)
-                .background(status.isActive ? Color.green.gradient : Color.gray.gradient, in: Circle())
+                .frame(width: side, height: side)
+                .background(fill, in: Circle())
                 .accessibilityHidden(true)
-            Text(status.isActive ? "Protection is on" : "Protection is off")
-                .font(.title2.bold())
-            Text(status.isActive ? "Shoo checks the sites you open in Safari." : "Switch on Shoo in Safari to stay safe.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 6) {
+                Text(status.isActive ? "Protection is on" : "Protection is off")
+                    .font(.title2.bold())
+                    .accessibilityAddTraits(.isHeader)
+                Text(status.isActive ? "Shoo checks the sites you open in Safari." : "Switch on Shoo in Safari to stay safe.")
+                    .font(.body)
+                    .foregroundStyle(.readableSecondary)
+            }
+            .multilineTextAlignment(.center)
+            .accessibilityElement(children: .combine)
             if !status.isActive {
                 Button {
                     // TODO(sync:alief): present TurnOnExtensionView (fase 02) as a sheet once 02 is in this chain
@@ -133,6 +153,7 @@ private struct ExtensionStatusCard: View {
                     Text("Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityHint(Text("Opens Settings"))
                 .accessibilityIdentifier("shield.turnOn")
             }
         }
@@ -149,33 +170,51 @@ private struct LastBlockedCard: View {
     let scan: ScanResult
     let reasons: [String]
     let language: AppLanguage
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var time: String { Formatters.relative(scan.detectedAt, language: language) }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        // Ring above the text at accessibility sizes, so the text keeps the full width.
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+        layout {
             ScoreRing(score: scan.score, size: 64, lineWidth: 7)
             VStack(alignment: .leading, spacing: 6) {
-                Label { Text("Blocked!") } icon: { Image(systemName: "hand.raised.fill") }
-                    .font(.headline)
-                    .foregroundStyle(.red)
+                Label {
+                    Text("Blocked!").foregroundStyle(.primary)
+                } icon: {
+                    Image(systemName: "hand.raised.fill").foregroundStyle(.red)
+                }
+                .font(.headline)
                 Text(verbatim: scan.domain)
                     .font(.title3.bold())
                     .foregroundStyle(.primary)
                 ForEach(reasons, id: \.self) { reason in
                     Text(verbatim: reason).font(.body).foregroundStyle(.primary)
                 }
-                Text(verbatim: Formatters.relative(scan.detectedAt, language: language))
+                Text(verbatim: time)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
+            if !dynamicTypeSize.isAccessibilitySize {
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(16)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
+        // What, where, how risky, why, when — in that order.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            Text("Blocked!") + Text(verbatim: " \(scan.domain). ") + Text("Risk score")
+                + Text(verbatim: " \(Formatters.percent(scan.score, language: language)). "
+                    + reasons.map { $0 + ". " }.joined() + time)
+        )
         .accessibilityHint(Text("Opens the details"))
     }
 }

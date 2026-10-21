@@ -271,6 +271,16 @@
         }
       }
     },
+    "Filter": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        }
+      }
+    },
     "Get started": {
       "localizations": {
         "id": {
@@ -357,6 +367,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Link"
+          }
+        }
+      }
+    },
+    "Loading": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memuat"
           }
         }
       }
@@ -537,6 +557,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dibuka oleh"
+          }
+        }
+      }
+    },
+    "Opens Settings": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membuka Pengaturan"
           }
         }
       }
