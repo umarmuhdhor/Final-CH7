@@ -1,0 +1,4 @@
+{
+    "extension_name": { "message": "Shoo", "description": "The display name for the extension." },
+    "extension_description": { "message": "Memblokir situs penipuan. Situs yang diblokir terbuka setelah dicek keluarga.", "description": "Description of what the extension does." }
+}

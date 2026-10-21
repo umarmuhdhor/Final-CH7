@@ -1,0 +1,24 @@
+# Shoo — rules for every AI agent in this repo
+
+Shoo = iPhone Safari Web Extension + app that blocks scam sites (see docs/README.md for the PRD).
+
+## Who owns what
+| Folder | Owner | Notes |
+|---|---|---|
+| `contracts/` | Lead | Shared data shapes. Read-only for everyone else |
+| `ios/project.yml` | Lead | Targets, capabilities, build settings |
+| `ios/ShooShared/` | Lead | Swift models used by app + extension |
+| `ios/ShooExtension/` | Lead | Safari extension (except `Resources/detector.js`) |
+| `ios/ShooLiveActivity/` | Lead | Dynamic Island (EX-03) |
+| `ios/ShooApp/` | Team App | All app screens (ON, PR, GD, DT, PF) |
+| `backend/` | Team App | Pairing, Activity, verdicts, push, 14-day retention |
+| `detector/` | Team AI | On-device detection (layer 1–2) |
+| `ai/` | Team AI | Server-side detection (layer 3–4, LLM) |
+
+## Hard rules
+1. Only edit files inside your team's folder. If the task needs a change elsewhere, stop and tell the user.
+2. NEVER edit `contracts/`, `ios/project.yml`, or `ios/ShooShared/`. If you need a change, write the proposal in the PR description and ask the lead.
+3. Every JSON you send or receive must match `contracts/`. Use `contracts/fixtures/` as mock data instead of waiting for another team.
+4. One branch = one PRD ID: `feat/EX-04-popup-warning`, `fix/GD-04-code-expiry`. Keep PRs small, merge at least daily.
+5. Never commit secrets (API keys, APNs keys, LLM keys). Use `.env` (gitignored) and `.env.example`.
+6. Read the `CLAUDE.md` inside the folder you work in — it has more rules.

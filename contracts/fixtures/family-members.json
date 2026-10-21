@@ -1,0 +1,6 @@
+{
+  "members": [
+    { "deviceId": "dev_mom", "name": "Mom", "avatarId": "avatar_03", "extensionActive": true, "lastScan": { "status": "blocked", "score": 92, "url": "https://bca-verifikasi.site/login?ref=wa", "detectedAt": "2026-10-21T04:05:00Z" } },
+    { "deviceId": "dev_dad", "name": "Dad", "avatarId": "avatar_07", "extensionActive": false, "lastScan": null }
+  ]
+}

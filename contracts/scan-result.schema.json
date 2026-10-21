@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shoo.app/contracts/scan-result.schema.json",
+  "title": "ScanResult",
+  "description": "One detection result for one page. Created by the extension when score >= 30 (EX-07), stored by the backend, shown in Activity/Detail.",
+  "type": "object",
+  "required": ["id", "url", "domain", "score", "status", "signals", "ownerDeviceId", "ownerName", "detectedAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid", "description": "Assigned by backend. Extension sends without id." },
+    "url": { "type": "string", "format": "uri" },
+    "domain": { "type": "string", "description": "Registrable domain, lowercase, no www. Verdicts apply per domain (PRD §5)." },
+    "pageTitle": { "type": "string" },
+    "faviconUrl": { "type": ["string", "null"], "format": "uri" },
+    "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "status": { "enum": ["warning", "blocked"], "description": "30–79 = warning, >= 80 = blocked. 'normal' results are never stored." },
+    "signals": {
+      "type": "array",
+      "description": "Every signal that raised the score, highest weight first. Detail shows the top 1–3 (DT-04).",
+      "items": { "$ref": "#/$defs/Signal" }
+    },
+    "screenshotUrl": { "type": ["string", "null"], "format": "uri", "description": "Evidence area only, typed input blurred (PRD §10)." },
+    "ownerDeviceId": { "type": "string", "description": "Device that opened the page." },
+    "ownerName": { "type": "string", "maxLength": 20 },
+    "detectedAt": { "type": "string", "format": "date-time" },
+    "verdict": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/Verdict" }],
+      "description": "null until a Guardian decides. Only blocked items can get a verdict in MVP."
+    }
+  },
+  "$defs": {
+    "Signal": {
+      "type": "object",
+      "required": ["id", "layer", "weight", "label", "labelSimple"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable machine id. Known ids are listed in detector-interface.md.",
+          "examples": ["db_match", "lookalike_domain", "brand_plus_keyword", "cheap_tld", "new_domain", "asks_pin", "asks_otp", "asks_card", "asks_ktp", "brand_logo_offsite", "urgent_language", "unreasonable_request"]
+        },
+        "layer": { "type": "integer", "enum": [1, 2, 3, 4, 5], "description": "1 database, 2 link name, 3 content & forms, 4 reality check (LLM), 5 hoax (phase 2)" },
+        "weight": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Points added to the score, e.g. 30 → '+30%'." },
+        "label": { "type": "string", "description": "Guardian wording, English. e.g. 'Domain age 3 days'" },
+        "labelSimple": { "type": "string", "description": "Protected (parent) wording, simpler. e.g. 'This site was made 3 days ago'" },
+        "evidence": { "type": "string", "description": "Optional raw evidence, e.g. the matched text or field name." }
+      }
+    },
+    "Verdict": {
+      "type": "object",
+      "required": ["value", "byDeviceId", "byName", "decidedAt"],
+      "properties": {
+        "value": { "enum": ["safe", "not_safe"] },
+        "byDeviceId": { "type": "string" },
+        "byName": { "type": "string", "description": "Shown as 'Verified scam by [name]' / 'Marked safe by [name]'. 'you' is rendered client-side." },
+        "decidedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

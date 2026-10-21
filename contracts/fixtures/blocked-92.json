@@ -1,0 +1,20 @@
+{
+  "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03",
+  "url": "https://bca-verifikasi.site/login?ref=wa",
+  "domain": "bca-verifikasi.site",
+  "pageTitle": "KlikBCA - Verifikasi Akun",
+  "faviconUrl": null,
+  "score": 92,
+  "status": "blocked",
+  "signals": [
+    { "id": "new_domain", "layer": 2, "weight": 30, "label": "Domain age 3 days", "labelSimple": "This site was made 3 days ago" },
+    { "id": "asks_pin", "layer": 3, "weight": 25, "label": "Form asks for m-banking PIN", "labelSimple": "Asks for your bank PIN — banks never do this", "evidence": "pin" },
+    { "id": "unreasonable_request", "layer": 4, "weight": 22, "label": "Verification page asks for PIN + OTP", "labelSimple": "A real bank page would not ask this" },
+    { "id": "brand_plus_keyword", "layer": 2, "weight": 15, "label": "Brand name + extra word: bca + verifikasi", "labelSimple": "Uses the BCA name but isn't BCA" }
+  ],
+  "screenshotUrl": "https://example.invalid/screens/blocked-92.png",
+  "ownerDeviceId": "dev_mom",
+  "ownerName": "Mom",
+  "detectedAt": "2026-10-21T04:05:00Z",
+  "verdict": null
+}

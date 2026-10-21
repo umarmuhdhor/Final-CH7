@@ -1,0 +1,11 @@
+{
+  "items": [
+    { "$ref": "blocked-92.json" },
+    { "$ref": "warning-63.json" },
+    { "$ref": "warning-41.json" },
+    { "$ref": "blocked-verified-scam.json" },
+    { "$ref": "blocked-marked-safe.json" }
+  ],
+  "nextCursor": null,
+  "_note": "GET /scans?owner=family response. $ref = inline that fixture file's content."
+}

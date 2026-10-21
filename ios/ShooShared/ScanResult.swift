@@ -1,0 +1,68 @@
+import Foundation
+
+/// Mirrors contracts/scan-result.schema.json. Change the contract first, then this file.
+struct ScanResult: Codable, Identifiable, Hashable {
+    var id: String
+    var url: URL
+    var domain: String
+    var pageTitle: String?
+    var faviconUrl: URL?
+    var score: Int
+    var status: ScanStatus
+    var signals: [Signal]
+    var screenshotUrl: URL?
+    var ownerDeviceId: String
+    var ownerName: String
+    var detectedAt: Date
+    var verdict: Verdict?
+}
+
+enum ScanStatus: String, Codable, Hashable {
+    case warning
+    case blocked
+}
+
+struct Signal: Codable, Hashable {
+    var id: String
+    var layer: Int
+    var weight: Int
+    var label: String
+    var labelSimple: String
+    var evidence: String?
+}
+
+struct Verdict: Codable, Hashable {
+    enum Value: String, Codable, Hashable {
+        case safe
+        case notSafe = "not_safe"
+    }
+
+    var value: Value
+    var byDeviceId: String
+    var byName: String
+    var decidedAt: Date
+}
+
+/// Score thresholds from PRD §5. Owner: lead.
+enum ScoreThreshold {
+    static let firstWarning = 30
+    static let secondWarning = 50
+    static let blocked = 80
+}
+
+extension JSONDecoder {
+    /// Decoder matching the API: ISO 8601 dates.
+    static var shoo: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+}
+
+extension JSONEncoder {
+    static var shoo: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+}

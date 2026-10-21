@@ -1,0 +1,20 @@
+# Xcode project is generated from ios/project.yml — never commit it
+ios/*.xcodeproj
+ios/*.xcworkspace
+DerivedData/
+build/
+xcuserdata/
+*.xcuserstate
+
+# Node / Python
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+.DS_Store

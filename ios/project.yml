@@ -1,0 +1,116 @@
+# Owner: lead. Generates Shoo.xcodeproj — run `xcodegen` in ios/ after changes.
+# Never commit Shoo.xcodeproj (gitignored). This file is the only source of truth.
+name: Shoo
+
+options:
+  bundleIdPrefix: com.shoo
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"          # iPhone only (iPad/Mac out of scope)
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""                 # TODO(lead): set Apple Team ID before running on device
+
+targets:
+  Shoo:
+    type: application
+    platform: iOS
+    sources:
+      - path: ShooApp
+        excludes: ["CLAUDE.md"]
+      - path: ShooShared
+        excludes: ["CLAUDE.md"]
+    info:
+      path: ShooApp/Info.plist
+      properties:
+        CFBundleDisplayName: Shoo
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSSupportsLiveActivities: true    # EX-03
+        CFBundleURLTypes:                 # PR-03 invite link: shoo://join?code=1234
+          - CFBundleURLName: com.shoo.app
+            CFBundleURLSchemes: [shoo]
+    entitlements:
+      path: ShooApp/Shoo.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.shoo.app]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shoo.app
+    dependencies:
+      - target: ShooExtension
+      - target: ShooLiveActivity
+
+  ShooExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShooExtension
+        excludes: ["CLAUDE.md", "Resources/**"]
+      # Web extension files must sit flat at the bundle root (same as Xcode's template)…
+      - path: ShooExtension/Resources
+        excludes: ["_locales/**", "images/**"]
+        buildPhase: resources
+      # …except these, which keep their folder structure.
+      - path: ShooExtension/Resources/_locales
+        type: folder
+      - path: ShooExtension/Resources/images
+        type: folder
+      - path: ShooShared
+        excludes: ["CLAUDE.md"]
+    info:
+      path: ShooExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Shoo
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.Safari.web-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SafariWebExtensionHandler
+    entitlements:
+      path: ShooExtension/ShooExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.shoo.app]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shoo.app.extension
+    dependencies:
+      - sdk: SafariServices.framework
+
+  ShooLiveActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShooLiveActivity
+        excludes: ["CLAUDE.md"]
+      - path: ShooShared
+        excludes: ["CLAUDE.md"]
+    info:
+      path: ShooLiveActivity/Info.plist
+      properties:
+        CFBundleDisplayName: Shoo
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: ShooLiveActivity/ShooLiveActivity.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.shoo.app]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shoo.app.liveactivity
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+
+schemes:
+  Shoo:
+    build:
+      targets:
+        Shoo: all
+    run:
+      config: Debug
