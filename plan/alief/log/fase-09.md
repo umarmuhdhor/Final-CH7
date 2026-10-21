@@ -2,10 +2,11 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (c): secret `SCREENSHOT_URL_SECRET` + deploy + uji asap (screenshot setelah delete/disconnect = 404). Belum ada PR |
+| Status | `[r]` PR dibuka (stacked on #11), reviewer @umarmuhdhor. Cloud: Worker c6ba8556, uji asap (c) hijau |
 | Track / branch | be · `feat/BE-scans` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-family` (PR #11, stacked on #9) → PR nanti menulis "Stacked on #11" |
 | Mulai | 21 Okt 2026 22:40 WITA |
+| Selesai | 21 Okt 2026 ±23:50 WITA (menunggu review PR) |
 | Model | Opus 5.5 |
 
 ## Ringkasan rencana
@@ -17,11 +18,12 @@ Rencana lengkap: [`fase-09-plan.md`](fase-09-plan.md). Dua butir BELUM DIVERIFIK
 - [x] 0. Verifikasi: Storage REST lokal (upload/sign/delete) dengan kunci `sb_secret_…` dan JWT `service_role` (header `apikey` + `Authorization`) → keduanya 200. ajv `compile` jalan di workerd lewat `@cloudflare/vitest-plugin` → D-alief-B04(d) terjawab, tanpa ajv standalone
 - [x] 1. `POST /scans`: zod sesuai skema + R3 §4, `ownerDeviceId`/`ownerName` diabaikan, domain = host atau `*.domain`, `owner = principal`, screenshot (≤ `SCREENSHOT_MAX_BYTES`, magic JPEG/PNG, sisi ≤ 1280 px, dedupe 24 jam, kuota 50/24 jam) → `201 { id }`, hook `PushSender` = `LogSender`
 - [x] 2. `GET /scans?owner=&status=&cursor=&limit=` + validasi JSON schema (ajv) di test
-- [x] 3. `GET /scans/{id}`: otorisasi R3 §3, signed URL 3600 s
+- [x] 3. `GET /scans/{id}`: otorisasi R3 §3, `screenshotUrl` = link Worker 1 jam (awalnya signed URL Storage, diganti D-alief-B08)
 - [x] 4. Bentuk body = yang dikirim extension (`report.js` `scanBody` + `background.js` owner fields) — test `extensionBody()`
 - [x] 5. Test IDOR + disconnect
 - [x] 6. Review berurutan: security → TypeScript → database (tabel Review)
-- [ ] 7. LANGKAH MANUAL (di bawah) — menunggu Alief
+- [x] 7. LANGKAH MANUAL 0–3, (b), (c) dijalankan (coordinator atas permintaan Alief); hasil (c) hijau: screenshot setelah disconnect dan setelah delete = 404, `no-store` di gambar dan JSON
+- [x] 8. Cek privasi Apple P1–P13 (D-alief-40, tabel di bawah); P13 diperbaiki (D-alief-B09)
 
 ## File dibuat / diubah
 
