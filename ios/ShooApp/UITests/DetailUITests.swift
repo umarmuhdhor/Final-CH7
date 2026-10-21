@@ -20,14 +20,14 @@ final class DetailUITests: XCTestCase {
             "-debug.detail", scanId,
         ]
         app.launch()
-        XCTAssertTrue(app.otherElements["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
         return app
     }
 
     @MainActor
     func testGuardianMarksNotSafeAtOnce() {
         let app = openDetail(Self.blocked92)
-        let header = app.otherElements["detail.header"]
+        let header = app.descendants(matching: .any)["detail.header"]
         XCTAssertTrue((header.value as? String ?? "").contains("Blocked"))
         XCTAssertTrue(app.staticTexts["detail.link"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["detail.owner"].exists)
@@ -57,13 +57,13 @@ final class DetailUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Share"].exists)
         XCTAssertFalse(app.buttons["Save Image"].exists)
         app.buttons["detail.screenshotClose"].tap()
-        XCTAssertTrue(app.otherElements["detail.header"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 5))
     }
 
     @MainActor
     func testWarningHasNoButtonsAndNoScreenshotBlock() {
         let app = openDetail(Self.warning41)
-        XCTAssertTrue((app.otherElements["detail.header"].value as? String ?? "").contains("Warning"))
+        XCTAssertTrue((app.descendants(matching: .any)["detail.header"].value as? String ?? "").contains("Warning"))
         XCTAssertFalse(app.buttons["detail.verdict.safe"].exists)
         XCTAssertFalse(app.buttons["detail.screenshot"].exists)
         XCTAssertFalse(app.staticTexts["Screenshot"].exists)
@@ -76,13 +76,13 @@ final class DetailUITests: XCTestCase {
         XCTAssertFalse(app.buttons["detail.verdict.notSafe"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["detail.owner"].exists)
         let first = app.descendants(matching: .any)["detail.evidence.0"]
-        XCTAssertEqual(first.label, "This site was made 3 days ago · +30%")
+        XCTAssertEqual(first.label, "This site was made 3 days ago, adds 30 percent to the risk score")
     }
 
     @MainActor
     func testProtectedIndonesianVerdictNote() {
         let app = openDetail(Self.markedSafe, mode: "protected", language: "id")
-        let header = app.otherElements["detail.header"]
+        let header = app.descendants(matching: .any)["detail.header"]
         XCTAssertTrue((header.value as? String ?? "").contains("Ditandai aman oleh Adhella"), header.debugDescription)
         XCTAssertTrue(app.navigationBars["Detail"].exists)
     }

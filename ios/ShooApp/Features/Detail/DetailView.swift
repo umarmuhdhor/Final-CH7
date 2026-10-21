@@ -72,16 +72,23 @@ struct DetailView: View {
         }
         .safeAreaInset(edge: .bottom) {
             if model.canValidate {
-                VerdictButtons(
-                    current: scan.verdict?.value,
-                    isSubmitting: model.isSubmittingVerdict,
-                    failed: model.verdictFailed
-                ) { value in
-                    Task { await model.setVerdict(value) }
+                VerdictButtons(current: scan.verdict?.value, failed: model.verdictFailed) { value in
+                    Task {
+                        await model.setVerdict(value)
+                        announceVerdictResult()
+                    }
                 }
             }
         }
         .sensoryFeedback(.success, trigger: scan.verdict?.value) { _, new in new != nil }
+    }
+
+    /// VoiceOver hears the result of a tap: the new note, or that it was rolled back.
+    private func announceVerdictResult() {
+        let text = model.verdictFailed
+            ? L10n.string("Couldn't save. Check your connection and try again.", language: language)
+            : model.verdictNote(language: language)
+        if let text { AccessibilityNotification.Announcement(text).post() }
     }
 
     /// DT-01 ring, DT-02 label, DT-06 note.
@@ -99,6 +106,7 @@ struct DetailView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("Risk score"))
         .accessibilityValue(Text(verbatim: headerValue(scan)))
+        .accessibilityAddTraits(.isHeader)
         .accessibilityIdentifier("detail.header")
     }
 
@@ -142,17 +150,21 @@ private struct DetailInfoSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Link")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                // Verbatim: never turned into a tappable link (D-alief-A31).
-                Text(verbatim: scan.url.absoluteString)
-                    .font(.body.monospaced())
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("detail.link")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Link")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    // Verbatim: never turned into a tappable link (D-alief-A31).
+                    Text(verbatim: scan.url.absoluteString)
+                        .font(.body.monospaced())
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("detail.link")
                 Button {
                     LinkCopy.copy(scan.url)
                     copied = true
+                    AccessibilityNotification.Announcement(L10n.string("Copied", language: language)).post()
                 } label: {
                     Label(copied ? LocalizedStringKey("Copied") : LocalizedStringKey("Copy link"), systemImage: copied ? "checkmark" : "doc.on.doc")
                         .frame(minHeight: 44)
@@ -186,8 +198,7 @@ private struct DetailInfoSection: View {
             Text(verbatim: value)
             if let detail {
                 Text(verbatim: detail)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
             }
         }
         .accessibilityElement(children: .combine)

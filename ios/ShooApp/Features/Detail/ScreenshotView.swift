@@ -98,7 +98,8 @@ struct ScreenshotView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Screenshot of the page"))
-            .accessibilityHint(Text("Double-tap to zoom"))
+            .accessibilityAddTraits(.isImage)
+            .accessibilityHint(Text("Opens a larger view"))
             .accessibilityIdentifier("detail.screenshot")
         } else if failed {
             Label("Screenshot isn't available anymore", systemImage: "photo.badge.exclamationmark")
@@ -132,25 +133,32 @@ private struct ZoomedScreenshot: View {
     let image: UIImage
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var scale: CGFloat = 1
     @State private var baseScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var baseOffset: CGSize = .zero
 
+    private static let maxScale: CGFloat = 5
+    private static let doubleTapScale: CGFloat = 2.5
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .scaleEffect(scale)
-                .offset(offset)
-                .gesture(magnify.simultaneously(with: drag))
-                .onTapGesture(count: 2, perform: toggleZoom)
-                .accessibilityLabel(Text("Screenshot of the page"))
-                .accessibilityAddTraits(.isImage)
-                .accessibilityAction(named: Text("Zoom")) { toggleZoom() }
-                .accessibilityIdentifier("detail.screenshotZoomed")
+            GeometryReader { proxy in
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .scaleEffect(scale)
+                    .offset(offset)
+                    .gesture(magnify(in: proxy.size).simultaneously(with: drag(in: proxy.size)))
+                    .onTapGesture(count: 2) { toggleZoom() }
+                    .accessibilityLabel(Text("Screenshot of the page"))
+                    .accessibilityAddTraits(.isImage)
+                    .accessibilityAction(named: scale > 1 ? Text("Zoom out") : Text("Zoom in")) { toggleZoom() }
+                    .accessibilityIdentifier("detail.screenshotZoomed")
+            }
             Button {
                 dismiss()
             } label: {
@@ -162,42 +170,49 @@ private struct ZoomedScreenshot: View {
             }
             .padding()
             .accessibilityLabel(Text("Close"))
+            .accessibilitySortPriority(1)
             .accessibilityIdentifier("detail.screenshotClose")
         }
+        // VoiceOver two-finger scrub closes it like any modal.
+        .accessibilityAction(.escape) { dismiss() }
     }
 
-    private var magnify: some Gesture {
+    private func magnify(in size: CGSize) -> some Gesture {
         MagnifyGesture()
-            .onChanged { scale = min(max(baseScale * $0.magnification, 1), 5) }
+            .onChanged { scale = min(max(baseScale * $0.magnification, 1), Self.maxScale) }
             .onEnded { _ in
                 baseScale = scale
-                if scale == 1 { resetOffset() }
+                offset = clamped(offset, in: size)
+                baseOffset = offset
             }
     }
 
-    private var drag: some Gesture {
+    private func drag(in size: CGSize) -> some Gesture {
         DragGesture()
             .onChanged { value in
                 guard scale > 1 else { return }
-                offset = CGSize(
+                offset = clamped(CGSize(
                     width: baseOffset.width + value.translation.width,
                     height: baseOffset.height + value.translation.height
-                )
+                ), in: size)
             }
             .onEnded { _ in baseOffset = offset }
     }
 
-    private func toggleZoom() {
-        withAnimation(.spring(duration: 0.3)) {
-            scale = scale > 1 ? 1 : 2.5
-            baseScale = scale
-            if scale == 1 { resetOffset() }
-        }
+    /// Keeps the zoomed image covering the screen: it can't be dragged off.
+    private func clamped(_ offset: CGSize, in size: CGSize) -> CGSize {
+        let maxX = size.width * (scale - 1) / 2
+        let maxY = size.height * (scale - 1) / 2
+        return CGSize(width: min(max(offset.width, -maxX), maxX), height: min(max(offset.height, -maxY), maxY))
     }
 
-    private func resetOffset() {
-        offset = .zero
-        baseOffset = .zero
+    private func toggleZoom() {
+        withAnimation(reduceMotion ? nil : .spring(duration: 0.3)) {
+            scale = scale > 1 ? 1 : Self.doubleTapScale
+            baseScale = scale
+            offset = .zero
+            baseOffset = .zero
+        }
     }
 }
 
