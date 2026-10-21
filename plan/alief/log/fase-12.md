@@ -10,13 +10,13 @@
 
 ## Ringkasan rencana
 
-Rencana lengkap: [`fase-12-plan.md`](fase-12-plan.md) (`ecc:planner`). Keputusan: D-alief-B12. Cron harian menghapus scan + screenshot setelah 14 hari (objek Storage dulu, batch 100 × 10), tabel kecil ikut dipangkas, heartbeat anti-pause. Hardening: timeout role `shoo_api`, Worker tidak bisa menyetujui domain blocklist, header keamanan + 413 awal, batas 401 per IP, HMAC untuk kunci rate limit, `GET /privacy`. Review keamanan penuh atas seluruh `backend/` → perbaikan HIGH (`service_role`) + MEDIUM (secret wajib, tombstone Storage, policy blocklist, batas global, cleanup lebih panjang) + LOW.
+Rencana lengkap: [`fase-12-plan.md`](fase-12-plan.md) (`ecc:planner`). Keputusan: D-alief-B12. Cron harian menghapus scan + screenshot setelah 14 hari (baris + tombstone dalam satu transaksi, lalu objek Storage; batch 100 × 10, scan tanpa screenshot chunk 2000 × 25), tabel kecil ikut dipangkas, heartbeat anti-pause. Hardening: timeout role `shoo_api`, Worker tidak bisa menyetujui domain blocklist, header keamanan + 413 awal, batas 401 per IP, HMAC untuk kunci rate limit, `GET /privacy`. Review keamanan penuh atas seluruh `backend/` → perbaikan HIGH (`service_role`) + MEDIUM (secret wajib, tombstone Storage, policy blocklist, batas global, cleanup lebih panjang) + LOW.
 
 ## Checklist langkah kerja
 
 - [x] 1. `cron/retention.ts` + `scheduled()` + `triggers.crons ["0 19 * * *"]` (`0ba2025`, `ce29cea`)
 - [x] 2. Hardening: migrasi timeout role + grant kolom blocklist (`8866425`); header keamanan, 413 awal, CORS tertutup, `auth_fail` (`70b9a5c`); HMAC `RATE_KEY_SECRET` (`27eac88`); `GET /privacy` (`261d090`); test kebersihan log + cakupan semua bucket (`bd929bd`)
-- [x] 3. Review penuh berurutan: `ecc:security-reviewer` → perbaikan (`8d42f44`, `8ccbbfa`) → `ecc:database-reviewer` → perbaikan (`379382b`) → `ecc:typescript-reviewer` (tabel di bawah)
+- [x] 3. Review penuh berurutan: `ecc:security-reviewer` → perbaikan (`8d42f44`, `8ccbbfa`) → `ecc:database-reviewer` → perbaikan (`379382b`) → `ecc:typescript-reviewer` → perbaikan (`cfecd73`) (tabel di bawah)
 - [x] 4. Estimasi kuota (`207c07e`, angka di bawah); anti-pause: cron + `/healthz/db` menulis `ops_heartbeat`
 - [x] 5. `backend/ci/backend.yml` (dry-run deploy + gitleaks) + `ci/README.md`; C2 diperbarui (`2c1bdca`)
 - [x] 6. `backend/README.md` final: retensi, kuota, rollback, `/privacy`, env `RATE_KEY_SECRET` (`2c1bdca`, `8d42f44`)
@@ -39,7 +39,7 @@ Rencana lengkap: [`fase-12-plan.md`](fase-12-plan.md) (`ecc:planner`). Keputusan
 
 ## DoD
 
-- [x] Retensi terbukti di test (umur 15/13 hari, path dedupe bersama, backlog, Storage gagal, lock verdict, tiap tabel, heartbeat) + trigger lokal. Cron terdaftar di cloud + satu run di `ops_heartbeat` = LANGKAH MANUAL 3 + 6.
+- [x] Retensi terbukti di test (umur 15/13 hari, path dedupe bersama, backlog, Storage gagal → baris tetap terhapus + tombstone, lock verdict `55P03`, tiap tabel, heartbeat, `scheduled()` di-await) + trigger lokal. Cron terdaftar di cloud + satu run di `ops_heartbeat` = LANGKAH MANUAL 3 + 6.
 - [x] Tidak ada temuan CRITICAL/HIGH terbuka (HIGH `service_role` diperbaiki di migrasi `20261022130000`).
 - [ ] Uji asap cloud (deploy branch fase 12) = LANGKAH MANUAL 5.
 - [x] `gitleaks` 0 temuan.
@@ -53,7 +53,7 @@ Berurutan, satu per satu (aturan Alief).
 |---|---|---|---|---|---|
 | `ecc:security-reviewer` (seluruh `backend/`) | 0 | 1 | 6 | H: kunci rahasia Storage = `service_role` + Data API melewati RLS → `revoke all … from service_role` + default privileges (+ matikan Data API, LANGKAH MANUAL). M: `RATE_KEY_SECRET` opsional jatuh ke sha256 → wajib ≥ 32, gagal tertutup; objek Storage tertinggal kalau remove gagal → `storage_tombstones` + cron; Worker bisa menghapus entri blocklist disetujui → policy per perintah; tanpa batas global → `devices_create_all` 1000/hari + screenshot 300/24 jam; cleanup `rate_limit_hits` 5 chunk → 50. L: rantai dedupe → hanya upload asli (≤ 15 hari); `/privacy` dilengkapi; panjang minimum secret. Ditunda: M `faviconUrl` dimuat langsung app (fase 13, handoff), L Content-Type + query URL (usulan C21), L device tidak aktif (TODO E7), L pin checksum/SHA action (C2) | `8d42f44`, `8ccbbfa` |
 | `ecc:database-reviewer` | 0 | 0 | 7 | M1 upload terlambat / Worker mati → objek tanpa tombstone, M2 `reserveScreenshot` tanpa cek baris (D-alief-40: celah P13 = TINGGI) → tombstone sebagai log niat di transaksi reservasi, dihapus hanya setelah remove terkonfirmasi + > 10 menit, `gone` tanpa upload. M3 satu batch gagal memblokir drain → `attempts`/`last_try_at`, lanjut ke batch berikut. M4 retensi maks 1000 scan/hari → chunk scan tanpa screenshot 2000 × 25 + batas global `POST /scans` 2000/jam. M5 deadlock `deleteDevice` ↔ retensi → urutan lock tetap + coba ulang sekali. M6 kuota global sort semua scan 24 jam → index parsial `scans_original_shot` (index-only, diverifikasi `EXPLAIN`). L1 index `scans_shot_path`; L3 CHECK tombstone hanya panjang (pola ketat bisa menggagalkan hapus akun); L5 komentar CTE `hitLight`. Ditunda: M7 device tidak aktif (TODO E7, keputusan Alief); L6 hitungan subrequest Hyperdrive (dicek di run cron cloud, LANGKAH MANUAL) | `379382b` |
-| `ecc:typescript-reviewer` | | | | | |
+| `ecc:typescript-reviewer` | 0 | 0 | 5 | M2 Storage mati menahan baris scan > 14 hari (janji `/privacy`, diperlakukan TINGGI) → tombstone di transaksi hapus, baris selalu hilang hari ke-14, objek dicoba ulang. M1 `scheduled()` di `waitUntil` → di-`await` (Cron Events gagal terlihat). M3 batas global terpakai body tidak valid → dihitung setelah validasi (risiko DoS diterima, D-alief-B12 i). M4 token mati dapat 429 → tetap 401 + `Retry-After`. M5 test: kode `55P03` diperiksa, log kegagalan Storage tanpa path, `vi.waitFor` ganti `setTimeout`. L: import kunci HMAC gagal tidak di-cache, jeda 100 ms sebelum coba ulang hapus, `clearScreenshotPath` gagal tidak melewati discard. Diterima: `backlog` bisa positif palsu di batch terakhir; `removed` menghitung tombstone muda | `cfecd73` |
 
 ### Cek privasi Apple P1–P13 (D-alief-40)
 

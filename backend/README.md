@@ -109,8 +109,12 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 
 `triggers.crons: ["0 19 * * *"]` (03:00 WITA) runs `src/cron/retention.ts`:
 - writes `ops_heartbeat('cron')` first (anti-pause signal, also written by `/healthz/db`);
-- scans older than 14 days in batches of 100, max 10 per run (1000/day; `backlog: true` in the log when more are left). Screenshot objects are deleted **before** their rows and only when no younger scan shares the path (dedupe); if Storage fails the rows stay and the batch is retried the next day. Verdicts stay with `scan_id` null (D-alief-14);
-- `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day.
+- scans older than 14 days without a screenshot in chunks of 2000, max 25 per run (no Storage call);
+- scans older than 14 days with a screenshot in batches of 100, max 10 per run (`backlog: true` in the log when more are left). Each batch tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects; if Storage fails the rows are still gone on day 14 and the tombstones are retried. Verdicts stay with `scan_id` null (D-alief-14);
+- `storage_tombstones` (intent log of every screenshot object, D-alief-B12): paths no scan points at, older than 10 min, max 500 per run;
+- `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
+
+`scheduled()` awaits the run, so a failed step fails the Cron event.
 
 Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler dev --test-scheduled` runs: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+19+*+*+*"`.
 
