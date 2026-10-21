@@ -1,3 +1,4 @@
+import ImageIO
 import SwiftUI
 import UIKit
 
@@ -17,12 +18,17 @@ protocol ScreenshotLoading: Sendable {
 struct URLSessionScreenshotLoader: ScreenshotLoading {
     /// The backend keeps screenshots ≤ 150 KB (contracts/api.md); anything far bigger is not ours.
     static let maxBytes = 2 * 1024 * 1024
+    /// Larger than any real screenshot (≤ 1280 px, contracts/api.md); stops decompression bombs.
+    static let maxPixelSide = 4096
     static let shared = URLSessionScreenshotLoader(configuration: configuration())
 
     private let session: URLSession
+    /// `screenshotUrl` always points at our Worker (D-alief-B08); nothing else is fetched.
+    private let allowedHost: String?
 
-    init(configuration: URLSessionConfiguration) {
-        session = URLSession(configuration: configuration)
+    init(configuration: URLSessionConfiguration, allowedHost: String? = AppConfig.apiBaseURL.host()) {
+        session = URLSession(configuration: configuration, delegate: RedirectRefuser(), delegateQueue: nil)
+        self.allowedHost = allowedHost
     }
 
     /// Ephemeral session without any URL cache: the image exists only while the Detail view holds it,
@@ -39,8 +45,15 @@ struct URLSessionScreenshotLoader: ScreenshotLoading {
     }
 
     func imageData(at url: URL) async throws -> Data {
-        guard Self.isAllowed(url) else { throw ScreenshotLoadError.unavailable }
-        let (bytes, response) = try await session.bytes(from: url)
+        guard isAllowed(url) else { throw ScreenshotLoadError.unavailable }
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await session.bytes(from: url)
+        } catch let error as URLError where error.code != .cancelled {
+            // Offline, TLS failure, refused redirect: all mean "no screenshot" to the screen.
+            throw ScreenshotLoadError.unavailable
+        }
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               response.expectedContentLength <= Int64(Self.maxBytes)
         else { throw ScreenshotLoadError.unavailable }
@@ -50,18 +63,62 @@ struct URLSessionScreenshotLoader: ScreenshotLoading {
             data.append(byte)
             if data.count > Self.maxBytes { throw ScreenshotLoadError.unavailable }
         }
-        guard UIImage(data: data) != nil else { throw ScreenshotLoadError.unavailable }
+        guard ScreenshotDecoder.hasSafeDimensions(data, maxSide: Self.maxPixelSide) else {
+            throw ScreenshotLoadError.unavailable
+        }
         return data
     }
 
-    /// HTTPS only (SECURITY §3 P5); the local Worker (`wrangler dev`) in Debug builds.
-    private static func isAllowed(_ url: URL) -> Bool {
+    /// Our Worker's `/screenshots/` path only, over HTTPS (SECURITY §3 P5);
+    /// plain HTTP only for the local Worker (`wrangler dev`) in Debug builds.
+    private func isAllowed(_ url: URL) -> Bool {
+        guard let host = url.host(), host == allowedHost, url.path().hasPrefix("/screenshots/") else { return false }
         if url.scheme == "https" { return true }
         #if DEBUG
-        return url.scheme == "http" && ["localhost", "127.0.0.1"].contains(url.host())
+        return url.scheme == "http" && ["localhost", "127.0.0.1"].contains(host)
         #else
         return false
         #endif
+    }
+}
+
+/// The Worker never redirects screenshots; a redirect would leave our origin, so it is not followed.
+private final class RedirectRefuser: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest
+    ) async -> URLRequest? {
+        nil
+    }
+}
+
+/// Decodes untrusted image bytes without ever building a full-size bitmap.
+enum ScreenshotDecoder {
+    /// Reads only the header: a few-KB file can claim 30000 × 30000 px.
+    static func hasSafeDimensions(_ data: Data, maxSide: Int) -> Bool {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              CGImageSourceGetCount(source) > 0,
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int
+        else { return false }
+        return width > 0 && height > 0 && width <= maxSide && height <= maxSide
+    }
+
+    /// Downsampled once, at load time, so the view and the zoom screen share one small bitmap.
+    static func image(from data: Data, maxPixelSize: Int = 2048) -> UIImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary)
+        else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
     }
 }
 
@@ -131,7 +188,7 @@ struct ScreenshotView: View {
         failed = false
         do {
             let data = try await loader.imageData(at: url)
-            image = UIImage(data: data)
+            image = ScreenshotDecoder.image(from: data)
             failed = image == nil
         } catch is CancellationError {
             // The view went away.
@@ -189,6 +246,7 @@ private struct ZoomedScreenshot: View {
         }
         // VoiceOver two-finger scrub closes it like any modal.
         .accessibilityAction(.escape) { dismiss() }
+        .privacyCover()
     }
 
     private func magnify(in size: CGSize) -> some Gesture {
