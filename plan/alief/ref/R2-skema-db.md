@@ -89,6 +89,17 @@ create table verdicts (
   primary key (owner_id, domain)
 );
 create index verdicts_not_safe on verdicts(decided_at) where value = 'not_safe';
+-- kolom tambahan verdicts: global_eligible boolean not null default false  -- snapshot kelayakan blocklist saat POST /verdicts (R2 §5)
+
+create table blocklist_entries (                          -- antrean + isi blocklist global (R2 §5, D-alief-25)
+  domain           text primary key check (domain = lower(domain) and domain !~ '^www\.'),
+  families         int not null default 1,                -- jumlah Guardian berbeda dengan verdict not_safe yang layak
+  first_seen_at    timestamptz not null default now(),
+  approved_at      timestamptz,                           -- null = menunggu review manual; hanya yang terisi dikirim
+  approved_by      text,
+  removed_at       timestamptz                            -- dibersihkan; dikirim lewat `removed` setelah C6 disetujui
+);
+create index blocklist_approved on blocklist_entries(approved_at) where approved_at is not null and removed_at is null;
 
 create table ops_heartbeat (                              -- ditulis /healthz/db + cron, supaya Supabase Free tidak pause
   id            int primary key default 1 check (id = 1),
@@ -137,29 +148,31 @@ Password role `shoo_api` tidak pernah ada di file migrasi (migrasi `supabase db 
 
 ## 5. Blocklist
 
-Kontrak: "all domains with a `not_safe` verdict from any family". Karena risiko peracunan (SECURITY T5, D-alief-06), fase 10 menerapkan **filter bawaan** sampai Umar + Imelda memutuskan (TODO C6):
+Kontrak: "all domains with a `not_safe` verdict from any family". Filter otomatis saja bisa dilewati (satu orang mendaftarkan Guardian + Protected anonim, join, kirim scan palsu, lalu Not safe; verify run 02 #N2). Karena itu default fase 10 = **antrean + review manual** sampai Umar + Imelda memutuskan (TODO C6, D-alief-25):
 
-1. Hanya verdict `not_safe` atas scan milik device **Protected** yang terhubung ke Guardian yang memutuskan saat itu (`scans.owner_id` mode protected dan `family_links` aktif) — verdict Guardian atas scan miliknya sendiri tidak masuk global.
-2. Domain di allowlist statis (`backend/api/src/data/allowlist.ts`: domain resmi brand Indonesia + domain populer) tidak pernah masuk.
-3. `BLOCKLIST_MIN_FAMILIES` (default 1) — jumlah keluarga berbeda minimal.
+1. **Saat `POST /verdicts`** (satu transaksi): `global_eligible = true` hanya kalau `value = 'not_safe'`, pemilik scan bermode **protected**, `family_links` pemilik itu aktif ke Guardian pemutus, dan domain tidak ada di allowlist statis (`backend/api/src/data/allowlist.ts`: domain resmi brand Indonesia + domain populer). Kelayakan disimpan saat keputusan (snapshot), jadi disconnect setelahnya tidak mengubah isi blocklist diam-diam.
+2. Kalau layak: upsert `blocklist_entries(domain)` dengan `families = (select count(distinct by_device_id) from verdicts where domain = $d and value = 'not_safe' and global_eligible)`. `approved_at` tetap null.
+3. Verdict yang berubah dari `not_safe` ke `safe` → hitung ulang `families`; tidak menghapus entri yang sudah disetujui (reviewer yang memutuskan `removed_at`).
+4. **Review manual (LANGKAH MANUAL berkala, Alief/Umar di SQL editor Supabase):**
+   ```sql
+   select domain, families, first_seen_at from blocklist_entries where approved_at is null and removed_at is null order by families desc, first_seen_at;
+   update blocklist_entries set approved_at = now(), approved_by = 'alief' where domain = 'contoh-scam.id';
+   update blocklist_entries set removed_at = now() where domain = 'salah-blokir.id';
+   ```
+5. **`GET /blocklist?since=`** hanya membaca entri yang disetujui:
+   ```sql
+   select domain, approved_at as added_at
+   from blocklist_entries
+   where approved_at is not null and removed_at is null and approved_at > coalesce($since, '-infinity')
+   order by approved_at, domain limit 1000;
+   ```
+   `nextSince` = `added_at` terakhir. Karena waktu yang dipakai adalah `approved_at`, refresh inkremental tidak pernah melewatkan domain (beda dengan filter `decided_at` + `having`).
 
-```sql
-select v.domain, max(v.decided_at) as added_at
-from verdicts v
-join devices o on o.id = v.owner_id and o.mode = 'protected'
-join family_links l on l.protected_id = v.owner_id and l.guardian_id = v.by_device_id
-where v.value = 'not_safe' and v.decided_at > $since
-group by v.domain
-having count(distinct v.by_device_id) >= $minFamilies
-order by added_at limit 1000;
--- lalu buang domain yang ada di allowlist
-```
-
-`nextSince` = `added_at` terakhir. Penghapusan (not_safe → safe, atau dibersihkan) tidak terkirim lewat `since`: usulan kontrak `removed: [{ domain, removedAt }]` (TODO C6, D-alief-18). Sampai disetujui, detector disarankan full refresh (`since` kosong) sekali sehari.
+Penghapusan (`removed_at`) tidak terkirim lewat `since`: usulan kontrak `removed: [{ domain, removedAt }]` (TODO C6, D-alief-18). Sampai disetujui, detector disarankan full refresh (`since` kosong) sekali sehari. Kalau C6 memilih persetujuan otomatis (mis. ≥ 2 keluarga + umur link ≥ 72 jam), cukup ubah langkah 2 menjadi mengisi `approved_at` saat syarat terpenuhi.
 
 ## 6. Retensi
 
-Cron Worker harian (R4 §4):
+Cron Worker harian (R4 §5):
 ```sql
 delete from scans where created_at < now() - interval '14 days' returning screenshot_path;  -- lalu hapus objek Storage
 delete from family_codes where expires_at < now() - interval '1 hour';

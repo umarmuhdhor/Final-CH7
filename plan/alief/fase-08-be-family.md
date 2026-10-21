@@ -37,7 +37,7 @@ Guardian membuat kode yang berganti tiap 60 detik, Protected bergabung dengan ko
 ## Verifikasi
 
 ```bash
-(cd backend/db && supabase db reset && supabase test db)
+(cd backend/db && supabase start && supabase db reset && supabase test db)
 pnpm -C backend/api exec vitest run family join
 ```
 

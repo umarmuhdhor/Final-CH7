@@ -14,6 +14,7 @@
 | Run | Sesi | Verdict | Temuan KRITIS/TINGGI | Diperbaiki |
 |---|---|---|---|---|
 | 01 | sesi baru (read-only) | BELUM SIAP | 1 KRITIS, 6 TINGGI (+ SEDANG/RENDAH) | Semua KRITIS/TINGGI dan sebagian besar SEDANG/RENDAH diperbaiki; keputusan baru D-alief-17..24. Laporan: `log/verify/run-01.md` |
+| 02 | sesi baru (read-only) | BELUM SIAP | 0 KRITIS, 2 TINGGI (N1 regresi status auto, N2 peracunan blocklist) + 4 SEDANG, 9 RENDAH | Semua N1–N15 diperbaiki; keputusan baru D-alief-25..28 (antrean blocklist + review manual, status `[m]`, deploy dari branch fase, Info.plist target test). Laporan: `log/verify/run-02.md` |
 
 ## Catatan handoff
 

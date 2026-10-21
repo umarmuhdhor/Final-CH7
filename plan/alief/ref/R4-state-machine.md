@@ -13,7 +13,7 @@ stateDiagram-v2
 ```
 
 Aturan:
-- `POST /family/code` di dalam transaksi: hapus kode lama milik guardian, hapus kode kedaluwarsa yang bentrok, pilih 4 digit acak (`crypto.getRandomValues`) yang tidak sedang aktif (maks 20 percobaan, lalu 503 `rate_limited`), insert `expires_at = now() + 60 s`.
+- `POST /family/code` di dalam transaksi: hapus kode lama milik guardian, hapus kode kedaluwarsa yang bentrok, pilih 4 digit acak (`crypto.getRandomValues`) yang tidak sedang aktif (maks 20 percobaan, lalu 503 `code_unavailable`, kode baru di R3 §1), insert `expires_at = now() + 60 s`.
 - App Guardian meminta kode baru otomatis saat hitung mundur 0 (GD-04 "ganti tiap 60 detik"), hanya selama layar Family code terbuka.
 - Kode tetap bisa dipakai beberapa Protected selama berlaku, sampai keluarga penuh.
 
@@ -57,7 +57,7 @@ stateDiagram-v2
 
 - Verdict berlaku per `(owner_id, domain)` (kontrak). Semua scan **blocked** pemilik itu di domain yang sama ikut menampilkan verdict tersebut; scan warning tetap `verdict: null`.
 - `safe` → extension Protected (polling `GET /verdicts?domain=` tiap 5 s) membuka halaman. Target: `GET /verdicts` mencerminkan keputusan ≤ 1 s setelah `POST /verdicts` (cache Hyperdrive dimatikan, D-alief-17); halaman terbuka ≤ 10 s ujung ke ujung. Diukur di Worker cloud, bukan hanya lokal. Halaman yang diblokir tidak pernah terbuka otomatis tanpa verdict.
-- `not_safe` → domain masuk `GET /blocklist` (layer 1 detector Imelda) dan Detail menampilkan "Verified scam by [nama]".
+- `not_safe` → Detail menampilkan "Verified scam by [nama]"; kalau layak (R2 §5), domain masuk antrean `blocklist_entries` dan baru muncul di `GET /blocklist` (layer 1 detector Imelda) setelah review manual (D-alief-25).
 - Tidak ada layar konfirmasi di app (GD-07). App menerapkan optimistic update lalu rollback kalau request gagal, dengan pesan error.
 
 ## 5. Retensi (harian, Cron Worker `0 19 * * *` UTC = 03:00 WITA)

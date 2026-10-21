@@ -25,22 +25,23 @@ Data scan + screenshot hilang otomatis setelah 14 hari, semua endpoint lolos rev
 4. Cek kuota: hitung ukuran DB + Storage di Supabase lokal untuk 1000 scan seed; ekstrapolasi terhadap 500 MB DB / 1 GB Storage / 5 GB egress. Pemicu migrasi ke R2 (`ScreenshotStore`): Storage > 700 MB atau egress > 3,5 GB (ARCHITECTURE §3). Anti-pause: cron harian + `/healthz/db` sama-sama menulis `ops_heartbeat` (bukan `select 1`), monitor B9 memanggil `/healthz/db`.
 5. Finalisasi `backend/ci/backend.yml` + `backend/ci/README.md`; tulis C2.
 6. `backend/README.md` final: setup lokal, env, deploy manual, rollback (`wrangler rollback`, migrasi maju saja), cara mengecek kuota.
-7. LANGKAH MANUAL deploy final + uji asap cloud (semua endpoint dengan dua device uji).
+7. LANGKAH MANUAL deploy final dari `main` setelah PR 07–11 di-merge (D-alief-27) + uji asap cloud (semua endpoint dengan dua device uji, CPU per request dari `wrangler tail`).
 
 ## Verifikasi
 
 ```bash
-(cd backend/db && supabase db reset && supabase test db)
+(cd backend/db && supabase start && supabase db reset && supabase test db)
 pnpm -C backend/api typecheck && pnpm -C backend/api test
-(pnpm -C backend/api exec wrangler dev --test-scheduled > /tmp/shoo-dev.log 2>&1 &) && npx wait-on tcp:8787
+(pnpm -C backend/api exec wrangler dev --test-scheduled > /tmp/shoo-dev.log 2>&1 &) && pnpm -C backend/api exec wait-on tcp:8787
 curl -s "http://localhost:8787/cdn-cgi/local/scheduled?cron=0+19+*+*+*"
+pkill -f "wrangler dev" || true
 gitleaks detect --source . --no-banner   # harus 0 temuan
 ```
 
 ## Kriteria selesai (DoD)
 
-- [ ] Retensi terbukti (test + trigger lokal) dan cron terdaftar di cloud (`wrangler triggers`/dashboard), satu run cloud tercatat di `ops_heartbeat`.
+- [ ] Retensi terbukti (test + trigger lokal) dan cron terdaftar di cloud (screenshot dashboard Worker → Settings → Triggers), satu run cloud tercatat di `ops_heartbeat` (query SQL editor).
 - [ ] Tidak ada temuan CRITICAL/HIGH terbuka.
-- [ ] Uji asap cloud lulus; G6 `[x]`.
+- [ ] Uji asap cloud lulus. G6 terpenuhi setelah semua PR 07–12 di-merge Umar (diperbarui di PROMPT langkah 1).
 - [ ] `gitleaks` 0 temuan.
 - [ ] C2 tertulis untuk Umar.

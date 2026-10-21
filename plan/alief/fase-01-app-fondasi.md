@@ -22,7 +22,7 @@ Kerangka app yang semua layar Fase A pakai: tab Shield / Activity, satu protocol
 ## Output
 
 1. **PR `chore/APP-test-targets`** (pengecualian D-alief-02, satu-satunya edit `ios/project.yml`; diff persis di D-alief-24 — kunci lain, termasuk `info`/`entitlements`, tidak disentuh):
-   - target `ShooAppTests` (bundle.unit-test, sources `ShooApp/Tests`, host app Shoo) dan `ShooAppUITests` (bundle.ui-testing, sources `ShooApp/UITests`)
+   - target `ShooAppTests` (bundle.unit-test, sources `ShooApp/Tests`, host app Shoo) dan `ShooAppUITests` (bundle.ui-testing, sources `ShooApp/UITests`), keduanya dengan `settings.base.GENERATE_INFOPLIST_FILE: YES` (D-alief-28)
    - target Shoo: tambah `excludes: ["CLAUDE.md", "Tests/**", "UITests/**", "ci/**"]`
    - scheme Shoo: test targets ditambahkan
    - satu test kosong di masing-masing target supaya hijau
@@ -35,7 +35,7 @@ Kerangka app yang semua layar Fase A pakai: tab Shield / Activity, satu protocol
 
 ## Langkah kerja
 
-1. **Target test** (PR 1). Edit `ios/project.yml` sesuai Output 1, `cd ios && xcodegen`, `xcodebuild test` hijau. Commit `chore(APP): add ShooAppTests and ShooAppUITests targets`. Buka PR, tulis pesan C1 di log untuk Alief kirim ke Umar.
+1. **Target test** (PR 1). Edit `ios/project.yml` sesuai Output 1, `(cd ios && xcodegen)`, `xcodebuild test` hijau. Kalau build masih gagal karena setting lain, berhenti dan catat (jangan menambah kunci di luar D-alief-24/28). Commit `chore(APP): add ShooAppTests and ShooAppUITests targets`. Buka PR, tulis pesan C1 di log untuk Alief kirim ke Umar.
 2. **Protocol** `ShooRepository` (async throws), dibentuk dari `contracts/api.md`:
    `registerDevice(name:mode:)`, `updateMe(name:language:apnsToken:)`, `createFamilyCode()`, `joinFamily(code:)`, `familyMembers()`, `removeMember(_:)`, `leaveGuardian()`, `scans(owner:status:cursor:)`, `scan(id:)`, `setVerdict(scanId:value:)`. Tipe pendukung di `Data/Models.swift` (`FamilyMember`, `FamilyCode`, `GuardianInfo`, `ScanPage`, `ScanOwnerFilter`, `RepositoryError` dengan `code` kontrak).
 3. **MockRepository**: baca `Data/Fixtures/*.json` (salinan `contracts/fixtures`, plus `activity-family.json` di-inline), simulasi latensi 300 ms (bisa dimatikan di test), state verdict di memori, mode Guardian/Protected bisa dipilih untuk preview. Error kontrak bisa dipicu lewat kode khusus (mis. join `0000` → `code_invalid`, `9999` → `code_expired`) untuk preview dan test.

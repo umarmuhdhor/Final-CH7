@@ -17,6 +17,7 @@
 - Route tipis → service → repo. Service menerima `sql` dan dependency (sender push, store screenshot) lewat parameter supaya bisa dites.
 - Validasi semua input dengan zod di route. Respons dibentuk oleh fungsi mapper `toScanResult(row)` dkk. sesuai kontrak.
 - SQL hanya lewat tagged template `sql\`…\``. Tidak ada `sql.unsafe` dengan input pengguna.
+- Client memakai `fetch_types: false` (D-alief-17), jadi **jangan** kirim array JS sebagai parameter (`= any(${ids})`). Daftar ID memakai ekspansi list `where id in ${sql(ids)}`. Skema tidak punya kolom array (`signals` = jsonb).
 
 ## 3. Git
 

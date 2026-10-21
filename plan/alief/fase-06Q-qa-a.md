@@ -38,4 +38,4 @@ ls plan/alief/qa/img/QA-A | wc -l
 
 - [ ] Laporan QA-A lengkap (header, ringkasan, daftar, detail, yang sudah baik, matriks).
 - [ ] P0 = 0 dan P1 = 0 setelah retest.
-- [ ] PROGRESS G5 `[x]`.
+- [ ] PR fase ini dibuka. G5 terpenuhi setelah semua PR 01–06Q di-merge Umar (diperbarui di PROMPT langkah 1, bukan di fase ini).

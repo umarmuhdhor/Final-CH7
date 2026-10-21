@@ -22,9 +22,10 @@ Selalu `{ "error": { "code": string, "message": string } }`. `message` bahasa In
 | 422 | `invalid_body` | validasi zod gagal (detail field di `message`) |
 | 429 | `too_many_attempts` | batas percobaan join (kontrak) |
 | 429 | `rate_limited` | batas umum lain |
+| 503 | `code_unavailable` | `POST /family/code` tidak menemukan 4 digit bebas setelah 20 percobaan (R4 §1); app menampilkan "Coba lagi" |
 | 500 | `internal` | error tak dikenal (tanpa detail ke klien, detail di log Worker) |
 
-Kode di luar daftar kontrak (`bad_json`, `already_connected`, `verdict_not_allowed`, `rate_limited`, dll.) dilaporkan ke Umar di PR fase yang memperkenalkannya.
+Kode di luar daftar kontrak (`bad_json`, `already_connected`, `verdict_not_allowed`, `rate_limited`, `code_unavailable`, dll.) dilaporkan ke Umar di PR fase yang memperkenalkannya.
 
 ## 2. Auth
 
@@ -63,7 +64,7 @@ Kode di luar daftar kontrak (`bad_json`, `already_connected`, `verdict_not_allow
 - **`GET /scans/{id}`**: `screenshotUrl` = signed URL Storage 3600 s (satu subrequest).
 - **`POST /verdicts`**: upsert `(owner_id, domain)`; `by_name` = nama Guardian saat itu. Respons `{ verdict }` (bentuk `Verdict` kontrak).
 - **`GET /verdicts?domain=`**: `{ verdict: Verdict | null }`. Rate limit 1 req/2 s per device (polling 5 s cukup).
-- **`GET /blocklist?since=`**: R2 §5. `since` kosong = dari awal. Header `Cache-Control: max-age=300`.
+- **`GET /blocklist?since=`**: R2 §5 (hanya entri `blocklist_entries` yang sudah disetujui manual). `since` kosong = dari awal. Header `Cache-Control: max-age=300`.
 - **`GET /healthz`**: `{ ok: true }` tanpa DB. **`GET /healthz/db`**: upsert `ops_heartbeat` (MENULIS, supaya dihitung aktivitas DB dan tidak terlayani cache), rate limit 1/menit per IP. Dipakai monitor harian (B9).
 
 ## 5. Rate limit
@@ -93,15 +94,18 @@ Payload: kontrak + `sound` (aditif, disampaikan di C9): `{ "aps": { "alert": { "
 
 ## 7. Env Worker
 
-| Nama | Jenis | Contoh / catatan |
-|---|---|---|
-| `DB` | binding Hyperdrive | `shoo-db` |
-| `SUPABASE_URL` | secret | `https://<ref>.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret | hanya untuk Storage API |
-| `INVITE_BASE_URL` | var | URL Worker |
-| `APNS_KEY_P8`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | di Worker (JWT dibuat Worker lalu dikirim ke relay) atau di Edge Function (relay membuat JWT sendiri) — dipilih di fase 11; kosong → `LogSender` |
-| `APNS_ENV` | var | `sandbox` \| `production` |
-| `PUSH_RELAY_URL`, `PUSH_RELAY_SECRET` | var/secret | jalur utama (relay Edge Function `push`, D-alief-16); secret yang sama diset di Edge Function (`supabase secrets set`) |
-| `BLOCKLIST_MIN_FAMILIES` | var | `1` (R2 §5) |
-| `APNS_SPIKE` | var | `1` hanya saat spike fase 07; endpoint debug dihapus di fase 11 |
-| `SCREENSHOT_MAX_BYTES` | var | `153600` |
+Var (bukan rahasia) ditulis di `vars` `backend/api/wrangler.jsonc` (ter-commit). Secret cloud: `npx wrangler secret put <NAMA>` (nilai diketik di prompt). Secret lokal: `backend/api/.dev.vars` (gitignored; contoh di `.dev.vars.example`, nilai lokal dari `(cd backend/db && supabase status)`), dan untuk test lewat `miniflare.bindings` di `vitest.config.ts`. Secret Edge Function: `supabase secrets set --env-file …` (lokal: `backend/db/supabase/functions/.env.local`, gitignored).
+
+| Nama | Jenis | Di mana diset | Contoh / catatan |
+|---|---|---|---|
+| `DB` | binding Hyperdrive | `wrangler.jsonc` (`id` + `localConnectionString`) | `shoo-db` (fase 07) |
+| `SUPABASE_URL` | secret | `wrangler secret put` · `.dev.vars` | cloud `https://<ref>.supabase.co`, lokal `http://127.0.0.1:54321` (fase 09) |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | hanya untuk Storage API; lokal dari `supabase status` (fase 09) |
+| `INVITE_BASE_URL` | var | `wrangler.jsonc` `vars` | URL Worker; lokal `http://localhost:8787` (fase 07) |
+| `APNS_ENV` | var | `wrangler.jsonc` `vars` + `supabase secrets set` (Edge Function) | `sandbox` (fase 11) → `production` (fase 16) |
+| `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` | `https://<ref>.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
+| `PUSH_RELAY_SECRET` | secret | `wrangler secret put` + `supabase secrets set` (nilai sama) · `.dev.vars` | jalur utama push (D-alief-16) |
+| `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | `supabase secrets set --env-file` (Edge Function) | hanya di Worker kalau `D-alief-B01` = spike lulus; kosong + tanpa relay → `LogSender` |
+| `SCREENSHOT_MAX_BYTES` | var | `wrangler.jsonc` `vars` | `153600` (fase 09) |
+| `APNS_SPIKE` | var | `wrangler.jsonc` `vars` | `1` hanya saat spike fase 07; dihapus di fase 11 |
+| `SPIKE_KEY` | secret | `wrangler secret put` | header `x-spike-key` untuk `/debug/apns-spike` (fase 07); dihapus di fase 11 (`wrangler secret delete SPIKE_KEY`) |

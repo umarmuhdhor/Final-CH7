@@ -36,8 +36,8 @@ Extension bisa mengirim hasil scan (skor ≥ 30) beserta screenshot bukti, app b
 ## Verifikasi
 
 ```bash
+(cd backend/db && supabase start && supabase test db)
 pnpm -C backend/api exec vitest run scans screenshots
-(cd backend/db && supabase test db)
 ```
 
 ## Kriteria selesai (DoD)

@@ -179,3 +179,29 @@ Format:
 - D-alief-02: diff `ios/project.yml` yang diizinkan PERSIS: (1) target baru `ShooAppTests` (`type: bundle.unit-test`, `platform: iOS`, `sources: [ShooApp/Tests]`, `dependencies: [{target: Shoo}]`), (2) target baru `ShooAppUITests` (`type: bundle.ui-testing`, `sources: [ShooApp/UITests]`, `dependencies: [{target: Shoo}]`), (3) di target `Shoo` source `ShooApp`: `excludes` ditambah `Tests/**`, `UITests/**`, `ci/**` (tetap `CLAUDE.md`), (4) scheme `Shoo`: `test.targets` = kedua target. Kunci lain tidak disentuh. Alief memutuskan agent boleh langsung membuat PR ini dan cukup memberi tahu Umar (C1); Umar tetap approver lewat CODEOWNERS. Key Info.plist/entitlement (kamera, push, Team ID) BUKAN bagian pengecualian ini → permintaan ke Umar (C3).
 - D-alief-06: filter blocklist bawaan sudah diterapkan sebagai default fase 10 (R2 §5) sambil menunggu keputusan C6.
 - D-alief-15: fallback diubah: tanpa data `extensionActive: true` (tidak pernah "Not connected" tanpa bukti); yang mengirim `extensionLastSeenAt` adalah extension (maks 1×/jam) + app saat foreground (C11).
+
+## D-alief-25 · 21 Okt 2026 · plan (verify run 02) · Blocklist global lewat antrean + review manual
+
+- Keputusan: `POST /verdicts` hanya mengisi antrean `blocklist_entries` (kelayakan disimpan saat keputusan: scan milik Protected yang terhubung, bukan allowlist). `GET /blocklist` hanya mengirim entri yang `approved_at`-nya diisi Alief/Umar lewat SQL editor (LANGKAH MANUAL berkala). `nextSince` memakai `approved_at`. `BLOCKLIST_MIN_FAMILIES` dihapus; `families` hanya membantu reviewer.
+- Alasan: verify run 02 #N2: filter otomatis bisa dilewati dengan Guardian + Protected milik penyerang yang sama (dua `POST /devices` anonim), lalu domain sah terblokir untuk semua pengguna. Run 02 #N6: filter waktu `decided_at` + `having` melewatkan domain di refresh inkremental, dan filter `family_links` saat query membuat isi berubah diam-diam setelah disconnect.
+- Alternatif yang ditolak: `MIN_FAMILIES = 2` + umur link/device (masih bisa dilewati dengan 4 device; tetap opsi C6).
+- File: R2 §2 + §5, R3 §4 + §7, R4 §4, R7 #11, SECURITY T5, fase-07, fase-10, TODO C6. Merevisi D-alief-06/24.
+
+## D-alief-26 · 21 Okt 2026 · plan (verify run 02) · Status `[m]` dan aturan lanjut di mode auto
+
+- Keputusan: status baru `[m]` = fase berhenti di LANGKAH MANUAL dan belum punya PR. Mode auto melanjutkan fase `[~]`/`[m]` milik track dulu (untuk `[m]`: berhenti lagi kalau checklist LANGKAH MANUAL di log belum dicentang), baru memilih fase `[ ]` pertama. Fase yang hanya menunggu pihak luar tanpa memblokir kode (C3, iPhone, Team ID) dibuka PR-nya dengan status `[r]` + catatan "pending …"; butir itu diuji ulang di fase yang disebut file fase. Baris gate G2/G5/G6/G8 diperbarui di PROMPT langkah 1 saat status disegarkan, bukan di DoD fase.
+- Alasan: verify run 02 #N1 (regresi perbaikan run 01 #7): aturan "fase pertama `[ ]`" melewati fase yang berhenti di LANGKAH MANUAL, sehingga fase 07–12 tidak pernah diverifikasi atau dibuka PR-nya. Run 02 #N7: DoD yang mewajibkan gate `[x]` tidak bisa dipenuhi karena agent tidak merge.
+- File: PROMPT langkah 1 + 6h, PROGRESS legenda, README §1, fase-06Q, fase-12, fase-16.
+
+## D-alief-27 · 21 Okt 2026 · plan (verify run 02) · Deploy cloud dari branch fase
+
+- Keputusan: LANGKAH MANUAL deploy di fase be (07–12) dijalankan Alief dari branch fase yang belum di-review, karena cloud `shoo-demo` hanya untuk demo/uji dan Imelda butuh `GET /blocklist` lebih awal (G3). Migrasi tetap maju saja; kalau PR berubah saat review, deploy ulang dari `main` setelah merge. Deploy final (fase 12) dan QA-E2E (fase 16) memakai `main`.
+- Alasan: verify run 02 §6 pertanyaan 7.
+- File: fase-07, fase-10, fase-12, fase-16.
+
+## D-alief-28 · 21 Okt 2026 · plan (verify run 02) · Revisi D-alief-24: Info.plist target test
+
+- Keputusan: diff `ios/project.yml` yang diizinkan ditambah satu setting di kedua target test: `settings: { base: { GENERATE_INFOPLIST_FILE: YES } }`. Tidak ada kunci lain.
+- Alasan: verify run 02 #N3: folder test tidak punya Info.plist, dan preset XcodeGen untuk bundle test tidak membuatnya, jadi build target test bisa gagal.
+- File: fase-01, TODO C1.
+

@@ -15,7 +15,7 @@
    - `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).`
    - `Saya Alief, track c. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` (setelah track app + be selesai)
 3. Tempel di Claude Code (plugin **ECC** + **Superpowers** terpasang) di worktree track itu (§4). Model per fase ada di §3 dan [`ref/R6-model-skill.md`](ref/R6-model-skill.md).
-4. Agent berhenti hanya untuk **LANGKAH MANUAL** (akun, secret, deploy cloud, TestFlight), blocker P0, atau konteks hampir habis. Untuk melanjutkan, ketik kalimat yang sama.
+4. Agent berhenti hanya untuk **LANGKAH MANUAL** (akun, secret, deploy cloud, TestFlight; status fase `[m]`), blocker P0, atau konteks hampir habis. Jalankan LANGKAH MANUAL, centang butirnya di `log/fase-XX.md`, lalu ketik kalimat yang sama: agent melanjutkan fase `[m]` itu (review, verifikasi, PR) sebelum pindah ke fase berikutnya.
 
 Agent mengisi `PROGRESS.md` (baris fasenya saja) dan `log/fase-XX.md`, commit, push branch fase, membuka PR ke `main` dengan reviewer @umarmuhdhor, lalu lanjut ke fase berikutnya.
 
@@ -44,7 +44,7 @@ plan/alief/
 ├── fase-00 … fase-17
 ├── qa/                  ← laporan QA (README = template) + img/ bukti
 └── log/
-    ├── DECISIONS.md     ← keputusan (ID D-alief-NN), append-only
+    ├── DECISIONS.md     ← keputusan (plan: D-alief-NN; per track: D-alief-A/B/C…), append-only
     ├── fase-XX.md       ← laporan per fase
     └── fase-XX-plan.md  ← output superpowers:writing-plans per fase
 ```

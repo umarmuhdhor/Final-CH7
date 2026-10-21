@@ -57,9 +57,10 @@ QA-E2E minimal:
 | 8 | Protected buka situs warning (fixture/staging) | Guardian dapat push warning EN/ID, tap → Detail |
 | 9 | Protected buka situs blocked | Guardian dapat push blocked, tap → Detail dengan screenshot |
 | 10 | Guardian It's safe | layar blokir Protected terbuka ≤ 10 s, Detail "Marked safe by …" |
-| 11 | Guardian Not safe | tetap diblokir, "Verified scam by …", domain muncul di `/blocklist` |
+| 11 | Guardian Not safe | tetap diblokir, "Verified scam by …", domain masuk antrean `blocklist_entries`; setelah disetujui lewat SQL editor muncul di `/blocklist` |
 | 12 | Guardian lain mencoba `GET /scans/{id}` milik keluarga lain | 404 |
 | 13 | Disconnect dari kedua sisi | daftar x/3 berkurang, data lama tidak terlihat |
 | 14 | Ganti bahasa ke Indonesia | semua layar + push dalam ID |
-| 15 | Extension Off | Shield "Off"/"Not connected" di Family |
+| 15a | Extension Off (HP sendiri) | Shield Protected/Guardian sendiri "Off" (dari `extension.lastSeenAt` App Group, selalu bisa diuji) |
+| 15b | Extension Off (anggota keluarga) | GD-03 "Not connected" — **hanya diuji kalau C11 sudah jalan** (extension mengirim `extensionLastSeenAt`). Kalau belum: tulis di "Batasan" header laporan dengan rujukan D-alief-15/24, bukan temuan P0 |
 | 16 | Retensi | scan > 14 hari (data uji dengan `created_at` mundur) hilang + objek Storage terhapus |

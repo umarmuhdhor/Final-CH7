@@ -42,9 +42,10 @@ source plan/alief/ref/sim.sh
 (cd ios && xcodegen)
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
 # simulator + backend lokal
-(cd backend/db && supabase start) && (pnpm -C backend/api dev > /tmp/shoo-dev.log 2>&1 &) && npx wait-on tcp:8787
+(cd backend/db && supabase start) && (pnpm -C backend/api dev > /tmp/shoo-dev.log 2>&1 &) && pnpm -C backend/api exec wait-on tcp:8787
 # cek App Group (AppGroup.id = group.com.shoo.app): container data app di simulator
-find "$(xcrun simctl get_app_container booted com.shoo.app groups 2>/dev/null | awk '{print $2}')" -name "group.com.shoo.app.plist" 2>/dev/null | head -1 | xargs -I{} plutil -p {}
+plutil -p "$(xcrun simctl get_app_container booted com.shoo.app group.com.shoo.app)/Library/Preferences/group.com.shoo.app.plist"
+pkill -f "wrangler dev" || true   # setelah uji manual selesai
 ```
 
 ## Kriteria selesai (DoD)

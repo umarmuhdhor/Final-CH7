@@ -21,7 +21,7 @@ Guardian menerima push, tap membuka Detail yang benar, dan It's safe / Not safe 
 ## Output
 
 - `UIApplicationDelegateAdaptor` di `ShooApp.swift`: `didRegisterForRemoteNotificationsWithDeviceToken` → `updateMe(apnsToken:)`; `UNUserNotificationCenterDelegate` → baca `scanId` → `Router.openDetail(scanId)` (juga saat app cold start)
-- Tidak ada edit `Shoo.entitlements`/Info.plist (di-generate XcodeGen dari `project.yml` milik Umar). `aps-environment` = permintaan C3; tanpa itu registrasi APNs di simulator tetap jalan dan `simctl push` tetap bisa diuji
+- Tidak ada edit `Shoo.entitlements`/Info.plist (di-generate XcodeGen dari `project.yml` milik Umar). `aps-environment` = permintaan C3; tanpa entitlement itu `registerForRemoteNotifications` gagal (`didFailToRegister…`, cukup log, sama dengan fase 02), tetapi `simctl push` tetap bisa diuji karena tidak butuh token. Uji `PATCH apnsToken` asli setelah C3
 - `Support/NotificationRouter.swift`: fungsi murni `route(userInfo:) -> Route?` (dibaca `scanId`), dipakai delegate dan test
 - `plan/alief/qa/push-blocked.apns` dan `push-warning.apns`: payload kontrak + `"Simulator Target Bundle": "com.shoo.app"`
 - Detail: tombol memanggil `POST /verdicts` asli; error → rollback + pesan
