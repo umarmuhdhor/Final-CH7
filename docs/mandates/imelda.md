@@ -52,11 +52,12 @@ Target awal ini bisa diubah oleh lead:
 - **Selesai kalau:** eval M2 menunjukkan layer 4 mengurangi salah blokir di halaman resmi tanpa menurunkan deteksi scam.
 - Branch: `feat/AI-M4-reality-check`
 
-### M5 · Layer 1: database (on-device) — `detector/`
-- [ ] Ambil daftar phishing publik (pilih sumber yang lisensinya boleh dipakai, catat di README), lalu kemas supaya ringan dibawa di extension.
-- [ ] Gabungkan dengan `GET /blocklist` dari backend Alief. Unduh daftarnya secara berkala, **jangan** kirim URL yang sedang dibuka.
-- [ ] Domain cocok → kembalikan sinyal `db_match` dengan weight 100.
-- **Bergantung pada:** Alief menyelesaikan `GET /blocklist`. Sambil menunggu, pakai data mock dulu.
+### M5 · Layer 1: database — `ai/` + `detector/`
+Desain: [`docs/design/blocklist.md`](../design/blocklist.md). Ringkasnya: daftar diunduh dan disimpan oleh `background.js` (Umar), detector **tidak** melakukan request jaringan.
+- [ ] `GET /public-blocklist?since=` di `ai/`: kumpulkan daftar phishing publik di server (pilih sumber yang lisensinya boleh dipakai, catat di `ai/README.md`), ubah ke domain utama, buang domain resmi/allowlist dan situs sah yang hanya disusupi. Bentuk sama dengan `GET /blocklist`: `{ domains: [{ domain, addedAt }], removed?, nextSince }`.
+- [ ] Di `detector/`: `await globalThis.ShooLists.match(new URL(snapshot.url).hostname)` → kalau cocok, kembalikan sinyal `db_match` (weight 100, label EN + ID, sumber di `evidence`). Sambil menunggu helper dari Umar, pakai mock `ShooLists` di test.
+- [ ] **Jangan** kirim URL yang sedang dibuka ke mana pun.
+- **Bergantung pada:** helper `ShooLists` (Umar) dan `GET /blocklist` (Alief). Sambil menunggu, pakai data mock.
 - Branch: `feat/AI-M5-database`
 
 ### M6 · Kalibrasi bobot
