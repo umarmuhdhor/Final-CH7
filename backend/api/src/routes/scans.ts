@@ -6,8 +6,9 @@ import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
-import { isoTime, parse, readJson } from "../http/validate";
-import { notifyGuardian } from "../services/push/notify";
+import { isoTime, parse, readJson, stripUnsafe } from "../http/validate";
+import { guardianPush } from "../services/push/notify";
+import { pushSender } from "../services/push/sender";
 import { attachScreenshot, signedScreenshotUrl, toScanResult } from "../services/scans";
 
 const MAX_BODY = 256 * 1024;
@@ -24,7 +25,9 @@ const httpUrl = (s: string) => {
   }
 };
 
-const localized = z.strictObject({ en: z.string().min(1).max(500), id: z.string().min(1).max(500) });
+// Text from the detector is stored and shown as plain text; control and bidi characters are removed.
+const text = (max: number) => z.string().max(max).transform(stripUnsafe);
+const localized = z.strictObject({ en: text(500).pipe(z.string().min(1)), id: text(500).pipe(z.string().min(1)) });
 // contracts/scan-result.schema.json $defs.Signal. Unknown keys are dropped.
 const signal = z.object({
   id: z.string().regex(/^[a-z0-9_]{1,64}$/),
@@ -32,7 +35,7 @@ const signal = z.object({
   weight: z.number().int().min(0).max(100),
   label: localized,
   labelSimple: localized,
-  evidence: z.string().max(500).optional(),
+  evidence: text(500).optional(),
 });
 
 // ScanResult without id/verdict/screenshotUrl (contracts/api.md). ownerDeviceId/ownerName are
@@ -63,7 +66,7 @@ const scanBody = z
 
 /** Free text from web pages: trimmed, at most 300 code points; empty → null. */
 const title = (s: string | null | undefined) => {
-  const t = [...(s ?? "").trim()].slice(0, 300).join("");
+  const t = [...stripUnsafe(s ?? "").trim()].slice(0, 300).join("");
   return t ? t : null;
 };
 /** Only http(s) favicons ≤ 2048 chars are kept; anything else (data:, junk) becomes null. */
@@ -115,13 +118,23 @@ scans.post("/scans", async (c) => {
     detectedAt: body.detectedAt,
   });
   if (body.screenshotBase64) {
-    await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);
+    try {
+      await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);
+    } catch (err) {
+      // The scan is stored; a screenshot problem must not turn into a 500 that the extension retries.
+      console.error(JSON.stringify({ event: "screenshot_dropped", reason: "error", error: String(err) }));
+    }
   }
-  c.executionCtx.waitUntil(
-    notifyGuardian(sql, c.env, principal, { id, status: body.status, score: body.score }).catch((err) =>
-      console.error(JSON.stringify({ event: "push_failed", scanId: id, error: String(err) })),
-    ),
-  );
+  // DB lookup now, while the request's connection is open; only the send runs after the response.
+  const push = await guardianPush(sql, principal, { id, status: body.status, score: body.score });
+  if (push) {
+    c.executionCtx.waitUntil(
+      pushSender(c.env).send(push).then(
+        () => undefined,
+        (err) => console.error(JSON.stringify({ event: "push_failed", scanId: id, error: String(err) })),
+      ),
+    );
+  }
   return c.json({ id }, 201);
 });
 

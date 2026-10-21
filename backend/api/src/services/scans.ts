@@ -1,6 +1,6 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
-import { recentScreenshot, screenshotsToday, setScreenshotPath, type ScanRow } from "../db/repo/scans";
+import { clearScreenshotPath, reserveScreenshot, scanExists, type ScanRow } from "../db/repo/scans";
 import { decodeBase64, sniffImage } from "./images";
 import { screenshotStore } from "./screenshots";
 
@@ -49,20 +49,23 @@ export async function attachScreenshot(
   if (!image) return dropped("not_image");
   if (Math.max(image.width, image.height) > MAX_SIDE || image.width === 0 || image.height === 0) return dropped("too_wide");
 
-  const reuse = await recentScreenshot(sql, scan.ownerId, scan.domain);
-  if (reuse) return setScreenshotPath(sql, scan.id, reuse);
-  if ((await screenshotsToday(sql, scan.ownerId)) >= DAILY_QUOTA) return dropped("quota");
-
   const store = screenshotStore(env);
   if (!store) return dropped("no_storage");
+
   const path = `${scan.ownerId}/${scan.id}.${image.type === "png" ? "png" : "jpg"}`;
+  const slot = await reserveScreenshot(sql, scan, path, DAILY_QUOTA);
+  if ("reuse" in slot) return;
+  if ("quota" in slot) return dropped("quota");
+
   try {
     await store.put(path, bytes, image.type === "png" ? "image/png" : "image/jpeg");
   } catch (err) {
+    await clearScreenshotPath(sql, scan.id, path);
     console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: String(err) }));
     return;
   }
-  await setScreenshotPath(sql, scan.id, path);
+  // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
+  if (!(await scanExists(sql, scan.id))) await store.remove([path]).catch(() => undefined);
 }
 
 /** Signed URL for Detail, or null when there is no screenshot or Storage fails (the scan still shows). */

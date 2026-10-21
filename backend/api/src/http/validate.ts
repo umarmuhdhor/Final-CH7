@@ -66,6 +66,10 @@ export const codePoints = (s: string) => [...s].length;
 // Control characters (NUL included: Postgres text rejects it) and bidi overrides that could
 // disguise a name in push text and the Guardian UI.
 const UNSAFE_TEXT = /[\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]/u;
+const UNSAFE_TEXT_ALL = new RegExp(UNSAFE_TEXT.source, "gu");
+
+/** Removes control and bidi characters from free text we only store and show (page titles, signal text). */
+export const stripUnsafe = (s: string) => s.replace(UNSAFE_TEXT_ALL, "");
 
 /** Display name: 1–20 code points after trim, no control or bidi characters. */
 export const displayName = z

@@ -177,6 +177,33 @@ describe("POST /scans screenshot", () => {
     expect(await pathOf(third)).toBe(`${p.deviceId}/${third}.jpg`);
   });
 
+  it("quota holds under parallel uploads", async () => {
+    const p = await createDevice("Mom");
+    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, screenshot_path)
+      select ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
+             ${p.deviceId} || '/seed' || g || '.jpg'
+      from generate_series(1, 48) g`;
+    const ids = await Promise.all(
+      Array.from({ length: 6 }, (_, i) =>
+        postOk(p, extensionBody(blocked92, {
+          url: `https://p${i}.example/`, domain: `p${i}.example`, screenshotBase64: b64(jpeg(100, 100)),
+        })),
+      ),
+    );
+    const paths = await Promise.all(ids.map(pathOf));
+    expect(paths.filter(Boolean)).toHaveLength(2);
+  });
+
+  it("control and bidi characters are stripped from page text", async () => {
+    const p = await createDevice("Mom");
+    const sig = { ...blocked92.signals[0]!, evidence: "pin\u202E\u0007", label: { en: "A\u202Eb", id: "c" } };
+    const id = await postOk(p, extensionBody(blocked92, { pageTitle: "Klik\u202EBCA\u0000\u0007 ", signals: [sig] }));
+    const [row] = await sql`select page_title, signals from scans where id = ${id}`;
+    expect(row!.page_title).toBe("KlikBCA");
+    expect(row!.signals[0].evidence).toBe("pin");
+    expect(row!.signals[0].label.en).toBe("Ab");
+  });
+
   it("quota: at most 50 uploads per owner per 24 h", async () => {
     const p = await createDevice("Mom");
     await sql`insert into scans (owner_id, url, domain, score, status, detected_at, screenshot_path)
