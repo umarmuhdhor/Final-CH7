@@ -23,6 +23,7 @@ Lead: @umarmuhdhor (Umar) · Team AI: @imeldamayanti (Imelda) · Team App: @alie
 | `backend/` | Team App | Pairing, Activity, verdicts, push, 14-day retention |
 | `detector/` | Team AI | On-device detection (layer 1–2) |
 | `ai/` | Team AI | Server-side detection (layer 3–4, LLM) |
+| `plan/<name>/` | That person | Their own work plan (docs only), e.g. `plan/alief/`. Reviewed by the lead |
 
 ## Hard rules
 1. Only edit files inside your team's folder. If the task needs a change elsewhere, stop and tell the user.

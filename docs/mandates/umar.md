@@ -75,3 +75,16 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [ ] Ubah kontrak hanya lewat PR `contracts/` sendiri. Perubahan aditif saja kalau bisa.
 - [ ] Setiap Imelda merge `detector/`, jalankan `detector/scripts/sync-to-extension.sh`.
 - [ ] Tanyakan ke PM pertanyaan terbuka di `docs/README.md` (scope MVP vs Fase 2).
+- [ ] Teruskan ke PM: video tutorial ON-04 ≤ 60 detik, ramah orang tua, MP4 H.264, EN + ID (permintaan Alief C15).
+
+### Dari review plan Alief (PR #2, 21 Okt) — semua usulan disetujui
+- [x] Review PR #2 (approve) · `plan/<nama>/` masuk tabel kepemilikan `CLAUDE.md`.
+- [ ] Merge PR kontrak setelah di-review: #1 (deep links), #3 (catatan extension), #4 (usulan backend C5, C6, C8–C13). Ketiganya bisa di-merge bersamaan tanpa konflik.
+- [ ] Review PR `chore/APP-test-targets` dari Alief (pengecualian `project.yml` sekali saja, diff persis D-alief-24).
+- [ ] **C3** Pilih tim Apple berbayar untuk build iPhone + TestFlight (Push & App Groups tidak ada di Personal Team gratis), lalu tambah di `project.yml` target Shoo: `NSCameraUsageDescription` (PR-01), entitlement `aps-environment` + Push (ON-05, GD-06), `UIBackgroundModes: [audio]` (PiP video ON-04).
+- [ ] **C11** Extension mengirim `PATCH /devices/me { extensionLastSeenAt }` maks 1×/jam bersama heartbeat (setelah PR #4 merge).
+- [ ] **C6** Review manual antrean blocklist berkala (bareng Alief, lewat SQL editor) setelah fase 10 backend.
+- [ ] Desain cara detector mendapat `/blocklist` di HP (token + CORS: lewat `background.js`?) — putuskan bareng Imelda sebelum M5.
+- [ ] **C2** Pindahkan draf CI Alief ke `.github/workflows/` + 5 secret repo (fase 12).
+- [ ] **C18** Putuskan branch protection di `main` (kalau aktif, lead juga wajib lewat PR).
+- [ ] **C17** Setujui `SFSafariExtensionManager` (iOS 26.2+) kalau spike S1 Alief membuktikannya di device.
