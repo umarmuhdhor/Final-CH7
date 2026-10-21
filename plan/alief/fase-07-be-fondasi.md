@@ -43,9 +43,9 @@ Backend bisa dijalankan lokal dan di cloud: Supabase (Postgres + Storage) untuk 
 12. **LANGKAH MANUAL deploy pertama** (tulis di log, berhenti):
     1. B1–B3 (proyek Supabase, `supabase link`, `wrangler login`).
     2. `(cd backend/db && supabase db push)`; set password `shoo_api` di SQL editor.
-    3. B4: `npx wrangler hyperdrive create shoo-db --connection-string="…Direct connection…" --caching-disabled`; kalau gagal (IPv6), ulangi dengan session pooler 5432 (`shoo_api.<ref>`). Isi `id` Hyperdrive di `wrangler.jsonc` (bukan rahasia).
+    3. B4: `npx wrangler hyperdrive create shoo-db --connection-string="…Direct connection…" --caching-disabled`; kalau gagal (IPv6), ulangi dengan session pooler 5432 (`shoo_api.nmekxihgjszgcibqytyj`). Isi `id` Hyperdrive di `wrangler.jsonc` (bukan rahasia).
     4. `npx wrangler secret put SPIKE_KEY`; var `APNS_SPIKE="1"` dan `INVITE_BASE_URL` di `vars` `wrangler.jsonc` (R3 §7); `pnpm -C backend/api run deploy`.
-    5. `curl https://shoo-api.<akun>.workers.dev/healthz`, `/healthz/db`, `POST /devices` lalu `GET /blocklist` dengan token itu.
+    5. `curl https://shoo-api.afindo-mi01.workers.dev/healthz`, `/healthz/db`, `POST /devices` lalu `GET /blocklist` dengan token itu.
     6. Spike: `curl -X POST …/debug/apns-spike -H "x-spike-key: …"` → tempel hasil ke log, tulis `D-alief-B01` (langsung vs relay). Lalu set `APNS_SPIKE=0` dan deploy ulang.
     7. Kirim C7 ke Imelda. Pasang monitor B9.
 
@@ -73,7 +73,7 @@ pkill -f "wrangler dev" || true
 
 | Risiko | Fallback |
 |---|---|
-| Direct connection Supabase hanya IPv6 dan Hyperdrive tidak bisa menjangkau | Session pooler port 5432 (`shoo_api.<ref>`), bukan transaction pooler 6543 |
+| Direct connection Supabase hanya IPv6 dan Hyperdrive tidak bisa menjangkau | Session pooler port 5432 (`shoo_api.nmekxihgjszgcibqytyj`), bukan transaction pooler 6543 |
 | Hyperdrive bermasalah | postgres.js langsung ke pooler via `connect()` TCP (`nodejs_compat`); catat `D-alief-B…` |
 | `cloudflareTest()` tidak bisa menjangkau Postgres lokal | `wrangler dev` + vitest Node biasa (langkah 10) |
 | Spike: Worker tidak bisa HTTP/2 ke APNs | Sudah jadi rencana utama: relay Edge Function (fase 11) |

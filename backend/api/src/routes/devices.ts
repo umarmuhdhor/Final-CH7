@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../env";
-import { insertDevice, updateDevice } from "../db/repo/devices";
+import { deleteDevice, findProfile, insertDevice, updateDevice } from "../db/repo/devices";
+import { guardianOf } from "../db/repo/families";
+import { deleteScreenshots } from "../services/screenshots";
 import { requireDevice } from "../http/auth";
 import { base64url, randomBytes, sha256 } from "../http/crypto";
 import { errors } from "../http/errors";
@@ -70,5 +72,25 @@ devices.patch("/devices/me", requireDevice, async (c) => {
     language: body.language,
     extensionLastSeenAt: seen,
   });
+  return c.json({ ok: true });
+});
+
+/** Contract: profile + guardian (Protected learns it was disconnected), always null for a Guardian. */
+devices.get("/devices/me", requireDevice, async (c) => {
+  const sql = c.get("sql");
+  const { deviceId, mode } = c.get("principal");
+  const profile = await findProfile(sql, deviceId);
+  if (!profile) throw errors.unauthorized();
+  const guardian = mode === "protected" ? await guardianOf(sql, deviceId) : null;
+  return c.json({ ...profile, guardian });
+});
+
+/**
+ * Proposal C19 (SECURITY §3 P3, App Store 5.1.1(v)): delete everything about this device.
+ * Storage objects go after the DB commit; a Storage failure never brings the data back.
+ */
+devices.delete("/devices/me", requireDevice, async (c) => {
+  const paths = await deleteDevice(c.get("sql"), c.get("principal").deviceId);
+  c.executionCtx.waitUntil(deleteScreenshots(c.env, paths));
   return c.json({ ok: true });
 });

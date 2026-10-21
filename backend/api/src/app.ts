@@ -5,7 +5,9 @@ import { ApiError, errorResponse, errors } from "./http/errors";
 import { blocklist } from "./routes/blocklist";
 import { debugApns } from "./routes/debug-apns";
 import { devices } from "./routes/devices";
+import { family } from "./routes/family";
 import { health } from "./routes/health";
+import { joinPage } from "./routes/join-page";
 
 export const app = new Hono<AppEnv>();
 
@@ -24,6 +26,8 @@ app.use("*", async (c, next) => {
 app.route("/", health);
 app.route("/", devices);
 app.route("/", blocklist);
+app.route("/", family);
+app.route("/", joinPage);
 app.route("/", debugApns);
 
 app.notFound((c) => errorResponse(c, errors.notFound()));
