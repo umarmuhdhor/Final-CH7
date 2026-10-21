@@ -1,4 +1,5 @@
 import type { Sql, TransactionSql } from "postgres";
+import { dropVerdicts } from "./verdicts";
 
 export const FAMILY_MAX = 3;
 
@@ -58,13 +59,22 @@ export async function listMembers(sql: Sql, guardianId: string): Promise<MemberR
     order by l.created_at, d.id`;
 }
 
-/** True when a link was removed. */
+/** True when a link was removed. The guardian's verdicts for that member go with it (P13). */
 export async function deleteMember(sql: Sql, guardianId: string, protectedId: string): Promise<boolean> {
-  const rows = await sql`delete from family_links where guardian_id = ${guardianId} and protected_id = ${protectedId} returning 1`;
-  return rows.length > 0;
+  return sql.begin(async (tx) => {
+    const rows = await tx`delete from family_links where guardian_id = ${guardianId} and protected_id = ${protectedId} returning 1`;
+    if (rows.length === 0) return false;
+    await dropVerdicts(tx, { ownerId: protectedId, byDeviceId: guardianId });
+    return true;
+  });
 }
 
 export async function deleteGuardianLink(sql: Sql, protectedId: string): Promise<boolean> {
-  const rows = await sql`delete from family_links where protected_id = ${protectedId} returning 1`;
-  return rows.length > 0;
+  return sql.begin(async (tx) => {
+    const [row] = await tx<{ guardianId: string }[]>`
+      delete from family_links where protected_id = ${protectedId} returning guardian_id as "guardianId"`;
+    if (!row) return false;
+    await dropVerdicts(tx, { ownerId: protectedId, byDeviceId: row.guardianId });
+    return true;
+  });
 }

@@ -14,7 +14,32 @@ export const limits = {
   familyCode: { bucket: "family_code", max: 6, windowSeconds: 60 },
   createScan: { bucket: "scans_create", max: 120, windowSeconds: 3600 },
   viewScreenshot: { bucket: "screenshots_view", max: 120, windowSeconds: 60 },
+  createVerdict: { bucket: "verdicts_create", max: 60, windowSeconds: 60 },
+  // EX-06 polls every 5 s per open block screen (several tabs), plus one lookup per page (SECURITY T10).
+  getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },
 } satisfies Record<string, Limit>;
+
+/**
+ * Same sliding window in one statement (one round trip instead of five), for the hot polling
+ * path GET /verdicts (R3 §5 "best effort", D-alief-B10): parallel requests may overshoot `max` by
+ * a few. Never use it for limits that guard against guessing or abuse.
+ */
+export async function hitLight(sql: Sql, limit: Limit, key: string): Promise<void> {
+  const keyHash = await sha256(`${limit.bucket}:${key}`);
+  const [row] = await sql<{ n: number; retry: number | null }[]>`
+    with recent as (
+      select count(*)::int as n,
+             ceil(extract(epoch from (min(hit_at) + make_interval(secs => ${limit.windowSeconds}) - now())))::int as retry
+      from rate_limit_hits
+      where bucket = ${limit.bucket} and key_hash = ${keyHash}
+        and hit_at > now() - make_interval(secs => ${limit.windowSeconds})
+    ), added as (
+      insert into rate_limit_hits (bucket, key_hash)
+      select ${limit.bucket}, ${keyHash} from recent where n < ${limit.max}
+    )
+    select n, retry from recent`;
+  if (row && row.n >= limit.max) throw errors.rateLimited(Math.max(1, row.retry ?? limit.windowSeconds));
+}
 
 /**
  * Sliding-window counter in Postgres (R3 §5). Only sha256('<bucket>:<key>') is

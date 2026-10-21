@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { clientIp } from "../src/http/rateLimit";
+import { beforeEach, describe, expect, it } from "vitest";
+import { ApiError } from "../src/http/errors";
+import { clientIp, hitLight } from "../src/http/rateLimit";
+import { resetDb, testSql } from "./helpers/resetDb";
 
 const key = (ip?: string) => clientIp((n) => (n === "cf-connecting-ip" ? ip : undefined));
 
@@ -19,5 +21,24 @@ describe("clientIp", () => {
   it("malformed IPv6 never throws", () => {
     expect(() => key("1:2:3:4:5:6:7:8:9::1")).not.toThrow();
     expect(() => key(":::")).not.toThrow();
+  });
+});
+
+describe("hitLight (one statement, best effort)", () => {
+  const sql = testSql();
+  beforeEach(() => resetDb(sql));
+
+  it("allows max hits per window, then throws rate_limited with Retry-After", async () => {
+    const limit = { bucket: "test_light", max: 3, windowSeconds: 10 };
+    for (let i = 0; i < 3; i++) await hitLight(sql, limit, "k");
+    const err = await hitLight(sql, limit, "k").then(() => undefined, (e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe("rate_limited");
+    expect((err as ApiError).retryAfter).toBeGreaterThanOrEqual(1);
+    expect((err as ApiError).retryAfter).toBeLessThanOrEqual(10);
+    // A rejected hit is not recorded; other keys are independent.
+    const [n] = await sql<{ n: number }[]>`select count(*)::int as n from rate_limit_hits where bucket = 'test_light'`;
+    expect(n!.n).toBe(3);
+    await hitLight(sql, limit, "other");
   });
 });

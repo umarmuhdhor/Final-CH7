@@ -64,7 +64,7 @@ Kode umum kontrak: `invalid_body`, `bad_json`, `too_large`, `rate_limited` (429 
 - **`GET /scans`**: cursor = base64url(`<detected_at ISO>|<id>`), `limit` default 20 maks 50, urutan `detected_at desc, id desc`. Filter `status`. `screenshotUrl` = `null` di daftar (D-alief-04). `ownerName` = nama device pemilik saat ini. `verdict` = join `verdicts` (owner, domain) **hanya untuk scan `blocked`**; scan `warning` selalu `verdict: null` (skema: hanya item blocked bisa diberi verdict di MVP). `pageTitle` null → field dihilangkan (skema: string). Setiap respons divalidasi dengan `contracts/scan-result.schema.json` (ajv) di test.
 - **`GET /scans/{id}`**: `screenshotUrl` = link Worker `<INVITE_BASE_URL>/screenshots/{scanId}?v=<viewer>&exp=<unix>&sig=<HMAC-SHA256>` berlaku 3600 s (D-alief-B08, tanpa subrequest). `GET /screenshots/{scanId}` (tanpa Bearer): sig + exp dicek (konstan-waktu), lalu **setiap request** cek DB scan masih ada + viewer = pemilik atau Guardian saat ini, lalu objek dialirkan dari Storage (service key, fetch `no-store`) dengan `Cache-Control: private, no-store`; gagal apa pun → 404; 120/menit per viewer (429). Signed URL Supabase tidak dipakai (CDN meng-cache sampai kedaluwarsa).
 - **`POST /verdicts`**: upsert `(owner_id, domain)`; `by_name` = nama Guardian saat itu. Respons `{ verdict }` (bentuk `Verdict` kontrak).
-- **`GET /verdicts?domain=`**: `{ verdict: Verdict | null }`. Rate limit token bucket 10 req / 10 s per device (EX-02 lookup per halaman + polling EX-06 5 s di beberapa tab); 429 membawa `Retry-After`. Extension memperlakukan 429 sebagai "coba lagi", bukan "tanpa verdict" (C8).
+- **`GET /verdicts?domain=`**: `{ verdict: Verdict | null }`. Rate limit 30 req / 10 s per device (D-alief-B10) (EX-02 lookup per halaman + polling EX-06 5 s di beberapa tab); 429 membawa `Retry-After`. Extension memperlakukan 429 sebagai "coba lagi", bukan "tanpa verdict" (C8).
 - **`GET /blocklist?since=`**: R2 §5 (hanya entri `blocklist_entries` yang sudah disetujui manual). `since` kosong = dari awal. Header `Cache-Control: max-age=300`.
 - **`GET /healthz`**: `{ ok: true }` tanpa DB. **`GET /healthz/db`**: upsert `ops_heartbeat` (MENULIS, supaya dihitung aktivitas DB dan tidak terlayani cache), rate limit 1/menit per IP. Dipakai monitor harian (B9).
 
@@ -79,7 +79,9 @@ Disimpan di Postgres (tidak ada KV), cukup untuk skala MVP. Karena cache Hyperdr
 | `POST /devices` per IP | 10 / jam | 429 `rate_limited` |
 | `POST /family/code` per guardian | 6 / menit | 429 `rate_limited` |
 | `POST /scans` per device | 120 / jam | 429 `rate_limited` |
-| `GET /verdicts` per device | 1 / 2 s (memori isolate, best effort) | 429 `rate_limited` |
+| `GET /verdicts` per device | 30 / 10 s (Postgres, sama dengan batas lain; beberapa tab layar blokir, T10, D-alief-B10) | 429 `rate_limited` + `Retry-After` |
+| `POST /verdicts` per Guardian | 60 / menit | 429 `rate_limited` |
+| `GET /screenshots/{id}` per viewer | 120 / menit (D-alief-B08) | 429 `rate_limited` |
 | `GET /healthz/db` per IP | 1 / menit | 429 `rate_limited` |
 
 ## 6. Push

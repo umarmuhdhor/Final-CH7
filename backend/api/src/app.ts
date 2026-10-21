@@ -10,6 +10,7 @@ import { health } from "./routes/health";
 import { joinPage } from "./routes/join-page";
 import { scans } from "./routes/scans";
 import { screenshots } from "./routes/screenshots";
+import { verdicts } from "./routes/verdicts";
 
 export const app = new Hono<AppEnv>();
 
@@ -35,6 +36,7 @@ app.route("/", family);
 app.route("/", joinPage);
 app.route("/", scans);
 app.route("/", screenshots);
+app.route("/", verdicts);
 app.route("/", debugApns);
 
 app.notFound((c) => errorResponse(c, errors.notFound()));

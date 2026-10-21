@@ -19,7 +19,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [r] | 21 Okt 2026 | 21 Okt 2026 | #9 | Worker + skema hidup di cloud, spike APNs lulus (D-alief-B01), review diperbaiki (pgTAP 61, vitest 48); di-rebase ke main setelah #7 merge; pending C7/B9 | log/fase-07.md |
 | 08 | Family | be | feat/BE-family | [r] | 21 Okt 2026 | 21 Okt 2026 | #11 | Family code/join/members/disconnect, `/join`, `GET`+`DELETE /devices/me`; cloud deploy + smoke hijau (Worker a9807b02); pgTAP 67, vitest 100; stacked on #9; usulan C19 + `code_unavailable` di PR; pending C7/B9 | log/fase-08.md |
 | 09 | Scans + screenshot | be | feat/BE-scans | [r] | 21 Okt 2026 | 21 Okt 2026 | #13 | `POST/GET /scans`, `GET /scans/{id}`, screenshot privat hanya lewat Worker `/screenshots/{id}` (link HMAC 1 jam, cek akses DB tiap request, D-alief-B08); default `private, no-store` + log tanpa id (D-alief-B09, P13); 4 review + cek P1–P13; pgTAP 71, vitest 184; cloud Worker c6ba8556, smoke (c) hijau (after delete/disconnect 404); stacked on #11; catatan kontrak C20 di PR | log/fase-09.md |
-| 10 | Verdicts + blocklist | be | feat/BE-verdicts | [ ] | | | | | log/fase-10.md |
+| 10 | Verdicts + blocklist | be | feat/BE-verdicts | [r] | 21 Okt 2026 | 22 Okt 2026 | #15 | `POST/GET /verdicts`, antrean blocklist dari verdict layak (snapshot, allowlist, sufiks publik, maks 10/24 jam per Guardian), review manual tetap; verdict Guardian lama terhapus saat putus hubungan (P13, D-alief-B10); 3 review + cek P1–P13; pgTAP 77, vitest 242; cloud Worker 781cf277, smoke hijau (verdict di GET pertama, antrean → disetujui → `/blocklist` → dihapus); deviasi p95 (1547 ms dari ID) → fase 12 (D-alief-B10 g); stacked on #13; C8 dikirim Alief | log/fase-10.md |
 | 11 | Push APNs | be | feat/BE-push | [ ] | | | | | log/fase-11.md |
 | 12 | Retensi + hardening + deploy | be | feat/BE-retention-hardening | [ ] | | | | | log/fase-12.md |
 | 13 | ApiRepository + sesi App Group | c | feat/APP-api-repository | [ ] | | | | | log/fase-13.md |
@@ -36,7 +36,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | G1 · Plan disetujui | PR `docs/alief-plan` di-merge | [x] | Umar approve (CODEOWNERS `*`) |
 | G2 · Target test ada | PR `chore/APP-test-targets` di-merge | [ ] | Sampai merge, fase app ditumpuk di atas PR ini |
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
-| G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Akhir fase 10 |
+| G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Hidup di cloud sejak 22 Okt (Worker 781cf277); tinggal Alief mengirim C8 ke Umar |
 | G5 · Track app selesai | 01–06 + 06Q `[x]` (semua PR merged) | [ ] | Syarat track c |
 | G6 · Track be selesai | 07–12 `[x]` (semua PR merged) + TODO D8 (deploy ulang dari `main`, uji asap hijau) | [ ] | Syarat track c |
 | G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8); uji push sandbox ke satu iPhone sudah di fase 11 |
@@ -69,8 +69,8 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | BE Devices | 07 | [r] | `backend/api/test/devices.test.ts`, PR #9 |
 | BE Family | 08 | [r] | `backend/api/test/family.test.ts`, `join-page.test.ts`, `devices-me.test.ts`; PR #11 |
 | BE Scans | 09 | [r] | `backend/api/test/scans.test.ts`, `screenshots.test.ts`, `cache-headers.test.ts`, `images.test.ts`, `push-notify.test.ts`; PR #13 |
-| BE Verdicts | 10 | [ ] | |
-| BE Blocklist | 07 (awal) + 10 | [ ] | |
+| BE Verdicts | 10 | [r] | `backend/api/test/verdicts.test.ts`, `allowlist.test.ts`; cloud smoke 22 Okt; PR #15 |
+| BE Blocklist | 07 (awal) + 10 | [r] | `blocklist.test.ts` (07), antrean dari verdict di `verdicts.test.ts` (10); cloud smoke 22 Okt; PR #9 + #15 |
 | BE Push APNs | 11 | [ ] | |
 | BE Retensi 14 hari | 12 | [ ] | |
 | BE Keamanan (akses Guardian, batas percobaan kode) | 08, 09, 10, 12 (checkbox mandat dicentang di 12) | [ ] | |

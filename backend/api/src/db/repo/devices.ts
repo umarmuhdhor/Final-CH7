@@ -1,5 +1,6 @@
 import type { Sql } from "postgres";
 import type { DeviceMode, Language } from "../../env";
+import { dropVerdicts } from "./verdicts";
 
 export interface DeviceAuthRow {
   id: string;
@@ -80,6 +81,10 @@ export async function findProfile(sql: Sql, id: string): Promise<DeviceProfile |
  */
 export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
   return sql.begin(async (tx) => {
+    // Links first, then verdicts under their domain locks (lock order of decideVerdict), so the
+    // review queue counts drop with the device (D-alief-B10).
+    await tx`delete from family_links where protected_id = ${id} or guardian_id = ${id}`;
+    await dropVerdicts(tx, { deviceId: id });
     // Deleting the scans first (with returning) leaves no window for an upload to slip in.
     const shots = await tx<{ path: string | null }[]>`
       delete from scans where owner_id = ${id} returning screenshot_path as path`;
