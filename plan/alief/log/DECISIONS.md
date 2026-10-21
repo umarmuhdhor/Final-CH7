@@ -517,3 +517,27 @@ Format:
 - Keputusan: chip Everyone / You / nama anggota → `owner` `.family` / `.me` / `.device(id)`, digabung dengan chip status. Daftar orang dibaca ulang setiap load/refresh; anggota yang sudah dihapus → kembali ke Everyone. Skenario mock DEBUG `oneMember` dan `threeMembers` (anggota ketiga "Grandma" hanya di mock, bukan fixture kontrak) untuk gerbang 0/1/2/3 anggota.
 - Alasan: PRD GD-05 + review M4/M5. Fixture kontrak hanya punya 2 anggota.
 - File: `Features/Activity/{ActivityModel,ActivityView}.swift`, `Data/MockRepository.swift`.
+
+## D-alief-A18 · 22 Okt 2026 · app (fase 06) · Fase 02 digabung ke cabang fase 06 di awal fase 06
+
+- Keputusan: `origin/feat/ON-01-05-onboarding` (#16, tip 4f7367c) di-merge (`--no-ff`) ke `feat/PF-01-profile` **di awal** fase 06, bukan tepat sebelum 06Q, karena PF-01 butuh layar fase 02 (Disconnect → Connect, ON-04 untuk status extension). Belum ada PR app yang masuk `main`, jadi rebase tidak mungkin. Penyelesaian konflik:
+  - `Localizable.xcstrings`: gabungan kedua katalog (140 key); satu key beda terjemahan ("Couldn't save…") memakai versi fase 03.
+  - `ShieldPlaceholderView` (dihapus di 05, diubah di 02): tetap dihapus; banner pengingat notifikasi Guardian (D-alief-A08) dipindah ke `GuardianShieldView`.
+  - `AppEnvironment`: versi 02 (`extensionStatus` closure, `notifications`, `register`/`finishOnboarding`) + argumen DEBUG fase 03; `ExtensionStatus.live()` fase 04 dihapus, `ShieldModel` menerima `env.extensionStatus` (satu sumber `-UITestExtensionActive`).
+  - "Turn on" di Shield (Protected dan Guardian) membuka `TurnOnExtensionView` fase 02 sebagai sheet (tutup otomatis saat heartbeat Active); `TurnOnExtensionView` menerima closure `refreshStatus` alih-alih `OnboardingModel`.
+  - `FailingRepository` ganda: versi `Tests/TestDoubles.swift` dipakai, salinan di `OnboardingTests` dihapus.
+  - `PROGRESS.md` baris 02 dari 02, baris 03–05 dari rantai ini; `DECISIONS.md` A04–A08 disisipkan sebelum A30.
+- Alasan: instruksi koordinator (gabungkan 02 ke cabang 06 sebelum 06Q, catat di DECISIONS). PR fase 06 menyebut "Stacked on #21 + merges #16".
+- File: lihat commit merge di `feat/PF-01-profile`.
+
+## D-alief-A19 · 22 Okt 2026 · app (fase 06) · Bahasa: berlaku langsung, server menyusul
+
+- Keputusan: pilihan bahasa di Profile (picker inline, kedua pilihan selalu terlihat) langsung mengubah `AppSettings.language` (seluruh app tanpa restart, lewat `.environment(\.locale)`), lalu `updateMe(language:)` di task yang dibatalkan oleh pilihan berikutnya. Gagal → app tetap memakai pilihan + alert; `ProfileModel.load()` mengirim ulang bila `me().language` berbeda.
+- Alasan: PF-01 + D-alief-05 (push dilokalkan sesuai bahasa server). Review M5: dua tap cepat tidak boleh meninggalkan server di bahasa lama.
+- File: `Features/Profile/{ProfileModel,ProfileView}.swift`.
+
+## D-alief-A20 · 22 Okt 2026 · app (fase 06) · Putus dan hapus data: server dulu, lalu awal yang bersih
+
+- Keputusan: Disconnect (Protected) = `leaveGuardian()` → `Router.reset()` → `onboardingConnectPassed = false`, `onboardingCompleted = false` → onboarding lanjut di Connect (mode tetap Protected). "Delete my data" = `deleteMe()` (usulan `DELETE /devices/me`, ditambahkan ke protokol `ShooRepository` milik app, mock menghapus scan sendiri, keluarga, guardian) → `Router.reset()` → `AppSettings.reset()` → onboarding dari awal; UI di belakang `AppConfig.dataDeletionEnabled = false` sampai C19 dijawab. `notFound` (dan `unauthorized` untuk hapus) setelah jawaban hilang = sudah selesai. Dialog konfirmasi iOS standar dipakai (bukan validasi GD-07).
+- Alasan: SECURITY §3 P3 / P13 (hapus = langsung hilang), review M1/M2. Kontrak belum punya endpoint → tidak boleh tampil di build.
+- File: `Features/Profile/ProfileModel.swift`, `Data/{ShooRepository,MockRepository}.swift`, `App/Router.swift`, `App/AppConfig.swift` (flag sudah ada sejak fase 01).
