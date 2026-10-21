@@ -22,6 +22,11 @@ Setup: `brew install xcodegen`, lalu `cd ios && xcodegen && open Shoo.xcodeproj`
 
 ## Tugas
 
+### Spike · di iPhone sendiri (minggu 1)
+Butuh signing ke akun Apple-mu dulu. Umar sedang menyiapkan override bundle ID + App Group per developer di `project.yml`; sampai itu ada, ganti lokal saja dan **jangan commit** perubahan `project.yml`.
+- [ ] **S1 · Deteksi extension On/Off** → isi `docs/spikes/extension-status.md`. Heartbeat sudah jalan (`content.js` → `background.js` → `SafariWebExtensionHandler` → App Group), cukup tes di device. Usulkan window Active ke Umar (nilainya di `AppGroup.extensionActiveWindow`, milik Umar).
+- [ ] **S2 · Buka pengaturan extension** → isi `docs/spikes/open-extension-settings.md`. Kode tes boleh di `ios/ShooApp/`. Jangan pakai `App-prefs:` (risiko ditolak App Review).
+
 ### Fase A · UI dari fixtures, tanpa menunggu backend
 Pakai `contracts/fixtures/*.json` sebagai data palsu lewat satu protocol/repository. Di Fase C, cukup implementasinya yang diganti, view-nya tidak perlu diubah.
 
@@ -29,6 +34,7 @@ Pakai `contracts/fixtures/*.json` sebagai data palsu lewat satu protocol/reposit
 - [ ] **ON-01** Splash interaktif 3 slide, ada tombol Skip
 - [ ] **ON-02** Isi nama (1–20 karakter) + avatar acak
 - [ ] **ON-03** Pilih mode Guardian / Protected (permanen)
+- [ ] **ON-04** Turn on extension: ilustrasi letak switch, tombol Turn on, cek status saat kembali ke app, link "Still can't? Watch video" (PiP). Mulai dengan fallback PRD §10, sempurnakan dari hasil S1 + S2.
 - [ ] **ON-05** Izin notifikasi + pengingat di Home kalau ditolak
 - [ ] **DT-01 s.d. DT-06** Layar Detail: ring skor, label, link & waktu, 1–3 bukti (`labelSimple` untuk Protected), tombol validasi khusus Guardian, catatan "Verified scam by / Marked safe by"
 - [ ] **PR-04, PR-05** Shield + Activity untuk Protected
@@ -59,7 +65,6 @@ Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk J
 - [ ] **GD-07** Tombol It's safe / Not safe langsung berlaku, tanpa konfirmasi
 
 ### Ditahan dulu
-- **ON-04** (Turn on extension): tunggu hasil spike Umar (`docs/spikes/`).
 - **Live Activity lewat push:** kalau spike Dynamic Island memutuskan jalur push-to-start, nanti ada endpoint tambahan. Umar akan memberi kabar.
 
 ## Bukan tugasmu

@@ -3,6 +3,7 @@
 Shoo = iPhone Safari Web Extension + app that blocks scam sites (see docs/README.md for the PRD).
 
 ## Mandates (task lists)
+- Umar (Lead · Extension): [docs/mandates/umar.md](docs/mandates/umar.md)
 - Imelda (Team AI): [docs/mandates/imelda.md](docs/mandates/imelda.md)
 - Alief (Team App + Backend): [docs/mandates/alief.md](docs/mandates/alief.md)
 
