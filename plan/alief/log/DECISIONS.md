@@ -311,3 +311,9 @@ Format:
 - Ditunda (dicatat, bukan blocker): grant `shoo_api` lebih sempit + role admin terpisah untuk approve blocklist, `statement_timeout`/`connection limit` role (fase 12 hardening); batas per IP untuk 401 berulang (fase 12); `x-spike-key` tidak constant-time (endpoint di-gate `APNS_SPIKE=0` dan dihapus fase 11); `join_attempts.ip` mentah dan `family_full` lewat pesan error (fase 08); bucket `screenshots` tanpa `file_size_limit` (fase 09); `POST /devices` menghitung rate limit sebelum validasi body (disengaja: setiap percobaan dihitung).
 - Dampak ke tim lain / kontrak: tidak ada perubahan bentuk JSON. Cloud: migrasi baru + kode ini ikut deploy berikutnya (LANGKAH MANUAL fase 08); sampai itu cloud memakai kode fase 07 awal (blocklist cloud masih 0 baris, jadi tidak ada risiko cursor).
 - File yang diperbarui: `backend/api/src/http/{validate,rateLimit}.ts`, `src/routes/{devices,blocklist}.ts`, `src/db/repo/blocklist.ts`, `test/{devices,blocklist}.test.ts`, `backend/db/supabase/migrations/20261021150000_blocklist_times.sql`, `tests/schema.test.sql`, `backend/ci/backend.yml`, `backend/README.md`.
+
+## D-alief-40 · 21 Okt 2026 · plan · Keamanan & privasi Apple wajib untuk semua pekerjaan
+
+- Keputusan: aturan PROMPT 6l diperluas dari "fase app" menjadi semua pekerjaan (app, backend, plan, langkah manual, QA); review langkah 8 wajib mencocokkan diff dengan SECURITY §3; tambah P13 "hapus = langsung hilang" (tanpa salinan cache/CDN); aturan emas README #10; baris aturan di `backend/CLAUDE.md` dan `ios/ShooApp/CLAUDE.md`.
+- Alasan: permintaan Alief (21 Okt): "add a rule, everything we do must follow apple security & privacy". Pemicu: uji asap fase 09 menunjukkan screenshot yang sudah dihapus masih tersaji dari CDN Supabase sampai signed URL kedaluwarsa (log fase-09 (b)).
+- File: PROMPT 6l + langkah 8, README §6, SECURITY §3 (P13), `backend/CLAUDE.md`, `ios/ShooApp/CLAUDE.md`.

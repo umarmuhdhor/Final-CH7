@@ -9,3 +9,4 @@ PRD: docs/README.md. Use the PRD IDs in branch names and PR titles.
 - Extension Active/Off = `AppGroup.Key.extensionLastSeenAt` is recent. Do not invent another way.
 - Copy is English by default + Bahasa Indonesia (use String Catalog `Localizable.xcstrings`).
 - Do not touch `ShooExtension/`, `ShooLiveActivity/`, `ShooShared/`, `project.yml`.
+- Everything must follow Apple security & privacy (plan/alief/SECURITY.md §3): privacy manifest, Keychain `AfterFirstUnlockThisDeviceOnly`, `os.Logger` with `privacy: .private`, just-in-time permissions, no third-party SDKs, user data never written to disk caches. When in doubt, pick the most privacy-preserving option.

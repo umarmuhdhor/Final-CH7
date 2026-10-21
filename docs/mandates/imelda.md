@@ -27,10 +27,10 @@ Target awal ini bisa diubah oleh lead:
 ## Tugas (kerjakan berurutan, centang kalau PR sudah di-merge)
 
 ### M1 · Layer 2: cek nama link (on-device) — `detector/`
-- [ ] Buat `detector/data/brands.json` berisi brand yang sering ditiru beserta domain resminya. Minimal: bank (BCA, BRI, Mandiri, BNI, BSI), e-wallet (DANA, OVO, GoPay, ShopeePay), e-commerce (Shopee, Tokopedia, Lazada, Bukalapak), Pos Indonesia, JNE, J&T, instansi pemerintah (Kemensos, DJP, BPJS).
-- [ ] Buat sinyal `cheap_tld`, `brand_plus_keyword` (bca-verifikasi), dan `lookalike_domain` (p0stindonesia, typo 1–2 huruf).
-- [ ] Siapkan test runner (`node --test` sudah cukup). Satu test per aturan, plus test "domain resmi → tanpa sinyal".
-- [ ] Jalankan `detector/scripts/sync-to-extension.sh`, lalu commit `src/` dan `detector.js` bersamaan.
+- [x] Buat `detector/data/brands.json` berisi brand yang sering ditiru beserta domain resminya. Minimal: bank (BCA, BRI, Mandiri, BNI, BSI), e-wallet (DANA, OVO, GoPay, ShopeePay), e-commerce (Shopee, Tokopedia, Lazada, Bukalapak), Pos Indonesia, JNE, J&T, instansi pemerintah (Kemensos, DJP, BPJS).
+- [x] Buat sinyal `cheap_tld`, `brand_plus_keyword` (bca-verifikasi), dan `lookalike_domain` (p0stindonesia, typo 1–2 huruf).
+- [x] Siapkan test runner (`node --test` sudah cukup). Satu test per aturan, plus test "domain resmi → tanpa sinyal".
+- [x] Jalankan `detector/scripts/sync-to-extension.sh`, lalu commit `src/` dan `detector.js` bersamaan.
 - **Selesai kalau:** semua test lolos, dan domain di fixture `contracts/fixtures/` menghasilkan sinyal layer 2 yang sesuai.
 - Branch: `feat/AI-M1-link-name`
 

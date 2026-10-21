@@ -10,3 +10,4 @@ Devices, family pairing, scans (Activity), verdicts, push, 14-day retention. Spe
 - JSON shapes come from contracts/ only. If you need a change, PR to the lead first.
 - Supabase recommended (DB + edge functions + cron + realtime). If you choose it, document schema + RPCs here and keep api.md JSON shapes.
 - Don't touch anything outside `backend/` and `ios/ShooApp/`.
+- Everything must follow Apple security & privacy (plan/alief/SECURITY.md §3): no PII or tokens in logs, minimum data, and deletion or disconnect takes effect immediately (no cached/CDN copies of user data, `Cache-Control: private, no-store`). When in doubt, pick the most privacy-preserving option.
