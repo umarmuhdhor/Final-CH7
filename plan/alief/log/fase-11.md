@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[r]` LANGKAH MANUAL 1–4 selesai di cloud (22 Okt, Worker `ac2025ec`); PR stacked on #15, **pending B6/B7/C3** (butir 5–6: kunci APNs + uji iPhone, diulang di fase 15 / G7) |
+| Status | `[r]` LANGKAH MANUAL 1–4 selesai di cloud (22 Okt, Worker `ac2025ec`); PR #17 (stacked on #15), **pending B6/B7/C3** (butir 5–6: kunci APNs + uji iPhone, diulang di fase 15 / G7) |
 | Track / branch | be · `feat/BE-push` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-verdicts` (PR #15, stacked on #13) → PR nanti menulis "Stacked on #15" |
 | Mulai | 22 Okt 2026 ±00:35 WITA |
