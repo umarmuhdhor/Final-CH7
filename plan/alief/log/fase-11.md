@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (migrasi + deploy + hapus `SPIKE_KEY` + uji cloud). Belum ada PR |
+| Status | `[r]` LANGKAH MANUAL 1–4 selesai di cloud (22 Okt, Worker `ac2025ec`); PR stacked on #15, **pending B6/B7/C3** (butir 5–6: kunci APNs + uji iPhone, diulang di fase 15 / G7) |
 | Track / branch | be · `feat/BE-push` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-verdicts` (PR #15, stacked on #13) → PR nanti menulis "Stacked on #15" |
 | Mulai | 22 Okt 2026 ±00:35 WITA |
@@ -22,7 +22,7 @@ Rencana lengkap: [`fase-11-plan.md`](fase-11-plan.md) (`ecc:planner`). Push diki
 - [x] 6. C9: sudah `[x]` (diterima kontrak PR #1/#3/#4); payload = kontrak + `sound`
 - [x] 7. Uji lokal (hasil di bawah)
 - [x] 8. Review berurutan: security → TypeScript → database → cek P1–P13
-- [ ] 9. LANGKAH MANUAL (di bawah) — menunggu Alief
+- [x] 9. LANGKAH MANUAL 1–4 (cloud, coordinator); 5–6 pending B6/B7/C3 (PROMPT 6h: bukan blocker kode)
 
 ## File dibuat / diubah
 
@@ -42,9 +42,9 @@ Rencana lengkap: [`fase-11-plan.md`](fase-11-plan.md) (`ecc:planner`). Push diki
 ## DoD
 
 - [x] Semua test vitest hijau (Deno tidak berlaku, D-alief-B11); payload = kontrak + `sound` (`push-apns.test.ts` "POSTs the contract payload…").
-- [~] Uji lokal: `push_log` mencatat hasil dari jalur lengkap lokal (`failed:network`, HTTP/1.1 lokal); respons APNs asli = LANGKAH MANUAL 5 (cloud).
+- [~] Uji lokal: `push_log` mencatat hasil dari jalur lengkap lokal (`failed:network`, HTTP/1.1 lokal). Cloud: `push_log` `logged` lewat `waitUntil` + Hyperdrive (butir 4). Respons APNs asli dengan kunci nyata = butir 5 (pending B7).
 - [x] Endpoint spike dihapus (`grep -rn apns-spike backend/` kosong).
-- [ ] Push sandbox nyata di iPhone Alief (D7) ATAU PR `[r]` + "pending B6/B7/C3" — setelah LANGKAH MANUAL 1–5.
+- [x] PR `[r]` + "pending B6/B7/C3" (PROMPT 6h); push nyata di iPhone (D7) diulang di fase 15 / G7.
 
 ## Review
 
