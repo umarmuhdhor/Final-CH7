@@ -73,23 +73,23 @@ Ditunda (bukan blocker, dicatat): `owner=family` mengurutkan semua scan keluarga
 
 Dijalankan dari root worktree ini, di branch `feat/BE-scans`. Satu migrasi baru (batas bucket). Nilai secret **diketik di prompt wrangler**, tidak pernah di file atau chat.
 
-- [ ] 0. **Migrasi bucket** (`20261021170000_screenshot_bucket.sql`):
+- [x] 0. **Migrasi bucket** (`20261021170000_screenshot_bucket.sql`):
   ```bash
   (cd backend/db && supabase migration list --linked)   # 20261021170000 tampil hanya di kolom Local
   (cd backend/db && supabase db push)
   (cd backend/db && supabase db query --linked "select file_size_limit, allowed_mime_types from storage.buckets where id = 'screenshots'")
   ```
   Harapan: `153600 | {image/jpeg,image/png}`.
-- [ ] 1. **B5 secret Storage.** Supabase Dashboard → proyek `shoo-demo` → Settings → API Keys → **Secret keys** → buat kunci baru bernama `shoo-worker` (atau pakai `service_role` legacy kalau hanya itu yang ada). Salin nilainya, lalu:
+- [x] 1. **B5 secret Storage.** Supabase Dashboard → proyek `shoo-demo` → Settings → API Keys → **Secret keys** → buat kunci baru bernama `shoo-worker` (atau pakai `service_role` legacy kalau hanya itu yang ada). Salin nilainya, lalu:
   ```bash
   pnpm -C backend/api exec wrangler secret put SUPABASE_SERVICE_ROLE_KEY   # tempel kunci di prompt
   ```
   `SUPABASE_URL` sudah di `wrangler.jsonc` `vars` (`https://nmekxihgjszgcibqytyj.supabase.co`, bukan rahasia).
-- [ ] 2. **Deploy Worker:**
+- [x] 2. **Deploy Worker:**
   ```bash
   pnpm -C backend/api run deploy
   ```
-- [ ] 3. **Uji asap cloud:**
+- [x] 3. **Uji asap cloud:**
   ```bash
   U=https://shoo-api.afindo-mi01.workers.dev
   tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])'; }
@@ -108,7 +108,14 @@ Dijalankan dari root worktree ini, di branch `feat/BE-scans`. Satu migrasi baru 
   curl -s -o /dev/null -w "signed url after delete: %{http_code}\n" "$SURL"
   ```
   Harapan: `scan <uuid>`; `1 Smoke P None None`; `signed url: 200 image/jpeg`; `IDOR other guardian: 404`; `{"ok":true}{"ok":true}`; `signed url after delete` bukan 200 (objek terhapus). Tempel hasilnya (tanpa token dan tanpa `$SURL`). Device `Smoke X` tertinggal (tanpa data).
-- [ ] 4. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11), dan lanjut ke fase 10.
+- [x] 4. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11), dan lanjut ke fase 10.
+
+### Hasil LANGKAH MANUAL (21 Okt 2026 ±23:25 WITA, dijalankan agent coordinator atas permintaan Alief; kunci secret ditempel Alief sendiri)
+
+- 0: `supabase db push --yes` → `"migrations":["20261021170000_screenshot_bucket.sql"] … Finished supabase db push.` Bucket `screenshots`: `file_size_limit 153600`, `allowed_mime_types {image/jpeg,image/png}`.
+- 1: kunci secret Supabase `shoo_worker` dibuat Alief, ditempel di prompt `wrangler secret put SUPABASE_SERVICE_ROLE_KEY` → `Success! Uploaded secret SUPABASE_SERVICE_ROLE_KEY`.
+- 2: deploy → Version `be621201-27f9-4f3a-8601-5c58d4967157` (binding `DB`, `SUPABASE_URL`, `SCREENSHOT_MAX_BYTES 153600`).
+- 3: `scan 3affdd87-…`; `1 Smoke P None None`; `signed url: 200 image/jpeg`; `IDOR other guardian: 404`; delete → `{"ok":true}` ×3 (Smoke X ikut dihapus); **`signed url after delete: 200` — tidak sesuai harapan.** Cek DB: `storage.objects` bucket `screenshots` kosong, `scans` = 0 → objek benar terhapus. Penyebab paling mungkin: upload tanpa `cache-control`, jadi Supabase memakai default `max-age=3600` dan CDN Storage menyajikan salinan cache sampai signed URL kedaluwarsa (≤ 1 jam). **Temuan untuk agent (TINGGI, privasi SECURITY §3):** set `cache-control: no-store` (atau `max-age=0`) saat upload screenshot dan tambahkan test; deploy ulang = LANGKAH MANUAL berikutnya.
 
 ## Catatan handoff
 
