@@ -74,7 +74,8 @@ export async function attachScreenshot(
   } catch (err) {
     console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: errorInfo(err) }));
     // A timed-out upload may still land in Storage: no row points at it now, the cron removes it.
-    await clearScreenshotPath(sql, scan.ownerId, path);
+    // The reservation's tombstone covers the object even if clearing the path fails.
+    await clearScreenshotPath(sql, scan.ownerId, path).catch(() => undefined);
     await abandonUpload(sql, store, path);
     return;
   }

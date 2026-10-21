@@ -94,17 +94,22 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     expect(await runRetention(sql, env, { batch: 10, maxBatches: 2 })).toMatchObject({ scans: 0, backlog: false });
   });
 
-  it("Storage failure keeps the rows with a screenshot (objects are never orphaned) and still prunes the rest", async () => {
+  it("Storage failure still deletes the rows on day 14; the paths stay tombstoned; logs carry no path", async () => {
     await device("dev_p");
     await scan("s_old", "dev_p", 15, "dev_p/old.jpg");
     await scan("s_noshot", "dev_p", 15);
     await sql`insert into family_codes (code, guardian_id, expires_at) values ('1234', 'dev_p', now() - interval '2 hours')`;
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    const errorsLogged: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errorsLogged.push(a.map(String).join(" ")));
+    vi.spyOn(console, "log").mockImplementation(() => {});
     const failing = { ...store, remove: async () => { throw new Error("storage remove 503 dev_p/old.jpg"); } };
 
-    await expect(runRetention(sql, env, { store: failing })).rejects.toThrow();
-    // The scan without a screenshot needs no Storage call, so it is deleted anyway.
-    expect(await scanIds()).toEqual(["s_old"]);
+    await expect(runRetention(sql, env, { store: failing })).rejects.toThrow("storage remove 503");
+    // Rows go anyway (the privacy page promises 14 days); the object stays tracked for a retry.
+    expect(await scanIds()).toEqual([]);
+    expect((await sql`select path from storage_tombstones`).map((r) => r.path)).toEqual(["dev_p/old.jpg"]);
+    expect(errorsLogged.join("\n")).toContain("retention_step_failed");
+    expect(errorsLogged.join("\n")).not.toContain("dev_p");
     expect((await sql`select 1 from family_codes`).length).toBe(0);
     expect((await sql`select 1 from ops_heartbeat where source = 'cron'`).length).toBe(1);
   });
@@ -127,7 +132,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
       await held;
     });
     await isLocked;
-    await expect(runRetention(sql, env, { lockTimeoutMs: 200 })).rejects.toThrow();
+    await expect(runRetention(sql, env, { lockTimeoutMs: 200 })).rejects.toMatchObject({ code: "55P03" });
     release();
     await holder;
     expect(await scanIds()).toEqual(["s_old"]);
@@ -171,10 +176,8 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
 
   it("the Worker's scheduled() handler runs retention", async () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
-    const waits: Promise<unknown>[] = [];
-    const ctx = { waitUntil: (p: Promise<unknown>) => void waits.push(p), passThroughOnException() {} } as unknown as ExecutionContext;
-    await worker.scheduled!({ cron: "0 19 * * *", scheduledTime: Date.now(), noRetry() {} } as ScheduledController, env, ctx);
-    await Promise.all(waits);
+    // Awaited by the handler itself (no waitUntil), so a failed run fails the Cron event.
+    await worker.scheduled!({ cron: "0 19 * * *", scheduledTime: Date.now(), noRetry() {} } as ScheduledController, env);
     expect((await sql`select 1 from ops_heartbeat where source = 'cron'`).length).toBe(1);
   });
 });

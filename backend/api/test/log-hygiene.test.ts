@@ -37,12 +37,20 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     await call("/verdicts?domain=very-private-domain.example", { token: p.token });
     await call("/devices/me", { token: "shoo_wrongwrongwrong", ip });
     await call(`/scans/${id}`, { token: "shoo_wrongwrongwrong2" });
-    await new Promise((r) => setTimeout(r, 300)); // waitUntil push + storage work
+    // waitUntil push work: done once its push_log row exists.
+    await vi.waitFor(async () => expect((await sql`select 1 from push_log where scan_id = ${id}`).length).toBe(1));
     await call(`/family/members/${p.deviceId}`, { method: "DELETE", token: g.token });
     await call("/devices/me", { method: "DELETE", token: p.token });
     await call("/devices/me", { method: "DELETE", token: g.token });
+    // waitUntil Storage work of DELETE /devices/me: done once the object is gone.
+    await vi.waitFor(async () => {
+      const info = await fetch(`${env.SUPABASE_URL}/storage/v1/object/info/screenshots/${p.deviceId}/${id}.jpg`, {
+        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+      });
+      await info.body?.cancel();
+      expect(info.ok).toBe(false);
+    });
     await runRetention(sql, env);
-    await new Promise((r) => setTimeout(r, 300));
 
     expect(lines.length).toBeGreaterThan(0);
     const all = lines.join("\n");
@@ -55,7 +63,7 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
   });
 });
 
-describe("every rate limit has a 429 test (fase 12 hardening)", () => {
+describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; fase 12 hardening)", () => {
   it("the list of limits is the reviewed one; a new limit needs a test and an entry here", () => {
     // Bucket → test file that proves its 429.
     const tested: Record<string, string> = {

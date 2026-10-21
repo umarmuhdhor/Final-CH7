@@ -43,8 +43,9 @@ export const devices = new Hono<AppEnv>();
 devices.post("/devices", async (c) => {
   const sql = c.get("sql");
   await hit(sql, limits.createDevice, clientIp((n) => c.req.header(n)));
-  await hit(sql, limits.createDeviceAll, "all");
   const body = await readJson(c, createBody);
+  // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
+  await hit(sql, limits.createDeviceAll, "all");
 
   const token = `shoo_${base64url(randomBytes(32))}`;
   const avatarId = `avatar_${String(randomAvatar()).padStart(2, "0")}`;
@@ -100,7 +101,10 @@ devices.delete("/devices/me", requireDevice, async (c) => {
       const code = err instanceof postgres.PostgresError ? err.code : undefined;
       // A rare deadlock or lock timeout with a concurrent writer (e.g. retention): Postgres rolled
       // back, retry once. Deleting your data must not fail on a race (SECURITY §3 P3).
-      if ((code === "40P01" || code === "40001" || code === "55P03") && attempt < 2) continue;
+      if ((code === "40P01" || code === "40001" || code === "55P03") && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 100));
+        continue;
+      }
       throw err;
     }
   }

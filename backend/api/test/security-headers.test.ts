@@ -66,14 +66,18 @@ describe("security headers on every response (fase 12 hardening)", () => {
 });
 
 describe("repeated unknown tokens per IP (D-alief-B05)", () => {
-  it(`after ${limits.authFail.max} unknown tokens from one IP → 429; a valid token from that IP still works`, async () => {
+  it(`after ${limits.authFail.max} unknown tokens from one IP → still 401 but with Retry-After; a valid token from that IP still works`, async () => {
     const ip = freshIp();
     const d = await createDevice();
     for (let i = 0; i < limits.authFail.max; i++) {
-      expect((await call("/devices/me", { token: `shoo_unknown${String(i).padStart(8, "0")}`, ip })).status).toBe(401);
+      const res = await call("/devices/me", { token: `shoo_unknown${String(i).padStart(8, "0")}`, ip });
+      expect(res.status).toBe(401);
+      expect(res.headers.get("retry-after")).toBeNull();
     }
+    // Over the limit: 401 (a dead token must look dead, not like a retryable 429).
     const blocked = await call("/devices/me", { token: "shoo_unknown_last_one", ip });
-    expect(blocked.status).toBe(429);
+    expect(blocked.status).toBe(401);
+    expect((await sql`select 1 from rate_limit_hits where bucket = 'auth_fail'`).length).toBe(limits.authFail.max);
     expect(Number(blocked.headers.get("retry-after"))).toBeGreaterThan(0);
     expect((await call("/devices/me", { token: d.token, ip })).status).toBe(200);
     // Another IP is not affected.

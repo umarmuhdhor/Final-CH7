@@ -14,7 +14,7 @@ export class ApiError extends Error {
 
 export const errors = {
   badJson: () => new ApiError(400, "bad_json", "Body is not valid JSON"),
-  unauthorized: () => new ApiError(401, "unauthorized", "Missing or unknown device token"),
+  unauthorized: (retryAfter?: number) => new ApiError(401, "unauthorized", "Missing or unknown device token", retryAfter),
   forbidden: (message = "Not allowed for this device mode") => new ApiError(403, "forbidden", message),
   notFound: () => new ApiError(404, "not_found", "Not found"),
   tooLarge: () => new ApiError(413, "too_large", "Body too large"),

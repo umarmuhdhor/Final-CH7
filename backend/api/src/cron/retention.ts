@@ -1,7 +1,7 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { errorInfo } from "../http/logError";
-import { dueTombstones } from "../db/repo/tombstones";
+import { addTombstones, dueTombstones } from "../db/repo/tombstones";
 import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../services/screenshots";
 
 /**
@@ -112,12 +112,13 @@ async function deleteOldScans(
   const maxBatches = opts.maxBatches ?? MAX_BATCHES;
   const lockTimeout = `${opts.lockTimeoutMs ?? 3000}ms`;
 
+  let storageError: unknown;
   for (let b = 0; b < maxBatches; b++) {
     // No transaction is open across the Storage call. Oldest first (index scans_created).
     const rows = await sql<{ id: string }[]>`
       select id from scans where created_at < now() - interval '14 days'
       order by created_at, id limit ${batch}`;
-    if (rows.length === 0) return;
+    if (rows.length === 0) break;
     const ids = rows.map((r) => r.id);
 
     // Dedupe shares one object between scans of the same owner. Only paths no scan outside this
@@ -132,21 +133,22 @@ async function deleteOldScans(
             where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in ${sql(ids)})`
     ).map((r) => r.path);
 
-    if (paths.length) {
-      // Objects first: if Storage fails the rows stay and the batch is retried tomorrow,
-      // so an object never outlives its rows unnoticed (SECURITY §3 P13).
-      if (!store) throw new Error("storage not configured");
-      await store.remove(paths);
-      result.objects += paths.length;
+    // Rows go on day 14 even while Storage is down (the privacy page promises it): the paths are
+    // tombstoned in the same transaction, so a failed remove is retried by the tombstone step and
+    // later runs (D-alief-B12, review fase 12). Lock order verdict → scan, as in decideVerdict and
+    // deleteDevice. A lock timeout or deadlock rolls the batch back and stops the loop until tomorrow.
+    const deleted = await deleteScans(sql, ids, lockTimeout, sql``, paths);
+    if (paths.length && !storageError) {
+      const removed = await removeTombstoned(sql, store, paths);
+      result.objects += removed.removed;
+      // One failure is enough: no more Storage calls this run, the tombstones keep the rest.
+      storageError = removed.error;
     }
-
-    // Lock order verdict → scan, as in decideVerdict and deleteDevice (fase 10 handoff).
-    // A lock timeout or deadlock rolls the batch back; the error stops the loop and is retried tomorrow.
-    const deleted = await deleteScans(sql, ids, lockTimeout);
     result.scans += deleted;
-    if (rows.length < batch) return;
+    if (rows.length < batch) break;
     if (b === maxBatches - 1) result.backlog = true;
   }
+  if (storageError) throw storageError;
 }
 
 /** Scans without a screenshot: no Storage call, so in large chunks (D-alief-B12). */
@@ -169,8 +171,9 @@ async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: Ret
  * then scans by id — the same order deleteDevice uses, so the two cannot deadlock on each other
  * (database review fase 12). Verdicts keep their row with scan_id null (D-alief-14).
  */
-async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra = sql``): Promise<number> {
+async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra = sql``, paths: string[] = []): Promise<number> {
   return sql.begin(async (tx) => {
+    await addTombstones(tx, paths);
     await tx`select set_config('lock_timeout', ${lockTimeout}, true), set_config('statement_timeout', '20s', true)`;
     await tx`select 1 from verdicts where scan_id in ${tx(ids)} order by owner_id, domain for update`;
     await tx`update verdicts set scan_id = null where scan_id in ${tx(ids)}`;

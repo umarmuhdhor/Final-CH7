@@ -6,7 +6,8 @@ import type { Env } from "./env";
 export default {
   fetch: app.fetch,
   // Daily retention, wrangler.jsonc triggers.crons (R4 §5).
-  async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(runRetention(createSql(env), env));
+  // Awaited, not waitUntil: a failed run then fails the Cron event (dashboard, alerts).
+  async scheduled(_controller, env) {
+    await runRetention(createSql(env), env);
   },
 } satisfies ExportedHandler<Env>;

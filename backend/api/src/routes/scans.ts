@@ -107,8 +107,9 @@ scans.post("/scans", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hit(sql, limits.createScan, principal.deviceId);
-  await hitLight(sql, limits.createScanAll, "all");
   const body = await readJson(c, scanBody, MAX_BODY);
+  // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
+  await hitLight(sql, limits.createScanAll, "all");
 
   const id = await insertScan(sql, {
     ownerId: principal.deviceId,

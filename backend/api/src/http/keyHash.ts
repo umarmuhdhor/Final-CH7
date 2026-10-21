@@ -15,6 +15,10 @@ export function useRateKeySecret(value: string | undefined): void {
   key = usable
     ? crypto.subtle.importKey("raw", encoder.encode(usable), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
     : undefined;
+  // A failed import is retried on the next request instead of cached.
+  key?.catch(() => {
+    if (secret === value) secret = key = undefined;
+  });
 }
 
 /**
