@@ -197,4 +197,17 @@ struct ActivityModelTests {
         #expect(model.items.allSatisfy { $0.status == .blocked })
         #expect(model.items.contains { $0.ownerDeviceId == "dev_dad" })
     }
+
+    @Test func removedPersonFallsBackToEveryone() async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let model = ActivityModel(repository: repository, owner: .family)
+        await model.load()
+        await model.select(person: .device("dev_dad"))
+        try await repository.removeMember(deviceId: "dev_dad")
+        await model.refresh()
+        #expect(model.people.map(\.name) == ["Mom"])
+        #expect(model.person == .everyone)
+        #expect(model.state == .loaded)
+        #expect(!model.items.contains { $0.ownerDeviceId == "dev_dad" })
+    }
 }

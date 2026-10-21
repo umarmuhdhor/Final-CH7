@@ -83,17 +83,15 @@ final class ActivityModel {
     var isEmpty: Bool { state == .loaded && items.isEmpty }
 
     func load() async {
-        if baseOwner == .family, people.isEmpty {
-            // Chips only; the list still loads if this fails.
-            people = (try? await repository.familyMembers()) ?? []
-        }
+        await refreshPeople()
+        guard !Task.isCancelled else { return }
         await loadFirstPage()
     }
 
     /// Pull to refresh: keeps the current items on screen until the new first page arrives,
     /// and keeps them if it fails.
     func refresh() async {
-        await loadFirstPage()
+        await load()
     }
 
     /// "Try again" on the error screen: shows the spinner while it retries.
@@ -144,6 +142,21 @@ final class ActivityModel {
             if error.isCancellation { return }
             Log.ui.error("Activity next page failed", error)
             loadMoreFailed = true
+        }
+    }
+
+    /// Person chips for Family Activity, re-read on every load (members come and go in Profile).
+    /// A failure keeps the chips already shown; the list still loads.
+    private func refreshPeople() async {
+        guard baseOwner == .family else { return }
+        do {
+            let members = try await repository.familyMembers()
+            people = members
+            if case .device(let id) = person, !members.contains(where: { $0.deviceId == id }) {
+                person = .everyone
+            }
+        } catch {
+            if !error.isCancellation { Log.ui.error("Activity people failed", error) }
         }
     }
 

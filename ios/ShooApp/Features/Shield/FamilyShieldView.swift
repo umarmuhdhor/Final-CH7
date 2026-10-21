@@ -102,15 +102,19 @@ struct FamilyShieldView: View {
         case .loaded:
             FamilyHeader(members: model.members, language: language)
             ForEach(model.members) { member in
-                let scanId = model.lastScanId(for: member.deviceId)
-                Button {
-                    if let scanId { env.router.showDetail(scanId: scanId) }
-                } label: {
-                    FamilyMemberCard(member: member, language: language, opensDetail: scanId != nil)
+                // Only a card with a site to open is a button; the others stay full contrast.
+                if let scanId = model.lastScanId(for: member.deviceId) {
+                    Button {
+                        env.router.showDetail(scanId: scanId)
+                    } label: {
+                        FamilyMemberCard(member: member, language: language, opensDetail: true)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("family.member.\(member.deviceId)")
+                } else {
+                    FamilyMemberCard(member: member, language: language)
+                        .accessibilityIdentifier("family.member.\(member.deviceId)")
                 }
-                .buttonStyle(.plain)
-                .disabled(scanId == nil)
-                .accessibilityIdentifier("family.member.\(member.deviceId)")
             }
         }
     }
@@ -206,6 +210,7 @@ struct FamilyMemberCard: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityHint(opensDetail ? Text("Opens the details") : Text(verbatim: ""))
+        .accessibilityAddTraits(opensDetail ? .isButton : [])
     }
 }
 

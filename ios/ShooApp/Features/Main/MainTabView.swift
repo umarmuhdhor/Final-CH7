@@ -57,8 +57,10 @@ struct MainTabView: View {
     }
 
     /// A new repository (mode switch, later a new session) or the Family toggle starts fresh screen models.
+    /// Protected screens ignore the toggle, so it never resets them.
     private var screenIdentity: String {
-        "\(ObjectIdentifier(env.repository).hashValue)-\(env.settings.familyModeOn)"
+        let familyMode = env.settings.mode == .guardian && env.settings.familyModeOn
+        return "\(ObjectIdentifier(env.repository).hashValue)-\(familyMode)"
     }
 
     @ViewBuilder
@@ -76,8 +78,8 @@ private struct FamilyModeToggle: ToolbarContent {
     @Environment(AppEnvironment.self) private var env
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            if env.settings.mode == .guardian {
+        if env.settings.mode == .guardian {
+            ToolbarItem(placement: .topBarLeading) {
                 @Bindable var settings = env.settings
                 Toggle(isOn: $settings.familyModeOn) {
                     Label { Text("Family mode") } icon: { Image(systemName: "person.3.fill") }

@@ -44,7 +44,7 @@ final class GuardianUITests: XCTestCase {
         let app = launch(familyMode: true)
         let mom = app.buttons["family.member.dev_mom"]
         XCTAssertTrue(mom.waitForExistence(timeout: 10), app.debugDescription)
-        let dad = app.buttons["family.member.dev_dad"]
+        let dad = app.descendants(matching: .any)["family.member.dev_dad"]
         XCTAssertTrue(dad.exists)
         XCTAssertTrue(dad.label.contains("Not connected"), dad.debugDescription)
         XCTAssertFalse(mom.label.contains("Not connected"), mom.debugDescription)

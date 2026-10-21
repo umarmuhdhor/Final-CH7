@@ -57,4 +57,14 @@ struct FamilyShieldModelTests {
         #expect(model.state == .loaded)
         #expect(model.members.count == 2)
     }
+
+    @Test func oneMembersScansFailingDoesNotHideTheFamily() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        repository.failingOwner = .device("dev_mom")
+        let model = FamilyShieldModel(repository: repository)
+        await model.refresh()
+        #expect(model.state == .loaded)
+        #expect(model.members.count == 2)
+        #expect(model.lastScanId(for: "dev_mom") == nil)
+    }
 }

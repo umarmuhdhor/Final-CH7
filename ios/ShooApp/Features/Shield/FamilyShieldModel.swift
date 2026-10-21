@@ -44,7 +44,7 @@ final class FamilyShieldModel {
         let request = generation
         do {
             let family = Array(try await repository.familyMembers().prefix(Self.maxMembers))
-            let ids = try await newestScanIds(for: family)
+            let ids = await newestScanIds(for: family)
             guard request == generation else { return }
             members = family
             lastScanIds = ids
@@ -61,17 +61,23 @@ final class FamilyShieldModel {
         await refresh()
     }
 
-    private func newestScanIds(for family: [FamilyMember]) async throws -> [String: String] {
+    private func newestScanIds(for family: [FamilyMember]) async -> [String: String] {
         let repository = repository
-        return try await withThrowingTaskGroup(of: (String, String?).self) { group in
-            for member in family where member.lastScan != nil {
+        // One member's failure only leaves that card without a link; it never hides the family.
+        return await withTaskGroup(of: (String, String?).self) { group in
+            for member in family {
+                guard let lastScan = member.lastScan else { continue }
                 group.addTask {
-                    let page = try await repository.scans(owner: .device(member.deviceId), status: nil, cursor: nil)
-                    return (member.deviceId, page.items.first?.id)
+                    guard let page = try? await repository.scans(owner: .device(member.deviceId), status: nil, cursor: nil) else {
+                        return (member.deviceId, nil)
+                    }
+                    // The scan the card shows; the newest one if the list moved on meanwhile.
+                    let shown = page.items.first { $0.url == lastScan.url && $0.detectedAt == lastScan.detectedAt }
+                    return (member.deviceId, (shown ?? page.items.first)?.id)
                 }
             }
             var ids: [String: String] = [:]
-            for try await (deviceId, scanId) in group {
+            for await (deviceId, scanId) in group {
                 ids[deviceId] = scanId
             }
             return ids

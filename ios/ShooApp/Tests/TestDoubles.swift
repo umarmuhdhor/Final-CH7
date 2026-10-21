@@ -23,6 +23,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     private let base: any ShooRepository
     private var delays: [Duration]
     var failure: (any Error)?
+    /// Only `scans` for this owner throw `RepositoryError.network`.
+    var failingOwner: ScanOwnerFilter?
 
     init(base: any ShooRepository, delays: [Duration] = []) {
         self.base = base
@@ -33,6 +35,7 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
         let delay = delays.isEmpty ? .zero : delays.removeFirst()
         try await Task.sleep(for: delay)
         if let failure { throw failure }
+        if owner == failingOwner { throw RepositoryError.network }
         return try await base.scans(owner: owner, status: status, cursor: cursor)
     }
 
