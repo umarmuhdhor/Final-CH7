@@ -15,6 +15,7 @@ struct NotificationReminderBanner: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Notifications are off")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
                 Text("You won't hear when your family is at risk.")
                     .font(.subheadline)
                 Button {
@@ -27,6 +28,7 @@ struct NotificationReminderBanner: View {
                     Text("Turn on").frame(minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel(Text("Turn on notifications"))
                 .accessibilityIdentifier("reminder.turnOn")
             }
             .frame(maxWidth: .infinity, alignment: .leading)

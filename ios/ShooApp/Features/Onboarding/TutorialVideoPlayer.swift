@@ -26,8 +26,9 @@ struct TutorialVideoPlayer: View {
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
                     .font(.headline)
+                    .foregroundStyle(.white)
                     .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .background(.black.opacity(0.6), in: Circle())
             }
             .accessibilityLabel(Text("Close"))
             .accessibilityIdentifier("video.close")

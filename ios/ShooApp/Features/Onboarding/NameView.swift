@@ -12,7 +12,7 @@ struct NameView: View {
                 Text("What's your name?")
                     .font(.largeTitle.bold())
                     .accessibilityAddTraits(.isHeader)
-                Text("Your family sees this name.")
+                Text("Your family sees this name. Up to 20 characters.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 TextField(text: $model.name) { Text("Your name") }

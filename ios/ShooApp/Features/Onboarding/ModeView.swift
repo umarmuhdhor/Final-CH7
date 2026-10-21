@@ -28,8 +28,8 @@ struct ModeView: View {
                     selection: $model.selectedMode
                 )
                 Label { Text("You can't change this later.") } icon: { Image(systemName: "exclamationmark.triangle.fill") }
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
                 if model.registrationFailed {
                     Label { Text("Couldn't save. Check your connection and try again.") } icon: {
                         Image(systemName: "wifi.exclamationmark")

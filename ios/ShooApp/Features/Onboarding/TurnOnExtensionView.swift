@@ -7,6 +7,7 @@ struct TurnOnExtensionView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var isVideoPresented = false
     @ScaledMetric(relativeTo: .headline) private var badgeSize: CGFloat = 36
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let steps = ExtensionSetup.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
 
@@ -43,16 +44,15 @@ struct TurnOnExtensionView: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("extension.offHint")
+                // At accessibility text sizes the pinned footer would hide the steps, so the link scrolls.
+                if dynamicTypeSize.isAccessibilitySize { videoLink }
             }
         } footer: {
             OnboardingPrimaryButton(title: "Turn on") {
                 Task { await ExtensionSetup.openSettings() }
             }
             .accessibilityIdentifier("extension.turnOn")
-            Button { isVideoPresented = true } label: {
-                Text("Still can't? Watch the video").frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .accessibilityIdentifier("extension.video")
+            if !dynamicTypeSize.isAccessibilitySize { videoLink }
         }
         .onAppear { model.refreshExtensionStatus() }
         .onChange(of: scenePhase) { _, phase in
@@ -61,5 +61,12 @@ struct TurnOnExtensionView: View {
         .fullScreenCover(isPresented: $isVideoPresented) {
             TutorialVideoPlayer()
         }
+    }
+
+    private var videoLink: some View {
+        Button { isVideoPresented = true } label: {
+            Text("Still can't? Watch the video").frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .accessibilityIdentifier("extension.video")
     }
 }

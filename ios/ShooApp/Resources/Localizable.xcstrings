@@ -481,6 +481,16 @@
         }
       }
     },
+    "Turn on notifications": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyalakan notifikasi"
+          }
+        }
+      }
+    },
     "Turn on Shoo in Safari": {
       "localizations": {
         "id": {
@@ -581,12 +591,12 @@
         }
       }
     },
-    "Your family sees this name.": {
+    "Your family sees this name. Up to 20 characters.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keluargamu akan melihat nama ini."
+            "value": "Keluargamu akan melihat nama ini. Paling banyak 20 karakter."
           }
         }
       }
