@@ -3,6 +3,8 @@
 Shoo = iPhone Safari Web Extension + app that blocks scam sites (see docs/README.md for the PRD).
 
 ## Who owns what
+Lead: @umarmuhdhor (Umar) · Team AI: @imeldamayanti (Imelda) · Team App: @aliefauzan (Alief)
+
 | Folder | Owner | Notes |
 |---|---|---|
 | `contracts/` | Lead | Shared data shapes. Read-only for everyone else |

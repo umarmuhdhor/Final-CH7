@@ -1,4 +1,4 @@
-# TODO(lead): replace placeholders with real GitHub usernames or teams.
+# Lead: @umarmuhdhor · Team AI: @imeldamayanti · Team App: @aliefauzan
 # PRs touching a path need approval from its owner (enable branch protection on main).
 
 *                                   @umarmuhdhor
@@ -9,9 +9,9 @@
 /ios/ShooExtension/                 @umarmuhdhor
 /ios/ShooLiveActivity/              @umarmuhdhor
 
-/ios/ShooApp/                       @TEAM-APP-MEMBER-1 @TEAM-APP-MEMBER-2
-/backend/                           @TEAM-APP-MEMBER-1 @TEAM-APP-MEMBER-2
+/ios/ShooApp/                       @aliefauzan
+/backend/                           @aliefauzan
 
-/detector/                          @TEAM-AI-MEMBER-1 @TEAM-AI-MEMBER-2
-/ai/                                @TEAM-AI-MEMBER-1 @TEAM-AI-MEMBER-2
-/ios/ShooExtension/Resources/detector.js  @TEAM-AI-MEMBER-1 @TEAM-AI-MEMBER-2
+/detector/                          @imeldamayanti
+/ai/                                @imeldamayanti
+/ios/ShooExtension/Resources/detector.js  @imeldamayanti
