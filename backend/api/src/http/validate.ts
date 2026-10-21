@@ -65,6 +65,9 @@ export const codePoints = (s: string) => [...s].length;
 
 // Control characters (NUL included: Postgres text rejects it) and bidi overrides that could
 // disguise a name in push text and the Guardian UI.
+/** Lowercase registrable domain without `www.` (R3 §4; same rule as the DB checks). */
+export const DOMAIN = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const UNSAFE_TEXT = /[\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]/u;

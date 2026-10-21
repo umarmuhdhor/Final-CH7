@@ -6,14 +6,13 @@ import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
-import { hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
+import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
 
 const MAX_BODY = 256 * 1024;
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
-const DOMAIN = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
 /** http(s) URL without control or bidi characters (Postgres rejects NUL; the Guardian UI shows the URL). */
 const httpUrl = (s: string) => {
