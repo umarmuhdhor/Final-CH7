@@ -41,7 +41,7 @@ Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
 The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. So one page = one Activity item = one push.
 
-`screenshotBase64` (optional — some Safari builds can't capture): JPEG, base64, **no `data:` prefix**, max 900 px wide. Evidence area only (the sensitive form, else the visible screen), every text field blurred before capture (PRD §10). Backend stores it and returns it as `screenshotUrl`.
+`screenshotBase64` (optional — some Safari builds can't capture): JPEG, base64, **no `data:` prefix**, longest side ≤ 1280 px, ≤ 150 KB (the backend drops larger screenshots and still stores the scan). Evidence area only (the sensitive form, else the visible screen), every text field blurred before capture (PRD §10). Backend stores it and returns it as `screenshotUrl`.
 
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |
