@@ -11,7 +11,7 @@ Team App may pick the stack (Supabase recommended). If Supabase tables/RPCs are 
 Auth: no login (PRD §10). `POST /devices` returns a token; every other call sends `Authorization: Bearer <token>`.
 All bodies are JSON. Times are ISO 8601 UTC. Errors: `{ "error": { "code": string, "message": string } }`.
 
-Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `internal`. Endpoint-specific codes are listed per section.
+Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `internal`, `unauthorized` (401: token missing or unknown), `forbidden` (403: not allowed for this device or mode), `not_found` (404). Endpoint-specific codes are listed per section.
 `rate_limited` = HTTP 429 with a `Retry-After` header (seconds). Clients retry after it; it is **not** an empty answer (e.g. not `verdict: null`).
 
 ## Backend (Team App)
@@ -71,6 +71,12 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 2. Published: only after manual approval by Alief/Umar. `addedAt` = approval time; `nextSince` follows it.
 3. Removed: optional `removed[]` lists domains taken off the list since `since`. Until clients handle it, do a full refresh (no `since`) once a day.
 
+**Paging and `nextSince`:**
+- One response holds at most about 1000 entries (`domains` + `removed` together). It may go slightly over so that entries sharing one timestamp are never split across pages.
+- Client: repeat with `since=nextSince` until a response has no `domains` and no `removed`. A full refresh is the first request without `since`, then the same loop; replace the stored list only after the last page.
+- An empty response returns `nextSince` = the `since` it was given (caught up).
+- `nextSince` is `null` only when the list is empty and no `since` was sent. Keep no cursor; the next request is a full refresh.
+
 The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
 
 ### Push payloads (APNs)
@@ -85,7 +91,7 @@ Tap → open Detail for `scanId` (GD-06).
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/analyze` | `{ snapshot: PageSnapshot, localSignals: Signal[] }` | `{ signals: Signal[] }` — layer 3–4 only |
-| GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape as `GET /blocklist`. Downloaded by the extension every 6 h (full daily) |
+| GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape and `nextSince` rules as `GET /blocklist`; paging is optional here (one response with every entry is fine). Downloaded by the extension every 6 h (full daily) |
 
 **Auth on the AI service:** the extension sends `Authorization: Bearer <device token>` on both calls, but the AI service has no access to the backend's device table, so in MVP it does **not** verify the token. Protect it with a per-IP rate limit and a body-size limit instead (M7). Never log the token.
 
