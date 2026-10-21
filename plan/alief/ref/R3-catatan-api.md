@@ -1,7 +1,7 @@
 # R3 — Catatan implementasi API
 
 > **Kontrak = `contracts/api.md`.** File ini hanya menjelaskan detail yang tidak ditulis kontrak (error code tambahan, rate limit, cursor, otorisasi). Kalau ada selisih, kontrak menang dan file ini diperbaiki.
-> Base URL: `https://shoo-api.<akun>.workers.dev` (cloud), `http://localhost:8787` (lokal). Semua body JSON, waktu ISO 8601 UTC.
+> Base URL: `https://shoo-api.afindo-mi01.workers.dev` (cloud), `http://localhost:8787` (lokal). Semua body JSON, waktu ISO 8601 UTC.
 
 ## 1. Bentuk error
 
@@ -100,12 +100,12 @@ Var (bukan rahasia) ditulis di `vars` `backend/api/wrangler.jsonc` (ter-commit).
 | Nama | Jenis | Di mana diset | Contoh / catatan |
 |---|---|---|---|
 | `DB` | binding Hyperdrive | `wrangler.jsonc` (`id` + `localConnectionString`) | `shoo-db` (fase 07) |
-| `SUPABASE_URL` | secret | `wrangler secret put` · `.dev.vars` | cloud `https://<ref>.supabase.co`, lokal `http://127.0.0.1:54321` (fase 09) |
+| `SUPABASE_URL` | secret | `wrangler secret put` · `.dev.vars` | cloud `https://nmekxihgjszgcibqytyj.supabase.co`, lokal `http://127.0.0.1:54321` (fase 09) |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | hanya untuk Storage API; lokal dari `supabase status` (fase 09) |
 | `INVITE_BASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | URL Worker; lokal `http://localhost:8787` (fase 07) |
 | `APNS_TOPIC` | var | `supabase secrets set --env-file` (Edge Function) · `wrangler.jsonc` `vars` kalau sender langsung | bundle ID build yang diuji: build iPhone Alief (fase 11, D7) → build TestFlight (fase 16); test memakai nilai env |
 | `APNS_ENV` | var | `wrangler.jsonc` `vars` + `supabase secrets set` (Edge Function) | `sandbox` (fase 11) → `production` (fase 16) |
-| `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | `https://<ref>.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
+| `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | `https://nmekxihgjszgcibqytyj.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
 | `PUSH_RELAY_SECRET` | secret | `wrangler secret put` + `supabase secrets set` (nilai sama) · `.dev.vars` | jalur utama push (D-alief-16) |
 | `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | `supabase secrets set --env-file` (Edge Function) | hanya di Worker kalau `D-alief-B01` = spike lulus; kosong + tanpa relay → `LogSender` |
 | `SCREENSHOT_MAX_BYTES` | var | `wrangler.jsonc` `vars` | `153600` (fase 09) |
