@@ -146,7 +146,7 @@
         },
         "evidence": {
           "type": "string",
-          "description": "Optional raw evidence, e.g. the matched text or field name."
+          "description": "Optional. Text signals: text that appears exactly on the page (highlighted by the extension, EX-05). Field signals (asks_*): the field's name/id. Never typed values. See detector-interface.md."
         }
       }
     },

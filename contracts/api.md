@@ -39,13 +39,19 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 
 Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
+The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. So one page = one Activity item = one push.
+
+`screenshotBase64` (optional — some Safari builds can't capture): JPEG, base64, **no `data:` prefix**, max 900 px wide. Evidence area only (the sensitive form, else the visible screen), every text field blurred before capture (PRD §10). Backend stores it and returns it as `screenshotUrl`.
+
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
 | POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe" }` (guardian) | `{ verdict }` — applies to the scan's domain for that owner | GD-07 |
 | GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
 
-Extension polls `GET /verdicts?domain=` every 5 s while a protected user's block screen is open (or Team App offers realtime — propose via PR).
+Extension polls `GET /verdicts?domain=` every 5 s while the block screen is open, for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
+
+The extension only asks for a verdict once a page reaches score 30 — the point where the domain would be sent with `POST /scans` anyway. Low-score browsing never reaches the backend.
 
 ### Blocklist (layer 1 database)
 | Method | Path | Body | Response | PRD |
