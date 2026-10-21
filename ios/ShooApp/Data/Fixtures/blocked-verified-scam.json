@@ -1,0 +1,34 @@
+{
+  "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04",
+  "url": "https://p0stindonesia.com/paket/tertahan",
+  "domain": "p0stindonesia.com",
+  "pageTitle": "Pos Indonesia - Paket Tertahan",
+  "faviconUrl": null,
+  "score": 100,
+  "status": "blocked",
+  "signals": [
+    {
+      "id": "db_match",
+      "layer": 1,
+      "weight": 100,
+      "label": {
+        "en": "Listed as a verified scam",
+        "id": "Tercatat sebagai penipuan terverifikasi"
+      },
+      "labelSimple": {
+        "en": "This site is a known scam",
+        "id": "Situs ini sudah diketahui menipu"
+      }
+    }
+  ],
+  "screenshotUrl": null,
+  "ownerDeviceId": "dev_dad",
+  "ownerName": "Dad",
+  "detectedAt": "2026-10-20T11:30:00Z",
+  "verdict": {
+    "value": "not_safe",
+    "byDeviceId": "dev_me",
+    "byName": "Adhella",
+    "decidedAt": "2026-10-20T11:32:10Z"
+  }
+}

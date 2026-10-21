@@ -1,0 +1,293 @@
+{
+  "items": [
+    {
+      "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03",
+      "url": "https://bca-verifikasi.site/login?ref=wa",
+      "domain": "bca-verifikasi.site",
+      "pageTitle": "KlikBCA - Verifikasi Akun",
+      "faviconUrl": null,
+      "score": 92,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "new_domain",
+          "layer": 2,
+          "weight": 30,
+          "label": {
+            "en": "Domain age 3 days",
+            "id": "Umur domain 3 hari"
+          },
+          "labelSimple": {
+            "en": "This site was made 3 days ago",
+            "id": "Situs ini baru dibuat 3 hari lalu"
+          }
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for m-banking PIN",
+            "id": "Form meminta PIN m-banking"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank PIN — banks never do this",
+            "id": "Meminta PIN bank kamu — bank tidak pernah meminta ini"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 22,
+          "label": {
+            "en": "Verification page asks for PIN + OTP",
+            "id": "Halaman verifikasi meminta PIN + OTP"
+          },
+          "labelSimple": {
+            "en": "A real bank page would not ask this",
+            "id": "Halaman bank asli tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Brand name + extra word: bca + verifikasi",
+            "id": "Nama brand + kata tambahan: bca + verifikasi"
+          },
+          "labelSimple": {
+            "en": "Uses the BCA name but isn't BCA",
+            "id": "Memakai nama BCA, tapi bukan BCA"
+          }
+        }
+      ],
+      "screenshotUrl": "https://example.invalid/screens/blocked-92.png",
+      "ownerDeviceId": "dev_mom",
+      "ownerName": "Mom",
+      "detectedAt": "2026-10-21T04:05:00Z",
+      "verdict": null
+    },
+    {
+      "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e02",
+      "url": "https://bansos-kemensos.site/cek",
+      "domain": "bansos-kemensos.site",
+      "pageTitle": "Cek Penerima Bansos 2026",
+      "faviconUrl": null,
+      "score": 63,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "nik"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending (.site)",
+            "id": "Akhiran domain murah (.site)"
+          },
+          "labelSimple": {
+            "en": "This website address looks cheap and unofficial",
+            "id": "Alamat situs ini terlihat murahan dan tidak resmi"
+          }
+        },
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 13,
+          "label": {
+            "en": "Government name on non-official domain",
+            "id": "Nama instansi pemerintah di domain tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Uses a government name but isn't a government site",
+            "id": "Memakai nama pemerintah, tapi bukan situs pemerintah"
+          }
+        },
+        {
+          "id": "urgent_language",
+          "layer": 3,
+          "weight": 10,
+          "label": {
+            "en": "Urgent language: \"terakhir hari ini\"",
+            "id": "Kalimat mendesak: \"terakhir hari ini\""
+          },
+          "labelSimple": {
+            "en": "Rushes you to act fast",
+            "id": "Memaksa kamu cepat-cepat bertindak"
+          }
+        }
+      ],
+      "screenshotUrl": "https://example.invalid/screens/warning-63.png",
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-21T03:40:00Z",
+      "verdict": null
+    },
+    {
+      "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01",
+      "url": "https://promo-undian-shopee.click/hadiah",
+      "domain": "promo-undian-shopee.click",
+      "pageTitle": "Selamat! Anda Pemenang Undian",
+      "faviconUrl": null,
+      "score": 41,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending (.click)",
+            "id": "Akhiran domain murah (.click)"
+          },
+          "labelSimple": {
+            "en": "This website address looks cheap and unofficial",
+            "id": "Alamat situs ini terlihat murahan dan tidak resmi"
+          }
+        },
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name + extra word: shopee + undian",
+            "id": "Nama brand + kata tambahan: shopee + undian"
+          },
+          "labelSimple": {
+            "en": "Uses the Shopee name but isn't Shopee",
+            "id": "Memakai nama Shopee, tapi bukan Shopee"
+          }
+        },
+        {
+          "id": "urgent_language",
+          "layer": 3,
+          "weight": 12,
+          "label": {
+            "en": "Urgent language: \"klaim dalam 1 jam\"",
+            "id": "Kalimat mendesak: \"klaim dalam 1 jam\""
+          },
+          "labelSimple": {
+            "en": "Rushes you to act fast",
+            "id": "Memaksa kamu cepat-cepat bertindak"
+          },
+          "evidence": "klaim dalam 1 jam"
+        }
+      ],
+      "screenshotUrl": null,
+      "ownerDeviceId": "dev_mom",
+      "ownerName": "Mom",
+      "detectedAt": "2026-10-21T02:14:00Z",
+      "verdict": null
+    },
+    {
+      "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04",
+      "url": "https://p0stindonesia.com/paket/tertahan",
+      "domain": "p0stindonesia.com",
+      "pageTitle": "Pos Indonesia - Paket Tertahan",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "db_match",
+          "layer": 1,
+          "weight": 100,
+          "label": {
+            "en": "Listed as a verified scam",
+            "id": "Tercatat sebagai penipuan terverifikasi"
+          },
+          "labelSimple": {
+            "en": "This site is a known scam",
+            "id": "Situs ini sudah diketahui menipu"
+          }
+        }
+      ],
+      "screenshotUrl": null,
+      "ownerDeviceId": "dev_dad",
+      "ownerName": "Dad",
+      "detectedAt": "2026-10-20T11:30:00Z",
+      "verdict": {
+        "value": "not_safe",
+        "byDeviceId": "dev_me",
+        "byName": "Adhella",
+        "decidedAt": "2026-10-20T11:32:10Z"
+      }
+    },
+    {
+      "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e05",
+      "url": "https://tokokecil-batik.xyz/checkout",
+      "domain": "tokokecil-batik.xyz",
+      "pageTitle": "Checkout - Toko Kecil Batik",
+      "faviconUrl": null,
+      "score": 81,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 30,
+          "label": {
+            "en": "Form asks for card number + CVV",
+            "id": "Form meminta nomor kartu + CVV"
+          },
+          "labelSimple": {
+            "en": "Asks for your card details",
+            "id": "Meminta data kartu kamu"
+          }
+        },
+        {
+          "id": "new_domain",
+          "layer": 2,
+          "weight": 30,
+          "label": {
+            "en": "Domain age 9 days",
+            "id": "Umur domain 9 hari"
+          },
+          "labelSimple": {
+            "en": "This site was made 9 days ago",
+            "id": "Situs ini baru dibuat 9 hari lalu"
+          }
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 21,
+          "label": {
+            "en": "Cheap domain ending (.xyz)",
+            "id": "Akhiran domain murah (.xyz)"
+          },
+          "labelSimple": {
+            "en": "This website address looks cheap and unofficial",
+            "id": "Alamat situs ini terlihat murahan dan tidak resmi"
+          }
+        }
+      ],
+      "screenshotUrl": null,
+      "ownerDeviceId": "dev_mom",
+      "ownerName": "Mom",
+      "detectedAt": "2026-10-19T08:00:00Z",
+      "verdict": {
+        "value": "safe",
+        "byDeviceId": "dev_me",
+        "byName": "Adhella",
+        "decidedAt": "2026-10-19T08:03:00Z"
+      }
+    }
+  ],
+  "nextCursor": null
+}

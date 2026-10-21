@@ -1,0 +1,186 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Activity": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivitas"
+          }
+        }
+      }
+    },
+    "Blocked": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diblokir"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selesai"
+          }
+        }
+      }
+    },
+    "I'm Protected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saya dilindungi"
+          }
+        }
+      }
+    },
+    "I'm a Guardian": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saya Guardian"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bahasa"
+          }
+        }
+      }
+    },
+    "Marked safe": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ditandai aman"
+          }
+        }
+      }
+    },
+    "No activity yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada aktivitas"
+          }
+        }
+      }
+    },
+    "Profile": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil"
+          }
+        }
+      }
+    },
+    "Protection is on": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perlindungan aktif"
+          }
+        }
+      }
+    },
+    "Risk score": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skor risiko"
+          }
+        }
+      }
+    },
+    "Risky sites you open will show up here.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situs berisiko yang kamu buka akan muncul di sini."
+          }
+        }
+      }
+    },
+    "Safari extension is off": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekstensi Safari mati"
+          }
+        }
+      }
+    },
+    "Scam sites, shooed away.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situs penipuan, diusir jauh-jauh."
+          }
+        }
+      }
+    },
+    "Shield": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perisai"
+          }
+        }
+      }
+    },
+    "Verified scam": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Penipuan terverifikasi"
+          }
+        }
+      }
+    },
+    "Warning": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Peringatan"
+          }
+        }
+      }
+    },
+    "Your Shield screen is coming soon.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layar Perisai segera hadir."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
