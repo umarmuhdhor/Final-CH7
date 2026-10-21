@@ -62,6 +62,7 @@ grep -rn "TODO(sync" ios/ShooApp || true
 - [ ] Semua fixture terdecode ke model `ShooShared` (test).
 - [ ] `MockRepository` memenuhi seluruh protocol, termasuk error kontrak (test).
 - [ ] Bahasa in-app EN ↔ ID terbukti (test atau screenshot) dan cara yang dipakai dicatat.
+- [ ] `ios/ShooApp/PrivacyInfo.xcprivacy` ada sesuai SECURITY §3 P1 (`plutil -lint` hijau, kode alasan dicek di docs Apple); `Support/Log.swift` membungkus `os.Logger` dengan `privacy: .private` (P6).
 - [ ] Tab Shield / Activity + profile button tampil di simulator (screenshot EN + ID).
 - [ ] Draf `ios-app.yml` ada.
 

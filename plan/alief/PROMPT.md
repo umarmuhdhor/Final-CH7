@@ -181,6 +181,9 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
       `ios/Config/Local.xcconfig` (gitignored, salin dari `.example`); bundle ID dan App Group per developer, jadi jangan
       hardcode `com.shoo.app` / `group.com.shoo.app`: pakai `AppGroup.id`, `Bundle.main.bundleIdentifier`, atau
       `$BUNDLE_ID` / `$APP_GROUP` dari `source plan/alief/ref/sim.sh`.
+   l. Privasi & keamanan Apple (SECURITY §3, P1–P12) wajib untuk setiap fase app: privacy manifest, Keychain
+      `AfterFirstUnlockThisDeviceOnly`, `os.Logger` dengan `privacy: .private`, izin just-in-time, tanpa SDK pihak ketiga.
+      Fase backend: tidak ada PII/token di log, data dihapus sesuai retensi dan `DELETE /devices/me` (P3).
 
 7. GERBANG UI (wajib kalau diff menyentuh ios/ShooApp/**/*.swift yang menghasilkan tampilan):
    a. Build + jalankan di simulator iPhone (iOS Simulator tool: launch, screenshot). Ambil screenshot setiap layar

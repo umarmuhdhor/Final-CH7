@@ -52,3 +52,4 @@ git diff --stat origin/main...HEAD -- ios/ShooApp/Info.plist ios/ShooApp/*.entit
 - [ ] Dua simulator terhubung lewat kode dan lewat link (bukti di log).
 - [ ] Semua 4 error join + `already_connected` punya pesan EN/ID yang jelas.
 - [ ] Tidak ada edit di Info.plist/entitlements; tab Scan QR aktif hanya kalau C3 sudah di-merge.
+- [ ] Kamera diminta hanya saat tab Scan QR dibuka, tidak ada foto disimpan (P7); "Copy invite link" pakai pasteboard `.localOnly` + `.expirationDate` (P8, test).

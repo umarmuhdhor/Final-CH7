@@ -265,3 +265,9 @@ Format:
 - Keputusan: kontrak PR #1 (deep links), #3 (catatan extension), #4 (usulan backend), #6 (`/public-blocklist`) sudah di `main`. Plan mengikuti kontrak: `GET /devices/me` dibangun di fase 08 dan dipakai app (`me()`) di fase 13; `extensionLastSeenAt` di `PATCH /devices/me` disimpan sejak fase 07; `removed[]` di `GET /blocklist` (fase 10); Guardian lain → 403 `verdict_not_allowed` (bukan 404); kode umum `invalid_body`/`bad_json`/`too_large`/`rate_limited` + `Retry-After`/`internal`. TODO C4–C6, C9–C13, C16 ditandai diterima. Sisa izin dari Umar: C3.
 - Alasan: hard rule 3 (semua JSON wajib cocok `contracts/`); teks "kalau C11/C12 disetujui" sudah usang.
 - File: TODO §C, PROGRESS (fase 00, G0, G1), fase-01, 07, 08, 09, 10, 13, R2 §5, R3 §1/§4, R7 #15b.
+
+## D-alief-39 · 21 Okt 2026 · plan · Privasi & keamanan ekosistem Apple
+
+- Keputusan: tambah SECURITY §3 (P1–P12): privacy manifest app (fase 01), label privasi App Store (fase 16), hapus data di dalam app lewat usulan `DELETE /devices/me` (fase 06/08/13, flag sampai C19), Keychain `AfterFirstUnlockThisDeviceOnly`, ATS tanpa pengecualian umum, `os.Logger` `.private`, izin just-in-time, pasteboard `.localOnly` + kedaluwarsa, screenshot tanpa cache disk, push tanpa URL, export compliance, kebijakan privasi. PROMPT langkah 6l mewajibkannya. Permintaan ke Umar: TODO C19.
+- Alasan: permintaan Alief (21 Okt): produk berjalan di ekosistem Apple dan memproses riwayat browsing berisiko, nama, dan screenshot; App Store Review 5.1.1 mewajibkan manifest, label, dan penghapusan akun.
+- File: SECURITY §3 (§ lama bergeser ke §4–§6), PROMPT 6l, fase-01, 06, 08, 13, 14, 16, TODO C19.

@@ -54,3 +54,4 @@ pkill -f "wrangler dev" || true   # setelah uji manual selesai
 - [ ] Tidak ada view yang berubah karena pergantian repository (diff `Features/` hanya injeksi).
 - [ ] Semua key App Group terisi setelah onboarding (test + cek di simulator); `device.name` ikut berubah setelah ganti nama; `guardian.name` hilang setelah disconnect (test).
 - [ ] Alur onboarding → Shield berjalan melawan backend lokal (screenshot).
+- [ ] SECURITY §3: Keychain `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` (test atribut, P4), ATS tanpa pengecualian umum (P5), screenshot cache memori saja (P9), `deleteMe()` asli bila C19 disetujui (P3).

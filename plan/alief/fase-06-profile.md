@@ -45,6 +45,7 @@ xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=
 
 - [ ] PF-01 sesuai "Selesai kalau" untuk Guardian dan Protected.
 - [ ] Ganti bahasa mengubah semua layar Fase A tanpa restart (UI test + screenshot).
+- [ ] "Delete my data" (SECURITY §3 P3): konfirmasi EN/ID → `MockRepository.deleteMe()` → sesi bersih → onboarding; di belakang `AppConfig.dataDeletionEnabled` sampai C19 dijawab (test).
 
 ## Catatan handoff
 

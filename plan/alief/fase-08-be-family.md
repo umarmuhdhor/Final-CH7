@@ -48,4 +48,5 @@ Test wajib: kode 4 digit + kedaluwarsa 60 s (jam disuntik), kode multi-pakai, Pr
 - [ ] Semua test di atas hijau.
 - [ ] Respons cocok dengan `fixtures/family-members.json` (test snapshot bentuk).
 - [ ] `GET /devices/me` sesuai kontrak (test).
+- [ ] `DELETE /devices/me` (SECURITY §3 P3, usulan C19): hapus device + link + scan + objek screenshot + verdict terkait dalam satu transaksi (Storage setelah commit); token lama → 401; test. Ditulis di PR "Contract proposals".
 - [ ] LANGKAH MANUAL deploy fase 08 tertulis.

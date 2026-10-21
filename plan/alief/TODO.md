@@ -65,6 +65,7 @@ Jangan tempel nilai secret di chat atau di file repo. Agent hanya perlu tahu bah
 | C17 | Umar | Usulan (hasil 01S, D-alief-34): di iOS 26.2+ app memakai `SFSafariExtensionManager.stateOfExtension(withIdentifier:)` (`.isEnabled`) sebagai sumber status tambahan di samping heartbeat `extension.lastSeenAt` (aturan `ios/ShooApp/CLAUDE.md` saat ini hanya heartbeat), dan `SFSafariSettings.openExtensionsSettings` untuk tombol Turn on. Sampai disetujui: status tetap heartbeat saja. | akhir fase 01S | [ ] |
 | C18 | Umar | "Mohon aktifkan branch protection di `main` (CODEOWNERS sudah menyarankan) supaya status review PR (`reviewDecision`) terisi." | sebelum PR fase pertama | [ ] |
 | C16 | Umar | "Deep link kontrak PR #1 (`shoo://scan/{id}`, `shoo://activity`, `shoo://join`, default Shield) sudah masuk plan: fase 14 (`join` + default) dan fase 15 (`scan`, `activity`). Mohon merge PR #1." (sebelumnya usulan D-alief-32, sekarang dikerjakan Umar) | sebelum fase 15 | [x] diterima kontrak (PR #1/#3/#4, merged 21 Okt) |
+| C19 | Umar | "Privasi Apple (SECURITY §3 plan Alief): (1) usulan kontrak `DELETE /devices/me` → hapus semua data device (Guideline 5.1.1(v): app yang membuat akun wajib bisa menghapusnya); (2) `PrivacyInfo.xcprivacy` untuk target extension (UserDefaults App Group `1C8F.1`); (3) `ITSAppUsesNonExemptEncryption: NO` di Info.plist target Shoo lewat `project.yml`; (4) kalau ATS memblokir `http://localhost` di Debug: `NSAllowsLocalNetworking` hanya untuk Debug." | **sekarang** (bersama C3) | [ ] |
 
 ## D. Langkah manual yang butuh manusia
 
