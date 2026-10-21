@@ -4,11 +4,12 @@ import markedSafe from "../../../contracts/fixtures/blocked-marked-safe.json";
 import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json";
 import warning41 from "../../../contracts/fixtures/warning-41.json";
 import { sha256 } from "../src/http/crypto";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created } from "./helpers/seed";
 
 const sql = testSql();
+const admin = adminSql();
 beforeEach(() => resetDb(sql));
 
 type Fixture = {
@@ -53,7 +54,7 @@ const blocklist = async (d: Created, q = "") =>
     nextSince: string | null;
   };
 const approve = (domain: string) =>
-  sql`update blocklist_entries set approved_at = now(), approved_by = 'test' where domain = ${domain}`;
+  admin`update blocklist_entries set approved_at = now(), approved_by = 'test' where domain = ${domain}`;
 
 /** Guardian G with a connected protected member P. */
 async function family() {
@@ -388,7 +389,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     await verdict(g, id, "not_safe");
     await approve("gone.example");
     const before = await blocklist(p);
-    await sql`update blocklist_entries set removed_at = now() where domain = 'gone.example'`;
+    await admin`update blocklist_entries set removed_at = now() where domain = 'gone.example'`;
     await verdict(g, id, "safe");
     await verdict(g, id, "not_safe");
     expect((await blocklist(p)).domains).toEqual([]);

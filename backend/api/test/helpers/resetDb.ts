@@ -6,6 +6,11 @@ export function testSql(): Sql {
   return postgres(env.DB.connectionString, { max: 1, fetch_types: false });
 }
 
+/** Role postgres: what a reviewer does in the SQL editor (approve/remove blocklist domains). */
+export function adminSql(): Sql {
+  return postgres(env.DB_ADMIN.connectionString, { max: 1, fetch_types: false });
+}
+
 /** Empties every table. shoo_api has DELETE (not TRUNCATE), which is enough for tests. */
 export async function resetDb(sql: Sql): Promise<void> {
   await sql.begin(async (tx) => {
