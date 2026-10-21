@@ -47,6 +47,13 @@ Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
 Extension polls `GET /verdicts?domain=` every 5 s while a protected user's block screen is open (or Team App offers realtime — propose via PR).
 
+### Blocklist (layer 1 database)
+| Method | Path | Body | Response | PRD |
+|---|---|---|---|---|
+| GET | `/blocklist?since=` | — | `{ domains: [{ domain, addedAt }], nextSince }` — all domains with a `not_safe` verdict from any family | §5 Layer 1 |
+
+The detector (Team AI) downloads this list and refreshes it periodically; it never sends the visited URL to check one domain.
+
 ### Push payloads (APNs)
 ```json
 { "aps": { "alert": { "body": "Mom hit a blocked site · 92%" } }, "scanId": "…" }

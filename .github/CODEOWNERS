@@ -15,3 +15,8 @@
 /detector/                          @imeldamayanti
 /ai/                                @imeldamayanti
 /ios/ShooExtension/Resources/detector.js  @imeldamayanti
+
+# Mandates: lead writes scope; the member may tick their own checkboxes
+/.claude/                           @umarmuhdhor
+/docs/mandates/imelda.md            @umarmuhdhor @imeldamayanti
+/docs/mandates/alief.md             @umarmuhdhor @aliefauzan

@@ -2,6 +2,12 @@
 
 Shoo = iPhone Safari Web Extension + app that blocks scam sites (see docs/README.md for the PRD).
 
+## Mandates (task lists)
+- Imelda (Team AI): [docs/mandates/imelda.md](docs/mandates/imelda.md)
+- Alief (Team App + Backend): [docs/mandates/alief.md](docs/mandates/alief.md)
+
+Before starting any task, read the mandate of the person you're working for. `/mandate` loads it and picks the next task.
+
 ## Who owns what
 Lead: @umarmuhdhor (Umar) · Team AI: @imeldamayanti (Imelda) · Team App: @aliefauzan (Alief)
 
