@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { errorInfo } from "../http/logError";
 
 const BUCKET = "screenshots";
 const TIMEOUT_MS = 5000;
@@ -94,6 +95,6 @@ export async function deleteScreenshots(env: Env, paths: string[]): Promise<void
     for (let i = 0; i < paths.length; i += REMOVE_BATCH) await store.remove(paths.slice(i, i + REMOVE_BATCH));
   } catch (err) {
     // Count only: paths contain device ids.
-    console.error(JSON.stringify({ event: "screenshots_delete_failed", count: paths.length, error: String(err) }));
+    console.error(JSON.stringify({ event: "screenshots_delete_failed", count: paths.length, error: errorInfo(err) }));
   }
 }

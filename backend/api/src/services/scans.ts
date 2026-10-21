@@ -4,6 +4,7 @@ import { clearScreenshotPath, reserveScreenshot, scanExists, type ScanRow } from
 import { decodeBase64, sniffImage } from "./images";
 import { screenshotLink } from "./screenshotLinks";
 import { screenshotStore } from "./screenshots";
+import { errorInfo } from "../http/logError";
 
 const MAX_SIDE = 1280;
 const DAILY_QUOTA = 50;
@@ -61,7 +62,7 @@ export async function attachScreenshot(
   try {
     await store.put(path, bytes, image.type === "png" ? "image/png" : "image/jpeg");
   } catch (err) {
-    console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: String(err) }));
+    console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: errorInfo(err) }));
     // A timed-out upload may still land in Storage: remove it so no object is left without a row.
     await store.remove([path]).catch(() => undefined);
     await clearScreenshotPath(sql, scan.ownerId, path);

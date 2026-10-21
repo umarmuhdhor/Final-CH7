@@ -37,6 +37,24 @@ describe("guardianPush (R4 §3)", () => {
   });
 });
 
+describe("guardianPush cap (security review fase 11 M1)", () => {
+  it("at most 10 pushes per guardian per 10 min; older rows do not count", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
+    const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+    await call("/family/join", { method: "POST", token: p.token, json: { code } });
+    const mom = principal(p, "Mom", "protected");
+
+    await sql`insert into push_log (to_device_id, result, created_at)
+      select ${g.deviceId}, 'sent', now() - interval '11 minutes' from generate_series(1, 20)`;
+    await sql`insert into push_log (to_device_id, result) select ${g.deviceId}, 'sent' from generate_series(1, 9)`;
+    expect(await guardianPush(sql, mom, scan)).toBeDefined();
+    await sql`insert into push_log (to_device_id, result) values (${g.deviceId}, 'failed:400 BadDeviceToken')`;
+    expect(await guardianPush(sql, mom, scan)).toBeUndefined();
+  });
+});
+
 describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
   const { id: _id, verdict: _v, screenshotUrl: _s, ownerDeviceId: _o, ownerName: _n, ...scanBody } = blocked92;
   const pushRows = async (expected: number) => {

@@ -2,5 +2,7 @@
 -- protected person's name in a second table and went stale after a rename; it can be rebuilt from
 -- scan_id + pushText. result is limited to short codes, so a token or JWT can never be stored there.
 alter table push_log drop column body;
+-- Rows written before this migration (none expected) are dropped rather than failing the CHECK.
+delete from push_log where result !~ '^(sent|logged|failed:([0-9]{3}( [A-Za-z]{1,64})?|timeout|network|config))$';
 alter table push_log add constraint push_log_result_format
   check (result ~ '^(sent|logged|failed:([0-9]{3}( [A-Za-z]{1,64})?|timeout|network|config))$');

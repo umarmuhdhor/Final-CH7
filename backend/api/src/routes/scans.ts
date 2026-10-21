@@ -11,6 +11,7 @@ import { deliverPush } from "../services/push/deliver";
 import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
+import { errorInfo } from "../http/logError";
 
 const MAX_BODY = 256 * 1024;
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
@@ -124,7 +125,7 @@ scans.post("/scans", async (c) => {
       await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);
     } catch (err) {
       // The scan is stored; a screenshot problem must not turn into a 500 that the extension retries.
-      console.error(JSON.stringify({ event: "screenshot_dropped", reason: "error", error: String(err) }));
+      console.error(JSON.stringify({ event: "screenshot_dropped", reason: "error", error: errorInfo(err) }));
     }
   }
   // DB lookup now, while the request's connection is open; only the send runs after the response.
@@ -136,12 +137,12 @@ scans.post("/scans", async (c) => {
       c.executionCtx.waitUntil(
         deliverPush(sql, sender, push).catch((err) =>
           // Name only: a DB error can quote values (D-alief-40).
-          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: (err as Error)?.name ?? "Error" })),
+          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
         ),
       );
     }
   } catch (err) {
-    console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: String(err) }));
+    console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
   }
   return c.json({ id }, 201);
 });

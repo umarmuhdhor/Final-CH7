@@ -45,7 +45,10 @@ function entry(config: ApnsConfig): CacheEntry {
   if (!e || e.keyP8B64 !== config.keyP8B64) {
     e = { keyP8B64: config.keyP8B64, key: Promise.resolve().then(() => importApnsKey(atob(config.keyP8B64))) };
     // A failed import is retried on the next send instead of being cached.
-    e.key.catch(() => cache.delete(id));
+    const created = e;
+    e.key.catch(() => {
+      if (cache.get(id) === created) cache.delete(id);
+    });
     cache.set(id, e);
   }
   return e;
@@ -83,8 +86,10 @@ export class ApnsSender implements PushSender {
     if (!HEX.test(message.apnsToken)) return { result: "failed:400 BadDeviceToken" };
     const e = entry(this.config);
     let jwt: string;
+    let used: CacheEntry["jwt"];
     try {
       jwt = await this.providerToken(e);
+      used = e.jwt;
     } catch {
       e.jwt = undefined;
       return { result: "failed:config" };
@@ -99,6 +104,8 @@ export class ApnsSender implements PushSender {
           "apns-push-type": "alert",
           "apns-topic": this.config.topic,
           "apns-priority": "10",
+          // A guardian offline for over an hour gets no stale alert; Activity still has the scan.
+          "apns-expiration": String(Math.floor(this.now() / 1000) + 3600),
           "content-type": "application/json",
         },
         body: JSON.stringify({ aps: { alert: { body: message.body }, sound: "default" }, scanId: message.scanId }),
@@ -117,7 +124,8 @@ export class ApnsSender implements PushSender {
     } catch {
       // Not JSON: status only.
     }
-    if (res.status === 403 && reason === "ExpiredProviderToken") e.jwt = undefined;
+    // Only drop the token this send used: a newer one from a parallel send stays (no refresh storm).
+    if (res.status === 403 && reason === "ExpiredProviderToken" && e.jwt === used) e.jwt = undefined;
     const result = `failed:${res.status}${reason ? ` ${reason}` : ""}`;
     return res.status === 410 ? { result, clearToken: true } : { result };
   }

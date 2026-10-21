@@ -57,6 +57,10 @@ describe("ApnsSender request (R3 §6, contracts/api.md Push payloads)", () => {
     expect(h.get("apns-priority")).toBe("10");
     expect(h.get("content-type")).toBe("application/json");
     expect(calls[0]!.init.signal).toBeInstanceOf(AbortSignal);
+    // Stale alerts are not delivered hours later (security review fase 11 M1).
+    const exp = Number(h.get("apns-expiration"));
+    expect(exp).toBeGreaterThan(Date.now() / 1000 + 3500);
+    expect(exp).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 3600);
     expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
       aps: { alert: { body: "Mom hit a blocked site · 92%" }, sound: "default" }, scanId: "scan-1",
     });

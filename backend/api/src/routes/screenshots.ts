@@ -6,6 +6,7 @@ import { hit, limits } from "../http/rateLimit";
 import { UUID } from "../http/validate";
 import { verifyScreenshotLink } from "../services/screenshotLinks";
 import { screenshotStore } from "../services/screenshots";
+import { errorInfo } from "../http/logError";
 
 const NO_STORE = "private, no-store";
 
@@ -32,7 +33,7 @@ screenshots.get("/screenshots/:id", async (c) => {
   try {
     object = await store.get(path);
   } catch (err) {
-    console.error(JSON.stringify({ event: "screenshot_read_failed", error: String(err) }));
+    console.error(JSON.stringify({ event: "screenshot_read_failed", error: errorInfo(err) }));
   }
   if (!object) throw errors.notFound();
 
