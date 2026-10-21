@@ -1,10 +1,8 @@
-import { z } from "zod";
 import type { Env } from "../env";
 
 const BUCKET = "screenshots";
 const TIMEOUT_MS = 5000;
 const REMOVE_BATCH = 100;
-const signResponse = z.object({ signedURL: z.string().startsWith("/") });
 
 /** Throws on a non-2xx response; the body is released first (workerd caps open subrequests). */
 async function ensureOk(res: Response, what: string): Promise<void> {
@@ -16,7 +14,8 @@ async function ensureOk(res: Response, what: string): Promise<void> {
 /** Private evidence screenshots (bucket `screenshots`, R3 §4, SECURITY T6). */
 export interface ScreenshotStore {
   put(path: string, bytes: Uint8Array, contentType: string): Promise<void>;
-  signedUrl(path: string, ttlSeconds: number): Promise<string>;
+  /** The object as a streaming response, or undefined when it does not exist. */
+  get(path: string): Promise<Response | undefined>;
   remove(paths: string[]): Promise<void>;
 }
 
@@ -51,16 +50,18 @@ export class SupabaseStorageStore implements ScreenshotStore {
     await res.body?.cancel();
   }
 
-  async signedUrl(path: string, ttlSeconds: number): Promise<string> {
-    const res = await fetch(`${this.baseUrl}/storage/v1/object/sign/${BUCKET}/${this.object(path)}`, {
-      method: "POST",
-      headers: this.headers("application/json"),
-      body: JSON.stringify({ expiresIn: ttlSeconds }),
+  async get(path: string): Promise<Response | undefined> {
+    const res = await fetch(`${this.baseUrl}/storage/v1/object/authenticated/${BUCKET}/${this.object(path)}`, {
+      headers: { apikey: this.key, authorization: `Bearer ${this.key}` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    await ensureOk(res, "sign");
-    const { signedURL } = signResponse.parse(await res.json());
-    return `${this.baseUrl}/storage/v1${signedURL}`;
+    // Storage answers a missing object with 400 or 404.
+    if (res.status === 400 || res.status === 404) {
+      await res.body?.cancel();
+      return undefined;
+    }
+    await ensureOk(res, "get");
+    return res;
   }
 
   async remove(paths: string[]): Promise<void> {

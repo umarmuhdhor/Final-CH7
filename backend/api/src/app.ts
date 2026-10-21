@@ -9,6 +9,7 @@ import { family } from "./routes/family";
 import { health } from "./routes/health";
 import { joinPage } from "./routes/join-page";
 import { scans } from "./routes/scans";
+import { screenshots } from "./routes/screenshots";
 
 export const app = new Hono<AppEnv>();
 
@@ -30,6 +31,7 @@ app.route("/", blocklist);
 app.route("/", family);
 app.route("/", joinPage);
 app.route("/", scans);
+app.route("/", screenshots);
 app.route("/", debugApns);
 
 app.notFound((c) => errorResponse(c, errors.notFound()));

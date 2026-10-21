@@ -149,3 +149,13 @@ export async function memberIds(sql: Sql, guardianId: string): Promise<string[]>
   const rows = await sql<{ id: string }[]>`select protected_id as id from family_links where guardian_id = ${guardianId}`;
   return rows.map((r) => r.id);
 }
+
+/** The screenshot path while the viewer owns the scan or is the owner's current guardian (D-alief-B08). */
+export async function screenshotPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
+  const [row] = await sql<{ path: string }[]>`
+    select s.screenshot_path as path from scans s
+    where s.id = ${id} and s.screenshot_path is not null
+      and (s.owner_id = ${viewerId}
+           or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
+  return row?.path;
+}

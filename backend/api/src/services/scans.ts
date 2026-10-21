@@ -2,9 +2,9 @@ import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { clearScreenshotPath, reserveScreenshot, scanExists, type ScanRow } from "../db/repo/scans";
 import { decodeBase64, sniffImage } from "./images";
+import { screenshotLink } from "./screenshotLinks";
 import { screenshotStore } from "./screenshots";
 
-export const SIGNED_URL_TTL = 3600;
 const MAX_SIDE = 1280;
 const DAILY_QUOTA = 50;
 const DEFAULT_MAX_BYTES = 150 * 1024;
@@ -71,14 +71,20 @@ export async function attachScreenshot(
   if (!(await scanExists(sql, scan.id))) await store.remove([path]).catch(() => undefined);
 }
 
-/** Signed URL for Detail, or null when there is no screenshot or Storage fails (the scan still shows). */
-export async function signedScreenshotUrl(env: Env, path: string | null): Promise<string | null> {
-  if (!path) return null;
-  try {
-    const store = screenshotStore(env);
-    return store ? await store.signedUrl(path, SIGNED_URL_TTL) : null;
-  } catch (err) {
-    console.error(JSON.stringify({ event: "screenshot_sign_failed", error: String(err) }));
+/**
+ * Detail's screenshotUrl: a 1-hour Worker link for this viewer (D-alief-B08), never a Storage URL,
+ * so no CDN copy can outlive a delete or disconnect. Null without a screenshot or without the secret.
+ */
+export async function screenshotUrl(
+  env: Env,
+  origin: string,
+  scan: { id: string; screenshotPath: string | null },
+  viewerId: string,
+): Promise<string | null> {
+  if (!scan.screenshotPath) return null;
+  if (!env.SCREENSHOT_URL_SECRET) {
+    console.error(JSON.stringify({ event: "screenshot_link_unavailable", reason: "no_secret" }));
     return null;
   }
+  return screenshotLink(env.SCREENSHOT_URL_SECRET, origin, scan.id, viewerId, Date.now() / 1000);
 }

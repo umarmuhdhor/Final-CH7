@@ -6,14 +6,13 @@ import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
-import { hasUnsafe, isoTime, parse, readJson, stripUnsafe } from "../http/validate";
+import { hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
-import { attachScreenshot, signedScreenshotUrl, toScanResult } from "../services/scans";
+import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
 
 const MAX_BODY = 256 * 1024;
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DOMAIN = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
 /** http(s) URL without control or bidi characters (Postgres rejects NUL; the Guardian UI shows the URL). */
@@ -187,8 +186,9 @@ scans.get("/scans", async (c) => {
 scans.get("/scans/:id", async (c) => {
   const id = c.req.param("id");
   if (!UUID.test(id)) throw errors.notFound();
-  const row = await findVisibleScan(c.get("sql"), id, c.get("principal").deviceId);
+  const viewerId = c.get("principal").deviceId;
+  const row = await findVisibleScan(c.get("sql"), id, viewerId);
   if (!row) throw errors.notFound();
-  return c.json(toScanResult(row, await signedScreenshotUrl(c.env, row.screenshotPath)));
+  return c.json(toScanResult(row, await screenshotUrl(c.env, new URL(c.req.url).origin, row, viewerId)));
 });
 

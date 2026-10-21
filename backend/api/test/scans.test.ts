@@ -411,28 +411,21 @@ describe("GET /scans", () => {
 });
 
 describe("GET /scans/{id}", () => {
-  it("owner gets a 1-hour signed URL that serves the screenshot", async () => {
+  it("owner gets a 1-hour Worker URL for the screenshot (D-alief-B08)", async () => {
     const p = await createDevice("Mom");
-    const shot = jpeg(320, 240, 500);
-    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(shot) }));
+    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(320, 240, 500)) }));
     const res = await call(`/scans/${id}`, { token: p.token });
     expect(res.status).toBe(200);
     const item = (await res.json()) as Item;
     expectScanResult(item);
     expect(item.id).toBe(id);
-    expect(item.screenshotUrl).toMatch(new RegExp(`^${env.SUPABASE_URL}/storage/v1/object/sign/screenshots/`));
     const url = new URL(item.screenshotUrl!);
-    const token = JSON.parse(atob(url.searchParams.get("token")!.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/")));
-    expect(token.exp - token.iat).toBe(3600);
-    const img = await fetch(item.screenshotUrl!);
-    expect(img.status).toBe(200);
-    // No CDN or browser copy may outlive DELETE /devices/me or retention (SECURITY §3, D-alief-B07 l).
-    // Local Storage does not echo the header, so the stored object setting is checked.
-    const info = (await (await fetch(`${env.SUPABASE_URL}/storage/v1/object/info/screenshots/${await pathOf(id)}`, {
-      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
-    })).json()) as { cache_control: string };
-    expect(info.cache_control).toBe("no-store");
-    expect(new Uint8Array(await img.arrayBuffer())).toEqual(shot);
+    expect(`${url.origin}${url.pathname}`).toBe(`http://api.test/screenshots/${id}`);
+    expect(url.searchParams.get("v")).toBe(p.deviceId);
+    const ttl = Number(url.searchParams.get("exp")) - Date.now() / 1000;
+    expect(ttl).toBeGreaterThan(3590);
+    expect(ttl).toBeLessThanOrEqual(3600);
+    expect(url.searchParams.get("sig")).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
   it("no screenshot → screenshotUrl null", async () => {

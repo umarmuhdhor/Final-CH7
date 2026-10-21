@@ -65,6 +65,8 @@ export const codePoints = (s: string) => [...s].length;
 
 // Control characters (NUL included: Postgres text rejects it) and bidi overrides that could
 // disguise a name in push text and the Guardian UI.
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 const UNSAFE_TEXT = /[\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]/u;
 const UNSAFE_TEXT_ALL = new RegExp(UNSAFE_TEXT.source, "gu");
 

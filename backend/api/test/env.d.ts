@@ -8,6 +8,7 @@ declare namespace Cloudflare {
     SUPABASE_URL?: string;
     SUPABASE_SERVICE_ROLE_KEY?: string;
     SCREENSHOT_MAX_BYTES?: string;
+    SCREENSHOT_URL_SECRET?: string;
   }
   interface GlobalProps {
     mainModule: typeof import("../src/index");
