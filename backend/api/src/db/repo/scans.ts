@@ -21,19 +21,21 @@ export async function insertScan(sql: Sql, s: NewScan): Promise<string> {
   return row!.id;
 }
 
-export type ScreenshotSlot = { reuse: string } | { upload: string } | { quota: true };
+export type ScreenshotSlot = { reuse: string } | { upload: string } | { quota: "owner" | "global" };
 
 /**
  * Picks the screenshot for a new scan in one transaction, locked per owner so parallel scans
  * cannot overrun the quota (R3 §4): reuse the owner's screenshot of this domain from the last
- * 24 h (dedupe), else reserve `path` when fewer than `quota` were stored in 24 h.
+ * 24 h (dedupe), else reserve `path` when fewer than `quota.owner` were stored in 24 h by this
+ * owner and fewer than `quota.global` by everyone (D-alief-B12; not locked across owners, so
+ * parallel scans may overshoot the global count by a few).
  * The path is written before the upload; clearScreenshotPath undoes it on failure.
  */
 export async function reserveScreenshot(
   sql: Sql,
   scan: { id: string; ownerId: string; domain: string },
   path: string,
-  quota: number,
+  quota: { owner: number; global: number },
 ): Promise<ScreenshotSlot> {
   return sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(3, hashtext(${scan.ownerId}))`;
@@ -42,7 +44,8 @@ export async function reserveScreenshot(
       await tx`update scans set screenshot_path = ${reuse} where id = ${scan.id}`;
       return { reuse };
     }
-    if ((await screenshotsToday(tx, scan.ownerId)) >= quota) return { quota: true as const };
+    if ((await screenshotsToday(tx, scan.ownerId)) >= quota.owner) return { quota: "owner" as const };
+    if ((await allScreenshotsToday(tx)) >= quota.global) return { quota: "global" as const };
     await tx`update scans set screenshot_path = ${path} where id = ${scan.id}`;
     return { upload: path };
   });
@@ -61,11 +64,16 @@ export async function scanExists(sql: Sql, id: string): Promise<boolean> {
 
 type Q = Sql | TransactionSql;
 
-/** Dedupe (R3 §4): a screenshot of the same owner + domain from the last 24 h. */
+/**
+ * Dedupe (R3 §4): a screenshot of the same owner + domain from the last 24 h. Only the scan that
+ * uploaded it counts (its path names its own id), so reuse never chains past that scan's age and
+ * an object is gone at most 15 days after upload (D-alief-B12, privacy page).
+ */
 export async function recentScreenshot(sql: Q, ownerId: string, domain: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select screenshot_path as path from scans
     where owner_id = ${ownerId} and domain = ${domain} and screenshot_path is not null
+      and screenshot_path in (owner_id || '/' || id || '.jpg', owner_id || '/' || id || '.png')
       and created_at > now() - interval '24 hours'
     order by created_at desc limit 1`;
   return row?.path;
@@ -76,6 +84,14 @@ export async function screenshotsToday(sql: Q, ownerId: string): Promise<number>
   const [row] = await sql<{ n: number }[]>`
     select count(distinct screenshot_path)::int as n from scans
     where owner_id = ${ownerId} and screenshot_path is not null and created_at > now() - interval '24 hours'`;
+  return row!.n;
+}
+
+/** Global quota: distinct screenshots everyone stored in the last 24 h (index scans_created). */
+export async function allScreenshotsToday(sql: Q): Promise<number> {
+  const [row] = await sql<{ n: number }[]>`
+    select count(distinct screenshot_path)::int as n from scans
+    where created_at > now() - interval '24 hours' and screenshot_path is not null`;
   return row!.n;
 }
 

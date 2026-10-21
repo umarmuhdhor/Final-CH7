@@ -42,6 +42,7 @@ export const devices = new Hono<AppEnv>();
 devices.post("/devices", async (c) => {
   const sql = c.get("sql");
   await hit(sql, limits.createDevice, clientIp((n) => c.req.header(n)));
+  await hit(sql, limits.createDeviceAll, "all");
   const body = await readJson(c, createBody);
 
   const token = `shoo_${base64url(randomBytes(32))}`;
@@ -91,6 +92,6 @@ devices.get("/devices/me", requireDevice, async (c) => {
  */
 devices.delete("/devices/me", requireDevice, async (c) => {
   const paths = await deleteDevice(c.get("sql"), c.get("principal").deviceId);
-  c.executionCtx.waitUntil(deleteScreenshots(c.env, paths));
+  c.executionCtx.waitUntil(deleteScreenshots(c.get("sql"), c.env, paths));
   return c.json({ ok: true });
 });

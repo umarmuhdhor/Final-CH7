@@ -10,6 +10,9 @@ export interface Limit {
 
 export const limits = {
   createDevice: { bucket: "devices_create", max: 10, windowSeconds: 3600 },
+  // All callers together, key "all" (D-alief-B12): rotating IPs cannot fill the free-tier DB.
+  // 1000/day is far above a demo's sign-ups; reaching it blocks new devices only, not existing ones.
+  createDeviceAll: { bucket: "devices_create_all", max: 1000, windowSeconds: 86400 },
   healthDb: { bucket: "healthz_db", max: 1, windowSeconds: 60 },
   familyCode: { bucket: "family_code", max: 6, windowSeconds: 60 },
   createScan: { bucket: "scans_create", max: 120, windowSeconds: 3600 },

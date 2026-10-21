@@ -10,7 +10,8 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     const html = await res.text();
     expect(html).toContain('<html lang="en">');
-    for (const s of ["14 days", "Delete my data", "decisions", "No ads, no analytics, no tracking", "Cloudflare", "Supabase", "Apple", "1 day"]) {
+    for (const s of ["14 days", "Delete my data", "decisions", "No ads, no analytics, no tracking", "Cloudflare", "Supabase", "Apple", "1 day",
+      "15 days", "never its text", "last used Shoo", "60 seconds", "retried daily"]) {
       expect(html).toContain(s);
     }
     expect(html).not.toContain("<script");
@@ -22,6 +23,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       expect(html).toContain('<html lang="id">');
       expect(html).toContain("14 hari");
       expect(html).toContain("Hapus dataku");
+      expect(html).toContain("15 hari");
     }
     expect(await (await call("/privacy?lang=xx", { headers: { "accept-language": "id" } })).text()).toContain('lang="id"');
   });

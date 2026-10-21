@@ -1,7 +1,8 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { errorInfo } from "../http/logError";
-import { type ScreenshotStore, screenshotStore } from "../services/screenshots";
+import { oldestTombstones } from "../db/repo/tombstones";
+import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../services/screenshots";
 
 /**
  * 100 scans per batch = one Storage DELETE (REMOVE_BATCH) per batch; 10 batches keep a run far
@@ -9,11 +10,17 @@ import { type ScreenshotStore, screenshotStore } from "../services/screenshots";
  */
 const BATCH = 100;
 const MAX_BATCHES = 10;
+/** Tombstones per run: 5 more Storage DELETEs at most. */
+const TOMBSTONES = 500;
+/** rate_limit_hits per run: 50 × 20000 = 1 M rows, ~30 days of GET /verdicts polling at 1 rps. */
+const HIT_CHUNK = 20000;
+const HIT_CHUNKS = 50;
 
 export interface RetentionResult {
   scans: number;
   objects: number;
   backlog: boolean;
+  tombstones: number;
   familyCodes: number;
   joinAttempts: number;
   pushLog: number;
@@ -36,7 +43,7 @@ export interface RetentionOptions {
  */
 export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = {}): Promise<RetentionResult> {
   const result: RetentionResult = {
-    scans: 0, objects: 0, backlog: false, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0,
+    scans: 0, objects: 0, backlog: false, tombstones: 0, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0,
   };
   const errors: unknown[] = [];
   const step = async (name: string, run: () => Promise<void>) => {
@@ -51,7 +58,12 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
   await step("heartbeat", async () => {
     await sql`insert into ops_heartbeat (source, at) values ('cron', now()) on conflict (source) do update set at = now()`;
   });
-  await step("scans", () => deleteOldScans(sql, opts.store ?? screenshotStore(env), opts, result));
+  const store = opts.store ?? screenshotStore(env);
+  await step("scans", () => deleteOldScans(sql, store, opts, result));
+  await step("tombstones", async () => {
+    // Objects whose rows are already gone (DELETE /devices/me, failed uploads) and whose remove failed.
+    result.tombstones = await removeTombstoned(sql, store, await oldestTombstones(sql, TOMBSTONES));
+  });
   await step("family_codes", async () => {
     result.familyCodes = (await sql`delete from family_codes where expires_at < now() - interval '1 hour'`).count;
   });
@@ -63,13 +75,13 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
     result.pushLog = (await sql`delete from push_log where created_at < now() - interval '14 days'`).count;
   });
   await step("rate_limit_hits", async () => {
-    // The longest window in limits is 1 h. Chunked: GET /verdicts polling writes many rows.
-    for (let i = 0; i < 5; i++) {
+    // The longest window in limits is 24 h (devices_create_all). Chunked: GET /verdicts polling writes many rows.
+    for (let i = 0; i < HIT_CHUNKS; i++) {
       const n = (await sql`
         delete from rate_limit_hits where id in (
-          select id from rate_limit_hits where hit_at < now() - interval '1 day' limit 20000)`).count;
+          select id from rate_limit_hits where hit_at < now() - interval '1 day' limit ${HIT_CHUNK})`).count;
       result.rateLimitHits += n;
-      if (n < 20000) break;
+      if (n < HIT_CHUNK) break;
     }
   });
 
@@ -98,7 +110,7 @@ async function deleteOldScans(
 
     // Dedupe shares one object between scans of the same owner. Only paths no scan outside this
     // batch points at are removed. No new scan can start sharing them: recentScreenshot reuses
-    // paths of scans younger than 24 h only.
+    // only an original upload younger than 24 h, so an object lives 15 days at most.
     const paths = (
       await sql<{ path: string }[]>`
         select distinct s.screenshot_path as path from scans s

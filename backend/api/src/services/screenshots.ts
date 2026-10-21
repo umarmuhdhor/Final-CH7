@@ -1,4 +1,6 @@
+import type { Sql } from "postgres";
 import type { Env } from "../env";
+import { addTombstones, dropTombstones } from "../db/repo/tombstones";
 import { errorInfo } from "../http/logError";
 
 const BUCKET = "screenshots";
@@ -86,15 +88,40 @@ export function screenshotStore(env: Env): ScreenshotStore | undefined {
   return new SupabaseStorageStore(env.SUPABASE_URL.replace(/\/+$/, ""), env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-/** Removes screenshot objects after their rows are gone (DELETE /devices/me, retention in fase 12). */
-export async function deleteScreenshots(env: Env, paths: string[]): Promise<void> {
-  if (paths.length === 0) return;
-  const store = screenshotStore(env);
+/**
+ * Removes screenshot objects whose paths are tombstoned (DELETE /devices/me, failed uploads).
+ * Each tombstone goes only after Storage confirmed its batch; what fails stays for the daily
+ * cron (D-alief-B12), so no object outlives its rows unnoticed (SECURITY §3 P13).
+ */
+export async function removeTombstoned(sql: Sql, store: ScreenshotStore | undefined, paths: string[]): Promise<number> {
+  if (paths.length === 0) return 0;
+  if (!store) throw new Error("storage not configured");
+  let removed = 0;
+  for (let i = 0; i < paths.length; i += REMOVE_BATCH) {
+    const batch = paths.slice(i, i + REMOVE_BATCH);
+    await store.remove(batch);
+    await dropTombstones(sql, batch);
+    removed += batch.length;
+  }
+  return removed;
+}
+
+/** After DELETE /devices/me committed (its transaction tombstoned the paths). Never throws. */
+export async function deleteScreenshots(sql: Sql, env: Env, paths: string[]): Promise<void> {
   try {
-    if (!store) throw new Error("storage not configured");
-    for (let i = 0; i < paths.length; i += REMOVE_BATCH) await store.remove(paths.slice(i, i + REMOVE_BATCH));
+    await removeTombstoned(sql, screenshotStore(env), paths);
   } catch (err) {
     // Count only: paths contain device ids.
     console.error(JSON.stringify({ event: "screenshots_delete_failed", count: paths.length, error: errorInfo(err) }));
+  }
+}
+
+/** One object that must not stay (failed or orphaned upload): tombstone, then remove. Never throws. */
+export async function discardScreenshot(sql: Sql, store: ScreenshotStore, path: string): Promise<void> {
+  try {
+    await addTombstones(sql, [path]);
+    await removeTombstoned(sql, store, [path]);
+  } catch (err) {
+    console.error(JSON.stringify({ event: "screenshot_discard_failed", error: errorInfo(err) }));
   }
 }

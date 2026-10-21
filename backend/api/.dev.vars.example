@@ -10,7 +10,8 @@ APNS_ENV=sandbox
 # Local Storage (fase 09): API_URL and SECRET_KEY from `(cd backend/db && supabase status)`.
 SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_ROLE_KEY=
-# HMAC key for rate-limit keys and join IPs (D-alief-B12), e.g. `openssl rand -base64 32`. Empty → plain sha256.
+# HMAC key for rate-limit keys and join IPs (D-alief-B12), e.g. `openssl rand -base64 32`. Required, at least
+# 32 characters: without it every request that rate-limits is a 500 (fail closed).
 RATE_KEY_SECRET=
-# HMAC key for screenshot links (D-alief-B08), any long random string locally, e.g. `openssl rand -base64 32`.
+# HMAC key for screenshot links (D-alief-B08), at least 32 characters, e.g. `openssl rand -base64 32`.
 SCREENSHOT_URL_SECRET=

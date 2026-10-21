@@ -1,5 +1,6 @@
 import type { Sql } from "postgres";
 import type { DeviceMode, Language } from "../../env";
+import { addTombstones } from "./tombstones";
 import { dropVerdicts } from "./verdicts";
 
 export interface DeviceAuthRow {
@@ -89,6 +90,9 @@ export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
     const shots = await tx<{ path: string | null }[]>`
       delete from scans where owner_id = ${id} returning screenshot_path as path`;
     await tx`delete from devices where id = ${id}`;
-    return [...new Set(shots.flatMap((s) => (s.path ? [s.path] : [])))];
+    // Tombstoned with the delete: if removing the objects fails later, the cron retries (D-alief-B12).
+    const paths = [...new Set(shots.flatMap((s) => (s.path ? [s.path] : [])))];
+    await addTombstones(tx, paths);
+    return paths;
   });
 }

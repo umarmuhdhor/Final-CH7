@@ -20,3 +20,9 @@ export function fromBase64url(text: string): Uint8Array | undefined {
 export function randomBytes(n: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(n));
 }
+
+/** Secrets shorter than this count as missing (D-alief-B12): every feature that needs one fails closed. */
+export const MIN_SECRET_LENGTH = 32;
+
+export const usableSecret = (value: string | undefined): string | undefined =>
+  value && value.length >= MIN_SECRET_LENGTH ? value : undefined;
