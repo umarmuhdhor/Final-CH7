@@ -33,18 +33,14 @@ final class ProfileModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let settings: AppSettings
-    @ObservationIgnored private let dataDeletionEnabled: Bool
 
-    init(repository: any ShooRepository, settings: AppSettings, dataDeletionEnabled: Bool = AppConfig.dataDeletionEnabled) {
+    init(repository: any ShooRepository, settings: AppSettings) {
         self.repository = repository
         self.settings = settings
-        self.dataDeletionEnabled = dataDeletionEnabled
     }
 
     var showsFamilyCode: Bool { settings.mode == .guardian }
     var showsDisconnect: Bool { settings.mode == .protected }
-    /// "Delete my data" waits for `DELETE /devices/me` in contracts (TODO C19).
-    var canDeleteData: Bool { dataDeletionEnabled }
 
     /// Same rule as ON-02.
     var nameProblem: NameRule.Problem? {
@@ -144,7 +140,7 @@ final class ProfileModel {
 
     /// SECURITY §3 P3: gone on the server first, then a fresh install here (onboarding from the start).
     func deleteMyData() async -> Bool {
-        guard canDeleteData, !isWorking else { return false }
+        guard !isWorking else { return false }
         isWorking = true
         defer { isWorking = false }
         do {

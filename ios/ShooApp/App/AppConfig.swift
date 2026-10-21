@@ -12,6 +12,4 @@ enum AppConfig {
 
     /// Scan QR (PR-01) needs `NSCameraUsageDescription` from the lead (TODO C3).
     static let cameraEnabled = false
-    /// "Delete my data" (SECURITY §3 P3) needs `DELETE /devices/me` in contracts (TODO C19).
-    static let dataDeletionEnabled = false
 }

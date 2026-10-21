@@ -88,7 +88,7 @@ Review `ecc:a11y-architect`: 3 HIGH, 6 MEDIUM, 3 LOW.
 |---|---|
 | P1 | Tidak berubah; `UserDefaults` hanya preferensi app (CA92.1) |
 | P2 | Tidak ada jenis data baru (nama, bahasa sudah ada) |
-| P3 | "Delete my data" siap di belakang flag sampai kontrak `DELETE /devices/me` (C19); setelah hapus: server dulu, lalu reset lokal; `TODO(sync:alief)` Keychain + kunci sesi App Group di fase 13 |
+| P3 | "Delete my data" selalu tampil sejak PR #10 (kontrak `DELETE /devices/me`, D-alief-A40); setelah hapus: server dulu, lalu reset lokal; `TODO(sync:alief)` Keychain + kunci sesi App Group di fase 13 |
 | P4, P5 | Tidak disentuh (Keychain/ATS fase 13) |
 | P6 | `Log.ui.error(StaticString, error)` → `.private`; nama tidak pernah di-log; `print(` kosong |
 | P7 | Izin notifikasi tetap just-in-time (fase 02); banner pengingat hanya Guardian |
@@ -98,6 +98,6 @@ Review `ecc:a11y-architect`: 3 HIGH, 6 MEDIUM, 3 LOW.
 ## Catatan handoff
 
 - 06Q (QA-A) berikutnya: rantai lengkap 01–06 ada di cabang ini.
-- Fase 13: `deleteMe()` → `DELETE /devices/me` bila C19 disetujui + hapus token Keychain dan kunci App Group; `updateMe(language:)` ke API.
+- Fase 13: `deleteMe()` → `DELETE /devices/me` (ada di kontrak sejak PR #10) + hapus token Keychain dan kunci App Group; `updateMe(language:)` ke API.
 - Fase 14: Family code (Profile + Shield Family), Connect sungguhan.
 - L9 fase 05 (kartu basi setelah hapus anggota di Profile): Profile belum punya hapus anggota (GD-04 fase 14) → tidak relevan sekarang.

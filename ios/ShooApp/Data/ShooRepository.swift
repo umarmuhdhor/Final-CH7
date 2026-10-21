@@ -20,8 +20,8 @@ protocol ShooRepository: AnyObject, Sendable {
     func removeMember(deviceId: String) async throws
     /// `DELETE /family/guardian` — protected (PF-01).
     func leaveGuardian() async throws
-    /// Proposed `DELETE /devices/me` (SECURITY §3 P3, TODO C19) — not in contracts yet, so the UI
-    /// stays behind `AppConfig.dataDeletionEnabled`. Removes the device, its family link and its scans.
+    /// `DELETE /devices/me` (PF-01, SECURITY §3 P3, App Store 5.1.1(v)): removes the device and
+    /// everything about it (family links, codes, scans + screenshots, verdicts). The token stops working.
     func deleteMe() async throws
 
     /// `GET /scans` newest first (PR-05, GD-05). `screenshotUrl` is always `nil` in lists.

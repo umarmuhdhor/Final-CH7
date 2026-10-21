@@ -13,10 +13,10 @@ struct ProfileModelTests {
         return settings
     }
 
-    func model(mode: UserMode, deletion: Bool = false) -> (ProfileModel, MockRepository, AppSettings) {
+    func model(mode: UserMode) -> (ProfileModel, MockRepository, AppSettings) {
         let repository = MockRepository(mode: mode, latency: .zero)
         let settings = settings(mode: mode)
-        return (ProfileModel(repository: repository, settings: settings, dataDeletionEnabled: deletion), repository, settings)
+        return (ProfileModel(repository: repository, settings: settings), repository, settings)
     }
 
     @Test func guardianSeesNameMembersAndFamilyCode() async {
@@ -57,7 +57,7 @@ struct ProfileModelTests {
 
     @Test func failedNameSaveKeepsTheOldNameAndSaysSo() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
-        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), dataDeletionEnabled: false)
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian))
         await model.load()
         repository.updateFailure = RepositoryError.network
         model.nameDraft = "Alief"
@@ -106,16 +106,9 @@ struct ProfileModelTests {
         #expect(settings.mode == .protected)
     }
 
-    @Test func deleteMyDataIsHiddenUntilTheContractExists() async {
-        let (model, _, _) = model(mode: .guardian)
-        #expect(!model.canDeleteData)
-        #expect(await model.deleteMyData() == false)
-    }
-
     @Test func deleteMyDataStartsOverWithAFreshInstall() async throws {
-        let (model, repository, settings) = model(mode: .guardian, deletion: true)
+        let (model, repository, settings) = model(mode: .guardian)
         await model.load()
-        #expect(model.canDeleteData)
         #expect(await model.deleteMyData())
         #expect(settings.mode == nil)
         #expect(!settings.onboardingCompleted)
@@ -133,7 +126,7 @@ struct ProfileModelTests {
     @Test func membersFailingStillShowsTheProfile() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
         repository.membersFailure = RepositoryError.network
-        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), dataDeletionEnabled: false)
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian))
         await model.load()
         #expect(model.state == .loaded)
         #expect(model.profile?.name == "Adhella")
@@ -142,7 +135,7 @@ struct ProfileModelTests {
 
     @Test func editingTheNameClearsTheOldError() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
-        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), dataDeletionEnabled: false)
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian))
         await model.load()
         repository.updateFailure = RepositoryError.network
         model.nameDraft = "Alief"

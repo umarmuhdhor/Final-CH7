@@ -34,8 +34,19 @@ final class ProfileUITests: XCTestCase {
         let familyCode = app.buttons["profile.familyCode"]
         if !familyCode.exists { app.swipeUp() }
         XCTAssertTrue(familyCode.waitForExistence(timeout: 5), app.debugDescription)
-        // "Delete my data" waits for the contract (C19).
-        XCTAssertFalse(app.buttons["profile.delete"].exists)
+    }
+
+    @MainActor
+    func testDeleteMyDataStartsOnboardingOver() {
+        let app = openProfile(mode: "guardian")
+        let delete = app.buttons["profile.delete"]
+        if !delete.isHittable { app.swipeUp() }
+        XCTAssertTrue(delete.waitForExistence(timeout: 5), app.debugDescription)
+        delete.tap()
+        let confirm = app.buttons["profile.delete.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
+        confirm.tap()
+        XCTAssertTrue(app.staticTexts["Shoo keeps scam sites away"].waitForExistence(timeout: 15), app.debugDescription)
     }
 
     @MainActor

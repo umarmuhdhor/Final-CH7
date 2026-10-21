@@ -41,7 +41,7 @@ struct ProfileView: View {
                     extensionSection
                     if model.showsDisconnect { guardianSection }
                     if model.showsFamilyCode { familySection }
-                    if model.canDeleteData { dataSection }
+                    dataSection
                 }
             }
             .navigationTitle(localized: "Profile")
@@ -295,6 +295,7 @@ struct ProfileView: View {
             .accessibilityIdentifier("profile.delete")
             .confirmationDialog(Text("Delete your data?"), isPresented: $isDeleteConfirming, titleVisibility: .visible) {
                 Button(role: .destructive) { Task { await deleteMyData() } } label: { Text("Delete my data") }
+                    .accessibilityIdentifier("profile.delete.confirm")
             } message: {
                 Text("Your name, family link and history are deleted right away. This can't be undone.")
             }

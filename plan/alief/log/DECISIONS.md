@@ -541,3 +541,9 @@ Format:
 - Keputusan: Disconnect (Protected) = `leaveGuardian()` → `Router.reset()` → `onboardingConnectPassed = false`, `onboardingCompleted = false` → onboarding lanjut di Connect (mode tetap Protected). "Delete my data" = `deleteMe()` (usulan `DELETE /devices/me`, ditambahkan ke protokol `ShooRepository` milik app, mock menghapus scan sendiri, keluarga, guardian) → `Router.reset()` → `AppSettings.reset()` → onboarding dari awal; UI di belakang `AppConfig.dataDeletionEnabled = false` sampai C19 dijawab. `notFound` (dan `unauthorized` untuk hapus) setelah jawaban hilang = sudah selesai. Dialog konfirmasi iOS standar dipakai (bukan validasi GD-07).
 - Alasan: SECURITY §3 P3 / P13 (hapus = langsung hilang), review M1/M2. Kontrak belum punya endpoint → tidak boleh tampil di build.
 - File: `Features/Profile/ProfileModel.swift`, `Data/{ShooRepository,MockRepository}.swift`, `App/Router.swift`, `App/AppConfig.swift` (flag sudah ada sejak fase 01).
+
+## D-alief-A40 · 22 Okt 2026 · app (fase 06) · "Delete my data" selalu tampil
+
+- Keputusan: flag `AppConfig.dataDeletionEnabled` dihapus. Tombol "Delete my data" di Profile selalu tampil untuk kedua mode; `ProfileModel` tidak lagi menerima flag. Test `deleteMyDataIsHiddenUntilTheContractExists` diganti UI test `testDeleteMyDataStartsOnboardingOver` (hapus → konfirmasi → onboarding dari awal).
+- Alasan: PR #10 Umar menambahkan `DELETE /devices/me → { ok }` ke `contracts/api.md` (C19 butir 1). Backend sudah punya endpoint sejak fase 08. App Store Guideline 5.1.1(v), SECURITY §3 P3.
+- File: `App/AppConfig.swift`, `Data/ShooRepository.swift`, `Features/Profile/{ProfileModel,ProfileView}.swift`, `Tests/ProfileModelTests.swift`, `UITests/ProfileUITests.swift`.
