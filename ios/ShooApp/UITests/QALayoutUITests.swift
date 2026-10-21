@@ -25,4 +25,23 @@ final class QALayoutUITests: XCTestCase {
         XCTAssertTrue(slide.exists, app.debugDescription)
         XCTAssertFalse(slide.frame.intersects(dots.frame), "slide \(slide.frame) under dots \(dots.frame)")
     }
+
+    /// P2-4: an empty family shows Invite above the tab bar without scrolling (fails on iPhone SE before the fix).
+    @MainActor
+    func testInviteButtonIsAboveTabBar() {
+        let app = launch([
+            "-settings.onboardingCompleted", "YES",
+            "-settings.mode", "guardian",
+            "-settings.familyModeOn", "YES",
+            "-mock.scenario", "empty",
+            "-UITestNotifications", "denied",
+            "-UITestExtensionActive", "YES",
+        ], textSize: "UICTContentSizeCategoryL")
+        let invite = app.buttons["family.invite"]
+        XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertTrue(tabBar.exists, app.debugDescription)
+        XCTAssertLessThanOrEqual(invite.frame.maxY, tabBar.frame.minY + 1, "invite \(invite.frame) tab bar \(tabBar.frame)")
+        XCTAssertTrue(invite.isHittable)
+    }
 }

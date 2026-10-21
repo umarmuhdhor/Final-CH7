@@ -36,6 +36,7 @@ struct FamilyShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var model: FamilyShieldModel
     @State private var isInvitePresented = false
 
@@ -57,6 +58,12 @@ struct FamilyShieldView: View {
         .navigationTitle(localized: "Family")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
+        // Pinned above the tab bar so the only action of an empty family is in view without scrolling (QA-A P2-4).
+        .safeAreaInset(edge: .bottom) {
+            if model.state == .loaded && model.members.isEmpty && !dynamicTypeSize.isAccessibilitySize {
+                inviteButton.padding(16)
+            }
+        }
         .refreshable { await model.refresh() }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -68,6 +75,18 @@ struct FamilyShieldView: View {
             // TODO(sync:alief): open Family code (GD-04) — replace after fase 14
             Text("Family codes are coming soon.")
         }
+    }
+
+    private var inviteButton: some View {
+        Button { isInvitePresented = true } label: {
+            Text("Invite your family")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("family.invite")
     }
 
     @ViewBuilder
@@ -93,11 +112,8 @@ struct FamilyShieldView: View {
                     title: "No one to look after yet",
                     message: "Invite the people you want to keep safe."
                 )
-                Button { isInvitePresented = true } label: {
-                    Text("Invite your family").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("family.invite")
+                // At accessibility text sizes a pinned button would take a third of the screen, so it scrolls.
+                if dynamicTypeSize.isAccessibilitySize { inviteButton }
             }
             .frame(minHeight: 320)
         case .loaded:
