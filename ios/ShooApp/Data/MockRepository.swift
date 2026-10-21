@@ -157,6 +157,14 @@ actor MockRepository: ShooRepository {
         members.removeAll { $0.deviceId == deviceId }
     }
 
+    func deleteMe() async throws {
+        try await pause()
+        let me = profile.deviceId
+        allScans.removeAll { $0.ownerDeviceId == me }
+        members = []
+        profile.guardian = nil
+    }
+
     func leaveGuardian() async throws {
         try await pause()
         try require(.protected)

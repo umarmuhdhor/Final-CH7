@@ -32,7 +32,7 @@ struct MainTabView: View {
             .tag(AppTab.activity)
         }
         .sheet(isPresented: $router.isProfilePresented) {
-            ProfilePlaceholderView()
+            ProfileView(repository: env.repository, settings: env.settings)
                 .environment(\.locale, env.settings.language.locale)
         }
     }

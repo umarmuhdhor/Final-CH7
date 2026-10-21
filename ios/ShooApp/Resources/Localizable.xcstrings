@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ will no longer see the sites Shoo warns you about.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tidak akan lagi melihat situs yang diperingatkan Shoo."
+          }
+        }
+      }
+    },
     "%@, adds %lld percent to the risk score": {
       "localizations": {
         "id": {
@@ -17,6 +27,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld tidak terhubung"
+          }
+        }
+      }
+    },
+    "1–20 characters. Your family sees this name.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1–20 karakter. Keluargamu melihat nama ini."
           }
         }
       }
@@ -47,6 +67,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Peringatan sebelum terlambat"
+          }
+        }
+      }
+    },
+    "Active": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktif"
           }
         }
       }
@@ -191,6 +221,26 @@
         }
       }
     },
+    "Couldn't delete your data. Check your connection and try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal menghapus datamu. Periksa koneksi, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Couldn't disconnect. Check your connection and try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memutus koneksi. Periksa koneksi, lalu coba lagi."
+          }
+        }
+      }
+    },
     "Couldn't load activity": {
       "localizations": {
         "id": {
@@ -231,6 +281,16 @@
         }
       }
     },
+    "Couldn't load your profile": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat profil"
+          }
+        }
+      }
+    },
     "Couldn't load your Shield": {
       "localizations": {
         "id": {
@@ -261,6 +321,36 @@
         }
       }
     },
+    "Delete": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapus"
+          }
+        }
+      }
+    },
+    "Delete my data": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapus dataku"
+          }
+        }
+      }
+    },
+    "Delete your data?": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapus datamu?"
+          }
+        }
+      }
+    },
     "Detail": {
       "localizations": {
         "id": {
@@ -271,12 +361,42 @@
         }
       }
     },
+    "Disconnect": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Putuskan"
+          }
+        }
+      }
+    },
+    "Disconnect from %@?": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Putuskan dari %@?"
+          }
+        }
+      }
+    },
     "Done": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Selesai"
+          }
+        }
+      }
+    },
+    "Enter a name.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masukkan nama."
           }
         }
       }
@@ -311,12 +431,32 @@
         }
       }
     },
+    "Family %lld/%lld": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga %lld/%lld"
+          }
+        }
+      }
+    },
     "Family activity": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Aktivitas keluarga"
+          }
+        }
+      }
+    },
+    "Family code": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode keluarga"
           }
         }
       }
@@ -397,6 +537,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mulai"
+          }
+        }
+      }
+    },
+    "Guardian": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardian"
           }
         }
       }
@@ -581,6 +731,16 @@
         }
       }
     },
+    "Name": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nama"
+          }
+        }
+      }
+    },
     "Next": {
       "localizations": {
         "id": {
@@ -646,7 +806,7 @@
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Belum terhubung ke pelindung"
+            "value": "Belum terhubung ke Guardian"
           }
         }
       }
@@ -901,12 +1061,32 @@
         }
       }
     },
+    "Safari extension": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekstensi Safari"
+          }
+        }
+      }
+    },
     "Safari extension is off": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Ekstensi Safari mati"
+          }
+        }
+      }
+    },
+    "Save name": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simpan nama"
           }
         }
       }
@@ -957,6 +1137,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Perisai"
+          }
+        }
+      }
+    },
+    "Shoo and its alerts use this language.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shoo dan notifikasinya memakai bahasa ini."
           }
         }
       }
@@ -1341,6 +1531,16 @@
         }
       }
     },
+    "Your family is full (3 people).": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluargamu sudah penuh (3 orang)."
+          }
+        }
+      }
+    },
     "Your family sees this name. Up to 20 characters.": {
       "localizations": {
         "id": {
@@ -1367,6 +1567,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Namamu"
+          }
+        }
+      }
+    },
+    "Your name, family link and history are deleted right away. This can't be undone.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nama, tautan keluarga, dan riwayatmu langsung dihapus. Ini tidak bisa dibatalkan."
           }
         }
       }

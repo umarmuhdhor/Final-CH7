@@ -11,6 +11,7 @@ final class FailingRepository: ShooRepository {
     func familyMembers() async throws -> [FamilyMember] { throw RepositoryError.network }
     func removeMember(deviceId: String) async throws { throw RepositoryError.network }
     func leaveGuardian() async throws { throw RepositoryError.network }
+    func deleteMe() async throws { throw RepositoryError.network }
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage { throw RepositoryError.network }
     func scan(id: String) async throws -> ScanResult { throw RepositoryError.network }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { throw RepositoryError.network }
@@ -23,6 +24,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     private let base: any ShooRepository
     private var delays: [Duration]
     var failure: (any Error)?
+    /// `updateMe` throws this.
+    var updateFailure: (any Error)?
     /// Only `scans` for this owner throw `RepositoryError.network`.
     var failingOwner: ScanOwnerFilter?
 
@@ -46,12 +49,16 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
         if let failure { throw failure }
         return try await base.me()
     }
-    func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
+    func updateMe(_ update: DeviceUpdate) async throws {
+        if let updateFailure { throw updateFailure }
+        try await base.updateMe(update)
+    }
     func createFamilyCode() async throws -> FamilyCode { try await base.createFamilyCode() }
     func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
     func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
     func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func deleteMe() async throws { try await base.deleteMe() }
     func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
 }
