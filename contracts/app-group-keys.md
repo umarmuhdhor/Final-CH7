@@ -18,6 +18,9 @@ Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, ne
 | `api.baseURL` | String | App | Extension | Backend base URL |
 | `ai.baseURL` | String | App | Extension | AI service base URL |
 
+## Language
+There is **no language key**. Extension UI (popup, marks, block screen) and the signal wording it shows follow the **iPhone's language** (`en`, or `id` when iOS is set to Bahasa Indonesia). The in-app language setting (PF-01) only changes the app.
+
 ## Native messages (extension JS → Swift)
 All messages: `{ "type": string, ... }`. Response always `{ "ok": boolean, ... }`.
 
