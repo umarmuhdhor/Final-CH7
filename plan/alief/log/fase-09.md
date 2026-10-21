@@ -129,15 +129,18 @@ Dijalankan dari root worktree ini, di branch `feat/BE-scans`. Satu migrasi baru 
 
 Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migrasi atau secret baru.
 
-- [ ] 1. Deploy:
+- [x] 1. Deploy:
   ```bash
   pnpm -C backend/api run deploy
   ```
-- [ ] 2. Jalankan lagi blok uji asap langkah 3 di atas, lalu tambahan cek header (sebelum `DELETE`):
+- [x] 2. Jalankan lagi blok uji asap langkah 3 di atas, lalu tambahan cek header (sebelum `DELETE`):
   ```bash
   curl -s -D - -o /dev/null "$SURL" | grep -i '^cache-control'
   ```
   Harapan: `cache-control: no-store`; semua harapan langkah 3 sama, dan **`signed url after delete` bukan 200**. Tempel hasilnya (tanpa token dan tanpa `$SURL`).
+  Hasil (21 Okt 2026 ±23:32 WITA, coordinator): deploy Version `5668ab54-a504-49fc-b7ee-339e52eebab4`. Uji asap: `scan d4bbcd74-…`; `1 Smoke P None None`; `signed url: 200 image/jpeg`; `IDOR other guardian: 404`; delete `{"ok":true}` ×3; **`signed url after delete: 200` — masih gagal.** Header `cache-control` **tidak dikirim** oleh Storage.
+  Probe tambahan (scan baru, URL tidak dicetak): `storage.objects.metadata.cacheControl = "no-store"` (perbaikan tersimpan), tetapi respons signed URL dari `nmekxihgjszgcibqytyj.supabase.co/storage/v1/object/sign/…` hanya membawa `expires` = waktu upload + 1 jam (= TTL signed URL) dan `cf-cache-status: MISS`; setelah delete `cf-cache-status: HIT`, `age: 3`, `200`. Kesimpulan: CDN Supabase (Free, tanpa Smart CDN purge) meng-cache respons signed URL sampai URL kedaluwarsa, **mengabaikan `cacheControl` objek**. `no-store` saat upload tidak cukup.
+  **Temuan untuk agent (TINGGI, tetap terbuka):** pilih dan catat di DECISIONS: (a) TTL signed URL pendek (mis. 60–300 s) untuk membatasi jendela, atau (b) Worker menyajikan screenshot sendiri (auth device, `Cache-Control: no-store`) lalu `screenshotUrl` menunjuk ke Worker; keduanya mungkin butuh catatan kontrak untuk Umar (kontrak menyebut signed URL 1 jam). Deploy ulang = LANGKAH MANUAL berikutnya.
 - [ ] 3. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11), dan lanjut ke fase 10.
 
 ## Catatan handoff
