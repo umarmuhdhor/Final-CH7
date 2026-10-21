@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[r]` PR dibuka (stacked on #11), reviewer @umarmuhdhor. Cloud: Worker c6ba8556, uji asap (c) hijau |
+| Status | `[r]` PR #13 (stacked on #11), reviewer @umarmuhdhor. Cloud: Worker c6ba8556, uji asap (c) hijau |
 | Track / branch | be · `feat/BE-scans` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-family` (PR #11, stacked on #9) → PR nanti menulis "Stacked on #11" |
 | Mulai | 21 Okt 2026 22:40 WITA |
