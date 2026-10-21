@@ -8,7 +8,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
 |---|---|---|---|---|---|---|---|---|---|
 | 00 | Plan + tooling | – | docs/alief-plan | [x] | 21 Okt 2026 | 21 Okt 2026 | #2 | Plan merged; disinkronkan dengan kontrak PR #1/#3/#4/#6 | log/fase-00.md |
-| 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [ ] | | | | | log/fase-01.md |
+| 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [r] | 21 Okt 2026 | 22 Okt 2026 | #8 (merged), #14 | Tab Shield/Activity, ShooRepository + MockRepository, EN/ID, komponen, privacy manifest; 53 unit + 3 UI test hijau | log/fase-01.md |
 | 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension | [ ] | | | | | log/fase-01S.md |
 | 02 | Onboarding ON-01..05 | app | feat/ON-01-05-onboarding | [ ] | | | | | log/fase-02.md |
 | 03 | Detail DT-01..06 | app | feat/DT-detail | [ ] | | | | | log/fase-03.md |
