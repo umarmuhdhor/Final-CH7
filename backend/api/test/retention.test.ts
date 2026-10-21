@@ -32,7 +32,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
   it("deletes scans older than 14 days with their screenshot; younger scans stay; verdicts stay with scan_id null", async () => {
     await device("dev_p");
     await device("dev_g", "guardian");
-    const oldPath = "dev_p/old.jpg";
+    const oldPath = `dev_p/old-${crypto.randomUUID()}.jpg`;
     await store.put(oldPath, jpeg(10, 10), "image/jpeg");
     await scan("s_old", "dev_p", 15, oldPath);
     await scan("s_new", "dev_p", 13);
@@ -51,8 +51,9 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
 
   it("keeps an object still used by a younger scan (dedupe); deletes a path shared only inside the batch once", async () => {
     await device("dev_p");
-    const shared = "dev_p/shared.jpg";
-    const both = "dev_p/both-old.jpg";
+    // Unique names: the kept object stays in local Storage after the test.
+    const shared = `dev_p/shared-${crypto.randomUUID()}.jpg`;
+    const both = `dev_p/both-old-${crypto.randomUUID()}.jpg`;
     await store.put(shared, jpeg(10, 10), "image/jpeg");
     await store.put(both, jpeg(10, 10), "image/jpeg");
     await scan("s_a", "dev_p", 15, shared);
@@ -71,6 +72,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     expect(await objectExists(shared)).toBe(true);
     expect(await objectExists(both)).toBe(false);
     expect(removed).toEqual([[both]]);
+    await store.remove([shared]);
   });
 
   it("at most maxBatches × batch per run; the rest goes on the next run (backlog logged)", async () => {
