@@ -1,6 +1,6 @@
 # Log fase 03 — Detail DT-01..06 + tombol GD-07 (Alief, track app)
 
-- **Status:** [r] — PR #PR_NO `feat/DT-detail`, reviewer @umarmuhdhor. **Stacked on #14** (fase 01), tidak di atas fase 02 (sesi paralel `feat/ON-01-05-onboarding`).
+- **Status:** [r] — PR #18 `feat/DT-detail`, reviewer @umarmuhdhor. **Stacked on #14** (fase 01), tidak di atas fase 02 (sesi paralel `feat/ON-01-05-onboarding`).
 - **Model:** Claude Opus 5.5, sesi paralel dengan fase 02. Mulai dan selesai 22 Okt 2026.
 - **Rencana lengkap:** `log/fase-03-plan.md`. Sumber requirement: PRD v1.5 §5 Validasi, §8.3 GD-07, §8.4 DT-01..06 (dibaca dari Google Drive 22 Okt 2026).
 
