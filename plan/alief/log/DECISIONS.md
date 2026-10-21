@@ -271,3 +271,9 @@ Format:
 - Keputusan: tambah SECURITY §3 (P1–P12): privacy manifest app (fase 01), label privasi App Store (fase 16), hapus data di dalam app lewat usulan `DELETE /devices/me` (fase 06/08/13, flag sampai C19), Keychain `AfterFirstUnlockThisDeviceOnly`, ATS tanpa pengecualian umum, `os.Logger` `.private`, izin just-in-time, pasteboard `.localOnly` + kedaluwarsa, screenshot tanpa cache disk, push tanpa URL, export compliance, kebijakan privasi. PROMPT langkah 6l mewajibkannya. Permintaan ke Umar: TODO C19.
 - Alasan: permintaan Alief (21 Okt): produk berjalan di ekosistem Apple dan memproses riwayat browsing berisiko, nama, dan screenshot; App Store Review 5.1.1 mewajibkan manifest, label, dan penghapusan akun.
 - File: SECURITY §3 (§ lama bergeser ke §4–§6), PROMPT 6l, fase-01, 06, 08, 13, 14, 16, TODO C19.
+
+## D-alief-40 · 21 Okt 2026 · plan · Keamanan & privasi Apple wajib untuk semua pekerjaan
+
+- Keputusan: aturan PROMPT 6l diperluas dari "fase app" menjadi semua pekerjaan (app, backend, plan, langkah manual, QA); review langkah 8 wajib mencocokkan diff dengan SECURITY §3; tambah P13 "hapus = langsung hilang" (tanpa salinan cache/CDN); aturan emas README #10; baris aturan di `backend/CLAUDE.md` dan `ios/ShooApp/CLAUDE.md`.
+- Alasan: permintaan Alief (21 Okt): "add a rule, everything we do must follow apple security & privacy". Pemicu: uji asap fase 09 menunjukkan screenshot yang sudah dihapus masih tersaji dari CDN Supabase sampai signed URL kedaluwarsa (log fase-09 (b)).
+- File: PROMPT 6l + langkah 8, README §6, SECURITY §3 (P13), `backend/CLAUDE.md`, `ios/ShooApp/CLAUDE.md`.
