@@ -1,6 +1,6 @@
 # Log fase 02 — Onboarding ON-01 … ON-05 (Alief, track app)
 
-- **Status:** [r] — PR dibuka (nomor di PROGRESS), stacked on #14 (`feat/APP-foundation`).
+- **Status:** [r] — PR #16, stacked on #14 (`feat/APP-foundation`), reviewer @umarmuhdhor.
 - **Model:** Claude Opus 5.5. 22 Okt 2026. Rencana: `log/fase-02-plan.md`.
 
 ## Ringkasan
