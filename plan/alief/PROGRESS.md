@@ -7,7 +7,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
 |---|---|---|---|---|---|---|---|---|---|
-| 00 | Plan + tooling | – | docs/alief-plan | [~] | 21 Okt 2026 | | | Folder plan/alief dibuat dari hasil grilling; menunggu PR | log/fase-00.md |
+| 00 | Plan + tooling | – | docs/alief-plan | [r] | 21 Okt 2026 | | #2 | Plan lengkap, verify run 05 SIAP; menunggu review Umar | log/fase-00.md |
 | 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [ ] | | | | | log/fase-01.md |
 | 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension | [ ] | | | | | log/fase-01S.md |
 | 02 | Onboarding ON-01..05 | app | feat/ON-01-05-onboarding | [ ] | | | | | log/fase-02.md |
