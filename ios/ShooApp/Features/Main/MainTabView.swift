@@ -8,7 +8,7 @@ struct MainTabView: View {
         @Bindable var router = env.router
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.shieldPath) {
-                ShieldPlaceholderView()
+                shieldRoot
                     .toolbar { ProfileButton() }
                     .navigationDestination(for: Route.self, destination: destination)
             }
@@ -16,7 +16,7 @@ struct MainTabView: View {
             .tag(AppTab.shield)
 
             NavigationStack(path: $router.activityPath) {
-                ActivityPlaceholderView()
+                activityRoot
                     .toolbar { ProfileButton() }
                     .navigationDestination(for: Route.self, destination: destination)
             }
@@ -26,6 +26,26 @@ struct MainTabView: View {
         .sheet(isPresented: $router.isProfilePresented) {
             ProfilePlaceholderView()
                 .environment(\.locale, env.settings.language.locale)
+        }
+    }
+
+    @ViewBuilder
+    private var shieldRoot: some View {
+        if env.settings.mode == .protected {
+            ProtectedShieldView(repository: env.repository)
+        } else {
+            // TODO(sync:alief): Guardian Shield (GD-01) lands in fase 05
+            ShieldPlaceholderView()
+        }
+    }
+
+    /// Protected sees its own scans (PR-05); the guardian sees the family's (GD-05, owner shown).
+    @ViewBuilder
+    private var activityRoot: some View {
+        if env.settings.mode == .protected {
+            ActivityView(repository: env.repository, owner: .me)
+        } else {
+            ActivityView(repository: env.repository, owner: .family, showsOwner: true)
         }
     }
 
