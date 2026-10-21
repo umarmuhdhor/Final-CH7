@@ -25,10 +25,12 @@ struct URLSessionScreenshotLoader: ScreenshotLoading {
         session = URLSession(configuration: configuration)
     }
 
-    /// Ephemeral session with a memory-only cache.
+    /// Ephemeral session without any URL cache: the image exists only while the Detail view holds it,
+    /// and every view asks the Worker again, which re-checks access (P13).
     static func configuration() -> URLSessionConfiguration {
         let configuration = URLSessionConfiguration.ephemeral
-        configuration.urlCache = URLCache(memoryCapacity: 8 * 1024 * 1024, diskCapacity: 0, directory: nil)
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         configuration.httpCookieStorage = nil
         configuration.httpShouldSetCookies = false
         configuration.urlCredentialStorage = nil
@@ -38,11 +40,17 @@ struct URLSessionScreenshotLoader: ScreenshotLoading {
 
     func imageData(at url: URL) async throws -> Data {
         guard Self.isAllowed(url) else { throw ScreenshotLoadError.unavailable }
-        let (data, response) = try await session.data(from: url)
+        let (bytes, response) = try await session.bytes(from: url)
         guard (response as? HTTPURLResponse)?.statusCode == 200,
-              data.count <= Self.maxBytes,
-              UIImage(data: data) != nil
+              response.expectedContentLength <= Int64(Self.maxBytes)
         else { throw ScreenshotLoadError.unavailable }
+        // Stop reading as soon as the body is bigger than any real screenshot.
+        var data = Data()
+        for try await byte in bytes {
+            data.append(byte)
+            if data.count > Self.maxBytes { throw ScreenshotLoadError.unavailable }
+        }
+        guard UIImage(data: data) != nil else { throw ScreenshotLoadError.unavailable }
         return data
     }
 
@@ -102,10 +110,15 @@ struct ScreenshotView: View {
             .accessibilityHint(Text("Opens a larger view"))
             .accessibilityIdentifier("detail.screenshot")
         } else if failed {
-            Label("Screenshot isn't available anymore", systemImage: "photo.badge.exclamationmark")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("detail.screenshotUnavailable")
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Screenshot isn't available anymore", systemImage: "photo.badge.exclamationmark")
+                    .font(.subheadline)
+                    .accessibilityIdentifier("detail.screenshotUnavailable")
+                Button("Try again") {
+                    Task { await load() }
+                }
+                .frame(minHeight: 44)
+            }
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, minHeight: 120)
@@ -114,6 +127,7 @@ struct ScreenshotView: View {
     }
 
     private func load() async {
+        image = nil
         failed = false
         do {
             let data = try await loader.imageData(at: url)

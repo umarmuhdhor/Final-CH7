@@ -18,6 +18,7 @@ actor StubRepository: ShooRepository {
     private var verdictFailures: Int
     private let verdictError: RepositoryError
     private let onVerdict: (@Sendable () async -> Void)?
+    private var onScan: (@Sendable () async -> Void)?
     private(set) var verdictCalls = 0
 
     init(
@@ -53,7 +54,18 @@ actor StubRepository: ShooRepository {
             failLoads -= 1
             throw RepositoryError.network
         }
-        return try await base.scan(id: id)
+        // Read first, then let the test act: the answer is a snapshot from before that action.
+        let scan = try await base.scan(id: id)
+        if let hook = onScan {
+            onScan = nil
+            await hook()
+        }
+        return scan
+    }
+
+    /// Runs once during the next `scan(id:)`, after the scan was read.
+    func setOnScan(_ hook: @escaping @Sendable () async -> Void) {
+        onScan = hook
     }
 
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
@@ -277,6 +289,40 @@ struct DetailModelTests {
         await model.setVerdict(.notSafe)
         #expect(!model.verdictFailed)
         #expect(model.badge == .verifiedScam)
+    }
+
+    @Test func reloadDuringVerdictKeepsTheNewVerdict() async {
+        let ref = ModelRef()
+        let stub = StubRepository()
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        ref.model = model
+        await model.load()
+        // The reload reads the scan, then the guardian taps before the stale answer lands.
+        await stub.setOnScan { await ref.model!.setVerdict(.notSafe) }
+        await model.load()
+        #expect(model.badge == .verifiedScam)
+        #expect(model.scan?.verdict?.byDeviceId == "dev_me")
+    }
+
+    @Test func verdictOnDeletedScanShowsGone() async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.notFound, message: "gone"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        let outcome = await model.setVerdict(.notSafe)
+        #expect(outcome == .gone)
+        #expect(model.state == .notFound)
+        #expect(model.scan == nil)
+    }
+
+    @Test func outcomesTellTheViewWhatHappened() async {
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1))
+        await model.load()
+        #expect(await model.setVerdict(.notSafe) == .rolledBack)
+        #expect(await model.setVerdict(.notSafe) == .saved)
+        #expect(model.verdictSaves == 1)
+        let warning = DetailModel(scanId: FixtureScan.warning41, repository: MockRepository(latency: .zero))
+        await warning.load()
+        #expect(await warning.setVerdict(.safe) == .ignored)
     }
 
     @Test func protectedNeverSendsAVerdict() async {

@@ -26,17 +26,31 @@ struct LinkCopyTests {
     }
 }
 
-/// Answers every request from `handler` instead of the network.
+/// Answers every request from `handler` instead of the network. Shared state is behind a lock:
+/// URL loading runs on its own thread. Only `ScreenshotLoaderTests` (serialized) uses it.
 final class StubURLProtocol: URLProtocol {
-    nonisolated(unsafe) static var handler: ((URLRequest) -> (Int, Data))?
-    nonisolated(unsafe) static var requests: [URLRequest] = []
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var _handler: (@Sendable (URLRequest) -> (Int, Data))?
+    nonisolated(unsafe) private static var _requests: [URLRequest] = []
+
+    static func reset(_ handler: (@Sendable (URLRequest) -> (Int, Data))?) {
+        lock.withLock {
+            _handler = handler
+            _requests = []
+        }
+    }
+
+    static var requests: [URLRequest] { lock.withLock { _requests } }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        Self.requests.append(request)
-        let (status, data) = Self.handler?(request) ?? (404, Data())
+        let handler = Self.lock.withLock {
+            Self._requests.append(request)
+            return Self._handler
+        }
+        let (status, data) = handler?(request) ?? (404, Data())
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)
@@ -61,18 +75,19 @@ struct ScreenshotLoaderTests {
         context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
     }
 
-    @Test func sessionNeverWritesToDisk() {
+    @Test func sessionKeepsNoCopy() {
         let configuration = URLSessionScreenshotLoader.configuration()
-        #expect(configuration.urlCache?.diskCapacity == 0)
-        #expect((configuration.urlCache?.memoryCapacity ?? 0) > 0)
+        // No URLCache at all (P9 + P13): every view asks the Worker, which re-checks access.
+        #expect(configuration.urlCache == nil)
+        #expect(configuration.requestCachePolicy == .reloadIgnoringLocalAndRemoteCacheData)
         #expect(configuration.httpCookieStorage == nil)
         #expect(configuration.httpShouldSetCookies == false)
         #expect(configuration.urlCredentialStorage == nil)
     }
 
     @Test func loadsImageWithoutAuthorizationHeader() async throws {
-        StubURLProtocol.requests = []
-        StubURLProtocol.handler = { _ in (200, Self.png) }
+        let png = Self.png
+        StubURLProtocol.reset { _ in (200, png) }
         let data = try await loader().imageData(at: Self.url)
         #expect(UIImage(data: data) != nil)
         let request = try #require(StubURLProtocol.requests.last)
@@ -80,28 +95,28 @@ struct ScreenshotLoaderTests {
     }
 
     @Test func goneScreenshotThrows() async {
-        StubURLProtocol.handler = { _ in (404, Data()) }
+        StubURLProtocol.reset { _ in (404, Data()) }
         await #expect(throws: ScreenshotLoadError.unavailable) {
             try await loader().imageData(at: Self.url)
         }
     }
 
     @Test func nonImageBodyThrows() async {
-        StubURLProtocol.handler = { _ in (200, Data("<html>".utf8)) }
+        StubURLProtocol.reset { _ in (200, Data("<html>".utf8)) }
         await #expect(throws: ScreenshotLoadError.unavailable) {
             try await loader().imageData(at: Self.url)
         }
     }
 
     @Test func oversizedBodyThrows() async {
-        StubURLProtocol.handler = { _ in (200, Data(count: URLSessionScreenshotLoader.maxBytes + 1)) }
+        StubURLProtocol.reset { _ in (200, Data(count: URLSessionScreenshotLoader.maxBytes + 1)) }
         await #expect(throws: ScreenshotLoadError.unavailable) {
             try await loader().imageData(at: Self.url)
         }
     }
 
     @Test func plainHTTPIsRefused() async {
-        StubURLProtocol.requests = []
+        StubURLProtocol.reset(nil)
         await #expect(throws: ScreenshotLoadError.unavailable) {
             try await loader().imageData(at: URL(string: "http://example.com/a.png")!)
         }
