@@ -177,15 +177,15 @@ Verifikasi setelah perbaikan: `pnpm typecheck` (+ `--noUnusedLocals --noUnusedPa
 
 Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migrasi baru. Nilai secret **tidak pernah** ditempel di chat atau file.
 
-- [ ] 1. Secret HMAC (acak, langsung dipipe ke wrangler, tidak tampil di layar):
+- [x] 1. Secret HMAC (acak, langsung dipipe ke wrangler, tidak tampil di layar):
   ```bash
   openssl rand -base64 32 | pnpm -C backend/api exec wrangler secret put SCREENSHOT_URL_SECRET
   ```
-- [ ] 2. Deploy (ikut membawa `invocation_logs: false`, D-alief-B09):
+- [x] 2. Deploy (ikut membawa `invocation_logs: false`, D-alief-B09):
   ```bash
   pnpm -C backend/api run deploy
   ```
-- [ ] 3. Uji asap (sama dengan langkah 3 di atas sampai `ID=`, lalu):
+- [x] 3. Uji asap (sama dengan langkah 3 di atas sampai `ID=`, lalu):
   ```bash
   GURL=$(curl -s $U/scans/$ID -H "authorization: Bearer $GT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["screenshotUrl"])')
   PURL=$(curl -s $U/scans/$ID -H "authorization: Bearer $PT" | python3 -c 'import sys,json;print(json.load(sys.stdin)["screenshotUrl"])')
@@ -206,7 +206,8 @@ Dari root worktree, branch `feat/BE-scans` (setelah `git pull`). Tidak ada migra
 " "$PURL"
   ```
   Harapan: `worker url: ok`; `screenshot guardian: 200 image/jpeg`; `cache-control: private, no-store` (dua kali: gambar dan JSON `GET /scans/{id}`); `IDOR other guardian: 404`; `{"ok":true}`; **`screenshot guardian after disconnect: 404`**; `screenshot owner before delete: 200`; `{"ok":true}{"ok":true}`; **`screenshot after delete: 404`**. Tempel hasilnya (tanpa token dan tanpa URL). Device `Smoke X` tertinggal (tanpa data).
-- [ ] 4. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11, sertakan catatan C20), dan lanjut ke fase 10.
+  Hasil (21 Okt 2026 ±23:50 WITA, coordinator atas permintaan Alief): secret `SCREENSHOT_URL_SECRET` dibuat acak lewat pipe (tidak pernah tampil) → `Success!`; deploy Version `c6ba8556-207a-4025-8b1b-08f486eeb0ad`. Uji asap: `scan 8c05bd7b-…`; `worker url: ok`; `screenshot guardian: 200 image/jpeg`; `cache-control: private, no-store` (gambar dan JSON); `IDOR other guardian: 404`; disconnect `{"ok":true}`; **`screenshot guardian after disconnect: 404`**; `screenshot owner before delete: 200`; delete `{"ok":true}` ×3 (Smoke X ikut dihapus); **`screenshot after delete: 404`**. Semua sesuai harapan → P13 terpenuhi.
+- [x] 4. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa hasil, membuka PR `feat/BE-scans` (stacked on #11, sertakan catatan C20), dan lanjut ke fase 10.
 
 ## Catatan handoff
 
