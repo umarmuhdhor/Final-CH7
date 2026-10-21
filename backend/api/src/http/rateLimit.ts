@@ -12,6 +12,7 @@ export const limits = {
   createDevice: { bucket: "devices_create", max: 10, windowSeconds: 3600 },
   healthDb: { bucket: "healthz_db", max: 1, windowSeconds: 60 },
   familyCode: { bucket: "family_code", max: 6, windowSeconds: 60 },
+  createScan: { bucket: "scans_create", max: 120, windowSeconds: 3600 },
 } satisfies Record<string, Limit>;
 
 /**
