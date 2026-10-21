@@ -60,7 +60,7 @@ targets:
     platform: iOS
     sources:
       - path: ShooExtension
-        excludes: ["CLAUDE.md", "Resources/**"]
+        excludes: ["CLAUDE.md", "Resources/**", "Tests/**", "scripts/**"]
       # Web extension files must sit flat at the bundle root (same as Xcode's template)…
       - path: ShooExtension/Resources
         excludes: ["_locales/**", "images/**"]
