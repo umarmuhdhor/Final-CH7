@@ -31,6 +31,16 @@
         }
       }
     },
+    "1 to 20 characters": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 sampai 20 karakter"
+          }
+        }
+      }
+    },
     "1–20 characters. Your family sees this name.": {
       "localizations": {
         "id": {
@@ -281,16 +291,6 @@
         }
       }
     },
-    "Couldn't load your family. Try again": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gagal memuat keluarga. Coba lagi"
-          }
-        }
-      }
-    },
     "Couldn't load your profile": {
       "localizations": {
         "id": {
@@ -331,16 +331,6 @@
         }
       }
     },
-    "Delete": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hapus"
-          }
-        }
-      }
-    },
     "Delete my data": {
       "localizations": {
         "id": {
@@ -377,6 +367,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Putuskan"
+          }
+        }
+      }
+    },
+    "Disconnect from %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Putuskan dari %@"
           }
         }
       }
@@ -507,6 +507,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mode keluarga nyala. Menampilkan keluargamu."
+          }
+        }
+      }
+    },
+    "Family, %lld of %lld people": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga, %lld dari %lld orang"
           }
         }
       }
@@ -747,6 +757,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nama"
+          }
+        }
+      }
+    },
+    "Name saved": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nama disimpan"
           }
         }
       }

@@ -13,6 +13,8 @@ struct ProfileView: View {
     @State private var isDeleteConfirming = false
     @State private var isFamilyCodePresented = false
     @FocusState private var isNameFocused: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .title3) private var avatarSize: CGFloat = 56
 
     init(repository: any ShooRepository, settings: AppSettings) {
         _model = State(initialValue: ProfileModel(repository: repository, settings: settings))
@@ -69,7 +71,17 @@ struct ProfileView: View {
             }
             .onChange(of: model.nameError) { _, message in
                 guard let message else { return }
-                AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
+                announce(message)
+            }
+            .onChange(of: model.nameProblem) { _, problem in
+                switch problem {
+                case .empty: announce("Enter a name.")
+                case .tooLong: announce("Use 20 characters or fewer.")
+                case nil: break
+                }
+            }
+            .onChange(of: model.membersFailed) { _, failed in
+                if failed { announce("Couldn't load your family") }
             }
             .alert(
                 Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
@@ -86,25 +98,27 @@ struct ProfileView: View {
 
     private var nameSection: some View {
         Section {
-            HStack(spacing: 16) {
-                AvatarView(id: model.profile?.avatarId ?? "", size: 56)
+            // Avatar above the field at accessibility sizes, so a 20-character name still fits.
+            stackedAtLargeSizes(spacing: 16) {
+                AvatarView(id: model.profile?.avatarId ?? "", size: min(avatarSize, 96))
                     .accessibilityHidden(true)
-                TextField(text: $model.nameDraft) { Text("Your name") }
+                // Same word as the section header, so Voice Control "Tap Name" works (WCAG 2.5.3).
+                TextField(text: $model.nameDraft, axis: .vertical) { Text("Name") }
+                    .lineLimit(1...3)
                     .font(.title3.weight(.semibold))
                     .textContentType(.givenName)
                     .submitLabel(.done)
                     .focused($isNameFocused)
                     .onSubmit { Task { await saveName() } }
-                    .accessibilityLabel(Text("Your name"))
+                    .accessibilityHint(Text("1 to 20 characters"))
                     .accessibilityIdentifier("profile.name")
             }
-            if model.nameDraft != model.profile?.name {
-                Button { Task { await saveName() } } label: {
-                    Text("Save name").frame(minHeight: 44)
-                }
-                .disabled(model.nameProblem != nil || model.isWorking)
-                .accessibilityIdentifier("profile.saveName")
+            // Always present (only disabled), so VoiceOver focus never lands on a vanished button.
+            Button { Task { await saveName() } } label: {
+                Text("Save name").frame(minHeight: 44)
             }
+            .disabled(model.nameDraft == model.profile?.name || model.nameProblem != nil || model.isWorking)
+            .accessibilityIdentifier("profile.saveName")
         } header: {
             Text("Name")
         } footer: {
@@ -115,9 +129,13 @@ struct ProfileView: View {
                 case nil: Text("1–20 characters. Your family sees this name.")
                 }
                 if let message = model.nameError {
-                    Text(verbatim: L10n.string(message, language: language))
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("profile.error")
+                    Label {
+                        Text(verbatim: L10n.string(message, language: language))
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill").accessibilityHidden(true)
+                    }
+                    .foregroundStyle(Color.readableRed)
+                    .accessibilityIdentifier("profile.error")
                 }
             }
             .foregroundStyle(.readableSecondary)
@@ -138,6 +156,7 @@ struct ProfileView: View {
             }
             // Both choices always visible: no menu to find, no truncated name at large text sizes.
             .pickerStyle(.inline)
+            .labelsHidden()
             .accessibilityIdentifier("languagePicker")
         } header: {
             Text("Language")
@@ -153,10 +172,12 @@ struct ProfileView: View {
                 HStack { extensionTitle; Spacer(); extensionValue }
                 VStack(alignment: .leading, spacing: 6) { extensionTitle; extensionValue }
             }
+            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
             if !extensionStatus.isActive {
                 Button { isTurnOnPresented = true } label: { Text("Turn on").frame(minHeight: 44) }
+                    .accessibilityLabel(Text("Turn on Shoo in Safari"))
                     .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
                     .accessibilityIdentifier("profile.turnOn")
             }
@@ -192,7 +213,7 @@ struct ProfileView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("profile.guardian")
                 Button(role: .destructive) { isDisconnectConfirming = true } label: {
-                    Text("Disconnect").frame(minHeight: 44)
+                    Text("Disconnect").frame(minHeight: 44).foregroundStyle(Color.readableRed)
                 }
                 .disabled(model.isWorking)
                 .accessibilityIdentifier("profile.disconnect")
@@ -201,7 +222,7 @@ struct ProfileView: View {
                     isPresented: $isDisconnectConfirming,
                     titleVisibility: .visible
                 ) {
-                    Button(role: .destructive) { Task { await disconnect() } } label: { Text("Disconnect") }
+                    Button(role: .destructive) { Task { await disconnect() } } label: { Text("Disconnect from \(guardian.name)") }
                         .accessibilityIdentifier("profile.disconnect.confirm")
                 } message: {
                     Text("\(guardian.name) will no longer see the sites Shoo warns you about.")
@@ -221,17 +242,20 @@ struct ProfileView: View {
                 HStack(spacing: 12) {
                     AvatarView(id: member.avatarId, size: 40)
                         .accessibilityHidden(true)
-                    Text(verbatim: member.name).font(.body)
-                    Spacer()
-                    if !member.isConnected {
-                        Text("Not connected").font(.subheadline).foregroundStyle(.readableSecondary)
+                    stackedAtLargeSizes(spacing: 2) {
+                        Text(verbatim: member.name).font(.body)
+                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+                        if !member.isConnected {
+                            Text("Not connected").font(.subheadline).foregroundStyle(.readableSecondary)
+                        }
                     }
                 }
                 .accessibilityElement(children: .combine)
             }
             if model.membersFailed {
+                Text("Couldn't load your family")
                 Button { Task { await model.load() } } label: {
-                    Text("Couldn't load your family. Try again").frame(minHeight: 44)
+                    Text("Try again").frame(minHeight: 44)
                 }
                 .accessibilityIdentifier("profile.members.retry")
             }
@@ -239,11 +263,22 @@ struct ProfileView: View {
                 Label { Text("Family code") } icon: { Image(systemName: "qrcode") }
                     .frame(minHeight: 44)
             }
-            .disabled(model.members.count >= FamilyShieldModel.maxMembers)
+            .disabled(model.membersFailed || model.members.count >= FamilyShieldModel.maxMembers)
+            .accessibilityHint(model.members.count >= FamilyShieldModel.maxMembers ? Text("Your family is full (3 people).") : Text(verbatim: ""))
             .accessibilityIdentifier("profile.familyCode")
         } header: {
-            Text(verbatim: L10n.string("Family \(model.members.count)/\(FamilyShieldModel.maxMembers)", language: language))
-                .accessibilityIdentifier("profile.members")
+            Group {
+                if model.membersFailed {
+                    Text("Family")
+                } else {
+                    Text(verbatim: L10n.string("Family \(model.members.count)/\(FamilyShieldModel.maxMembers)", language: language))
+                        .accessibilityLabel(Text(verbatim: L10n.string(
+                            "Family, \(model.members.count) of \(FamilyShieldModel.maxMembers) people", language: language
+                        )))
+                }
+            }
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("profile.members")
         } footer: {
             if model.members.count >= FamilyShieldModel.maxMembers {
                 Text("Your family is full (3 people).").foregroundStyle(.readableSecondary)
@@ -254,12 +289,12 @@ struct ProfileView: View {
     private var dataSection: some View {
         Section {
             Button(role: .destructive) { isDeleteConfirming = true } label: {
-                Text("Delete my data").frame(minHeight: 44)
+                Text("Delete my data").frame(minHeight: 44).foregroundStyle(Color.readableRed)
             }
             .disabled(model.isWorking)
             .accessibilityIdentifier("profile.delete")
             .confirmationDialog(Text("Delete your data?"), isPresented: $isDeleteConfirming, titleVisibility: .visible) {
-                Button(role: .destructive) { Task { await deleteMyData() } } label: { Text("Delete") }
+                Button(role: .destructive) { Task { await deleteMyData() } } label: { Text("Delete my data") }
             } message: {
                 Text("Your name, family link and history are deleted right away. This can't be undone.")
             }
@@ -269,7 +304,22 @@ struct ProfileView: View {
     // MARK: Actions
 
     private func saveName() async {
-        if await model.saveName() { isNameFocused = false }
+        if await model.saveName() {
+            isNameFocused = false
+            announce("Name saved")
+        }
+    }
+
+    private func announce(_ message: String.LocalizationValue) {
+        AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
+    }
+
+    /// Side by side normally, stacked at accessibility text sizes.
+    private func stackedAtLargeSizes<Content: View>(spacing: CGFloat, @ViewBuilder content: () -> Content) -> some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: spacing))
+            : AnyLayout(HStackLayout(spacing: spacing))
+        return layout(content)
     }
 
     private func disconnect() async {
