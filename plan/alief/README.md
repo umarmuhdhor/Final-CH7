@@ -130,6 +130,7 @@ Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.
 7. **EN default + Bahasa Indonesia** untuk semua teks. Teks sinyal deteksi dari Imelda dipakai apa adanya, tidak diterjemahkan.
 8. **Desain sementara.** Belum ada Figma: layar mengikuti wireframe PRD §7 + skill `apple-design`, dan setiap log fase UI mencatat "re-skin saat desain final datang".
 9. **Cloud = manusia.** Agent bebas di Supabase lokal + `wrangler dev`. Setiap aksi cloud (deploy, secret, migrasi produksi) = LANGKAH MANUAL yang dikonfirmasi Alief.
+10. **Keamanan & privasi Apple untuk semuanya.** Setiap perubahan app, backend, plan, dan langkah manual mengikuti SECURITY §3 (P1–P13). Kalau ragu, pilih opsi paling menjaga privasi dan catat di DECISIONS (D-alief-40, PROMPT 6l).
 
 ---
 
