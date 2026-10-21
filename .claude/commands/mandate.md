@@ -1,16 +1,16 @@
 ---
 description: Load your Shoo mandate and start the next unchecked task
-argument-hint: "[imelda|alief] [task, e.g. M3 or ON-02]"
+argument-hint: "[umar|imelda|alief] [task, e.g. M3 or ON-02]"
 ---
 
 You are helping a member of the Shoo team work on their mandate.
 
 ## 1. Identify the member
-- If `$ARGUMENTS` starts with `imelda` or `alief`, use that.
+- If `$ARGUMENTS` starts with `umar`, `imelda` or `alief`, use that.
 - Otherwise run `gh api user --jq .login` (fallback: `git config user.name`) and map:
   - `imeldamayanti` → `docs/mandates/imelda.md` (Team AI)
   - `aliefauzan` → `docs/mandates/alief.md` (Team App + Backend)
-  - `umarmuhdhor` → the lead; ask which mandate to review instead of starting work.
+  - `umarmuhdhor` → `docs/mandates/umar.md` (Lead · Safari Extension)
 - If you can't tell, ask.
 
 ## 2. Load context

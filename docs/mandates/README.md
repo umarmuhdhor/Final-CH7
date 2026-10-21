@@ -1,6 +1,20 @@
 # Ringkasan mandat
 
-Detail lengkap + checkbox progres: [imelda.md](imelda.md) · [alief.md](alief.md). Kalau ada perbedaan, yang berlaku file detail.
+Detail lengkap + checkbox progres: [umar.md](umar.md) · [imelda.md](imelda.md) · [alief.md](alief.md). Kalau ada perbedaan, yang berlaku file detail.
+
+## Umar — Lead (`contracts/`, `ios/ShooExtension/`, `ios/ShooLiveActivity/`, `ios/ShooShared/`, `ios/project.yml`)
+
+| # | PRD ID | Tugas | Selesai kalau |
+|---|---|---|---|
+| L0 | — | Override signing per developer | Tim bisa build ke iPhone sendiri tanpa ubah `project.yml` |
+| S3 | EX-03 | Spike Dynamic Island | Jalur dipilih (Live Activity / pill in-page) |
+| U1 | EX-02 | Pipeline scan | Skor naik per layer, reset per URL |
+| U2 | EX-04 | Popup warning 30 / 50 | Sekali per halaman, tidak muncul kalau langsung ≥80 |
+| U3 | EX-05 | Highlight + coret form | Protected tidak bisa hapus, Guardian bisa tutup |
+| U4 | EX-06 | Layar blokir | Tidak bisa di-bypass, auto-buka kalau Safe |
+| U5 | EX-07 | Kirim hasil | Skor ≥30 → `POST /scans` + screenshot bukti |
+| U6 | EX-03 | Indikator live | Sesuai hasil S3 |
+| U7 | EX-01 | Izin semua situs | Izin dicabut → app Off |
 
 ## Imelda — Team AI (`detector/`, `ai/`)
 
@@ -19,6 +33,12 @@ Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu
 
 ## Alief — Team App + Backend (`ios/ShooApp/`, `backend/`)
 
+### Spike · di iPhone sendiri (minggu 1)
+| # | PRD ID | Tugas | Selesai kalau |
+|---|---|---|---|
+| S1 | ON-04, PR-04, GD-01 | Deteksi extension On/Off | `docs/spikes/extension-status.md` terisi + usulan window Active ke Umar |
+| S2 | ON-04 | Buka pengaturan extension | `docs/spikes/open-extension-settings.md` terisi |
+
 ### Fase A · UI dengan data palsu (fixtures)
 | # | PRD ID | Tugas | Selesai kalau |
 |---|---|---|---|
@@ -26,6 +46,7 @@ Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu
 | A2 | ON-01 | Splash 3 slide + Skip | Sesuai PRD 8.1 |
 | A3 | ON-02 | Isi nama + avatar acak | 1–20 karakter, avatar bukan inisial |
 | A4 | ON-03 | Pilih mode Guardian / Protected | Permanen setelah dipilih |
+| A4b | ON-04 | Turn on extension | Fallback PRD §10 dulu, disempurnakan dari S1 + S2 |
 | A5 | ON-05 | Izin notifikasi | Ditolak → pengingat di Home |
 | A6 | DT-01 s.d. 06 | Layar Detail | Ring skor, bukti 1–3, tombol hanya untuk Guardian |
 | A7 | PR-04, PR-05 | Shield + Activity (Protected) | Card blokir terakhir, filter All/Warning/Blocked |
@@ -52,5 +73,5 @@ Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu
 | C4 | GD-06 | Tap push → buka Detail |
 | C5 | GD-07 | Tombol It's safe / Not safe |
 
-**Ditahan:** ON-04 (menunggu spike Umar), Live Activity lewat push (kalau spike memutuskan begitu).
+**Ditahan:** Live Activity lewat push (kalau spike S3 Umar memutuskan begitu).
 Bukan tugas Alief: popup & layar blokir di Safari (Umar), skor & teks alasan (Imelda), hoaks (Fase 2).
