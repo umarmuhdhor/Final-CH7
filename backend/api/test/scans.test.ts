@@ -116,6 +116,26 @@ describe("POST /scans", () => {
     expect(row).toEqual({ page_title: null, favicon_url: null });
   });
 
+  it.each([["NUL", "\u0000"], ["bidi", "\u202E"], ["newline", "\n"]])("url with %s → 422", async (_, ch) => {
+    const p = await createDevice("Mom");
+    const res = await post(p, extensionBody(blocked92, { url: `${blocked92.url}${ch}x` }));
+    expect(res.status).toBe(422);
+  });
+
+  it("faviconUrl with control or bidi characters is stored as null; screenshotBase64 null is accepted", async () => {
+    const p = await createDevice("Mom");
+    const id = await postOk(p, extensionBody(warning41, { faviconUrl: "https://a.example/\u0000.ico", screenshotBase64: null }));
+    const id2 = await postOk(p, extensionBody(warning41, { faviconUrl: "https://a.example/\u202E.ico" }));
+    const rows = await sql`select favicon_url from scans where id in (${id}, ${id2})`;
+    expect(rows.map((r) => r.favicon_url)).toEqual([null, null]);
+  });
+
+  it("signal ids follow the contract (any string), not a stricter pattern", async () => {
+    const p = await createDevice("Mom");
+    const signals = [{ ...(blocked92.signals[0] as object), id: "Lookalike-Domain" }];
+    await postOk(p, extensionBody(blocked92, { signals }));
+  });
+
   it("413 for a body over 256 KB", async () => {
     const p = await createDevice("Mom");
     const res = await post(p, extensionBody(blocked92, { screenshotBase64: "A".repeat(300 * 1024) }));
@@ -256,7 +276,26 @@ describe("GET /scans", () => {
     expect(new Set(seen).size).toBe(5);
   });
 
-  it.each(["?limit=0", "?limit=51", "?limit=x", "?status=normal", "?cursor=bad", "?cursor=" + btoa("x|y")])(
+  it("paging is stable when several scans share the same detectedAt", async () => {
+    const p = await createDevice("Mom");
+    const at = "2026-10-21T04:00:00.123Z";
+    for (let i = 0; i < 5; i++) await postOk(p, extensionBody(blocked92, { detectedAt: at }));
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const { body } = await list(p, `?limit=2${cursor ? `&cursor=${cursor}` : ""}`);
+      seen.push(...body.items.map((i) => i.id));
+      cursor = body.nextCursor;
+    } while (cursor);
+    expect(new Set(seen).size).toBe(5);
+    expect(seen).toHaveLength(5);
+  });
+
+  const cursorOf = (s: string) => btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  it.each([
+    "?limit=0", "?limit=51", "?limit=x", "?status=normal", "?cursor=bad", "?cursor=" + btoa("x|y"),
+    "?cursor=" + cursorOf("2026-10-21T04:00:00.000000Z|00000000-0000-4000-8000-000000000000|junk"),
+  ])(
     "422 for %s",
     async (q) => {
       const p = await createDevice("Mom");

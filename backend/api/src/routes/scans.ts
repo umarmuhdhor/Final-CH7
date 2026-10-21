@@ -6,7 +6,7 @@ import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
-import { isoTime, parse, readJson, stripUnsafe } from "../http/validate";
+import { hasUnsafe, isoTime, parse, readJson, stripUnsafe } from "../http/validate";
 import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachScreenshot, signedScreenshotUrl, toScanResult } from "../services/scans";
@@ -16,7 +16,9 @@ const FUTURE_SKEW_MS = 5 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DOMAIN = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
+/** http(s) URL without control or bidi characters (Postgres rejects NUL; the Guardian UI shows the URL). */
 const httpUrl = (s: string) => {
+  if (hasUnsafe(s)) return undefined;
   try {
     const u = new URL(s);
     return u.protocol === "http:" || u.protocol === "https:" ? u : undefined;
@@ -30,7 +32,7 @@ const text = (max: number) => z.string().max(max).transform(stripUnsafe);
 const localized = z.strictObject({ en: text(500).pipe(z.string().min(1)), id: text(500).pipe(z.string().min(1)) });
 // contracts/scan-result.schema.json $defs.Signal. Unknown keys are dropped.
 const signal = z.object({
-  id: z.string().regex(/^[a-z0-9_]{1,64}$/),
+  id: text(64).pipe(z.string().min(1)),
   layer: z.number().int().min(1).max(5),
   weight: z.number().int().min(0).max(100),
   label: localized,
@@ -50,7 +52,7 @@ const scanBody = z
     status: z.enum(["warning", "blocked"]),
     signals: z.array(signal).max(20),
     detectedAt: isoTime.refine((v) => Date.parse(v) <= Date.now() + FUTURE_SKEW_MS, "must not be in the future"),
-    screenshotBase64: z.string().optional(),
+    screenshotBase64: z.string().nullish(),
   })
   .refine((b) => b.status === (b.score >= 80 ? "blocked" : "warning"), {
     message: "must be blocked for score >= 80, else warning",
@@ -87,8 +89,9 @@ function decodeCursor(cursor: string): { at: string; id: string } {
   } catch {
     /* falls through to the error below */
   }
-  const [at, id] = text.split("|");
-  if (!at || !id || !UUID.test(id) || Number.isNaN(Date.parse(at)) || !isoTime.safeParse(at).success) {
+  const parts = text.split("|");
+  const [at, id] = parts;
+  if (parts.length !== 2 || !at || !id || !UUID.test(id) || Number.isNaN(Date.parse(at)) || !isoTime.safeParse(at).success) {
     throw errors.invalidBody("cursor: invalid");
   }
   return { at, id };
@@ -126,14 +129,19 @@ scans.post("/scans", async (c) => {
     }
   }
   // DB lookup now, while the request's connection is open; only the send runs after the response.
-  const push = await guardianPush(sql, principal, { id, status: body.status, score: body.score });
-  if (push) {
-    c.executionCtx.waitUntil(
-      pushSender(c.env).send(push).then(
-        () => undefined,
-        (err) => console.error(JSON.stringify({ event: "push_failed", scanId: id, error: String(err) })),
-      ),
-    );
+  // Like the screenshot, a push problem never fails a stored scan (a retry would duplicate it).
+  try {
+    const push = await guardianPush(sql, principal, { id, status: body.status, score: body.score });
+    if (push) {
+      const sender = pushSender(c.env);
+      c.executionCtx.waitUntil(
+        (async () => sender.send(push))().catch((err) =>
+          console.error(JSON.stringify({ event: "push_failed", scanId: id, error: String(err) })),
+        ),
+      );
+    }
+  } catch (err) {
+    console.error(JSON.stringify({ event: "push_lookup_failed", scanId: id, error: String(err) }));
   }
   return c.json({ id }, 201);
 });

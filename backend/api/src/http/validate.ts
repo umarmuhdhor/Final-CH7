@@ -70,6 +70,7 @@ const UNSAFE_TEXT_ALL = new RegExp(UNSAFE_TEXT.source, "gu");
 
 /** Removes control and bidi characters from free text we only store and show (page titles, signal text). */
 export const stripUnsafe = (s: string) => s.replace(UNSAFE_TEXT_ALL, "");
+export const hasUnsafe = (s: string) => UNSAFE_TEXT.test(s);
 
 /** Display name: 1–20 code points after trim, no control or bidi characters. */
 export const displayName = z

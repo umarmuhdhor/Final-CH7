@@ -23,6 +23,7 @@ export function decodeBase64(text: string, maxBytes: number): Uint8Array | undef
 /** Type and pixel size from the JPEG/PNG headers (magic bytes, SOFn / IHDR). Undefined for anything else. */
 export function sniffImage(b: Uint8Array): ImageInfo | undefined {
   if (b.length >= 24 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 &&
+      b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a &&
       b[12] === 0x49 && b[13] === 0x48 && b[14] === 0x44 && b[15] === 0x52) {
     const u32 = (o: number) => ((b[o]! << 24) | (b[o + 1]! << 16) | (b[o + 2]! << 8) | b[o + 3]!) >>> 0;
     return { type: "png", width: u32(16), height: u32(20) };
@@ -43,9 +44,10 @@ export function sniffImage(b: Uint8Array): ImageInfo | undefined {
     }
     if (marker === 0xd9 || marker === 0xda) return undefined; // no frame header before the scan data
     const len = (b[i + 2]! << 8) | b[i + 3]!;
+    if (len < 2) return undefined; // the length counts its own 2 bytes
     const isSof = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
     if (isSof) {
-      if (i + 9 > b.length) return undefined;
+      if (len < 8 || i + 9 > b.length) return undefined;
       return { type: "jpeg", height: (b[i + 5]! << 8) | b[i + 6]!, width: (b[i + 7]! << 8) | b[i + 8]! };
     }
     i += 2 + len;

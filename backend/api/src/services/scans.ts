@@ -28,7 +28,7 @@ export function toScanResult(row: ScanRow, screenshotUrl: string | null) {
   };
 }
 
-type Drop = "invalid" | "too_large" | "not_image" | "too_wide" | "quota" | "no_storage" | "upload_failed";
+type Drop = "invalid" | "too_large" | "not_image" | "too_wide" | "bad_size" | "quota" | "no_storage" | "upload_failed";
 
 const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "screenshot_dropped", reason }));
 
@@ -47,7 +47,8 @@ export async function attachScreenshot(
   if (!bytes) return dropped(/^[A-Za-z0-9+/]*={0,2}$/.test(base64) && base64.length % 4 === 0 ? "too_large" : "invalid");
   const image = sniffImage(bytes);
   if (!image) return dropped("not_image");
-  if (Math.max(image.width, image.height) > MAX_SIDE || image.width === 0 || image.height === 0) return dropped("too_wide");
+  if (image.width === 0 || image.height === 0) return dropped("bad_size");
+  if (Math.max(image.width, image.height) > MAX_SIDE) return dropped("too_wide");
 
   const store = screenshotStore(env);
   if (!store) return dropped("no_storage");
@@ -60,8 +61,10 @@ export async function attachScreenshot(
   try {
     await store.put(path, bytes, image.type === "png" ? "image/png" : "image/jpeg");
   } catch (err) {
-    await clearScreenshotPath(sql, scan.id, path);
     console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: String(err) }));
+    // A timed-out upload may still land in Storage: remove it so no object is left without a row.
+    await store.remove([path]).catch(() => undefined);
+    await clearScreenshotPath(sql, scan.id, path);
     return;
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.

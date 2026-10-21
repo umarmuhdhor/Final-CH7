@@ -1,7 +1,16 @@
+import { z } from "zod";
 import type { Env } from "../env";
 
 const BUCKET = "screenshots";
 const TIMEOUT_MS = 5000;
+const signResponse = z.object({ signedURL: z.string().startsWith("/") });
+
+/** Throws on a non-2xx response; the body is released first (workerd caps open subrequests). */
+async function ensureOk(res: Response, what: string): Promise<void> {
+  if (res.ok) return;
+  await res.body?.cancel();
+  throw new Error(`storage ${what} ${res.status}`);
+}
 
 /** Private evidence screenshots (bucket `screenshots`, R3 §4, SECURITY T6). */
 export interface ScreenshotStore {
@@ -35,7 +44,8 @@ export class SupabaseStorageStore implements ScreenshotStore {
       body: bytes,
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) throw new Error(`storage put ${res.status}`);
+    await ensureOk(res, "put");
+    await res.body?.cancel();
   }
 
   async signedUrl(path: string, ttlSeconds: number): Promise<string> {
@@ -45,8 +55,8 @@ export class SupabaseStorageStore implements ScreenshotStore {
       body: JSON.stringify({ expiresIn: ttlSeconds }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) throw new Error(`storage sign ${res.status}`);
-    const { signedURL } = (await res.json()) as { signedURL: string };
+    await ensureOk(res, "sign");
+    const { signedURL } = signResponse.parse(await res.json());
     return `${this.baseUrl}/storage/v1${signedURL}`;
   }
 
@@ -58,7 +68,8 @@ export class SupabaseStorageStore implements ScreenshotStore {
       body: JSON.stringify({ prefixes: paths }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    if (!res.ok) throw new Error(`storage remove ${res.status}`);
+    await ensureOk(res, "remove");
+    await res.body?.cancel();
   }
 }
 
