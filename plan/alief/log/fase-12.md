@@ -20,7 +20,7 @@ Rencana lengkap: [`fase-12-plan.md`](fase-12-plan.md) (`ecc:planner`). Keputusan
 - [x] 4. Estimasi kuota (`207c07e`, angka di bawah); anti-pause: cron + `/healthz/db` menulis `ops_heartbeat`
 - [x] 5. `backend/ci/backend.yml` (dry-run deploy + gitleaks) + `ci/README.md`; C2 diperbarui (`2c1bdca`)
 - [x] 6. `backend/README.md` final: retensi, kuota, rollback, `/privacy`, env `RATE_KEY_SECRET` (`2c1bdca`, `8d42f44`)
-- [ ] 7. LANGKAH MANUAL deploy + uji asap cloud (di bawah)
+- [x] 7. LANGKAH MANUAL deploy + uji asap cloud (di bawah)
 
 ## File dibuat / diubah
 
@@ -82,7 +82,7 @@ Berurutan, satu per satu (aturan Alief).
 
 Dari root worktree, branch `feat/BE-retention-hardening` (PR 07–11 masih terbuka → tetap stacked on #17, tanpa rebase). **Urutan penting:** butir 2 (secret) sebelum butir 3 (deploy) — kode fase 12 gagal tertutup tanpa `RATE_KEY_SECRET` (semua request ber-rate-limit → 500). Tidak ada kunci Apple yang dibutuhkan.
 
-- [ ] 1. Migrasi (2 file: `20261022120000_hardening`, `20261022130000_security_review`):
+- [x] 1. Migrasi (2 file: `20261022120000_hardening`, `20261022130000_security_review`):
   ```bash
   (cd backend/db && supabase migration list --linked)   # dua migrasi di atas hanya di kolom Local
   (cd backend/db && supabase db push)
@@ -91,19 +91,19 @@ Dari root worktree, branch `feat/BE-retention-hardening` (PR 07–11 masih terbu
   (cd backend/db && supabase db query --linked "select count(*) from storage_tombstones")   # 0
   ```
   Catatan: Worker lama (`ac2025ec`) tetap jalan dengan skema baru (kolom/tabel lama tidak berubah; Worker lama tidak menyentuh `storage_tombstones`, dan grant `blocklist_entries` lama yang dipakainya — insert `(domain, families)`, update `families`, hapus baris belum diputus — tetap diizinkan).
-- [ ] 2. Secret baru (nilai tidak pernah tampil; 44 karakter base64):
+- [x] 2. Secret baru (nilai tidak pernah tampil; 44 karakter base64):
   ```bash
   openssl rand -base64 32 | tr -d '\n' | pnpm -C backend/api exec wrangler secret put RATE_KEY_SECRET
   pnpm -C backend/api exec wrangler secret list   # RATE_KEY_SECRET, SCREENSHOT_URL_SECRET, SUPABASE_SERVICE_ROLE_KEY
   ```
   `SCREENSHOT_URL_SECRET` (fase 09) dibuat dengan `openssl rand -base64 32` = 44 karakter, jadi lolos batas ≥ 32; butir 5 membuktikannya (`screenshotUrl` tidak null).
-- [ ] 3. Deploy (cron + Smart Placement ikut):
+- [x] 3. Deploy (cron + Smart Placement ikut):
   ```bash
   pnpm -C backend/api run deploy   # output harus memuat "schedule: 0 19 * * *"
   ```
   Screenshot dashboard Cloudflare → Workers → `shoo-api` → Settings → Triggers (Cron `0 19 * * *`) → simpan di `plan/alief/qa/img/fase-12-cron-trigger.png`.
-- [ ] 4. (Opsional, pertahanan berlapis) Supabase dashboard → Project Settings → Data API → matikan "Enable Data API". Worker tidak memakai PostgREST (Storage punya API sendiri); `service_role` sudah tanpa hak di `public` setelah butir 1.
-- [ ] 5. Uji asap semua endpoint dengan dua device uji (batas `POST /devices` 10/jam per IP):
+- [ ] 4. (dilewati malam ini — butuh login dashboard Alief; opsional) (Opsional, pertahanan berlapis) Supabase dashboard → Project Settings → Data API → matikan "Enable Data API". Worker tidak memakai PostgREST (Storage punya API sendiri); `service_role` sudah tanpa hak di `public` setelah butir 1.
+- [x] 5. Uji asap semua endpoint dengan dua device uji (batas `POST /devices` 10/jam per IP):
   ```bash
   U=https://shoo-api.afindo-mi01.workers.dev
   tok() { python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])'; }
@@ -146,6 +146,13 @@ Dari root worktree, branch `feat/BE-retention-hardening` (PR 07–11 masih terbu
   ```bash
   (cd backend/db && supabase db query --linked "select indexrelname, idx_scan from pg_stat_user_indexes where indexrelname in ('verdicts_not_safe','scans_original_shot','scans_shot_path')")
   ```
+  Hasil butir 1–3, 5, 7 (22 Okt 2026 ±02:10 WITA, coordinator; mandat malam Alief):
+  - 1: `db push` → `20261022120000_hardening.sql`, `20261022130000_security_review.sql`. `shoo_api`: `statement_timeout=10s`, `idle_in_transaction_session_timeout=15s`, `lock_timeout=5s`; grant `service_role` di `public` = `0`; `storage_tombstones` = `0`.
+  - 2: `RATE_KEY_SECRET` dibuat acak lewat pipe (tidak pernah tampil) → `Success!`; secret list: `RATE_KEY_SECRET`, `SCREENSHOT_URL_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`.
+  - 3: deploy Version `bdc661e8-3776-4b8f-9e22-2ae2cd5c8745`, output memuat `schedule: 0 19 * * *`. Screenshot dashboard Triggers **belum** (butuh login Alief).
+  - 5: header `private, no-store`, HSTS `max-age=31536000; includeSubDomains`, CSP `default-src 'none'; frame-ancestors 'none'`, `no-referrer`, `nosniff`, `DENY`; `healthz/db 200`; `options 404`; `413 413`; privacy `1`; `bad token 401`; `join 200`; `scan 92bc0964`; `family items 1`; `screenshot 200 image/jpeg`; tombstone `1`; `verdict not_safe`; `lookup not_safe`; `blocklist 200`; `codes ['200'] p50 252 ms p95 317 ms max 347 ms` (fase 10: p50 435 / p95 1547 ms → Smart Placement membantu; p95 masih 17 ms di atas target 300 ms); delete `{"ok":true}{"ok":true}`; `screenshot after delete 404`; blocklist untuk `shoo-smoke-11552.example` = 0 baris.
+  - 7: `scans_original_shot` idx_scan 2, `scans_shot_path` 1, `verdicts_not_safe` 0 (belum ada jalur yang memakainya di uji asap ini).
+  - 6: menunggu run cron 03:00 WITA — coordinator memeriksa setelahnya.
 - [ ] 8. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa angka, membuka PR `feat/BE-retention-hardening` (stacked on #17), status `[r]`. Track be lalu selesai kode; G6 menunggu merge 07–12 + TODO D8.
 
 ## Catatan handoff
