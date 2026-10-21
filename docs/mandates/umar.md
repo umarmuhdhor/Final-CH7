@@ -54,7 +54,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - Muncul di 30 dan 50, masing-masing maks. sekali per halaman. Langsung ≥80 → tanpa popup.
   - Isi: status, skor, link, "See detail" → buka app (`shoo://scan/{id}`). Bisa ditutup.
   - Shadow DOM supaya CSS halaman tidak bocor. Teks EN + ID (`_locales`).
-- [ ] **U3 · EX-05** Tandai bagian berbahaya. Branch: `feat/EX-05-highlight`
+- [x] **U3 · EX-05** Tandai bagian berbahaya. Branch: `feat/EX-05-highlight`
   - Teks mencurigakan: stabilo tebal. Form PIN/OTP/kartu/KTP: dicoret + "Don't enter your PIN here", input tetap bisa diketik.
   - Protected: tidak bisa dihapus. Guardian: bisa ditutup.
   - Butuh posisi bukti dari sinyal → kalau Signal belum punya field itu, usulkan perubahan kontrak (opsional, aditif).

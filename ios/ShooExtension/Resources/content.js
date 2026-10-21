@@ -1,6 +1,6 @@
 // Owner: lead. Collects the page, runs the scan pipeline, publishes the score (EX-02).
 // Loaded last (manifest.json) so UI scripts have already called ShooPipeline.subscribe().
-// TODO(EX-05): highlight — subscriber in its own file (popup.js = EX-04, block.js = EX-06).
+// UI lives in subscribers: popup.js (EX-04), marks.js (EX-05), block.js (EX-06), report.js (EX-07).
 
 (() => {
     const MAX_TEXT_CHARS = 20000;

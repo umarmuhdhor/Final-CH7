@@ -16,5 +16,11 @@
     "block_auto_open": {"message": "Halaman ini terbuka sendiri setelah ditandai aman.", "description": "EX-06 Protected hint"},
     "block_review": {"message": "Tinjau di Shoo", "description": "EX-06 Guardian button → Detail in app"},
     "block_open_app": {"message": "Buka Shoo", "description": "EX-06 button when the app isn't set up yet"},
-    "block_verified_scam": {"message": "Dipastikan penipuan oleh $NAME$", "description": "EX-06 after a Not safe verdict; guardian's name", "placeholders": {"name": {"content": "$1"}}}
+    "block_verified_scam": {"message": "Dipastikan penipuan oleh $NAME$", "description": "EX-06 after a Not safe verdict; guardian's name", "placeholders": {"name": {"content": "$1"}}},
+    "mark_dont_pin": {"message": "Jangan masukkan PIN di sini", "description": "EX-05 label above a struck-through sensitive field"},
+    "mark_dont_otp": {"message": "Jangan masukkan OTP di sini", "description": "EX-05 label above a struck-through sensitive field"},
+    "mark_dont_card": {"message": "Jangan masukkan data kartu di sini", "description": "EX-05 label above a struck-through sensitive field"},
+    "mark_dont_ktp": {"message": "Jangan masukkan nomor KTP di sini", "description": "EX-05 label above a struck-through sensitive field"},
+    "mark_dont_password": {"message": "Jangan masukkan password di sini", "description": "EX-05 label above a struck-through sensitive field"},
+    "mark_hide": {"message": "Sembunyikan tanda", "description": "EX-05 Guardian button that hides the marks on this page"}
 }
