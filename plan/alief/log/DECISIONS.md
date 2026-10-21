@@ -547,3 +547,15 @@ Format:
 - Keputusan: flag `AppConfig.dataDeletionEnabled` dihapus. Tombol "Delete my data" di Profile selalu tampil untuk kedua mode; `ProfileModel` tidak lagi menerima flag. Test `deleteMyDataIsHiddenUntilTheContractExists` diganti UI test `testDeleteMyDataStartsOnboardingOver` (hapus → konfirmasi → onboarding dari awal).
 - Alasan: PR #10 Umar menambahkan `DELETE /devices/me → { ok }` ke `contracts/api.md` (C19 butir 1). Backend sudah punya endpoint sejak fase 08. App Store Guideline 5.1.1(v), SECURITY §3 P3.
 - File: `App/AppConfig.swift`, `Data/ShooRepository.swift`, `Features/Profile/{ProfileModel,ProfileView}.swift`, `Tests/ProfileModelTests.swift`, `UITests/ProfileUITests.swift`.
+
+## D-alief-A21 · 22 Okt 2026 · app (fase 06Q) · Pengingat notifikasi Guardian ikut tergulir
+
+- Keputusan: Banner "Notifications are off" (D-alief-A08) tidak lagi di `safeAreaInset(edge: .top)` `GuardianShieldView`, tapi jadi baris pertama konten gulir `ProtectedShieldView` (perspektif Guardian) dan `FamilyShieldView` (parameter `reminder`). Tombol "Invite your family" saat keluarga kosong menempel di atas tab bar di ukuran teks biasa, dan ikut tergulir di ukuran aksesibilitas.
+- Alasan: QA-A P2-4 / P2-7: di iPhone SE + XL banner menempel setinggi ±300 pt, ruang gulir tinggal sepotong dan geseran di banner tidak menggulir; tombol Invite tertutup tab bar di SE ukuran default.
+- File: `Features/Shield/{FamilyShieldView,ProtectedShieldView}.swift`; test `UITests/QALayoutUITests.swift`.
+
+## D-alief-A22 · 22 Okt 2026 · app (fase 06Q) · Tata letak teks besar dari QA-A
+
+- Keputusan: Cincin skor Detail tidak ikut membesar dengan Dynamic Type (`ScoreRing.maxScale = 1`, angka 42 pt); kartu lain tetap boleh 2×. `EmptyStateView` memakai tata letak sendiri (judul membungkus, deskripsi `.readableSecondary`, satu elemen VoiceOver) menggantikan `ContentUnavailableView`. Slide splash berakhir 52 pt di atas titik halaman. Kartu mode ON-03 menaruh ikon di baris sendiri pada ukuran aksesibilitas.
+- Alasan: QA-A P2-1, P2-2, P2-3, P2-5 (iPhone SE, XL). Audit `performAccessibilityAudit` di simulator banyak positif palsu (efek tepi gulir iOS 26), jadi diputuskan dari screenshot + UI test frame.
+- File: `Components/{ScoreRing,EmptyStateView}.swift`, `Features/Detail/DetailView.swift`, `Features/Onboarding/{SplashView,ModeView}.swift`; test `Tests/ComponentLogicTests.swift`, `UITests/QALayoutUITests.swift`, `UITests/AccessibilityAuditUITests.swift` (atas permintaan).

@@ -15,11 +15,12 @@ Laporan: [`qa/QA-A-2026-10-22.md`](qa/QA-A-2026-10-22.md). P0 = 0, P1 = 0; P2 ke
 
 | ID | Prio | Area | Temuan singkat | Test | Branch | Status |
 |---|---|---|---|---|---|---|
-| P2-1 | P2 | ON-01 | Titik halaman menimpa teks splash di XL | `QALayoutUITests.testSplashDotsDoNotCoverText` | `fix/QA-A-P2-layout` | [ ] |
-| P2-2 | P2 | ON-03 | Kata terpotong di kartu mode (XL) | `QALayoutUITests.testModeCardTextUsesFullWidthAtAccessibilitySizes` | `fix/QA-A-P2-layout` | [ ] |
-| P2-3 | P2 | DT-01 | Cincin skor Detail memenuhi layar di XL | `ComponentLogicTests` (ukuran cincin) | `fix/QA-A-P2-layout` | [ ] |
-| P2-4 | P2 | GD-03 | Tombol Invite tertutup tab bar | `QALayoutUITests.testInviteButtonIsAboveTabBar` | `fix/QA-A-P2-layout` | [ ] |
-| P2-5 | P2 | PR-05 / komponen | Judul empty state terpotong, deskripsi `.secondary` | screenshot retest (judul terpotong tidak terlihat di pohon aksesibilitas) | `fix/QA-A-P2-layout` | [ ] |
+| P2-1 | P2 | ON-01 | Titik halaman menimpa teks splash di XL | `QALayoutUITests.testSplashDotsDoNotCoverText` | `fix/QA-A-P2-layout` | [x] `8da5da0` |
+| P2-2 | P2 | ON-03 | Kata terpotong di kartu mode (XL) | screenshot retest (kartu satu elemen VoiceOver) | `fix/QA-A-P2-layout` | [x] `17b442e` |
+| P2-3 | P2 | DT-01 | Cincin skor Detail memenuhi layar di XL | `ComponentLogicTests.scoreRingGrowsUpToItsCap` | `fix/QA-A-P2-layout` | [x] `8acfe63` |
+| P2-4 | P2 | GD-03 | Tombol Invite tertutup tab bar | `QALayoutUITests.testInviteButtonIsAboveTabBar` | `fix/QA-A-P2-layout` | [x] `1e1f719` |
+| P2-5 | P2 | PR-05 / komponen | Judul empty state terpotong, deskripsi `.secondary` | screenshot retest (judul terpotong tidak terlihat di pohon aksesibilitas) | `fix/QA-A-P2-layout` | [x] `01cb7fd` |
+| P2-7 | P2 | GD-01/03 | Banner notifikasi menempel memakan layar (SE + XL) | `QALayoutUITests.testInviteButtonIsReachableAtAccessibilitySizes` | `fix/QA-A-P2-layout` | [x] `509366a` |
 | P2-6 | P2 | A11y | Suara VoiceOver tidak ikut bahasa app | butuh iPhone + VoiceOver | ditunda ke QA-E2E #14 | [ ] |
 
 ## Ronde QA-E2E (fase 16)
