@@ -15,8 +15,8 @@ export const limits = {
   createScan: { bucket: "scans_create", max: 120, windowSeconds: 3600 },
   viewScreenshot: { bucket: "screenshots_view", max: 120, windowSeconds: 60 },
   createVerdict: { bucket: "verdicts_create", max: 60, windowSeconds: 60 },
-  // EX-06 polls every 5 s per open block screen, plus one lookup per page (SECURITY T10).
-  getVerdict: { bucket: "verdicts_get", max: 10, windowSeconds: 10 },
+  // EX-06 polls every 5 s per open block screen (several tabs), plus one lookup per page (SECURITY T10).
+  getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },
 } satisfies Record<string, Limit>;
 
 /**

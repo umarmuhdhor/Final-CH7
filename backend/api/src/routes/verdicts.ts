@@ -32,7 +32,14 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   // An id that is not a UUID cannot name a scan.
   if (!UUID.test(scanId)) throw errors.notFound();
 
-  const result = await decideVerdict(sql, principal, scanId, value);
+  let result;
+  try {
+    result = await decideVerdict(sql, principal, scanId, value);
+  } catch (err) {
+    // The scan, its owner or this guardian was deleted mid-request (foreign key gone).
+    if ((err as { code?: string }).code === "23503") throw errors.notFound();
+    throw err;
+  }
   if ("verdict" in result) return c.json({ verdict: result.verdict });
   if (result.error === "not_found") throw errors.notFound();
   if (result.error === "not_allowed") throw errors.verdictNotAllowed(403, "Not the owner's guardian");

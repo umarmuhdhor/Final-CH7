@@ -103,6 +103,32 @@ describe("POST /verdicts", () => {
     expect(await errorCode(res)).toBe("verdict_not_allowed");
   });
 
+  it.each([
+    ["guardian removes the member", "member"],
+    ["protected leaves", "guardian"],
+  ])("disconnect (%s): the ex-guardian's verdicts are gone at once (P13)", async (_, how) => {
+    const { g, p } = await family();
+    const id = await scan(p);
+    await verdict(g, id, "safe");
+    const res = how === "member"
+      ? await call(`/family/members/${p.deviceId}`, { method: "DELETE", token: g.token })
+      : await call("/family/guardian", { method: "DELETE", token: p.token });
+    expect(res.status).toBe(200);
+    expect(await lookup(p, blocked92.domain)).toBeNull();
+    const item = (await (await call(`/scans/${id}`, { token: p.token })).json()) as { verdict: unknown };
+    expect(item.verdict).toBeNull();
+    const [n] = await sql<{ n: number }[]>`select count(*)::int as n from verdicts where by_device_id = ${g.deviceId}`;
+    expect(n!.n).toBe(0);
+  });
+
+  it("the guardian's verdicts on its own scans survive a member's disconnect", async () => {
+    const { g, p } = await family();
+    const own = await scan(g);
+    await verdict(g, own, "safe");
+    await call("/family/guardian", { method: "DELETE", token: p.token });
+    expect((await lookup(g, blocked92.domain))?.value).toBe("safe");
+  });
+
   it("after disconnect the old guardian → 403", async () => {
     const { g, p } = await family();
     const id = await scan(p);
@@ -204,9 +230,11 @@ describe("GET /verdicts?domain=", () => {
     expect((await call("/verdicts?domain=example.com")).status).toBe(401);
   });
 
-  it("rate limits 10 per 10 s per device with Retry-After", async () => {
+  it("rate limits 30 per 10 s per device with Retry-After", async () => {
     const p = await createDevice("Mom");
-    for (let i = 0; i < 10; i++) expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
+    const hash = await sha256(`verdicts_get:${p.deviceId}`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select 'verdicts_get', ${hash} from generate_series(1, 29)`;
+    expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
     const res = await call("/verdicts?domain=a.example", { token: p.token });
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
@@ -271,14 +299,47 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect((await entry("many.example"))?.families).toBe(2);
   });
 
-  it("disconnect after the verdict keeps it eligible (snapshot)", async () => {
+  it("disconnect removes the ex-guardian's support; an approved entry stays served", async () => {
     const { g, p } = await family();
-    const id = await scan(p, blocked92 as Fixture, "snap.example");
-    await verdict(g, id, "not_safe");
+    await verdict(g, await scan(p, blocked92 as Fixture, "queued.example"), "not_safe");
+    await verdict(g, await scan(p, blocked92 as Fixture, "approved.example"), "not_safe");
+    await approve("approved.example");
     await call("/family/guardian", { method: "DELETE", token: p.token });
-    const [v] = await sql<{ e: boolean }[]>`select global_eligible as e from verdicts where domain = 'snap.example'`;
-    expect(v!.e).toBe(true);
-    expect((await entry("snap.example"))?.families).toBe(1);
+    expect((await entry("queued.example"))?.families).toBe(0);
+    expect((await entry("approved.example"))?.families).toBe(0);
+    expect((await blocklist(p)).domains.map((d) => d.domain)).toEqual(["approved.example"]);
+  });
+
+  it("DELETE /devices/me of the protected owner recounts families", async () => {
+    const { g, p } = await family();
+    await verdict(g, await scan(p, blocked92 as Fixture, "owner-gone.example"), "not_safe");
+    expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
+    expect((await entry("owner-gone.example"))?.families).toBe(0);
+  });
+
+  it("DELETE /devices/me of the guardian recounts families", async () => {
+    const { g, p } = await family();
+    await verdict(g, await scan(p, blocked92 as Fixture, "guardian-gone.example"), "not_safe");
+    expect((await call("/devices/me", { method: "DELETE", token: g.token })).status).toBe(200);
+    expect((await entry("guardian-gone.example"))?.families).toBe(0);
+  });
+
+  it("at most 10 newly queued domains per guardian per 24 h; the verdict itself still applies", async () => {
+    const { g, p } = await family();
+    for (let i = 0; i < 10; i++) await verdict(g, await scan(p, blocked92 as Fixture, `cap${i}.example`), "not_safe");
+    const id = await scan(p, blocked92 as Fixture, "cap10.example");
+    expect((await verdict(g, id, "not_safe")).status).toBe(200);
+    expect(await entry("cap10.example")).toBeUndefined();
+    expect((await lookup(p, "cap10.example"))?.value).toBe("not_safe");
+    // Re-deciding an already queued domain is not a new one.
+    await verdict(g, await scan(p, blocked92 as Fixture, "cap0.example"), "not_safe");
+    expect((await entry("cap0.example"))?.families).toBe(1);
+  });
+
+  it.each(["co.id", "github.io", "vercel.app", "blogspot.com"])("public suffix / shared host %s never enters the queue", async (dom) => {
+    const { g, p } = await family();
+    expect((await verdict(g, await scan(p, blocked92 as Fixture, dom), "not_safe")).status).toBe(200);
+    expect(await entry(dom)).toBeUndefined();
   });
 
   it.each(["klikbca.com", "bca.co.id", "pajak.go.id", "google.com"])("allowlisted %s never enters the queue", async (dom) => {

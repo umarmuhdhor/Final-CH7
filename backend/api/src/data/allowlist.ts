@@ -26,6 +26,22 @@ const ALLOWLIST = new Set([
   "detik.com", "kompas.com", "tribunnews.com", "liputan6.com", "cnnindonesia.com", "tempo.co", "kumparan.com",
 ]);
 
+/**
+ * Public suffixes and shared hosting roots (exact match only): approving one would block a whole
+ * TLD or every site on that host. Their subdomains are separate sites and may be queued.
+ */
+const SHARED_ROOTS = new Set([
+  "co.id", "or.id", "web.id", "my.id", "biz.id", "net.id", "ponpes.id", "co.uk", "com.au", "com.sg", "com.my",
+  "github.io", "gitlab.io", "vercel.app", "netlify.app", "pages.dev", "workers.dev", "web.app", "firebaseapp.com",
+  "herokuapp.com", "onrender.com", "blogspot.com", "wordpress.com", "wixsite.com", "weebly.com", "carrd.co",
+  "000webhostapp.com", "glitch.me", "replit.app", "framer.website", "notion.site", "linktr.ee", "s.id", "bit.ly",
+]);
+
+/** True when a not_safe verdict on this domain must never enter the global review queue. */
+export function neverQueue(domain: string): boolean {
+  return SHARED_ROOTS.has(domain) || isAllowlisted(domain);
+}
+
 export function isAllowlisted(domain: string): boolean {
   const labels = domain.split(".");
   for (let i = 0; i < labels.length - 1; i++) {
