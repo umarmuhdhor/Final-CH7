@@ -136,7 +136,7 @@ Dari root worktree, branch `feat/BE-retention-hardening` (PR 07–11 masih terbu
   echo "domain uji: $D"
   ```
   Harapan: header `nosniff`, HSTS, CSP `default-src 'none'`, `no-referrer`, `DENY`, `private, no-store`; `healthz/db 200`; `options 404`; `413 413`; `1`; `bad token 401`; `join 200`; `scan <8 hex>`; `family items 1`; `screenshot 200 image/jpeg`; tombstone `1`; `verdict not_safe`; `lookup not_safe`; `blocklist 200`; `codes ['200']` + p50/p95 (bandingkan dengan 435 / 1547 ms di fase 10, Smart Placement); `{"ok":true}{"ok":true}`; `screenshot after delete 404`; blocklist 0 baris. Tempel angka (tanpa token, tanpa `$SURL`). Tombstone upload tinggal sampai cron (umur < 10 menit saat delete, lalu dihapus run 03:00 WITA; objeknya sendiri sudah dihapus `DELETE /devices/me`).
-- [ ] 6. Bukti run cron pertama (03:00 WITA = 19:00 UTC berikutnya):
+- [x] 6. Bukti run cron pertama (03:00 WITA = 19:00 UTC berikutnya):
   ```bash
   (cd backend/db && supabase db query --linked "select source, at from ops_heartbeat order by source")   # baris cron dengan at setelah 19:00 UTC
   (cd backend/db && supabase db query --linked "select count(*) from storage_tombstones")              # 0 (tombstone uji butir 5 terkuras)
@@ -152,7 +152,7 @@ Dari root worktree, branch `feat/BE-retention-hardening` (PR 07–11 masih terbu
   - 3: deploy Version `bdc661e8-3776-4b8f-9e22-2ae2cd5c8745`, output memuat `schedule: 0 19 * * *`. Screenshot dashboard Triggers **belum** (butuh login Alief).
   - 5: header `private, no-store`, HSTS `max-age=31536000; includeSubDomains`, CSP `default-src 'none'; frame-ancestors 'none'`, `no-referrer`, `nosniff`, `DENY`; `healthz/db 200`; `options 404`; `413 413`; privacy `1`; `bad token 401`; `join 200`; `scan 92bc0964`; `family items 1`; `screenshot 200 image/jpeg`; tombstone `1`; `verdict not_safe`; `lookup not_safe`; `blocklist 200`; `codes ['200'] p50 252 ms p95 317 ms max 347 ms` (fase 10: p50 435 / p95 1547 ms → Smart Placement membantu; p95 masih 17 ms di atas target 300 ms); delete `{"ok":true}{"ok":true}`; `screenshot after delete 404`; blocklist untuk `shoo-smoke-11552.example` = 0 baris.
   - 7: `scans_original_shot` idx_scan 2, `scans_shot_path` 1, `verdicts_not_safe` 0 (belum ada jalur yang memakainya di uji asap ini).
-  - 6: menunggu run cron 03:00 WITA — coordinator memeriksa setelahnya.
+  - 6: run cron pertama terbukti — `ops_heartbeat` baris `cron` `at = 2026-10-21 19:00:47 UTC` (03:00:47 WITA); `storage_tombstones` = `0` (tombstone uji butir 5 terkuras). Log Worker (`"event":"retention"`, jumlah subrequest) belum dicek — butuh dashboard Alief.
 - [ ] 8. Ketik lagi: `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` Agent memeriksa angka, membuka PR `feat/BE-retention-hardening` (stacked on #17), status `[r]`. Track be lalu selesai kode; G6 menunggu merge 07–12 + TODO D8.
 
 ## Catatan handoff
