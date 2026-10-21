@@ -24,9 +24,9 @@ Detail lengkap + checkbox progres: [umar.md](umar.md) · [imelda.md](imelda.md) 
 | M2 | Eval set | ≥ 50 halaman scam + ≥ 50 halaman resmi, skrip eval | Satu perintah, hasilnya ditempel di PR | — |
 | M3 | Layer 3: isi & form | `POST /analyze`, form PIN/OTP/kartu/KTP, kalimat mendesak, logo palsu, umur domain | Fixture `blocked-92` & `warning-63` bisa direproduksi (skor ±10) | M2 |
 | M4 | Layer 4: reality check (LLM) | Prompt "wajar atau tidak", output JSON, batas 8 detik | Salah blokir turun, deteksi scam tidak turun | M2, M3 |
-| M5 | Layer 1: database | `GET /public-blocklist` di `ai/` + detector pakai `ShooLists.match` ([desain](../design/blocklist.md)) | Domain cocok → langsung 100% | Umar: `ShooLists`; Alief: `GET /blocklist` (sementara pakai mock) |
+| M5 | Layer 1: database | `GET /public-blocklist` di `ai/` + detector pakai `ShooLists.match` ([desain](../design/blocklist.md)). Unduh/simpan daftar = extension, bukan Imelda | Domain cocok → langsung 100% | — (`ShooLists` sudah ada di `main`) |
 | M6 | Kalibrasi bobot | Atur bobot sinyal | Situs resmi < 30%, ≥ 90% scam ≥ 50% | M1–M5 |
-| M7 | Deploy `/analyze` | URL HTTPS publik + rate limit | URL dikirim ke Umar & Alief | M3, M4 |
+| M7 | Deploy `/analyze` + `/public-blocklist` | URL HTTPS publik + rate limit per IP | URL dikirim ke Umar & Alief | M3, M4, M5 |
 
 Semua teks alasan wajib 2 bahasa: `{ "en": "...", "id": "..." }`.
 Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu PM), UI.

@@ -80,7 +80,8 @@ Team AI owns the **weights**. The lead owns the **thresholds** (contracts/README
 
 ## `evidence` (EX-05 highlight)
 Optional, but it drives what the extension marks on the page:
-- **Text signals** (`urgent_language`, `brand_logo_offsite`, `hoax_claim`, …): `evidence` must be text that appears **exactly** on the page (case-insensitive, within one text block), e.g. `"diblokir dalam 24 jam"`. The extension highlights every occurrence at score ≥ 30. Paraphrased or translated evidence highlights nothing.
+- **Layer 1–2 signals**: `evidence` is free-form and never highlighted (e.g. `db_match` → `"shoo"` or `"public"`, `lookalike_domain` → the brand it imitates).
+- **Text signals, layer ≥ 3** (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`, `hoax_claim`, …): `evidence` must be text that appears **exactly** on the page (case-insensitive, within one text block), e.g. `"diblokir dalam 24 jam"`. The extension highlights every occurrence at score ≥ 30. Paraphrased or translated evidence highlights nothing.
 - **Field signals** (`asks_*`): `evidence` is the field's `name`/`id` (e.g. `"pin"`). Not highlighted as text — the extension strikes sensitive fields itself at score ≥ 50.
 - Never put typed values in `evidence`.
 

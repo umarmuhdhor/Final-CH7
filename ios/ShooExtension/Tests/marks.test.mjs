@@ -42,6 +42,11 @@ test("phrases come from text evidence only, longest first, deduped", () => {
 
 const warning41 = JSON.parse(readFileSync(new URL("../../../contracts/fixtures/warning-41.json", import.meta.url), "utf8"));
 
+test("layer 1–2 evidence is never highlighted (db_match \"public\" must not mark the word on the page)", () => {
+    const signals = [sig("db_match", 1, 100, "public"), sig("lookalike_domain", 2, 30, "BCA"), sig("urgent_language", 3, 10, "segera verifikasi")];
+    assert.deepEqual(phrasesFrom(signals), ["segera verifikasi"]);
+});
+
 test("30–49: highlight only", () => {
     assert.deepEqual(marksFor({ ...warning41, status: "warning" }).highlight, true);
     assert.deepEqual(marksFor({ ...warning41, status: "warning" }).strike, false);

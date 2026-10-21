@@ -8,7 +8,8 @@
     const MAX_PHRASES = 10;
     const MAX_RANGES = 50;
 
-    // Field signals carry a field name as evidence, not page text — they're shown as struck fields instead.
+    // Only content signals (layer ≥ 3) quote page text. Field signals (asks_*) carry a field name and are
+    // shown as struck fields; layer 1–2 evidence is free-form (e.g. db_match → "shoo"/"public").
     const FIELD_SIGNAL = /^asks_/;
 
     const FIELD_KINDS = [
@@ -32,7 +33,7 @@
     function phrasesFrom(signals) {
         const phrases = new Set();
         for (const s of signals) {
-            if (FIELD_SIGNAL.test(s.id) || typeof s.evidence !== "string") continue;
+            if (!(s.layer >= 3) || FIELD_SIGNAL.test(s.id) || typeof s.evidence !== "string") continue;
             const text = s.evidence.trim();
             if (text.length >= 3) phrases.add(text);
         }

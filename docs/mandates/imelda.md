@@ -10,7 +10,12 @@ Kamu yang menentukan **seberapa berbahaya sebuah halaman**. Semua yang menghasil
 |---|---|
 | `detector/`, `ai/`, `ios/ShooExtension/Resources/detector.js` (hasil sync saja) | `contracts/`, `ios/` lainnya, `backend/` |
 
-Wajib dibaca sebelum mulai: `contracts/detector-interface.md`, `contracts/scan-result.schema.json`, `contracts/api.md` (bagian AI + Blocklist), `detector/CLAUDE.md`, `ai/CLAUDE.md`.
+Wajib dibaca sebelum mulai: `contracts/detector-interface.md`, `contracts/scan-result.schema.json`, `contracts/api.md` (bagian AI + Blocklist), `detector/CLAUDE.md`, `ai/CLAUDE.md`, `docs/design/blocklist.md` (untuk M5).
+
+**Aturan yang sering terlewat:**
+- `detector.js` **tidak boleh** melakukan request jaringan apa pun. Data blocklist didapat lewat `ShooLists.match` (M5).
+- `evidence` di sinyal teks layer 3–4 (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`) harus berisi **teks persis** dari halaman. Extension men-stabilo teks itu (EX-05). Parafrase atau terjemahan = tidak ada yang di-stabilo.
+- Teks sinyal (`label`, `labelSimple`) selalu 2 bahasa. Extension memilih sesuai bahasa iPhone.
 
 ## Definisi sukses MVP
 Target awal ini bisa diubah oleh lead:
@@ -39,7 +44,7 @@ Target awal ini bisa diubah oleh lead:
 ### M3 · Layer 3: isi halaman & form (server) — `ai/`
 - [ ] Buat service `POST /analyze` persis seperti di `contracts/api.md`. Stateless, tanpa log isi halaman.
 - [ ] Buat sinyal form sensitif: `asks_pin`, `asks_otp`, `asks_password`, `asks_card`, `asks_cvv`, `asks_ktp`, `asks_selfie_ktp`. Bahan: `snapshot.forms[].fields` (label, name, placeholder, autocomplete). Harus mengenali kata dalam Bahasa Indonesia dan English.
-- [ ] Buat sinyal `urgent_language` ("diblokir dalam 24 jam", "klaim sekarang") dan `brand_logo_offsite` (nama brand muncul di `imageAlts`/title, tapi domainnya bukan domain resmi).
+- [ ] Buat sinyal `urgent_language` ("diblokir dalam 24 jam", "klaim sekarang") dan `brand_logo_offsite` (nama brand muncul di `imageAlts`/title, tapi domainnya bukan domain resmi). `evidence` = potongan teks **persis** dari `snapshot.text`/title, supaya bisa di-stabilo.
 - [ ] Buat sinyal `new_domain` lewat lookup RDAP/WHOIS **di server**, bukan di HP, supaya riwayat browsing tidak bocor ke pihak ketiga dari perangkat user. Simpan hasil lookup di cache.
 - **Selesai kalau:** `fixtures/blocked-92.json` dan `warning-63.json` bisa direproduksi kira-kira (sinyal sama, skor ±10).
 - Branch: `feat/AI-M3-content-forms`
@@ -53,11 +58,22 @@ Target awal ini bisa diubah oleh lead:
 - Branch: `feat/AI-M4-reality-check`
 
 ### M5 · Layer 1: database — `ai/` + `detector/`
-Desain: [`docs/design/blocklist.md`](../design/blocklist.md). Ringkasnya: daftar diunduh dan disimpan oleh `background.js` (Umar), detector **tidak** melakukan request jaringan.
-- [ ] `GET /public-blocklist?since=` di `ai/`: kumpulkan daftar phishing publik di server (pilih sumber yang lisensinya boleh dipakai, catat di `ai/README.md`), ubah ke domain utama, buang domain resmi/allowlist dan situs sah yang hanya disusupi. Bentuk sama dengan `GET /blocklist`: `{ domains: [{ domain, addedAt }], removed?, nextSince }`.
-- [ ] Di `detector/`: `await globalThis.ShooLists.match(new URL(snapshot.url).hostname)` → kalau cocok, kembalikan sinyal `db_match` (weight 100, label EN + ID, sumber di `evidence`). Sambil menunggu helper dari Umar, pakai mock `ShooLists` di test.
-- [ ] **Jangan** kirim URL yang sedang dibuka ke mana pun.
-- **Bergantung pada:** helper `ShooLists` (Umar) dan `GET /blocklist` (Alief). Sambil menunggu, pakai data mock.
+Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
+**Yang bukan tugasmu:** mengunduh, menyimpan, dan me-refresh daftar. Itu sudah dikerjakan Umar di extension (`lists.js`). `GET /blocklist` milik Alief juga diunduh extension, jadi kamu **tidak** memanggilnya.
+
+**A. Server — `GET /public-blocklist?since=` di `ai/`**
+- [ ] Pilih sumber daftar phishing publik yang lisensinya boleh dipakai di app, lalu catat sumber dan lisensinya di `ai/README.md`.
+- [ ] Ubah setiap entri ke domain utama (registrable domain, pakai Public Suffix List). Buang domain resmi/allowlist (`detector/data/brands.json` + situs populer) dan situs sah yang hanya disusupi (mis. `wordpress.com`, `github.io` tanpa subdomain).
+- [ ] Respons persis `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }`. `since` kosong = daftar lengkap. Target ≤ 200.000 domain.
+- [ ] Token Bearer dari extension **tidak** perlu (dan tidak bisa) diverifikasi. Pakai rate limit per IP, dan jangan log token-nya.
+
+**B. Detector — `detector/`**
+- [ ] Di `analyzeLocal`: `const hit = await globalThis.ShooLists?.match(new URL(snapshot.url).hostname)`. Kalau ada → kembalikan `db_match` (layer 1, weight 100, `label`/`labelSimple` EN + ID, `evidence` = `hit.source`). Kalau `null` → lanjut ke aturan layer 2.
+- [ ] Di test: mock `globalThis.ShooLists = { match: async (h) => … }`. Test: cocok, tidak cocok, dan `ShooLists` tidak ada (harus tetap jalan tanpa error).
+- [ ] **Jangan** melakukan request jaringan, dan jangan kirim URL yang sedang dibuka ke mana pun.
+
+- **Selesai kalau:** endpoint mengembalikan daftar sesuai bentuk di atas, dan detector menghasilkan `db_match` untuk domain yang di-mock cocok.
+- **Bergantung pada:** tidak ada. `ShooLists` sudah ada di `main` (`ios/ShooExtension/Resources/lists-client.js`).
 - Branch: `feat/AI-M5-database`
 
 ### M6 · Kalibrasi bobot
@@ -67,7 +83,8 @@ Desain: [`docs/design/blocklist.md`](../design/blocklist.md). Ringkasnya: daftar
 
 ### M7 · Deploy `/analyze`
 - [ ] Deploy ke URL publik HTTPS, lalu kirim URL-nya ke Umar dan Alief (dipakai untuk `ai.baseURL`).
-- [ ] Pasang rate limit sederhana dan batas ukuran body (snapshot maks. ±200 KB).
+- [ ] Pasang rate limit sederhana per IP dan batas ukuran body (snapshot maks. ±200 KB). Berlaku untuk `/analyze` dan `/public-blocklist`.
+- [ ] `/public-blocklist` (M5) ikut di-deploy di URL yang sama.
 - Branch: `feat/AI-M7-deploy`
 
 ## Bukan tugasmu di MVP

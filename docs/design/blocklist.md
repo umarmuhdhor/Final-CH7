@@ -1,6 +1,6 @@
 # Design: getting the blocklist onto the phone (layer 1)
 
-Status: **proposal** · Owner: Umar (lead) · Needs: Imelda (M5), Alief (`GET /blocklist`) · 21 Oct 2026
+Status: **accepted** (21 Oct 2026, #5 + contract #6) · Owner: Umar (lead) · Implemented: extension side (`lists.js`, `lists-client.js`) · Next: Imelda M5
 
 ## Problem
 Layer 1 = "domain is on a scam list → score 100" (PRD §5). The lists live on servers, the check must run on the phone,
@@ -76,7 +76,7 @@ downloads the list itself. That can't work:
 - `api.md` (AI): add `GET /public-blocklist?since=`, same shape as `GET /blocklist`, Bearer device token.
 - `mandates/imelda.md` M5: "aggregate public lists server-side + use `ShooLists`" instead of "package into the extension".
 
-## Open questions for Imelda
-1. Which public feeds, and roughly how many domains after filtering?
-2. Is 6 h fresh enough for public feeds, or do you want hourly?
-3. Do you want a small offline seed shipped inside the extension anyway (top N most-reported domains)?
+## Decided defaults (lead, 21 Oct)
+1. **Feeds:** Imelda's choice. Licence must allow use in an app, noted in `ai/README.md`. Target after filtering: ≤ 200 000 domains (the extension's cap).
+2. **Refresh:** 6 h for public, fixed by the extension. Ask the lead if a feed really needs faster.
+3. **Offline seed inside the extension:** not in MVP.

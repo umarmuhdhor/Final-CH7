@@ -79,13 +79,13 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 
 ### Dari review plan Alief (PR #2, 21 Okt) — semua usulan disetujui
 - [x] Review PR #2 (approve) · `plan/<nama>/` masuk tabel kepemilikan `CLAUDE.md`.
-- [ ] Merge PR kontrak setelah di-review: #1 (deep links), #3 (catatan extension), #4 (usulan backend C5, C6, C8–C13). Ketiganya bisa di-merge bersamaan tanpa konflik.
+- [x] Merge PR kontrak #1, #3, #4, #5, #6 (di-merge lead, 21 Okt).
 - [ ] Review PR `chore/APP-test-targets` dari Alief (pengecualian `project.yml` sekali saja, diff persis D-alief-24).
 - [ ] **C3** Pilih tim Apple berbayar untuk build iPhone + TestFlight (Push & App Groups tidak ada di Personal Team gratis), lalu tambah di `project.yml` target Shoo: `NSCameraUsageDescription` (PR-01), entitlement `aps-environment` + Push (ON-05, GD-06), `UIBackgroundModes: [audio]` (PiP video ON-04).
 - [ ] **C11** Extension mengirim `PATCH /devices/me { extensionLastSeenAt }` maks 1×/jam bersama heartbeat (setelah PR #4 merge).
 - [ ] **C6** Review manual antrean blocklist berkala (bareng Alief, lewat SQL editor) setelah fase 10 backend.
 - [x] Desain cara detector mendapat `/blocklist` di HP → [`docs/design/blocklist.md`](../design/blocklist.md) (PR ke Imelda).
-- [ ] **Layer 1 di extension:** `lists.js` di background (unduh, `storage.local`, refresh) + helper `ShooLists.match` untuk content script. Branch: `feat/EX-02-blocklist`.
+- [x] **Layer 1 di extension:** `lists.js` di background (unduh, `storage.local`, refresh) + helper `ShooLists.match` untuk content script. Branch: `feat/EX-02-blocklist`.
 - [ ] **C2** Pindahkan draf CI Alief ke `.github/workflows/` + 5 secret repo (fase 12).
 - [ ] **C18** Putuskan branch protection di `main` (kalau aktif, lead juga wajib lewat PR).
 - [ ] **C17** Setujui `SFSafariExtensionManager` (iOS 26.2+) kalau spike S1 Alief membuktikannya di device.
