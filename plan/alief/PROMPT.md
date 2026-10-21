@@ -181,9 +181,12 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
       `ios/Config/Local.xcconfig` (gitignored, salin dari `.example`); bundle ID dan App Group per developer, jadi jangan
       hardcode `com.shoo.app` / `group.com.shoo.app`: pakai `AppGroup.id`, `Bundle.main.bundleIdentifier`, atau
       `$BUNDLE_ID` / `$APP_GROUP` dari `source plan/alief/ref/sim.sh`.
-   l. Privasi & keamanan Apple (SECURITY §3, P1–P12) wajib untuk setiap fase app: privacy manifest, Keychain
-      `AfterFirstUnlockThisDeviceOnly`, `os.Logger` dengan `privacy: .private`, izin just-in-time, tanpa SDK pihak ketiga.
-      Fase backend: tidak ada PII/token di log, data dihapus sesuai retensi dan `DELETE /devices/me` (P3).
+   l. ATURAN WAJIB SEMUA PEKERJAAN (D-alief-40): semua yang kita kerjakan (app, backend, plan, langkah manual, QA)
+      HARUS mengikuti keamanan & privasi Apple (SECURITY §3, P1–P13; App Store Review Guidelines 5.1 + Apple Platform
+      Security). App: privacy manifest, Keychain `AfterFirstUnlockThisDeviceOnly`, `os.Logger` dengan `privacy: .private`,
+      izin just-in-time, tanpa SDK pihak ketiga. Backend: tidak ada PII/token di log, data minimum, data dihapus sesuai
+      retensi dan `DELETE /devices/me` (P3), dan hapus/putus hubungan berlaku SEKETIKA (P13, tanpa salinan cache/CDN).
+      Kalau ragu atau ada dua opsi: pilih yang paling menjaga privasi, catat di DECISIONS. Pelanggaran = temuan TINGGI.
 
 7. GERBANG UI (wajib kalau diff menyentuh ios/ShooApp/**/*.swift yang menghasilkan tampilan):
    a. Build + jalankan di simulator iPhone (iOS Simulator tool: launch, screenshot). Ambil screenshot setiap layar
@@ -196,6 +199,7 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
    - app: `ecc:swift-reviewer`. be: `ecc:typescript-reviewer` + `ecc:database-reviewer` (migrasi/SQL).
    - `ecc:security-reviewer` WAJIB untuk fase 07, 08, 09, 10, 11, 12, 13, 14, 15 (auth, kode keluarga, akses data,
      screenshot, push, token di App Group).
+   - Cek privasi Apple (6l) untuk SETIAP fase: diff dicocokkan dengan SECURITY §3 P1–P13; hasil per butir di log fase.
    Perbaiki semua temuan CRITICAL/HIGH. Ringkas temuan di log fase.
 
 9. VERIFIKASI. `ecc:verification-loop` + `superpowers:verification-before-completion`: jalankan SEMUA perintah di bagian

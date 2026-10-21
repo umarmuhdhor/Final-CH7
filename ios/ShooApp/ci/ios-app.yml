@@ -1,0 +1,46 @@
+# DRAFT — inert here. The lead moves it to .github/workflows/ios-app.yml (TODO C2, D-alief-12).
+# Excluded from the Shoo target by ios/project.yml (`ci/**`).
+name: iOS app
+
+on:
+  pull_request:
+    paths:
+      - "ios/ShooApp/**"
+      - "ios/ShooShared/**"
+      - "ios/project.yml"
+      - "contracts/fixtures/**"
+
+concurrency:
+  group: ios-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        working-directory: ios
+        run: xcodegen
+
+      - name: Pick a simulator
+        id: sim
+        run: |
+          SIM=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+(e| Pro Max| Pro| Plus| mini| Air)?' | head -1)
+          echo "name=$SIM" >> "$GITHUB_OUTPUT"
+
+      # Unit tests also compare Data/Fixtures with contracts/fixtures, so the whole repo must be checked out.
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project ios/Shoo.xcodeproj \
+            -scheme Shoo \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tail -40
+          exit ${PIPESTATUS[0]}

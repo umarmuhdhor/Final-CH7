@@ -272,6 +272,24 @@ Format:
 - Alasan: permintaan Alief (21 Okt): produk berjalan di ekosistem Apple dan memproses riwayat browsing berisiko, nama, dan screenshot; App Store Review 5.1.1 mewajibkan manifest, label, dan penghapusan akun.
 - File: SECURITY §3 (§ lama bergeser ke §4–§6), PROMPT 6l, fase-01, 06, 08, 13, 14, 16, TODO C19.
 
+## D-alief-A01 · 22 Okt 2026 · app (fase 01) · Hook uji di `MockRepository` dan launch argument
+
+- Keputusan: error kontrak join dipicu kode ajaib (`0000` code_invalid, `9999` code_expired, `8888` family_full, `7777` too_many_attempts, `6666` already_connected). Skenario `-mock.scenario empty` untuk empty state. Launch argument `-settings.language`, `-settings.mode`, `-settings.onboardingCompleted` (domain argumen `UserDefaults`) untuk UI test dan screenshot; galeri komponen hanya di DEBUG (`-debug.gallery YES`).
+- Alasan: fase 01 langkah 3 meminta error kontrak bisa dipicu untuk preview/test; launch argument tidak menambah kode produksi di luar DEBUG kecuali pembacaan `UserDefaults` yang memang dipakai.
+- File: `ios/ShooApp/Data/MockRepository.swift`, `App/AppEnvironment.swift`, `App/AppSettings.swift`, `App/RootView.swift`, `UITests/SmokeUITests.swift`.
+
+## D-alief-A02 · 22 Okt 2026 · app (fase 01) · Bahasa in-app lewat `\.locale` + helper `L10n`
+
+- Keputusan: `RootView` memasang `.environment(\.locale, settings.language.locale)`. `Text("literal")` dan `Label("literal", …)` ikut. Teks yang dibangun sebagai `String` (view model, nilai aksesibilitas, judul navigasi) memakai `L10n.string(_:language:)` = `String(localized:bundle:locale:)` dengan bundle `<code>.lproj`. `navigationTitle(Text(_:))` tidak ikut berganti saat bahasa diganti live (UI test `testLanguageSwitchesLiveFromProfile` gagal), jadi judul memakai `navigationTitle(localized:)`.
+- Alasan: fase 01 langkah 5 (BELUM DIVERIFIKASI → sekarang terbukti oleh `LocalizationTests` + `SmokeUITests`). Bahasa app terpisah dari bahasa iPhone (PF-01); extension tetap mengikuti bahasa iPhone.
+- File: `Support/L10n.swift`, `Support/AppLanguage.swift`, `App/RootView.swift`, `Tests/LocalizationTests.swift`, `UITests/SmokeUITests.swift`.
+
+## D-alief-A03 · 22 Okt 2026 · app (fase 01) · `SiteIcon` = monogram, favicon tidak diunduh
+
+- Keputusan: `SiteIcon` menampilkan huruf pertama domain; `faviconUrl` dari kontrak tidak dimuat.
+- Alasan: memuat favicon berarti app menghubungi host yang dicurigai penipuan (bocor IP + "pernah dibuka" ke pelaku) dan menyimpan gambarnya di cache disk. Opsi paling privat (SECURITY §3, sejalan P9). Fase 01 langkah 7 mengizinkan "favicon atau huruf awal domain".
+- File: `Components/SiteIcon.swift`.
+
 ## D-alief-B01 · 21 Okt 2026 · fase 07 · Spike APNs dari Worker cloud: lulus
 
 - Hasil: `POST /debug/apns-spike` di Worker cloud `https://shoo-api.afindo-mi01.workers.dev` (LANGKAH MANUAL 6, log fase 07) → `{"reached":true,"status":403,"body":"{\"reason\":\"InvalidProviderToken\"}","ms":1242,"colo":"CDG"}`. APNs hanya melayani HTTP/2 dan menjawab dengan JSON `reason` miliknya, jadi `fetch()` Worker yang sudah di-deploy mencapai `api.sandbox.push.apple.com` lewat HTTP/2. `403 InvalidProviderToken` memang yang diharapkan (kunci P-256 sekali pakai, Key ID/Team ID palsu). Setelah uji: `APNS_SPIKE: "0"`, deploy ulang, endpoint → `404`.
@@ -311,6 +329,12 @@ Format:
 - Ditunda (dicatat, bukan blocker): grant `shoo_api` lebih sempit + role admin terpisah untuk approve blocklist, `statement_timeout`/`connection limit` role (fase 12 hardening); batas per IP untuk 401 berulang (fase 12); `x-spike-key` tidak constant-time (endpoint di-gate `APNS_SPIKE=0` dan dihapus fase 11); `join_attempts.ip` mentah dan `family_full` lewat pesan error (fase 08); bucket `screenshots` tanpa `file_size_limit` (fase 09); `POST /devices` menghitung rate limit sebelum validasi body (disengaja: setiap percobaan dihitung).
 - Dampak ke tim lain / kontrak: tidak ada perubahan bentuk JSON. Cloud: migrasi baru + kode ini ikut deploy berikutnya (LANGKAH MANUAL fase 08); sampai itu cloud memakai kode fase 07 awal (blocklist cloud masih 0 baris, jadi tidak ada risiko cursor).
 - File yang diperbarui: `backend/api/src/http/{validate,rateLimit}.ts`, `src/routes/{devices,blocklist}.ts`, `src/db/repo/blocklist.ts`, `test/{devices,blocklist}.test.ts`, `backend/db/supabase/migrations/20261021150000_blocklist_times.sql`, `tests/schema.test.sql`, `backend/ci/backend.yml`, `backend/README.md`.
+
+## D-alief-40 · 21 Okt 2026 · plan · Keamanan & privasi Apple wajib untuk semua pekerjaan
+
+- Keputusan: aturan PROMPT 6l diperluas dari "fase app" menjadi semua pekerjaan (app, backend, plan, langkah manual, QA); review langkah 8 wajib mencocokkan diff dengan SECURITY §3; tambah P13 "hapus = langsung hilang" (tanpa salinan cache/CDN); aturan emas README #10; baris aturan di `backend/CLAUDE.md` dan `ios/ShooApp/CLAUDE.md`.
+- Alasan: permintaan Alief (21 Okt): "add a rule, everything we do must follow apple security & privacy". Pemicu: uji asap fase 09 menunjukkan screenshot yang sudah dihapus masih tersaji dari CDN Supabase sampai signed URL kedaluwarsa (log fase-09 (b)).
+- File: PROMPT 6l + langkah 8, README §6, SECURITY §3 (P13), `backend/CLAUDE.md`, `ios/ShooApp/CLAUDE.md`.
 
 ## D-alief-B06 · 21 Okt 2026 · fase 08 · Detail family dan join
 
@@ -352,6 +376,36 @@ Format:
 - Alternatif yang ditolak: menyaring verdict saat dibaca (data Guardian lama tetap tersimpan tanpa guna); 10/10 s untuk lookup (5+ tab polling 5 s → 429 bagi orang yang justru menunggu); batas umur device untuk `families` (lebih rumit, review manual tetap gerbang utama).
 - Dampak ke tim lain / kontrak: tidak ada perubahan JSON. C8 (draf) menyebut 30/10 s dan verdict hilang setelah putus hubungan. Reviewer antrean: `families` = petunjuk, bukan bukti (SECURITY T5).
 - File yang diperbarui: `backend/api/src/routes/verdicts.ts`, `src/db/repo/{verdicts,families,devices}.ts`, `src/data/allowlist.ts`, `src/http/{errors,rateLimit,validate}.ts`, `src/routes/scans.ts`, `src/app.ts`, `backend/db/supabase/migrations/20261021180000_verdicts.sql`, `tests/verdicts.test.sql`, `test/verdicts.test.ts`, `ref/R3` §4–§5, `SECURITY.md` T5 + T10, `TODO.md` C8 + D4, `backend/README.md`.
+
+## D-alief-A04 · 22 Okt 2026 · app (fase 02) · Alur onboarding hanya maju, titik lanjut setelah relaunch
+
+- Keputusan: `OnboardingModel` hanya maju: splash → nama → mode → sapaan → (Connect, Protected) → ON-04 → ON-05. Mode disimpan sekali lewat `AppSettings.chooseMode` (setter `mode` jadi `private(set)`). Relaunch sebelum selesai: mode belum ada → splash; Protected yang belum melewati Connect → Connect (`settings.onboardingConnectPassed`); selain itu → ON-04. Token registrasi tidak disimpan di model (fase 13: Keychain + App Group, `TODO(sync:alief)` di `AppEnvironment.register`).
+- Alasan: fase 02 langkah 3 ("tidak ada jalan kembali ke ON-03") + temuan review H2 (Protected yang menutup app di Connect tidak boleh melewatkannya).
+- File: `Features/Onboarding/OnboardingModel.swift`, `App/AppSettings.swift`, `App/AppEnvironment.swift`, `Tests/OnboardingTests.swift`.
+
+## D-alief-A05 · 22 Okt 2026 · app (fase 02) · Hook uji onboarding (DEBUG)
+
+- Keputusan: launch argument DEBUG `-UITestReset YES` (hapus preferensi app), `-UITestExtensionActive YES` (status extension dianggap Active tanpa menulis App Group asli), `-UITestNotifications granted|denied` (jawaban izin tetap, tanpa alert sistem), `-debug.onboardingStep <step>` (screenshot gerbang UI). Semua di dalam `#if DEBUG`.
+- Alasan: simulator tidak punya heartbeat extension, dan alert izin sistem tidak bisa direset per test untuk notifikasi; UI test harus deterministik. Catatan review: key `-settings.*` lewat domain argumen `UserDefaults` juga terbaca di Release, tapi hanya bisa diset oleh orang yang menjalankan app dari Xcode/`devicectl`.
+- File: `App/AppEnvironment.swift`, `Support/NotificationPermission.swift`, `Features/Onboarding/OnboardingFlow.swift`, `UITests/OnboardingUITests.swift`.
+
+## D-alief-A06 · 22 Okt 2026 · app (fase 02) · ON-04: langkah per versi iOS + `SFSafariSettings`
+
+- Keputusan: iOS 26.2+ → `SFSafariSettings.openExtensionsSettings(forIdentifiers: [bundleId + ".extension"])` (API dicek di header `SafariServices/SFSafariSettings.h` SDK iOS 27.1: `API_AVAILABLE(ios(26.2))`, dipanggil saat foreground); gagal atau iOS lebih lama → `UIApplication.openSettingsURLString`. Tidak ada `App-prefs:`. Langkah bergambar (SF Symbols) per versi: 26.2+ "Tap Turn on", 18+ "Settings › Apps › Safari › Extensions", 17 "Settings › Safari › Extensions". Nama menu Pengaturan berbahasa Indonesia dan perilaku di perangkat BELUM DIVERIFIKASI (01S / QA-E2E #17).
+- Alasan: fase 02 langkah 4; ID extension tidak di-hardcode (L0).
+- File: `Features/Onboarding/ExtensionSetup.swift`, `TurnOnExtensionView.swift`.
+
+## D-alief-A07 · 22 Okt 2026 · app (fase 02) · Video tutorial placeholder + PiP
+
+- Keputusan: `Resources/onboarding-tutorial-placeholder.mp4` (4 s warna polos, ±4 KB, dibuat dengan ffmpeg) sampai video PM ada (C15, `TODO(sync:umar)`). Pemutar `AVPlayerViewController` layar penuh, `allowsPictureInPicturePlayback`, `AVAudioSession .playback/.moviePlayback` saat dibuka dan dinonaktifkan saat ditutup. PiP di luar app (di atas Settings) butuh `UIBackgroundModes: [audio]` = TODO C3 butir 4 (Umar); sampai itu video hanya diputar di dalam app.
+- Alasan: fase 02 langkah 4, risiko "Video PM belum ada".
+- File: `Features/Onboarding/TutorialVideoPlayer.swift`, `Resources/onboarding-tutorial-placeholder.mp4`.
+
+## D-alief-A08 · 22 Okt 2026 · app (fase 02) · Izin notifikasi dan pengingat
+
+- Keputusan: izin diminta di ON-05 dengan `[.alert, .sound]` (payload push tanpa badge). Guardian tidak bisa melewati ON-05 tetapi tetap lanjut kalau menolak; Protected boleh "Nanti saja". Banner pengingat di Shield hanya untuk Guardian (hanya Guardian yang menerima push menurut kontrak); belum pernah ditanya → tombol memunculkan prompt, ditolak → membuka Settings notifikasi app. `registerForRemoteNotifications()` setelah izin diberikan; token dikirim di fase 15. Tidak ada dialog konfirmasi tambahan untuk mode permanen: PRD hanya meminta teks peringatan (saran review MEDIUM, dicek ulang di QA-A).
+- Alasan: fase 02 langkah 5, SECURITY §3 P7 (just-in-time, teks jujur).
+- File: `Support/NotificationPermission.swift`, `Components/NotificationReminderBanner.swift`, `Features/Onboarding/NotificationPermissionView.swift`, `Features/Shield/ShieldPlaceholderView.swift`.
 
 ## D-alief-B11 · 22 Okt 2026 · fase 11 · Push APNs langsung dari Worker, `push_log` tanpa teks
 
