@@ -4,4 +4,5 @@
 - NEVER commit or hand-edit `Shoo.xcodeproj`. NEVER edit `project.yml` unless you are the lead — targets, capabilities, Info.plist keys and build settings go through the lead.
 - New Swift files: just create them inside your folder, then run `xcodegen`. No project file edits needed.
 - Shared types (`ScanResult`, `Signal`, `AppGroup` keys) live in `ShooShared/`. Use them; don't redefine them.
+- Signing: Team ID, bundle ID and App Group come from `Config/Shoo.xcconfig`, overridden per developer by `Config/Local.xcconfig` (gitignored, copy from `.example`). Never commit a personal Team ID; never hardcode the App Group — use `AppGroup.id`.
 - Swift 5 language mode, SwiftUI, iOS 17+, iPhone only.

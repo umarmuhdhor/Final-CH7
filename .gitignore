@@ -21,3 +21,6 @@ __pycache__/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Per-developer signing (ios/Config/Local.xcconfig.example)
+ios/Config/Local.xcconfig

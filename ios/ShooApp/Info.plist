@@ -33,6 +33,8 @@
 	<string>1</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>ShooAppGroup</key>
+	<string>$(SHOO_APP_GROUP)</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

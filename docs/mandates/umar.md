@@ -38,7 +38,8 @@ Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CL
 
 ### Minggu 1 · Setup & spike
 S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhone-nya sendiri — lihat `alief.md`.
-- [ ] **L0** Override signing per developer: bundle ID prefix + App Group + Team ID dari file lokal yang di-gitignore (mis. `ios/Local.xcconfig` + `Local.xcconfig.example`). Prioritas: Alief butuh ini untuk S1/S2. Cek juga apakah App Group butuh akun developer berbayar.
+- [x] **L0** Override signing per developer: `ios/Config/Shoo.xcconfig` (default) + `Local.xcconfig` (gitignored, dari `.example`) → `DEVELOPMENT_TEAM`, `SHOO_BUNDLE_ID`, `SHOO_APP_GROUP`. `AppGroup.id` dibaca dari Info.plist `ShooAppGroup`.
+- [ ] Pastikan akun Apple tiap tim bisa memakai App Groups (akun gratis / Personal Team kemungkinan tidak bisa).
 - [ ] Setelah S1 masuk: set `AppGroup.extensionActiveWindow` sesuai usulan Alief.
 - [ ] **S3** Dynamic Island dari extension → isi `docs/spikes/dynamic-island.md`. Coba jalur A → B → C, kalau semua gagal: pill in-page. Kabari Alief kalau jalur push dipilih (butuh endpoint tambahan).
 

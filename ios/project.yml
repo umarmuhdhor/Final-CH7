@@ -9,6 +9,13 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
+# Team ID, bundle ID and App Group come from here so each developer can sign with their own
+# Apple account via Config/Local.xcconfig (gitignored). Don't set them in `settings` below —
+# project settings override this file.
+configFiles:
+  Debug: Config/Shoo.xcconfig
+  Release: Config/Shoo.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -16,7 +23,6 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     TARGETED_DEVICE_FAMILY: "1"          # iPhone only (iPad/Mac out of scope)
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: ""                 # TODO(lead): set Apple Team ID before running on device
 
 targets:
   Shoo:
@@ -31,6 +37,7 @@ targets:
       path: ShooApp/Info.plist
       properties:
         CFBundleDisplayName: Shoo
+        ShooAppGroup: $(SHOO_APP_GROUP)   # read by ShooShared/AppGroup.swift
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true    # EX-03
@@ -40,10 +47,10 @@ targets:
     entitlements:
       path: ShooApp/Shoo.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.shoo.app]
+        com.apple.security.application-groups: [$(SHOO_APP_GROUP)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.shoo.app
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID)
     dependencies:
       - target: ShooExtension
       - target: ShooLiveActivity
@@ -69,16 +76,17 @@ targets:
       path: ShooExtension/Info.plist
       properties:
         CFBundleDisplayName: Shoo
+        ShooAppGroup: $(SHOO_APP_GROUP)   # read by ShooShared/AppGroup.swift
         NSExtension:
           NSExtensionPointIdentifier: com.apple.Safari.web-extension
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SafariWebExtensionHandler
     entitlements:
       path: ShooExtension/ShooExtension.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.shoo.app]
+        com.apple.security.application-groups: [$(SHOO_APP_GROUP)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.shoo.app.extension
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID).extension
     dependencies:
       - sdk: SafariServices.framework
 
@@ -94,15 +102,16 @@ targets:
       path: ShooLiveActivity/Info.plist
       properties:
         CFBundleDisplayName: Shoo
+        ShooAppGroup: $(SHOO_APP_GROUP)   # read by ShooShared/AppGroup.swift
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
       path: ShooLiveActivity/ShooLiveActivity.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.shoo.app]
+        com.apple.security.application-groups: [$(SHOO_APP_GROUP)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.shoo.app.liveactivity
+        PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID).liveactivity
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework

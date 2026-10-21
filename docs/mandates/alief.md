@@ -23,7 +23,7 @@ Setup: `brew install xcodegen`, lalu `cd ios && xcodegen && open Shoo.xcodeproj`
 ## Tugas
 
 ### Spike · di iPhone sendiri (minggu 1)
-Butuh signing ke akun Apple-mu dulu. Umar sedang menyiapkan override bundle ID + App Group per developer di `project.yml`; sampai itu ada, ganti lokal saja dan **jangan commit** perubahan `project.yml`.
+Signing ke akun Apple-mu: `cp ios/Config/Local.xcconfig.example ios/Config/Local.xcconfig`, isi Team ID + bundle ID + App Group milikmu, lalu `cd ios && xcodegen`. File itu di-gitignore, `project.yml` tidak perlu diubah. Kalau Xcode menolak capability App Groups (biasanya karena akun gratis / Personal Team), lapor ke Umar.
 - [ ] **S1 · Deteksi extension On/Off** → isi `docs/spikes/extension-status.md`. Heartbeat sudah jalan (`content.js` → `background.js` → `SafariWebExtensionHandler` → App Group), cukup tes di device. Usulkan window Active ke Umar (nilainya di `AppGroup.extensionActiveWindow`, milik Umar).
 - [ ] **S2 · Buka pengaturan extension** → isi `docs/spikes/open-extension-settings.md`. Kode tes boleh di `ios/ShooApp/`. Jangan pakai `App-prefs:` (risiko ditolak App Review).
 
