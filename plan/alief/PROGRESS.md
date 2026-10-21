@@ -19,7 +19,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 07 | Fondasi backend + auth + blocklist awal | be | feat/BE-devices | [r] | 21 Okt 2026 | 21 Okt 2026 | #9 | Worker + skema hidup di cloud, spike APNs lulus (D-alief-B01), review diperbaiki (pgTAP 61, vitest 48); di-rebase ke main setelah #7 merge; pending C7/B9 | log/fase-07.md |
 | 08 | Family | be | feat/BE-family | [r] | 21 Okt 2026 | 21 Okt 2026 | #11 | Family code/join/members/disconnect, `/join`, `GET`+`DELETE /devices/me`; cloud deploy + smoke hijau (Worker a9807b02); pgTAP 67, vitest 100; stacked on #9; usulan C19 + `code_unavailable` di PR; pending C7/B9 | log/fase-08.md |
 | 09 | Scans + screenshot | be | feat/BE-scans | [r] | 21 Okt 2026 | 21 Okt 2026 | #13 | `POST/GET /scans`, `GET /scans/{id}`, screenshot privat hanya lewat Worker `/screenshots/{id}` (link HMAC 1 jam, cek akses DB tiap request, D-alief-B08); default `private, no-store` + log tanpa id (D-alief-B09, P13); 4 review + cek P1–P13; pgTAP 71, vitest 184; cloud Worker c6ba8556, smoke (c) hijau (after delete/disconnect 404); stacked on #11; catatan kontrak C20 di PR | log/fase-09.md |
-| 10 | Verdicts + blocklist | be | feat/BE-verdicts | [ ] | | | | | log/fase-10.md |
+| 10 | Verdicts + blocklist | be | feat/BE-verdicts | [~] | 21 Okt 2026 | | | Sedang dikerjakan (stacked on #13) | log/fase-10.md |
 | 11 | Push APNs | be | feat/BE-push | [ ] | | | | | log/fase-11.md |
 | 12 | Retensi + hardening + deploy | be | feat/BE-retention-hardening | [ ] | | | | | log/fase-12.md |
 | 13 | ApiRepository + sesi App Group | c | feat/APP-api-repository | [ ] | | | | | log/fase-13.md |

@@ -97,7 +97,7 @@ export interface ScanRow {
   verdict: { value: "safe" | "not_safe"; byDeviceId: string; byName: string; decidedAt: string } | null;
 }
 
-const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
+export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
 // Columns shared by list and detail. ownerName is the owner's current name; the verdict
 // (per owner + domain) is joined only for blocked scans (schema: warnings keep null).

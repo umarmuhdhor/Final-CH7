@@ -32,9 +32,12 @@ const ALLOWLIST = new Set([
  */
 const SHARED_ROOTS = new Set([
   "co.id", "or.id", "web.id", "my.id", "biz.id", "net.id", "ponpes.id", "co.uk", "com.au", "com.sg", "com.my",
+  "co.nz", "co.in", "co.jp", "co.kr", "com.br", "com.ph", "com.vn", "com.cn", "com.hk", "com.tw", "co.th", "in.th",
   "github.io", "gitlab.io", "vercel.app", "netlify.app", "pages.dev", "workers.dev", "web.app", "firebaseapp.com",
   "herokuapp.com", "onrender.com", "blogspot.com", "wordpress.com", "wixsite.com", "weebly.com", "carrd.co",
   "000webhostapp.com", "glitch.me", "replit.app", "framer.website", "notion.site", "linktr.ee", "s.id", "bit.ly",
+  "myshopify.com", "ngrok.io", "ngrok-free.app", "duckdns.org", "t.me", "wa.me", "page.link", "r2.dev", "azurewebsites.net",
+  "cloudfront.net", "appspot.com", "translate.goog", "webflow.io", "square.site", "godaddysites.com",
 ]);
 
 /** True when a not_safe verdict on this domain must never enter the global review queue. */

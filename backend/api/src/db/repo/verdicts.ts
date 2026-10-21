@@ -1,5 +1,6 @@
 import type { Sql, TransactionSql } from "postgres";
 import { neverQueue } from "../../data/allowlist";
+import { ISO_MS } from "./scans";
 
 export type VerdictValue = "safe" | "not_safe";
 export interface Verdict {
@@ -9,7 +10,6 @@ export interface Verdict {
   decidedAt: string;
 }
 
-const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 /** New domains one guardian can put in the review queue per 24 h (SECURITY T5, queue flooding). */
 export const QUEUE_CAP_PER_DAY = 10;
 
@@ -17,11 +17,13 @@ export type VerdictResult =
   | { verdict: Verdict }
   | { error: "not_found" | "not_allowed" | "not_blocked" };
 
-const lockDomain = (tx: TransactionSql, domain: string) => tx`select pg_advisory_xact_lock(4, hashtext(${domain}))`;
+const lockDomain = async (tx: TransactionSql, domain: string): Promise<void> => {
+  await tx`select pg_advisory_xact_lock(4, hashtext(${domain}))`;
+};
 
 /**
  * POST /verdicts (R2 §5, R4 §4) in one transaction. Lock order everywhere: family_links row,
- * then domain locks (sorted). The link row is read `for share`, so a disconnect cannot commit
+ * then the guardian's queue lock (only here), then domain locks (by lock key). The link row is read `for share`, so a disconnect cannot commit
  * between the check and the insert. The guardian may decide on its own scans and on scans of
  * its currently linked protected members. Blocklist eligibility is a snapshot taken here.
  */
@@ -46,14 +48,16 @@ export async function decideVerdict(
     }
     if (scan.status !== "blocked") return { error: "not_blocked" as const };
 
-    await lockDomain(tx, scan.domain);
     let eligible = value === "not_safe" && scan.ownerMode === "protected" && linked && !neverQueue(scan.domain);
+    // Serializes this guardian's queue count, so parallel verdicts cannot pass the daily cap.
+    if (eligible) await tx`select pg_advisory_xact_lock(5, hashtext(${guardian.deviceId}))`;
+    await lockDomain(tx, scan.domain);
     if (eligible) {
       const [q] = await tx<{ n: number }[]>`
         select count(distinct domain)::int as n from verdicts
         where by_device_id = ${guardian.deviceId} and global_eligible and value = 'not_safe'
           and decided_at > now() - interval '24 hours' and domain <> ${scan.domain}`;
-      eligible = q!.n < QUEUE_CAP_PER_DAY;
+      eligible = q!.n < QUEUE_CAP_PER_DAY; // count(*) always returns one row
     }
     const [row] = await tx<Verdict[]>`
       insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name, decided_at, global_eligible)
@@ -82,6 +86,9 @@ async function recountFamilies(tx: TransactionSql, domain: string): Promise<void
     await tx`insert into blocklist_entries (domain, families) values (${domain}, ${c!.n})
              on conflict (domain) do update set families = excluded.families`;
   } else {
+    // A queued domain nobody supports any more is browsing history without a purpose (D-alief-40):
+    // drop it. Approved or removed rows are the reviewer's record and stay.
+    await tx`delete from blocklist_entries where domain = ${domain} and approved_at is null and removed_at is null`;
     await tx`update blocklist_entries set families = 0 where domain = ${domain}`;
   }
 }
@@ -98,9 +105,11 @@ export async function dropVerdicts(
 ): Promise<void> {
   const where =
     "deviceId" in match
-      ? tx`owner_id = ${match.deviceId} or by_device_id = ${match.deviceId}`
-      : tx`owner_id = ${match.ownerId} and by_device_id = ${match.byDeviceId}`;
-  const domains = (await tx<{ domain: string }[]>`select distinct domain from verdicts where ${where} order by domain`)
+      ? tx`(owner_id = ${match.deviceId} or by_device_id = ${match.deviceId})`
+      : tx`(owner_id = ${match.ownerId} and by_device_id = ${match.byDeviceId})`;
+  // Locked in lock-key order, the same order any other transaction would use.
+  const domains = (await tx<{ domain: string }[]>`
+    select domain from (select distinct domain from verdicts where ${where}) d order by hashtext(domain), domain`)
     .map((r) => r.domain);
   if (domains.length === 0) return;
   for (const d of domains) await lockDomain(tx, d);

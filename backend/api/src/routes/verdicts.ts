@@ -1,7 +1,8 @@
 import { Hono } from "hono";
+import postgres from "postgres";
 import { z } from "zod";
 import type { AppEnv } from "../env";
-import { decideVerdict, findVerdict } from "../db/repo/verdicts";
+import { decideVerdict, findVerdict, type VerdictResult } from "../db/repo/verdicts";
 import { requireDevice, requireMode } from "../http/auth";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
@@ -15,7 +16,7 @@ const lookupQuery = z.object({
   domain: z
     .string()
     .max(260)
-    .transform((s) => s.trim().toLowerCase().replace(/^www\./, ""))
+    .transform((s) => s.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, ""))
     .pipe(z.string().max(253).regex(DOMAIN, "must be a registrable domain")),
 });
 
@@ -32,13 +33,18 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   // An id that is not a UUID cannot name a scan.
   if (!UUID.test(scanId)) throw errors.notFound();
 
-  let result;
-  try {
-    result = await decideVerdict(sql, principal, scanId, value);
-  } catch (err) {
-    // The scan, its owner or this guardian was deleted mid-request (foreign key gone).
-    if ((err as { code?: string }).code === "23503") throw errors.notFound();
-    throw err;
+  let result: VerdictResult | undefined;
+  for (let attempt = 1; !result; attempt++) {
+    try {
+      result = await decideVerdict(sql, principal, scanId, value);
+    } catch (err) {
+      const code = err instanceof postgres.PostgresError ? err.code : undefined;
+      // The scan, its owner or this guardian was deleted mid-request (foreign key gone).
+      if (code === "23503") throw errors.notFound();
+      // A rare deadlock with a concurrent delete (e.g. retention): Postgres rolled back, retry once.
+      if ((code === "40P01" || code === "40001") && attempt < 2) continue;
+      throw err;
+    }
   }
   if ("verdict" in result) return c.json({ verdict: result.verdict });
   if (result.error === "not_found") throw errors.notFound();

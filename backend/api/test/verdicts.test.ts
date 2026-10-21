@@ -221,6 +221,12 @@ describe("GET /verdicts?domain=", () => {
     expect((await lookup(g, blocked92.domain))?.value).toBe("safe");
   });
 
+  it("a trailing dot is tolerated; a missing domain → 422", async () => {
+    const p = await createDevice("Mom");
+    expect(await lookup(p, "example.com.")).toBeNull();
+    expect((await call("/verdicts", { token: p.token })).status).toBe(422);
+  });
+
   it.each(["", "not a domain", "localhost", "a".repeat(254) + ".com", "https://x.com/"])("422 for %j", async (q) => {
     const p = await createDevice("Mom");
     expect((await call(`/verdicts?domain=${encodeURIComponent(q)}`, { token: p.token })).status).toBe(422);
@@ -280,7 +286,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect((await blocklist(g)).domains).toEqual([]);
   });
 
-  it("safe verdict → no entry; not_safe → safe recounts families to 0 but keeps the row", async () => {
+  it("safe verdict → no entry; not_safe → safe removes the unapproved row (no browsing domain kept)", async () => {
     const { g, p } = await family();
     const id = await scan(p, blocked92 as Fixture, "flip.example");
     await verdict(g, id, "safe");
@@ -288,7 +294,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     await verdict(g, id, "not_safe");
     expect((await entry("flip.example"))?.families).toBe(1);
     await verdict(g, id, "safe");
-    expect((await entry("flip.example"))?.families).toBe(0);
+    expect(await entry("flip.example")).toBeUndefined();
   });
 
   it("families counts distinct guardians", async () => {
@@ -305,7 +311,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     await verdict(g, await scan(p, blocked92 as Fixture, "approved.example"), "not_safe");
     await approve("approved.example");
     await call("/family/guardian", { method: "DELETE", token: p.token });
-    expect((await entry("queued.example"))?.families).toBe(0);
+    expect(await entry("queued.example")).toBeUndefined();
     expect((await entry("approved.example"))?.families).toBe(0);
     expect((await blocklist(p)).domains.map((d) => d.domain)).toEqual(["approved.example"]);
   });
@@ -314,14 +320,17 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     const { g, p } = await family();
     await verdict(g, await scan(p, blocked92 as Fixture, "owner-gone.example"), "not_safe");
     expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
-    expect((await entry("owner-gone.example"))?.families).toBe(0);
+    expect(await entry("owner-gone.example")).toBeUndefined();
   });
 
   it("DELETE /devices/me of the guardian recounts families", async () => {
     const { g, p } = await family();
     await verdict(g, await scan(p, blocked92 as Fixture, "guardian-gone.example"), "not_safe");
+    await verdict(g, await scan(p, blocked92 as Fixture, "guardian-approved.example"), "not_safe");
+    await approve("guardian-approved.example");
     expect((await call("/devices/me", { method: "DELETE", token: g.token })).status).toBe(200);
-    expect((await entry("guardian-gone.example"))?.families).toBe(0);
+    expect(await entry("guardian-gone.example")).toBeUndefined();
+    expect((await blocklist(p)).domains.map((d) => d.domain)).toEqual(["guardian-approved.example"]);
   });
 
   it("at most 10 newly queued domains per guardian per 24 h; the verdict itself still applies", async () => {
@@ -334,6 +343,18 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     // Re-deciding an already queued domain is not a new one.
     await verdict(g, await scan(p, blocked92 as Fixture, "cap0.example"), "not_safe");
     expect((await entry("cap0.example"))?.families).toBe(1);
+  });
+
+  it("the queue cap holds under parallel verdicts", async () => {
+    const g = await createDevice("G", "guardian");
+    const members = [await createDevice("A"), await createDevice("B"), await createDevice("C")];
+    for (const m of members) await connect(g, m);
+    const ids: string[] = [];
+    for (let i = 0; i < 15; i++) ids.push(await scan(members[i % 3]!, blocked92 as Fixture, `par${i}.example`));
+    const res = await Promise.all(ids.map((id) => verdict(g, id, "not_safe")));
+    expect(res.map((r) => r.status)).toEqual(Array(15).fill(200));
+    const [n] = await sql<{ n: number }[]>`select count(*)::int as n from blocklist_entries where domain like 'par%'`;
+    expect(n!.n).toBe(10);
   });
 
   it.each(["co.id", "github.io", "vercel.app", "blogspot.com"])("public suffix / shared host %s never enters the queue", async (dom) => {

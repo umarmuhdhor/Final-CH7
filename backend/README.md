@@ -49,7 +49,7 @@ pnpm -C backend/api dev                                    # http://localhost:87
 | GET | `/scans/{id}` | Bearer | one ScanResult, `screenshotUrl` = 1 h Worker link for this viewer; 404 unless own scan or my member's scan |
 | GET | `/screenshots/{scanId}?v=&exp=&sig=` | link signature | the image, `Cache-Control: private, no-store`; access re-checked in the DB on every request (deleted scan, disconnect → 404 at once) |
 | POST | `/verdicts` | Bearer guardian | `{ scanId, value: safe\|not_safe }` → `{ verdict }` for the scan's owner + domain; 404 unknown scan, 403 `verdict_not_allowed` (not mine and not my member's), 409 `verdict_not_allowed` (not blocked); 60/min. A `not_safe` on a connected member's scan queues the domain for review (allowlist excluded) |
-| GET | `/verdicts?domain=` | Bearer | `{ verdict \| null }` for (me, domain); domain normalized (case, `www.`); 10 per 10 s per device with `Retry-After` |
+| GET | `/verdicts?domain=` | Bearer | `{ verdict \| null }` for (me, domain); domain normalized (case, `www.`); 30 per 10 s per device with `Retry-After`. Disconnect or device deletion removes the ex-guardian's verdicts for that member |
 | GET | `/blocklist?since=` | Bearer | approved global domains; `removed[]` only with `since`; `nextSince` has microseconds |
 | POST | `/debug/apns-spike` | `x-spike-key` | fase 07 spike only, 404 unless `APNS_SPIKE=1` (removed in fase 11) |
 
