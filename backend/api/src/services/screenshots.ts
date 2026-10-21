@@ -3,6 +3,7 @@ import type { Env } from "../env";
 
 const BUCKET = "screenshots";
 const TIMEOUT_MS = 5000;
+const REMOVE_BATCH = 100;
 const signResponse = z.object({ signedURL: z.string().startsWith("/") });
 
 /** Throws on a non-2xx response; the body is released first (workerd caps open subrequests). */
@@ -85,7 +86,7 @@ export async function deleteScreenshots(env: Env, paths: string[]): Promise<void
   const store = screenshotStore(env);
   try {
     if (!store) throw new Error("storage not configured");
-    await store.remove(paths);
+    for (let i = 0; i < paths.length; i += REMOVE_BATCH) await store.remove(paths.slice(i, i + REMOVE_BATCH));
   } catch (err) {
     // Count only: paths contain device ids.
     console.error(JSON.stringify({ event: "screenshots_delete_failed", count: paths.length, error: String(err) }));

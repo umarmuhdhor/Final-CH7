@@ -48,8 +48,9 @@ export async function reserveScreenshot(
   });
 }
 
-export async function clearScreenshotPath(sql: Sql, id: string, path: string): Promise<void> {
-  await sql`update scans set screenshot_path = null where id = ${id} and screenshot_path = ${path}`;
+/** Clears the path on every scan of the owner that points at it: dedupe may have reused it meanwhile. */
+export async function clearScreenshotPath(sql: Sql, ownerId: string, path: string): Promise<void> {
+  await sql`update scans set screenshot_path = null where owner_id = ${ownerId} and screenshot_path = ${path}`;
 }
 
 /** False once the scan row is gone (e.g. DELETE /devices/me ran during the upload). */

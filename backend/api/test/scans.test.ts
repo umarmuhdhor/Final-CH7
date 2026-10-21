@@ -6,6 +6,7 @@ import markedSafe from "../../../contracts/fixtures/blocked-marked-safe.json";
 import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json";
 import warning41 from "../../../contracts/fixtures/warning-41.json";
 import warning63 from "../../../contracts/fixtures/warning-63.json";
+import { clearScreenshotPath } from "../src/db/repo/scans";
 import { sha256 } from "../src/http/crypto";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -195,6 +196,16 @@ describe("POST /scans screenshot", () => {
     await sql`update scans set created_at = now() - interval '25 hours' where id in (${first}, ${second})`;
     const third = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
     expect(await pathOf(third)).toBe(`${p.deviceId}/${third}.jpg`);
+  });
+
+  it("a failed upload clears the path on every scan that reused it (dedupe)", async () => {
+    const p = await createDevice("Mom");
+    const a = await postOk(p, extensionBody(blocked92));
+    const b = await postOk(p, extensionBody(blocked92));
+    const path = `${p.deviceId}/${a}.jpg`;
+    await sql`update scans set screenshot_path = ${path} where id in (${a}, ${b})`;
+    await clearScreenshotPath(sql, p.deviceId, path);
+    expect([await pathOf(a), await pathOf(b)]).toEqual([null, null]);
   });
 
   it("quota holds under parallel uploads", async () => {

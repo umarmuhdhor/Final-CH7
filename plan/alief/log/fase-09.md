@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (secret Storage + deploy). Belum ada PR |
+| Status | `[m]` berhenti di LANGKAH MANUAL (migrasi bucket + secret Storage + deploy). Belum ada PR |
 | Track / branch | be · `feat/BE-scans` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-family` (PR #11, stacked on #9) → PR nanti menulis "Stacked on #11" |
 | Mulai | 21 Okt 2026 22:40 WITA |
@@ -20,19 +20,23 @@ Rencana lengkap: [`fase-09-plan.md`](fase-09-plan.md). Dua butir BELUM DIVERIFIK
 - [x] 3. `GET /scans/{id}`: otorisasi R3 §3, signed URL 3600 s
 - [x] 4. Bentuk body = yang dikirim extension (`report.js` `scanBody` + `background.js` owner fields) — test `extensionBody()`
 - [x] 5. Test IDOR + disconnect
-- [ ] 6. Review berurutan: security → TypeScript → database
+- [x] 6. Review berurutan: security → TypeScript → database (tabel Review)
 - [ ] 7. LANGKAH MANUAL (di bawah) — menunggu Alief
 
 ## File dibuat / diubah
 
+- `backend/db/supabase/migrations/20261021170000_screenshot_bucket.sql` (batas bucket + index `scans_owner_shot`), `tests/storage.test.sql`
 - `backend/api/src/routes/scans.ts`, `src/db/repo/scans.ts`, `src/services/{scans,images,screenshots}.ts`, `src/services/push/{sender,notify,messages}.ts`
 - `backend/api/src/{app,env}.ts`, `src/http/rateLimit.ts` (bucket `scans_create`), `wrangler.jsonc` (`SUPABASE_URL`, `SCREENSHOT_MAX_BYTES`), `vitest.config.ts` (Storage lokal dari `supabase status`), `.dev.vars.example`, `package.json` (dev: `ajv`, `ajv-formats`)
-- `backend/api/test/{scans,push-messages}.test.ts`, `test/devices-me.test.ts` (hapus objek Storage), `test/helpers/{schema,images}.ts`, `test/env.d.ts`
+- `backend/api/test/{scans,push-messages}.test.ts`, `test/{images,push-notify}.test.ts`, `test/devices-me.test.ts` (hapus objek Storage), `test/helpers/{schema,images}.ts`, `test/env.d.ts`
 - `plan/alief/log/{fase-09,fase-09-plan,DECISIONS}.md`, `PROGRESS.md`, `backend/README.md`
 
 ## Hasil verifikasi (lokal)
 
-VERIFIKASI_PLACEHOLDER
+- `(cd backend/db && supabase db reset && supabase test db)` → **PASS, 71 test** (4 file; baru `storage.test.sql`: bucket privat, `file_size_limit 153600`, MIME JPEG/PNG, index `scans_owner_shot`).
+- `pnpm -C backend/api typecheck` → bersih. `pnpm -C backend/api test` → **12 file, 170 test lulus** (baru: `scans.test.ts`, `images.test.ts`, `push-notify.test.ts`, `push-messages.test.ts`; `devices-me.test.ts` + hapus objek Storage).
+- Respons `GET /scans` dan `GET /scans/{id}` divalidasi dengan ajv terhadap `contracts/scan-result.schema.json` di setiap test list/detail.
+- Cloud: belum (LANGKAH MANUAL di bawah).
 
 ## DoD
 
@@ -44,7 +48,15 @@ VERIFIKASI_PLACEHOLDER
 
 ## Review
 
-REVIEW_PLACEHOLDER
+Berurutan, satu per satu (aturan Alief: subagent tidak paralel).
+
+| Reviewer | CRITICAL | HIGH | MEDIUM | Diperbaiki | Commit |
+|---|---|---|---|---|---|
+| `ecc:security-reviewer` | 0 | 0 | 3 | kuota/dedupe atomik (`reserveScreenshot` + advisory lock), teks kontrol/bidi dibersihkan, lookup Guardian sebelum respons (hanya `send` di `waitUntil`), try/catch screenshot, migrasi batas bucket | `78da6c3` |
+| `ecc:typescript-reviewer` | 0 | 2 | 7 | H1 lookup push gagal → tetap 201 (`push_lookup_failed`); H2 `url` dengan karakter kontrol → 422, `faviconUrl` → null. M: cursor tepat 2 bagian, signature PNG penuh + panjang segmen JPEG, body Storage dilepas saat error, respons sign divalidasi zod, upload timeout dihapus, `screenshotBase64: null` diterima. L: `signals[].id` bebas (kontrak tanpa pola), alasan `bad_size`, `send` sinkron tertangkap | `b145024` |
+| `ecc:database-reviewer` | 0 | 1 (+1 fase 12) | 3 | H: upload gagal mengosongkan path di semua scan owner yang memakainya (dedupe). M: index parsial `scans_owner_shot (owner_id, created_at desc) where screenshot_path is not null`; hapus Storage dibatch 100. Fase 12: retensi hapus objek hanya kalau tidak ada scan tersisa yang menunjuknya (catatan handoff) | commit fase 09 terakhir |
+
+Ditunda (bukan blocker, dicatat): `owner=family` mengurutkan semua scan keluarga dalam retensi (kecil untuk ≤ 3 member); sort key = `detectedAt` dari klien (scan backdated bisa jatuh di belakang cursor yang sudah dibagikan); regex domain menerima IPv4 literal; komentar kolom `screenshot_path` di init masih `.jpg` saja; header gambar dicek, isi tidak di-decode (content-type tetap `image/*`).
 
 ## Deviasi
 
@@ -103,4 +115,4 @@ Dijalankan dari root worktree ini, di branch `feat/BE-scans`. Satu migrasi baru 
 - Lokal: setelah `supabase link`, file `supabase/.temp/storage-version` mematok versi Storage cloud (v1.80.2) dan `db reset` memigrasi skema `storage` ke versi itu. Container Storage yang sudah jalan dari sebelum link (v1.69.0) lalu gagal upload (`42P10`). Perbaikan: `(cd backend/db && supabase stop && supabase start -x …)`.
 - Fase 10: `verdict` di `ScanRow` dibaca lewat join `verdicts (owner_id, domain)` hanya untuk scan `blocked`; `POST /verdicts` cukup upsert tabel itu. `findVisibleScan` bisa dipakai ulang untuk otorisasi verdict (lalu 403 `verdict_not_allowed`, bukan 404).
 - Fase 11: `services/push/{sender,notify,messages}.ts` sudah ada; ganti `pushSender` dengan `ApnsSender` (D-alief-B01), tulis `push_log`, test teks sudah di `push-messages.test.ts`.
-- Fase 12: retensi memakai `deleteScreenshots(env, paths)` (satu `DELETE` dengan `prefixes` per batch); dedupe berarti satu path bisa dipakai beberapa scan → hapus objek hanya kalau tidak ada scan tersisa yang menunjuk ke path itu (R4 §5).
+- Fase 12: retensi memakai `deleteScreenshots(env, paths)` (`DELETE` dengan `prefixes`, batch 100); dedupe berarti satu path bisa dipakai beberapa scan → hapus objek hanya kalau tidak ada scan tersisa yang menunjuk ke path itu (R4 §5).

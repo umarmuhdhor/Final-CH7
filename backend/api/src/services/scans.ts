@@ -64,7 +64,7 @@ export async function attachScreenshot(
     console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: String(err) }));
     // A timed-out upload may still land in Storage: remove it so no object is left without a row.
     await store.remove([path]).catch(() => undefined);
-    await clearScreenshotPath(sql, scan.id, path);
+    await clearScreenshotPath(sql, scan.ownerId, path);
     return;
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
