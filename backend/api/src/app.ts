@@ -25,9 +25,36 @@ app.use("*", async (c, next) => {
   // postgres.js connects on the first query, so /healthz never opens a connection.
   // No sql.end(): Hyperdrive closes the client connection when the request ends
   // (Hyperdrive docs, connection lifecycle); ending it ourselves raises "socket has been closed".
+  // Early 413 from the declared length, before auth or rate limits touch the DB. readJson still
+  // caps the streamed body per route (16 KB default, 256 KB for POST /scans).
+  if (Number(c.req.header("content-length") ?? 0) > MAX_REQUEST_BYTES) {
+    c.res = errorResponse(c, errors.tooLarge());
+    setSecurityHeaders(c.res.headers);
+    return;
+  }
+
   c.set("sql", createSql(c.env));
   await next();
+  setSecurityHeaders(c.res.headers);
 });
+
+const MAX_REQUEST_BYTES = 256 * 1024;
+
+/**
+ * Fase 12 hardening, on every response after the route ran (also errors and raw Responses).
+ * Only fills what a route did not set: /join and /screenshots keep their own CSP.
+ * No CORS headers anywhere: the clients are native (app, Safari extension), and OPTIONS → 404.
+ */
+function setSecurityHeaders(h: Headers): void {
+  const defaults: Record<string, string> = {
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "x-frame-options": "DENY",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+  };
+  for (const [k, v] of Object.entries(defaults)) if (!h.has(k)) h.set(k, v);
+}
 
 app.route("/", health);
 app.route("/", devices);

@@ -17,6 +17,8 @@ export const limits = {
   createVerdict: { bucket: "verdicts_create", max: 60, windowSeconds: 60 },
   // EX-06 polls every 5 s per open block screen (several tabs), plus one lookup per page (SECURITY T10).
   getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },
+  // Unknown bearer tokens per IP (D-alief-B05): guessing a 256-bit token is hopeless, this caps the DB cost.
+  authFail: { bucket: "auth_fail", max: 60, windowSeconds: 600 },
 } satisfies Record<string, Limit>;
 
 /**

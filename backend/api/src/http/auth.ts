@@ -3,6 +3,7 @@ import type { AppEnv, DeviceMode } from "../env";
 import { findByTokenHash, touchLastSeen } from "../db/repo/devices";
 import { sha256 } from "./crypto";
 import { errors } from "./errors";
+import { clientIp, hit, limits } from "./rateLimit";
 
 const BEARER = /^Bearer (shoo_[A-Za-z0-9_-]{8,128})$/;
 
@@ -13,7 +14,12 @@ export const requireDevice: MiddlewareHandler<AppEnv> = async (c, next) => {
 
   const sql = c.get("sql");
   const device = await findByTokenHash(sql, await sha256(match[1]));
-  if (!device) throw errors.unauthorized();
+  if (!device) {
+    // Only well-formed unknown tokens are counted (a malformed header costs no DB work), and valid
+    // tokens never are, so neighbours behind the same CGNAT IP keep working. Over the limit → 429.
+    await hit(sql, limits.authFail, clientIp((n) => c.req.header(n)));
+    throw errors.unauthorized();
+  }
 
   c.set("principal", {
     deviceId: device.id,
