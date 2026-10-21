@@ -35,7 +35,7 @@
 | API | vitest `^4.1.0` + `@cloudflare/vitest-plugin` (`cloudflareTest()` di `vitest.config.ts`, binding Hyperdrive lewat `miniflare.hyperdrives`) | `backend/api/test/` | `pnpm -C backend/api test`; satu file: `pnpm -C backend/api exec vitest run <pola>` |
 | SQL | pgTAP | `backend/db/supabase/tests/` | `cd backend/db && supabase test db` |
 
-Semua perintah dijalankan dari **root repo**. Setiap blok Verifikasi iOS diawali `source plan/alief/ref/sim.sh` yang mengisi `$SIM` (nama iPhone simulator yang tersedia, tanpa spasi di akhir). Perintah backend memakai subshell `(cd backend/db && …)` atau `pnpm -C backend/api …` supaya direktori tidak berpindah. Test API memakai Supabase lokal (`supabase start`) dan reset data per file lewat helper `test/helpers/resetDb.ts`. Server lokal ditunggu dengan `npx wait-on tcp:8787` sebelum `curl`.
+Semua perintah dijalankan dari **root repo**. Setiap blok Verifikasi iOS diawali `source plan/alief/ref/sim.sh` yang mengisi `$SIM` (nama iPhone simulator yang tersedia, tanpa spasi di akhir). Perintah backend memakai subshell `(cd backend/db && …)` atau `pnpm -C backend/api …` supaya direktori tidak berpindah. Test API memakai Supabase lokal (`supabase start`) dan reset data per file lewat helper `test/helpers/resetDb.ts`. Server lokal ditunggu dengan `pnpm -C backend/api exec wait-on tcp:8787` (devDependency) sebelum `curl`.
 
 ## 5. Waktu & bahasa dokumen
 

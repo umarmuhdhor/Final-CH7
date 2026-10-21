@@ -62,9 +62,9 @@ Retest: QA-<ronde>/P0-1_retest.png — <keterangan>
 
 # Lampiran — matriks uji
 
-| # | Skenario / layar | Mode | Bahasa | Hasil |
-| :-: | :-: | :-: | :-: | :-: |
-| 1 | ON-01 splash | – | EN | ✓ |
+| # | Skenario / layar | Mode | Bahasa | Waktu (s) | Hasil |
+| :-: | :-: | :-: | :-: | :-: | :-: |
+| 1 | ON-01 splash | – | EN | – | ✓ |
 
 ✓ lulus · △ lulus sebagian · ✗ gagal.
 ```

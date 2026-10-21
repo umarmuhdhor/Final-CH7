@@ -41,7 +41,7 @@ SEBAGIAN = sebagian harapan terpenuhi; sisa masalah ditulis jelas, dan kalau per
 
 ## 5. Matriks uji
 
-QA-A: setiap ID layar PRD (ON-01..05 kecuali 04, PR-04/05, GD-01/02/03/05, DT-01..06, PF-01) × {EN, ID} × {Guardian, Protected bila relevan} × {light, dark} × {Dynamic Type default, XL}.
+QA-A: setiap ID layar PRD (ON-01..05, PR-04/05, GD-01/02/03/05, DT-01..06, PF-01) × {EN, ID} × {Guardian, Protected bila relevan} × {light, dark} × {Dynamic Type default, XL}.
 
 QA-E2E minimal:
 
@@ -64,3 +64,6 @@ QA-E2E minimal:
 | 15a | Extension Off (HP sendiri) | Shield Protected/Guardian sendiri "Off" (dari `extension.lastSeenAt` App Group, selalu bisa diuji) |
 | 15b | Extension Off (anggota keluarga) | GD-03 "Not connected" — **hanya diuji kalau C11 sudah jalan** (extension mengirim `extensionLastSeenAt`). Kalau belum: tulis di "Batasan" header laporan dengan rujukan D-alief-15/24, bukan temuan P0 |
 | 16 | Retensi | scan > 14 hari (data uji dengan `created_at` mundur) hilang + objek Storage terhapus |
+| 17 | ON-04 di iPhone (Guardian + Protected) | Turn on membuka Settings; setelah extension On + satu halaman dimuat, kembali ke app → lanjut ke ON-05; Off → tetap di ON-04; video tutorial bisa PiP (kalau C3 butir 4 sudah ada, kalau belum tulis di "Batasan") |
+
+Kolom **Waktu** (detik, opsional) diisi untuk skenario yang lulus berdasarkan waktu (#10, #17) dan untuk catatan performa.

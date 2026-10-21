@@ -14,6 +14,7 @@
    - `Saya Alief, track app. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).`
    - `Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).`
    - `Saya Alief, track c. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` (setelah track app + be selesai)
+   - `Saya Alief, track spike. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` (fase 01S, kapan saja setelah fase 01 kalau iPhone + signing siap; berhenti di uji perangkat)
 3. Tempel di Claude Code (plugin **ECC** + **Superpowers** terpasang) di worktree track itu (§4). Model per fase ada di §3 dan [`ref/R6-model-skill.md`](ref/R6-model-skill.md).
 4. Agent berhenti hanya untuk **LANGKAH MANUAL** (akun, secret, deploy cloud, TestFlight; status fase `[m]`), blocker P0, atau konteks hampir habis. Jalankan LANGKAH MANUAL, centang butirnya di `log/fase-XX.md`, lalu ketik kalimat yang sama: agent melanjutkan fase `[m]` itu (review, verifikasi, PR) sebelum pindah ke fase berikutnya.
 
@@ -41,7 +42,7 @@ plan/alief/
 │   ├── R5-konvensi.md          ← gaya kode, test, env, nama file terlarang, commit
 │   ├── R6-model-skill.md       ← model + skill ECC/Superpowers per fase
 │   └── R7-protokol-qa.md       ← format laporan QA, prioritas P0–P3, bukti, retest
-├── fase-00 … fase-17
+├── fase-00 … fase-17 (+ fase-01S spike, fase-06Q QA-A)
 ├── qa/                  ← laporan QA (README = template) + img/ bukti
 └── log/
     ├── DECISIONS.md     ← keputusan (plan: D-alief-NN; per track: D-alief-A/B/C…), append-only
@@ -59,7 +60,8 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 |---|---|---|---|---|---|---|
 | 00 | Plan + tooling | – | `docs/alief-plan` | folder `plan/alief/` | – | Opus 5.5 |
 | 01 | Fondasi app | app | `chore/APP-test-targets` → `feat/APP-foundation` | tab Shield/Activity, `ShooRepository` + `MockRepository`, String Catalog EN/ID, 12 avatar, target test, draf CI iOS | Fase A "Fondasi" | Sonnet 5.5 |
-| 02 | Onboarding | app | `feat/ON-01-05-onboarding` | splash 3 slide, nama, mode, izin notifikasi | ON-01, 02, 03, 05 | Sonnet 5.5 |
+| 01S | Spike S1/S2 | spike | `spike/S1-S2-extension` | hasil `docs/spikes/extension-status.md` + `open-extension-settings.md` di iPhone Alief, usulan window Active | Spike S1, S2 | Sonnet 5.5 |
+| 02 | Onboarding | app | `feat/ON-01-05-onboarding` | splash 3 slide, nama, mode, Turn on extension (fallback PRD §10), izin notifikasi | ON-01, 02, 03, 04, 05 | Sonnet 5.5 |
 | 03 | Detail | app | `feat/DT-detail` | ring skor, label, link, bukti, tombol validasi, catatan verifikasi | DT-01..06 | Sonnet 5.5 |
 | 04 | Protected | app | `feat/PR-04-05-shield-activity` | Shield + Activity Protected | PR-04, PR-05 | Sonnet 5.5 |
 | 05 | Guardian & Family | app | `feat/GD-family-mode` | Shield Guardian, toggle Family, Shield Family, Activity Family | GD-01, 02, 03, 05 | Sonnet 5.5 |
@@ -75,7 +77,7 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 14 | Pairing | c | `feat/GD-04-PR-01-03-pairing` | Family code, Connect, Protected by, deep link | GD-04, PR-01, 02, 03 | Opus 5.5 |
 | 15 | Push + validasi live | c | `feat/GD-06-07-push-validation` | tap push → Detail, It's safe / Not safe live | GD-06, GD-07 | Opus 5.5 |
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
-| 17 | Ditahan | – | nanti | ON-04, Live Activity lewat push | ON-04, EX-03 | – |
+| 17 | Ditahan | – | nanti | Live Activity lewat push | EX-03 | – |
 
 **Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6).
 
@@ -90,8 +92,9 @@ Satu worktree + satu sesi Claude per track (`superpowers:using-git-worktrees`):
 | app | `../Final-CH7-app` | `ios/ShooApp/`, `plan/alief/` (baris fase app saja, keputusan `D-alief-A…`) |
 | be | `../Final-CH7-be` | `backend/`, `plan/alief/` (baris fase be saja, keputusan `D-alief-B…`) |
 | c | repo utama `Final-CH7` | `ios/ShooApp/`, `backend/`, `plan/alief/` (keputusan `D-alief-C…`) |
+| spike | `../Final-CH7-spike` | `ios/ShooApp/` (debug + ON-04), `docs/spikes/extension-status.md`, `docs/spikes/open-extension-settings.md`, `plan/alief/` (baris 01S saja, keputusan `D-alief-A…`) |
 
-Pengecualian: (1) PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.yml` hanya dengan diff yang tertulis di D-alief-02; (2) `plan/alief/` sendiri berada di luar folder Team App (D-alief-20); (3) checkbox `docs/mandates/alief.md` (diizinkan CODEOWNERS).
+Pengecualian: (1) PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.yml` hanya dengan diff yang tertulis di D-alief-02; (2) `plan/alief/` sendiri berada di luar folder Team App (D-alief-20); (3) checkbox `docs/mandates/alief.md` (diizinkan CODEOWNERS); (4) dua file spike S1/S2 di `docs/spikes/` (mandat, D-alief-29). Ubahan signing lokal di `ios/project.yml` untuk iPhone Alief tidak pernah di-commit (pakai L0 `ios/Local.xcconfig` kalau sudah ada).
 
 ---
 
@@ -101,6 +104,7 @@ Pengecualian: (1) PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.y
 flowchart LR
   F00[00 Plan] --> F01[01 Fondasi app]
   F00 --> F07[07 Fondasi BE]
+  F01 --> F01S[01S Spike S1/S2] -. hasil .-> F02
   F01 --> F02[02 Onboarding] --> F03[03 Detail] --> F04[04 Protected] --> F05[05 Guardian/Family] --> F06[06 Profile] --> F06Q[06Q QA-A]
   F07 --> F08[08 Family] --> F09[09 Scans] --> F10[10 Verdicts] --> F11[11 Push] --> F12[12 Retensi + deploy]
   F07 -. blocklist awal .-> IMELDA[Imelda layer 1]
@@ -108,7 +112,7 @@ flowchart LR
   F06Q --> F13[13 ApiRepository]
   F12 --> F13
   F13 --> F14[14 Pairing] --> F15[15 Push + validasi] --> F16[16 QA-E2E]
-  F16 --> F17[17 Ditahan: ON-04, Live Activity push]
+  F16 -.-> F17[17 Ditahan: Live Activity push]
 ```
 
 Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.
@@ -132,7 +136,7 @@ Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.
 ## 7. Definisi selesai (MVP Alief)
 
 Diambil dari mandat:
-1. Semua requirement P0 di PRD 8.1–8.4 dan 8.6 lolos "Selesai kalau", dengan bukti di log fase. ON-04 ditahan sesuai mandat ("Ditahan dulu"); MVP Alief dianggap selesai tanpa ON-04 hanya setelah Umar mengonfirmasi (TODO C14).
+1. Semua requirement P0 di PRD 8.1–8.4 dan 8.6 lolos "Selesai kalau", dengan bukti di log fase, termasuk ON-04 (fase 02, fallback PRD §10 + hasil spike 01S). Spike S1 dan S2 selesai (fase 01S).
 2. Keluarga terhubung lewat kode 4 digit atau QR, dan Guardian menerima push saat orang tuanya membuka situs berbahaya.
 3. Guardian menekan **It's safe** → layar blokir di HP orang tua terbuka (EX-06) tanpa layar konfirmasi.
 4. Semua teks tersedia EN + ID.

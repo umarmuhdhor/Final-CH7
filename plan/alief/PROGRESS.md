@@ -1,15 +1,16 @@
 # Progress — Shoo · Alief (Team App + Backend)
 
-Legenda status: `[ ]` belum · `[~]` sedang dikerjakan · `[m]` berhenti di LANGKAH MANUAL, belum ada PR (log fase berisi checklist) · `[r]` PR terbuka, menunggu review/merge Umar (catatan "pending C3/B6…" boleh di Ringkasan) · `[x]` PR **sudah di-merge** ke `main` (cek `gh pr view <no> --json state`) · `[!]` terblokir
+Legenda status: `[ ]` belum · `[~]` sedang dikerjakan · `[m]` berhenti di LANGKAH MANUAL, belum ada PR (log fase berisi checklist) · `[r]` PR terbuka, menunggu review/merge Umar (catatan "pending C3/B6…" boleh di Ringkasan) · `[x]` PR **sudah di-merge** ke `main` (cek `gh pr view <no> --json state`) · `[!]` terblokir (diset agent saat berhenti karena blocker P0 / PR ditutup; dibuka kembali hanya oleh Alief)
 
-Mode auto: kalau ada fase track berstatus `[~]`/`[m]` → lanjutkan fase itu dulu (`[m]`: berhenti lagi kalau checklist LANGKAH MANUAL belum dicentang Alief); kalau tidak ada → fase pertama berstatus `[ ]` (PROMPT langkah 1, D-alief-26). Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged; baris gate diperbarui di langkah 1 saat status disegarkan.
+Mode auto: kalau ada fase `[r]` track dengan review CHANGES_REQUESTED → tangani dulu; kalau ada fase track berstatus `[~]`/`[m]` → lanjutkan fase itu dulu (`[m]`: berhenti lagi kalau checklist LANGKAH MANUAL belum dicentang Alief); kalau tidak ada → fase pertama berstatus `[ ]` (PROMPT langkah 1, D-alief-26). Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged; baris gate diperbarui di langkah 1 saat status disegarkan.
 Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya PR paralel tidak bentrok).
 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
 |---|---|---|---|---|---|---|---|---|---|
 | 00 | Plan + tooling | – | docs/alief-plan | [~] | 21 Okt 2026 | | | Folder plan/alief dibuat dari hasil grilling; menunggu PR | log/fase-00.md |
 | 01 | Fondasi app + target test | app | chore/APP-test-targets, feat/APP-foundation | [ ] | | | | | log/fase-01.md |
-| 02 | Onboarding ON-01/02/03/05 | app | feat/ON-01-05-onboarding | [ ] | | | | | log/fase-02.md |
+| 01S | Spike S1/S2 di iPhone Alief | spike | spike/S1-S2-extension (+ feat/ON-04-refine) | [ ] | | | | | log/fase-01S.md |
+| 02 | Onboarding ON-01..05 | app | feat/ON-01-05-onboarding | [ ] | | | | | log/fase-02.md |
 | 03 | Detail DT-01..06 | app | feat/DT-detail | [ ] | | | | | log/fase-03.md |
 | 04 | Protected PR-04/05 | app | feat/PR-04-05-shield-activity | [ ] | | | | | log/fase-04.md |
 | 05 | Guardian & Family GD-01/02/03/05 | app | feat/GD-family-mode | [ ] | | | | | log/fase-05.md |
@@ -25,7 +26,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 14 | Pairing GD-04, PR-01/02/03 | c | feat/GD-04-PR-01-03-pairing | [ ] | | | | | log/fase-14.md |
 | 15 | Push tap + validasi GD-06/07 | c | feat/GD-06-07-push-validation | [ ] | | | | | log/fase-15.md |
 | 16 | QA-E2E + fixbug + retest | c | fix/QA-* | [ ] | | | | | qa/QA-E2E-*.md |
-| 17 | Ditahan: ON-04, Live Activity push | – | – | [!] | | | | Menunggu spike Umar (docs/spikes/) | – |
+| 17 | Ditahan: Live Activity push | – | – | [!] | | | | Menunggu keputusan Umar (spike Dynamic Island) | – |
 
 ## Gate & milestone
 
@@ -36,8 +37,8 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
 | G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Akhir fase 10 |
 | G5 · Track app selesai | 01–06 + 06Q `[x]` (semua PR merged) | [ ] | Syarat track c |
-| G6 · Track be selesai | 07–12 `[x]` (semua PR merged), deploy cloud hijau | [ ] | Syarat track c |
-| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`), C14 (MVP tanpa ON-04) | [ ] | C3 dibutuhkan sebelum fase 14/15; C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
+| G6 · Track be selesai | 07–12 `[x]` (semua PR merged) + TODO D8 (deploy ulang dari `main`, uji asap hijau) | [ ] | Syarat track c |
+| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`) | [ ] | C3 dibutuhkan sebelum fase 14/15 (butir 4 `UIBackgroundModes` untuk PiP ON-04 di fase 02, ada fallback); C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
 | G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8); uji push sandbox ke satu iPhone sudah di fase 11 |
 | G8 · MVP Alief | Definisi selesai README §7 | [ ] | |
 
@@ -48,7 +49,8 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | ON-01 Splash 3 slide + Skip | 02 | [ ] | |
 | ON-02 Nama 1–20 + avatar acak | 02 (+13 `POST /devices`) | [ ] | |
 | ON-03 Pilih mode permanen | 02 (+13) | [ ] | |
-| ON-04 Turn on extension | 17 | [!] | Ditahan, spike #2 #3 |
+| ON-04 Turn on extension | 02 (+01S hasil spike) | [ ] | |
+| Spike S1/S2 (mandat) | 01S | [ ] | |
 | ON-05 Izin notifikasi + pengingat | 02 (+15 token APNs) | [ ] | |
 | PR-01 Connect QR / kode | 14 | [ ] | |
 | PR-02 Protected by | 14 | [ ] | |

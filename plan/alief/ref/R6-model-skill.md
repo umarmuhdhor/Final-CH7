@@ -31,7 +31,8 @@ Eskalasi: kalau Sonnet gagal dua kali di build/test yang sama, pindah ke Opus un
 | Fase | Model | Skill domain (dimuat otomatis) | Review wajib |
 |---|---|---|---|
 | 01 | Sonnet 5.5 | `apple-design`, `ecc:swiftui-patterns`, `ecc:swift-protocol-di-testing`, `write-swift` | swift-reviewer |
-| 02 | Sonnet 5.5 | `apple-design`, `ecc:swiftui-patterns`, `emil-design-eng` (splash) | swift-reviewer, a11y |
+| 01S | Sonnet 5.5 | `write-swift`, `apple-design` (spike, perangkat fisik) | swift-reviewer |
+| 02 | Sonnet 5.5 | `apple-design`, `ecc:swiftui-patterns`, `emil-design-eng` (splash), `ecc:swift-concurrency-6-2` (scenePhase ON-04) | swift-reviewer, a11y |
 | 03 | Sonnet 5.5 | `apple-design`, `ecc:swiftui-patterns` | swift-reviewer, a11y |
 | 04 | Sonnet 5.5 | `apple-design`, `ecc:swiftui-patterns` | swift-reviewer, a11y |
 | 05 | Sonnet 5.5 | `apple-design`, `ecc:swiftui-patterns` | swift-reviewer, a11y |

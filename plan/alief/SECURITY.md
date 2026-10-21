@@ -35,6 +35,7 @@ Berlaku untuk `ios/ShooApp/`, `backend/`, dan `plan/alief/`. Repo bisa jadi publ
 | T12 | Data setelah disconnect | Guardian lama masih melihat data | Akses dicek dari `family_links` aktif saat request, bukan dari histori. Cache query Hyperdrive dimatikan (D-alief-17) supaya cek tidak basi di cloud | 08, 09 |
 | T13 | Reflected XSS / injeksi link di `GET /join?code=` (domain sama dengan API) | Script berjalan di origin Worker | `code` harus `^\d{4}$`, escape HTML, CSP `default-src 'none'`, `nosniff`, test XSS | 08 |
 | T14 | Cache Hyperdrive melayani hasil basi (verdict, rate limit, link keluarga) | Unblock terlambat ±75 s, otorisasi basi | `--caching-disabled` (D-alief-17); uji `GET /verdicts` setelah `POST /verdicts` di Worker cloud | 07, 10 |
+| T15 | Deep link `shoo://scan/<id>` dipanggil situs/app lain | Hanya membuka Detail lewat `GET /scans/{id}` dengan token device (404 kalau bukan milik/keluarga); tidak pernah memicu verdict atau aksi lain; id divalidasi sebelum request | fase 15 (`NotificationRouter.route(url:)` test URL rusak/host lain) |
 
 ## 3. Memakai AI assistant dengan aman
 

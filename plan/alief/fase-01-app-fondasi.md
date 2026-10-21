@@ -52,7 +52,7 @@ Kerangka app yang semua layar Fase A pakai: tab Shield / Activity, satu protocol
 source plan/alief/ref/sim.sh
 (cd ios && xcodegen)
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM" | tail -20
-git diff origin/main -- ios/project.yml   # di PR 1 saja: harus persis diff D-alief-02/D-alief-24
+git diff origin/main...HEAD -- ios/project.yml   # di PR 1 saja: harus persis diff D-alief-02/D-alief-24/D-alief-28
 grep -rn "TODO(sync" ios/ShooApp || true
 ```
 

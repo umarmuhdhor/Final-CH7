@@ -205,3 +205,33 @@ Format:
 - Alasan: verify run 02 #N3: folder test tidak punya Info.plist, dan preset XcodeGen untuk bundle test tidak membuatnya, jadi build target test bisa gagal.
 - File: fase-01, TODO C1.
 
+## D-alief-29 · 21 Okt 2026 · plan (verify run 03) · ON-04 + spike S1/S2 masuk plan (mandat `981ad73`)
+
+- Keputusan: mengikuti mandat terbaru Umar. ON-04 dikerjakan di fase 02 dari fallback PRD §10 (Settings umum + ilustrasi langkah + video PiP, status dari heartbeat App Group saat kembali ke app). Spike S1/S2 menjadi fase 01S (track `spike`, iPhone Alief, worktree `../Final-CH7-spike`); hasilnya menyempurnakan ON-04 (handoff ke fase 02 atau PR `feat/ON-04-refine`). Pengecualian folder: `docs/spikes/extension-status.md` + `docs/spikes/open-extension-settings.md` (diizinkan mandat). Ubahan signing lokal di `ios/project.yml` / `AppGroup.id` untuk iPhone Alief tidak pernah di-commit (pakai L0 `ios/Local.xcconfig` kalau sudah ada). C14 lama (MVP tanpa ON-04) dihapus; C14 baru = hasil spike, C15 = video PM, C3 butir 4 = `UIBackgroundModes` audio untuk PiP. Fase 17 tinggal Live Activity push.
+- Alasan: verify run 03 #T1, `docs/mandates/alief.md` + `docs/spikes/README.md` di `origin/main` (`981ad73`).
+- File: fase-01S (baru), fase-02, fase-05, fase-14, fase-17, PROGRESS, README §1/§3/§4/§5/§7, PROMPT (track spike), TODO B6/C3/C14/C15/D5, R1, R6, R7, VERIFY_PROMPT. Merevisi D-alief-23 (window Active diusulkan dari hasil S1).
+
+## D-alief-30 · 21 Okt 2026 · plan (verify run 03) · Revisi D-alief-27: deploy fase 12 dan sumber build QA-E2E
+
+- Keputusan: LANGKAH MANUAL fase 12 deploy dari branch fase 12 (seperti fase be lain), bukan dari `main`. Deploy ulang dari `main` setelah semua PR 07–12 di-merge = TODO D8, syarat G6, dicek di PROMPT langkah 1. QA-E2E memakai app dari ujung branch fase 15 (stack 13–15 boleh masih `[r]`) + backend `main` setelah D8; header laporan mencatat kedua commit + nomor build.
+- Alasan: verify run 03 #T2 (fase 12 melingkar: kode cron fase 12 belum ada di `main` saat DoD-nya diperiksa) dan #S7 (QA-E2E "memakai `main`" tanpa ApiRepository/pairing/push).
+- File: fase-12, fase-16, PROGRESS G6, PROMPT 6h, TODO D8.
+
+## D-alief-31 · 21 Okt 2026 · plan (verify run 03) · Transisi status lengkap + prioritas aturan
+
+- Keputusan: (a) PR `[r]` dengan `reviewDecision = CHANGES_REQUESTED` dipilih dulu oleh mode auto (pilihan 0: perbaiki di branch yang sama, rebase stack, status tetap `[r]`); PR `CLOSED` tanpa merge → `[!]` + tanya Alief. (b) `[!]` diset agent saat berhenti karena blocker P0 / keputusan user / PR ditutup, dibuka kembali hanya oleh Alief. (c) Resume `[m]` meneruskan Langkah kerja yang belum dicentang dulu (mis. fase 16 langkah 2–6), baru langkah 7–11. (d) Menunggu merge Umar bukan LANGKAH MANUAL. (e) File fase kalah dari PROMPT/DECISIONS yang lebih baru; plan kalah dari mandat di `origin/main`. (f) Semua gate G1–G8 diperbarui di langkah 1. Fase 11 dan 14 memakai `[r]` + "pending" untuk penantian pihak luar.
+- Alasan: verify run 03 #S1, #S2, #S3, #R1.
+- File: PROMPT langkah 1 + 6h + konteks, PROGRESS legenda, fase-11, fase-14.
+
+## D-alief-32 · 21 Okt 2026 · plan (verify run 03) · Deep link `shoo://scan/<scanId>`
+
+- Keputusan: app menangani `shoo://scan/<scanId>` → Detail (fungsi murni `NotificationRouter.route(url:)`, fase 15), dipakai popup "See detail" (EX-04, mandat Umar U2) dan "Review in Shoo" (EX-06). Format diusulkan masuk `contracts/` lewat TODO C16. Deep link hanya membuka layar, tidak pernah memicu aksi (SECURITY T15).
+- Alasan: verify run 03 #S6.
+- File: fase-15, R1, SECURITY T15, TODO C16.
+
+## D-alief-33 · 21 Okt 2026 · plan (verify run 03) · Perbaikan kecil run 03
+
+- Keputusan: grant `shoo_api` + RLS untuk `blocklist_entries` di migrasi awal fase 07 (fase 10 hanya menambah `global_eligible`); review blocklist satu domain per statement dengan `clock_timestamp()`, entri `removed_at` tidak hidup lagi otomatis, antrean review `families > 0`, review harian = TODO D9; `410 ExpiredToken` juga mengosongkan token; diff tiga titik `origin/main...HEAD` di semua cek "harus kosong"; UDID simulator alih-alih `booted` saat dua simulator menyala; `allowlist.ts` masuk R1 dengan sumbernya; override var lokal (`.dev.vars` / `miniflare.bindings`) untuk `INVITE_BASE_URL` + `PUSH_RELAY_URL`; Hyperdrive `id` placeholder sampai LANGKAH MANUAL; kolom Waktu di matriks QA; `extensionLastSeenAt` opsional di `updateMe` kalau C11 disetujui; B6/C3 memakai L0 `Local.xcconfig` + pertanyaan pemegang akun berbayar.
+- Alasan: verify run 03 #S4, #S5, #R2–#R11.
+- File: R1, R2, R3, R5, R7, qa/README, fase-00, 01, 07, 10, 11, 13, 14, 15, TODO.
+

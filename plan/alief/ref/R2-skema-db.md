@@ -121,7 +121,7 @@ create table push_log (                                   -- untuk LogSender, de
 ```sql
 create role shoo_api login noinherit;   -- TANPA password di migrasi (lihat paragraf di bawah)
 grant usage on schema public to shoo_api;
-grant select, insert, update, delete on devices, family_links, family_codes, join_attempts, scans, verdicts, push_log, ops_heartbeat to shoo_api;
+grant select, insert, update, delete on devices, family_links, family_codes, join_attempts, scans, verdicts, blocklist_entries, push_log, ops_heartbeat to shoo_api;
 grant usage on all sequences in schema public to shoo_api;
 revoke all on all tables in schema public from anon, authenticated;
 alter default privileges in schema public revoke all on tables from anon, authenticated;
@@ -152,11 +152,11 @@ Kontrak: "all domains with a `not_safe` verdict from any family". Filter otomati
 
 1. **Saat `POST /verdicts`** (satu transaksi): `global_eligible = true` hanya kalau `value = 'not_safe'`, pemilik scan bermode **protected**, `family_links` pemilik itu aktif ke Guardian pemutus, dan domain tidak ada di allowlist statis (`backend/api/src/data/allowlist.ts`: domain resmi brand Indonesia + domain populer). Kelayakan disimpan saat keputusan (snapshot), jadi disconnect setelahnya tidak mengubah isi blocklist diam-diam.
 2. Kalau layak: upsert `blocklist_entries(domain)` dengan `families = (select count(distinct by_device_id) from verdicts where domain = $d and value = 'not_safe' and global_eligible)`. `approved_at` tetap null.
-3. Verdict yang berubah dari `not_safe` ke `safe` → hitung ulang `families`; tidak menghapus entri yang sudah disetujui (reviewer yang memutuskan `removed_at`).
+3. Verdict yang berubah dari `not_safe` ke `safe` → hitung ulang `families`; tidak menghapus entri yang sudah disetujui (reviewer yang memutuskan `removed_at`). Entri dengan `removed_at` tidak dihidupkan otomatis oleh verdict baru (upsert hanya memperbarui `families`); reviewer yang memutuskan (`update … set removed_at = null, approved_at = clock_timestamp()`).
 4. **Review manual (LANGKAH MANUAL berkala, Alief/Umar di SQL editor Supabase):**
    ```sql
-   select domain, families, first_seen_at from blocklist_entries where approved_at is null and removed_at is null order by families desc, first_seen_at;
-   update blocklist_entries set approved_at = now(), approved_by = 'alief' where domain = 'contoh-scam.id';
+   select domain, families, first_seen_at from blocklist_entries where approved_at is null and removed_at is null and families > 0 order by families desc, first_seen_at;
+   update blocklist_entries set approved_at = clock_timestamp(), approved_by = 'alief' where domain = 'contoh-scam.id';   -- satu domain per statement
    update blocklist_entries set removed_at = now() where domain = 'salah-blokir.id';
    ```
 5. **`GET /blocklist?since=`** hanya membaca entri yang disetujui:
@@ -166,7 +166,7 @@ Kontrak: "all domains with a `not_safe` verdict from any family". Filter otomati
    where approved_at is not null and removed_at is null and approved_at > coalesce($since, '-infinity')
    order by approved_at, domain limit 1000;
    ```
-   `nextSince` = `added_at` terakhir. Karena waktu yang dipakai adalah `approved_at`, refresh inkremental tidak pernah melewatkan domain (beda dengan filter `decided_at` + `having`).
+   `nextSince` = `added_at` terakhir (ISO dengan mikrodetik). Review menyetujui **satu domain per statement** dengan `clock_timestamp()` (bukan `now()`, yang sama untuk seluruh transaksi), jadi `approved_at` unik dan batas halaman 1000 tidak melewatkan domain. Karena waktu yang dipakai adalah `approved_at`, refresh inkremental tidak pernah melewatkan domain (beda dengan filter `decided_at` + `having`).
 
 Penghapusan (`removed_at`) tidak terkirim lewat `since`: usulan kontrak `removed: [{ domain, removedAt }]` (TODO C6, D-alief-18). Sampai disetujui, detector disarankan full refresh (`since` kosong) sekali sehari. Kalau C6 memilih persetujuan otomatis (mis. ≥ 2 keluarga + umur link ≥ 72 jam), cukup ubah langkah 2 menjadi mengisi `approved_at` saat syarat terpenuhi.
 

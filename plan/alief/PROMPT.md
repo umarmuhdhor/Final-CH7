@@ -13,11 +13,14 @@ Saya Alief, track be. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).
 ```text
 Saya Alief, track c. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).
 ```
+```text
+Saya Alief, track spike. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).
+```
 
 Pertama kali? Jalankan dulu [`VERIFY_PROMPT.md`](VERIFY_PROMPT.md) (AI membaca plan tanpa mengubah apa pun).
 
 AI akan:
-- melanjutkan fase track itu yang berstatus `[~]`/`[m]` kalau ada, kalau tidak memilih fase `[ ]` pertama di `PROGRESS.md`,
+- menangani dulu PR fase track itu yang diminta perubahan oleh Umar, lalu melanjutkan fase `[~]`/`[m]` kalau ada, kalau tidak memilih fase `[ ]` pertama di `PROGRESS.md`,
 - membuat branch fase dari `origin/main` (atau menumpuk di atas PR fase sebelumnya yang belum di-merge),
 - mengerjakan fase sampai selesai, membuka PR ke `main` dengan reviewer @umarmuhdhor, lalu **langsung lanjut** ke fase berikutnya.
 
@@ -34,14 +37,15 @@ Salin blok di bawah, ubah **dua baris pertama** (`TRACK`, `FASE`), tempel ke Cla
 | app | `01 → 02 → 03 → 04 → 05 → 06 → 06Q` |
 | be | `07 → 08 → 09 → 10 → 11 → 12` |
 | c | `13 → 14 → 15 → 16` (mulai setelah 06Q dan 12 `[x]`) |
-| ditahan | `17` (hanya kalau TODO §D menyatakan spike sudah selesai) |
+| spike | `01S` (setelah 01; butuh iPhone Alief + signing, tidak menjadi syarat track lain) |
+| ditahan | `17` Live Activity push (hanya kalau Umar memberi kabar, TODO §D) |
 
 Alternatif tanpa salin-tempel: ubah dua baris di file ini, lalu ketik ke Claude Code: `Jalankan instruksi di plan/alief/PROMPT.md`.
 
 ---
 
 ```text
-TRACK: app          # app | be | c
+TRACK: app          # app | be | c | spike
 FASE: auto          # auto = kerjakan semua fase track berurutan; atau nomor fase, mis. 03
 
 <peran>
@@ -63,11 +67,14 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
 - Kontrak WAJIB (read-only): contracts/api.md, contracts/app-group-keys.md, contracts/scan-result.schema.json,
   contracts/fixtures/*.json. Model Swift: ios/ShooShared/ (read-only, jangan didefinisikan ulang).
 - Kontrak internal: plan/alief/ref/R1..R7. Kalau R* bertentangan dengan contracts/, contracts/ menang.
+  Kalau file fase bertentangan dengan PROMPT.md atau entri DECISIONS yang lebih baru, PROMPT/DECISIONS yang menang.
+  Kalau plan bertentangan dengan docs/mandates/alief.md di origin/main, mandat menang: berhenti, catat di DECISIONS, tanya Alief.
 - Repo umarmuhdhor/Final-CH7. Aturan repo: CLAUDE.md root, backend/CLAUDE.md, ios/ShooApp/CLAUDE.md, ios/CLAUDE.md.
 - Folder yang BOLEH diubah per TRACK:
   · app → ios/ShooApp/**, plan/alief/** (baris fase app saja)
   · be  → backend/**, plan/alief/** (baris fase be saja)
   · c   → ios/ShooApp/**, backend/**, plan/alief/**
+  · spike → ios/ShooApp/**, docs/spikes/extension-status.md, docs/spikes/open-extension-settings.md, plan/alief/** (baris 01S saja)
   Pengecualian tunggal: PR chore/APP-test-targets (fase 01) boleh menambah target test di ios/project.yml (D-alief-02).
   Jangan pernah mengubah contracts/, ios/ShooShared/, ios/ShooExtension/, ios/ShooLiveActivity/, detector/, ai/, .github/.
 - Toolchain: Node 24 (`nvm use 24`), pnpm, Deno (tidak dipakai kecuali fallback push), Docker (untuk `supabase start`),
@@ -83,14 +90,21 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
    - "Saya Alief, track <x>" → TRACK = x, FASE = auto.
    - Status PROGRESS: [ ] belum · [~] sedang dikerjakan · [m] berhenti di LANGKAH MANUAL (belum ada PR) ·
      [r] PR terbuka menunggu review (boleh dengan catatan "pending C3/B6/…" di kolom Ringkasan) · [x] PR MERGED · [!] terblokir.
-     Sebelum memilih, segarkan status: untuk setiap baris [r] milik TRACK jalankan `gh pr view <no> --json state` →
-     MERGED berarti ubah ke [x] (commit kecil "docs(plan): mark fase NN merged").
-     Setelah itu perbarui baris gate G5/G6 (dan G2) di PROGRESS kalau semua PR syaratnya sudah MERGED.
+     Sebelum memilih, segarkan status: untuk setiap baris [r] milik TRACK jalankan `gh pr view <no> --json state,reviewDecision` →
+     MERGED → [x] (commit kecil "docs(plan): mark fase NN merged"); CLOSED tanpa merge → [!] + tanya Alief;
+     OPEN + reviewDecision CHANGES_REQUESTED → fase itu dipilih dulu (pilihan 0).
+     Setelah itu perbarui baris gate G1–G8 di PROGRESS yang syaratnya bisa dicek: PR MERGED (`gh pr view`), checklist
+     LANGKAH MANUAL tercentang di log fase, butir TODO B6–B8/D8 `[x]`, laporan QA LULUS (G8).
+   - [!] diset agent saat berhenti karena blocker P0 / keputusan user (langkah 13b) atau PR ditutup; hanya Alief yang
+     membukanya kembali (ubah ke [ ] atau [~]). Mode auto melewati fase [!].
    - FASE = auto, urutan pilihan:
+     (0) ada fase TRACK [r] dengan CHANGES_REQUESTED (atau komentar review Umar belum dijawab) → mode REVIEW: baca komentar
+         (`gh pr view <no> --comments`), perbaiki di branch yang sama (TDD), push, balas komentar, rebase branch
+         stacked di atasnya (langkah 13 SINKRON), status tetap [r]. Lalu kembali ke langkah 1.
      (1) ada fase TRACK berstatus [~] atau [m] → FASE = fase itu, mode LANJUT. Untuk [m]: buka checklist LANGKAH MANUAL
          di log/fase-<FASE>.md. Kalau masih ada butir yang belum dicentang Alief (atau Alief belum menempel hasilnya),
-         tampilkan butir yang tersisa lalu BERHENTI. Kalau semua sudah dicentang: cek hasilnya (curl/log), lalu lanjut
-         ke langkah 7–11 fase itu (review, verifikasi, dokumentasi, PR).
+         tampilkan butir yang tersisa lalu BERHENTI. Kalau semua sudah dicentang: cek hasilnya (curl/log), lalu teruskan
+         Langkah kerja fase yang belum selesai menurut checklist log (langkah 6; mis. fase 16 langkah 2–6), baru langkah 7–11.
      (2) kalau tidak ada → fase pertama milik TRACK (tabel "Urutan fase") berstatus [ ].
      Fase [r]/[x] tidak dikerjakan ulang. Kalau fase sebelumnya [r], fase baru DITUMPUK di atas branch fase itu (langkah 3c).
    - Track c: syaratnya SEMUA PR fase 01–06Q dan 07–12 sudah MERGED: jalankan `gh pr view <no> --json state -q .state`
@@ -145,7 +159,8 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
    h. Aksi CLOUD (supabase link/db push/secrets, wrangler deploy/secret/hyperdrive, Storage bucket di cloud,
       App Store Connect, TestFlight): JANGAN dijalankan sendiri. Siapkan perintahnya, tulis checklist bernomor
       "LANGKAH MANUAL" (kotak [ ] per butir) di log fase, commit + push branch fase, set status [m] di PROGRESS, lalu berhenti.
-      Sisa fase (langkah 7–11) dikerjakan saat fase dilanjutkan (langkah 1, pilihan 1).
+      Sisa fase (Langkah kerja yang belum dicentang, lalu langkah 7–11) dikerjakan saat fase dilanjutkan (langkah 1, pilihan 1).
+      Menunggu merge PR oleh Umar bukan LANGKAH MANUAL: buka PR, status [r], dan tulis syaratnya di TODO §D (mis. D8).
       Butir yang hanya menunggu pihak luar dan tidak memblokir kode (mis. capability C3, iPhone fisik, Team ID B6):
       jangan pakai [m]; selesaikan fase, buka PR, status [r] + catatan "pending C3/B6" di Ringkasan, dan uji ulang
       butir itu di fase yang disebut file fase (mis. 15 atau 16).
@@ -154,7 +169,9 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
       DECISIONS + TODO §C, pakai placeholder, lanjutkan tanpa menyentuh file itu.
    k. `ios/ShooApp/Info.plist` dan `ios/ShooApp/Shoo.entitlements` DI-GENERATE XcodeGen dari `ios/project.yml`: jangan diedit
       (perubahan hilang di `xcodegen` berikutnya). Key baru = permintaan ke Umar (TODO C3). Satu-satunya edit project.yml
-      yang diizinkan adalah diff D-alief-02 (fase 01), persisnya D-alief-24 + D-alief-28.
+      yang diizinkan adalah diff D-alief-02 (fase 01), persisnya D-alief-24 + D-alief-28. Ubahan signing lokal untuk iPhone
+      Alief (fase 01S, sebelum L0) tidak pernah di-commit: commit dengan path eksplisit, cek
+      `git diff --name-only origin/main...HEAD -- ios/project.yml ios/ShooShared` kosong.
 
 7. GERBANG UI (wajib kalau diff menyentuh ios/ShooApp/**/*.swift yang menghasilkan tampilan):
    a. Build + jalankan di simulator iPhone (iOS Simulator tool: launch, screenshot). Ambil screenshot setiap layar
@@ -222,7 +239,8 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
 | Baris | Fase | Track | Model | Review keamanan |
 |---|---|---|---|---|
 | `FASE: 01` | Fondasi app + target test | app | Sonnet 5.5 | – |
-| `FASE: 02` | Onboarding ON-01/02/03/05 | app | Sonnet 5.5 | – |
+| `FASE: 01S` | Spike S1/S2 di iPhone Alief | spike | Sonnet 5.5 | – |
+| `FASE: 02` | Onboarding ON-01..05 | app | Sonnet 5.5 | – |
 | `FASE: 03` | Detail DT-01..06 | app | Sonnet 5.5 | – |
 | `FASE: 04` | Protected PR-04/05 | app | Sonnet 5.5 | – |
 | `FASE: 05` | Guardian & Family GD-01/02/03/05 | app | Sonnet 5.5 | – |

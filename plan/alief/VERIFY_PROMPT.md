@@ -19,7 +19,7 @@ Baca berurutan dan lengkap:
 4. PRD v1.5 (link di docs/README.md). Kalau tidak bisa dibuka, katakan terus terang dan verifikasi dari mandat saja.
 5. plan/alief/README.md, PROMPT.md, PROGRESS.md, TODO.md, ARCHITECTURE.md, SECURITY.md, fixbug.md
 6. plan/alief/log/DECISIONS.md. Keputusan yang lebih baru MENGALAHKAN teks lama yang bertentangan.
-7. plan/alief/fase-00 … fase-17 (semua)
+7. plan/alief/fase-00 … fase-17 (semua, termasuk fase-01S dan fase-06Q)
 8. plan/alief/ref/R1 … R7 (semua), plan/alief/qa/README.md
 </bacaan>
 

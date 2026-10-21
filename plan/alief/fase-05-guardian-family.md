@@ -27,7 +27,7 @@ Tampilan Guardian untuk dirinya sendiri dan Family mode untuk memantau sampai 3 
 
 ## Langkah kerja
 
-1. **GD-01**: toggle Family mode kiri atas, profile kanan atas; lingkaran "You're protected" (Off → "You're not protected · Turn on", tombol Turn on menuju placeholder ON-04 / Settings); card Blocked terakhir milik sendiri; navbar Shield / Activity.
+1. **GD-01**: toggle Family mode kiri atas, profile kanan atas; lingkaran "You're protected" (Off → "You're not protected · Turn on", tombol Turn on membuka `TurnOnExtensionView` dari fase 02 sebagai sheet); card Blocked terakhir milik sendiri; navbar Shield / Activity.
 2. **GD-02**: toggle mengganti tampilan ke sudut pandang keluarga; Safari Guardian tetap dilindungi (hanya tampilan); pilihan terakhir disimpan di `AppSettings`.
 3. **GD-03**: lingkaran + avatar orang yang dilindungi (maks 3); card ramping per orang: nama, status terakhir, link, waktu; "Not connected" hanya kalau `extensionActive == false` (server tidak pernah mengirim `false` tanpa bukti, D-alief-15/24); tap card → Detail scan terakhir; kosong → tombol "Invite your family" (membuka Family code, fase 14; sementara placeholder).
 4. **GD-05**: Activity Family (`owner=family` = Guardian sendiri + Protected, sesuai fixture `activity-family.json`, D-alief-19): filter orang (Everyone / per nama, termasuk "You") + status; item menampilkan nama pemilik; catatan "Riwayat sendiri saja: matikan Family mode". Kalau Umar menjawab C13 berbeda, ubah filter di MockRepository + test saja.

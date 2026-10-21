@@ -4,10 +4,10 @@
 |---|---|
 | Track | c |
 | Branch | `fix/QA-E2E-<ID>-<slug>` per perbaikan |
-| Prasyarat | 15; G7 (TestFlight) untuk skenario perangkat fisik |
+| Prasyarat | 15 (boleh `[r]`); G6 + D8 (backend `main`); G7 (TestFlight) untuk skenario perangkat fisik |
 | Requirement | Semua P0 Alief (PROGRESS), definisi selesai README §7 |
 | Model | Sonnet 5.5 (run QA) · Opus 5.5 (fix keamanan) · `ecc:e2e-testing` |
-| Fase berikutnya | 17 (kalau spike siap) / selesai |
+| Fase berikutnya | selesai (17 hanya kalau Umar memberi kabar) |
 
 ## Tujuan
 
@@ -19,8 +19,8 @@ Laporan QA End-to-End berformat Catalyst atas sistem nyata (app TestFlight + Wor
 
 ## Langkah kerja
 
-1. Persiapan (LANGKAH MANUAL, tulis di log, berhenti sampai Alief selesai): build TestFlight (B6, B8), **set `APNS_ENV=production` di Edge Function `push` (`supabase secrets set APNS_ENV=production`, bukan rahasia) dan var Worker sebelum uji** (TestFlight = APNs production, B7), dua iPhone (D6), data cloud bersih (`truncate` tabel uji lewat SQL editor), catat commit/build.
-2. Jalankan matriks QA-E2E `ref/R7` §5 (16 skenario) + skenario keamanan API (IDOR, brute force, scan palsu, token salah) dengan `curl`.
+1. Persiapan (LANGKAH MANUAL, tulis di log, berhenti sampai Alief selesai): build TestFlight (B6, B8), **set `APNS_ENV=production` di Edge Function `push` (`supabase secrets set APNS_ENV=production`, bukan rahasia) dan var Worker sebelum uji** (TestFlight = APNs production, B7), dua iPhone (D6), data cloud bersih (`truncate` tabel uji lewat SQL editor). Sumber build (D-alief-30): app dari ujung branch fase 15 (stack 13–15, walau masih `[r]`), backend dari `main` setelah D8. Catat commit app + commit backend + nomor build di header laporan.
+2. Jalankan matriks QA-E2E `ref/R7` §5 (17 skenario, termasuk ON-04 #17) + skenario keamanan API (IDOR, brute force, scan palsu, token salah) dengan `curl`.
 3. Batasan ditulis jujur di header (mis. extension Umar belum final → scan dikirim lewat `curl` meniru extension).
 4. Tulis `qa/QA-E2E-<YYYY-MM-DD>.md`, bukti di `qa/img/QA-E2E/`.
 5. Isi `fixbug.md`, perbaiki P0 → P1 → P2 (TDD, satu bug satu commit). Bug di luar folder kita → "Diteruskan".

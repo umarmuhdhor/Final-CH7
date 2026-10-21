@@ -25,7 +25,7 @@ Data scan + screenshot hilang otomatis setelah 14 hari, semua endpoint lolos rev
 4. Cek kuota: hitung ukuran DB + Storage di Supabase lokal untuk 1000 scan seed; ekstrapolasi terhadap 500 MB DB / 1 GB Storage / 5 GB egress. Pemicu migrasi ke R2 (`ScreenshotStore`): Storage > 700 MB atau egress > 3,5 GB (ARCHITECTURE §3). Anti-pause: cron harian + `/healthz/db` sama-sama menulis `ops_heartbeat` (bukan `select 1`), monitor B9 memanggil `/healthz/db`.
 5. Finalisasi `backend/ci/backend.yml` + `backend/ci/README.md`; tulis C2.
 6. `backend/README.md` final: setup lokal, env, deploy manual, rollback (`wrangler rollback`, migrasi maju saja), cara mengecek kuota.
-7. LANGKAH MANUAL deploy final dari `main` setelah PR 07–11 di-merge (D-alief-27) + uji asap cloud (semua endpoint dengan dua device uji, CPU per request dari `wrangler tail`).
+7. LANGKAH MANUAL deploy dari **branch fase 12** (rebase dulu ke `origin/main` kalau 07–11 sudah merged; D-alief-27/30) + uji asap cloud (semua endpoint dengan dua device uji, CPU per request dari `wrangler tail`). Setelah itu buka PR, status `[r]`. Deploy ulang dari `main` setelah semua PR 07–12 di-merge = TODO D8, syarat G6 (bukan LANGKAH MANUAL fase ini).
 
 ## Verifikasi
 
@@ -42,6 +42,6 @@ gitleaks detect --source . --no-banner   # harus 0 temuan
 
 - [ ] Retensi terbukti (test + trigger lokal) dan cron terdaftar di cloud (screenshot dashboard Worker → Settings → Triggers), satu run cloud tercatat di `ops_heartbeat` (query SQL editor).
 - [ ] Tidak ada temuan CRITICAL/HIGH terbuka.
-- [ ] Uji asap cloud lulus. G6 terpenuhi setelah semua PR 07–12 di-merge Umar (diperbarui di PROMPT langkah 1).
+- [ ] Uji asap cloud (deploy branch fase 12) lulus. G6 terpenuhi setelah semua PR 07–12 di-merge Umar + D8 (diperbarui di PROMPT langkah 1).
 - [ ] `gitleaks` 0 temuan.
 - [ ] C2 tertulis untuk Umar.

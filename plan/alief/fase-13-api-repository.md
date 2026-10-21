@@ -34,6 +34,7 @@ App memakai backend asli tanpa mengubah view: `ApiRepository` menggantikan `Mock
 4. 401 dari server → tampilkan layar "Session expired" dengan tombol mulai ulang onboarding (P1, cukup pesan jelas untuk MVP).
 5. Uji manual melawan `wrangler dev` lokal dari simulator: onboarding Guardian + Protected, Activity kosong, Profile ganti nama/bahasa.
 6. `ecc:security-reviewer` fokus T3 (token tidak di-log, tidak di UserDefaults standar).
+7. Kalau C11 sudah disetujui: tambah parameter opsional `extensionLastSeenAt: Date?` ke `updateMe` (protocol + Mock + Api) dan panggil saat `scenePhase == .active` dengan nilai `ExtensionStatus`; kalau belum, tidak ada perubahan (D-alief-15).
 
 ## Verifikasi
 

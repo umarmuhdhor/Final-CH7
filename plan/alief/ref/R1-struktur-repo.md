@@ -41,6 +41,7 @@ backend/
 │   │   │       ├── jwt.ts        JWT ES256 APNs (dipakai bersama relay & langsung; test di vitest)
 │   │   │       ├── log.ts        LogSender (dipakai saat secret APNs belum ada / test)
 │   │   │       └── messages.ts   teks push EN/ID
+│   │   ├── data/allowlist.ts     domain resmi/populer yang tidak pernah masuk blocklist global (R2 §5): awal = domain brand di contracts/fixtures + daftar manual bank/e-wallet/pemerintah/marketplace utama Indonesia; diperbarui lewat PR (sumber dicatat di komentar file)
 │   │   └── cron/retention.ts
 │   └── test/                     *.test.ts (vitest-plugin), helpers/{resetDb,seed,schema}.ts (schema = validasi respons dengan contracts/scan-result.schema.json via ajv)
 ├── db/
@@ -66,7 +67,7 @@ ios/ShooApp/
 ├── App/
 │   ├── AppEnvironment.swift      repository + settings + router (DI)
 │   ├── RootView.swift            onboarding vs TabView
-│   ├── Router.swift              navigasi ke Detail(scanId), Profile, Family code
+│   ├── Router.swift              navigasi ke Detail(scanId), Profile, Family code; deep link shoo://join (fase 14) + shoo://scan/<id> (fase 15)
 │   ├── AppSettings.swift         bahasa, Family mode terakhir (GD-02), onboarding selesai
 │   └── AppConfig.swift           base URL API `#if DEBUG` localhost / Release cloud, flag `cameraEnabled` (R5 §6)
 ├── Data/
@@ -78,12 +79,13 @@ ios/ShooApp/
 │   ├── ExtensionStatus.swift     baca AppGroup.Key.extensionLastSeenAt
 │   └── Fixtures/                 salinan contracts/fixtures/*.json (sumber kebenaran tetap contracts/)
 ├── Features/
-│   ├── Onboarding/               ON-01, 02, 03, 05
+│   ├── Onboarding/               ON-01..05 (TurnOnExtensionView ON-04, TutorialVideoPlayer PiP)
 │   ├── Shield/                   PR-04, GD-01, GD-03
 │   ├── Activity/                 PR-05, GD-05
 │   ├── Detail/                   DT-01..06, GD-07
 │   ├── Profile/                  PF-01
 │   └── Pairing/                  GD-04, PR-01, 02, 03 (fase 14)
+├── Debug/                        ExtensionSpikeView (fase 01S, seluruhnya #if DEBUG, launch arg -ShooSpike)
 ├── Components/                   ScoreRing, StatusChip, AvatarView, SiteIcon, EmptyStateView, PrimaryButton
 ├── Support/                      Formatters (waktu relatif, persen), Localization helper, NotificationRouter (payload push → scanId, fase 15)
 ├── Resources/
