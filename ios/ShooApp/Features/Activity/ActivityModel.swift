@@ -25,6 +25,13 @@ enum ActivityFilter: String, CaseIterable, Hashable, Sendable {
     }
 }
 
+/// Whose scans Family Activity shows (GD-05): everyone, the guardian, or one member.
+enum ActivityPerson: Hashable, Sendable {
+    case everyone
+    case me
+    case device(String)
+}
+
 /// Activity list (PR-05; reused by the Guardian's GD-05 with another `owner`): newest first,
 /// filter by status, endless scroll on `nextCursor`, pull to refresh.
 @MainActor
@@ -36,7 +43,11 @@ final class ActivityModel {
         case failed
     }
 
-    let owner: ScanOwnerFilter
+    /// `.family` turns on the person filter (GD-05); `.me` is the user's own history.
+    let baseOwner: ScanOwnerFilter
+    private(set) var person: ActivityPerson = .everyone
+    /// Family members for the person chips; empty outside Family Activity.
+    private(set) var people: [FamilyMember] = []
     private(set) var state: State = .loading
     private(set) var filter: ActivityFilter = .all
     private(set) var items: [ScanResult] = []
@@ -54,8 +65,17 @@ final class ActivityModel {
 
     init(repository: any ShooRepository, owner: ScanOwnerFilter, filter: ActivityFilter = .all) {
         self.repository = repository
-        self.owner = owner
+        baseOwner = owner
         self.filter = filter
+    }
+
+    /// The `owner=` actually requested: the person filter narrows Family Activity.
+    var owner: ScanOwnerFilter {
+        switch person {
+        case .everyone: baseOwner
+        case .me: .me
+        case .device(let id): .device(id)
+        }
     }
 
     var hasMore: Bool { nextCursor != nil }
@@ -63,6 +83,10 @@ final class ActivityModel {
     var isEmpty: Bool { state == .loaded && items.isEmpty }
 
     func load() async {
+        if baseOwner == .family, people.isEmpty {
+            // Chips only; the list still loads if this fails.
+            people = (try? await repository.familyMembers()) ?? []
+        }
         await loadFirstPage()
     }
 
@@ -75,12 +99,22 @@ final class ActivityModel {
     /// "Try again" on the error screen: shows the spinner while it retries.
     func retry() async {
         if items.isEmpty { state = .loading }
-        await loadFirstPage()
+        await load()
     }
 
     func select(_ filter: ActivityFilter) async {
         guard filter != self.filter || state == .failed else { return }
         self.filter = filter
+        await startOver()
+    }
+
+    func select(person: ActivityPerson) async {
+        guard baseOwner == .family, person != self.person || state == .failed else { return }
+        self.person = person
+        await startOver()
+    }
+
+    private func startOver() async {
         items = []
         nextCursor = nil
         isLoadingMore = false

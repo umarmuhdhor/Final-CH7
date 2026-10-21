@@ -16,6 +16,11 @@ enum ScanBadge: Equatable, Sendable {
         }
     }
 
+    /// Family cards (GD-03) only know the status of a member's newest scan, not its verdict.
+    init(status: ScanStatus) {
+        self = status == .blocked ? .blocked : .warning
+    }
+
     var title: LocalizedStringKey {
         switch self {
         case .warning: "Warning"

@@ -11,7 +11,16 @@ actor MockRepository: ShooRepository {
         case standard
         /// No scans, no members — for empty states.
         case empty
+        /// Fixture data with only the first member (UI gate GD-03: 1 person).
+        case oneMember
+        /// Fixture data plus a third, connected member without risky sites (UI gate GD-03: 3 people).
+        case threeMembers
     }
+
+    /// Not in contracts/fixtures: only the 3-member UI gate uses it.
+    static let extraMember = FamilyMember(
+        deviceId: "dev_grandma", name: "Grandma", avatarId: "avatar_05", extensionActive: true, lastScan: nil
+    )
 
     /// Fixture identities. `dev_me` is the guardian in contracts/fixtures (verdicts "by Adhella").
     static let guardianProfile = DeviceProfile(
@@ -48,9 +57,14 @@ actor MockRepository: ShooRepository {
         self.bundle = bundle
         self.now = now
         switch scenario {
-        case .standard:
+        case .standard, .oneMember, .threeMembers:
             allScans = Self.load(ScanPage.self, "activity-family", bundle: bundle)?.items ?? []
-            members = Self.load(FamilyMembersResponse.self, "family-members", bundle: bundle)?.members ?? []
+            let fixture = Self.load(FamilyMembersResponse.self, "family-members", bundle: bundle)?.members ?? []
+            switch scenario {
+            case .oneMember: members = Array(fixture.prefix(1))
+            case .threeMembers: members = fixture + [Self.extraMember]
+            default: members = fixture
+            }
         case .empty:
             allScans = []
             members = []

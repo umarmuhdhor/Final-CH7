@@ -11,6 +11,16 @@
         }
       }
     },
+    "%lld not connected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld tidak terhubung"
+          }
+        }
+      }
+    },
     "A family member looks after you.": {
       "localizations": {
         "id": {
@@ -211,6 +221,16 @@
         }
       }
     },
+    "Couldn't load your family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat keluarga"
+          }
+        }
+      }
+    },
     "Couldn't load your Shield": {
       "localizations": {
         "id": {
@@ -271,6 +291,36 @@
         }
       }
     },
+    "Everyone": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semua orang"
+          }
+        }
+      }
+    },
+    "Family codes are coming soon.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode keluarga segera hadir."
+          }
+        }
+      }
+    },
+    "Family mode": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode keluarga"
+          }
+        }
+      }
+    },
     "Filter": {
       "localizations": {
         "id": {
@@ -327,6 +377,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saya dilindungi"
+          }
+        }
+      }
+    },
+    "Invite the people you want to keep safe.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undang orang yang ingin kamu jaga."
+          }
+        }
+      }
+    },
+    "Invite your family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undang keluargamu"
           }
         }
       }
@@ -471,12 +541,42 @@
         }
       }
     },
+    "No one to look after yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada yang kamu jaga"
+          }
+        }
+      }
+    },
+    "No risky sites yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada situs berisiko"
+          }
+        }
+      }
+    },
     "No warnings": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Belum ada peringatan"
+          }
+        }
+      }
+    },
+    "Not connected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidak terhubung"
           }
         }
       }
@@ -527,6 +627,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notifikasi mati"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Only your own history? Turn off Family mode.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanya riwayatmu sendiri? Matikan Mode keluarga."
           }
         }
       }
@@ -597,6 +717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Membuka detail"
+          }
+        }
+      }
+    },
+    "Person": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orang"
           }
         }
       }
@@ -1081,12 +1211,42 @@
         }
       }
     },
+    "You look after %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu menjaga %@"
+          }
+        }
+      }
+    },
     "You won't hear when your family is at risk.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Kamu tidak akan tahu saat keluargamu dalam bahaya."
+          }
+        }
+      }
+    },
+    "You're not protected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu tidak terlindungi"
+          }
+        }
+      }
+    },
+    "You're protected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu terlindungi"
           }
         }
       }

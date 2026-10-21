@@ -9,9 +9,11 @@ struct MainTabView: View {
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.shieldPath) {
                 shieldRoot
-                    // A new repository (mode switch, later a new session) starts a fresh screen model.
-                    .id(ObjectIdentifier(env.repository))
-                    .toolbar { ProfileButton() }
+                    .id(screenIdentity)
+                    .toolbar {
+                        FamilyModeToggle()
+                        ProfileButton()
+                    }
                     .navigationDestination(for: Route.self, destination: destination)
             }
             .tabItem { Label("Shield", systemImage: "shield.lefthalf.filled") }
@@ -19,8 +21,11 @@ struct MainTabView: View {
 
             NavigationStack(path: $router.activityPath) {
                 activityRoot
-                    .id(ObjectIdentifier(env.repository))
-                    .toolbar { ProfileButton() }
+                    .id(screenIdentity)
+                    .toolbar {
+                        FamilyModeToggle()
+                        ProfileButton()
+                    }
                     .navigationDestination(for: Route.self, destination: destination)
             }
             .tabItem { Label("Activity", systemImage: "list.bullet.rectangle") }
@@ -37,19 +42,23 @@ struct MainTabView: View {
         if env.settings.mode == .protected {
             ProtectedShieldView(repository: env.repository, extensionStatus: env.extensionStatus)
         } else {
-            // TODO(sync:alief): Guardian Shield (GD-01) lands in fase 05
-            ShieldPlaceholderView()
+            GuardianShieldView()
         }
     }
 
-    /// Protected sees its own scans (PR-05); the guardian sees the family's (GD-05, owner shown).
+    /// Own scans (PR-05, guardian with Family mode off); Family mode → the family's, owner shown (GD-05).
     @ViewBuilder
     private var activityRoot: some View {
-        if env.settings.mode == .protected {
-            ActivityView(repository: env.repository, owner: .me)
-        } else {
+        if env.settings.mode == .guardian && env.settings.familyModeOn {
             ActivityView(repository: env.repository, owner: .family, showsOwner: true)
+        } else {
+            ActivityView(repository: env.repository, owner: .me)
         }
+    }
+
+    /// A new repository (mode switch, later a new session) or the Family toggle starts fresh screen models.
+    private var screenIdentity: String {
+        "\(ObjectIdentifier(env.repository).hashValue)-\(env.settings.familyModeOn)"
     }
 
     @ViewBuilder
@@ -58,6 +67,25 @@ struct MainTabView: View {
         case .detail(let scanId):
             DetailView(scanId: scanId, repository: env.repository)
                 .id(scanId)
+        }
+    }
+}
+
+/// Top-left Family mode switch, guardian only (GD-02). Remembered in `AppSettings.familyModeOn`.
+private struct FamilyModeToggle: ToolbarContent {
+    @Environment(AppEnvironment.self) private var env
+
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            if env.settings.mode == .guardian {
+                @Bindable var settings = env.settings
+                Toggle(isOn: $settings.familyModeOn) {
+                    Label { Text("Family mode") } icon: { Image(systemName: "person.3.fill") }
+                }
+                .toggleStyle(.button)
+                .labelStyle(.titleAndIcon)
+                .accessibilityIdentifier("familyModeToggle")
+            }
         }
     }
 }
