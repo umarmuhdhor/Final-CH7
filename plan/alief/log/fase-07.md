@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[m]` berhenti di LANGKAH MANUAL (deploy cloud pertama). Belum ada PR |
+| Status | `[r]` PR terbuka (stacked on #7), menunggu review Umar |
 | Track / branch | be · `feat/BE-devices` (worktree sesi `track-be-776b81`, menggantikan `../Final-CH7-be`) |
 | Basis | ditumpuk di atas `docs/alief-plan-sync` (PR #7, belum di-merge) → PR nanti menulis "Stacked on #7", rebase ke `main` setelah #7 merge |
 | Mulai | 21 Okt 2026 21:04 WITA |
@@ -25,8 +25,8 @@ Rencana lengkap: [`fase-07-plan.md`](fase-07-plan.md). Supabase lokal + migrasi 
 - [x] 9. Spike APNs: kode `jwt.ts` + `POST /debug/apns-spike` siap; **uji di Worker cloud = LANGKAH MANUAL 6**
 - [x] 10. Test vitest + pgTAP
 - [x] 11. Draf CI `backend/ci/backend.yml` + `backend/ci/README.md`
-- [ ] 12. LANGKAH MANUAL deploy pertama (di bawah) — menunggu Alief
-- [ ] Setelah 12: `D-alief-B01`, review (langkah 8 PROMPT), verifikasi ulang, PR
+- [x] 12. LANGKAH MANUAL deploy pertama (di bawah) — selesai 21 Okt ±21:35 WITA
+- [x] Setelah 12: `D-alief-B01` (spike lulus), review (langkah 8 PROMPT) + perbaikan `D-alief-B05`, verifikasi ulang, PR
 
 ## File dibuat / diubah
 
@@ -52,26 +52,47 @@ Placeholder Hyperdrive `id` (`000…0`) diterima `wrangler dev` dan vitest (`loc
 
 Catatan TDD: pgTAP dan vitest ditulis sebelum/bersama kode; satu bug nyata ditemukan test (`since` kehilangan mikrodetik, D-alief-B03).
 
+## Review (langkah 8, 21 Okt 2026 ±21:40 WITA)
+
+| Reviewer | CRITICAL | HIGH | MEDIUM | LOW | Ditangani |
+|---|---|---|---|---|---|
+| `ecc:security-reviewer` | 0 | 0 | 4 | 8 | IPv6 /64, CI `cancel-in-progress`, body stream, nama kontrol/bidi, CI `permissions`/versi CLI/`env`; sisanya ditunda (D-alief-B05) |
+| `ecc:typescript-reviewer` + database | 0 | 3 | 5 | 5 | 3 HIGH diperbaiki (NUL di nama, tahun ekstrem, cursor blocklist seri/re-approve); MEDIUM: body stream, rate limit atomik, CHECK blocklist; `GET /devices/me` = fase 08 (D-alief-38) |
+
+Test baru (merah dulu, lalu hijau): 422 untuk NUL/BEL/bidi di nama, `apnsToken: null` di `POST /devices`, `extensionLastSeenAt`/`since` tahun 0000/9999, body stream 24 KB tanpa `content-length` → 413, 14 request paralel satu IP → tepat 10 × 201 + 4 × 429, IPv6 satu /64 berbagi bucket, seri waktu di batas halaman 1000, re-approve → `addedAt` baru, approve lewat UPDATE → waktu unik; pgTAP 3 assert blocklist.
+
+## Verifikasi ulang (21 Okt 2026 ±21:45 WITA, setelah perbaikan)
+
+| Perintah | Hasil |
+|---|---|
+| `(cd backend/db && supabase db reset && supabase test db)` | `Files=2, Tests=61` · `Result: PASS` |
+| `pnpm -C backend/api typecheck` | bersih |
+| `pnpm -C backend/api test` | `Tests 48 passed (48)` · 0 error tak tertangani |
+
+Cloud belum memuat migrasi `20261021150000_blocklist_times.sql` dan perbaikan kode ini: ikut LANGKAH MANUAL deploy fase 08 (`supabase db push` menerapkan semua migrasi yang belum ada).
+
 ## DoD
 
 - [x] Semua test pgTAP + vitest hijau; angka di atas.
 - [x] Token hanya tersimpan sebagai hash (`devices.test.ts` "creates a device and returns the token once"); grep log test tidak memuat token.
 - [x] `anon`/`authenticated` tidak punya akses tabel (`grants.test.sql`, 20 assert `table_privs_are … array[]`).
-- [ ] Hyperdrive cloud dibuat dengan `--caching-disabled` — LANGKAH MANUAL 3.
-- [ ] Hasil spike dari Worker cloud tercatat (`D-alief-B01`); endpoint debug dimatikan — LANGKAH MANUAL 6.
-- [ ] `/healthz`, `/healthz/db`, `/blocklist` cloud hijau (G3) — LANGKAH MANUAL 5.
+- [x] Hyperdrive cloud dibuat dengan `--caching-disabled` — LANGKAH MANUAL 3 (`caching.disabled: true`).
+- [x] Hasil spike dari Worker cloud tercatat (`D-alief-B01`, lulus); endpoint debug dimatikan (`404`) — LANGKAH MANUAL 6.
+- [x] `/healthz`, `/healthz/db`, `/blocklist` cloud hijau — LANGKAH MANUAL 5. G3 menunggu C7 (URL ke Imelda, ditunda Alief).
 
 ## Deviasi
 
 - D-alief-B02 tabel `rate_limit_hits` (hash, tanpa IP mentah).
 - D-alief-B03 tanpa `sql.end()`; `since` lewat `::text`.
 - D-alief-B04 detail kecil API; `test/helpers/schema.ts` (ajv) ditunda ke fase 09.
+- D-alief-B01 spike APNs lulus → fase 11 memakai `ApnsSender` langsung.
+- D-alief-B05 perbaikan review (validasi, body stream, rate limit atomik, IPv6 /64, migrasi `blocklist_times`, CI).
 - `vitest.config.ts` memakai `fileParallelism: false` (semua file test berbagi satu Postgres lokal).
 
 ## Placeholder aktif
 
-- `backend/api/wrangler.jsonc` Hyperdrive `id` = `00000000000000000000000000000000` → diisi di LANGKAH MANUAL 3.
-- `backend/api/wrangler.jsonc` `INVITE_BASE_URL` = `http://localhost:8787` → URL Worker di LANGKAH MANUAL 4.
+- ~~Hyperdrive `id` placeholder~~ → diisi (`f6c9b58d…`), LANGKAH MANUAL 3.
+- ~~`INVITE_BASE_URL` lokal~~ → `https://shoo-api.afindo-mi01.workers.dev`, LANGKAH MANUAL 4.
 - `POST /debug/apns-spike` + `APNS_SPIKE` + `SPIKE_KEY` → dihapus di fase 11.
 
 ## LANGKAH MANUAL (Alief) — deploy cloud pertama
@@ -143,4 +164,6 @@ Semua dijalankan dari root worktree, di branch `feat/BE-devices` (D-alief-27). P
 - Fase 09: `test/helpers/schema.ts` (ajv) — lihat D-alief-B04(d) soal `new Function` di workerd.
 - Fase 12: tambahkan `delete from rate_limit_hits where hit_at < now() - interval '1 day'` ke cron retensi + baris tabel di R2 §2/§6 (D-alief-B02).
 - Rate limit `POST /devices` per IP: semua test memakai `cf-connecting-ip` berbeda (`freshIp()`), kecuali test rate limit itu sendiri.
+- Fase 12 (hardening, dari review fase 07): grant `shoo_api` lebih sempit + role admin untuk approve blocklist, `statement_timeout`/`connection limit`, batas per IP untuk 401 berulang (D-alief-B05).
+- Untuk Alief: subdomain workers.dev `afindo-mi01` ter-commit di `wrangler.jsonc` dan memuat potongan alamat email pribadi. Kalau tidak diinginkan: ganti subdomain akun Cloudflare (Workers → Subdomain) atau pakai custom domain, lalu perbarui `INVITE_BASE_URL` (aksi cloud, bukan oleh agent).
 - Lokal: `pnpm-workspace.yaml` (`allowBuilds`) dibutuhkan pnpm 12 supaya `workerd`/`esbuild` boleh menjalankan postinstall.

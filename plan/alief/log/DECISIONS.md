@@ -272,6 +272,15 @@ Format:
 - Alasan: permintaan Alief (21 Okt): produk berjalan di ekosistem Apple dan memproses riwayat browsing berisiko, nama, dan screenshot; App Store Review 5.1.1 mewajibkan manifest, label, dan penghapusan akun.
 - File: SECURITY §3 (§ lama bergeser ke §4–§6), PROMPT 6l, fase-01, 06, 08, 13, 14, 16, TODO C19.
 
+## D-alief-B01 · 21 Okt 2026 · fase 07 · Spike APNs dari Worker cloud: lulus
+
+- Hasil: `POST /debug/apns-spike` di Worker cloud `https://shoo-api.afindo-mi01.workers.dev` (LANGKAH MANUAL 6, log fase 07) → `{"reached":true,"status":403,"body":"{\"reason\":\"InvalidProviderToken\"}","ms":1242,"colo":"CDG"}`. APNs hanya melayani HTTP/2 dan menjawab dengan JSON `reason` miliknya, jadi `fetch()` Worker yang sudah di-deploy mencapai `api.sandbox.push.apple.com` lewat HTTP/2. `403 InvalidProviderToken` memang yang diharapkan (kunci P-256 sekali pakai, Key ID/Team ID palsu). Setelah uji: `APNS_SPIKE: "0"`, deploy ulang, endpoint → `404`.
+- Keputusan: syarat D-alief-16 terpenuhi. Fase 11 memakai **`ApnsSender` langsung dari Worker sebagai jalur utama** (komponen paling sedikit: tanpa Edge Function, tanpa shared secret relay, kunci `.p8` hanya di secret Worker). `RelaySender` + Edge Function `push` hanya dibuat kalau uji push nyata di fase 11 (D7) gagal di jalur langsung; keputusan akhir dicatat di log fase 11. `LogSender` tetap untuk lokal/test tanpa secret APNs.
+- Batas bukti: satu request ke sandbox dari satu colo (CDG). Belum dibuktikan: push yang diterima iPhone (butuh kunci `.p8` asli B7 + token perangkat, fase 11/15) dan endpoint Production (`api.push.apple.com`, QA-E2E B7).
+- Alasan: D-alief-16 mensyaratkan bukti dari Worker cloud, bukan `wrangler dev`; bukti itu ada.
+- Dampak ke tim lain / kontrak: tidak ada.
+- File yang diperbarui: `plan/alief/log/fase-07.md` (hasil butir 6). Fase 11 membaca entri ini (lebih baru dari teks file fase 11 yang menyebut relay sebagai jalur utama).
+
 ## D-alief-B02 · 21 Okt 2026 · fase 07 · Tabel `rate_limit_hits` untuk batas umum
 
 - Keputusan: batas umum R3 §5 yang bukan join (`POST /devices` 10/jam per IP, `/healthz/db` 1/menit per IP, nanti `POST /family/code`, `POST /scans`) memakai satu tabel `rate_limit_hits(bucket, key_hash, hit_at)` dengan jendela geser. `key_hash = sha256('<bucket>:<ip atau device>')`, jadi IP mentah tidak pernah disimpan. Join tetap memakai `join_attempts` (R2). Baris > 1 hari dihapus cron retensi (fase 12).
@@ -294,3 +303,11 @@ Format:
 - Alasan: kontrak tidak mengatur detail ini; pilihan paling sederhana yang tetap sesuai `contracts/api.md`.
 - Dampak ke tim lain / kontrak: tidak ada perubahan bentuk JSON.
 - File yang diperbarui: `backend/api/src/routes/{devices,blocklist}.ts`, `backend/README.md`.
+
+## D-alief-B05 · 21 Okt 2026 · fase 07 · Perbaikan dari review fase 07
+
+- Keputusan: (a) Nama device menolak karakter kontrol (`\p{Cc}`, termasuk NUL yang ditolak Postgres → dulu 500) dan bidi override (`U+200E/F`, `U+202A–202E`, `U+2066–2069`) → 422. (b) Waktu ISO (`since`, `extensionLastSeenAt`) dibatasi tahun 1970–2100 → 422, bukan 500 dari Postgres. (c) Body JSON dibaca sebagai stream dengan penghitung byte; body chunked tanpa `content-length` berhenti di batas (413). (d) `hit()` rate limit atomik: `pg_advisory_xact_lock` per kunci di dalam transaksi. (e) Kunci rate limit IPv6 = prefix /64. (f) Migrasi baru `20261021150000_blocklist_times.sql`: CHECK `removed_at` butuh `approved_at`, `approved_at` butuh `approved_by`; trigger UPDATE memberi `approved_at`/`removed_at` = `clock_timestamp()` (approve massal = waktu unik, re-approve setelah remove = `addedAt` baru). (g) `GET /blocklist` memperpanjang halaman penuh dengan semua event yang waktunya sama dengan event terakhir, jadi seri waktu tidak pernah terpotong di batas 1000. (h) Avatar tanpa bias modulo. (i) Draf CI: `permissions: contents: read`, tidak membatalkan run di `main`, versi Supabase CLI dipatok, ref proyek lewat `env`.
+- Alasan: review fase 07 (`ecc:typescript-reviewer` + `ecc:database-reviewer` 3 HIGH, `ecc:security-reviewer` 0 CRITICAL/HIGH, 4 MEDIUM). Migrasi `init` sudah di-push ke cloud, jadi tidak diubah; perbaikan skema = migrasi baru.
+- Ditunda (dicatat, bukan blocker): grant `shoo_api` lebih sempit + role admin terpisah untuk approve blocklist, `statement_timeout`/`connection limit` role (fase 12 hardening); batas per IP untuk 401 berulang (fase 12); `x-spike-key` tidak constant-time (endpoint di-gate `APNS_SPIKE=0` dan dihapus fase 11); `join_attempts.ip` mentah dan `family_full` lewat pesan error (fase 08); bucket `screenshots` tanpa `file_size_limit` (fase 09); `POST /devices` menghitung rate limit sebelum validasi body (disengaja: setiap percobaan dihitung).
+- Dampak ke tim lain / kontrak: tidak ada perubahan bentuk JSON. Cloud: migrasi baru + kode ini ikut deploy berikutnya (LANGKAH MANUAL fase 08); sampai itu cloud memakai kode fase 07 awal (blocklist cloud masih 0 baris, jadi tidak ada risiko cursor).
+- File yang diperbarui: `backend/api/src/http/{validate,rateLimit}.ts`, `src/routes/{devices,blocklist}.ts`, `src/db/repo/blocklist.ts`, `test/{devices,blocklist}.test.ts`, `backend/db/supabase/migrations/20261021150000_blocklist_times.sql`, `tests/schema.test.sql`, `backend/ci/backend.yml`, `backend/README.md`.
