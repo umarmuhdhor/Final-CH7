@@ -5,13 +5,21 @@ struct ScoreRing: View {
     let score: Int
     var size: CGFloat = 120
     var lineWidth: CGFloat = 12
+    /// How far Dynamic Type may grow the ring. Detail keeps it at 1: its 160 pt ring already has a 42 pt
+    /// number, and a bigger ring pushes link and evidence off a small screen (QA-A P2-3).
+    var maxScale: CGFloat = 2
 
     @Environment(\.locale) private var locale
-    /// Grows the ring (and its number) with Dynamic Type, at most to twice the base size.
+    /// Grows the ring (and its number) with Dynamic Type, at most to `maxScale` × the base size.
     @ScaledMetric(relativeTo: .title) private var textScale: CGFloat = 1
 
     private var clamped: Int { min(max(score, 0), 100) }
-    private var side: CGFloat { size * min(textScale, 2) }
+    private var side: CGFloat { Self.side(size: size, textScale: textScale, maxScale: maxScale) }
+
+    /// Ring diameter for a Dynamic Type scale, never above `maxScale` × `size`.
+    static func side(size: CGFloat, textScale: CGFloat, maxScale: CGFloat) -> CGFloat {
+        size * min(textScale, maxScale)
+    }
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {

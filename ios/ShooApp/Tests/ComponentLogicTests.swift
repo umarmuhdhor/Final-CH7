@@ -32,6 +32,15 @@ struct ComponentLogicTests {
         #expect(AvatarCatalog.avatar(for: "avatar_99") == AvatarCatalog.fallback)
     }
 
+    /// QA-A P2-3: the Detail ring grows with Dynamic Type only up to its cap, so link and evidence stay in view.
+    @Test(arguments: [
+        (CGFloat(1), CGFloat(2), CGFloat(160)), (1.2, 2, 192), (3, 2, 320),
+        (1, 1.25, 160), (1.2, 1.25, 192), (3, 1.25, 200), (0.8, 1, 128), (3, 1, 160),
+    ])
+    func scoreRingGrowsUpToItsCap(textScale: CGFloat, maxScale: CGFloat, expected: CGFloat) {
+        #expect(abs(ScoreRing.side(size: 160, textScale: textScale, maxScale: maxScale) - expected) < 0.001)
+    }
+
     @Test(arguments: [("bca-verifikasi.site", "B"), ("www.p0stindonesia.com", "P"), ("123.example", "E"), ("", "?")])
     func siteMonogram(domain: String, expected: String) {
         #expect(SiteIcon.monogram(for: domain) == expected)
