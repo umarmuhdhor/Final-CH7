@@ -1,4 +1,7 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
+import blocked92 from "../../../contracts/fixtures/blocked-92.json";
+import { b64, jpeg } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
 
@@ -87,6 +90,28 @@ describe("DELETE /devices/me (proposal C19)", () => {
     // The protected device's own scan stays.
     const [s] = await sql<{ n: number }[]>`select count(*)::int as n from scans where id = 's_keep'`;
     expect(s!.n).toBe(1);
+  });
+
+  it("removes the device's screenshot objects from Storage", async () => {
+    const p = await createDevice("Mom");
+    const { id } = (await (await call("/scans", {
+      method: "POST", token: p.token,
+      json: { ...blocked92, id: undefined, verdict: undefined, screenshotUrl: undefined, screenshotBase64: b64(jpeg(100, 100)) },
+    })).json()) as { id: string };
+    const info = () =>
+      fetch(`${env.SUPABASE_URL}/storage/v1/object/info/screenshots/${p.deviceId}/${id}.jpg`, {
+        headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+      }).then((r) => r.ok);
+    expect(await info()).toBe(true);
+
+    expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
+    // Storage removal runs in waitUntil after the response.
+    let present = true;
+    for (let i = 0; i < 20 && present; i++) {
+      present = await info();
+      if (present) await new Promise((r) => setTimeout(r, 100));
+    }
+    expect(present).toBe(false);
   });
 
   it("401 without token", async () => {

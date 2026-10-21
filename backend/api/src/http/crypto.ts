@@ -10,6 +10,13 @@ export function base64url(bytes: Uint8Array): string {
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+/** Undefined when the text is not unpadded base64url. */
+export function fromBase64url(text: string): Uint8Array | undefined {
+  if (!/^[A-Za-z0-9_-]*$/.test(text) || text.length % 4 === 1) return undefined;
+  const bin = atob(text.replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+}
+
 export function randomBytes(n: number): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(n));
 }

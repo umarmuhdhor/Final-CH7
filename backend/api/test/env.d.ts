@@ -5,8 +5,17 @@ declare namespace Cloudflare {
     INVITE_BASE_URL: string;
     APNS_SPIKE?: string;
     SPIKE_KEY?: string;
+    SUPABASE_URL?: string;
+    SUPABASE_SERVICE_ROLE_KEY?: string;
+    SCREENSHOT_MAX_BYTES?: string;
+    SCREENSHOT_URL_SECRET?: string;
   }
   interface GlobalProps {
     mainModule: typeof import("../src/index");
   }
+}
+
+// vitest.config.ts runs in Node; only this one Node API is used there.
+declare module "node:child_process" {
+  export function execSync(command: string, options?: { cwd?: string; stdio?: unknown }): { toString(): string };
 }

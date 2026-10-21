@@ -3,3 +3,8 @@
 INVITE_BASE_URL=http://localhost:8787
 APNS_SPIKE=0
 SPIKE_KEY=
+# Local Storage (fase 09): API_URL and SECRET_KEY from `(cd backend/db && supabase status)`.
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_ROLE_KEY=
+# HMAC key for screenshot links (D-alief-B08), any long random string locally, e.g. `openssl rand -base64 32`.
+SCREENSHOT_URL_SECRET=

@@ -7,6 +7,14 @@ export interface Env {
   APNS_SPIKE?: string;
   /** Secret: header x-spike-key for /debug/apns-spike. */
   SPIKE_KEY?: string;
+  /** Supabase project URL, for Storage only (fase 09). */
+  SUPABASE_URL?: string;
+  /** Secret: Supabase secret/service key, for Storage only. */
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+  /** Largest accepted screenshot in bytes (contract: 150 KB). */
+  SCREENSHOT_MAX_BYTES?: string;
+  /** Secret: HMAC key for screenshot links (D-alief-B08). Unset → screenshotUrl null. */
+  SCREENSHOT_URL_SECRET?: string;
 }
 
 export type DeviceMode = "guardian" | "protected";
