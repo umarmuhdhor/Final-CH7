@@ -38,4 +38,16 @@ struct AppSettingsTests {
         router.popToRoot()
         #expect(router.activityPath.isEmpty)
     }
+
+    @Test func completeOnboardingKeepsMockScenario() async throws {
+        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        let env = AppEnvironment(
+            repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero), settings: settings
+        )
+        env.completeOnboarding(mode: .protected)
+        #expect(settings.mode == .protected)
+        #expect(settings.onboardingCompleted)
+        #expect(try await env.repository.me().mode == .protected)
+        #expect(try await env.repository.scans(owner: .me, status: nil, cursor: nil).items.isEmpty)
+    }
 }

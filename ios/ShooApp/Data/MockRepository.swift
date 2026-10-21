@@ -17,18 +17,21 @@ actor MockRepository: ShooRepository {
     static let guardianProfile = DeviceProfile(
         deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01", mode: .guardian, language: "en", guardian: nil
     )
+    static let fixtureGuardian = GuardianInfo(deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01")
     static let protectedProfile = DeviceProfile(
         deviceId: "dev_mom", name: "Mom", avatarId: "avatar_03", mode: .protected, language: "en",
-        guardian: GuardianInfo(deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01")
+        guardian: fixtureGuardian
     )
     static let pageSize = 20
 
     private var profile: DeviceProfile
     private var allScans: [ScanResult]
     private var members: [FamilyMember]
-    private let latency: Duration
-    private let pageSize: Int
-    private let now: @Sendable () -> Date
+    nonisolated let scenario: Scenario
+    nonisolated let latency: Duration
+    nonisolated let pageSize: Int
+    private nonisolated let bundle: Bundle
+    private nonisolated let now: @Sendable () -> Date
 
     init(
         mode: UserMode = .guardian,
@@ -39,8 +42,10 @@ actor MockRepository: ShooRepository {
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         profile = mode == .guardian ? Self.guardianProfile : Self.protectedProfile
+        self.scenario = scenario
         self.latency = latency
         self.pageSize = pageSize
+        self.bundle = bundle
         self.now = now
         switch scenario {
         case .standard:
@@ -50,6 +55,11 @@ actor MockRepository: ShooRepository {
             allScans = []
             members = []
         }
+    }
+
+    /// The same fixtures and settings, answering as `mode` (used when onboarding picks a mode).
+    nonisolated func switching(to mode: UserMode) -> MockRepository {
+        MockRepository(mode: mode, scenario: scenario, latency: latency, pageSize: pageSize, bundle: bundle, now: now)
     }
 
     // MARK: Devices
@@ -76,19 +86,16 @@ actor MockRepository: ShooRepository {
 
     func updateMe(_ update: DeviceUpdate) async throws {
         try await pause()
-        if let name = update.name {
-            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard (1...20).contains(trimmed.count) else {
-                throw RepositoryError.api(.invalidBody, message: "name must be 1–20 characters")
-            }
-            profile.name = trimmed
+        // Validate everything first: a rejected update changes nothing.
+        let trimmed = update.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmed, !(1...20).contains(trimmed.count) {
+            throw RepositoryError.api(.invalidBody, message: "name must be 1–20 characters")
         }
-        if let language = update.language {
-            guard ["en", "id"].contains(language) else {
-                throw RepositoryError.api(.invalidBody, message: "language must be en or id")
-            }
-            profile.language = language
+        if let language = update.language, !["en", "id"].contains(language) {
+            throw RepositoryError.api(.invalidBody, message: "language must be en or id")
         }
+        if let trimmed { profile.name = trimmed }
+        if let language = update.language { profile.language = language }
     }
 
     // MARK: Family
@@ -118,7 +125,10 @@ actor MockRepository: ShooRepository {
         guard code.count == 4, code.allSatisfy(\.isASCII), code.allSatisfy(\.isNumber) else {
             throw RepositoryError.api(.codeInvalid, message: "Code must be 4 digits")
         }
-        let guardian = Self.protectedProfile.guardian!
+        guard profile.guardian == nil else {
+            throw RepositoryError.api(.alreadyConnected, message: "Already connected")
+        }
+        let guardian = Self.fixtureGuardian
         profile.guardian = guardian
         return guardian
     }
@@ -154,7 +164,8 @@ actor MockRepository: ShooRepository {
         let owners = try visibleOwners(for: owner)
         let matching = allScans
             .filter { owners.contains($0.ownerDeviceId) && (status == nil || $0.status == status) }
-            .sorted { $0.detectedAt > $1.detectedAt }
+            // Tie-break on id so the index cursor never skips or repeats an item.
+            .sorted { ($0.detectedAt, $0.id) > ($1.detectedAt, $1.id) }
         let start = cursor.flatMap(Int.init) ?? 0
         guard start >= 0, start <= matching.count else {
             throw RepositoryError.api(.invalidBody, message: "Bad cursor")
@@ -207,7 +218,8 @@ actor MockRepository: ShooRepository {
 
     private func visibleOwners(for filter: ScanOwnerFilter) throws -> Set<String> {
         let me = profile.deviceId
-        let family = Set([me] + members.map(\.deviceId) + allScans.map(\.ownerDeviceId))
+        // Only current members: a removed member's scans are gone from the guardian's view.
+        let family = Set([me] + members.map(\.deviceId))
         switch filter {
         case .me:
             return [me]

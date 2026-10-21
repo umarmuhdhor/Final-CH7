@@ -30,8 +30,8 @@ final class AppEnvironment {
         settings.mode = mode
         settings.onboardingCompleted = true
         // Fixtures answer as the chosen identity; the real API knows the mode from the token.
-        if repository is MockRepository {
-            repository = MockRepository(mode: mode)
+        if let mock = repository as? MockRepository {
+            repository = mock.switching(to: mode)
         }
     }
 

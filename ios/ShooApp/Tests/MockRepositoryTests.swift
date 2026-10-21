@@ -62,9 +62,36 @@ struct MockRepositoryTests {
     }
 
     @Test func protectedCannotOpenSomeoneElsesScan() async {
-        await #expect(throws: RepositoryError.self) {
+        await #expect {
             // blocked-verified-scam belongs to dev_dad.
             try await protected().scan(id: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04")
+        } throws: { ($0 as? RepositoryError)?.apiCode == .notFound }
+    }
+
+    @Test func unknownScanIsNotFound() async {
+        await #expect { try await guardian().scan(id: "nope") } throws: { ($0 as? RepositoryError)?.apiCode == .notFound }
+        await #expect { try await guardian().setVerdict(scanId: "nope", value: .safe) } throws: {
+            ($0 as? RepositoryError)?.apiCode == .notFound
+        }
+    }
+
+    @Test func badCursorIsInvalidBody() async {
+        await #expect { try await guardian().scans(owner: .family, status: nil, cursor: "99") } throws: {
+            ($0 as? RepositoryError)?.apiCode == .invalidBody
+        }
+    }
+
+    @Test func removedMemberScansAreNoLongerVisible() async throws {
+        let repo = guardian()
+        try await repo.removeMember(deviceId: "dev_dad")
+        let page = try await repo.scans(owner: .family, status: nil, cursor: nil)
+        #expect(!page.items.contains { $0.ownerDeviceId == "dev_dad" })
+        await #expect { try await repo.scans(owner: .device("dev_dad"), status: nil, cursor: nil) } throws: {
+            ($0 as? RepositoryError)?.apiCode == .notFound
+        }
+        // blocked-verified-scam belongs to dev_dad.
+        await #expect { try await repo.scan(id: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e04") } throws: {
+            ($0 as? RepositoryError)?.apiCode == .notFound
         }
     }
 
@@ -96,11 +123,33 @@ struct MockRepositoryTests {
         ("7777", .tooManyAttempts),
         ("6666", .alreadyConnected),
         ("12a4", .codeInvalid),
+        ("123", .codeInvalid),
+        ("12345", .codeInvalid),
+        ("\u{0661}\u{0662}\u{0663}\u{0664}", .codeInvalid),
     ])
     func joinErrorCodes(code: String, expected: APIErrorCode) async {
         await #expect {
             try await protected().joinFamily(code: code)
         } throws: { ($0 as? RepositoryError)?.apiCode == expected }
+    }
+
+    @Test func joinWhileConnectedIsAlreadyConnected() async {
+        await #expect { try await protected().joinFamily(code: "4821") } throws: {
+            ($0 as? RepositoryError)?.apiCode == .alreadyConnected
+        }
+    }
+
+    @Test func leaveWithoutGuardianIsNotFound() async throws {
+        let repo = protected()
+        try await repo.leaveGuardian()
+        await #expect { try await repo.leaveGuardian() } throws: { ($0 as? RepositoryError)?.apiCode == .notFound }
+    }
+
+    @Test func wrongModeIsForbidden() async {
+        await #expect { try await guardian().joinFamily(code: "4821") } throws: { ($0 as? RepositoryError)?.apiCode == .forbidden }
+        await #expect { try await protected().removeMember(deviceId: "dev_dad") } throws: {
+            ($0 as? RepositoryError)?.apiCode == .forbidden
+        }
     }
 
     @Test func joinWithValidCodeReturnsGuardian() async throws {
@@ -159,6 +208,25 @@ struct MockRepositoryTests {
         await #expect { try await repo.updateMe(DeviceUpdate(language: "fr")) } throws: {
             ($0 as? RepositoryError)?.apiCode == .invalidBody
         }
+    }
+
+    @Test func updateMeIsAllOrNothing() async throws {
+        let repo = guardian()
+        await #expect { try await repo.updateMe(DeviceUpdate(name: "Budi", language: "fr")) } throws: {
+            ($0 as? RepositoryError)?.apiCode == .invalidBody
+        }
+        #expect(try await repo.me().name == "Adhella")
+    }
+
+    @Test func verdictCoversSameDomainAndOwnerAndCanBeReplaced() async throws {
+        let repo = guardian()
+        let blocked = "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+        _ = try await repo.setVerdict(scanId: blocked, value: .notSafe)
+        let replaced = try await repo.setVerdict(scanId: blocked, value: .safe)
+        #expect(try await repo.scan(id: blocked).verdict == replaced)
+        // Other scans (other domains) keep their own verdicts.
+        let others = try await repo.scans(owner: .family, status: nil, cursor: nil).items.filter { $0.id != blocked }
+        #expect(others.allSatisfy { $0.verdict != replaced })
     }
 
     @Test func emptyScenarioHasNothing() async throws {

@@ -44,17 +44,20 @@ enum ScanBadge: Equatable, Sendable {
 }
 
 /// Small capsule with icon + label. Colour is never the only signal: the text is always there.
+/// The label uses `.primary` so it keeps full contrast on the tinted capsule (orange or green
+/// text on a 15 % tint is about 2:1); the colour sits on the icon and the background.
 struct StatusChip: View {
     let badge: ScanBadge
 
     var body: some View {
         Label {
             Text(badge.title)
+                .foregroundStyle(.primary)
         } icon: {
             Image(systemName: badge.systemImage)
+                .foregroundStyle(badge.color)
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(badge.color)
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(badge.color.opacity(0.15), in: Capsule())
