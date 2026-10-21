@@ -31,7 +31,7 @@ struct ProfileView: View {
                 case .failed:
                     Section {
                         Text("Couldn't load your profile").font(.headline)
-                        Button { Task { await model.load() } } label: { Text("Try again") }
+                        Button { Task { await model.retry() } } label: { Text("Try again") }
                     }
                 case .loaded:
                     nameSection
@@ -50,7 +50,11 @@ struct ProfileView: View {
                         .accessibilityIdentifier("profile.done")
                 }
             }
-            .task { await model.load() }
+            .task {
+                // Disconnect / delete hand the app back to onboarding: clear navigation first.
+                model.onSessionEnd = { [router = env.router] in router.reset() }
+                await model.load()
+            }
             .task(id: scenePhase) {
                 if scenePhase == .active { extensionStatus = env.extensionStatus() }
             }
@@ -63,9 +67,15 @@ struct ProfileView: View {
                 // TODO(sync:alief): open Family code (GD-04) — replace after fase 14
                 Text("Family codes are coming soon.")
             }
-            .onChange(of: model.errorMessage) { _, message in
+            .onChange(of: model.nameError) { _, message in
                 guard let message else { return }
                 AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
+            }
+            .alert(
+                Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
+                isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
+            ) {
+                Button("OK", role: .cancel) {}
             }
         }
         // Names and the family list stay out of the app switcher snapshot (D-alief-A36).
@@ -104,7 +114,7 @@ struct ProfileView: View {
                 case .tooLong: Text("Use 20 characters or fewer.")
                 case nil: Text("1–20 characters. Your family sees this name.")
                 }
-                if let message = model.errorMessage {
+                if let message = model.nameError {
                     Text(verbatim: L10n.string(message, language: language))
                         .foregroundStyle(.red)
                         .accessibilityIdentifier("profile.error")
@@ -118,7 +128,7 @@ struct ProfileView: View {
         Section {
             Picker(selection: Binding(
                 get: { env.settings.language },
-                set: { newValue in Task { await model.setLanguage(newValue) } }
+                set: { model.chooseLanguage($0) }
             )) {
                 ForEach(AppLanguage.allCases) { language in
                     Text(Self.spokenName(language)).tag(language)
@@ -126,7 +136,11 @@ struct ProfileView: View {
             } label: {
                 Text("Language")
             }
+            // Both choices always visible: no menu to find, no truncated name at large text sizes.
+            .pickerStyle(.inline)
             .accessibilityIdentifier("languagePicker")
+        } header: {
+            Text("Language")
         } footer: {
             Text("Shoo and its alerts use this language.")
                 .foregroundStyle(.readableSecondary)
@@ -135,17 +149,9 @@ struct ProfileView: View {
 
     private var extensionSection: some View {
         Section {
-            LabeledContent {
-                Label {
-                    Text(extensionStatus.isActive ? "Active" : "Off")
-                } icon: {
-                    Image(systemName: extensionStatus.isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(extensionStatus.isActive ? Color.green : Color.red)
-                        .accessibilityHidden(true)
-                }
-                .foregroundStyle(.primary)
-            } label: {
-                Text("Safari extension")
+            ViewThatFits(in: .horizontal) {
+                HStack { extensionTitle; Spacer(); extensionValue }
+                VStack(alignment: .leading, spacing: 6) { extensionTitle; extensionValue }
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
@@ -155,6 +161,21 @@ struct ProfileView: View {
                     .accessibilityIdentifier("profile.turnOn")
             }
         }
+    }
+
+    private var extensionTitle: some View {
+        Text("Safari extension")
+    }
+
+    private var extensionValue: some View {
+        Label {
+            Text(extensionStatus.isActive ? "Active" : "Off")
+        } icon: {
+            Image(systemName: extensionStatus.isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundStyle(extensionStatus.isActive ? Color.green : Color.red)
+                .accessibilityHidden(true)
+        }
+        .foregroundStyle(.primary)
     }
 
     private var guardianSection: some View {
@@ -208,6 +229,12 @@ struct ProfileView: View {
                 }
                 .accessibilityElement(children: .combine)
             }
+            if model.membersFailed {
+                Button { Task { await model.load() } } label: {
+                    Text("Couldn't load your family. Try again").frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("profile.members.retry")
+            }
             Button { isFamilyCodePresented = true } label: {
                 Label { Text("Family code") } icon: { Image(systemName: "qrcode") }
                     .frame(minHeight: 44)
@@ -246,12 +273,11 @@ struct ProfileView: View {
     }
 
     private func disconnect() async {
-        // The app goes back to Connect: close this sheet with it.
-        if await model.disconnect() { env.router.isProfilePresented = false }
+        _ = await model.disconnect()
     }
 
     private func deleteMyData() async {
-        if await model.deleteMyData() { env.router.isProfilePresented = false }
+        _ = await model.deleteMyData()
     }
 
     /// The language's own name, read by VoiceOver in that language.

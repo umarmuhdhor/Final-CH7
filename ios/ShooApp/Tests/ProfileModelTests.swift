@@ -63,21 +63,43 @@ struct ProfileModelTests {
         model.nameDraft = "Alief"
         #expect(await model.saveName() == false)
         #expect(model.profile?.name == "Adhella")
-        #expect(model.errorMessage != nil)
+        #expect(model.nameError != nil)
     }
 
     @Test func languageChangesAtOnceAndReachesTheServer() async throws {
         let (model, repository, settings) = model(mode: .guardian)
         await model.load()
-        await model.setLanguage(.indonesian)
+        model.chooseLanguage(.indonesian)
         #expect(settings.language == .indonesian)
+        await model.languageTask?.value
+        #expect(try await repository.me().language == "id")
+    }
+
+    @Test func lastLanguageChoiceWins() async throws {
+        let (model, repository, settings) = model(mode: .guardian)
+        await model.load()
+        model.chooseLanguage(.indonesian)
+        model.chooseLanguage(.english)
+        await model.languageTask?.value
+        #expect(settings.language == .english)
+        #expect(try await repository.me().language == "en")
+    }
+
+    @Test func loadResendsALanguageTheServerMissed() async throws {
+        let (model, repository, settings) = model(mode: .guardian)
+        settings.language = .indonesian
+        await model.load()
+        await model.languageTask?.value
         #expect(try await repository.me().language == "id")
     }
 
     @Test func disconnectSendsProtectedBackToConnect() async throws {
         let (model, repository, settings) = model(mode: .protected)
+        var ended = false
+        model.onSessionEnd = { ended = true }
         await model.load()
         #expect(await model.disconnect())
+        #expect(ended)
         #expect(try await repository.me().guardian == nil)
         #expect(!settings.onboardingCompleted)
         #expect(!settings.onboardingConnectPassed)
@@ -98,5 +120,43 @@ struct ProfileModelTests {
         #expect(settings.mode == nil)
         #expect(!settings.onboardingCompleted)
         #expect(try await repository.familyMembers().isEmpty)
+    }
+
+    @Test func disconnectThatAlreadyHappenedCountsAsDone() async throws {
+        let (model, repository, settings) = model(mode: .protected)
+        await model.load()
+        try await repository.leaveGuardian()
+        #expect(await model.disconnect())
+        #expect(!settings.onboardingCompleted)
+    }
+
+    @Test func membersFailingStillShowsTheProfile() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        repository.membersFailure = RepositoryError.network
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), dataDeletionEnabled: false)
+        await model.load()
+        #expect(model.state == .loaded)
+        #expect(model.profile?.name == "Adhella")
+        #expect(model.membersFailed)
+    }
+
+    @Test func editingTheNameClearsTheOldError() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), dataDeletionEnabled: false)
+        await model.load()
+        repository.updateFailure = RepositoryError.network
+        model.nameDraft = "Alief"
+        _ = await model.saveName()
+        #expect(model.nameError != nil)
+        model.nameDraft = "Alie"
+        #expect(model.nameError == nil)
+    }
+
+    @Test func reloadKeepsANameBeingEdited() async {
+        let (model, _, _) = model(mode: .guardian)
+        await model.load()
+        model.nameDraft = "Ali"
+        await model.load()
+        #expect(model.nameDraft == "Ali")
     }
 }

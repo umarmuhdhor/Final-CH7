@@ -281,6 +281,16 @@
         }
       }
     },
+    "Couldn't load your family. Try again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat keluarga. Coba lagi"
+          }
+        }
+      }
+    },
     "Couldn't load your profile": {
       "localizations": {
         "id": {

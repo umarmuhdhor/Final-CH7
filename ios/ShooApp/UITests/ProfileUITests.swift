@@ -41,7 +41,6 @@ final class ProfileUITests: XCTestCase {
     @MainActor
     func testLanguageSwitchesTheWholeAppAtOnce() {
         let app = openProfile(mode: "guardian")
-        app.buttons["languagePicker"].tap()
         let indonesian = app.buttons["Bahasa Indonesia"]
         XCTAssertTrue(indonesian.waitForExistence(timeout: 5), app.debugDescription)
         indonesian.tap()
@@ -52,7 +51,7 @@ final class ProfileUITests: XCTestCase {
 
         // Back to English for the next run.
         app.buttons["profileButton"].tap()
-        app.buttons["languagePicker"].tap()
+        XCTAssertTrue(app.buttons["English"].waitForExistence(timeout: 5))
         app.buttons["English"].tap()
         XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 5))
     }

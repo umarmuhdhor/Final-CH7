@@ -26,6 +26,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     var failure: (any Error)?
     /// `updateMe` throws this.
     var updateFailure: (any Error)?
+    /// `familyMembers` throws this.
+    var membersFailure: (any Error)?
     /// Only `scans` for this owner throw `RepositoryError.network`.
     var failingOwner: ScanOwnerFilter?
 
@@ -55,7 +57,10 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     }
     func createFamilyCode() async throws -> FamilyCode { try await base.createFamilyCode() }
     func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
-    func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
+    func familyMembers() async throws -> [FamilyMember] {
+        if let membersFailure { throw membersFailure }
+        return try await base.familyMembers()
+    }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
     func leaveGuardian() async throws { try await base.leaveGuardian() }
     func deleteMe() async throws { try await base.deleteMe() }

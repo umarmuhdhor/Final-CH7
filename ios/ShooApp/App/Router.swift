@@ -30,6 +30,13 @@ final class Router {
         activityPath.removeAll()
     }
 
+    /// Back to a fresh start (disconnect, delete my data): no pushed screens, no sheet, first tab.
+    func reset() {
+        popToRoot()
+        selectedTab = .shield
+        isProfilePresented = false
+    }
+
     private func append(_ route: Route) {
         switch selectedTab {
         case .shield: shieldPath.append(route)

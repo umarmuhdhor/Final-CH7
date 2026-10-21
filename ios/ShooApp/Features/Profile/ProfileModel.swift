@@ -15,10 +15,21 @@ final class ProfileModel {
     private(set) var profile: DeviceProfile?
     /// Guardian only: the people connected (x/3).
     private(set) var members: [FamilyMember] = []
+    /// The family list could not be read; the rest of Profile still works.
+    private(set) var membersFailed = false
     private(set) var isWorking = false
-    /// Last failure in plain words; cleared by the next action.
-    private(set) var errorMessage: String.LocalizationValue?
-    var nameDraft = ""
+    /// Why the name was not saved; cleared as soon as the name is edited.
+    private(set) var nameError: String.LocalizationValue?
+    /// Disconnect / delete / language failures, shown as an alert.
+    var actionError: String.LocalizationValue?
+    var nameDraft = "" {
+        didSet { if nameDraft != oldValue { nameError = nil } }
+    }
+    /// The running language sync; a newer choice cancels it.
+    private(set) var languageTask: Task<Void, Never>?
+    /// Called right before disconnect or delete hands the app back to onboarding
+    /// (close the sheet, clear pushed screens).
+    @ObservationIgnored var onSessionEnd: () -> Void = {}
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let settings: AppSettings
@@ -44,21 +55,39 @@ final class ProfileModel {
     func load() async {
         do {
             let me = try await repository.me()
-            members = settings.mode == .guardian ? try await repository.familyMembers() : []
+            // Keep a name the user is still editing.
+            if nameDraft.isEmpty || nameDraft == profile?.name { nameDraft = me.name }
             profile = me
-            nameDraft = me.name
             state = .loaded
+            // The server missed the last language change (offline then): send it again.
+            if me.language != settings.language.code { chooseLanguage(settings.language, force: true) }
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Profile load failed", error)
             if state != .loaded { state = .failed }
+            return
         }
+        guard settings.mode == .guardian else { return }
+        do {
+            members = try await repository.familyMembers()
+            membersFailed = false
+        } catch {
+            guard !error.isCancellation else { return }
+            Log.ui.error("Profile members failed", error)
+            membersFailed = true
+        }
+    }
+
+    /// "Try again": shows the spinner while it retries.
+    func retry() async {
+        state = .loading
+        await load()
     }
 
     /// Saves the edited name; `false` when it breaks the rule or the server says no (old name stays).
     func saveName() async -> Bool {
         guard case .success(let trimmed) = NameRule.validate(nameDraft), !isWorking else { return false }
-        errorMessage = nil
+        nameError = nil
         isWorking = true
         defer { isWorking = false }
         do {
@@ -68,60 +97,68 @@ final class ProfileModel {
             return true
         } catch {
             Log.ui.error("Name save failed", error)
-            errorMessage = "Couldn't save. Check your connection and try again."
+            nameError = "Couldn't save. Check your connection and try again."
             return false
         }
     }
 
     /// The app switches at once; the server learns it for localized pushes (D-alief-05).
-    func setLanguage(_ language: AppLanguage) async {
-        guard language != settings.language else { return }
+    /// Only the newest choice is sent.
+    func chooseLanguage(_ language: AppLanguage, force: Bool = false) {
+        guard force || language != settings.language else { return }
         settings.language = language
-        errorMessage = nil
-        do {
-            try await repository.updateMe(DeviceUpdate(language: language.code))
-            profile?.language = language.code
-        } catch {
-            // The app keeps the choice; pushes stay in the old language until the next save.
-            Log.ui.error("Language save failed", error)
-            errorMessage = "Couldn't save. Check your connection and try again."
+        languageTask?.cancel()
+        languageTask = Task { [repository] in
+            do {
+                try await repository.updateMe(DeviceUpdate(language: language.code))
+                guard !Task.isCancelled else { return }
+                profile?.language = language.code
+            } catch {
+                guard !Task.isCancelled, !error.isCancellation else { return }
+                // The app keeps the choice; `load()` sends it again next time.
+                Log.ui.error("Language save failed", error)
+                actionError = "Couldn't save. Check your connection and try again."
+            }
         }
     }
 
     /// Protected leaves their guardian (`DELETE /family/guardian`) and goes back to Connect.
     func disconnect() async -> Bool {
         guard showsDisconnect, !isWorking else { return false }
-        errorMessage = nil
         isWorking = true
         defer { isWorking = false }
         do {
             try await repository.leaveGuardian()
-            profile?.guardian = nil
-            settings.onboardingConnectPassed = false
-            settings.onboardingCompleted = false
-            return true
+        } catch RepositoryError.api(.notFound, _) {
+            // Already disconnected (an earlier answer got lost): same end state.
         } catch {
             Log.ui.error("Disconnect failed", error)
-            errorMessage = "Couldn't disconnect. Check your connection and try again."
+            actionError = "Couldn't disconnect. Check your connection and try again."
             return false
         }
+        onSessionEnd()
+        settings.onboardingConnectPassed = false
+        settings.onboardingCompleted = false
+        return true
     }
 
     /// SECURITY §3 P3: gone on the server first, then a fresh install here (onboarding from the start).
     func deleteMyData() async -> Bool {
         guard canDeleteData, !isWorking else { return false }
-        errorMessage = nil
         isWorking = true
         defer { isWorking = false }
         do {
             try await repository.deleteMe()
-            // TODO(sync:alief): also clear the Keychain token and App Group session keys — replace after fase 13
-            settings.reset()
-            return true
+        } catch RepositoryError.api(.notFound, _), RepositoryError.api(.unauthorized, _) {
+            // Already deleted (an earlier answer got lost): same end state.
         } catch {
             Log.ui.error("Delete data failed", error)
-            errorMessage = "Couldn't delete your data. Check your connection and try again."
+            actionError = "Couldn't delete your data. Check your connection and try again."
             return false
         }
+        // TODO(sync:alief): also clear the Keychain token and App Group session keys — replace after fase 13
+        onSessionEnd()
+        settings.reset()
+        return true
     }
 }
