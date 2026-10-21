@@ -1,0 +1,5 @@
+# Copy to backend/api/.dev.vars (gitignored) for `pnpm -C backend/api dev`.
+# Local values only. Cloud values are set with `npx wrangler secret put <NAME>`.
+INVITE_BASE_URL=http://localhost:8787
+APNS_SPIKE=0
+SPIKE_KEY=

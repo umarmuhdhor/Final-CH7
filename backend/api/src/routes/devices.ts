@@ -1,0 +1,69 @@
+import { Hono } from "hono";
+import { z } from "zod";
+import type { AppEnv } from "../env";
+import { insertDevice, updateDevice } from "../db/repo/devices";
+import { requireDevice } from "../http/auth";
+import { base64url, randomBytes, sha256 } from "../http/crypto";
+import { errors } from "../http/errors";
+import { clientIp, hit, limits } from "../http/rateLimit";
+import { codePoints, readJson } from "../http/validate";
+
+const name = z
+  .string()
+  .trim()
+  .refine((s) => codePoints(s) >= 1 && codePoints(s) <= 20, "must be 1-20 characters");
+// APNs device tokens are hex; Apple says not to assume a fixed length.
+const apnsToken = z.string().regex(/^[0-9a-fA-F]{32,200}$/, "must be a hex APNs token");
+
+const createBody = z.object({
+  name,
+  mode: z.enum(["guardian", "protected"]),
+  apnsToken: apnsToken.optional(),
+});
+
+const patchBody = z.object({
+  name: name.optional(),
+  apnsToken: apnsToken.nullable().optional(),
+  language: z.enum(["en", "id"]).optional(),
+  extensionLastSeenAt: z.iso.datetime({ offset: true }).optional(),
+});
+
+const FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+export const devices = new Hono<AppEnv>();
+
+devices.post("/devices", async (c) => {
+  const sql = c.get("sql");
+  await hit(sql, limits.createDevice, clientIp((n) => c.req.header(n)));
+  const body = await readJson(c, createBody);
+
+  const token = `shoo_${base64url(randomBytes(32))}`;
+  const avatarId = `avatar_${String((randomBytes(1)[0]! % 12) + 1).padStart(2, "0")}`;
+  const deviceId = await insertDevice(sql, {
+    name: body.name,
+    mode: body.mode,
+    avatarId,
+    apnsToken: body.apnsToken ?? null,
+    tokenHash: await sha256(token),
+  });
+  // The plain token exists only in this response (D-alief-10).
+  return c.json({ deviceId, token, avatarId }, 201);
+});
+
+devices.patch("/devices/me", requireDevice, async (c) => {
+  const body = await readJson(c, patchBody);
+  let seen: Date | undefined;
+  if (body.extensionLastSeenAt !== undefined) {
+    seen = new Date(body.extensionLastSeenAt);
+    if (seen.getTime() > Date.now() + FUTURE_SKEW_MS) {
+      throw errors.invalidBody("extensionLastSeenAt: must not be in the future");
+    }
+  }
+  await updateDevice(c.get("sql"), c.get("principal").deviceId, {
+    name: body.name,
+    apnsToken: body.apnsToken,
+    language: body.language,
+    extensionLastSeenAt: seen,
+  });
+  return c.json({ ok: true });
+});

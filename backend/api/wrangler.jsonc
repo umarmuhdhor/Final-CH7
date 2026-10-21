@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shoo-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "hyperdrive": [
+    {
+      "binding": "DB",
+      // Placeholder until manual step 3 (fase 07) creates `shoo-db` with --caching-disabled.
+      // The id is not a secret. The cloud connection string never appears in this repo.
+      "id": "00000000000000000000000000000000",
+      // Local Supabase (supabase start). Dev-only password from db/supabase/seed.sql.
+      "localConnectionString": "postgres://shoo_api:shoo_api_local@127.0.0.1:54322/postgres"
+    }
+  ],
+  "vars": {
+    // Cloud value set in manual step 4: https://shoo-api.<account>.workers.dev
+    "INVITE_BASE_URL": "http://localhost:8787",
+    // "1" only during the fase 07 APNs spike; removed in fase 11.
+    "APNS_SPIKE": "0"
+  },
+  "triggers": { "crons": [] }
+}
