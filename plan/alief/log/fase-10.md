@@ -2,7 +2,7 @@
 
 | Field | Nilai |
 |---|---|
-| Status | `[~]` sedang dikerjakan |
+| Status | `[m]` berhenti di LANGKAH MANUAL (migrasi + deploy + uji cloud). Belum ada PR |
 | Track / branch | be · `feat/BE-verdicts` (worktree sesi `happy-mcnulty-9fc732`) |
 | Basis | ditumpuk di atas `feat/BE-scans` (PR #13, stacked on #11) → PR nanti menulis "Stacked on #13" |
 | Mulai | 21 Okt 2026 ±23:55 WITA |
@@ -20,7 +20,7 @@ Rencana lengkap: [`fase-10-plan.md`](fase-10-plan.md). `POST /verdicts` (Guardia
 - [x] 4. `GET /verdicts?domain=`: normalisasi, `{ verdict | null }` untuk owner = saya, 10/10 s + `Retry-After`
 - [x] 5. `GET /blocklist`: integrasi verdict → antrean → disetujui → muncul; dihapus → `removed[]`, tidak dihidupkan lagi oleh verdict baru
 - [x] 6. ScanResult memakai verdict asli; cocok dua fixture
-- [ ] 7. Review berurutan: security (T5, T10) → TypeScript → database → cek P1–P13
+- [x] 7. Review berurutan: security (T5, T10) → TypeScript → database → cek P1–P13 (tabel di bawah)
 - [ ] 8. LANGKAH MANUAL (di bawah) — menunggu Alief
 
 ## File dibuat / diubah
@@ -32,7 +32,10 @@ Rencana lengkap: [`fase-10-plan.md`](fase-10-plan.md). `POST /verdicts` (Guardia
 
 ## Hasil verifikasi (lokal)
 
-VERIFIKASI_PLACEHOLDER
+- `(cd backend/db && supabase db reset && supabase test db)` → **PASS, 77 test** (5 file; baru `verdicts.test.sql`: kolom `global_eligible`, default, index `verdicts_eligible_domain`, CHECK `verdicts_eligible_not_safe`).
+- `pnpm -C backend/api exec tsc --noEmit --noUnusedLocals` → bersih. `pnpm -C backend/api test` → **16 file, 242 test lulus** (baru: `verdicts.test.ts` 47, `allowlist.test.ts` 13).
+- Semua test wajib file fase ada: Protected → 403; Guardian lain → 403 `verdict_not_allowed`; scan tidak ada → 404; warning → 409; keputusan terakhir menang; berlaku untuk scan lain domain sama pemilik sama, tidak untuk pemilik lain; `www.Example.com` = `example.com`; not_safe Protected → antrean `approved_at` null, tidak di `/blocklist`; disetujui → muncul, `nextSince` maju; verdict lama disetujui belakangan muncul di refresh inkremental; Guardian + scan palsu sendiri → tanpa entri; Guardian + Protected penyerang → menunggu review; allowlist tidak pernah antre; `removed_at` → hilang dari penuh, muncul di `removed[]`; warning di domain ber-verdict tetap `null`. **Diubah** (D-alief-B10 d, privasi): "disconnect setelah verdict → `global_eligible` tetap" diganti "disconnect menghapus verdict Guardian lama; entri yang disetujui tetap tersaji".
+- Cloud: belum (LANGKAH MANUAL di bawah).
 
 ## DoD
 
@@ -42,7 +45,33 @@ VERIFIKASI_PLACEHOLDER
 
 ## Review
 
-REVIEW_PLACEHOLDER
+Berurutan, satu per satu (aturan Alief).
+
+| Reviewer | CRITICAL | HIGH | MEDIUM | Diperbaiki | Commit |
+|---|---|---|---|---|---|
+| `ecc:security-reviewer` | 0 | 1 | 4 | H: verdict + nama/id Guardian lama tetap terbaca setelah disconnect (P13) → verdict dihapus saat putus hubungan dan `DELETE /devices/me`, `families` dihitung ulang. M: link dibaca `for share` (urutan lock link → domain); `families` dihitung ulang saat device dihapus; maks 10 domain baru per Guardian per 24 jam; lookup 30/10 s. L: FK race → 404; sufiks publik/host bersama tidak antre | `2a8f6b9` |
+| `ecc:typescript-reviewer` | 0 | 0 | 2 | M: lock antrean per Guardian (`(5, guardian)`) agar batas tahan paralel (test 15 paralel → 10); baris antrean tanpa dukungan dan belum disetujui dihapus (domain riwayat browsing tidak disimpan tanpa guna). L: urutan lock domain per kunci hash, kurung di fragmen `where`, `PostgresError`, retry sekali untuk 40P01/40001, titik akhir domain ditoleransi, daftar sufiks diperluas, `ISO_MS` dibagi | `4e19dde` |
+| `ecc:database-reviewer` | 0 | 0 | 2 | M: konfirmasi ulang domain yang sudah antre tidak gugur karena batas. L: upsert/update tanpa tulis ulang sia-sia; CHECK `global_eligible` hanya untuk `not_safe` (+ pgTAP). M lain (deadlock cron retensi vs `deleteDevice`) → catatan handoff fase 12 | commit fase 10 terakhir |
+
+Ditunda (dicatat): 403 vs 404 membuka keberadaan UUID scan (urutan kontrak); `families` bisa digelembungkan banyak pasangan device (review manual = gerbang; SECURITY T5); index `verdicts_not_safe` mungkin tidak terpakai lagi (cek `pg_stat_user_indexes` di fase 12); daftar sufiks publik subset PSL.
+
+### Cek privasi Apple P1–P13 (D-alief-40)
+
+| # | Hasil | Bukti |
+|---|---|---|
+| P1 Privacy manifest | N/A (tanpa perubahan iOS) | — |
+| P2 Label privasi | OK: tidak ada jenis data baru (domain = Browsing History, nama Guardian = Name, sudah ada); tanpa SDK pihak ketiga | — |
+| P3 Hapus data | OK: `DELETE /devices/me` menghapus verdict milik/dibuat device, menghitung ulang antrean, menghapus baris antrean tanpa dukungan | `verdicts.test.ts` "DELETE /devices/me …" |
+| P4 Keychain | N/A | — |
+| P5 ATS | OK (HTTPS Worker) | — |
+| P6 Log | OK: route baru tidak menulis log; error handler hanya pola route; domain di query tidak tercatat (invocation logs mati, D-alief-B09) | `src/routes/verdicts.ts` |
+| P7 Izin | N/A | — |
+| P8 Pasteboard | N/A | — |
+| P9 Screenshot di app | N/A | — |
+| P10 Push | N/A (verdict tidak mengirim push) | — |
+| P11 Export compliance | N/A | — |
+| P12 Kebijakan privasi | Catatan untuk fase 12/16: domain yang di-Not safe dari keluarga terhubung bisa masuk antrean review global (tanpa id/nama), disetujui manual | — |
+| P13 Hapus = langsung hilang | **Pelanggaran ditemukan (TINGGI) dan diperbaiki:** setelah putus hubungan, verdict + nama/id Guardian lama tetap terbaca oleh member → sekarang dihapus seketika. Antrean domain tanpa dukungan dihapus. Respons `private, no-store` (default middleware) | `verdicts.test.ts` "disconnect (…)", `cache-headers.test.ts` |
 
 ## Deviasi
 
@@ -97,5 +126,5 @@ Dari root worktree, branch `feat/BE-verdicts`. Tidak ada secret baru. Domain uji
 ## Catatan handoff
 
 - Fase 11: `POST /verdicts` tidak mengirim push (kontrak hanya push untuk scan). `decideVerdict` mengembalikan verdict saja.
-- Fase 12: retensi tidak menghapus `verdicts` (D-alief-14); `scan_id` jadi null lewat `on delete set null`. Baris `rate_limit_hits` bucket `verdicts_get` tumbuh cepat (polling 5 s) → retensi 1 hari wajib.
+- Fase 12: retensi tidak menghapus `verdicts` (D-alief-14); `scan_id` jadi null lewat `on delete set null`. **Urutan lock:** cron harus `update verdicts set scan_id = null where scan_id in (…)` **dulu**, baru `delete from scans` (urutan verdict → scan seperti `decideVerdict` dan `deleteDevice`), batch kecil + `lock_timeout`; tanpa itu bisa deadlock dengan `DELETE /devices/me` (review database fase 10 M1). Cek `pg_stat_user_indexes` untuk `verdicts_not_safe` (mungkin dihapus). Baris `rate_limit_hits` bucket `verdicts_get` tumbuh cepat (polling 5 s) → retensi 1 hari wajib.
 - D9 (review antrean harian) aktif sejak deploy fase 10.

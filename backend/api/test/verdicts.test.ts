@@ -345,6 +345,16 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect((await entry("cap0.example"))?.families).toBe(1);
   });
 
+  it("re-confirming an already queued domain keeps it queued even when the cap is full", async () => {
+    const { g, p } = await family();
+    const old = await scan(p, blocked92 as Fixture, "old-queued.example");
+    await verdict(g, old, "not_safe");
+    await sql`update verdicts set decided_at = now() - interval '2 days' where domain = 'old-queued.example'`;
+    for (let i = 0; i < 10; i++) await verdict(g, await scan(p, blocked92 as Fixture, `new${i}.example`), "not_safe");
+    await verdict(g, old, "not_safe");
+    expect((await entry("old-queued.example"))?.families).toBe(1);
+  });
+
   it("the queue cap holds under parallel verdicts", async () => {
     const g = await createDevice("G", "guardian");
     const members = [await createDevice("A"), await createDevice("B"), await createDevice("C")];

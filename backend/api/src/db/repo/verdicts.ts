@@ -53,25 +53,41 @@ export async function decideVerdict(
     if (eligible) await tx`select pg_advisory_xact_lock(5, hashtext(${guardian.deviceId}))`;
     await lockDomain(tx, scan.domain);
     if (eligible) {
+      // Re-confirming a domain this owner already has queued is not a new one: keep it.
+      const [prev] = await tx<{ e: boolean }[]>`
+        select global_eligible as e from verdicts where owner_id = ${scan.ownerId} and domain = ${scan.domain}`;
+      if (prev?.e) return upsert(tx, scan, scanId, guardian, value, true);
       const [q] = await tx<{ n: number }[]>`
         select count(distinct domain)::int as n from verdicts
         where by_device_id = ${guardian.deviceId} and global_eligible and value = 'not_safe'
           and decided_at > now() - interval '24 hours' and domain <> ${scan.domain}`;
       eligible = q!.n < QUEUE_CAP_PER_DAY; // count(*) always returns one row
     }
-    const [row] = await tx<Verdict[]>`
-      insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name, decided_at, global_eligible)
-      values (${scan.ownerId}, ${scan.domain}, ${value}, ${scanId}, ${guardian.deviceId}, ${guardian.name},
-              clock_timestamp(), ${eligible})
-      on conflict (owner_id, domain) do update
-        set value = excluded.value, scan_id = excluded.scan_id, by_device_id = excluded.by_device_id,
-            by_name = excluded.by_name, decided_at = excluded.decided_at, global_eligible = excluded.global_eligible
-      returning value, by_device_id as "byDeviceId", by_name as "byName",
-                to_char(decided_at at time zone 'UTC', ${tx.unsafe(ISO_MS)}) as "decidedAt"`;
-    await recountFamilies(tx, scan.domain);
-    return { verdict: row! };
+    return upsert(tx, scan, scanId, guardian, value, eligible);
   });
 }
+
+async function upsert(
+  tx: TransactionSql,
+  scan: { ownerId: string; domain: string },
+  scanId: string,
+  guardian: { deviceId: string; name: string },
+  value: VerdictValue,
+  eligible: boolean,
+): Promise<VerdictResult> {
+  const [row] = await tx<Verdict[]>`
+    insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name, decided_at, global_eligible)
+    values (${scan.ownerId}, ${scan.domain}, ${value}, ${scanId}, ${guardian.deviceId}, ${guardian.name},
+            clock_timestamp(), ${eligible})
+    on conflict (owner_id, domain) do update
+      set value = excluded.value, scan_id = excluded.scan_id, by_device_id = excluded.by_device_id,
+          by_name = excluded.by_name, decided_at = excluded.decided_at, global_eligible = excluded.global_eligible
+    returning value, by_device_id as "byDeviceId", by_name as "byName",
+              to_char(decided_at at time zone 'UTC', ${tx.unsafe(ISO_MS)}) as "decidedAt"`;
+  await recountFamilies(tx, scan.domain);
+  return { verdict: row! };
+}
+
 
 /**
  * R2 §5 butir 2–3: queue a domain once it has an eligible not_safe verdict; otherwise only keep
@@ -84,12 +100,13 @@ async function recountFamilies(tx: TransactionSql, domain: string): Promise<void
     where domain = ${domain} and value = 'not_safe' and global_eligible`;
   if (c!.n > 0) {
     await tx`insert into blocklist_entries (domain, families) values (${domain}, ${c!.n})
-             on conflict (domain) do update set families = excluded.families`;
+             on conflict (domain) do update set families = excluded.families
+             where blocklist_entries.families is distinct from excluded.families`;
   } else {
     // A queued domain nobody supports any more is browsing history without a purpose (D-alief-40):
     // drop it. Approved or removed rows are the reviewer's record and stay.
     await tx`delete from blocklist_entries where domain = ${domain} and approved_at is null and removed_at is null`;
-    await tx`update blocklist_entries set families = 0 where domain = ${domain}`;
+    await tx`update blocklist_entries set families = 0 where domain = ${domain} and families <> 0`;
   }
 }
 
