@@ -65,7 +65,7 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 2. Published: only after manual approval by Alief/Umar. `addedAt` = approval time; `nextSince` follows it.
 3. Removed: optional `removed[]` lists domains taken off the list since `since`. Until clients handle it, do a full refresh (no `since`) once a day.
 
-The detector (Team AI) downloads this list and refreshes it periodically; it never sends the visited URL to check one domain.
+The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
 
 ### Push payloads (APNs)
 ```json
