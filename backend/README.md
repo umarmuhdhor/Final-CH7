@@ -1,3 +1,87 @@
 # backend
 
-API for devices, family, scans, verdicts, push. Spec: contracts/api.md. Stack: Team App's choice (Supabase recommended) — document setup here.
+API for devices, family, scans, verdicts, push. Spec: `contracts/api.md` (source of truth for every JSON shape).
+
+Stack: Cloudflare Worker `shoo-api` (Hono, zod, postgres.js) → Hyperdrive (`--caching-disabled`) → Supabase Postgres + private Storage bucket `screenshots`. Plan: `plan/alief/ARCHITECTURE.md`.
+
+```text
+backend/
+├── api/            Worker (TypeScript). src/{app,env,index}.ts, routes/, http/, db/, services/
+├── db/supabase/    config.toml, migrations/, tests/ (pgTAP), seed.sql (local only)
+└── ci/             draft GitHub Action (inert, see ci/README.md)
+```
+
+## Local setup
+
+Needs Node 24, pnpm, Docker, Supabase CLI. Run from the repo root.
+
+```bash
+(cd backend/db && supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,realtime,postgres-meta,supavisor)
+(cd backend/db && supabase db reset && supabase test db)   # migrations + seed + pgTAP
+pnpm -C backend/api install
+pnpm -C backend/api typecheck && pnpm -C backend/api test  # vitest inside workerd, against local Postgres
+cp backend/api/.dev.vars.example backend/api/.dev.vars     # once
+pnpm -C backend/api dev                                    # http://localhost:8787
+```
+
+- The Worker reaches local Postgres through the Hyperdrive binding `DB` (`localConnectionString` in `api/wrangler.jsonc`) as role `shoo_api` with the dev-only password `shoo_api_local` from `seed.sql`.
+- Tests empty all tables before each test (`api/test/helpers/resetDb.ts`). Run `supabase db reset` to get the seed data back.
+- Seed devices (local only): `dev_me` (guardian), `dev_mom`, `dev_dad` (protected). Bearer value `shoo_local_<id>`, e.g. `curl localhost:8787/blocklist -H "authorization: Bearer shoo_local_dev_me"`.
+
+## Endpoints (so far)
+
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/healthz` | – | `{ ok: true }`, no DB |
+| GET | `/healthz/db` | – | writes `ops_heartbeat` (keeps Supabase Free awake), 1/min per IP |
+| POST | `/devices` | – | `{ name, mode, apnsToken? }` → `201 { deviceId, token, avatarId }`; 10/h per IP |
+| PATCH | `/devices/me` | Bearer | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` → `{ ok: true }` |
+| GET | `/blocklist?since=` | Bearer | approved global domains; `removed[]` only with `since`; `nextSince` has microseconds |
+| POST | `/debug/apns-spike` | `x-spike-key` | fase 07 spike only, 404 unless `APNS_SPIKE=1` (removed in fase 11) |
+
+Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
+
+## Schema summary
+
+Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql` (details: `plan/alief/ref/R2-skema-db.md`).
+
+| Table | Purpose |
+|---|---|
+| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt` |
+| `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
+| `family_codes`, `join_attempts` | 4-digit codes (60 s) and join attempts for rate limiting (fase 08) |
+| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.` (fase 09) |
+| `verdicts` | one per (owner, domain), last decision wins (fase 10) |
+| `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served |
+| `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
+| `push_log` | push results for debugging and QA (fase 11) |
+| `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP |
+
+Access: role `shoo_api` (no password in migrations) has CRUD on these tables only. `anon`/`authenticated` have no grants; RLS is on everywhere with a single `shoo_api` policy. No RPCs: the Worker uses plain SQL through postgres.js tagged templates.
+
+Approving a blocklist domain (Supabase SQL editor). A trigger stamps `approved_at`/`removed_at` with `clock_timestamp()` on every UPDATE, so bulk approvals and re-approvals after a removal page correctly:
+
+```sql
+select domain, families, first_seen_at from blocklist_entries
+ where approved_at is null and removed_at is null and families > 0 order by families desc, first_seen_at;
+update blocklist_entries set approved_at = now(), approved_by = 'alief' where domain = 'example-scam.id';
+update blocklist_entries set removed_at = now() where domain = 'false-positive.id';       -- take one off
+update blocklist_entries set removed_at = null where domain = 'false-positive.id';        -- put it back (new addedAt)
+```
+
+## Env
+
+Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secret put <NAME>` (cloud) or `api/.dev.vars` (local, gitignored). Full list: `plan/alief/ref/R3-catatan-api.md` §7.
+
+| Name | Kind | Now |
+|---|---|---|
+| `DB` | Hyperdrive binding | `shoo-db` (id filled in at first deploy) |
+| `INVITE_BASE_URL` | var | Worker URL (used from fase 08) |
+| `APNS_SPIKE` | var | `"1"` only during the fase 07 spike |
+| `SPIKE_KEY` | secret | header `x-spike-key` for the spike |
+
+## Deploy (manual until the GitHub Action is on)
+
+Cloud actions are always done by a person (plan/alief/README.md §6 rule 9). Step-by-step checklist: `plan/alief/log/fase-07.md` "LANGKAH MANUAL".
+
+Cloud URL: _filled in after the first deploy_ (shared with Imelda, TODO C7).

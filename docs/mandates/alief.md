@@ -46,7 +46,7 @@ Layout dan copy final mengikuti designer. Wireframe di PRD bagian 7 hanya refere
 
 ### Fase B · Backend — `backend/`
 Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk JSON **wajib** sama dengan `contracts/api.md`.
-- [ ] **Devices:** `POST /devices`, `PATCH /devices/me`, auth token per perangkat (tanpa login)
+- [x] **Devices:** `POST /devices`, `PATCH /devices/me`, auth token per perangkat (tanpa login)
 - [ ] **Family:** `POST /family/code` (4 digit, berlaku 60 detik, batas jumlah percobaan), `POST /family/join`, `GET/DELETE /family/members`, `DELETE /family/guardian`, maks. 3 orang per guardian
 - [ ] **Scans:** `POST /scans` (+ upload screenshot), `GET /scans` dengan filter + cursor, `GET /scans/{id}`
 - [ ] **Verdicts:** `POST /verdicts` (berlaku per domain), `GET /verdicts?domain=`
