@@ -1,6 +1,6 @@
 # Log fase 05 — Guardian & Family mode: GD-01, GD-02, GD-03, GD-05 (Alief, track app)
 
-- **Status:** [r] — PR `feat/GD-family-mode`, reviewer @umarmuhdhor. **Stacked on #19** (fase 04) → #18 → #14. Fase 02 (#16) belum di rantai (digabung ke cabang fase 06 sebelum 06Q).
+- **Status:** [r] — PR #21 `feat/GD-family-mode`, reviewer @umarmuhdhor. **Stacked on #19** (fase 04) → #18 → #14. Fase 02 (#16) belum di rantai (digabung ke cabang fase 06 sebelum 06Q).
 - **Model:** Claude Opus 5.5, mode auto. Mulai dan selesai 22 Okt 2026.
 - **Rencana:** `log/fase-05-plan.md`. Sumber: `fase-05-guardian-family.md`, PRD §8.3, fixture `family-members.json`, `activity-family.json`.
 
