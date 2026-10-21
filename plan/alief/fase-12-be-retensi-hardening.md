@@ -40,7 +40,7 @@ gitleaks detect --source . --no-banner   # harus 0 temuan
 
 ## Kriteria selesai (DoD)
 
-- [ ] Retensi terbukti (test + trigger lokal) dan cron terdaftar di cloud (screenshot dashboard Worker → Settings → Triggers), satu run cloud tercatat di `ops_heartbeat` (query SQL editor).
+- [ ] Retensi terbukti (test + trigger lokal) dan cron terdaftar di cloud (screenshot dashboard Worker → Settings → Triggers), satu run cloud cron tercatat di `ops_heartbeat` dengan `source = 'cron'` (query SQL editor) + baris "Cron Events" di dashboard / `wrangler tail` dengan jumlah baris terhapus.
 - [ ] Tidak ada temuan CRITICAL/HIGH terbuka.
 - [ ] Uji asap cloud (deploy branch fase 12) lulus. G6 terpenuhi setelah semua PR 07–12 di-merge Umar + D8 (diperbarui di PROMPT langkah 1).
 - [ ] `gitleaks` 0 temuan.

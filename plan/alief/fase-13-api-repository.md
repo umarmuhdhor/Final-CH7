@@ -44,8 +44,8 @@ source plan/alief/ref/sim.sh
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
 # simulator + backend lokal
 (cd backend/db && supabase start) && (pnpm -C backend/api dev > /tmp/shoo-dev.log 2>&1 &) && pnpm -C backend/api exec wait-on tcp:8787
-# cek App Group (AppGroup.id = group.com.shoo.app): container data app di simulator
-plutil -p "$(xcrun simctl get_app_container booted com.shoo.app group.com.shoo.app)/Library/Preferences/group.com.shoo.app.plist"
+# cek App Group: $BUNDLE_ID / $APP_GROUP dari sim.sh (per developer, L0)
+plutil -p "$(xcrun simctl get_app_container booted "$BUNDLE_ID" "$APP_GROUP")/Library/Preferences/$APP_GROUP.plist"
 pkill -f "wrangler dev" || true   # setelah uji manual selesai
 ```
 

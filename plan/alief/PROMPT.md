@@ -20,7 +20,7 @@ Saya Alief, track spike. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode aut
 Pertama kali? Jalankan dulu [`VERIFY_PROMPT.md`](VERIFY_PROMPT.md) (AI membaca plan tanpa mengubah apa pun).
 
 AI akan:
-- menangani dulu PR fase track itu yang diminta perubahan oleh Umar, lalu melanjutkan fase `[~]`/`[m]` kalau ada, kalau tidak memilih fase `[ ]` pertama di `PROGRESS.md`,
+- menangani dulu komentar/review baru Umar di PR fase track itu, lalu melanjutkan fase `[~]`/`[m]` kalau ada, kalau tidak memilih fase `[ ]` pertama di `PROGRESS.md`,
 - membuat branch fase dari `origin/main` (atau menumpuk di atas PR fase sebelumnya yang belum di-merge),
 - mengerjakan fase sampai selesai, membuka PR ke `main` dengan reviewer @umarmuhdhor, lalu **langsung lanjut** ke fase berikutnya.
 
@@ -90,24 +90,29 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
    - "Saya Alief, track <x>" → TRACK = x, FASE = auto.
    - Status PROGRESS: [ ] belum · [~] sedang dikerjakan · [m] berhenti di LANGKAH MANUAL (belum ada PR) ·
      [r] PR terbuka menunggu review (boleh dengan catatan "pending C3/B6/…" di kolom Ringkasan) · [x] PR MERGED · [!] terblokir.
-     Sebelum memilih, segarkan status: untuk setiap baris [r] milik TRACK jalankan `gh pr view <no> --json state,reviewDecision` →
+     Sebelum memilih, segarkan status: untuk setiap baris [r] milik TRACK jalankan `gh pr view <no> --json state,reviews,comments,commits` →
      MERGED → [x] (commit kecil "docs(plan): mark fase NN merged"); CLOSED tanpa merge → [!] + tanya Alief;
-     OPEN + reviewDecision CHANGES_REQUESTED → fase itu dipilih dulu (pilihan 0).
-     Setelah itu perbarui baris gate G1–G8 di PROGRESS yang syaratnya bisa dicek: PR MERGED (`gh pr view`), checklist
+     OPEN + review `CHANGES_REQUESTED` atau komentar `umarmuhdhor` yang LEBIH BARU dari "review ditangani @<sha>" terakhir
+     di log fase (atau dari commit terakhir branch kalau belum pernah) → fase itu dipilih dulu (pilihan 0).
+     `reviewDecision` hanya sinyal tambahan (proteksi branch `main` belum aktif, nilainya bisa kosong; TODO C18).
+     Baris fase 00 (track "–") juga disegarkan: nomor PR plan dicatat Alief saat PR dibuka, MERGED → [x] + G1.
+     Setelah itu perbarui baris gate G0–G8 di PROGRESS yang syaratnya bisa dicek: G0 dari kolom Status TODO C3/C11/C13, PR MERGED (`gh pr view`), checklist
      LANGKAH MANUAL tercentang di log fase, butir TODO B6–B8/D8 `[x]`, laporan QA LULUS (G8).
    - [!] diset agent saat berhenti karena blocker P0 / keputusan user (langkah 13b) atau PR ditutup; hanya Alief yang
      membukanya kembali (ubah ke [ ] atau [~]). Mode auto melewati fase [!].
    - FASE = auto, urutan pilihan:
-     (0) ada fase TRACK [r] dengan CHANGES_REQUESTED (atau komentar review Umar belum dijawab) → mode REVIEW: baca komentar
+     (0) ada fase TRACK [r] dengan review/komentar baru (lihat penyegaran di atas) → mode REVIEW: baca komentar
          (`gh pr view <no> --comments`), perbaiki di branch yang sama (TDD), push, balas komentar, rebase branch
-         stacked di atasnya (langkah 13 SINKRON), status tetap [r]. Lalu kembali ke langkah 1.
+         stacked di atasnya (langkah 13 SINKRON), status tetap [r]. Tulis "review ditangani @<sha> <tanggal>" di log fase,
+         minta review ulang (`gh pr edit <no> --add-reviewer umarmuhdhor`). Fase itu tidak dipilih lagi sampai ada
+         review/komentar yang lebih baru dari catatan itu. Lalu kembali ke langkah 1.
      (1) ada fase TRACK berstatus [~] atau [m] → FASE = fase itu, mode LANJUT. Untuk [m]: buka checklist LANGKAH MANUAL
          di log/fase-<FASE>.md. Kalau masih ada butir yang belum dicentang Alief (atau Alief belum menempel hasilnya),
          tampilkan butir yang tersisa lalu BERHENTI. Kalau semua sudah dicentang: cek hasilnya (curl/log), lalu teruskan
          Langkah kerja fase yang belum selesai menurut checklist log (langkah 6; mis. fase 16 langkah 2–6), baru langkah 7–11.
      (2) kalau tidak ada → fase pertama milik TRACK (tabel "Urutan fase") berstatus [ ].
      Fase [r]/[x] tidak dikerjakan ulang. Kalau fase sebelumnya [r], fase baru DITUMPUK di atas branch fase itu (langkah 3c).
-   - Track c: syaratnya SEMUA PR fase 01–06Q dan 07–12 sudah MERGED: jalankan `gh pr view <no> --json state -q .state`
+   - Track c: syaratnya SEMUA PR fase 01–06Q dan 07–12 sudah MERGED (D8 baru wajib untuk fase 16, lihat Prasyarat fase 16): jalankan `gh pr view <no> --json state -q .state`
      untuk setiap nomor PR di kolom PR PROGRESS (termasuk `chore/APP-test-targets` dan `fix/QA-A-*`); semua harus `MERGED`.
      Kalau belum, berhenti dan laporkan PR yang masih menunggu review.
    - FASE = nomor: buka plan/alief/fase-<FASE>-*.md. Kalau tidak ada, berhenti dan tampilkan daftar fase.
@@ -155,23 +160,25 @@ Laporan dan dokumen plan dalam Bahasa Indonesia. Kode, nama file, komentar, comm
       Pengecualian: `git push --force-with-lease` ke branch fase MILIKMU sendiri setelah rebase stacked (langkah 13).
    g. Keputusan produk yang tidak dijawab PRD/mandat/plan: pilih opsi paling sederhana yang tetap memenuhi
       "Selesai kalau" di PRD, catat di DECISIONS, lanjutkan. ID keputusan per track supaya worktree paralel tidak bentrok:
-      app = `D-alief-A01, A02, …`, be = `D-alief-B01, …`, c = `D-alief-C01, …` (nomor plan `D-alief-NN` hanya untuk fase 00).
+      app = `D-alief-A01, A02, …`, be = `D-alief-B01, …`, c = `D-alief-C01, …`, spike = `D-alief-S01, …` (nomor plan `D-alief-NN` hanya untuk fase 00).
    h. Aksi CLOUD (supabase link/db push/secrets, wrangler deploy/secret/hyperdrive, Storage bucket di cloud,
       App Store Connect, TestFlight): JANGAN dijalankan sendiri. Siapkan perintahnya, tulis checklist bernomor
       "LANGKAH MANUAL" (kotak [ ] per butir) di log fase, commit + push branch fase, set status [m] di PROGRESS, lalu berhenti.
       Sisa fase (Langkah kerja yang belum dicentang, lalu langkah 7–11) dikerjakan saat fase dilanjutkan (langkah 1, pilihan 1).
       Menunggu merge PR oleh Umar bukan LANGKAH MANUAL: buka PR, status [r], dan tulis syaratnya di TODO §D (mis. D8).
-      Butir yang hanya menunggu pihak luar dan tidak memblokir kode (mis. capability C3, iPhone fisik, Team ID B6):
+      Butir yang hanya menunggu pihak luar dan tidak memblokir kode (mis. capability C3, uji ulang di iPhone fisik untuk kode yang sudah lulus di simulator, Team ID):
       jangan pakai [m]; selesaikan fase, buka PR, status [r] + catatan "pending C3/B6" di Ringkasan, dan uji ulang
       butir itu di fase yang disebut file fase (mis. 15 atau 16).
+      Pengecualian: fase yang HASIL-nya sendiri berasal dari uji perangkat (01S) memakai [m] sampai Alief menempel hasilnya.
    i. Test merah yang tidak jelas sebabnya → superpowers:systematic-debugging sebelum mengubah kode.
    j. Butuh perubahan kontrak, capability Xcode, model ShooShared, atau file milik tim lain → tulis usulan di
       DECISIONS + TODO §C, pakai placeholder, lanjutkan tanpa menyentuh file itu.
    k. `ios/ShooApp/Info.plist` dan `ios/ShooApp/Shoo.entitlements` DI-GENERATE XcodeGen dari `ios/project.yml`: jangan diedit
       (perubahan hilang di `xcodegen` berikutnya). Key baru = permintaan ke Umar (TODO C3). Satu-satunya edit project.yml
-      yang diizinkan adalah diff D-alief-02 (fase 01), persisnya D-alief-24 + D-alief-28. Ubahan signing lokal untuk iPhone
-      Alief (fase 01S, sebelum L0) tidak pernah di-commit: commit dengan path eksplisit, cek
-      `git diff --name-only origin/main...HEAD -- ios/project.yml ios/ShooShared` kosong.
+      yang diizinkan adalah diff D-alief-02 (fase 01), persisnya D-alief-24 + D-alief-28. Signing ke iPhone sendiri lewat L0:
+      `ios/Config/Local.xcconfig` (gitignored, salin dari `.example`); bundle ID dan App Group per developer, jadi jangan
+      hardcode `com.shoo.app` / `group.com.shoo.app`: pakai `AppGroup.id`, `Bundle.main.bundleIdentifier`, atau
+      `$BUNDLE_ID` / `$APP_GROUP` dari `source plan/alief/ref/sim.sh`.
 
 7. GERBANG UI (wajib kalau diff menyentuh ios/ShooApp/**/*.swift yang menghasilkan tampilan):
    a. Build + jalankan di simulator iPhone (iOS Simulator tool: launch, screenshot). Ambil screenshot setiap layar

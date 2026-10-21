@@ -16,7 +16,7 @@
    - `Saya Alief, track c. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` (setelah track app + be selesai)
    - `Saya Alief, track spike. Kerjakan otomatis sesuai plan/alief/PROMPT.md (mode auto).` (fase 01S, kapan saja setelah fase 01 kalau iPhone + signing siap; berhenti di uji perangkat)
 3. Tempel di Claude Code (plugin **ECC** + **Superpowers** terpasang) di worktree track itu (§4). Model per fase ada di §3 dan [`ref/R6-model-skill.md`](ref/R6-model-skill.md).
-4. Agent berhenti hanya untuk **LANGKAH MANUAL** (akun, secret, deploy cloud, TestFlight; status fase `[m]`), blocker P0, atau konteks hampir habis. Jalankan LANGKAH MANUAL, centang butirnya di `log/fase-XX.md`, lalu ketik kalimat yang sama: agent melanjutkan fase `[m]` itu (review, verifikasi, PR) sebelum pindah ke fase berikutnya.
+4. Agent berhenti hanya untuk **LANGKAH MANUAL** (akun, secret, deploy cloud, TestFlight; status fase `[m]`), blocker P0, atau konteks hampir habis. Jalankan LANGKAH MANUAL, centang butirnya di `log/fase-XX.md`, lalu ketik kalimat yang sama: agent melanjutkan fase `[m]` itu (sisa Langkah kerja, lalu review, verifikasi, PR) sebelum pindah ke fase berikutnya.
 
 Agent mengisi `PROGRESS.md` (baris fasenya saja) dan `log/fase-XX.md`, commit, push branch fase, membuka PR ke `main` dengan reviewer @umarmuhdhor, lalu lanjut ke fase berikutnya.
 
@@ -92,9 +92,9 @@ Satu worktree + satu sesi Claude per track (`superpowers:using-git-worktrees`):
 | app | `../Final-CH7-app` | `ios/ShooApp/`, `plan/alief/` (baris fase app saja, keputusan `D-alief-A…`) |
 | be | `../Final-CH7-be` | `backend/`, `plan/alief/` (baris fase be saja, keputusan `D-alief-B…`) |
 | c | repo utama `Final-CH7` | `ios/ShooApp/`, `backend/`, `plan/alief/` (keputusan `D-alief-C…`) |
-| spike | `../Final-CH7-spike` | `ios/ShooApp/` (debug + ON-04), `docs/spikes/extension-status.md`, `docs/spikes/open-extension-settings.md`, `plan/alief/` (baris 01S saja, keputusan `D-alief-A…`) |
+| spike | `../Final-CH7-spike` | `ios/ShooApp/` (debug + ON-04), `docs/spikes/extension-status.md`, `docs/spikes/open-extension-settings.md`, `plan/alief/` (baris 01S saja, keputusan `D-alief-S…`) |
 
-Pengecualian: (1) PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.yml` hanya dengan diff yang tertulis di D-alief-02; (2) `plan/alief/` sendiri berada di luar folder Team App (D-alief-20); (3) checkbox `docs/mandates/alief.md` (diizinkan CODEOWNERS); (4) dua file spike S1/S2 di `docs/spikes/` (mandat, D-alief-29). Ubahan signing lokal di `ios/project.yml` untuk iPhone Alief tidak pernah di-commit (pakai L0 `ios/Local.xcconfig` kalau sudah ada).
+Pengecualian: (1) PR `chore/APP-test-targets` (fase 01) menyentuh `ios/project.yml` hanya dengan diff yang tertulis di D-alief-02; (2) `plan/alief/` sendiri berada di luar folder Team App (D-alief-20); (3) checkbox `docs/mandates/alief.md` (diizinkan CODEOWNERS); (4) dua file spike S1/S2 di `docs/spikes/` (mandat, D-alief-29). Build ke iPhone sendiri memakai L0: `ios/Config/Local.xcconfig` (gitignored); `ios/project.yml` tidak diubah, bundle ID / App Group tidak di-hardcode.
 
 ---
 

@@ -90,7 +90,7 @@ Disimpan di Postgres (tidak ada KV), cukup untuk skala MVP. Karena cache Hyperdr
 | blocked | `{name} hit a blocked site · {score}%` | `{name} membuka situs yang diblokir · {score}%` |
 | warning | `{name} opened a suspicious site · {score}%` | `{name} membuka situs mencurigakan · {score}%` |
 
-Payload: kontrak + `sound` (aditif, disampaikan di C9): `{ "aps": { "alert": { "body": … }, "sound": "default" }, "scanId": "…" }`. Header APNs: `apns-push-type: alert`, `apns-topic: com.shoo.app`, `apns-priority: 10`. Hanya status 410 (reason `Unregistered` atau `ExpiredToken`, docs Apple: jangan di-retry) yang mengosongkan `devices.apns_token`. `400 BadDeviceToken` (juga muncul kalau environment salah: token sandbox ke host production atau sebaliknya) → catat di `push_log`, token TIDAK dihapus. Build TestFlight = APNs production → set `APNS_ENV=production` sebelum QA-E2E.
+Payload: kontrak + `sound` (aditif, disampaikan di C9): `{ "aps": { "alert": { "body": … }, "sound": "default" }, "scanId": "…" }`. Header APNs: `apns-push-type: alert`, `apns-topic: <APNS_TOPIC>` (bundle ID build yang menerima push; per developer sejak L0, tidak di-hardcode), `apns-priority: 10`. Hanya status 410 (reason `Unregistered` atau `ExpiredToken`, docs Apple: jangan di-retry) yang mengosongkan `devices.apns_token`. `400 BadDeviceToken` (juga muncul kalau environment salah: token sandbox ke host production atau sebaliknya) → catat di `push_log`, token TIDAK dihapus. Build TestFlight = APNs production → set `APNS_ENV=production` sebelum QA-E2E.
 
 ## 7. Env Worker
 
@@ -102,6 +102,7 @@ Var (bukan rahasia) ditulis di `vars` `backend/api/wrangler.jsonc` (ter-commit).
 | `SUPABASE_URL` | secret | `wrangler secret put` · `.dev.vars` | cloud `https://<ref>.supabase.co`, lokal `http://127.0.0.1:54321` (fase 09) |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | hanya untuk Storage API; lokal dari `supabase status` (fase 09) |
 | `INVITE_BASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | URL Worker; lokal `http://localhost:8787` (fase 07) |
+| `APNS_TOPIC` | var | `supabase secrets set --env-file` (Edge Function) · `wrangler.jsonc` `vars` kalau sender langsung | bundle ID build yang diuji: build iPhone Alief (fase 11, D7) → build TestFlight (fase 16); test memakai nilai env |
 | `APNS_ENV` | var | `wrangler.jsonc` `vars` + `supabase secrets set` (Edge Function) | `sandbox` (fase 11) → `production` (fase 16) |
 | `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | `https://<ref>.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
 | `PUSH_RELAY_SECRET` | secret | `wrangler secret put` + `supabase secrets set` (nilai sama) · `.dev.vars` | jalur utama push (D-alief-16) |

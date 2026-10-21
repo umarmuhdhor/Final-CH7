@@ -31,7 +31,8 @@ Layar Profile untuk semua mode: identitas, bahasa, status extension, dan kontrol
 4. Status extension Active/Off (`ExtensionStatus`).
 5. Protected: guardian terhubung (avatar + nama) + tombol Disconnect (dialog konfirmasi standar iOS boleh di sini karena bukan validasi GD-07) → `leaveGuardian()` → kembali ke layar Connect.
 6. Guardian: menu "Family code" (GD-04, layar di fase 14; sementara placeholder) dan daftar terhubung x/3 ringkas.
-7. Gerbang UI.
+7. **Refine ON-04** (hanya kalau log fase 01S punya handoff "Refine ON-04" yang belum diterapkan fase 02): ubah langkah ilustrasi, tombol, petunjuk, dan window di `TurnOnExtensionView` sesuai hasil spike; test + gerbang UI. Tandai handoff itu "diterapkan di fase 06" di log 01S.
+8. Gerbang UI.
 
 ## Verifikasi
 

@@ -23,7 +23,7 @@ Guardian menerima push, tap membuka Detail yang benar, dan It's safe / Not safe 
 - `UIApplicationDelegateAdaptor` di `ShooApp.swift`: `didRegisterForRemoteNotificationsWithDeviceToken` → `updateMe(apnsToken:)`; `UNUserNotificationCenterDelegate` → baca `scanId` → `Router.openDetail(scanId)` (juga saat app cold start)
 - Tidak ada edit `Shoo.entitlements`/Info.plist (di-generate XcodeGen dari `project.yml` milik Umar). `aps-environment` = permintaan C3; tanpa entitlement itu `registerForRemoteNotifications` gagal (`didFailToRegister…`, cukup log, sama dengan fase 02), tetapi `simctl push` tetap bisa diuji karena tidak butuh token. Uji `PATCH apnsToken` asli setelah C3
 - `Support/NotificationRouter.swift`: fungsi murni `route(userInfo:) -> Route?` (dibaca `scanId`) dan `route(url:) -> Route?` untuk deep link `shoo://scan/<scanId>` (popup "See detail" EX-04 dan "Review in Shoo" EX-06, mandat Umar U2; D-alief-32, usulan kontrak C16), dipakai delegate, `onOpenURL` (di samping `shoo://join` fase 14), dan test
-- `plan/alief/qa/push-blocked.apns` dan `push-warning.apns`: payload kontrak + `"Simulator Target Bundle": "com.shoo.app"`
+- `plan/alief/qa/push-blocked.apns` dan `push-warning.apns`: payload kontrak saja (tanpa `Simulator Target Bundle`; bundle ID diberikan di argumen `simctl push`)
 - Detail: tombol memanggil `POST /verdicts` asli; error → rollback + pesan
 - Test (Swift Testing): `NotificationRouter` untuk payload blocked/warning/tanpa `scanId`/`scanId` rusak, URL `shoo://scan/<id>` valid/rusak/host lain, token hex encoding, optimistic verdict + rollback, Detail dimuat dari `scanId` yang belum ada di cache
 
@@ -42,8 +42,8 @@ Guardian menerima push, tap membuka Detail yang benar, dan It's safe / Not safe 
 source plan/alief/ref/sim.sh
 (cd ios && xcodegen)
 xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=iOS Simulator,name=$SIM"
-xcrun simctl push "${GUARD_UDID:-booted}" com.shoo.app plan/alief/qa/push-blocked.apns   # dibuat di fase ini; GUARD_UDID dari `xcrun simctl list devices booted`
-xcrun simctl openurl "${GUARD_UDID:-booted}" "shoo://scan/scan_01"   # deep link Detail (D-alief-32)
+xcrun simctl push "${GUARD_UDID:-booted}" "$BUNDLE_ID" plan/alief/qa/push-blocked.apns   # dibuat di fase ini; GUARD_UDID dari `xcrun simctl list devices booted`
+xcrun simctl openurl "${GUARD_UDID:-booted}" "shoo://scan/6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"   # deep link Detail (D-alief-32); id scan blocked-92.json di seed lokal
 git diff --stat origin/main...HEAD -- ios/ShooApp/Info.plist ios/ShooApp/*.entitlements   # harus kosong
 ```
 

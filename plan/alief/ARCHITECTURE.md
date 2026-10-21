@@ -10,7 +10,7 @@ flowchart LR
   subgraph iPhone["iPhone (Guardian atau Protected)"]
     APP["Shoo app (SwiftUI)\nios/ShooApp"]
     EXT["Safari extension\n(Umar + detector Imelda)"]
-    AG[("App Group\ngroup.com.shoo.app")]
+    AG[("App Group\nAppGroup.id (default group.com.shoo.app)")]
     APP -- tulis sesi --> AG
     EXT -- baca sesi, tulis heartbeat --> AG
   end
@@ -71,7 +71,7 @@ Perkiraan kasar: 150 KB × 50/hari × 14 hari = ±105 MB per device paling sibuk
 1. **Onboarding (ON-02, ON-03, fase 13).** App → `POST /devices {name, mode, apnsToken?}` → `{deviceId, token, avatarId}`. App menulis `device.id`, `device.token`, `device.mode`, `device.name`, `api.baseURL`, `ai.baseURL` ke App Group (kontrak) + menyimpan token di Keychain untuk app sendiri. Kalau bahasa app = ID, app langsung memanggil `PATCH /devices/me {language: "id"}`.
 2. **Pairing (GD-04, PR-01..03, fase 08 + 14).** Guardian → `POST /family/code` (tiap 60 s, app menghitung mundur) → QR + kode + `inviteUrl` https. Protected → `POST /family/join {code}` (scan QR, ketik kode, atau buka `shoo://join?code=`) → `{guardian}`. Server menolak kalau kode salah/kedaluwarsa, keluarga penuh (3), atau percobaan berlebih.
 3. **Scan → push (EX-07, GD-06, fase 09 + 11 + 15).** Extension → `POST /scans` (skor ≥ 30, + `screenshotBase64?`) → Worker menyimpan scan, mengunggah screenshot (kalau lolos kuota) → kalau pemiliknya Protected: kirim push (relay Edge Function → APNs) ke Guardian dengan teks sesuai bahasa Guardian dan `scanId` → tap → app membuka Detail (`GET /scans/{id}`).
-4. **Verdict → buka blokir (GD-07, EX-06, fase 10 + 15).** Guardian menekan It's safe / Not safe di Detail → `POST /verdicts {scanId, value}` (langsung, tanpa konfirmasi) → verdict berlaku untuk domain itu milik pemilik scan → extension Protected yang polling `GET /verdicts?domain=` tiap 5 s melihat `safe` → layar blokir terbuka. Target: `GET /verdicts` mencerminkan keputusan ≤ 1 s setelah `POST /verdicts`; layar blokir terbuka ≤ 10 s ujung ke ujung (polling 5 s). `not_safe` → domain masuk `GET /blocklist`.
+4. **Verdict → buka blokir (GD-07, EX-06, fase 10 + 15).** Guardian menekan It's safe / Not safe di Detail → `POST /verdicts {scanId, value}` (langsung, tanpa konfirmasi) → verdict berlaku untuk domain itu milik pemilik scan → extension Protected yang polling `GET /verdicts?domain=` tiap 5 s melihat `safe` → layar blokir terbuka. Target: `GET /verdicts` mencerminkan keputusan ≤ 1 s setelah `POST /verdicts`; layar blokir terbuka ≤ 10 s ujung ke ujung (polling 5 s). `not_safe` → domain masuk antrean `blocklist_entries` dan baru muncul di `GET /blocklist` setelah review manual (D-alief-25, R4 §4).
 5. **Retensi (fase 12).** Cron harian menghapus scan > 14 hari + objek Storage-nya, kode keluarga kedaluwarsa, dan catatan percobaan join lama. Verdict tidak dihapus (dipakai blocklist, D-alief-14).
 
 ## 5. Di Mac Alief (lokal)

@@ -235,3 +235,21 @@ Format:
 - Alasan: verify run 03 #S4, #S5, #R2–#R11.
 - File: R1, R2, R3, R5, R7, qa/README, fase-00, 01, 07, 10, 11, 13, 14, 15, TODO.
 
+## D-alief-34 · 21 Okt 2026 · plan (verify run 04) · Revisi D-alief-29: L0 + API extension iOS 26.2
+
+- Keputusan: (a) signing ke iPhone sendiri hanya lewat L0 (`ios/Config/Local.xcconfig`, `main` `495c792`); fallback ubah `project.yml` / `AppGroup.id` lokal dihapus. Bundle ID dan App Group per developer, jadi plan tidak meng-hardcode `com.shoo.app` / `group.com.shoo.app`: var baru `APNS_TOPIC` (R3 §6–7), `$BUNDLE_ID` / `$APP_GROUP` dari `ref/sim.sh` untuk perintah `simctl`, payload `.apns` tanpa `Simulator Target Bundle`. Kunci APNs + Team ID + topic dari tim yang sama dengan build yang diuji (B7). (b) Tombol Turn on ON-04 memakai `SFSafariSettings.openExtensionsSettings(forIdentifiers:)` di iOS 26.2+ (fallback `openSettingsURLString` + ilustrasi); status tetap heartbeat sampai Umar menyetujui `SFSafariExtensionManager.getStateOfSafariExtension` sebagai sumber tambahan (C17). Ketersediaan di iOS 26.2 dari pembacaan docs verify run 04, BELUM DIVERIFIKASI di perangkat (uji 01S). (c) Track spike memakai prefix `D-alief-S…`, PR spike di PROMPT langkah 11, prasyarat PR fase 01 merged atau stacked, dan tidak mengubah `TurnOnExtensionView`: refine ON-04 = handoff yang dikerjakan fase 02 atau 06.
+- Alasan: verify run 04 #T1, #T2, #S1, #S2, #S4.
+- File: fase-01S, fase-02, fase-06, fase-11, fase-13, fase-15, fase-16, PROMPT 6g/6h/6k, README §4, TODO B6/B7/B8/C3/C17, R3, ref/sim.sh, ARCHITECTURE.
+
+## D-alief-35 · 21 Okt 2026 · plan (verify run 04) · Mode REVIEW yang bisa selesai
+
+- Keputusan: pilihan 0 dipicu oleh review `CHANGES_REQUESTED` atau komentar `umarmuhdhor` yang lebih baru dari catatan "review ditangani @<sha>" di log fase (`gh pr view --json state,reviews,comments,commits`), bukan oleh `reviewDecision` saja. Setelah ditangani: catatan di log + `gh pr edit --add-reviewer umarmuhdhor`, fase tidak dipilih lagi sampai ada review baru. Minta Umar mengaktifkan branch protection (C18). G0–G8 dan baris fase 00 disegarkan di langkah 1.
+- Alasan: verify run 04 #T3, #R1 (`reviewDecision` tetap `CHANGES_REQUESTED` setelah push, dan bisa kosong tanpa proteksi branch).
+- File: PROMPT langkah 1, PROGRESS, TODO C18.
+
+## D-alief-36 · 21 Okt 2026 · plan (verify run 04) · Perbaikan kecil run 04
+
+- Keputusan: PiP ON-04 lengkap (`AVAudioSession` `.playback`, pemutar full screen, delegate restore); ilustrasi Settings per versi iOS; `ops_heartbeat.source` (`cron`/`healthz`) sebagai bukti cron fase 12; review blocklist autocommit per statement; track c cukup PR merged, D8 untuk fase 16; ARCHITECTURE alur blocklist disamakan dengan D-alief-25; sel T15 diperbaiki; contoh deep link memakai id scan seed; worktree spike di fase 00; README §1 resume `[m]` disamakan.
+- Alasan: verify run 04 #S3, #R2–#R10.
+- File: fase-02, fase-12, fase-15, fase-00, R2, PROMPT, ARCHITECTURE, SECURITY, README, log/fase-00.
+

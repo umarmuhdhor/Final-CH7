@@ -19,7 +19,7 @@ Laporan QA End-to-End berformat Catalyst atas sistem nyata (app TestFlight + Wor
 
 ## Langkah kerja
 
-1. Persiapan (LANGKAH MANUAL, tulis di log, berhenti sampai Alief selesai): build TestFlight (B6, B8), **set `APNS_ENV=production` di Edge Function `push` (`supabase secrets set APNS_ENV=production`, bukan rahasia) dan var Worker sebelum uji** (TestFlight = APNs production, B7), dua iPhone (D6), data cloud bersih (`truncate` tabel uji lewat SQL editor). Sumber build (D-alief-30): app dari ujung branch fase 15 (stack 13–15, walau masih `[r]`), backend dari `main` setelah D8. Catat commit app + commit backend + nomor build di header laporan.
+1. Persiapan (LANGKAH MANUAL, tulis di log, berhenti sampai Alief selesai): build TestFlight (B6, B8), **set `APNS_ENV=production` dan `APNS_TOPIC=<bundle ID build TestFlight>` di Edge Function `push` (`supabase secrets set …`) dan var Worker sebelum uji; kalau tim TestFlight beda dengan tim D7, ganti juga `APNS_KEY_P8_B64`/`APNS_KEY_ID`/`APNS_TEAM_ID` (B7, `--env-file`)** (TestFlight = APNs production, B7), dua iPhone (D6), data cloud bersih (`truncate` tabel uji lewat SQL editor). Sumber build (D-alief-30): app dari ujung branch fase 15 (stack 13–15, walau masih `[r]`), backend dari `main` setelah D8. Catat commit app + commit backend + nomor build di header laporan.
 2. Jalankan matriks QA-E2E `ref/R7` §5 (17 skenario, termasuk ON-04 #17) + skenario keamanan API (IDOR, brute force, scan palsu, token salah) dengan `curl`.
 3. Batasan ditulis jujur di header (mis. extension Umar belum final → scan dikirim lewat `curl` meniru extension).
 4. Tulis `qa/QA-E2E-<YYYY-MM-DD>.md`, bukti di `qa/img/QA-E2E/`.

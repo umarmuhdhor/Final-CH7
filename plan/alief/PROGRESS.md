@@ -2,7 +2,7 @@
 
 Legenda status: `[ ]` belum · `[~]` sedang dikerjakan · `[m]` berhenti di LANGKAH MANUAL, belum ada PR (log fase berisi checklist) · `[r]` PR terbuka, menunggu review/merge Umar (catatan "pending C3/B6…" boleh di Ringkasan) · `[x]` PR **sudah di-merge** ke `main` (cek `gh pr view <no> --json state`) · `[!]` terblokir (diset agent saat berhenti karena blocker P0 / PR ditutup; dibuka kembali hanya oleh Alief)
 
-Mode auto: kalau ada fase `[r]` track dengan review CHANGES_REQUESTED → tangani dulu; kalau ada fase track berstatus `[~]`/`[m]` → lanjutkan fase itu dulu (`[m]`: berhenti lagi kalau checklist LANGKAH MANUAL belum dicentang Alief); kalau tidak ada → fase pertama berstatus `[ ]` (PROMPT langkah 1, D-alief-26). Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged; baris gate diperbarui di langkah 1 saat status disegarkan.
+Mode auto: kalau ada fase `[r]` track dengan review/komentar Umar yang lebih baru dari catatan "review ditangani" di log → tangani dulu (sekali per review baru); kalau ada fase track berstatus `[~]`/`[m]` → lanjutkan fase itu dulu (`[m]`: berhenti lagi kalau checklist LANGKAH MANUAL belum dicentang Alief); kalau tidak ada → fase pertama berstatus `[ ]` (PROMPT langkah 1, D-alief-26). Fase `[r]` tidak dikerjakan ulang; fase berikutnya ditumpuk di atas branch-nya. Gate yang menyebut `[x]` berarti merged; baris gate diperbarui di langkah 1 saat status disegarkan.
 Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya PR paralel tidak bentrok).
 
 | Fase | Judul | Track | Branch | Status | Mulai | Selesai | PR | Ringkasan satu kalimat | Log |
@@ -32,13 +32,13 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 
 | Titik | Syarat | Status | Catatan |
 |---|---|---|---|
+| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`) | [ ] | C3 dibutuhkan sebelum fase 14/15 (butir 4 `UIBackgroundModes` untuk PiP ON-04 di fase 02, ada fallback); C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
 | G1 · Plan disetujui | PR `docs/alief-plan` di-merge | [ ] | Umar approve (CODEOWNERS `*`) |
 | G2 · Target test ada | PR `chore/APP-test-targets` di-merge | [ ] | Sampai merge, fase app ditumpuk di atas PR ini |
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
 | G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Akhir fase 10 |
 | G5 · Track app selesai | 01–06 + 06Q `[x]` (semua PR merged) | [ ] | Syarat track c |
 | G6 · Track be selesai | 07–12 `[x]` (semua PR merged) + TODO D8 (deploy ulang dari `main`, uji asap hijau) | [ ] | Syarat track c |
-| G0 · Izin Umar | Jawaban TODO C3 (kamera + push di project.yml), C11 (`extensionLastSeenAt`), C13 (`owner=family`) | [ ] | C3 dibutuhkan sebelum fase 14/15 (butir 4 `UIBackgroundModes` untuk PiP ON-04 di fase 02, ada fallback); C11/C13 sebelum fase 05/08 (ada default kalau belum dijawab) |
 | G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8); uji push sandbox ke satu iPhone sudah di fase 11 |
 | G8 · MVP Alief | Definisi selesai README §7 | [ ] | |
 
