@@ -50,10 +50,8 @@ Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe" }` (guardian) | `{ verdict }` — applies to the scan's domain for that owner | GD-07 |
+| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe" }` (guardian) | `{ verdict }` — applies to the scan's domain for that owner. Error `verdict_not_allowed`: not the owner's guardian, or the scan isn't `blocked` (`warning` scans keep `verdict: null` in MVP) | GD-07 |
 | GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
-
-`POST /verdicts` error: `verdict_not_allowed` (not the owner's guardian, or the scan isn't `blocked`). `warning` scans always have `verdict: null` in MVP.
 
 Extension polls `GET /verdicts?domain=` every 5 s while a protected user's block screen is open (or Team App offers realtime — propose via PR).
 
