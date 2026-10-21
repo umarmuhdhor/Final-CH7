@@ -35,12 +35,13 @@ backend/
 │   │   │   ├── verdicts.ts
 │   │   │   ├── screenshots.ts    interface ScreenshotStore + SupabaseStorageStore (+ R2Store nanti)
 │   │   │   └── push/
-│   │   │       ├── sender.ts     interface PushSender
-│   │   │       ├── relay.ts      RelaySender → Edge Function push (JALUR UTAMA, D-alief-16)
-│   │   │       ├── apns.ts       ApnsSender langsung (hanya kalau spike Worker cloud lulus)
-│   │   │       ├── jwt.ts        JWT ES256 APNs (dipakai bersama relay & langsung; test di vitest)
-│   │   │       ├── log.ts        LogSender (dipakai saat secret APNs belum ada / test)
+│   │   │       ├── sender.ts     interface PushSender, LogSender, pemilihan pushSender(env)
+│   │   │       ├── apns.ts       ApnsSender langsung dari Worker (JALUR UTAMA, D-alief-B01; cache JWT per isolate)
+│   │   │       ├── jwt.ts        JWT ES256 APNs (test di vitest)
+│   │   │       ├── deliver.ts    send → kosongkan token (410) → push_log, di waitUntil
+│   │   │       ├── notify.ts     cari Guardian + batas push (fase 09/11)
 │   │   │       └── messages.ts   teks push EN/ID
+│   │   │   (RelaySender + Edge Function push hanya dibuat kalau D7 gagal di jalur langsung, D-alief-B11)
 │   │   ├── data/allowlist.ts     domain resmi/populer yang tidak pernah masuk blocklist global (R2 §5): awal = domain brand di contracts/fixtures + daftar manual bank/e-wallet/pemerintah/marketplace utama Indonesia; diperbarui lewat PR (sumber dicatat di komentar file)
 │   │   └── cron/retention.ts
 │   └── test/                     *.test.ts (vitest-plugin), helpers/{resetDb,seed,schema}.ts (schema = validasi respons dengan contracts/scan-result.schema.json via ajv)

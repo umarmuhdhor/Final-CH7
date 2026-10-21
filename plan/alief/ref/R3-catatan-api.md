@@ -93,7 +93,7 @@ Disimpan di Postgres (tidak ada KV), cukup untuk skala MVP. Karena cache Hyperdr
 | blocked | `{name} hit a blocked site · {score}%` | `{name} membuka situs yang diblokir · {score}%` |
 | warning | `{name} opened a suspicious site · {score}%` | `{name} membuka situs mencurigakan · {score}%` |
 
-Payload: kontrak + `sound` (aditif, disampaikan di C9): `{ "aps": { "alert": { "body": … }, "sound": "default" }, "scanId": "…" }`. Header APNs: `apns-push-type: alert`, `apns-topic: <APNS_TOPIC>` (bundle ID build yang menerima push; per developer sejak L0, tidak di-hardcode), `apns-priority: 10`. Hanya status 410 (reason `Unregistered` atau `ExpiredToken`, docs Apple: jangan di-retry) yang mengosongkan `devices.apns_token`. `400 BadDeviceToken` (juga muncul kalau environment salah: token sandbox ke host production atau sebaliknya) → catat di `push_log`, token TIDAK dihapus. Build TestFlight = APNs production → set `APNS_ENV=production` dan kunci Production (B7) sebelum QA-E2E.
+Payload: kontrak + `sound` (aditif, disampaikan di C9): `{ "aps": { "alert": { "body": … }, "sound": "default" }, "scanId": "…" }`. Header APNs: `apns-push-type: alert`, `apns-topic: <APNS_TOPIC>` (bundle ID build yang menerima push; per developer sejak L0, tidak di-hardcode), `apns-priority: 10`. Header tambahan `apns-expiration` = sekarang + 1 jam (fase 11). Hanya status 410 (reason `Unregistered` atau `ExpiredToken`, docs Apple: jangan di-retry) yang mengosongkan `devices.apns_token` (compare-and-clear: token baru tetap). Maks 10 push / 10 menit per Guardian (batas lunak, review keamanan fase 11). Tanpa retry; `push_log.result` = `sent` / `logged` / `failed:<status>[ <reason>]` / `failed:timeout|network|config`. `400 BadDeviceToken` (juga muncul kalau environment salah: token sandbox ke host production atau sebaliknya) → catat di `push_log`, token TIDAK dihapus. Build TestFlight = APNs production → set `APNS_ENV=production` dan kunci Production (B7) sebelum QA-E2E.
 
 ## 7. Env Worker
 
@@ -105,12 +105,8 @@ Var (bukan rahasia) ditulis di `vars` `backend/api/wrangler.jsonc` (ter-commit).
 | `SUPABASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · `.dev.vars` / `vitest.config.ts` (lokal, dari `supabase status`) | cloud `https://nmekxihgjszgcibqytyj.supabase.co`, lokal `http://127.0.0.1:54321`. URL proyek publik, bukan rahasia (D-alief-B07) |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | `wrangler secret put` · `.dev.vars` | secret key Supabase (`sb_secret_…`, nama `shoo-worker`; atau JWT `service_role` legacy), hanya untuk Storage API; lokal dari `supabase status` (fase 09). Kosong → screenshot dibuang, scan tetap 201 |
 | `INVITE_BASE_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | URL Worker; lokal `http://localhost:8787` (fase 07) |
-| `APNS_TOPIC` | var | `supabase secrets set --env-file` (Edge Function) · `wrangler.jsonc` `vars` kalau sender langsung | bundle ID build yang diuji: build iPhone Alief (fase 11, D7) → build TestFlight (fase 16); test memakai nilai env |
-| `APNS_ENV` | var | `wrangler.jsonc` `vars` + `supabase secrets set` (Edge Function) | `sandbox` (fase 11) → `production` (fase 16) |
-| `PUSH_RELAY_URL` | var | `wrangler.jsonc` `vars` (cloud) · lokal di-override `.dev.vars` / `miniflare.bindings` (vitest) | `https://nmekxihgjszgcibqytyj.supabase.co/functions/v1/push`; lokal `http://127.0.0.1:54321/functions/v1/push` (fase 11) |
-| `PUSH_RELAY_SECRET` | secret | `wrangler secret put` + `supabase secrets set` (nilai sama) · `.dev.vars` | jalur utama push (D-alief-16) |
-| `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | `supabase secrets set --env-file` (Edge Function) | hanya di Worker kalau `D-alief-B01` = spike lulus; kosong + tanpa relay → `LogSender` |
+| `APNS_TOPIC` | var | `wrangler.jsonc` `vars` (`""` sampai B6 → `LogSender`) | bundle ID build yang diuji: build iPhone Alief (fase 11, D7) → build TestFlight (fase 16); test memakai nilai env |
+| `APNS_ENV` | var | `wrangler.jsonc` `vars` | `sandbox` (fase 11) → `production` (fase 16) |
+| `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | `wrangler secret put` (nilai ditempel di prompt, B7) · `.dev.vars` | `ApnsSender` langsung dari Worker (D-alief-B01, fase 11); salah satu nilai APNs kosong → `LogSender` (`push_log` `logged`) |
 | `SCREENSHOT_MAX_BYTES` | var | `wrangler.jsonc` `vars` | `153600` (fase 09) |
 | `SCREENSHOT_URL_SECRET` | secret | `wrangler secret put` · `.dev.vars` · `miniflare.bindings` (vitest) | kunci HMAC link screenshot (D-alief-B08), acak ≥ 32 byte (`openssl rand -base64 32`); kosong → `screenshotUrl` null. Mengganti nilai = semua link lama 404 (fase 09) |
-| `APNS_SPIKE` | var | `wrangler.jsonc` `vars` | `1` hanya saat spike fase 07; dihapus di fase 11 |
-| `SPIKE_KEY` | secret | `wrangler secret put` | header `x-spike-key` untuk `/debug/apns-spike` (fase 07); dihapus di fase 11 (`wrangler secret delete SPIKE_KEY`) |
