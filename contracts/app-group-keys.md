@@ -25,3 +25,14 @@ All messages: `{ "type": string, ... }`. Response always `{ "ok": boolean, ... }
 |---|---|---|
 | `heartbeat` | `{}` | `{ ok }` — writes `extension.lastSeenAt` |
 | `getSession` | `{}` | `{ ok, deviceId, token, mode, name, guardianName, apiBaseURL, aiBaseURL }` (`ok: false` if app not onboarded) |
+
+## Deep links (extension / invite link → app)
+URL scheme `shoo://` (registered in `ios/project.yml`). The app handles these in `ShooApp` (`.onOpenURL`); an unknown or malformed link opens Shield.
+
+| URL | Opened by | App shows | PRD |
+|---|---|---|---|
+| `shoo://scan/{scanId}` | Extension popup "See detail" (EX-04), block screen "Review in Shoo" (EX-06) | Detail for that scan (`GET /scans/{id}`) | DT-* |
+| `shoo://activity` | Same buttons, before the scan has an id (EX-07 not finished or offline) | Activity tab, newest first | PR-05, GD-05 |
+| `shoo://join?code=1234` | WhatsApp invite link (GD-04) | Connect with the code filled in | PR-03 |
+
+`scanId` is the backend id returned by `POST /scans`. Safari asks "Open in Shoo?" the first time — expected.
