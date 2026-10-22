@@ -118,7 +118,7 @@ struct AppEnvironmentSessionTests {
         configuration.protocolClasses = [HostStubProtocol.self]
         let session = server.session
         let client = APIClient(
-            baseURL: server.baseURL, configuration: configuration, token: { session.token },
+            baseURL: server.baseURL, configuration: configuration, token: { try session.readToken() },
             onUnauthorized: { expiry.report() }
         )
         await #expect(throws: RepositoryError.self) { _ = try await ApiRepository(client: client, session: session).me() }
@@ -155,6 +155,25 @@ struct AppEnvironmentSessionTests {
         #expect(!env.sessionExpired)
         #expect(env.settings.mode == nil)
         #expect(!env.settings.onboardingCompleted)
+        #expect(server.session.token == nil)
+    }
+
+    @Test func unusableAppGroupTokenIsRemovedEvenBeforeRegistration() {
+        let server = StubServer(token: nil)
+        let env = environment(server: server)
+        server.session.defaults.set("shoo_from_backup", forKey: AppGroup.Key.deviceToken)
+        server.session.defaults.set("dev_old", forKey: AppGroup.Key.deviceId)
+        env.checkStoredSession()
+        #expect(!env.sessionExpired)
+        #expect(server.session.defaults.object(forKey: AppGroup.Key.deviceToken) == nil)
+        #expect(server.session.defaults.object(forKey: AppGroup.Key.deviceId) == nil)
+    }
+
+    @Test func unauthorizedBeforeTheModeIsSavedStillDropsTheToken() {
+        let server = StubServer()
+        let env = environment(server: server)
+        env.markSessionExpired()
+        #expect(!env.sessionExpired)
         #expect(server.session.token == nil)
     }
 

@@ -21,28 +21,35 @@ struct KeychainItem: Sendable {
             kSecAttrService: service,
             kSecAttrAccount: account,
             kSecAttrSynchronizable: kCFBooleanFalse as Any,
+            kSecUseDataProtectionKeychain: true,
         ]
     }
 
-    func read() -> String? {
+    /// `nil` only when there is no item. Any other failure (e.g. `errSecInteractionNotAllowed` before
+    /// the first unlock) throws, so a locked iPhone is never mistaken for a lost session.
+    func read() throws -> String? {
         var request = query
         request[kSecReturnData] = true
         request[kSecMatchLimit] = kSecMatchLimitOne
         var result: CFTypeRef?
-        guard SecItemCopyMatching(request as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data
-        else { return nil }
+        let status = SecItemCopyMatching(request as CFDictionary, &result)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = result as? Data else { throw Failure.status(status) }
         return String(data: data, encoding: .utf8)
     }
 
-    /// Replaces any older value. Deleting first also drops an item stored with weaker accessibility.
+    /// Updates in place, so a failed write never loses the old value; adds the item when there is none.
     func write(_ value: String) throws {
-        delete()
+        let data = Data(value.utf8)
+        let update: [CFString: Any] = [kSecValueData: data, kSecAttrAccessible: Self.accessibility]
+        let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        if status == errSecSuccess { return }
+        guard status == errSecItemNotFound else { throw Failure.status(status) }
         var item = query
-        item[kSecValueData] = Data(value.utf8)
+        item[kSecValueData] = data
         item[kSecAttrAccessible] = Self.accessibility
-        let status = SecItemAdd(item as CFDictionary, nil)
-        guard status == errSecSuccess else { throw Failure.status(status) }
+        let added = SecItemAdd(item as CFDictionary, nil)
+        guard added == errSecSuccess else { throw Failure.status(added) }
     }
 
     func delete() {

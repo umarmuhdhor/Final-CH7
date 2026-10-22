@@ -123,7 +123,7 @@ final class StubServer: @unchecked Sendable {
         configuration.protocolClasses = [HostStubProtocol.self]
         let session = session
         return APIClient(
-            baseURL: baseURL, configuration: configuration, token: { session.token },
+            baseURL: baseURL, configuration: configuration, token: { try session.readToken() },
             onUnauthorized: { [weak self] in self?.countUnauthorized() }
         )
     }

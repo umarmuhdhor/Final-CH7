@@ -27,18 +27,18 @@ final class APIClient: Sendable {
 
     let baseURL: URL
     private let session: URLSession
-    private let token: @Sendable () -> String?
+    private let token: @Sendable () throws -> String?
     /// Called on 401, or when an authorized call has no token at all (backup restored onto another iPhone).
     private let onUnauthorized: @Sendable () -> Void
 
     init(
         baseURL: URL,
         configuration: URLSessionConfiguration = APIClient.configuration(),
-        token: @escaping @Sendable () -> String?,
+        token: @escaping @Sendable () throws -> String?,
         onUnauthorized: @escaping @Sendable () -> Void = {}
     ) {
         self.baseURL = baseURL
-        session = URLSession(configuration: configuration)
+        session = URLSession(configuration: configuration, delegate: RedirectRefusal(), delegateQueue: nil)
         self.token = token
         self.onUnauthorized = onUnauthorized
     }
@@ -67,11 +67,13 @@ final class APIClient: Sendable {
     }
 
     func urlRequest(for request: Request) throws -> URLRequest {
+        // Ids come from the server and from deep links (`shoo://scan/{id}`, T15): a segment that isn't a
+        // plain id (`..`, `/`, `%2e`) never leaves the app; to the caller it is a scan that doesn't exist.
+        guard request.path.allSatisfy(Self.isPlainSegment) else {
+            throw RepositoryError.api(.notFound, message: "Invalid id")
+        }
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
-        let encodedPath = request.path
-            .map { $0.addingPercentEncoding(withAllowedCharacters: .urlPathSegmentAllowed) ?? "" }
-            .joined(separator: "/")
-        components?.percentEncodedPath = "/" + encodedPath
+        components?.percentEncodedPath = "/" + request.path.joined(separator: "/")
         components?.queryItems = request.query.isEmpty ? nil : request.query
         guard let url = components?.url else { throw RepositoryError.decoding }
 
@@ -79,7 +81,14 @@ final class APIClient: Sendable {
         urlRequest.httpMethod = request.method.rawValue
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
         if request.authorized {
-            guard let token = token() else {
+            let stored: String?
+            do {
+                stored = try token()
+            } catch {
+                // Keychain locked (before the first unlock): try later, the session is fine.
+                throw RepositoryError.network
+            }
+            guard let token = stored else {
                 if request.reportsUnauthorized { onUnauthorized() }
                 throw RepositoryError.api(.unauthorized, message: "No device session")
             }
@@ -136,7 +145,22 @@ struct OkResponse: Decodable, Sendable {
     var ok: Bool
 }
 
-private extension CharacterSet {
-    /// `urlPathAllowed` minus "/": a segment can't add path levels.
-    static let urlPathSegmentAllowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))
+extension APIClient {
+    /// Route names and ids: letters, digits, `_` and `-` only (UUIDs, `dev_…`), at most 128.
+    static func isPlainSegment(_ segment: String) -> Bool {
+        (1...128).contains(segment.count)
+            && segment.unicodeScalars.allSatisfy { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == "_" || $0 == "-") }
+    }
+}
+
+/// The backend never redirects; following one could send the Bearer token over another scheme or path.
+private final class RedirectRefusal: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest
+    ) async -> URLRequest? {
+        nil
+    }
 }

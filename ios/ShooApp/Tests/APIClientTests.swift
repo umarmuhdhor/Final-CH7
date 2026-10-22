@@ -112,11 +112,29 @@ struct APIClientTests {
         }
     }
 
-    @Test func pathSegmentsCannotAddLevels() throws {
+    /// T15: ids also come from deep links; anything but a plain id never leaves the app.
+    @Test(arguments: ["..", ".", "", "../devices/me", "a/b", "%2e%2e", "abc?x=1", "é"])
+    func oddIdsNeverReachTheServer(id: String) async {
         let server = StubServer()
-        let request = try server.client().urlRequest(for: .init(method: .get, path: ["scans", "../devices/me?x=1"]))
-        #expect(request.url?.path(percentEncoded: true) == "/scans/..%2Fdevices%2Fme%3Fx=1")
-        #expect(request.url?.query() == nil)
+        server.reply { _ in .json(200, "{}") }
+        await #expect(throws: RepositoryError.api(.notFound, message: "Invalid id")) {
+            _ = try await server.repository().scan(id: id)
+        }
+        #expect(server.requests.isEmpty)
+    }
+
+    @Test func plainIdsPass() {
+        #expect(APIClient.isPlainSegment("6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"))
+        #expect(APIClient.isPlainSegment("dev_mom"))
+    }
+
+    @Test func redirectAnswerIsNotASuccess() async {
+        let server = StubServer()
+        server.reply { _ in .json(302, "") }
+        await #expect(throws: RepositoryError.self) {
+            let _: OkResponse = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
+        }
+        #expect(server.requests.count == 1)
     }
 
     /// SECURITY §3 P9 + P13: answers carry user data; nothing is kept on disk.

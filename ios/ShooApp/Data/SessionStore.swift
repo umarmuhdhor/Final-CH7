@@ -36,7 +36,11 @@ final class SessionStore: @unchecked Sendable {
 
     /// Bearer token for the API. `nil` before onboarding, after delete, or when a backup was restored
     /// onto another iPhone (the Keychain item never moves; the App Group copy is then ignored).
-    var token: String? { keychain.read() }
+    /// Throws when the Keychain can't be read right now (locked before the first unlock).
+    func readToken() throws -> String? { try keychain.read() }
+
+    /// `readToken()` with a locked Keychain read as "no token" (tests, simple checks).
+    var token: String? { try? readToken() }
 
     var deviceId: String? { defaults.string(forKey: AppGroup.Key.deviceId) }
 
@@ -44,47 +48,79 @@ final class SessionStore: @unchecked Sendable {
     var guardian: GuardianInfo? { lock.withLock { _guardian } }
 
     /// After `POST /devices`: Keychain first, so a failed write leaves no half session behind.
+    /// One lock around every write, so a `clear()` from a 401 can't interleave with it.
     func save(_ registration: DeviceRegistration, name: String, mode: UserMode) throws {
-        try keychain.write(registration.token)
-        defaults.set(registration.deviceId, forKey: AppGroup.Key.deviceId)
-        defaults.set(registration.token, forKey: AppGroup.Key.deviceToken)
-        defaults.set(mode.rawValue, forKey: AppGroup.Key.deviceMode)
-        defaults.set(name, forKey: AppGroup.Key.deviceName)
-        defaults.removeObject(forKey: AppGroup.Key.guardianName)
-        lock.withLock { _guardian = nil }
-        writeBaseURLs()
+        try lock.withLock {
+            try keychain.write(registration.token)
+            defaults.set(registration.deviceId, forKey: AppGroup.Key.deviceId)
+            defaults.set(registration.token, forKey: AppGroup.Key.deviceToken)
+            defaults.set(mode.rawValue, forKey: AppGroup.Key.deviceMode)
+            defaults.set(name, forKey: AppGroup.Key.deviceName)
+            defaults.removeObject(forKey: AppGroup.Key.guardianName)
+            _guardian = nil
+            writeBaseURLsLocked()
+        }
     }
 
     /// Also at every launch, so a new build's URLs reach the extension.
     func writeBaseURLs() {
-        defaults.set(apiBaseURL.absoluteString, forKey: AppGroup.Key.apiBaseURL)
-        if let aiBaseURL {
+        lock.withLock { writeBaseURLsLocked() }
+    }
+
+    /// After `PATCH /devices/me { name }` or a `GET /devices/me` with another name.
+    /// A no-op once the session is gone: a late answer never brings data back after delete (P13).
+    func updateName(_ name: String) {
+        lock.withLock {
+            guard hasSessionLocked else { return }
+            defaults.set(name, forKey: AppGroup.Key.deviceName)
+        }
+    }
+
+    /// `nil` = no guardian (left, removed by the guardian, or never joined): EX-06 stops naming them.
+    func setGuardian(_ guardian: GuardianInfo?) {
+        lock.withLock {
+            guard guardian == nil || hasSessionLocked else { return }
+            _guardian = guardian
+            if let guardian {
+                defaults.set(guardian.name, forKey: AppGroup.Key.guardianName)
+            } else {
+                defaults.removeObject(forKey: AppGroup.Key.guardianName)
+            }
+        }
+    }
+
+    /// Delete my data, session expired: the extension loses its session at once (P3, P13).
+    func clear() {
+        lock.withLock {
+            keychain.delete()
+            for key in Self.appKeys { defaults.removeObject(forKey: key) }
+            _guardian = nil
+        }
+    }
+
+    private var hasSessionLocked: Bool { defaults.string(forKey: AppGroup.Key.deviceId) != nil }
+
+    private func writeBaseURLsLocked() {
+        // Release builds only ever hand the extension HTTPS endpoints (P5); plain HTTP is `wrangler dev`.
+        if Self.isAllowed(apiBaseURL) {
+            defaults.set(apiBaseURL.absoluteString, forKey: AppGroup.Key.apiBaseURL)
+        } else {
+            defaults.removeObject(forKey: AppGroup.Key.apiBaseURL)
+        }
+        if let aiBaseURL, Self.isAllowed(aiBaseURL) {
             defaults.set(aiBaseURL.absoluteString, forKey: AppGroup.Key.aiBaseURL)
         } else {
             defaults.removeObject(forKey: AppGroup.Key.aiBaseURL)
         }
     }
 
-    /// After `PATCH /devices/me { name }` or a `GET /devices/me` with another name.
-    func updateName(_ name: String) {
-        defaults.set(name, forKey: AppGroup.Key.deviceName)
-    }
-
-    /// `nil` = no guardian (left, removed by the guardian, or never joined): EX-06 stops naming them.
-    func setGuardian(_ guardian: GuardianInfo?) {
-        lock.withLock { _guardian = guardian }
-        if let guardian {
-            defaults.set(guardian.name, forKey: AppGroup.Key.guardianName)
-        } else {
-            defaults.removeObject(forKey: AppGroup.Key.guardianName)
-        }
-    }
-
-    /// Delete my data, session expired: the extension loses its session at once (P3, P13).
-    func clear() {
-        keychain.delete()
-        for key in Self.appKeys { defaults.removeObject(forKey: key) }
-        lock.withLock { _guardian = nil }
+    static func isAllowed(_ url: URL) -> Bool {
+        if url.scheme == "https" { return true }
+        #if DEBUG
+        return url.scheme == "http" && ["localhost", "127.0.0.1"].contains(url.host() ?? "")
+        #else
+        return false
+        #endif
     }
 }
 

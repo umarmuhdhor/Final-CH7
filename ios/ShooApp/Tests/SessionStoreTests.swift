@@ -93,6 +93,36 @@ struct SessionStoreTests {
         #expect(defaults.object(forKey: AppGroup.Key.extensionLastSeenAt) as? Date == heartbeat)
     }
 
+    /// P13: an answer that lands after delete never writes the name or guardian back.
+    @Test func lateAnswersAfterClearWriteNothing() throws {
+        let (store, defaults, suite) = makeStore()
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        try store.save(registration, name: "Mom", mode: .protected)
+        store.clear()
+        store.updateName("Ibu")
+        store.setGuardian(GuardianInfo(deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01"))
+        #expect(defaults.object(forKey: AppGroup.Key.deviceName) == nil)
+        #expect(defaults.object(forKey: AppGroup.Key.guardianName) == nil)
+        #expect(store.guardian == nil)
+    }
+
+    @Test func secondSaveReplacesTheToken() throws {
+        let (store, _, suite) = makeStore()
+        defer { store.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        try store.save(registration, name: "Mom", mode: .protected)
+        try store.save(DeviceRegistration(deviceId: "dev_2", token: "shoo_second", avatarId: "avatar_02"), name: "Mom", mode: .protected)
+        #expect(store.token == "shoo_second")
+        #expect(store.keychain.storedAccessibility() == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly as String)
+    }
+
+    @Test func onlyLocalHTTPIsAllowedAndOnlyInDebug() {
+        #expect(SessionStore.isAllowed(URL(string: "https://shoo-api.afindo-mi01.workers.dev")!))
+        #expect(!SessionStore.isAllowed(URL(string: "http://example.com")!))
+        #if DEBUG
+        #expect(SessionStore.isAllowed(URL(string: "http://localhost:8787")!))
+        #endif
+    }
+
     /// A restored backup brings the App Group copy but not the Keychain item: the app does not use it.
     @Test func appGroupCopyAloneIsNotASession() {
         let (store, defaults, suite) = makeStore()

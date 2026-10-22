@@ -59,7 +59,7 @@ final class AppEnvironment {
             let store = SessionStore()
             let client = APIClient(
                 baseURL: AppConfig.apiBaseURL,
-                token: { store.token },
+                token: { try store.readToken() },
                 onUnauthorized: { expiry.report() }
             )
             repository = ApiRepository(client: client, session: store)
@@ -108,7 +108,15 @@ final class AppEnvironment {
     func register(name: String, mode: UserMode) async throws -> DeviceRegistration {
         let registration = try await repository.registerDevice(name: name, mode: mode, apnsToken: nil)
         // Keychain + App Group before the mode is saved: a relaunch never finds a mode without a session.
-        try session?.save(registration, name: name, mode: mode)
+        do {
+            try session?.save(registration, name: name, mode: mode)
+        } catch {
+            // Keychain refused (full, locked): no half session. The unused device on the server holds
+            // only a name and expires with the inactive-device cleanup (handoff fase 13).
+            session?.clear()
+            Log.app.error("Session save failed", error)
+            throw RepositoryError.network
+        }
         settings.chooseMode(mode)
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
@@ -150,18 +158,28 @@ final class AppEnvironment {
     @MainActor
     func checkStoredSession() {
         guard let session else { return }
-        if settings.mode != nil, session.token == nil {
-            markSessionExpired()
-        } else if settings.mode != nil {
-            session.writeBaseURLs()
+        let token: String?
+        do {
+            token = try session.readToken()
+        } catch {
+            // Keychain not readable yet (before the first unlock): decide on the next launch.
+            return
         }
+        guard token != nil else {
+            // Never leave a token the app can't use in the App Group, registered or not.
+            session.clear()
+            if settings.mode != nil { markSessionExpired() }
+            return
+        }
+        if settings.mode != nil { session.writeBaseURLs() }
     }
 
     @MainActor
     func markSessionExpired() {
+        // A dead token goes in every case; the screen only for a registered device.
+        session?.clear()
         guard settings.mode != nil, !sessionExpired else { return }
         Log.app.info("Session expired")
-        session?.clear()
         sessionExpired = true
     }
 
