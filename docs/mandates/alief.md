@@ -30,16 +30,16 @@ Signing ke akun Apple-mu: `cp ios/Config/Local.xcconfig.example ios/Config/Local
 ### Fase A · UI dari fixtures, tanpa menunggu backend
 Pakai `contracts/fixtures/*.json` sebagai data palsu lewat satu protocol/repository. Di Fase C, cukup implementasinya yang diganti, view-nya tidak perlu diubah.
 
-- [ ] **Fondasi:** struktur navigasi (tab Shield / Activity), protocol `ShooRepository` + `MockRepository` yang membaca fixtures, String Catalog EN + ID. Branch: `feat/APP-foundation`
-- [ ] **ON-01** Splash interaktif 3 slide, ada tombol Skip
-- [ ] **ON-02** Isi nama (1–20 karakter) + avatar acak
-- [ ] **ON-03** Pilih mode Guardian / Protected (permanen)
+- [x] **Fondasi:** struktur navigasi (tab Shield / Activity), protocol `ShooRepository` + `MockRepository` yang membaca fixtures, String Catalog EN + ID. Branch: `feat/APP-foundation`
+- [x] **ON-01** Splash interaktif 3 slide, ada tombol Skip
+- [x] **ON-02** Isi nama (1–20 karakter) + avatar acak
+- [x] **ON-03** Pilih mode Guardian / Protected (permanen)
 - [ ] **ON-04** Turn on extension: ilustrasi letak switch, tombol Turn on, cek status saat kembali ke app, link "Still can't? Watch video" (PiP). Mulai dengan fallback PRD §10, sempurnakan dari hasil S1 + S2.
-- [ ] **ON-05** Izin notifikasi + pengingat di Home kalau ditolak
-- [ ] **DT-01 s.d. DT-06** Layar Detail: ring skor, label, link & waktu, 1–3 bukti (`labelSimple` untuk Protected), tombol validasi khusus Guardian, catatan "Verified scam by / Marked safe by"
-- [ ] **PR-04, PR-05** Shield + Activity untuk Protected
-- [ ] **GD-01, GD-02, GD-03, GD-05** Shield Guardian, toggle Family mode, Shield Family, Activity Family
-- [ ] **PF-01** Profile (nama, avatar, bahasa, status extension)
+- [x] **ON-05** Izin notifikasi + pengingat di Home kalau ditolak
+- [x] **DT-01 s.d. DT-06** Layar Detail: ring skor, label, link & waktu, 1–3 bukti (`labelSimple` untuk Protected), tombol validasi khusus Guardian, catatan "Verified scam by / Marked safe by"
+- [x] **PR-04, PR-05** Shield + Activity untuk Protected
+- [x] **GD-01, GD-02, GD-03, GD-05** Shield Guardian, toggle Family mode, Shield Family, Activity Family
+- [x] **PF-01** Profile (nama, avatar, bahasa, status extension)
 
 Status extension Active/Off cukup baca `AppGroup.Key.extensionLastSeenAt`. Contohnya sudah ada di `ContentView.swift`.
 Layout dan copy final mengikuti designer. Wireframe di PRD bagian 7 hanya referensi.
