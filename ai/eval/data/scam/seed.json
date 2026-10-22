@@ -2,7 +2,11 @@
   {
     "id": "lphone-login",
     "label": "scam",
-    "tags": ["lookalike-brand", "credential-iframe", "apple"],
+    "tags": [
+      "lookalike-brand",
+      "credential-iframe",
+      "apple"
+    ],
     "synthetic": false,
     "redacted": true,
     "source": "found by Imelda 2026-10-21; static HTML read, never opened in a browser. Live phishing URL: do not open it.",
@@ -14,51 +18,79 @@
       "lang": "en-us",
       "text": "Locating... Find Devices All Devices iPhone 11 Now Play Sound Mark As Lost Erase This Device iPhone 11 a few minutes ago Play Sound Mark As Lost Erase This Device",
       "forms": [],
-      "imageAlts": ["Your profile photo", "iPhone"],
+      "imageAlts": [
+        "Your profile photo",
+        "iPhone"
+      ],
       "capturedAt": "2026-10-21T12:47:38.000Z"
     },
     "meta": {
-      "iframes": ["/script/navigation_compass_find_devices_login_passcode6_2026/2026/components/form_container.php?module=code6.php&theme=lite"]
+      "iframes": [
+        "/script/navigation_compass_find_devices_login_passcode6_2026/2026/components/form_container.php?module=code6.php&theme=lite"
+      ]
     }
   },
   {
     "id": "fixture-bca-verifikasi",
     "label": "scam",
-    "tags": ["brand-plus-keyword", "cheap-tld", "bank"],
+    "tags": [
+      "brand-plus-keyword",
+      "cheap-tld",
+      "bank"
+    ],
     "synthetic": true,
     "source": "domain from contracts/fixtures/blocked-92.json; page content not captured",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "URL only: enough for layers 1-2.",
-    "snapshot": { "url": "https://bca-verifikasi.site/login?ref=REDACTED" }
+    "snapshot": {
+      "url": "https://bca-verifikasi.site/login?ref=REDACTED"
+    }
   },
   {
     "id": "fixture-promo-shopee",
     "label": "scam",
-    "tags": ["brand-plus-keyword", "cheap-tld", "e-commerce"],
+    "tags": [
+      "brand-plus-keyword",
+      "cheap-tld",
+      "prize"
+    ],
     "synthetic": true,
     "source": "domain from contracts/fixtures/warning-41.json; page content not captured",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "URL only: enough for layers 1-2.",
-    "snapshot": { "url": "https://promo-undian-shopee.click/hadiah" }
+    "snapshot": {
+      "url": "https://promo-undian-shopee.click/hadiah"
+    }
   },
   {
     "id": "fixture-bansos-kemensos",
     "label": "scam",
-    "tags": ["brand-plus-keyword", "cheap-tld", "government"],
+    "tags": [
+      "brand-plus-keyword",
+      "cheap-tld",
+      "government"
+    ],
     "synthetic": true,
     "source": "domain from contracts/fixtures/warning-63.json; page content not captured",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "URL only: enough for layers 1-2.",
-    "snapshot": { "url": "https://bansos-kemensos.site/cek" }
+    "snapshot": {
+      "url": "https://bansos-kemensos.site/cek"
+    }
   },
   {
     "id": "synthetic-p0stindonesia",
     "label": "scam",
-    "tags": ["lookalike-brand", "courier"],
+    "tags": [
+      "lookalike-brand",
+      "courier"
+    ],
     "synthetic": true,
     "source": "invented by Imelda's Claude to exercise the digit-swap rule of M1; not a real page",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "URL only.",
-    "snapshot": { "url": "https://p0stindonesia.com/lacak-paket" }
+    "snapshot": {
+      "url": "https://p0stindonesia.com/lacak-paket"
+    }
   }
 ]
