@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
 import { cropBox, smallestFitting } from "../Resources/capture.js";
-const { shouldReport, scanBody, evidenceRect } = globalThis.ShooReport;
+const { shouldReport, scanBody, shareableUrl, evidenceRect } = globalThis.ShooReport;
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const schema = read("../../../contracts/scan-result.schema.json");
@@ -34,6 +34,16 @@ test("POST /scans body matches ScanResult once background adds the owner", () =>
     assert.ok(!("verdict" in body) && !("id" in body));
     assert.ok(schema.properties.status.enum.includes(body.status));
     assert.deepEqual(body.signals.map((s) => s.weight), [25, 15, 13, 10]); // highest weight first
+});
+
+test("POST /scans url drops query, fragment and credentials; domain is untouched", () => {
+    assert.equal(shareableUrl("https://bank.example/reset?token=abc123#sid=9"), "https://bank.example/reset");
+    assert.equal(shareableUrl("https://user:pw@bansos.example:8443/klaim/form?nik=1"), "https://bansos.example:8443/klaim/form");
+    assert.equal(shareableUrl("https://bansos.example"), "https://bansos.example/");
+    const state = { ...warning63, url: "https://bansos-klaim.example/form?otp=1234#x", scanId: 1, done: true };
+    const body = scanBody(state, { title: "", faviconUrl: null, now: "2026-10-21T10:00:00.000Z" });
+    assert.equal(body.url, "https://bansos-klaim.example/form");
+    assert.equal(body.domain, warning63.domain);
 });
 
 test("evidence = the sensitive form plus padding, clamped to the viewport", () => {
