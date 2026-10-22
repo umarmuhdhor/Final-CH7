@@ -41,6 +41,8 @@ Berlaku untuk `ios/ShooApp/`, `backend/`, dan `plan/alief/`. Repo bisa jadi publ
 
 Shoo memproses riwayat browsing berisiko, nama, dan screenshot. App Store Review (5.1.x) dan privasi pengguna menuntut aturan di bawah. Nilai persis (kode alasan API, kategori data) **dicek ulang di docs Apple lewat `ecc:documentation-lookup` di fase yang memakainya**; yang belum terbukti ditulis BELUM DIVERIFIKASI di log.
 
+**Aturan wajib (D-alief-40):** semua pekerjaan (app, backend, plan, langkah manual, QA) mengikuti bagian ini. Kalau ragu, pilih opsi paling menjaga privasi dan catat di DECISIONS. Pelanggaran = temuan TINGGI di review.
+
 | # | Aturan | Fase / bukti |
 |---|---|---|
 | P1 | **Privacy manifest** `ios/ShooApp/PrivacyInfo.xcprivacy` (folder kita, ikut target lewat sources XcodeGen): `NSPrivacyTracking = false`, `NSPrivacyTrackingDomains = []`, `NSPrivacyAccessedAPITypes`: UserDefaults (alasan app sendiri `CA92.1` + App Group `1C8F.1`), `NSPrivacyCollectedDataTypes` sesuai P2. Manifest extension = milik Umar (TODO C19). | 01 · `plutil -lint`; 16 · Xcode Archive → Generate Privacy Report |
@@ -55,6 +57,7 @@ Shoo memproses riwayat browsing berisiko, nama, dan screenshot. App Store Review
 | P10 | **Push:** isi hanya nama + kata kerja + skor (T9), tanpa URL/domain di lock screen. | 11, 15 |
 | P11 | **Export compliance:** app hanya memakai HTTPS standar → `ITSAppUsesNonExemptEncryption = NO` di Info.plist (lewat `project.yml`, TODO C19) supaya TestFlight tidak bertanya tiap build. BELUM DIVERIFIKASI untuk kasus ini, cek docs saat B8. | 16 |
 | P12 | **Kebijakan privasi:** URL kebijakan privasi wajib sebelum TestFlight eksternal / App Store (bukan untuk tester internal). Isi: data P2, retensi 14 hari, hapus data P3, tanpa tracking. Halaman statis di Worker (`GET /privacy`, EN/ID) atau dokumen tim → TODO E. **Fase 12:** `GET /privacy` EN/ID hidup (D-alief-B12 j); tinggal alamat kontak + domain sendiri (TODO E6). | 12 (halaman), 16 |
+| P13 | **Hapus = langsung hilang.** Setelah `DELETE /devices/me`, retensi 14 hari, atau putus hubungan Guardian, data pengguna (scan, screenshot, nama) tidak boleh bisa diakses lagi lewat jalur apa pun, termasuk URL yang sudah dibagikan dan salinan cache/CDN. Data pengguna tidak dilayani lewat CDN yang tidak bisa di-purge; respons berisi data pengguna memakai `Cache-Control: private, no-store`. Contoh: screenshot dilayani Worker dengan cek akses per request (D-alief-B08, fase 09). | 08, 09, 12 · uji asap "after delete = 404" |
 
 ## 4. Memakai AI assistant dengan aman
 

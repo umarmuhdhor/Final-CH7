@@ -272,6 +272,24 @@ Format:
 - Alasan: permintaan Alief (21 Okt): produk berjalan di ekosistem Apple dan memproses riwayat browsing berisiko, nama, dan screenshot; App Store Review 5.1.1 mewajibkan manifest, label, dan penghapusan akun.
 - File: SECURITY §3 (§ lama bergeser ke §4–§6), PROMPT 6l, fase-01, 06, 08, 13, 14, 16, TODO C19.
 
+## D-alief-A01 · 22 Okt 2026 · app (fase 01) · Hook uji di `MockRepository` dan launch argument
+
+- Keputusan: error kontrak join dipicu kode ajaib (`0000` code_invalid, `9999` code_expired, `8888` family_full, `7777` too_many_attempts, `6666` already_connected). Skenario `-mock.scenario empty` untuk empty state. Launch argument `-settings.language`, `-settings.mode`, `-settings.onboardingCompleted` (domain argumen `UserDefaults`) untuk UI test dan screenshot; galeri komponen hanya di DEBUG (`-debug.gallery YES`).
+- Alasan: fase 01 langkah 3 meminta error kontrak bisa dipicu untuk preview/test; launch argument tidak menambah kode produksi di luar DEBUG kecuali pembacaan `UserDefaults` yang memang dipakai.
+- File: `ios/ShooApp/Data/MockRepository.swift`, `App/AppEnvironment.swift`, `App/AppSettings.swift`, `App/RootView.swift`, `UITests/SmokeUITests.swift`.
+
+## D-alief-A02 · 22 Okt 2026 · app (fase 01) · Bahasa in-app lewat `\.locale` + helper `L10n`
+
+- Keputusan: `RootView` memasang `.environment(\.locale, settings.language.locale)`. `Text("literal")` dan `Label("literal", …)` ikut. Teks yang dibangun sebagai `String` (view model, nilai aksesibilitas, judul navigasi) memakai `L10n.string(_:language:)` = `String(localized:bundle:locale:)` dengan bundle `<code>.lproj`. `navigationTitle(Text(_:))` tidak ikut berganti saat bahasa diganti live (UI test `testLanguageSwitchesLiveFromProfile` gagal), jadi judul memakai `navigationTitle(localized:)`.
+- Alasan: fase 01 langkah 5 (BELUM DIVERIFIKASI → sekarang terbukti oleh `LocalizationTests` + `SmokeUITests`). Bahasa app terpisah dari bahasa iPhone (PF-01); extension tetap mengikuti bahasa iPhone.
+- File: `Support/L10n.swift`, `Support/AppLanguage.swift`, `App/RootView.swift`, `Tests/LocalizationTests.swift`, `UITests/SmokeUITests.swift`.
+
+## D-alief-A03 · 22 Okt 2026 · app (fase 01) · `SiteIcon` = monogram, favicon tidak diunduh
+
+- Keputusan: `SiteIcon` menampilkan huruf pertama domain; `faviconUrl` dari kontrak tidak dimuat.
+- Alasan: memuat favicon berarti app menghubungi host yang dicurigai penipuan (bocor IP + "pernah dibuka" ke pelaku) dan menyimpan gambarnya di cache disk. Opsi paling privat (SECURITY §3, sejalan P9). Fase 01 langkah 7 mengizinkan "favicon atau huruf awal domain".
+- File: `Components/SiteIcon.swift`.
+
 ## D-alief-B01 · 21 Okt 2026 · fase 07 · Spike APNs dari Worker cloud: lulus
 
 - Hasil: `POST /debug/apns-spike` di Worker cloud `https://shoo-api.afindo-mi01.workers.dev` (LANGKAH MANUAL 6, log fase 07) → `{"reached":true,"status":403,"body":"{\"reason\":\"InvalidProviderToken\"}","ms":1242,"colo":"CDG"}`. APNs hanya melayani HTTP/2 dan menjawab dengan JSON `reason` miliknya, jadi `fetch()` Worker yang sudah di-deploy mencapai `api.sandbox.push.apple.com` lewat HTTP/2. `403 InvalidProviderToken` memang yang diharapkan (kunci P-256 sekali pakai, Key ID/Team ID palsu). Setelah uji: `APNS_SPIKE: "0"`, deploy ulang, endpoint → `404`.
@@ -311,6 +329,12 @@ Format:
 - Ditunda (dicatat, bukan blocker): grant `shoo_api` lebih sempit + role admin terpisah untuk approve blocklist, `statement_timeout`/`connection limit` role (fase 12 hardening); batas per IP untuk 401 berulang (fase 12); `x-spike-key` tidak constant-time (endpoint di-gate `APNS_SPIKE=0` dan dihapus fase 11); `join_attempts.ip` mentah dan `family_full` lewat pesan error (fase 08); bucket `screenshots` tanpa `file_size_limit` (fase 09); `POST /devices` menghitung rate limit sebelum validasi body (disengaja: setiap percobaan dihitung).
 - Dampak ke tim lain / kontrak: tidak ada perubahan bentuk JSON. Cloud: migrasi baru + kode ini ikut deploy berikutnya (LANGKAH MANUAL fase 08); sampai itu cloud memakai kode fase 07 awal (blocklist cloud masih 0 baris, jadi tidak ada risiko cursor).
 - File yang diperbarui: `backend/api/src/http/{validate,rateLimit}.ts`, `src/routes/{devices,blocklist}.ts`, `src/db/repo/blocklist.ts`, `test/{devices,blocklist}.test.ts`, `backend/db/supabase/migrations/20261021150000_blocklist_times.sql`, `tests/schema.test.sql`, `backend/ci/backend.yml`, `backend/README.md`.
+
+## D-alief-40 · 21 Okt 2026 · plan · Keamanan & privasi Apple wajib untuk semua pekerjaan
+
+- Keputusan: aturan PROMPT 6l diperluas dari "fase app" menjadi semua pekerjaan (app, backend, plan, langkah manual, QA); review langkah 8 wajib mencocokkan diff dengan SECURITY §3; tambah P13 "hapus = langsung hilang" (tanpa salinan cache/CDN); aturan emas README #10; baris aturan di `backend/CLAUDE.md` dan `ios/ShooApp/CLAUDE.md`.
+- Alasan: permintaan Alief (21 Okt): "add a rule, everything we do must follow apple security & privacy". Pemicu: uji asap fase 09 menunjukkan screenshot yang sudah dihapus masih tersaji dari CDN Supabase sampai signed URL kedaluwarsa (log fase-09 (b)).
+- File: PROMPT 6l + langkah 8, README §6, SECURITY §3 (P13), `backend/CLAUDE.md`, `ios/ShooApp/CLAUDE.md`.
 
 ## D-alief-B06 · 21 Okt 2026 · fase 08 · Detail family dan join
 
@@ -353,6 +377,36 @@ Format:
 - Dampak ke tim lain / kontrak: tidak ada perubahan JSON. C8 (draf) menyebut 30/10 s dan verdict hilang setelah putus hubungan. Reviewer antrean: `families` = petunjuk, bukan bukti (SECURITY T5).
 - File yang diperbarui: `backend/api/src/routes/verdicts.ts`, `src/db/repo/{verdicts,families,devices}.ts`, `src/data/allowlist.ts`, `src/http/{errors,rateLimit,validate}.ts`, `src/routes/scans.ts`, `src/app.ts`, `backend/db/supabase/migrations/20261021180000_verdicts.sql`, `tests/verdicts.test.sql`, `test/verdicts.test.ts`, `ref/R3` §4–§5, `SECURITY.md` T5 + T10, `TODO.md` C8 + D4, `backend/README.md`.
 
+## D-alief-A04 · 22 Okt 2026 · app (fase 02) · Alur onboarding hanya maju, titik lanjut setelah relaunch
+
+- Keputusan: `OnboardingModel` hanya maju: splash → nama → mode → sapaan → (Connect, Protected) → ON-04 → ON-05. Mode disimpan sekali lewat `AppSettings.chooseMode` (setter `mode` jadi `private(set)`). Relaunch sebelum selesai: mode belum ada → splash; Protected yang belum melewati Connect → Connect (`settings.onboardingConnectPassed`); selain itu → ON-04. Token registrasi tidak disimpan di model (fase 13: Keychain + App Group, `TODO(sync:alief)` di `AppEnvironment.register`).
+- Alasan: fase 02 langkah 3 ("tidak ada jalan kembali ke ON-03") + temuan review H2 (Protected yang menutup app di Connect tidak boleh melewatkannya).
+- File: `Features/Onboarding/OnboardingModel.swift`, `App/AppSettings.swift`, `App/AppEnvironment.swift`, `Tests/OnboardingTests.swift`.
+
+## D-alief-A05 · 22 Okt 2026 · app (fase 02) · Hook uji onboarding (DEBUG)
+
+- Keputusan: launch argument DEBUG `-UITestReset YES` (hapus preferensi app), `-UITestExtensionActive YES` (status extension dianggap Active tanpa menulis App Group asli), `-UITestNotifications granted|denied` (jawaban izin tetap, tanpa alert sistem), `-debug.onboardingStep <step>` (screenshot gerbang UI). Semua di dalam `#if DEBUG`.
+- Alasan: simulator tidak punya heartbeat extension, dan alert izin sistem tidak bisa direset per test untuk notifikasi; UI test harus deterministik. Catatan review: key `-settings.*` lewat domain argumen `UserDefaults` juga terbaca di Release, tapi hanya bisa diset oleh orang yang menjalankan app dari Xcode/`devicectl`.
+- File: `App/AppEnvironment.swift`, `Support/NotificationPermission.swift`, `Features/Onboarding/OnboardingFlow.swift`, `UITests/OnboardingUITests.swift`.
+
+## D-alief-A06 · 22 Okt 2026 · app (fase 02) · ON-04: langkah per versi iOS + `SFSafariSettings`
+
+- Keputusan: iOS 26.2+ → `SFSafariSettings.openExtensionsSettings(forIdentifiers: [bundleId + ".extension"])` (API dicek di header `SafariServices/SFSafariSettings.h` SDK iOS 27.1: `API_AVAILABLE(ios(26.2))`, dipanggil saat foreground); gagal atau iOS lebih lama → `UIApplication.openSettingsURLString`. Tidak ada `App-prefs:`. Langkah bergambar (SF Symbols) per versi: 26.2+ "Tap Turn on", 18+ "Settings › Apps › Safari › Extensions", 17 "Settings › Safari › Extensions". Nama menu Pengaturan berbahasa Indonesia dan perilaku di perangkat BELUM DIVERIFIKASI (01S / QA-E2E #17).
+- Alasan: fase 02 langkah 4; ID extension tidak di-hardcode (L0).
+- File: `Features/Onboarding/ExtensionSetup.swift`, `TurnOnExtensionView.swift`.
+
+## D-alief-A07 · 22 Okt 2026 · app (fase 02) · Video tutorial placeholder + PiP
+
+- Keputusan: `Resources/onboarding-tutorial-placeholder.mp4` (4 s warna polos, ±4 KB, dibuat dengan ffmpeg) sampai video PM ada (C15, `TODO(sync:umar)`). Pemutar `AVPlayerViewController` layar penuh, `allowsPictureInPicturePlayback`, `AVAudioSession .playback/.moviePlayback` saat dibuka dan dinonaktifkan saat ditutup. PiP di luar app (di atas Settings) butuh `UIBackgroundModes: [audio]` = TODO C3 butir 4 (Umar); sampai itu video hanya diputar di dalam app.
+- Alasan: fase 02 langkah 4, risiko "Video PM belum ada".
+- File: `Features/Onboarding/TutorialVideoPlayer.swift`, `Resources/onboarding-tutorial-placeholder.mp4`.
+
+## D-alief-A08 · 22 Okt 2026 · app (fase 02) · Izin notifikasi dan pengingat
+
+- Keputusan: izin diminta di ON-05 dengan `[.alert, .sound]` (payload push tanpa badge). Guardian tidak bisa melewati ON-05 tetapi tetap lanjut kalau menolak; Protected boleh "Nanti saja". Banner pengingat di Shield hanya untuk Guardian (hanya Guardian yang menerima push menurut kontrak); belum pernah ditanya → tombol memunculkan prompt, ditolak → membuka Settings notifikasi app. `registerForRemoteNotifications()` setelah izin diberikan; token dikirim di fase 15. Tidak ada dialog konfirmasi tambahan untuk mode permanen: PRD hanya meminta teks peringatan (saran review MEDIUM, dicek ulang di QA-A).
+- Alasan: fase 02 langkah 5, SECURITY §3 P7 (just-in-time, teks jujur).
+- File: `Support/NotificationPermission.swift`, `Components/NotificationReminderBanner.swift`, `Features/Onboarding/NotificationPermissionView.swift`, `Features/Shield/ShieldPlaceholderView.swift`.
+
 ## D-alief-B11 · 22 Okt 2026 · fase 11 · Push APNs langsung dari Worker, `push_log` tanpa teks
 
 - Keputusan: (a) **Jalur push = `ApnsSender` langsung dari Worker** (D-alief-B01 lebih baru dari teks relay di file fase 11): tidak ada Edge Function `push`, `RelaySender`, `PUSH_RELAY_*`, atau test Deno. Relay hanya dibuat kalau uji iPhone nyata (D7) gagal di jalur langsung. Secret APNs (`APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID`) di Worker; `APNS_TOPIC` + `APNS_ENV` = var. Salah satu kosong / `APNS_ENV` bukan `sandbox|production` → `LogSender` (`push_log` `logged`), peringatan sekali per isolate berisi nama saja. (b) JWT ES256 di-cache per isolate per `keyId:teamId` (maks 50 menit, single flight; 403 `ExpiredProviderToken` membuang hanya token yang dipakai send itu). Header `apns-expiration` = +1 jam, timeout 5 s, tanpa retry. Token device divalidasi hex sebelum masuk path URL. (c) **Privasi (D-alief-40):** kolom `push_log.body` dihapus (menyalin nama Protected ke tabel kedua dan basi setelah ganti nama; teks bisa dibangun ulang dari `scan_id`); `push_log.result` dibatasi CHECK ke kode pendek (`sent`, `logged`, `failed:<3 digit>[ <Reason>]`, `failed:timeout|network|config`) supaya token/JWT tidak mungkin tersimpan; insert `push_log` memakai `FOR KEY SHARE` pada device + scan (scan/Guardian yang dihapus di tengah pengiriman tidak meninggalkan baris; 23503 ditelan). Log hanya nama error + SQLSTATE (`errorInfo`), tidak pernah pesan error (bisa memuat URL berisi token atau nilai SQL). (d) Batas lunak 10 push / 10 menit per Guardian (review keamanan M1): satu device berpasangan tidak bisa membanjiri lock screen; scan tetap tersimpan, hanya push dilewati. Lunak: scan paralel bisa melewati sedikit (baris ditulis setelah kirim); `POST /scans` 120/jam per device tetap batas keras. (e) 410 `Unregistered`/`ExpiredToken` → `apns_token` dikosongkan compare-and-clear (token yang didaftarkan ulang di tengah jalan tetap); 400 `BadDeviceToken` → token tetap (R3 §6).
@@ -360,6 +414,77 @@ Format:
 - Alternatif yang ditolak: relay Edge Function sebagai jalur utama (komponen + secret tambahan tanpa kebutuhan setelah B01); `apns-collapse-id` (menggabungkan push beda scan, Guardian kehilangan scanId lama); batas keras dengan baris `pending` sebelum kirim (perlu nilai `result` baru + update kedua; batas lunak cukup untuk MVP).
 - Dampak ke tim lain / kontrak: tidak ada perubahan JSON. Payload = kontrak + `sound` (C9 sudah diterima). Fase 15 langkah 4 membangun ulang teks push dari `scan_id` bila perlu, bukan dari `push_log`.
 - File yang diperbarui: `backend/api/src/services/push/{apns,sender,deliver,notify}.ts`, `src/db/repo/push.ts`, `src/http/logError.ts` (+ pemakaiannya), `src/routes/scans.ts`, `src/env.ts`, `src/app.ts` (route spike dihapus), `wrangler.jsonc`, `.dev.vars.example`, `vitest.config.ts`, migrasi `20261022100000_push_log_privacy.sql` + `tests/push_log.test.sql`, test `push-apns`, `push-deliver`, `push-notify`, `logError`, `apns`; `ref/R1`, `R2`, `R3` §6–§7, `R4`, `TODO.md` B5/B7, `backend/README.md`.
+
+## D-alief-A30 · 22 Okt 2026 · app (fase 03) · Tombol verdict tetap tampil, menempel di bawah, optimistic + rollback
+
+- Keputusan: Guardian melihat It's safe / Not safe di setiap item `blocked` (milik sendiri dan Protected-nya), juga setelah ada verdict (pilihan aktif ditandai isian lebih kuat + garis tepi + trait `isSelected`; menekan yang lain = ganti keputusan, sesuai `POST /verdicts` "keputusan terakhir menang"). Bar tombol menempel di bawah (`safeAreaInset`) supaya selalu terjangkau. Tanpa dialog (PRD §5, GD-07). Verdict optimistic (`byDeviceId`/`byName` = viewer, waktu sekarang), diganti hasil server; gagal → kembali ke verdict sebelumnya + pesan di bawah tombol. Tombol dikunci selama request (tap ganda diabaikan). Item `warning` tidak punya tombol (kontrak `verdict_not_allowed`).
+- Alasan: PRD tidak menyebut apakah keputusan bisa diubah; kontrak dan backend (I6) mengizinkan, jadi opsi paling sederhana = tombol yang sama tetap ada.
+- File: `Features/Detail/{DetailModel,VerdictButtons,DetailView}.swift`, `Tests/DetailModelTests.swift`.
+
+## D-alief-A31 · 22 Okt 2026 · app (fase 03) · Link tidak pernah dibuka dari app; salin = teks biasa, perangkat ini saja
+
+- Keputusan: DT-03 menampilkan URL lengkap sebagai teks (`Text(verbatim:)`, bukan link) untuk semua status, bukan hanya `blocked`. Tombol "Copy link" menulis `public.plain-text` saja ke `UIPasteboard` dengan `.localOnly: true` (tidak ke Universal Clipboard) dan `.expirationDate` = 5 menit (review keamanan L4: URL riwayat browsing tidak tinggal di pasteboard tanpa batas).
+- Alasan: membuka situs penipuan dari app melewati alur extension; plan meminta "tidak bisa dibuka langsung untuk scan blocked", dan item warning pun tetap berisiko. P8 (`localOnly`) diterapkan juga di sini karena URL termasuk riwayat browsing (P2).
+- File: `Features/Detail/{LinkCopy,DetailView}.swift`, `Tests/DetailPrivacyTests.swift`.
+
+## D-alief-A32 · 22 Okt 2026 · app (fase 03) · Screenshot bukti: sesi ephemeral tanpa cache, tanpa share/simpan
+
+- Keputusan: `ScreenshotView` memuat `screenshotUrl` (link Worker, D-alief-B08) lewat `URLSessionScreenshotLoader`: `URLSessionConfiguration.ephemeral`, **tanpa `URLCache`** (`urlCache = nil`, `reloadIgnoringLocalAndRemoteCacheData`; gambar hanya ada selama view Detail memegangnya), tanpa cookie/kredensial/`Authorization`, hanya host `AppConfig.apiBaseURL` + path `/screenshots/` (review keamanan M2), redirect tidak diikuti, HTTPS saja (HTTP hanya `localhost` di DEBUG), status 200 + body dibaca streaming dan berhenti di > 2 MB + header gambar dibaca dulu: sisi > 4096 px ditolak (decompression bomb, review keamanan M1), lalu didekode sekali dengan downsampling `CGImageSourceCreateThumbnailAtIndex` (maks 2048 px). Review swift (M5): cache memori 8 MB sempat dipakai, tapi itu menyimpan gambar sepanjang umur proses sehingga screenshot yang sudah dihapus/diputus masih bisa tampil saat Detail dibuka ulang (P13). Gagal/404 → "Screenshot isn't available anymore" + Try again (P13: setelah hapus/retensi/disconnect link langsung 404). `nil` → blok disembunyikan. Layar zoom (pinch, ketuk dua kali, tombol tutup) tanpa `ShareLink`, `contextMenu`, atau simpan. Untuk `MockRepository` (DEBUG) gambar diganti `FixtureScreenshotLoader` karena URL fixture `example.invalid` tidak pernah resolve.
+- Alasan: SECURITY §3 P9 + P13. Server sudah mengirim `Cache-Control: private, no-store` (D-alief-B09); disk 0 di sisi app membuat itu tidak bergantung pada header.
+- File: `Features/Detail/ScreenshotView.swift`, `Tests/DetailPrivacyTests.swift`.
+
+## D-alief-A33 · 22 Okt 2026 · app (fase 03) · Nama pemilik di Detail
+
+- Keputusan: baris "Opened by" tampil untuk Guardian bila scan milik orang lain (Protected-nya), atau bila Family mode menyala (scan sendiri → "You"). Protected tidak pernah melihatnya.
+- Alasan: PRD DT-03 "Nama pemilik (Family mode)"; Detail juga dibuka dari push (fase 15) tanpa konteks toggle, jadi scan milik anggota keluarga selalu menyebut namanya.
+- File: `Features/Detail/{DetailModel,DetailView}.swift`.
+
+## D-alief-A34 · 22 Okt 2026 · app (fase 03) · Bukti: bobot untuk kedua mode, field `evidence` tidak ditampilkan
+
+- Keputusan: maks 3 sinyal, bobot terbesar dulu, bobot sama = urutan kontrak. Guardian `label`, Protected `labelSimple`, keduanya dengan "+NN%" (PRD: "sinyal dan bobotnya"; yang lebih sederhana untuk Protected adalah bahasanya). Field `Signal.evidence` (teks yang di-highlight extension) tidak ditampilkan di app.
+- Alasan: opsi paling sederhana yang memenuhi DT-04; `evidence` milik alur highlight extension (EX-05) dan bisa berisi potongan teks halaman.
+- File: `Features/Detail/EvidenceList.swift`.
+
+## D-alief-A35 · 22 Okt 2026 · app (fase 03) · `-debug.detail <scanId>` dan cakupan gerbang UI Protected
+
+- Keputusan: launch argument DEBUG `-debug.detail <scanId>` membuka Detail di tab aktif (UI test + screenshot), satu blok di `AppEnvironment.live`. Gerbang UI Protected memakai 3 fixture milik `dev_mom` (`warning-41`, `blocked-92`, `blocked-marked-safe`); `warning-63` (milik Guardian) dan `blocked-verified-scam` (milik Dad) memang 404 untuk Mom (T1), teks Protected untuk keduanya dibuktikan di unit test.
+- File: `App/AppEnvironment.swift`, `UITests/DetailUITests.swift`.
+
+## D-alief-A36 · 22 Okt 2026 · app (fase 03) · Penutup privasi saat app tidak aktif
+
+- Keputusan: `DetailView` dan layar zoom screenshot memakai `.privacyCover()`: saat `scenePhase != .active`, isi ditutup latar polos + ikon perisai. Snapshot app switcher yang ditulis iOS ke disk (`Library/SplashBoard/Snapshots`) tidak memuat URL penipuan, nama pemilik, atau screenshot bukti. Dicek di simulator: snapshot `.ktx` dikonversi ke PNG = hanya penutup (`qa/img/ui-03/app-switcher-snapshot-on-disk.png`).
+- Alasan: review keamanan M3 (SECURITY §3 P9 + P13): snapshot di disk tidak ikut terhapus saat data dihapus/diputus. Layar lain (Activity, Shield) memuat data serupa → usulan untuk fase 04/05 (catatan handoff log fase 03).
+- File: `Features/Detail/PrivacyCover.swift`, `DetailView.swift`, `ScreenshotView.swift`.
+
+## D-alief-A10 · 22 Okt 2026 · app (fase 04) · Activity Guardian sudah memakai `ActivityView` (owner `.family`)
+
+- Keputusan: `ActivityPlaceholderView` dihapus. Tab Activity Guardian memakai `ActivityView(owner: .family, showsOwner: true)` (nama pemilik di baris); Shield Guardian tetap placeholder sampai fase 05. Filter per orang (GD-05) menyusul di fase 05.
+- Alasan: `ActivityModel` memang dirancang dipakai ulang GD-05; placeholder kosong lebih buruk daripada daftar yang sudah benar. `MainTabView` memberi `.id(ObjectIdentifier(env.repository))` ke akar tab supaya model layar dibuat ulang saat repository diganti (ganti mode, nanti sesi baru).
+- File: `Features/Main/MainTabView.swift`, `Features/Activity/ActivityView.swift`.
+
+## D-alief-A11 · 22 Okt 2026 · app (fase 04) · Baris Activity: host + path saja
+
+- Keputusan: baris Activity menampilkan `host/path` (`ActivityRow.displayLink`), tanpa scheme, query, dan fragment. Link lengkap hanya di Detail (DT-03). VoiceOver membaca satu stop: domain, status, (pemilik), waktu.
+- Alasan: SECURITY §3 P9: query/fragment halaman phishing sering membawa email, OTP, atau token; daftar terlihat oleh siapa pun yang melihat layar. Opsi paling menjaga privasi yang tetap memenuhi PR-05 ("link, domain tebal").
+- File: `Features/Activity/ActivityView.swift`, test `ActivityModelTests.rowLinkHidesQueryAndFragment`.
+
+## D-alief-A12 · 22 Okt 2026 · app (fase 04) · Gagal refresh tidak menghapus yang sudah tampil
+
+- Keputusan: pull to refresh / refresh saat foreground yang gagal mempertahankan daftar dan kartu Shield (`refreshFailed` + baris "Couldn't refresh…", diumumkan VoiceOver); layar error hanya bila belum ada data. Halaman berikut yang gagal → baris "Retry". `URLError(.cancelled)` dan `CancellationError` bukan kegagalan (`Error.isCancellation`). `generation` dinaikkan saat permintaan halaman pertama mulai **dan** saat diterapkan, jadi halaman berikut untuk daftar lama dibuang. Ketuk chip yang sudah aktif tidak memuat ulang.
+- Alasan: review `ecc:swift-reviewer` fase 04 (2 HIGH). Orang tua di jaringan lemah tidak boleh kehilangan riwayat karena satu tarikan gagal.
+- File: `Features/Activity/ActivityModel.swift`, `Features/Shield/ShieldModel.swift`, `Support/Cancellation.swift`, test di `ActivityModelTests`/`ShieldModelTests`.
+
+## D-alief-A13 · 22 Okt 2026 · app (fase 04) · Kontras teks sekunder dan isian status
+
+- Keputusan: teks sekunder yang bermakna (waktu, "Protected by", link, subjudul status) memakai `.readableSecondary` = `Color(.label).opacity(0.72)` (≥ 4,5:1 terang/gelap), bukan `.secondary` (±3,5:1 di mode terang). Lingkaran status: hijau `#1A783D` / abu `#6B6B70` tanpa gradient (ikon putih ≥ 3:1). Chip terpilih: isian `#0061CC` + ikon centang (bukan hanya warna). Di ukuran aksesibilitas: chip bertumpuk lebar penuh, lingkaran dibatasi 160 pt, kartu blokir ring di atas teks.
+- Alasan: review `ecc:a11y-architect` fase 04 (3 HIGH), persona 45–65 tahun. Komponen bersama fase 01 (`EmptyStateView` deskripsi, `StatusChip` `.caption`) belum diubah → dicatat untuk 06Q.
+- File: `Components/ReadableSecondary.swift`, `Features/Shield/ProtectedShieldView.swift`, `Features/Activity/ActivityView.swift`.
+
+## D-alief-A14 · 22 Okt 2026 · app (fase 04) · "Turn on" sementara membuka Settings; `-debug.activityFilter`
+
+- Keputusan: saat Off, "Turn on" membuka `UIApplication.openSettingsURLString` (hint VoiceOver "Opens Settings"); sheet panduan `TurnOnExtensionView` fase 02 dipasang saat 02 digabung ke rantai sebelum 06Q (`TODO(sync:alief)`). Banner pengingat notifikasi tidak dipasang di PR-04 (hanya Guardian, D-alief-A08 di cabang fase 02). Launch argument DEBUG `-debug.activityFilter warning|blocked` membuka filter untuk screenshot gerbang UI.
+- Alasan: fase 02 belum ada di rantai 01 → 03 → 04; tidak boleh menyalin layar 02 ke sini (konflik saat merge).
+- File: `Features/Shield/ProtectedShieldView.swift`, `Features/Activity/ActivityView.swift`.
 
 ## D-alief-B12 · 22 Okt 2026 · fase 12 · Retensi, hardening, perbaikan review keamanan penuh
 
