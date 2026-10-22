@@ -87,3 +87,20 @@ test("a client cannot use localSignals for anything but this weighting (junk is 
         assert.equal(out.find((x) => x.id === "brand_logo_offsite").weight, 12);
     }
 });
+
+test("review: user-content / hosting platforms never get the official or popular silence", async () => {
+    const hosts = [
+        "evil-bank.s3.amazonaws.com", "x.execute-api.ap-southeast-1.amazonaws.com", "sites.googleusercontent.com", "x.googleapis.com",
+        "sway.office.com", "onedrive.live.com", "tenant.sharepoint.com", "forms.cloud.microsoft", "evil.pages.dev", "x.github.io",
+    ];
+    for (const host of hosts) {
+        const signals = await run(`https://${host}/login`, FORMS.pin);
+        assert.ok(signals.some((x) => x.id === "asks_pin"), host);
+    }
+});
+
+test("review: government suffixes and link shorteners are not popular sites (only named agencies are)", async () => {
+    for (const host of ["dinas-xyz.go.id", "kecil.ac.id"]) {
+        assert.ok((await run(`https://${host}/bayar`, FORMS.pin)).some((x) => x.id === "asks_pin"), host);
+    }
+});

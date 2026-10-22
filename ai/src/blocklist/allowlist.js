@@ -17,11 +17,11 @@ export const POPULAR = new Set([
     "tiket.com", "olx.co.id", "jd.id", "zalora.co.id", "sociolla.com", "bri.co.id", "bni.co.id", "bca.co.id",
     "mandiri.co.id", "cimbniaga.co.id", "danamon.co.id", "permatabank.com", "btn.co.id", "ocbc.id", "uob.co.id", "jenius.com",
     "gopay.co.id", "ovo.id", "dana.id", "linkaja.id", "shopeepay.co.id", "kompas.com", "detik.com", "tribunnews.com",
-    "liputan6.com", "cnnindonesia.com", "tempo.co", "kumparan.com", "idntimes.com", "antaranews.com", "go.id", "kominfo.go.id",
+    "liputan6.com", "cnnindonesia.com", "tempo.co", "kumparan.com", "idntimes.com", "antaranews.com", "kominfo.go.id",
     "bpjs-kesehatan.go.id", "bpjsketenagakerjaan.go.id", "pajak.go.id", "kemenkeu.go.id", "kemdikbud.go.id", "kemkes.go.id",
     "kemensos.go.id", "polri.go.id", "indonesia.go.id", "telkomsel.com", "indosatooredoo.com", "xl.co.id", "smartfren.com",
     "pln.co.id", "pertamina.com", "jne.co.id", "jet.co.id", "sicepat.com", "pos.co.id", "anteraja.id", "tiki.id",
-    "googleapis.com", "gstatic.com", "googleusercontent.com", "amazonaws.com", "ruangguru.com", "traveloka.co.id", "kaskus.co.id", "gramedia.com", "halodoc.com", "alodokter.com", "tokopedia.link",
+    "microsoftonline.com", "office365.com", "googleapis.com", "gstatic.com", "googleusercontent.com", "amazonaws.com", "ruangguru.com", "traveloka.co.id", "kaskus.co.id", "gramedia.com", "halodoc.com", "alodokter.com", "tokopedia.com",
 ]);
 
 /**
@@ -37,6 +37,6 @@ export const SHARED_HOSTS = new Set([
     "ngrok.io", "ngrok-free.app", "trycloudflare.com", "azurewebsites.net", "amazonaws.com", "cloudfront.net", "s3.amazonaws.com",
     "sharepoint.com", "googleapis.com", "gstatic.com", "googleusercontent.com", "linktr.ee", "youtu.be", "t.me", "wa.me", "fb.me",
     "fbcdn.net", "akamaihd.net", "fastly.net", "mzstatic.com", "tumblr.com", "mediafire.com", "mega.nz", "canva.site", "godaddysites.com",
-    "rebrand.ly", "is.gd", "cutt.ly", "linkedin.cn", "office365.com", "microsoftonline.com", "windows.net", "live.net", "onedrive.com",
+    "rebrand.ly", "is.gd", "cutt.ly", "linkedin.cn", "windows.net", "live.net", "onedrive.com",
     "notion.site", "carrd.co", "typedream.app", "framer.app", "webwave.me", "mystrikingly.com", "yolasite.com", "jimdofree.com",
 ]);
