@@ -18,7 +18,11 @@ export function buildIndex(text) {
     const from = [];
     const to = [];
     let i = 0;
+    // NFKC can turn one character into 18 (U+FDFA). Past 2x the input we stop: a hostile blow-up costs CPU and
+    // anything beyond is not honest text anyway. Phrases after the cut are simply not found.
+    const maxFolded = 2 * text.length;
     for (const ch of text) {
+        if (folded.length >= maxFolded) break;
         const start = i;
         i += ch.length;
         let f = NEWLINES.has(ch) ? "\n" : fold(ch).toLowerCase();
