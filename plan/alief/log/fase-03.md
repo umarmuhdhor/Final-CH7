@@ -1,6 +1,6 @@
 # Log fase 03 — Detail DT-01..06 + tombol GD-07 (Alief, track app)
 
-- **Status:** [r] — PR #18 `feat/DT-detail`, reviewer @umarmuhdhor. **Stacked on #14** (fase 01), tidak di atas fase 02 (sesi paralel `feat/ON-01-05-onboarding`).
+- **Status:** [r] — PR #18 `feat/DT-detail`, reviewer @umarmuhdhor. Awalnya stacked on #14; setelah #14 (941234b) dan #16 fase 02 di-merge, branch di-rebase ke `origin/main` (lihat "Rebase 22 Okt").
 - **Model:** Claude Opus 5.5, sesi paralel dengan fase 02. Mulai dan selesai 22 Okt 2026.
 - **Rencana lengkap:** `log/fase-03-plan.md`. Sumber requirement: PRD v1.5 §5 Validasi, §8.3 GD-07, §8.4 DT-01..06 (dibaca dari Google Drive 22 Okt 2026).
 
@@ -128,10 +128,16 @@ Perbandingan PRD §7/§8.4: semua butir DT ada; wireframe hanya coretan Crazy 8.
 
 Tidak ada.
 
+## Rebase 22 Okt 2026 (07:55 WITA) ke `origin/main` 32699e4
+
+- `git rebase --onto origin/main 9c49d8e`: 8 commit fase 03 di atas main (berisi #14 squash, #16 onboarding, kontrak #10, backend #9/#11/#13/#15/#17). Cadangan lokal: branch `backup/DT-detail-pre-rebase`.
+- Konflik: `Localizable.xcstrings` (kunci fase 02 + fase 03 digabung lewat JSON 3-arah; satu kunci sama, "Couldn't save. Check your connection and try again.", memakai terjemahan main "…koneksi lalu coba lagi."; 63 kunci main utuh, total 94), `log/DECISIONS.md` (entri B* + A04–A08 dari main dipertahankan, A30–A36 ditambahkan), `PROGRESS.md` (versi main + baris 03 saja).
+- Kontrak #10: `GET /scans/{id}` `screenshotUrl` = "short-lived URL valid 1 h, re-checked on every request… Load it as-is, without `Authorization`" dan screenshot JPEG/PNG — sesuai `URLSessionScreenshotLoader` (tanpa perubahan kode).
+- Verifikasi setelah rebase (simulator sesi ini): `ShooAppTests` **116 test / 13 suite lulus** (78 dari main + 38 Detail), `ShooAppUITests` **16/16** (Smoke 3, Detail 6, Onboarding 7), `** TEST SUCCEEDED **`.
+
 ## Catatan handoff
 
 - **Fase 13:** `URLSessionScreenshotLoader` hanya menerima host `AppConfig.apiBaseURL`; `screenshotUrl` dari Worker memakai origin `INVITE_BASE_URL` (D-alief-B08 c). Pastikan keduanya host yang sama saat `AppConfig` diganti ke URL cloud, kalau tidak screenshot selalu "not available". `ApiRepository` sebaiknya memetakan `URLError.cancelled` ke `CancellationError` (model sudah menangani keduanya).
 - **Fase 15:** validasi `scanId` (UUID) di `NotificationRouter` sebelum `showDetail` (T15, review keamanan L7). Detail dibuka lewat `Router.showDetail(scanId:)`; `.id(scanId)` membuat model baru per scan.
 - **Fase 04/05:** Activity dan kartu Shield menampilkan URL + nama juga → pakai `.privacyCover()` (D-alief-A36) di layar itu. `Router.showDetail` sudah siap untuk tap kartu/baris.
-- `Localizable.xcstrings`: fase 02 menambah kunci di file yang sama; kalau ada konflik saat rebase, gabungkan kedua set kunci (file diurutkan alfabetis, format `json.dumps(indent=2, sort_keys=True)`).
 - Simulator sesi ini: "Shoo DT iPhone 17 Pro" (`1017BA6C-10ED-477F-BC60-166A97686474`) dibuat supaya tidak bentrok dengan sesi fase 02; boleh dihapus (`xcrun simctl delete 1017BA6C-10ED-477F-BC60-166A97686474`).
