@@ -36,8 +36,8 @@
 | `(cd ios && xcodegen)` | OK |
 | `xcodebuild build-for-testing` | OK, tanpa warning baru dari file fase 14 |
 | `xcodebuild test … -only-testing:ShooAppTests` | **262 test / 27 suite lulus** (fase 13: 233) |
-| `xcodebuild test … -only-testing:ShooAppUITests` (mock) | RESULT_UI |
-| `TEST_RUNNER_SHOO_SHOT_DIR=… PairingGateUITests` light + AX-XL, lalu dark | RESULT_GATE |
+| `xcodebuild test … -only-testing:ShooAppUITests` (mock) | **47 dijalankan, 40 lulus, 7 dilewati** (opt-in: 2 audit, 2 `LiveBackendUITests`, 2 `LivePairingUITests`, 1 `PairingGateUITests`), 0 gagal (fase 13: 38 / 36 / 2) |
+| `TEST_RUNNER_SHOO_SHOT_DIR=… PairingGateUITests` light + AX-XL, lalu dark | 2 run lulus (light + AX-XL, dark) · 24 screenshot EN/ID → `qa/img/ui-14/` |
 | `scratchpad/pair.sh` — `LivePairingUITests` di dua simulator bersamaan, `pnpm -C backend/api dev` (Supabase lokal) | 2/2 lulus: Guardian "Rina" menampilkan kode; Protected "Mom" join dengan **mengetik kode**; Protected "Dad" (install bersih) join lewat **`xcrun simctl openurl $PROT_UDID shoo://join?code=5446`** → iOS "Open in Shoo?" → kode terisi, tidak join sendiri (T11, dicek 2 s), tap Connect → "You're protected by Rina"; Guardian melihat "Connected 2/3" (anggota dibaca ulang tiap 5 s) |
 | `psql` lokal: `family_links` 10 menit terakhir | `Mom → Rina 04:26:18`, `Dad → Rina 04:26:37` (UTC) |
 | `git diff --stat $(git merge-base origin/main HEAD)..HEAD -- ios/ShooApp/Info.plist ios/ShooApp/*.entitlements` | kosong |
