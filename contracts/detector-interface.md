@@ -64,7 +64,7 @@ Defined in `scan-result.schema.json#/$defs/Signal`.
 
 `label` and `labelSimple` are **bilingual objects** — Team AI writes both languages; the app only picks one:
 ```json
-{ "id": "new_domain", "layer": 2, "weight": 30,
+{ "id": "new_domain", "layer": 3, "weight": 30,
   "label":       { "en": "Domain age 3 days",             "id": "Umur domain 3 hari" },
   "labelSimple": { "en": "This site was made 3 days ago", "id": "Situs ini baru dibuat 3 hari lalu" } }
 ```
@@ -92,7 +92,7 @@ Optional, but it drives what the extension marks on the page:
 | `lookalike_domain` | 2 | Spelling close to an official brand (p0stindonesia) |
 | `brand_plus_keyword` | 2 | Brand + extra word (bca-verifikasi) |
 | `cheap_tld` | 2 | .xyz, .site, .click, ... |
-| `new_domain` | 2 | Domain age in days |
+| `new_domain` | 3 | Domain age in days (made by the server via RDAP) |
 | `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 | Form requests sensitive data |
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
 | `urgent_language` | 3 | "blocked in 24 hours", etc. |
