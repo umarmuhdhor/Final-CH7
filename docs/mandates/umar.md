@@ -86,7 +86,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [x] Review PR `chore/APP-test-targets` dari Alief (pengecualian `project.yml` sekali saja, diff persis D-alief-24). Merged sebagai PR #8.
 - [x] **C3** Tambah di `project.yml` target Shoo: `NSCameraUsageDescription` (PR-01), entitlement `aps-environment` + Push (ON-05, GD-06), `UIBackgroundModes: [audio]` (PiP video ON-04). Merged sebagai PR #27.
 - [x] **C3** Pilih tim Apple berbayar untuk build iPhone + TestFlight (Push & App Groups tidak ada di Personal Team gratis). Tim Umar, ditutup di #32. Sisa: undang Alief, B7 kunci APNs, B8 App Store Connect.
-- [ ] **C11** Extension mengirim `PATCH /devices/me { extensionLastSeenAt }` maks 1×/jam bersama heartbeat (setelah PR #4 merge).
+- [x] **C11** Extension mengirim `PATCH /devices/me { extensionLastSeenAt }` maks 1×/jam bersama heartbeat (setelah PR #4 merge). `last-seen.js`, branch `feat/EX-01-last-seen`.
 - [ ] **C6** Review manual antrean blocklist berkala (bareng Alief, lewat SQL editor) setelah fase 10 backend.
 - [x] Desain cara detector mendapat `/blocklist` di HP → [`docs/design/blocklist.md`](../design/blocklist.md) (PR ke Imelda).
 - [x] **Layer 1 di extension:** `lists.js` di background (unduh, `storage.local`, refresh) + helper `ShooLists.match` untuk content script. Branch: `feat/EX-02-blocklist`.
