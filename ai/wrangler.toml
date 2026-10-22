@@ -1,0 +1,12 @@
+# Cloudflare Worker for the Shoo AI service (/analyze, /public-blocklist). Nothing is deployed by committing this file.
+# Deploy is a manual step: see plan/imelda/log/fase-08.md. Secrets (LLM_*) are set with `wrangler secret put`, never written here.
+name = "shoo-ai"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Privacy (SECURITY A4): no request logs. The code never logs URL, text, form, IP or token; turn the platform's own logs off too.
+[observability]
+enabled = false
+
+[observability.logs]
+invocation_logs = false
