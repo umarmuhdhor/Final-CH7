@@ -31,34 +31,34 @@ pnpm -C backend/api dev                                    # http://localhost:87
 
 ## Endpoints
 
-| Method | Path | Auth | Notes |
+Full reference with what each endpoint is for, its input, output and errors: **[API.md](API.md)**.
+The shared contract is [`contracts/api.md`](../contracts/api.md).
+
+| Method | Path | Who calls it | What it is for |
 |---|---|---|---|
-| GET | `/healthz` | – | `{ ok: true }`, no DB |
-| GET | `/healthz/db` | – | writes `ops_heartbeat` (keeps Supabase Free awake), 1/min per IP |
-| POST | `/devices` | – | `{ name, mode, apnsToken? }` → `201 { deviceId, token, avatarId }`; 10/h per IP |
-| GET | `/devices/me` | Bearer | `{ deviceId, name, avatarId, mode, language, guardian \| null }` |
-| PATCH | `/devices/me` | Bearer | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` → `{ ok: true }` |
-| DELETE | `/devices/me` | Bearer | proposal C19: deletes the device and all its data → `{ ok: true }` |
-| POST | `/family/code` | Bearer guardian | `{ code, expiresAt, inviteUrl }`, 60 s, replaces the old code; 6/min; `503 code_unavailable` |
-| POST | `/family/join` | Bearer protected | `{ code }` → `{ guardian }`; failures 5/10 min per device, 20/10 min per IP (`too_many_attempts` + `Retry-After`) |
-| GET | `/family/members` | Bearer guardian | `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan }] }` |
-| DELETE | `/family/members/{deviceId}` | Bearer guardian | `{ ok: true }`, 404 if not my member |
-| DELETE | `/family/guardian` | Bearer protected | `{ ok: true }`, 404 if not connected |
-| GET | `/privacy?lang=en\|id` | – | privacy policy page (SECURITY §3 P12), EN/ID by `lang` then Accept-Language; no DB |
-| GET | `/join?code=` | – | HTML invite page (EN/ID by Accept-Language) → `shoo://join?code=`; strict CSP; no DB lookup |
-| POST | `/scans` | Bearer | contract ScanResult body (+ `screenshotBase64?`) → `201 { id }`; owner = token device; 120/h per device. Screenshot: JPEG/PNG ≤ 150 KB, ≤ 1280 px, dedupe same domain 24 h, 50/24 h per device, otherwise dropped (scan still 201) |
-| GET | `/scans?owner=me\|family\|<deviceId>&status=&cursor=&limit=` | Bearer | `{ items, nextCursor }`, newest first, limit 1–50 (20); `family` guardian only (403), unknown member 404 |
-| GET | `/scans/{id}` | Bearer | one ScanResult, `screenshotUrl` = 1 h Worker link for this viewer; 404 unless own scan or my member's scan |
-| GET | `/screenshots/{scanId}?v=&exp=&sig=` | link signature | the image, `Cache-Control: private, no-store`; access re-checked in the DB on every request (deleted scan, disconnect → 404 at once) |
-| POST | `/verdicts` | Bearer guardian | `{ scanId, value: safe\|not_safe }` → `{ verdict }` for the scan's owner + domain; 404 unknown scan, 403 `verdict_not_allowed` (not mine and not my member's), 409 `verdict_not_allowed` (not blocked); 60/min. A `not_safe` on a connected member's scan queues the domain for review (allowlist excluded) |
-| GET | `/verdicts?domain=` | Bearer | `{ verdict \| null }` for (me, domain); domain normalized (case, `www.`); 30 per 10 s per device with `Retry-After`. Disconnect or device deletion removes the ex-guardian's verdicts for that member |
-| GET | `/blocklist?since=` | Bearer | approved global domains; `removed[]` only with `since`; `nextSince` has microseconds |
+| GET | [`/healthz`](API.md#get-healthz) | uptime monitor | Worker is up (no DB) |
+| GET | [`/healthz/db`](API.md#get-healthzdb) | uptime monitor | DB is reachable; keeps Supabase Free awake |
+| POST | [`/devices`](API.md#post-devices) | app, onboarding | Register this phone, get its device token |
+| GET | [`/devices/me`](API.md#get-devicesme) | app | My profile, and my Guardian if I am Protected |
+| PATCH | [`/devices/me`](API.md#patch-devicesme) | app, extension | Rename, APNs token, language, extension heartbeat |
+| DELETE | [`/devices/me`](API.md#delete-devicesme) | app, Profile | Delete my data now |
+| POST | [`/family/code`](API.md#post-familycode) | Guardian app | 4-digit code + QR + invite link, valid 60 s |
+| POST | [`/family/join`](API.md#post-familyjoin) | Protected app | Connect to a Guardian with the code |
+| GET | [`/family/members`](API.md#get-familymembers) | Guardian app | Family cards: members, extension status, last scan |
+| DELETE | [`/family/members/{deviceId}`](API.md#delete-familymembersdeviceid) | Guardian app | Remove a member |
+| DELETE | [`/family/guardian`](API.md#delete-familyguardian) | Protected app | Disconnect from my Guardian |
+| POST | [`/scans`](API.md#post-scans) | extension | Report a warned or blocked page (+ screenshot); pushes the Guardian |
+| GET | [`/scans`](API.md#get-scans) | app, Activity | My or my family's scans, newest first, paged |
+| GET | [`/scans/{id}`](API.md#get-scansid) | app, Detail | One scan with a 1-hour screenshot link |
+| GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link |
+| POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
+| GET | [`/verdicts?domain=`](API.md#get-verdictsdomain) | extension | Poll for the Guardian's decision on a block screen |
+| GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
+| GET | [`/join?code=`](API.md#get-joincode) | browser (WhatsApp link) | Invite page that opens `shoo://join?code=` |
+| GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
 
-Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
-
-Push (GD-06, fase 11): `POST /scans` from a protected device sends the guardian `{ aps: { alert: { body }, sound: "default" }, scanId }` straight from the Worker to APNs over HTTP/2 (D-alief-B01), text in the guardian's language, after the response (`waitUntil`). Only 410 `Unregistered`/`ExpiredToken` clears the guardian's `apns_token`; a push failure never fails the scan.
-Every response also carries `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, HSTS and (unless the route sets its own) CSP `default-src 'none'; frame-ancestors 'none'`. No CORS headers (native clients only). A declared body over 256 KB → 413 before any DB work. Unknown bearer tokens are limited to 60 per 10 min per IP (then 429).
-Every response is `Cache-Control: private, no-store` (user data, SECURITY §3 P13) except `GET /blocklist` (`private, max-age=300`). Workers invocation logs are off; logs never carry ids, names, URLs or tokens.
+All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`. Every response is
+`Cache-Control: private, no-store` except `GET /blocklist`. Details: [API.md, General rules](API.md#general-rules).
 
 ## Schema summary
 

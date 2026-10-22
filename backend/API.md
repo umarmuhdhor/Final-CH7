@@ -1,0 +1,595 @@
+# Shoo API reference
+
+What each backend endpoint is for, what it expects and what it returns. The shared contract is
+[`contracts/api.md`](../contracts/api.md) (read-only, owned by the lead); this file describes how the
+Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wins and this file is a bug.
+
+- **Base URL (cloud):** `https://shoo-api.afindo-mi01.workers.dev`
+- **Local:** `http://localhost:8787` (`npm run dev` in `backend/api`, see [README](README.md#local-setup))
+
+## Contents
+
+- [General rules](#general-rules): auth, request format, errors, rate limits, caching
+- [Health](#health): `GET /healthz`, `GET /healthz/db`
+- [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `DELETE /devices/me`
+- [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
+- [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
+- [Screenshots](#screenshots): `GET /screenshots/{scanId}`
+- [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
+- [Blocklist](#blocklist): `GET /blocklist`
+- [Web pages](#web-pages): `GET /join`, `GET /privacy`
+- [Push notification](#push-notification) sent by `POST /scans`
+
+## General rules
+
+### Auth
+
+There are no accounts or passwords. `POST /devices` creates a device and returns a **device token**
+once. Every other call (except health, web pages and screenshot links) sends it:
+
+```http
+Authorization: Bearer shoo_<43 characters>
+```
+
+- The backend stores only a SHA-256 hash of the token and never logs it.
+- Each device has a fixed **mode**: `guardian` (parent) or `protected` (family member). Some endpoints
+  allow only one mode; the other mode gets `403 forbidden`.
+- A missing, malformed or unknown token returns `401 unauthorized`. Treat 401 as "this token is dead"
+  (for example after `DELETE /devices/me`): start onboarding again. After 60 unknown tokens in 10 min
+  from one IP the answer is still 401, now with `Retry-After`.
+
+### Request format
+
+- JSON bodies with `Content-Type: application/json`, UTF-8.
+- Maximum body size: 16 KB (most endpoints), 256 KB for `POST /scans`, 1 KB for `POST /verdicts`.
+  A larger body returns `413 too_large`.
+- Times are ISO 8601 with an offset, e.g. `2026-10-22T03:05:00Z`, between 1970 and 2100.
+- Names are 1–20 characters after trimming, without control or bidi-override characters.
+- Domains are lowercase registrable domains without `www.`, e.g. `bca-verifikasi.site`.
+
+### Errors
+
+Every error has the same shape:
+
+```json
+{ "error": { "code": "invalid_body", "message": "name: must be 1-20 characters" } }
+```
+
+`message` is for logs and debugging only; clients branch on `code`.
+
+| HTTP | `code` | When |
+|---|---|---|
+| 400 | `bad_json` | Body is not valid JSON |
+| 401 | `unauthorized` | Token missing, malformed or unknown |
+| 403 | `forbidden` | Wrong device mode for this endpoint |
+| 404 | `not_found` | The thing does not exist, or you may not see it (both look the same on purpose) |
+| 413 | `too_large` | Body over the size limit |
+| 422 | `invalid_body` | Body or query fails validation; `message` names the field |
+| 429 | `rate_limited` | Too many requests; wait `Retry-After` seconds and retry |
+| 500 | `internal` | Unexpected server error |
+
+Endpoint-specific codes are listed under each endpoint.
+
+### Rate limits
+
+Limits are per device (or per IP before a device exists) over a sliding window. Over the limit:
+`429 rate_limited` with a `Retry-After` header in seconds. A 429 is never an empty answer: retry
+after the wait.
+
+### Caching and privacy headers
+
+- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`).
+  Deleted or disconnected data must disappear at once (Apple privacy rule, `plan/alief/SECURITY.md` §3 P13).
+- Every response also carries `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
+  `X-Frame-Options: DENY`, HSTS and a strict CSP. There are no CORS headers: only the native app and
+  extension call this API.
+- Logs never contain tokens, device ids, names or URLs. Workers invocation logs are off.
+
+## Health
+
+### `GET /healthz`
+
+**For:** uptime monitors. Checks that the Worker answers; does not touch the database.
+
+- **Auth:** none
+- **Response 200:** `{ "ok": true }`
+
+### `GET /healthz/db`
+
+**For:** checking the database path. Each call writes a heartbeat row, which also keeps the Supabase
+Free project from pausing.
+
+- **Auth:** none
+- **Rate limit:** 1 per minute per IP
+- **Response 200:** `{ "ok": true }`
+
+## Devices
+
+### `POST /devices`
+
+**For:** onboarding (ON-02, ON-03). Registers this phone and returns its device token. Called once by
+the app after the user picks a name and a mode.
+
+- **Auth:** none
+- **Rate limit:** 10 per hour per IP (and 1000 per day across all users)
+
+**Request body**
+
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `name` | string | yes | 1–20 characters |
+| `mode` | `"guardian"` \| `"protected"` | yes | Cannot be changed later |
+| `apnsToken` | string | no | Hex APNs device token (32–200 hex characters) |
+
+```json
+{ "name": "Mom", "mode": "protected" }
+```
+
+**Response 201**
+
+```json
+{ "deviceId": "0b6e0c1e-…", "token": "shoo_…", "avatarId": "avatar_07" }
+```
+
+- `token` is shown only in this response. The app stores it in the Keychain and writes the session
+  keys for the extension to the App Group (`contracts/app-group-keys.md`).
+- `avatarId` is random, `avatar_01` to `avatar_12`.
+
+### `GET /devices/me`
+
+**For:** the Profile screen (PF-01) and for a Protected device to learn whether it is still connected
+to its Guardian.
+
+- **Auth:** Bearer, either mode
+
+**Response 200**
+
+```json
+{
+  "deviceId": "0b6e0c1e-…",
+  "name": "Mom",
+  "avatarId": "avatar_07",
+  "mode": "protected",
+  "language": "en",
+  "guardian": { "deviceId": "7d1f…", "name": "Adhella", "avatarId": "avatar_02" }
+}
+```
+
+`guardian` is `null` when a Protected device is not connected, and always `null` for a Guardian.
+
+### `PATCH /devices/me`
+
+**For:** renaming (PF-01), saving the APNs token after the notification prompt (ON-05), choosing the
+push language, and the extension's hourly heartbeat that drives "Not connected" on the Guardian side.
+
+- **Auth:** Bearer, either mode
+
+**Request body** (send only the fields that change)
+
+| Field | Type | Rules |
+|---|---|---|
+| `name` | string | 1–20 characters |
+| `apnsToken` | string \| `null` | Hex APNs token; `null` clears it (push turned off) |
+| `language` | `"en"` \| `"id"` | Language of push texts sent to this device |
+| `extensionLastSeenAt` | ISO time | At most 5 minutes in the future. Sent by the extension at most once per hour and by the app when it comes to the foreground |
+
+```json
+{ "language": "id" }
+```
+
+**Response 200:** `{ "ok": true }`
+
+### `DELETE /devices/me`
+
+**For:** "Delete my data" in Profile (PF-01, App Store Guideline 5.1.1(v)). Deletes this device and
+everything about it right away.
+
+- **Auth:** Bearer, either mode
+- **Deletes:** family links on either side, family codes, join attempts, all scans and screenshots,
+  verdicts on its scans or made by it, push log.
+- **Response 200:** `{ "ok": true }`
+- After this the token returns `401` and every screenshot link returns `404`. Screenshot files are
+  removed from storage just after the response; if storage cannot be reached, the daily cron retries.
+- The app then clears the Keychain token and the App Group keys and starts onboarding again.
+
+## Family
+
+A Guardian can have at most 3 Protected devices; a Protected device has at most one Guardian.
+
+### `POST /family/code`
+
+**For:** "Family code" on the Guardian (GD-04). Shows a 4-digit code and a QR the Protected device
+scans or types.
+
+- **Auth:** Bearer, **guardian** only
+- **Rate limit:** 6 per minute per device
+- **Request body:** none
+
+**Response 200**
+
+```json
+{ "code": "4821", "expiresAt": "2026-10-22T03:06:00.000Z", "inviteUrl": "https://shoo-api.afindo-mi01.workers.dev/join?code=4821" }
+```
+
+- The code is valid for 60 seconds. A new request replaces the Guardian's previous code.
+- `inviteUrl` is an https link for WhatsApp (it opens `shoo://join?code=4821`, see [`GET /join`](#get-joincode)).
+
+| Error | When |
+|---|---|
+| `503 code_unavailable` | No free 4-digit code was found. Show "Try again" |
+
+### `POST /family/join`
+
+**For:** "Connect" on the Protected device (PR-01, PR-03): scan the QR, type the code or open the
+invite link.
+
+- **Auth:** Bearer, **protected** only
+
+**Request body**
+
+| Field | Type | Rules |
+|---|---|---|
+| `code` | string | Exactly 4 digits |
+
+```json
+{ "code": "4821" }
+```
+
+**Response 200**
+
+```json
+{ "guardian": { "deviceId": "7d1f…", "name": "Adhella", "avatarId": "avatar_02" } }
+```
+
+| Error | When |
+|---|---|
+| `404 code_invalid` | No such code (also when the Guardian replaced it) |
+| `410 code_expired` | The code is older than 60 seconds |
+| `409 family_full` | The Guardian already has 3 Protected devices |
+| `409 already_connected` | This device already has a Guardian |
+| `429 too_many_attempts` | Too many wrong codes: 5 per 10 min per device or 20 per 10 min per IP. Has `Retry-After` |
+
+Only wrong or expired codes count as failed attempts.
+
+### `GET /family/members`
+
+**For:** the Guardian's family cards on Shield (GD-03), including the "Not connected" state.
+
+- **Auth:** Bearer, **guardian** only
+
+**Response 200**
+
+```json
+{
+  "members": [
+    {
+      "deviceId": "0b6e0c1e-…",
+      "name": "Mom",
+      "avatarId": "avatar_07",
+      "extensionActive": true,
+      "lastScan": { "status": "blocked", "score": 92, "url": "https://bca-verifikasi.site/login?ref=wa", "detectedAt": "2026-10-21T04:05:00.000Z" }
+    }
+  ]
+}
+```
+
+- Ordered by when each member joined.
+- `extensionActive` is `false` only when the extension's last heartbeat is older than 24 hours. With
+  no heartbeat yet it is `true` (never "Not connected" without evidence).
+- `lastScan` is `null` when the member has no scans.
+
+### `DELETE /family/members/{deviceId}`
+
+**For:** a Guardian removing a member (GD-04).
+
+- **Auth:** Bearer, **guardian** only
+- **Response 200:** `{ "ok": true }`
+- **Errors:** `404 not_found` when `deviceId` is not one of your members.
+- The Guardian loses access to that member's scans and screenshots at once, and the verdicts it made for
+  that member are deleted.
+
+### `DELETE /family/guardian`
+
+**For:** "Disconnect" on the Protected device's Profile (PF-01).
+
+- **Auth:** Bearer, **protected** only
+- **Response 200:** `{ "ok": true }`
+- **Errors:** `404 not_found` when the device has no Guardian.
+- Same effect as the Guardian removing this member.
+
+## Scans
+
+A **scan** is one page the extension warned about or blocked (shape: `ScanResult` in
+[`contracts/scan-result.schema.json`](../contracts/scan-result.schema.json)). Only score 30 or more is
+ever sent. Scans and screenshots are deleted automatically after 14 days.
+
+### `POST /scans`
+
+**For:** the Safari extension (EX-07) after it blocks a page or finishes all layers on a warning
+page. One page is one scan, one Activity item and (for a Protected device) one push to the Guardian.
+
+- **Auth:** Bearer, either mode. The owner is always the token's device.
+- **Rate limit:** 120 per hour per device
+- **Body limit:** 256 KB
+
+**Request body:** a `ScanResult` without `id`, `verdict` and `screenshotUrl`, plus an optional screenshot.
+
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `url` | string | yes | http(s) URL, ≤ 2048 characters |
+| `domain` | string | yes | Registrable domain; the URL's host must be this domain or a subdomain of it |
+| `pageTitle` | string \| null | no | Trimmed and cut to 300 characters |
+| `faviconUrl` | string \| null | no | Kept only if it is an http(s) URL ≤ 2048 characters |
+| `score` | integer | yes | 30–100 |
+| `status` | `"warning"` \| `"blocked"` | yes | Must be `blocked` when score ≥ 80, else `warning` |
+| `signals` | array | yes | At most 20 items, see below |
+| `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
+| `screenshotBase64` | string \| null | no | JPEG or PNG, base64 without a `data:` prefix |
+
+Each signal:
+
+| Field | Type | Rules |
+|---|---|---|
+| `id` | string | 1–64 characters, e.g. `new_domain` |
+| `layer` | integer | 1–5 |
+| `weight` | integer | 0–100 |
+| `label` | `{ en, id }` | Technical text for the Guardian, 1–500 characters each |
+| `labelSimple` | `{ en, id }` | Plain text for the Protected user, 1–500 characters each |
+| `evidence` | string | Optional, ≤ 500 characters |
+
+`ownerDeviceId` and `ownerName` are accepted but ignored. Control and bidi characters are removed from
+all text.
+
+```json
+{
+  "url": "https://bca-verifikasi.site/login?ref=wa",
+  "domain": "bca-verifikasi.site",
+  "pageTitle": "KlikBCA - Verifikasi Akun",
+  "score": 92,
+  "status": "blocked",
+  "signals": [
+    {
+      "id": "new_domain", "layer": 2, "weight": 30,
+      "label": { "en": "Domain age 3 days", "id": "Umur domain 3 hari" },
+      "labelSimple": { "en": "This site was made 3 days ago", "id": "Situs ini baru dibuat 3 hari lalu" }
+    }
+  ],
+  "detectedAt": "2026-10-21T04:05:00Z",
+  "screenshotBase64": "/9j/4AAQSkZJRg…"
+}
+```
+
+**Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03" }`
+
+**Screenshot rules.** The screenshot is optional, and a bad screenshot never fails the scan: the scan
+is still stored and the answer is still 201. It is dropped when it is not JPEG/PNG, is over 150 KB or
+1280 px on its longest side, or the device already sent 50 in the last 24 h. A second scan of the same
+domain within 24 h reuses the earlier screenshot.
+
+**Push.** When a Protected device sends a scan, its Guardian gets a push right after the response
+(see [Push notification](#push-notification)). A push failure never fails the scan.
+
+### `GET /scans`
+
+**For:** the Activity lists: a Protected user's own history (PR-05) and the Guardian's family
+activity (GD-05).
+
+- **Auth:** Bearer, either mode
+
+**Query parameters**
+
+| Name | Default | Meaning |
+|---|---|---|
+| `owner` | `me` | `me` = my scans. `family` = mine plus all my members' (guardian only). A member's `deviceId` = only that member (guardian only) |
+| `status` | all | `warning` or `blocked` |
+| `limit` | 20 | 1–50 |
+| `cursor` | – | `nextCursor` from the previous page |
+
+```http
+GET /scans?owner=family&status=blocked&limit=20
+```
+
+**Response 200**
+
+```json
+{ "items": [ { "id": "6f1c…", "url": "…", "domain": "bca-verifikasi.site", "score": 92, "status": "blocked", "signals": [], "screenshotUrl": null, "ownerDeviceId": "0b6e…", "ownerName": "Mom", "detectedAt": "2026-10-21T04:05:00.000Z", "verdict": null } ],
+  "nextCursor": "MjAyNi0xMC0yMVQwNDowNTowMC4wMDBafDZmMWM…" }
+```
+
+- Newest first. `nextCursor` is `null` on the last page.
+- Items are full `ScanResult`s, but `screenshotUrl` is always `null` in lists; open the scan to get it.
+- `verdict` is the Guardian's decision for that owner and domain, or `null`.
+
+| Error | When |
+|---|---|
+| `403 forbidden` | `owner=family` from a Protected device |
+| `404 not_found` | `owner=<deviceId>` that is not one of your members |
+| `422 invalid_body` | Bad `status`, `limit` or `cursor` |
+
+### `GET /scans/{id}`
+
+**For:** the Detail screen (DT-01 to DT-06), opened from Activity or from a push.
+
+- **Auth:** Bearer, either mode. You can open your own scans and, as a Guardian, your members' scans.
+
+**Response 200:** one `ScanResult`:
+
+```json
+{
+  "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03",
+  "url": "https://bca-verifikasi.site/login?ref=wa",
+  "domain": "bca-verifikasi.site",
+  "pageTitle": "KlikBCA - Verifikasi Akun",
+  "faviconUrl": null,
+  "score": 92,
+  "status": "blocked",
+  "signals": [ { "id": "new_domain", "layer": 2, "weight": 30, "label": { "en": "…", "id": "…" }, "labelSimple": { "en": "…", "id": "…" } } ],
+  "screenshotUrl": "https://shoo-api.afindo-mi01.workers.dev/screenshots/6f1c…?v=…&exp=…&sig=…",
+  "ownerDeviceId": "0b6e0c1e-…",
+  "ownerName": "Mom",
+  "detectedAt": "2026-10-21T04:05:00.000Z",
+  "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" }
+}
+```
+
+- `pageTitle` is left out when there is none.
+- `screenshotUrl` is a link made for you, valid for 1 hour, or `null` when there is no screenshot.
+- **Errors:** `404 not_found` when the scan does not exist, was deleted, or is not yours to see.
+
+## Screenshots
+
+### `GET /screenshots/{scanId}?v=&exp=&sig=`
+
+**For:** showing the screenshot on the Detail screen. This is the `screenshotUrl` from
+`GET /scans/{id}`; load it as is (e.g. `AsyncImage`), **without** an `Authorization` header.
+
+- **Auth:** the signature in the link. The link names the viewer and expires after 1 hour.
+- **Rate limit:** 120 per minute per viewer
+- **Response 200:** the image (`image/jpeg` or `image/png`), `Cache-Control: private, no-store`.
+- Access is re-checked in the database on every request. After the scan is deleted, the member
+  disconnects or is removed, or the 14-day retention runs, the same link returns `404` at once.
+- **Errors:** `404 not_found` for an expired, altered or no-longer-allowed link. An expired link also
+  gives 404, so re-fetch `GET /scans/{id}` once for a fresh link before showing "deleted".
+
+## Verdicts
+
+A **verdict** is the Guardian's decision on a blocked domain: `safe` ("It's safe") or `not_safe`
+("Not safe"). It applies per owner and domain, so it covers every visit by that person to that site.
+
+### `POST /verdicts`
+
+**For:** the It's safe / Not safe buttons on Detail (GD-07). The decision applies at once, with no
+confirmation step.
+
+- **Auth:** Bearer, **guardian** only
+- **Rate limit:** 60 per minute per device
+- **Body limit:** 1 KB
+
+**Request body**
+
+| Field | Type | Rules |
+|---|---|---|
+| `scanId` | string | The blocked scan the Guardian is looking at |
+| `value` | `"safe"` \| `"not_safe"` | |
+
+```json
+{ "scanId": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "value": "not_safe" }
+```
+
+**Response 200**
+
+```json
+{ "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
+```
+
+- A new verdict replaces the previous one for that owner and domain.
+- A Guardian can decide on its own blocked scans and on its members' blocked scans.
+- A `not_safe` on a connected member's scan also queues the domain for **manual** review before it can
+  enter the global blocklist (at most 10 new domains per Guardian per 24 h). Government, education and bank domains, and
+  shared roots such as `co.id` or `vercel.app`, are never queued.
+
+| Error | When |
+|---|---|
+| `404 not_found` | Unknown scan id |
+| `403 verdict_not_allowed` | Not your scan and not one of your members' scans |
+| `409 verdict_not_allowed` | The scan is a warning, not blocked |
+
+### `GET /verdicts?domain=`
+
+**For:** the extension's block screen (EX-06). While it is open, the extension polls this every
+5 seconds; when the Guardian taps "It's safe" the page opens.
+
+- **Auth:** Bearer, either mode (a Guardian's own extension polls for pages it blocked itself)
+- **Rate limit:** 30 per 10 seconds per device. On 429, wait `Retry-After` and poll again; it does not
+  mean "no verdict".
+- **Query:** `domain`, the registrable domain. Case, surrounding spaces, a trailing dot and a leading
+  `www.` are tolerated.
+
+**Response 200**
+
+```json
+{ "verdict": { "value": "safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
+```
+
+`verdict` is `null` when there is no decision for (this device, this domain). When a member
+disconnects or is removed, the old Guardian's verdicts for that member are deleted.
+
+## Blocklist
+
+### `GET /blocklist?since=`
+
+**For:** detection layer 1 in the extension. It downloads the global list of manually approved scam
+domains and checks visits against it on the device, so the visited URL is never sent to the server.
+Incremental refresh every hour, full refresh daily (`docs/design/blocklist.md`).
+
+- **Auth:** Bearer, either mode
+- **Cache:** `private, max-age=300`, so a change can reach a device up to 5 minutes late.
+- **Query:** `since` (optional ISO time), the `nextSince` of the previous response.
+
+**Response 200, full download (no `since`)**
+
+```json
+{ "domains": [ { "domain": "bca-verifikasi.site", "addedAt": "2026-10-21T05:00:00.123456Z" } ], "nextSince": "2026-10-21T05:00:00.123456Z" }
+```
+
+**Response 200, incremental (`since` sent)**
+
+```json
+{ "domains": [], "removed": [ { "domain": "old-scam.site", "removedAt": "2026-10-22T01:00:00.000000Z" } ], "nextSince": "2026-10-22T01:00:00.000000Z" }
+```
+
+**Paging**
+
+- One response holds about 1000 entries (`domains` + `removed`). It may go slightly over so that
+  entries with the same timestamp are never split across pages.
+- Repeat with `since=nextSince` until a response has no `domains` and no `removed`.
+- A full refresh is the first request without `since`, then the same loop; replace the stored list
+  only after the last page.
+- An empty response returns `nextSince` equal to the `since` you sent (caught up).
+- `nextSince` is `null` only when the list is empty and no `since` was sent; keep no cursor then.
+- Times have microseconds so the cursor is exact; store `nextSince` as the string you got.
+
+| Error | When |
+|---|---|
+| `422 invalid_body` | `since` is not an ISO time |
+
+## Web pages
+
+These return HTML for people, not JSON for the app.
+
+### `GET /join?code=`
+
+**For:** the `inviteUrl` a Guardian shares on WhatsApp (PR-03). WhatsApp does not make `shoo://` links
+tappable, so this small page links to `shoo://join?code=4821`, which opens the app with the code filled in.
+
+- **Auth:** none. No database lookup: the page never says whether a code is valid.
+- Language: Bahasa Indonesia when `Accept-Language` starts with `id`, else English. Strict CSP.
+
+### `GET /privacy?lang=en|id`
+
+**For:** the privacy policy linked from the app and App Store Connect (SECURITY §3 P12): what is
+stored, who can see it, the 14-day deletion, and how "Delete my data" works.
+
+- **Auth:** none. No database.
+- Language: `lang` first, then `Accept-Language`, else English.
+
+## Push notification
+
+Not an endpoint: `POST /scans` from a Protected device sends its Guardian this APNs payload, straight
+from the Worker over HTTP/2 (GD-06):
+
+```json
+{ "aps": { "alert": { "body": "Mom hit a blocked site · 92%" }, "sound": "default" }, "scanId": "6f1c2a4e-…" }
+```
+
+- The text is in the Guardian's `language` and never contains the URL:
+
+  | Status | `en` | `id` |
+  |---|---|---|
+  | `blocked` | `Mom hit a blocked site · 92%` | `Mom membuka situs yang diblokir · 92%` |
+  | `warning` | `Mom opened a suspicious site · 41%` | `Mom membuka situs mencurigakan · 41%` |
+
+- No push for a Guardian's own scans, or when the Guardian has no APNs token.
+- Tapping it opens Detail for `scanId`.
+- At most 10 pushes per Guardian per 10 minutes. A `410 Unregistered`/`ExpiredToken` from Apple clears
+  the Guardian's `apnsToken`.
