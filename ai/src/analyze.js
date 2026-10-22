@@ -10,7 +10,8 @@ import { hostOf, isOfficialHost } from "./layer3/official.js";
 const strongestFirst = (signals) => signals.sort((a, b) => b.weight - a.weight || (a.id < b.id ? -1 : 1));
 
 function rules(snapshot, official) {
-    return strongestFirst([...formSignals(snapshot, { official }), ...contentSignals(snapshot, { official })]);
+    const forms = formSignals(snapshot, { official });
+    return strongestFirst([...forms, ...contentSignals(snapshot, { official, asksData: forms.length > 0 })]);
 }
 
 /**

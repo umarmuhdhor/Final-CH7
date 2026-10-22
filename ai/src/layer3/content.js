@@ -95,16 +95,17 @@ function findBrandLogo(snapshot) {
 
 /**
  * @param {{ text: string, title: string, imageAlts: string[] }} snapshot sanitised
- * @param {{ official: boolean }} ctx
+ * @param {{ official: boolean, asksData?: boolean }} ctx asksData: a form signal (asks_*) fired; without it the words weigh less
  * @returns {object[]} 0-2 signals
  */
-export function contentSignals(snapshot, { official }) {
+export function contentSignals(snapshot, { official, asksData = true }) {
+    const quiet = !asksData;
     const out = [];
     const urgent = findUrgent(snapshot.text) ?? findUrgent(snapshot.title);
-    if (urgent) out.push(buildUrgentSignal(urgent.phrase, urgent.evidence));
+    if (urgent) out.push(buildUrgentSignal(urgent.phrase, urgent.evidence, { quiet }));
     if (!official) {
         const logo = findBrandLogo(snapshot);
-        if (logo) out.push(buildBrandLogoSignal(logo.brand, logo.evidence));
+        if (logo) out.push(buildBrandLogoSignal(logo.brand, logo.evidence, { quiet }));
     }
     return out;
 }

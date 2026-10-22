@@ -56,13 +56,16 @@ export function buildSignal(id, evidence) {
 // ---- phase 03: content and domain-age signals --------------------------------
 // Starting weights from plan/imelda/ref/R1 and D-imelda-15/16/17; tuned in phase 07. (new_domain: see newDomainWeight)
 export const CONTENT_WEIGHTS = Object.freeze({ urgent_language: 15, brand_logo_offsite: 25 });
+// Words are cheap: shops, news and blogs say "terakhir hari ini" and show bank logos. Without a form that asks for
+// something sensitive nothing can be stolen on the page, so the words weigh about half (phase 07, D-imelda-31).
+export const QUIET_CONTENT_WEIGHTS = Object.freeze({ urgent_language: 8, brand_logo_offsite: 12 });
 
 /** @param {string} phrase our own phrase from the list (never page text) @param {string} evidence exact page text */
-export function buildUrgentSignal(phrase, evidence) {
+export function buildUrgentSignal(phrase, evidence, { quiet = false } = {}) {
     return {
         id: "urgent_language",
         layer: 3,
-        weight: CONTENT_WEIGHTS.urgent_language,
+        weight: (quiet ? QUIET_CONTENT_WEIGHTS : CONTENT_WEIGHTS).urgent_language,
         label: { en: `Urgent language: "${phrase}"`, id: `Kalimat mendesak: "${phrase}"` },
         labelSimple: { en: "Rushes you to act fast", id: "Memaksa kamu cepat-cepat bertindak" },
         evidence,
@@ -70,11 +73,11 @@ export function buildUrgentSignal(phrase, evidence) {
 }
 
 /** @param {string} brandName display name from brands.json @param {string} evidence exact page text */
-export function buildBrandLogoSignal(brandName, evidence) {
+export function buildBrandLogoSignal(brandName, evidence, { quiet = false } = {}) {
     return {
         id: "brand_logo_offsite",
         layer: 3,
-        weight: CONTENT_WEIGHTS.brand_logo_offsite,
+        weight: (quiet ? QUIET_CONTENT_WEIGHTS : CONTENT_WEIGHTS).brand_logo_offsite,
         label: { en: `${brandName} logo on an unofficial site`, id: `Logo ${brandName} di situs tidak resmi` },
         labelSimple: { en: `Pretends to be ${brandName}`, id: `Berpura-pura menjadi ${brandName}` },
         evidence,

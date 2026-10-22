@@ -52,7 +52,7 @@ for (const [text, evidence] of URGENT) {
         const s = find(run({ text }), "urgent_language");
         assert.ok(s, "signal present");
         assert.equal(s.layer, 3);
-        assert.equal(s.weight, 15);
+        assert.equal(s.weight, 8, "no form asks for data here: quiet weight (phase 07); full weight 15 is covered in calibration.test.mjs");
         assert.equal(s.evidence, evidence);
         assert.ok(text.includes(s.evidence), "string-equal substring of the page text");
         assert.deepEqual(Object.keys(s.label).sort(), ["en", "id"]);
@@ -111,7 +111,7 @@ test("brand_logo_offsite fires for a BCA logo alt on an unofficial domain; evide
     const s = find(run({ imageAlts: ["Logo BCA", "banner"] }), "brand_logo_offsite");
     assert.ok(s);
     assert.equal(s.layer, 3);
-    assert.equal(s.weight, 25);
+    assert.equal(s.weight, 12, "quiet weight without a sensitive form (phase 07); full weight 25 is covered in calibration.test.mjs");
     assert.equal(s.evidence, "BCA");
     assert.match(s.label.en, /BCA/);
 });
