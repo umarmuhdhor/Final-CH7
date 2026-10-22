@@ -20,7 +20,10 @@ struct RootView: View {
             }
         }
         .environment(\.locale, env.settings.language.locale)
+        .onOpenURL { env.open($0) }
         .onChange(of: scenePhase, initial: true) { _, phase in
+            // An invite code waits only while the app is in use.
+            if phase == .background { env.router.pendingJoinCode = nil }
             guard phase == .active else { return }
             Task { await env.sceneBecameActive() }
         }

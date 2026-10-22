@@ -119,6 +119,7 @@ final class AppEnvironment {
             throw RepositoryError.network
         }
         settings.chooseMode(mode)
+        if mode == .guardian { router.pendingJoinCode = nil }
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
             do {
@@ -202,6 +203,23 @@ final class AppEnvironment {
         router.reset()
         settings.reset()
         sessionExpired = false
+    }
+
+    /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: Connect still asks
+    /// for a tap (T11). A guardian, or any unknown link, lands on Shield.
+    @MainActor
+    func open(_ url: URL) {
+        switch DeepLink(url: url) {
+        case .join(let code) where settings.mode != .guardian:
+            router.pendingJoinCode = code
+            // Not registered yet: onboarding reaches Connect with the code. Mid-onboarding Connect picks it up.
+            guard settings.mode == .protected, settings.onboardingCompleted else { return }
+            // Already open, `ConnectSheet` picks the new code up.
+            router.showConnect()
+        default:
+            // `scan` / `activity` are routed in fase 15.
+            router.reset()
+        }
     }
 
     /// After ON-05: the tabs replace onboarding.

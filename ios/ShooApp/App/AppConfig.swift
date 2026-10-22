@@ -17,6 +17,6 @@ enum AppConfig {
     // TODO(sync:imelda): AI service URL — replace after the ai/ service is deployed
     static let aiBaseURL: URL? = nil
 
-    /// Scan QR (PR-01) needs `NSCameraUsageDescription` from the lead (TODO C3).
-    static let cameraEnabled = false
+    /// Scan QR (PR-01): `NSCameraUsageDescription` came with C3 (#27). Off = Enter code only.
+    static let cameraEnabled = true
 }

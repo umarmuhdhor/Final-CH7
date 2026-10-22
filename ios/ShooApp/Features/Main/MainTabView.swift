@@ -31,8 +31,12 @@ struct MainTabView: View {
             .tabItem { Label("Activity", systemImage: "list.bullet.rectangle") }
             .tag(AppTab.activity)
         }
-        .sheet(isPresented: $router.isProfilePresented) {
+        .sheet(isPresented: $router.isProfilePresented, onDismiss: router.sheetDismissed) {
             ProfileView(repository: env.repository, settings: env.settings)
+                .environment(\.locale, env.settings.language.locale)
+        }
+        .sheet(isPresented: $router.isConnectPresented) {
+            ConnectSheet()
                 .environment(\.locale, env.settings.language.locale)
         }
     }
@@ -126,4 +130,31 @@ private struct ProfileButton: ToolbarContent {
 
 #Preview("Guardian") {
     MainTabView().environment(AppEnvironment.preview())
+}
+
+/// PR-01 after onboarding (Shield "Connect", or an invite link).
+private struct ConnectSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    @State private var model: ConnectModel?
+
+    var body: some View {
+        Group {
+            if let model {
+                ConnectView(model: model, onSkip: { dismiss() }, onFinish: { dismiss() })
+            } else {
+                // An empty Group never appears, so `onAppear` below would never run.
+                Color(.systemBackground)
+            }
+        }
+        .interactiveDismissDisabled(model?.state == .joining)
+        .onAppear {
+            guard model == nil else { return }
+            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode())
+        }
+        .onChange(of: env.router.pendingJoinCode) { _, code in
+            guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
+            model?.prefill(pending)
+        }
+    }
 }
