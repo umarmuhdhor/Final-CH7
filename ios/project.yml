@@ -44,10 +44,15 @@ targets:
         CFBundleURLTypes:                 # PR-03 invite link: shoo://join?code=1234
           - CFBundleURLName: com.shoo.app
             CFBundleURLSchemes: [shoo]
+        NSCameraUsageDescription: Scan your family's QR code to connect.   # PR-01
+        UIBackgroundModes: [audio]        # ON-04 tutorial video keeps playing in PiP over Settings
     entitlements:
       path: ShooApp/Shoo.entitlements
       properties:
         com.apple.security.application-groups: [$(SHOO_APP_GROUP)]
+        # Push Notifications capability (ON-05, GD-06). Sandbox APNs; App Store/TestFlight export
+        # signs it as production. Needs a paid team — a free Personal Team can't sign this.
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID)
