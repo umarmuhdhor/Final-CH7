@@ -10,7 +10,7 @@ final class QALayoutUITests: XCTestCase {
     @MainActor
     private func launch(_ arguments: [String], textSize: String = "UICTContentSizeCategoryAccessibilityXL") -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-UIPreferredContentSizeCategoryName", textSize, "-settings.language", "en"] + arguments
+        app.launchArguments = ["-UITestMock", "YES", "-UIPreferredContentSizeCategoryName", textSize, "-settings.language", "en"] + arguments
         app.launch()
         return app
     }

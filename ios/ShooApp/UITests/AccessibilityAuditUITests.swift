@@ -56,7 +56,7 @@ final class AccessibilityAuditUITests: XCTestCase {
     private func audit(language: String) throws {
         for (name, arguments) in Self.screens {
             let app = XCUIApplication()
-            app.launchArguments = ["-settings.language", language] + arguments
+            app.launchArguments = ["-UITestMock", "YES", "-settings.language", language] + arguments
             app.launch()
             // Let the mock answer and the screen settle.
             _ = app.staticTexts.firstMatch.waitForExistence(timeout: 10)

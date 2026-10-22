@@ -4,11 +4,17 @@ import Foundation
 /// from ios/project.yml (lead-owned).
 enum AppConfig {
     #if DEBUG
+    /// `wrangler dev` (`pnpm -C backend/api dev`); the simulator reaches the Mac at localhost.
     static let apiBaseURL = URL(string: "http://localhost:8787")!
     #else
-    // TODO(sync:alief): Worker cloud URL — replace after fase 12 deploy
-    static let apiBaseURL = URL(string: "https://shoo-api.example.workers.dev")!
+    /// Cloudflare Worker deployed from `main` (fase 12, TODO D8).
+    static let apiBaseURL = URL(string: "https://shoo-api.afindo-mi01.workers.dev")!
     #endif
+
+    /// Team AI service (`POST /analyze`, `GET /public-blocklist`). `nil` = not written to the App Group,
+    /// so the extension skips layer 3–4 instead of sending pages to a placeholder host.
+    // TODO(sync:imelda): AI service URL — replace after the ai/ service is deployed
+    static let aiBaseURL: URL? = nil
 
     /// Scan QR (PR-01) needs `NSCameraUsageDescription` from the lead (TODO C3).
     static let cameraEnabled = false

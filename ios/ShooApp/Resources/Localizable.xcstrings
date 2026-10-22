@@ -1161,6 +1161,16 @@
         }
       }
     },
+    "Session expired": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesi berakhir"
+          }
+        }
+      }
+    },
     "Shield": {
       "localizations": {
         "id": {
@@ -1261,6 +1271,16 @@
         }
       }
     },
+    "Start again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulai lagi"
+          }
+        }
+      }
+    },
     "Step %lld": {
       "localizations": {
         "id": {
@@ -1327,6 +1347,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Videonya belum tersedia."
+          }
+        }
+      }
+    },
+    "This iPhone isn't connected to Shoo anymore. Set it up again to stay protected.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone ini tidak terhubung lagi ke Shoo. Siapkan lagi supaya tetap terlindungi."
           }
         }
       }

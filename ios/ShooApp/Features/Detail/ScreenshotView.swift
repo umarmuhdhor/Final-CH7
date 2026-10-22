@@ -129,11 +129,14 @@ extension EnvironmentValues {
 /// DT-04: large evidence screenshot, tap to zoom. No share, save or context menu (SECURITY §3 P9).
 struct ScreenshotView: View {
     let url: URL
+    /// Asked once when the link fails: `true` = a fresh `url` is on its way (the old one had expired).
+    var refreshLink: (() async -> Bool)?
 
     @Environment(\.screenshotLoader) private var loader
     @State private var image: UIImage?
     @State private var failed = false
     @State private var isZoomed = false
+    @State private var askedForFreshLink = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -194,6 +197,11 @@ struct ScreenshotView: View {
             // The view went away.
         } catch {
             Log.ui.error("Screenshot load failed")
+            if let refreshLink, !askedForFreshLink {
+                askedForFreshLink = true
+                // A new link restarts `.task(id: url)`.
+                if await refreshLink() { return }
+            }
             failed = true
         }
     }

@@ -83,6 +83,7 @@ final class DetailModel {
 
     func load() async {
         if scan == nil { state = .loading }
+        screenshotLinkRefreshed = false
         let epoch = verdictEpoch
         do {
             async let fetchedScan = repository.scan(id: scanId)
@@ -104,6 +105,26 @@ final class DetailModel {
             guard !Self.isCancellation(error), !Task.isCancelled else { return }
             Log.ui.error("Detail load failed", error)
             if scan == nil { state = .failed }
+        }
+    }
+
+    /// The screenshot link failed. It may only have expired (valid 1 h), so ask for the scan once more:
+    /// that brings a fresh link, or a 404 when the scan is really gone (contracts/api.md, D-alief-C04).
+    /// `true` when a new link came back.
+    func refreshScreenshotLink() async -> Bool {
+        guard !screenshotLinkRefreshed, let current = scan else { return false }
+        screenshotLinkRefreshed = true
+        do {
+            let fresh = try await repository.scan(id: scanId)
+            guard let link = fresh.screenshotUrl, link != current.screenshotUrl else { return false }
+            scan?.screenshotUrl = link
+            return true
+        } catch RepositoryError.api(.notFound, _) {
+            scan = nil
+            state = .notFound
+            return false
+        } catch {
+            return false
         }
     }
 
@@ -134,6 +155,8 @@ final class DetailModel {
     }
 
     @ObservationIgnored private var verdictEpoch = 0
+    /// One fresh screenshot link per load; a second failure shows "isn't available".
+    @ObservationIgnored private var screenshotLinkRefreshed = false
 
     private static func isCancellation(_ error: any Error) -> Bool {
         error is CancellationError || (error as? URLError)?.code == .cancelled

@@ -65,7 +65,7 @@ struct DetailView: View {
                 )
                 EvidenceList(items: model.evidence(language: language))
                 if let url = scan.screenshotUrl {
-                    ScreenshotView(url: url)
+                    ScreenshotView(url: url, refreshLink: { await model.refreshScreenshotLink() })
                         .environment(\.screenshotLoader, loader)
                 }
             }
