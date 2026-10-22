@@ -6,15 +6,12 @@ import { readFileSync } from "node:fs";
 import { build } from "../scripts/build.mjs";
 
 const brands = JSON.parse(readFileSync(new URL("../data/brands.json", import.meta.url), "utf8"));
-const KNOWN_IDS = ["lookalike_domain", "brand_plus_keyword", "cheap_tld"];
+const KNOWN_IDS = ["db_match", "lookalike_domain", "brand_plus_keyword", "cheap_tld"];
 
-function load() {
-    const ctx = { URL };
-    vm.createContext(ctx);
-    vm.runInContext(build(), ctx); // the same single script the extension gets
-    return ctx.ShooDetector;
-}
-const detector = load();
+const ctx = { URL };
+vm.createContext(ctx);
+vm.runInContext(build(), ctx); // the same single script the extension gets
+const detector = ctx.ShooDetector;
 
 // The detector runs in its own vm context, so its arrays have another prototype: copy through JSON before deepEqual.
 const run = async (snapshot) => JSON.parse(JSON.stringify(await detector.analyzeLocal(snapshot)));
@@ -221,4 +218,88 @@ test("brands.json is consistent", () => {
     }
     for (const t of brands.cheapTlds) assert.match(t, /^[a-z]+$/);
     for (const k of brands.keywords) assert.match(k, /^[a-z0-9]+$/);
+});
+
+// ---------- layer 1: db_match through ShooLists.match (mocked; the real helper lives in the extension) ----------
+/** Runs `fn` with globalThis.ShooLists = { match } inside the detector's context, then removes it again. */
+async function withLists(match, fn) {
+    ctx.ShooLists = match === undefined ? undefined : { match };
+    try {
+        return await fn();
+    } finally {
+        delete ctx.ShooLists;
+    }
+}
+const hit = (source) => async (host) => ({ source, domain: host, addedAt: "2026-10-01T00:00:00Z" });
+const TECHNICAL = /\b(domain|dns|phishing|database|blocklist|url|tld|hostname|list)\b/i;
+
+test("layer 1: a Shoo list hit gives db_match (layer 1, weight 100, evidence shoo) and stops", async () => {
+    const s = await withLists(hit("shoo"), () => scan("https://p0stindonesia.com/login"));
+    assert.deepEqual(ids(s), ["db_match"]);
+    assert.equal(s[0].layer, 1);
+    assert.equal(s[0].weight, 100);
+    assert.equal(s[0].evidence, "shoo");
+});
+
+test("layer 1: a public list hit has evidence public", async () => {
+    const s = await withLists(hit("public"), () => scan("https://random-site.example/"));
+    assert.deepEqual(ids(s), ["db_match"]);
+    assert.equal(s[0].evidence, "public");
+});
+
+test("layer 1: match returns null -> no db_match, layer 2 still runs", async () => {
+    const s = await withLists(async () => null, () => scan("https://lphone-login.com/"));
+    assert.ok(!ids(s).includes("db_match"));
+    assert.deepEqual(ids(s), ["lookalike_domain", "brand_plus_keyword"]);
+});
+
+test("layer 1: ShooLists missing -> still works without error", async () => {
+    assert.equal(ctx.ShooLists, undefined);
+    assert.deepEqual(ids(await scan("https://lphone-login.com/")), ["lookalike_domain", "brand_plus_keyword"]);
+});
+
+test("layer 1: match throws or rejects -> caught, layer 2 runs, analyzeLocal does not throw", async () => {
+    for (const match of [() => { throw new Error("sync boom"); }, async () => { throw new Error("async boom"); }]) {
+        const s = await withLists(match, () => scan("https://lphone-login.com/"));
+        assert.deepEqual(ids(s), ["lookalike_domain", "brand_plus_keyword"]);
+    }
+});
+
+test("layer 1: official domains with match null stay silent (no false positives)", async () => {
+    await withLists(async () => null, async () => {
+        for (const brand of brands.brands) {
+            for (const domain of brand.domains) assert.deepEqual(await scan(`https://www.${domain}/`), [], domain);
+        }
+    });
+});
+
+test("layer 1: match gets the hostname only (no scheme, path, query, port or credentials)", async () => {
+    const calls = [];
+    await withLists(async (h) => { calls.push(h); return null; }, async () => {
+        await run({ url: "https://User:Pw@Login.Example.COM:8443/a/b?token=secret#frag", domain: "example.com" });
+        await run({ url: "https://www.p0stindonesia.com./x?y=1" });
+    });
+    assert.deepEqual(calls, ["login.example.com", "www.p0stindonesia.com"]);
+});
+
+test("layer 1: unparseable URL does not throw and does not call match with junk", async () => {
+    const calls = [];
+    await withLists(async (h) => { calls.push(h); return null; }, async () => {
+        for (const input of [{ url: "" }, { url: "not a url" }, {}, { url: "http://192.168.0.1/" }, { url: "http://[::1]/" }]) {
+            assert.deepEqual(await run(input), []);
+        }
+    });
+    assert.deepEqual(calls, []);
+});
+
+test("layer 1: db_match has bilingual label and labelSimple, labelSimple in plain words", async () => {
+    for (const source of ["shoo", "public"]) {
+        const [s] = await withLists(hit(source), () => scan("https://scam-site.example/"));
+        for (const text of [s.label, s.labelSimple]) {
+            assert.ok(text.en.length > 0 && text.id.length > 0, source);
+            assert.notEqual(text.en, text.id);
+        }
+        assert.doesNotMatch(s.labelSimple.en, TECHNICAL);
+        assert.doesNotMatch(s.labelSimple.id, TECHNICAL);
+    }
 });

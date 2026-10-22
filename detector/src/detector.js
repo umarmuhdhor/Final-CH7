@@ -1,5 +1,5 @@
-// Owner: Team AI. Layer 2 (link name) = M1. Layer 1 (database) = M5, not here. Contract: contracts/detector-interface.md
-// Pure rules, no network. detector/data/brands.json is inlined at build time (scripts/build.mjs) into the placeholder below.
+// Owner: Team AI. Layer 2 (link name) = M1. Layer 1 (database) = M5-B, via ShooLists.match. Contract: contracts/detector-interface.md
+// Pure rules, no network (layer 1 data comes from the extension's globalThis.ShooLists). detector/data/brands.json is inlined at build time (scripts/build.mjs) into the placeholder below.
 //
 // Suspicion levels (how sure we are that the name imitates a brand). Weights are starting values, calibrated in M6.
 //   Level 0  official domain (listed in brands.json)        -> no signals at all
@@ -205,10 +205,32 @@
             label: { en: `Cheap domain ending .${tld}`, id: `Akhiran domain murah .${tld}` },
             labelSimple: { en: "This site uses a cheap address ending that scammers often use", id: "Situs ini memakai akhiran alamat murah yang sering dipakai penipu" },
         }),
+        dbMatch: (source) => ({
+            label: {
+                en: source === "shoo" ? "Reported and confirmed as a scam by Shoo" : "Found on a public list of phishing sites",
+                id: source === "shoo" ? "Dilaporkan dan dipastikan sebagai penipuan oleh Shoo" : "Ada di daftar publik situs phishing",
+            },
+            labelSimple: { en: "This site is known to cheat people. Do not enter anything here", id: "Situs ini sudah dikenal menipu orang. Jangan isi apa pun di sini" },
+        }),
     };
 
-    function signal(id, weight, texts, evidence) {
-        return { id, layer: 2, weight, label: texts.label, labelSimple: texts.labelSimple, evidence };
+    function signal(id, weight, texts, evidence, layer = 2) {
+        return { id, layer, weight, label: texts.label, labelSimple: texts.labelSimple, evidence };
+    }
+
+    // ---------- layer 1: database (hostname only; the lists live in the extension) ----------
+    /** @returns {Promise<object[] | null>} [db_match] on a hit, otherwise null (also when ShooLists is absent or fails). */
+    async function matchLists(snapshot) {
+        const host = hostOf(snapshot);
+        if (!host || host.includes(":") || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return null;
+        try {
+            const hit = await globalThis.ShooLists?.match(host);
+            if (!hit) return null;
+            const source = typeof hit.source === "string" ? hit.source : undefined;
+            return [signal("db_match", 100, T.dbMatch(source), source, 1)];
+        } catch (error) {
+            return null;
+        }
     }
 
     // ---------- main ----------
@@ -284,7 +306,8 @@
         analyzeLocal: async (snapshot) => {
             try {
                 if (!DATA) return [];
-                return analyze(snapshot || {});
+                const snap = snapshot || {};
+                return (await matchLists(snap)) || analyze(snap);
             } catch (error) {
                 return [];
             }
