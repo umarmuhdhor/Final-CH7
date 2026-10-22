@@ -7,7 +7,7 @@
 //   --show-holdout         also list holdout samples one by one (default: only their totals; look at them once, at the end of phase 07)
 //   --strict               exit 0 only when the targets were judged (50+ real per class, --analyze-url, no /analyze failure) AND met; 1 = not met, 2 = not judged
 import { fileURLToPath } from "node:url";
-import { loadSamples, loadDetector, evaluate, summarize, probeAnalyze, strictExitCode, visibleRows, MIN_PER_CLASS, TARGETS } from "./lib.mjs";
+import { loadSamples, loadDetector, evaluate, summarize, probeAnalyze, strictExitCode, visibleRows, jsonReport, normalizeSnapshot, MIN_PER_CLASS, TARGETS } from "./lib.mjs";
 
 function parseArgs(argv) {
     const args = { dir: fileURLToPath(new URL("./data", import.meta.url)), analyzeUrl: null, tag: null, json: false, strict: false, showHoldout: false };
@@ -54,11 +54,12 @@ async function main() {
     if (args.analyzeUrl) await probeAnalyze(args.analyzeUrl);
     const detector = loadDetector();
     const rows = [];
+    await detector.analyzeLocal(normalizeSnapshot(chosen[0].snapshot)); // warm-up: the first call is slow and would skew the max timing
     for (const s of chosen) rows.push(await evaluate(s, { detector, analyzeUrl: args.analyzeUrl }));
     const summary = summarize(rows, { remote: !!args.analyzeUrl });
 
     if (args.json) {
-        console.log(JSON.stringify({ summary, rows }, null, 2));
+        console.log(JSON.stringify(jsonReport(rows, summary, args), null, 2));
     } else {
         console.log(`${pad("id", 30)} ${pad("label", 6)} ${pad("L2", 4)} ${pad("score", 5)} ${pad("status", 9)} signals`);
         console.log("-".repeat(96));

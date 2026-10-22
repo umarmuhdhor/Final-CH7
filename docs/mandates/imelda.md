@@ -35,8 +35,8 @@ Target awal ini bisa diubah oleh lead:
 - Branch: `feat/AI-M1-link-name`
 
 ### M2 · Eval set — `ai/eval/`
-- [x] Kumpulkan ≥ 50 halaman scam (URL + HTML/teks + label) dan ≥ 50 halaman resmi yang mirip (halaman login bank, checkout e-commerce, dll). (50 scam + 51 legit ada; scam nyata hanya 1, sisanya sintetis: lihat plan/imelda/log/fase-04.md)
-- [ ] Buat skrip eval yang menjalankan detector + `/analyze`, lalu mencetak skor per halaman dan metrik di "Definisi sukses".
+- [~] Kumpulkan ≥ 50 halaman scam (URL + HTML/teks + label) dan ≥ 50 halaman resmi yang mirip (halaman login bank, checkout e-commerce, dll). (50 scam + 51 legit ada; scam nyata hanya 1, sisanya sintetis: lihat plan/imelda/log/fase-04.md)
+- [x] Buat skrip eval yang menjalankan detector + `/analyze`, lalu mencetak skor per halaman dan metrik di "Definisi sukses".
 - [x] Data pribadi apa pun di sampel harus disamarkan dulu.
 - **Selesai kalau:** skrip bisa dijalankan dengan satu perintah dan hasilnya ditempel di PR.
 - Branch: `feat/AI-M2-eval-set`

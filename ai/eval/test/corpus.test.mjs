@@ -284,7 +284,7 @@ test("form action URLs are redacted at capture and checked by the checker", () =
     const { snapshot } = parseHtml('<form action="https://x.site/post.php?sid=abc123&u=budi@x.com#f"><input name="a"></form>', { url: "https://x.site/" });
     assert.equal(snapshot.forms[0].action, "https://x.site/post.php?sid=REDACTED&u=REDACTED");
     const s = clean();
-    s.snapshot.forms[0].action = "https://bank.example/login?p_auth=hRDXgBJT";
+    s.snapshot.forms[0].action = "https://bank.example/login?p_auth=DUMMY123";
     assert.ok(findPersonalData(s).some((p) => /action/.test(p)));
     s.snapshot.forms[0].action = "https://bank.example/login?p_auth=REDACTED";
     assert.deepEqual(findPersonalData(s), []);

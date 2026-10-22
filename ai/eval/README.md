@@ -94,6 +94,8 @@ About 30% of the samples carry the tag `holdout`. It is **derived**, never picke
 5. `node ai/eval/tools/check-corpus.mjs` shows whether the set is complete.
 
 ## Known limits
+- "Real legit 0/39 flagged" is weaker than it sounds: the real legit pages are mostly homepages, 6 are JavaScript shells with empty text, and only `bank-login-klikbca` has a password field. `asks_pin` / `asks_otp` / `asks_ktp` are barely exercised against real legit pages. About 8-10 real pages with a login or checkout form still have to be added (a later PR).
+- `checkout-tokopedia-cart` is not a checkout: the capture is a redirect to `/login`, so it is tagged `bank-login` (a login page), not `checkout`.
 - Static HTML only: pages built by JavaScript (several bank and shop shells) come out with little or no text and no forms, so they exercise layers 1-2 only.
 - The redaction checker is pattern based (e-mail incl. spelled-out, mobile and landline numbers, 13-19 digit runs with space/dot/hyphen separators, fullwidth and Arabic digits folded, common token formats, URL query values). It cannot know a person's name; names in page text are the owner's job when reading.
 - `capture.mjs` resolves the host name and then `fetch` resolves it again, so a host that changes its DNS answer in between (rebinding) is not stopped.

@@ -937,7 +937,7 @@
     "id": "checkout-tokopedia-cart",
     "label": "legit",
     "tags": [
-      "checkout"
+      "bank-login"
     ],
     "synthetic": false,
     "redacted": true,
