@@ -591,16 +591,6 @@
         }
       }
     },
-    "Opens Settings": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Membuka Pengaturan"
-          }
-        }
-      }
-    },
     "Opens the details": {
       "localizations": {
         "id": {
@@ -807,6 +797,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shoo baru bekerja setelah kamu menyalakannya."
+          }
+        }
+      }
+    },
+    "Shows how to switch Shoo on in Safari": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menunjukkan cara menyalakan Shoo di Safari"
           }
         }
       }

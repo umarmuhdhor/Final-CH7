@@ -35,7 +35,7 @@ struct MainTabView: View {
     @ViewBuilder
     private var shieldRoot: some View {
         if env.settings.mode == .protected {
-            ProtectedShieldView(repository: env.repository)
+            ProtectedShieldView(repository: env.repository, extensionStatus: env.extensionStatus)
         } else {
             // TODO(sync:alief): Guardian Shield (GD-01) lands in fase 05
             ShieldPlaceholderView()

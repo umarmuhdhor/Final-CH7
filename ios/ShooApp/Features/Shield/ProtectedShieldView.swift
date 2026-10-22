@@ -7,8 +7,8 @@ struct ProtectedShieldView: View {
     @Environment(\.locale) private var locale
     @State private var model: ShieldModel
 
-    init(repository: any ShooRepository) {
-        _model = State(initialValue: ShieldModel(repository: repository))
+    init(repository: any ShooRepository, extensionStatus: @escaping () -> ExtensionStatus) {
+        _model = State(initialValue: ShieldModel(repository: repository, extensionStatus: extensionStatus))
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -116,6 +116,7 @@ struct ProtectedShieldView: View {
 /// Big Active / Off circle (PR-04). Off offers the way to switch the extension on.
 private struct ExtensionStatusCard: View {
     let status: ExtensionStatus
+    @State private var isTurnOnPresented = false
     @ScaledMetric(relativeTo: .largeTitle) private var circle: CGFloat = 96
 
     /// Capped so "Turn on" stays on screen at accessibility sizes.
@@ -145,15 +146,12 @@ private struct ExtensionStatusCard: View {
             .accessibilityElement(children: .combine)
             if !status.isActive {
                 Button {
-                    // TODO(sync:alief): present TurnOnExtensionView (fase 02) as a sheet once 02 is in this chain
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
+                    isTurnOnPresented = true
                 } label: {
                     Text("Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.borderedProminent)
-                .accessibilityHint(Text("Opens Settings"))
+                .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
                 .accessibilityIdentifier("shield.turnOn")
             }
         }
@@ -162,6 +160,29 @@ private struct ExtensionStatusCard: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(status.isActive ? "shield.status.active" : "shield.status.off")
+        .sheet(isPresented: $isTurnOnPresented) {
+            TurnOnExtensionSheet()
+        }
+    }
+}
+
+/// ON-04's guide as a sheet (PR-04). Closes itself once the extension reports in.
+private struct TurnOnExtensionSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            TurnOnExtensionView {
+                if env.extensionStatus().isActive { dismiss() }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                        .accessibilityIdentifier("turnOn.close")
+                }
+            }
+        }
     }
 }
 
@@ -220,6 +241,8 @@ private struct LastBlockedCard: View {
 }
 
 #Preview {
-    NavigationStack { ProtectedShieldView(repository: MockRepository(mode: .protected, latency: .zero)) }
+    NavigationStack {
+        ProtectedShieldView(repository: MockRepository(mode: .protected, latency: .zero), extensionStatus: { .off(lastSeen: nil) })
+    }
         .environment(AppEnvironment.preview(mode: .protected))
 }
