@@ -31,7 +31,7 @@ The dev server is plain HTTP with no rate limit. Deploying the Worker (wrangler 
 |---|---|
 | Valid | `200 { "signals": [...] }`, strongest signal first, `Cache-Control: no-store` |
 | Not JSON | `400 bad_json` |
-| Wrong shape, no `snapshot.url`, URL not http(s) | `400 invalid_body` |
+| Wrong shape, no `snapshot.url`, URL not http(s) | `422 invalid_body` |
 | Body over 200 KB | `413 too_large`, decided from `Content-Length` or while streaming, before parsing |
 | Other method on `/analyze` | `405 method_not_allowed` with `Allow: POST` |
 | Other path | `404 not_found` |
