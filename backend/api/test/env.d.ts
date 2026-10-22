@@ -2,6 +2,8 @@
 declare namespace Cloudflare {
   interface Env {
     DB: Hyperdrive;
+    /** Tests only: role postgres, for what a person does in the SQL editor (approve blocklist domains). */
+    DB_ADMIN: Hyperdrive;
     INVITE_BASE_URL: string;
     APNS_KEY_P8_B64?: string;
     APNS_KEY_ID?: string;
@@ -12,6 +14,7 @@ declare namespace Cloudflare {
     SUPABASE_SERVICE_ROLE_KEY?: string;
     SCREENSHOT_MAX_BYTES?: string;
     SCREENSHOT_URL_SECRET?: string;
+    RATE_KEY_SECRET?: string;
   }
   interface GlobalProps {
     mainModule: typeof import("../src/index");

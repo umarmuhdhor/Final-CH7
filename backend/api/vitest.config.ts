@@ -4,6 +4,8 @@ import { defineConfig } from "vitest/config";
 
 // Local Supabase started with `supabase start` in backend/db. Dev-only password (seed.sql).
 const LOCAL_DB = process.env.SHOO_TEST_DB_URL ?? "postgres://shoo_api:shoo_api_local@127.0.0.1:54322/postgres";
+// Reviewer role for tests that approve blocklist domains (shoo_api cannot, fase 12). Local stack default.
+const ADMIN_DB = process.env.SHOO_TEST_ADMIN_DB_URL ?? "postgres://postgres:postgres@127.0.0.1:54322/postgres";
 
 // Local Storage for screenshot tests: URL + secret key of the running local stack (demo values,
 // printed by `supabase status`). Env vars win, e.g. in CI.
@@ -25,12 +27,13 @@ export default defineConfig({
     cloudflareTest({
       wrangler: { configPath: "./wrangler.jsonc" },
       miniflare: {
-        hyperdrives: { DB: LOCAL_DB },
+        hyperdrives: { DB: LOCAL_DB, DB_ADMIN: ADMIN_DB },
         bindings: {
           INVITE_BASE_URL: "http://localhost:8787",
           SUPABASE_URL: storage.url,
           SUPABASE_SERVICE_ROLE_KEY: storage.key,
-          SCREENSHOT_URL_SECRET: "test-screenshot-url-secret",
+          SCREENSHOT_URL_SECRET: "test-screenshot-url-secret-".padEnd(40, "x"),
+          RATE_KEY_SECRET: "test-rate-key-secret-".padEnd(40, "x"),
         },
       },
     }),

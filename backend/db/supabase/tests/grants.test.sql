@@ -13,8 +13,11 @@ select table_privs_are('public', t, 'shoo_api',
   array['SELECT', 'INSERT', 'UPDATE', 'DELETE'], 'shoo_api CRUD on ' || t)
 from unnest(array[
   'devices', 'family_links', 'family_codes', 'join_attempts', 'scans', 'verdicts',
-  'blocklist_entries', 'ops_heartbeat', 'push_log', 'rate_limit_hits'
+  'ops_heartbeat', 'push_log', 'rate_limit_hits'
 ]) as t;
+-- blocklist_entries: table-wide SELECT + DELETE, INSERT/UPDATE per column (fase 12, hardening.test.sql)
+select table_privs_are('public', 'blocklist_entries', 'shoo_api',
+  array['SELECT', 'DELETE'], 'shoo_api SELECT + DELETE on blocklist_entries (column grants for the rest)');
 
 -- I7: PostgREST roles have nothing
 select table_privs_are('public', t, r, array[]::text[], r || ' has no privileges on ' || t)

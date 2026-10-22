@@ -1,14 +1,17 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import markedSafe from "../../../contracts/fixtures/blocked-marked-safe.json";
 import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json";
 import warning41 from "../../../contracts/fixtures/warning-41.json";
-import { sha256 } from "../src/http/crypto";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created } from "./helpers/seed";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
+const admin = adminSql();
 beforeEach(() => resetDb(sql));
 
 type Fixture = {
@@ -53,7 +56,7 @@ const blocklist = async (d: Created, q = "") =>
     nextSince: string | null;
   };
 const approve = (domain: string) =>
-  sql`update blocklist_entries set approved_at = now(), approved_by = 'test' where domain = ${domain}`;
+  admin`update blocklist_entries set approved_at = now(), approved_by = 'test' where domain = ${domain}`;
 
 /** Guardian G with a connected protected member P. */
 async function family() {
@@ -197,7 +200,7 @@ describe("POST /verdicts", () => {
   it("rate limits 60 per minute per guardian", async () => {
     const { g, p } = await family();
     const id = await scan(p);
-    const hash = await sha256(`verdicts_create:${g.deviceId}`);
+    const hash = await keyHash(`verdicts_create:${g.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select 'verdicts_create', ${hash} from generate_series(1, 60)`;
     expect((await verdict(g, id, "safe")).status).toBe(429);
   });
@@ -238,7 +241,7 @@ describe("GET /verdicts?domain=", () => {
 
   it("rate limits 30 per 10 s per device with Retry-After", async () => {
     const p = await createDevice("Mom");
-    const hash = await sha256(`verdicts_get:${p.deviceId}`);
+    const hash = await keyHash(`verdicts_get:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select 'verdicts_get', ${hash} from generate_series(1, 29)`;
     expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
     const res = await call("/verdicts?domain=a.example", { token: p.token });
@@ -388,7 +391,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     await verdict(g, id, "not_safe");
     await approve("gone.example");
     const before = await blocklist(p);
-    await sql`update blocklist_entries set removed_at = now() where domain = 'gone.example'`;
+    await admin`update blocklist_entries set removed_at = now() where domain = 'gone.example'`;
     await verdict(g, id, "safe");
     await verdict(g, id, "not_safe");
     expect((await blocklist(p)).domains).toEqual([]);

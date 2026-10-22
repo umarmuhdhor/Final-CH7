@@ -1,7 +1,11 @@
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ApiError } from "../src/http/errors";
+import { useRateKeySecret } from "../src/http/keyHash";
 import { clientIp, hitLight } from "../src/http/rateLimit";
 import { resetDb, testSql } from "./helpers/resetDb";
+
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const key = (ip?: string) => clientIp((n) => (n === "cf-connecting-ip" ? ip : undefined));
 

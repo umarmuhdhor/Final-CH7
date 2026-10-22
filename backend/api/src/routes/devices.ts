@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import postgres from "postgres";
 import { z } from "zod";
 import type { AppEnv } from "../env";
 import { deleteDevice, findProfile, insertDevice, updateDevice } from "../db/repo/devices";
@@ -43,6 +44,8 @@ devices.post("/devices", async (c) => {
   const sql = c.get("sql");
   await hit(sql, limits.createDevice, clientIp((n) => c.req.header(n)));
   const body = await readJson(c, createBody);
+  // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
+  await hit(sql, limits.createDeviceAll, "all");
 
   const token = `shoo_${base64url(randomBytes(32))}`;
   const avatarId = `avatar_${String(randomAvatar()).padStart(2, "0")}`;
@@ -90,7 +93,21 @@ devices.get("/devices/me", requireDevice, async (c) => {
  * Storage objects go after the DB commit; a Storage failure never brings the data back.
  */
 devices.delete("/devices/me", requireDevice, async (c) => {
-  const paths = await deleteDevice(c.get("sql"), c.get("principal").deviceId);
-  c.executionCtx.waitUntil(deleteScreenshots(c.env, paths));
+  let paths: string[] | undefined;
+  for (let attempt = 1; !paths; attempt++) {
+    try {
+      paths = await deleteDevice(c.get("sql"), c.get("principal").deviceId);
+    } catch (err) {
+      const code = err instanceof postgres.PostgresError ? err.code : undefined;
+      // A rare deadlock or lock timeout with a concurrent writer (e.g. retention): Postgres rolled
+      // back, retry once. Deleting your data must not fail on a race (SECURITY §3 P3).
+      if ((code === "40P01" || code === "40001" || code === "55P03") && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 100));
+        continue;
+      }
+      throw err;
+    }
+  }
+  c.executionCtx.waitUntil(deleteScreenshots(c.get("sql"), c.env, paths));
   return c.json({ ok: true });
 });

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
 import { screenshotPathForViewer } from "../db/repo/scans";
+import { usableSecret } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
 import { UUID } from "../http/validate";
@@ -20,7 +21,7 @@ export const screenshots = new Hono<AppEnv>();
 screenshots.get("/screenshots/:id", async (c) => {
   c.header("Cache-Control", NO_STORE);
   const id = c.req.param("id");
-  const secret = c.env.SCREENSHOT_URL_SECRET;
+  const secret = usableSecret(c.env.SCREENSHOT_URL_SECRET);
   if (!secret || !UUID.test(id)) throw errors.notFound();
   const viewerId = await verifyScreenshotLink(secret, id, c.req.query(), Date.now() / 1000);
   if (!viewerId) throw errors.notFound();

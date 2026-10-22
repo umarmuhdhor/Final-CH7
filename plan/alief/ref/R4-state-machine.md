@@ -64,11 +64,14 @@ stateDiagram-v2
 ## 5. Retensi (harian, Cron Worker `0 19 * * *` UTC = 03:00 WITA)
 
 ```text
-1. Ambil batch 500 scan created_at < now() - 14 hari (returning id, screenshot_path)
-2. Hapus objek Storage untuk path yang tidak dipakai scan lain yang lebih baru (dedupe!)
-3. Hapus baris scan batch itu (satu `DELETE /storage/v1/object/screenshots` dengan `prefixes` per batch); ulangi sampai kosong atau 10 batch (Workers Free: 10 ms CPU + 50 subrequest per Cron)
-4. Hapus family_codes, join_attempts, push_log lama (R2 §6)
-5. Upsert `ops_heartbeat`, log jumlah yang dihapus
+0. Upsert `ops_heartbeat('cron')` lebih dulu (sinyal anti-pause tidak bergantung pada retensi)
+1a. Scan tanpa screenshot: chunk 2000 (maks 25), satu transaksi per chunk, tanpa Storage
+1. Ambil batch 100 scan created_at < now() - 14 hari, urut (created_at, id) — tanpa transaksi (D-alief-B12)
+2. Path yang tidak dipakai scan di luar batch (dedupe!)
+3. Satu transaksi (`lock_timeout`, `statement_timeout` lokal): tombstone path, `verdicts.scan_id = null`, hapus scan batch; lalu satu `DELETE /storage/v1/object/screenshots` dengan `prefixes` (gagal → tombstone dicoba ulang, baris tetap terhapus); ulangi sampai kosong atau 10 batch (batch ke-10 penuh → `backlog: true`)
+4. Tombstone Storage (maks 500, umur > 10 menit, tidak ditunjuk scan): hapus objek, lalu tombstone-nya; batch gagal → `attempts`/`last_try_at`, lanjut
+5. Hapus family_codes, join_attempts, push_log, rate_limit_hits lama (R2 §6)
+6. Log hanya jumlah; tiap langkah berdiri sendiri, error pertama dilempar di akhir (Cron Events)
 ```
 
 Uji lokal: `curl "http://localhost:8787/cdn-cgi/local/scheduled?cron=0+19+*+*+*"` saat `wrangler dev` jalan.

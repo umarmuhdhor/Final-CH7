@@ -3,11 +3,17 @@ import type { Env } from "../env";
 import { clearScreenshotPath, reserveScreenshot, scanExists, type ScanRow } from "../db/repo/scans";
 import { decodeBase64, sniffImage } from "./images";
 import { screenshotLink } from "./screenshotLinks";
-import { screenshotStore } from "./screenshots";
+import { abandonUpload, screenshotStore } from "./screenshots";
+import { usableSecret } from "../http/crypto";
 import { errorInfo } from "../http/logError";
 
 const MAX_SIDE = 1280;
 const DAILY_QUOTA = 50;
+/**
+ * All owners together (D-alief-B12): 300 × 150 KB × 15 days ≈ 675 MB, under the 1 GB Storage of
+ * Supabase Free. Past it scans are still stored, only without a screenshot.
+ */
+const GLOBAL_DAILY_QUOTA = 300;
 const DEFAULT_MAX_BYTES = 150 * 1024;
 
 /** ScanResult (contracts/scan-result.schema.json). pageTitle is omitted when unknown. */
@@ -29,12 +35,13 @@ export function toScanResult(row: ScanRow, screenshotUrl: string | null) {
   };
 }
 
-type Drop = "invalid" | "too_large" | "not_image" | "too_wide" | "bad_size" | "quota" | "no_storage" | "upload_failed";
+type Drop = "invalid" | "too_large" | "not_image" | "too_wide" | "bad_size" | "quota" | "global_quota" | "no_storage" | "scan_gone" | "upload_failed";
 
 const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "screenshot_dropped", reason }));
 
 /**
- * R3 §4: decode, check size/type/pixels, dedupe per owner + domain (24 h), quota 50/24 h, upload.
+ * R3 §4: decode, check size/type/pixels, dedupe per owner + domain (24 h), quota 50/24 h
+ * (300/24 h for everyone), upload.
  * Any failure drops the screenshot only; the scan is already stored.
  */
 export async function attachScreenshot(
@@ -55,26 +62,30 @@ export async function attachScreenshot(
   if (!store) return dropped("no_storage");
 
   const path = `${scan.ownerId}/${scan.id}.${image.type === "png" ? "png" : "jpg"}`;
-  const slot = await reserveScreenshot(sql, scan, path, DAILY_QUOTA);
+  // Reserving also tombstones the path (D-alief-B12): whatever happens to this Worker from here,
+  // the cron can find and remove the object once no scan points at it.
+  const slot = await reserveScreenshot(sql, scan, path, { owner: DAILY_QUOTA, global: GLOBAL_DAILY_QUOTA });
   if ("reuse" in slot) return;
-  if ("quota" in slot) return dropped("quota");
+  if ("gone" in slot) return dropped("scan_gone");
+  if ("quota" in slot) return dropped(slot.quota === "owner" ? "quota" : "global_quota");
 
   try {
     await store.put(path, bytes, image.type === "png" ? "image/png" : "image/jpeg");
   } catch (err) {
     console.error(JSON.stringify({ event: "screenshot_dropped", reason: "upload_failed", error: errorInfo(err) }));
-    // A timed-out upload may still land in Storage: remove it so no object is left without a row.
-    await store.remove([path]).catch(() => undefined);
-    await clearScreenshotPath(sql, scan.ownerId, path);
+    // A timed-out upload may still land in Storage: no row points at it now, the cron removes it.
+    // The reservation's tombstone covers the object even if clearing the path fails.
+    await clearScreenshotPath(sql, scan.ownerId, path).catch(() => undefined);
+    await abandonUpload(sql, store, path);
     return;
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
-  if (!(await scanExists(sql, scan.id))) await store.remove([path]).catch(() => undefined);
+  if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
 }
 
 /**
  * Detail's screenshotUrl: a 1-hour Worker link for this viewer (D-alief-B08), never a Storage URL,
- * so no CDN copy can outlive a delete or disconnect. Null without a screenshot or without the secret.
+ * so no CDN copy can outlive a delete or disconnect. Null without a screenshot or without a usable secret (≥ 32 characters).
  */
 export async function screenshotUrl(
   env: Env,
@@ -82,11 +93,12 @@ export async function screenshotUrl(
   viewerId: string,
 ): Promise<string | null> {
   if (!scan.screenshotPath) return null;
-  if (!env.SCREENSHOT_URL_SECRET) {
+  const secret = usableSecret(env.SCREENSHOT_URL_SECRET);
+  if (!secret) {
     console.error(JSON.stringify({ event: "screenshot_link_unavailable", reason: "no_secret" }));
     return null;
   }
   // Pinned Worker URL, not the request Host (a custom domain without HTTPS would leak the link).
   const origin = env.INVITE_BASE_URL.replace(/\/+$/, "");
-  return screenshotLink(env.SCREENSHOT_URL_SECRET, origin, scan.id, viewerId, Date.now() / 1000);
+  return screenshotLink(secret, origin, scan.id, viewerId, Date.now() / 1000);
 }

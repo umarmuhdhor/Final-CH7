@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice } from "./helpers/seed";
 
 const sql = testSql();
+const admin = adminSql();
 let token: string;
 beforeEach(async () => {
   await resetDb(sql);
@@ -32,11 +33,11 @@ describe("GET /blocklist", () => {
   });
 
   it("serves only approved, not removed entries, ordered by approval", async () => {
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by) values
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by) values
       ('b-scam.example', '2026-10-21T05:00:00.000002Z', 't'),
       ('a-scam.example', '2026-10-21T05:00:00.000001Z', 't')`;
-    await sql`insert into blocklist_entries (domain) values ('pending.example')`;
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by, removed_at) values
+    await admin`insert into blocklist_entries (domain) values ('pending.example')`;
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by, removed_at) values
       ('gone.example', '2026-10-21T04:00:00Z', 't', '2026-10-21T06:00:00Z')`;
 
     const { body } = await get();
@@ -49,10 +50,10 @@ describe("GET /blocklist", () => {
   });
 
   it("since: only newer approvals plus removals, exact microsecond cursor", async () => {
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by) values
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by) values
       ('old.example', '2026-10-21T05:00:00.000001Z', 't'),
       ('new.example', '2026-10-21T05:00:00.000002Z', 't')`;
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by, removed_at) values
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by, removed_at) values
       ('gone.example', '2026-10-21T04:00:00Z', 't', '2026-10-21T06:00:00Z')`;
 
     const { body } = await get(`?since=${encodeURIComponent("2026-10-21T05:00:00.000001Z")}`);
@@ -65,7 +66,7 @@ describe("GET /blocklist", () => {
   });
 
   it("pages by event time without skipping", async () => {
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by)
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by)
       select 'd' || g || '.example', timestamptz '2026-10-01T00:00:00Z' + g * interval '1 second', 't'
       from generate_series(1, 1001) g`;
     const first = await get();
@@ -75,13 +76,13 @@ describe("GET /blocklist", () => {
   });
 
   it("a full page never splits entries that share one approval time", async () => {
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by)
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by)
       select 'd' || lpad(g::text, 4, '0') || '.example', timestamptz '2026-10-01T00:00:00Z' + g * interval '1 second', 't'
       from generate_series(1, 998) g`;
     // Bulk manual approval: three domains with the same timestamp straddle the 1000 boundary.
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by)
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by)
       select 'tie' || g || '.example', timestamptz '2026-10-02T00:00:00Z', 't' from generate_series(1, 3) g`;
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by)
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by)
       values ('last.example', '2026-10-03T00:00:00Z', 't')`;
 
     const first = await get();
@@ -92,19 +93,19 @@ describe("GET /blocklist", () => {
   });
 
   it("re-approving a removed domain gives it a new addedAt", async () => {
-    await sql`insert into blocklist_entries (domain, approved_at, approved_by, removed_at)
+    await admin`insert into blocklist_entries (domain, approved_at, approved_by, removed_at)
       values ('back.example', '2026-10-01T00:00:00Z', 't', '2026-10-02T00:00:00Z')`;
     const before = await get(`?since=${encodeURIComponent("2026-10-02T00:00:00Z")}`);
     expect(before.body.domains).toEqual([]);
 
-    await sql`update blocklist_entries set removed_at = null where domain = 'back.example'`;
+    await admin`update blocklist_entries set removed_at = null where domain = 'back.example'`;
     const after = await get(`?since=${encodeURIComponent("2026-10-02T00:00:00Z")}`);
     expect(after.body.domains.map((d) => d.domain)).toEqual(["back.example"]);
   });
 
   it("an approval by update gets a fresh, unique time", async () => {
-    await sql`insert into blocklist_entries (domain) values ('q1.example'), ('q2.example')`;
-    await sql`update blocklist_entries set approved_at = now(), approved_by = 'alief'`;
+    await admin`insert into blocklist_entries (domain) values ('q1.example'), ('q2.example')`;
+    await admin`update blocklist_entries set approved_at = now(), approved_by = 'alief'`;
     const { body } = await get();
     expect(body.domains).toHaveLength(2);
     expect(body.domains[0]!.addedAt).not.toBe(body.domains[1]!.addedAt);

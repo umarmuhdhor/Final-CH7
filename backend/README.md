@@ -6,8 +6,9 @@ Stack: Cloudflare Worker `shoo-api` (Hono, zod, postgres.js) → Hyperdrive (`--
 
 ```text
 backend/
-├── api/            Worker (TypeScript). src/{app,env,index}.ts, routes/, http/, db/, services/
+├── api/            Worker (TypeScript). src/{app,env,index}.ts, routes/, http/, db/, services/, cron/
 ├── db/supabase/    config.toml, migrations/, tests/ (pgTAP), seed.sql (local only)
+├── db/scripts/     quota-estimate.sql (local only)
 └── ci/             draft GitHub Action (inert, see ci/README.md)
 ```
 
@@ -26,9 +27,9 @@ pnpm -C backend/api dev                                    # http://localhost:87
 
 - The Worker reaches local Postgres through the Hyperdrive binding `DB` (`localConnectionString` in `api/wrangler.jsonc`) as role `shoo_api` with the dev-only password `shoo_api_local` from `seed.sql`.
 - Tests empty all tables before each test (`api/test/helpers/resetDb.ts`). Run `supabase db reset` to get the seed data back.
-- Seed devices (local only): `dev_me` (guardian), `dev_mom`, `dev_dad` (protected). Bearer value `shoo_local_<id>`, e.g. `curl localhost:8787/blocklist -H "authorization: Bearer shoo_local_dev_me"`.
+- Seed devices (local only): `dev_me` (guardian), `dev_mom`, `dev_dad` (protected). Bearer value `shoo_local_<id>`, e.g. `T=shoo_local_dev_me; curl localhost:8787/blocklist -H "authorization: Bearer $T"`.
 
-## Endpoints (so far)
+## Endpoints
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
@@ -43,6 +44,7 @@ pnpm -C backend/api dev                                    # http://localhost:87
 | GET | `/family/members` | Bearer guardian | `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan }] }` |
 | DELETE | `/family/members/{deviceId}` | Bearer guardian | `{ ok: true }`, 404 if not my member |
 | DELETE | `/family/guardian` | Bearer protected | `{ ok: true }`, 404 if not connected |
+| GET | `/privacy?lang=en\|id` | – | privacy policy page (SECURITY §3 P12), EN/ID by `lang` then Accept-Language; no DB |
 | GET | `/join?code=` | – | HTML invite page (EN/ID by Accept-Language) → `shoo://join?code=`; strict CSP; no DB lookup |
 | POST | `/scans` | Bearer | contract ScanResult body (+ `screenshotBase64?`) → `201 { id }`; owner = token device; 120/h per device. Screenshot: JPEG/PNG ≤ 150 KB, ≤ 1280 px, dedupe same domain 24 h, 50/24 h per device, otherwise dropped (scan still 201) |
 | GET | `/scans?owner=me\|family\|<deviceId>&status=&cursor=&limit=` | Bearer | `{ items, nextCursor }`, newest first, limit 1–50 (20); `family` guardian only (403), unknown member 404 |
@@ -55,6 +57,7 @@ pnpm -C backend/api dev                                    # http://localhost:87
 Errors always `{ "error": { "code", "message" } }`; `429` carries `Retry-After`.
 
 Push (GD-06, fase 11): `POST /scans` from a protected device sends the guardian `{ aps: { alert: { body }, sound: "default" }, scanId }` straight from the Worker to APNs over HTTP/2 (D-alief-B01), text in the guardian's language, after the response (`waitUntil`). Only 410 `Unregistered`/`ExpiredToken` clears the guardian's `apns_token`; a push failure never fails the scan.
+Every response also carries `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, HSTS and (unless the route sets its own) CSP `default-src 'none'; frame-ancestors 'none'`. No CORS headers (native clients only). A declared body over 256 KB → 413 before any DB work. Unknown bearer tokens are limited to 60 per 10 min per IP (then 429).
 Every response is `Cache-Control: private, no-store` (user data, SECURITY §3 P13) except `GET /blocklist` (`private, max-age=300`). Workers invocation logs are off; logs never carry ids, names, URLs or tokens.
 
 ## Schema summary
@@ -96,13 +99,42 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
-| `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot links (`openssl rand -base64 32`); unset → `screenshotUrl` null; changing it invalidates every link |
+| `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot links (`openssl rand -base64 32`, ≥ 32 characters); unset or shorter → `screenshotUrl` null; changing it invalidates every link |
 | `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | APNs token auth (`.p8` as one line of base64, B7). Any APNs value unset → pushes only logged (`push_log` `logged`) |
+| `RATE_KEY_SECRET` | secret | HMAC key for rate-limit keys and join attempt IPs (`openssl rand -base64 32`, ≥ 32 characters). **Required**: unset or shorter → every rate-limited request is a 500 (fail closed). Set it before deploying. Changing it resets all counters once |
 | `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
 | `APNS_ENV` | var | `sandbox` (Debug builds) → `production` (TestFlight, fase 16) |
 
+## Retention (daily cron)
+
+`triggers.crons: ["0 19 * * *"]` (03:00 WITA) runs `src/cron/retention.ts`:
+- writes `ops_heartbeat('cron')` first (anti-pause signal, also written by `/healthz/db`);
+- scans older than 14 days without a screenshot in chunks of 2000, max 25 per run (no Storage call);
+- scans older than 14 days with a screenshot in batches of 100, max 10 per run (`backlog: true` in the log when more are left). Each batch tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects; if Storage fails the rows are still gone on day 14 and the tombstones are retried. Verdicts stay with `scan_id` null (D-alief-14);
+- `storage_tombstones` (intent log of every screenshot object, D-alief-B12): paths no scan points at, older than 10 min, max 500 per run;
+- `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
+
+`scheduled()` awaits the run, so a failed step fails the Cron event.
+
+Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler dev --test-scheduled` runs: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+19+*+*+*"`.
+
+Check for a backlog (SQL editor): `select count(*) from scans where created_at < now() - interval '15 days';` should be 0.
+
+## Quota (Supabase Free)
+
+`db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); one block screen polling `GET /verdicts` all day ≈ 17k `rate_limit_hits` rows ≈ 4 MB (kept 1 day).
+- DB 500 MB: ≈ 300k scans alive (14 days) ≈ 20k scans/day.
+- Storage 1 GB: screenshots ≤ 150 KB, ≤ 50 per device per day, kept 14 days. Move to R2 (`ScreenshotStore`) when Storage > 700 MB.
+- Egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB. Move to R2 when egress > 3.5 GB.
+- Check (SQL editor): `select pg_size_pretty(pg_database_size(current_database()));` and Storage usage in the Supabase dashboard (Settings → Usage).
+
+## Rollback
+
+- Worker: `npx wrangler rollback` (dashboard → Deployments shows versions). Secrets are not versioned.
+- Database: migrations only move forward. Undo with a new migration; every migration must work with the Worker version that is still live (ci/README.md).
+
 ## Deploy (manual until the GitHub Action is on)
 
-Cloud actions are always done by a person (plan/alief/README.md §6 rule 9). Step-by-step checklist: `plan/alief/log/fase-07.md` "LANGKAH MANUAL".
+Cloud actions are always done by a person (plan/alief/README.md §6 rule 9). Step-by-step checklists: "LANGKAH MANUAL" in `plan/alief/log/fase-07.md` … `fase-12.md`. Order: `(cd backend/db && supabase db push)` first, then `pnpm -C backend/api run deploy`.
 
 Cloud URL: `https://shoo-api.afindo-mi01.workers.dev` (shared with Imelda, TODO C7).

@@ -19,6 +19,8 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   /** Largest accepted screenshot in bytes (contract: 150 KB). */
   SCREENSHOT_MAX_BYTES?: string;
+  /** Secret: HMAC key for rate-limit keys and join attempt IPs (D-alief-B12). Unset → sha256. */
+  RATE_KEY_SECRET?: string;
   /** Secret: HMAC key for screenshot links (D-alief-B08). Unset → screenshotUrl null. */
   SCREENSHOT_URL_SECRET?: string;
 }

@@ -12,6 +12,8 @@ import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created } from "./helpers/seed";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -145,7 +147,7 @@ describe("POST /scans", () => {
 
   it("rate limits 120 per hour per device", async () => {
     const p = await createDevice("Mom");
-    const hash = await sha256(`scans_create:${p.deviceId}`);
+    const hash = await keyHash(`scans_create:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select 'scans_create', ${hash} from generate_series(1, 120)`;
     const res = await post(p, extensionBody(blocked92));
     expect(res.status).toBe(429);
@@ -210,8 +212,9 @@ describe("POST /scans screenshot", () => {
 
   it("quota holds under parallel uploads", async () => {
     const p = await createDevice("Mom");
-    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, screenshot_path)
-      select ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
+    // Original uploads: the path names the scan's own id (reuses do not count, D-alief-B12).
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, screenshot_path)
+      select 'seed' || g, ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
              ${p.deviceId} || '/seed' || g || '.jpg'
       from generate_series(1, 48) g`;
     const ids = await Promise.all(
@@ -237,8 +240,9 @@ describe("POST /scans screenshot", () => {
 
   it("quota: at most 50 uploads per owner per 24 h", async () => {
     const p = await createDevice("Mom");
-    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, screenshot_path)
-      select ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
+    // Original uploads: the path names the scan's own id (reuses do not count, D-alief-B12).
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, screenshot_path)
+      select 'seed' || g, ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
              ${p.deviceId} || '/seed' || g || '.jpg'
       from generate_series(1, 50) g`;
     const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
