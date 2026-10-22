@@ -6,7 +6,7 @@ Safari Web Extension (EX-01 … EX-08). Swift handler + web files in `Resources/
 - Content scripts can't use ES `import`. Every script in `manifest.json > content_scripts.js` shares one global scope, loaded in order.
 - Page data sent anywhere must follow contracts/ (PageSnapshot, ScanResult). Never send typed input values.
 - Native messages (`sendNativeMessage`) are defined in contracts/app-group-keys.md.
-- Script order: `lists-client.js` → `detector.js` → `pipeline.js` → UI scripts (`popup.js`, `marks.js`, `report.js`, `block.js`) → `content.js` (last).
+- Script order: `lists-client.js` → `detector.js` → `pipeline.js` → UI scripts (`pill.js`, `popup.js`, `marks.js`, `report.js`, `block.js`) → `content.js` (last).
 - Block screen (EX-06) is the extension page `blocked.html` (listed in `web_accessible_resources`), not an overlay — page scripts can't remove it. Data travels in the URL fragment (`ShooBlock.encode/decode`). UI listens with `ShooPipeline.subscribe(state => …)`.
 - EX-07: `report.js` sends one result per page (blocked, or warning once all layers are done); `background.js` takes the screenshot (`capture.js`) and does the POST so it survives the block-screen navigation.
 - Layer 1 (docs/design/blocklist.md): `lists.js` in background downloads `/blocklist` + `/public-blocklist` into `storage.local` (hourly / 6 h / full daily, alarms); `lists-client.js` gives content scripts `ShooLists.match(hostname)`. The visited URL never leaves the phone.
