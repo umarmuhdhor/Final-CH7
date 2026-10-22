@@ -201,8 +201,9 @@ struct AppEnvironmentSessionTests {
         #expect(AppEnvironment.live(arguments: []).repository is ApiRepository)
     }
 
+    /// Only a Debug build in the simulator uses localhost; on a real iPhone localhost is the phone.
     @Test func releaseTalksToTheCloudWorker() {
-        #if DEBUG
+        #if DEBUG && targetEnvironment(simulator)
         #expect(AppConfig.apiBaseURL.absoluteString == "http://localhost:8787")
         #else
         #expect(AppConfig.apiBaseURL.absoluteString == "https://shoo-api.afindo-mi01.workers.dev")
