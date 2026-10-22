@@ -69,3 +69,21 @@ test("words still count at full weight when the page also asks for something sen
     assert.equal(byId.urgent_language, 15);
     assert.equal(byId.brand_logo_offsite, 25);
 });
+
+test("words keep full weight when the domain itself already looks like impersonation (layer 2 evidence from the extension)", async () => {
+    const snap = { imageAlts: ["Logo OVO"], text: "Undian berhadiah. Klaim sekarang!", title: "Undian OVO" };
+    const quiet = await analyze(page("https://undian-ovo.example.xyz/", [], snap));
+    assert.equal(quiet.find((x) => x.id === "brand_logo_offsite").weight, 12);
+    const layer2 = [{ id: "brand_plus_keyword", layer: 2, weight: 14, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } }];
+    const loud = await analyze(page("https://undian-ovo.example.xyz/", [], snap), { localSignals: layer2 });
+    assert.equal(loud.find((x) => x.id === "brand_logo_offsite").weight, 25);
+    assert.equal(loud.find((x) => x.id === "urgent_language").weight, 15);
+});
+
+test("a client cannot use localSignals for anything but this weighting (junk is ignored)", async () => {
+    const snap = { imageAlts: ["Logo OVO"], text: "", title: "" };
+    for (const junk of [null, "x", [null, 5, { layer: 2, weight: "999" }, { layer: 3, weight: 50 }, { layer: 2, weight: -4 }]]) {
+        const out = await analyze(page("https://undian-ovo.example.xyz/", [], snap), { localSignals: junk });
+        assert.equal(out.find((x) => x.id === "brand_logo_offsite").weight, 12);
+    }
+});

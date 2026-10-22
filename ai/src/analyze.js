@@ -9,9 +9,20 @@ import { hostOf, isOfficialHost } from "./layer3/official.js";
 /** Strongest first, ties by id (same order as the form signals had on their own). */
 const strongestFirst = (signals) => signals.sort((a, b) => b.weight - a.weight || (a.id < b.id ? -1 : 1));
 
-function rules(snapshot, official) {
+function rules(snapshot, official, impersonation = false) {
     const forms = formSignals(snapshot, { official });
-    return strongestFirst([...forms, ...contentSignals(snapshot, { official, asksData: forms.length > 0 })]);
+    // Words weigh full when something sensitive is asked, or when the domain itself already looks like impersonation.
+    return strongestFirst([...forms, ...contentSignals(snapshot, { official, asksData: forms.length > 0 || impersonation })]);
+}
+
+/** True when the extension's own layer 1-2 signals already add up to >= 10 (D-imelda-31). Untrusted numbers: they only change how much WORDS weigh. */
+function looksLikeImpersonation(localSignals) {
+    if (!Array.isArray(localSignals)) return false;
+    let sum = 0;
+    for (const s of localSignals.slice(0, 30)) {
+        if (s && typeof s === "object" && (s.layer === 1 || s.layer === 2) && Number.isFinite(s.weight) && s.weight > 0) sum += Math.min(s.weight, 100);
+    }
+    return sum >= 10;
 }
 
 /**
@@ -28,14 +39,14 @@ export function analyzeSnapshot(rawSnapshot) {
  * Rules + domain age. The RDAP lookup starts first and runs while the rules run; it has its own
  * deadline and returns null on any failure, so the rules' answer never depends on it.
  * @param {object} rawSnapshot
- * @param {{ rdap?: { lookupAgeDays(host: string): Promise<number|null> } | null, llm?: { check: Function } | null, client?: string }} [deps]
+ * @param {{ rdap?: { lookupAgeDays(host: string): Promise<number|null> } | null, llm?: { check: Function } | null, client?: string, localSignals?: unknown }} [deps]
  */
-export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "unknown" } = {}) {
+export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "unknown", localSignals = [] } = {}) {
     const snapshot = sanitizeSnapshot(rawSnapshot);
     const host = hostOf(snapshot.url);
     const official = isOfficialHost(host);
     const age = rdap && !official ? rdap.lookupAgeDays(host).catch(() => null) : Promise.resolve(null);
-    const signals = rules(snapshot, official);
+    const signals = rules(snapshot, official, looksLikeImpersonation(localSignals));
     // Layer 4 starts right after the rules and runs while RDAP is still answering. Its budget is separate (<= 4 s).
     const score = signals.reduce((sum, s) => sum + s.weight, 0); // our rules only, never client-supplied numbers
     const reality = llm ? llm.check(snapshot, { official, score, ruleIds: signals.map((s) => s.id), client }).catch(() => null) : Promise.resolve(null);
