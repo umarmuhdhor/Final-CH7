@@ -59,9 +59,9 @@ Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk J
 ### Fase C · Sambungkan app ke backend
 - [x] `ApiRepository` menggantikan `MockRepository`
 - [x] Setelah onboarding, tulis key sesi ke App Group (`contracts/app-group-keys.md`) supaya extension bisa memanggil API
-- [ ] **GD-04** Family code: QR + kode yang berganti tiap 60 detik + hitung mundur + "Copy invite link" + daftar terhubung (x/3)
-- [ ] **PR-01, PR-02** Connect lewat Scan QR / Enter code → layar "You're protected by …"
-- [ ] **PR-03** Link undangan `shoo://join?code=1234` membuka app dengan kode terisi (P0). Deferred deep link setelah install = P1.
+- [x] **GD-04** Family code: QR + kode yang berganti tiap 60 detik + hitung mundur + "Copy invite link" + daftar terhubung (x/3)
+- [x] **PR-01, PR-02** Connect lewat Scan QR / Enter code → layar "You're protected by …"
+- [x] **PR-03** Link undangan `shoo://join?code=1234` membuka app dengan kode terisi (P0). Deferred deep link setelah install = P1.
 - [ ] **GD-06** Tap push → buka Detail sesuai `scanId`
 - [ ] **GD-07** Tombol It's safe / Not safe langsung berlaku, tanpa konfirmasi
 

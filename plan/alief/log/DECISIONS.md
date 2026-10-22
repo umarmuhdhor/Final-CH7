@@ -601,3 +601,45 @@ Format:
 - Alasan: fase 13 langkah 3 + 7, kontrak `extensionLastSeenAt`.
 - Alternatif yang ditolak: throttle per jam di app (MVP: dua request kecil per foreground cukup; backend punya batas umum).
 - File: `App/{AppEnvironment,RootView}.swift`.
+
+## D-alief-C07 · 22 Okt 2026 · track c (fase 14) · Link/QR hanya mengisi kode; join selalu lewat tap "Connect" (T11)
+
+- Keputusan: `shoo://join?code=`, `https://<host API>/join?code=` dan hasil scan QR hanya mengisi 4 digit di ConnectView (`ConnectModel.prefill` / `scanned` tidak pernah memanggil `joinFamily`). Pengguna melihat kodenya lalu menekan "Connect". Setelah onboarding, link membuka sheet Connect di tab Shield; sebelum registrasi, kode disimpan di `Router.pendingJoinCode` (memori saja, tidak ke disk) sampai langkah Connect onboarding. Mode Guardian, link rusak, host lain, `http` di luar localhost Debug, kode ganda (`code=1&code=2`), atau digit non-ASCII → Shield (kontrak "Deep links"). `scan`/`activity` diterima parser tapi dirutekan di fase 15.
+- Alasan: SECURITY T11 (link tidak boleh menghubungkan tanpa konfirmasi). Kontrak tidak punya endpoint "preview" (nama guardian sebelum join), jadi konfirmasinya adalah tap eksplisit pada kode yang terlihat; nama guardian muncul di PR-02 setelah join, dan Profile → Disconnect membatalkannya.
+- Alternatif yang ditolak: join otomatis dari link (melanggar T11); dialog "Join Adhella's family?" (butuh endpoint preview baru di `contracts/`, bukan wewenang Team App); menyimpan kode tertunda di UserDefaults (data undangan tidak perlu hidup setelah app ditutup, P1).
+- File: `App/{DeepLink,AppEnvironment,Router}.swift`, `Features/Pairing/{ConnectModel,ConnectView}.swift`, `Features/Onboarding/OnboardingFlow.swift`, `Features/Main/MainTabView.swift`.
+
+## D-alief-C08 · 22 Okt 2026 · track c (fase 14) · Tab default "Enter code"; kamera diminta saat tab Scan QR dibuka
+
+- Keputusan: ConnectView membuka tab "Enter code". Tab "Scan QR" memakai `DataScannerViewController` (VisionKit) khusus QR; izin kamera diminta (`AVCaptureDevice.requestAccess`) baru saat tab itu dibuka. Tidak ada foto/frame yang disimpan; hanya string QR yang dibaca, dan hanya link undangan dari host yang diizinkan yang diterima (lainnya: "That QR code isn't a Shoo family code."). Simulator / iPhone tanpa dukungan / izin ditolak → catatan + "Open Settings" (saat ditolak), tab Enter code tetap ada. `AppConfig.cameraEnabled = true` karena C3 (`NSCameraUsageDescription`) sudah masuk lewat #27.
+- Alasan: SECURITY P7 (izin tepat waktu, minimal), PRD PR-01; kode 4 digit bisa dibaca lewat telepon, jadi tidak memaksa kamera.
+- Alternatif yang ditolak: `AVCaptureSession` + `AVCaptureMetadataOutput` manual (lebih banyak kode, sama hasilnya); minta izin kamera saat ConnectView muncul.
+- File: `Features/Pairing/{QRScannerView,ConnectView}.swift`, `App/AppConfig.swift`.
+
+## D-alief-C09 · 22 Okt 2026 · track c (fase 14) · Kode keluarga: refresh di 0 s, jam miring = 60 s, keluarga penuh = tanpa kode
+
+- Keputusan: FamilyCodeView meminta `POST /family/code` saat muncul dan setiap hitung mundur mencapai 0. `secondsLeft` dihitung dari `expiresAt` server; kalau hasilnya di luar 1…60 s (jam iPhone miring dari server) dipakai 60 s, supaya tidak macet di 0 atau meminta kode terus-menerus. Kalau anggota sudah 3 (`FamilyShieldModel.maxMembers`), tidak ada kode yang diminta: tampil "Your family is full (3 people)…" dan daftar anggota dengan Remove; setelah ada yang dihapus kode langsung diminta. Gagal → "Couldn't get a code" + Try again. Sheet memakai `.privacyCover()` (kode tidak terlihat di app switcher).
+- Alasan: PRD GD-04 + §10 risiko kode 4 digit (umur pendek, refresh otomatis), kontrak `family_full`.
+- Alternatif yang ditolak: memakai jam iPhone apa adanya (kode bisa terlihat "0 s" terus); tetap meminta kode saat penuh (server menolak join, pengguna bingung).
+- File: `Features/Pairing/{FamilyCodeModel,FamilyCodeView}.swift`.
+
+## D-alief-C10 · 22 Okt 2026 · track c (fase 14) · Anggota dibaca ulang tiap 5 s selama kode tampil
+
+- Keputusan: selama FamilyCodeView terbuka, `GET /family/members` diulang tiap 5 s (bersama loop hitung mundur, berhenti saat sheet ditutup). Saat ditutup, Family Shield / Profile memuat ulang.
+- Alasan: Guardian perlu melihat "Mom connected" segera setelah Mom memasukkan kode; kontrak tidak punya push/event untuk join, dan polling hanya berjalan selama layar ini terbuka (paling lama beberapa menit).
+- Alternatif yang ditolak: push "X joined" (butuh perubahan kontrak + fase 11); tanpa refresh (Guardian harus menutup sheet untuk melihat).
+- File: `Features/Pairing/FamilyCodeModel.swift`.
+
+## D-alief-C11 · 22 Okt 2026 · track c (fase 14) · "Copy invite link": pasteboard lokal, hilang saat kode kedaluwarsa
+
+- Keputusan: teks undangan EN/ID (berisi `inviteUrl` + kode) disalin dengan `UIPasteboard.setItems(_:options:)` memakai `.localOnly: true` (tidak ke Universal Clipboard) dan `.expirationDate` = `expiresAt` kode (dijepit 1…60 s). Tombol berubah jadi "Copied" + pengumuman VoiceOver; kembali saat kode baru muncul.
+- Alasan: SECURITY P8; kode tidak berguna setelah kedaluwarsa, jadi tidak perlu tinggal di clipboard.
+- Alternatif yang ditolak: `UIPasteboard.general.string = …` (sinkron ke Mac/iPad, tidak kedaluwarsa); `ShareLink` (bisa ditambah nanti, tapi PRD meminta "Copy invite link" untuk WhatsApp).
+- File: `Features/Pairing/FamilyCodeModel.swift`, `Tests/PairingTests.swift`.
+
+## D-alief-C12 · 22 Okt 2026 · track c (fase 14) · Link saat sheet lain terbuka: sheet itu ditutup dulu, Connect menyusul dari `onDismiss`
+
+- Keputusan: `Router.showConnect()` kembali ke tab Shield; kalau Profile atau "Turn on" (PR-04) sedang terbuka, keduanya ditutup dan `wantsConnect` dicatat, lalu Connect dibuka dari `onDismiss` sheet itu (`Router.sheetDismissed()`). Status sheet "Turn on" di Shield pindah ke `Router.isTurnOnPresented` supaya link bisa menutupnya. Link kedua saat Connect sudah terbuka hanya mengisi ulang kode. Kode tertunda dibuang saat app ke background dan saat registrasi sebagai Guardian.
+- Alasan: review swift fase 14 (HIGH): SwiftUI hanya menampilkan satu sheet; jeda waktu tetap (700 ms) menebak kapan animasi selesai dan bisa membuat flag Connect macet `true` tanpa sheet. Urutan dari state tidak menebak.
+- Alternatif yang ditolak: satu `enum ActiveSheet` + `.sheet(item:)` untuk semua sheet (lebih rapi, tapi menyentuh banyak layar fase 04–06; dicatat untuk refactor setelah MVP); cek `presentedViewController` UIKit + jeda (ikut menghitung alert/dialog sistem yang tidak bisa ditutup app).
+- File: `App/{Router,AppEnvironment,RootView}.swift`, `Features/Main/MainTabView.swift`, `Features/Shield/ProtectedShieldView.swift`, `Tests/PairingTests.swift` (`DeepLinkRoutingTests`).
