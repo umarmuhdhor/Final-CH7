@@ -52,3 +52,53 @@ export function buildSignal(id, evidence) {
     if (evidence) signal.evidence = evidence;
     return signal;
 }
+
+// ---- phase 03: content and domain-age signals --------------------------------
+// Starting weights from plan/imelda/ref/R1 and D-imelda-15/16/17; tuned in phase 07. (new_domain: see newDomainWeight)
+export const CONTENT_WEIGHTS = Object.freeze({ urgent_language: 15, brand_logo_offsite: 25 });
+
+/** @param {string} phrase our own phrase from the list (never page text) @param {string} evidence exact page text */
+export function buildUrgentSignal(phrase, evidence) {
+    return {
+        id: "urgent_language",
+        layer: 3,
+        weight: CONTENT_WEIGHTS.urgent_language,
+        label: { en: `Urgent language: "${phrase}"`, id: `Kalimat mendesak: "${phrase}"` },
+        labelSimple: { en: "Rushes you to act fast", id: "Memaksa kamu cepat-cepat bertindak" },
+        evidence,
+    };
+}
+
+/** @param {string} brandName display name from brands.json @param {string} evidence exact page text */
+export function buildBrandLogoSignal(brandName, evidence) {
+    return {
+        id: "brand_logo_offsite",
+        layer: 3,
+        weight: CONTENT_WEIGHTS.brand_logo_offsite,
+        label: { en: `${brandName} logo on an unofficial site`, id: `Logo ${brandName} di situs tidak resmi` },
+        labelSimple: { en: `Pretends to be ${brandName}`, id: `Berpura-pura menjadi ${brandName}` },
+        evidence,
+    };
+}
+
+/** Weight by domain age (D-imelda-15). null = old enough, no signal. */
+export function newDomainWeight(days) {
+    if (days < 7) return 30;
+    if (days <= 30) return 20;
+    if (days <= 90) return 10;
+    return null;
+}
+
+/** @param {number} days whole days since registration */
+export function buildNewDomainSignal(days) {
+    const weight = newDomainWeight(days);
+    if (weight === null) return null;
+    return {
+        id: "new_domain",
+        layer: 3,
+        weight,
+        label: { en: `Domain age ${days} ${days === 1 ? "day" : "days"}`, id: `Umur domain ${days} hari` },
+        labelSimple: { en: days === 1 ? "This site was made 1 day ago" : `This site was made ${days} days ago`, id: `Situs ini baru dibuat ${days} hari lalu` },
+        evidence: String(days),
+    };
+}
