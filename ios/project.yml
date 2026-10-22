@@ -32,7 +32,7 @@ targets:
       - path: ShooApp
         excludes: ["CLAUDE.md", "Tests/**", "UITests/**", "ci/**"]
       - path: ShooShared
-        excludes: ["CLAUDE.md"]
+        excludes: ["CLAUDE.md", "Tests/**"]
     info:
       path: ShooApp/Info.plist
       properties:
@@ -76,7 +76,7 @@ targets:
       - path: ShooExtension/Resources/images
         type: folder
       - path: ShooShared
-        excludes: ["CLAUDE.md"]
+        excludes: ["CLAUDE.md", "Tests/**"]
     info:
       path: ShooExtension/Info.plist
       properties:
@@ -102,7 +102,7 @@ targets:
       - path: ShooLiveActivity
         excludes: ["CLAUDE.md"]
       - path: ShooShared
-        excludes: ["CLAUDE.md"]
+        excludes: ["CLAUDE.md", "Tests/**"]
     info:
       path: ShooLiveActivity/Info.plist
       properties:
@@ -124,7 +124,7 @@ targets:
   ShooAppTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [ShooApp/Tests]
+    sources: [ShooApp/Tests, ShooShared/Tests]
     dependencies:
       - target: Shoo
     settings:
