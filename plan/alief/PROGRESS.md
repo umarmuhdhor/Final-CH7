@@ -38,7 +38,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
 | G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Hidup di cloud sejak 22 Okt (Worker 781cf277); tinggal Alief mengirim C8 ke Umar |
 | G5 · Track app selesai | 01–06 + 06Q `[x]` (semua PR merged) | [x] | 01–06 + 06Q merged (#8, #14, #16, #18, #19, #21, #22, #23, #24), 22 Okt. 01S (spike iPhone) terpisah, belum |
-| G6 · Track be selesai | 07–12 `[x]` (semua PR merged) + TODO D8 (deploy ulang dari `main`, uji asap hijau) | [ ] | Syarat track c |
+| G6 · Track be selesai | 07–12 `[x]` (semua PR merged) + TODO D8 (deploy ulang dari `main`, uji asap hijau) | [x] | 07–12 merged; D8 selesai 22 Okt (Worker `8f3df4ed` dari `main`, uji asap hijau) |
 | G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8); uji push sandbox ke satu iPhone sudah di fase 11 |
 | G8 · MVP Alief | Definisi selesai README §7 | [ ] | |
 

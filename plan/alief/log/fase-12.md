@@ -161,3 +161,14 @@ Dari root worktree, branch `feat/BE-retention-hardening` (PR 07–11 masih terbu
 - **TODO D8 (setelah merge 07–12):** deploy dari `main` + ulang butir 5. Secret `RATE_KEY_SECRET` tetap (jangan diganti: semua penghitung reset sekali, aman tetapi tidak perlu).
 - **Kuota:** pantau log `backlog: true` dan `global_quota` di Observability; pemicu R2 = Storage > 700 MB (TODO E1).
 - **Ditunda:** C21 (Content-Type + query/fragment URL), E6 (kontak + domain kebijakan privasi), E7 (hapus device tidak aktif), pin checksum/SHA Action (C2, setelah Umar memindahkan workflow).
+
+## D8 · deploy ulang dari `main` (22 Okt 2026, 10:20 WITA)
+
+Syarat G6 (D-alief-30). Semua PR backend 07–12 sudah merged; kode `backend/` di `main` sama persis dengan `feat/BE-retention-hardening`.
+
+- [x] Migrasi: `supabase migration list --linked` → 8/8 lokal = remote, jadi tanpa `db push`.
+- [x] `npx tsc --noEmit` bersih, `npx vitest run` 310/310 (24 file).
+- [x] `npx wrangler deploy` dari `main` `d10922d` → Worker `8f3df4ed-569a-4533-b8a0-c4cc067b0342`, cron `0 19 * * *` tetap.
+- [x] Uji asap cloud: `/healthz` 200, `/healthz/db` 200 `{"ok":true}`, `/blocklist` tanpa token 401; dua device uji + join, `POST /scans` dengan screenshot, URL Worker `/screenshots/{id}`, gambar 200 `image/jpeg`, `Cache-Control: private, no-store` (gambar + JSON), Guardian lain 404 (IDOR), setelah putus 404, setelah `DELETE /devices/me` 404.
+- [x] Bersih: device uji dihapus; satu device sisa uji asap fase 07 ("Smoke", 21 Okt, tanpa scan/link) ikut dihapus. `devices` dengan nama `Smoke%` = 0.
+

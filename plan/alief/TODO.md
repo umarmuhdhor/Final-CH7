@@ -82,7 +82,7 @@ Catatan password DB (21 Okt): password role `postgres` dibuat acak oleh Supabase
 | D5 | Uji spike S1/S2 di iPhone Alief (checklist LANGKAH MANUAL log fase 01S) | fase 01S, setelah signing (B6/L0) | [ ] |
 | D6 | Dua iPhone (Guardian + Protected) dengan build TestFlight untuk QA-E2E (`APNS_ENV=production` sebelum build) | fase 16 | [ ] |
 | D7 | Satu iPhone Alief dengan build Debug (Xcode, sandbox APNs) untuk uji push nyata | fase 11 → 15 / G7 | [ ] pending B6/B7/C3; jalur server siap (fase 11, Worker ac2025ec, `push_log` `logged`), butir 5–6 LANGKAH MANUAL fase 11 |
-| D8 | Deploy ulang backend dari `main` setelah semua PR 07–12 di-merge + uji asap cloud (`curl /healthz`, `/healthz/db`, satu `POST /scans` dua device uji) — syarat G6 (D-alief-30) | setelah PR fase 12 merged | [ ] |
+| D8 | Deploy ulang backend dari `main` setelah semua PR 07–12 di-merge + uji asap cloud (`curl /healthz`, `/healthz/db`, satu `POST /scans` dua device uji) — syarat G6 (D-alief-30) | setelah PR fase 12 merged | [x] 22 Okt 10:20 WITA dari `main` `d10922d`: migrasi sudah lengkap (8/8, tanpa db push), Worker `8f3df4ed`, cron `0 19 * * *`; vitest 310/310; uji asap hijau (log/fase-12.md "D8") |
 | D9 | Review antrean `blocklist_entries` di SQL editor (R2 §5 butir 4) 1×/hari selama uji/demo; catat jumlah disetujui/ditolak di log fase terakhir yang aktif | sejak fase 10 deploy | [ ] |
 
 ## E. Opsional
