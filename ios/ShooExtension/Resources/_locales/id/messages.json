@@ -22,5 +22,8 @@
     "mark_dont_card": {"message": "Jangan masukkan data kartu di sini", "description": "EX-05 label above a struck-through sensitive field"},
     "mark_dont_ktp": {"message": "Jangan masukkan nomor KTP di sini", "description": "EX-05 label above a struck-through sensitive field"},
     "mark_dont_password": {"message": "Jangan masukkan password di sini", "description": "EX-05 label above a struck-through sensitive field"},
-    "mark_hide": {"message": "Sembunyikan tanda", "description": "EX-05 Guardian button that hides the marks on this page"}
+    "mark_hide": {"message": "Sembunyikan tanda", "description": "EX-05 Guardian button that hides the marks on this page"},
+    "pill_score": {"message": "Skor risiko Shoo $SCORE$%", "description": "EX-03 live score pill, accessibility label", "placeholders": {"score": {"content": "$1"}}},
+    "pill_checking": {"message": "Shoo sedang mengecek halaman ini, sementara $SCORE$%", "description": "EX-03 live score pill while layers are still running", "placeholders": {"score": {"content": "$1"}}},
+    "pill_hide": {"message": "Ketuk untuk sembunyikan", "description": "EX-03 live score pill hint"}
 }
