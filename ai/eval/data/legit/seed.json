@@ -12,7 +12,8 @@
     "notes": "",
     "snapshot": {
       "url": "https://www.tokopedia.com/"
-    }
+    },
+    "redacted": true
   },
   {
     "id": "official-bca-home",
@@ -27,7 +28,8 @@
     "notes": "",
     "snapshot": {
       "url": "https://www.bca.co.id/"
-    }
+    },
+    "redacted": true
   },
   {
     "id": "official-shopee-home",
@@ -42,7 +44,8 @@
     "notes": "",
     "snapshot": {
       "url": "https://shopee.co.id/"
-    }
+    },
+    "redacted": true
   },
   {
     "id": "popular-wikipedia",
@@ -56,7 +59,8 @@
     "notes": "",
     "snapshot": {
       "url": "https://id.wikipedia.org/wiki/Bank_Central_Asia"
-    }
+    },
+    "redacted": true
   },
   {
     "id": "trap-dana-sosial",
