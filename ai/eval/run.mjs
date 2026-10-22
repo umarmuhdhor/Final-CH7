@@ -6,7 +6,7 @@
 //   --json                 print machine-readable results instead of the table
 //   --strict               exit 1 when the MVP targets are not met (only meaningful with 50+ per class and --analyze-url)
 import { fileURLToPath } from "node:url";
-import { loadSamples, loadDetector, evaluate, summarize, MIN_PER_CLASS, TARGETS } from "./lib.mjs";
+import { loadSamples, loadDetector, evaluate, summarize, probeAnalyze, MIN_PER_CLASS, TARGETS } from "./lib.mjs";
 
 function parseArgs(argv) {
     const args = { dir: fileURLToPath(new URL("./data", import.meta.url)), analyzeUrl: null, tag: null, json: false, strict: false };
@@ -41,6 +41,7 @@ async function main() {
         process.exit(2);
     }
 
+    if (args.analyzeUrl) await probeAnalyze(args.analyzeUrl);
     const detector = loadDetector();
     const rows = [];
     for (const s of chosen) rows.push(await evaluate(s, { detector, analyzeUrl: args.analyzeUrl }));

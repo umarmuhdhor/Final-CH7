@@ -38,7 +38,7 @@ test("findPersonalData rejects e-mail, ID phone numbers, NIK, long numbers and s
         "kartu 4111 1111 1111 1111",
         "key sk-abcdefghijklmnopqrstuvwx",
         "id AKIAIOSFODNN7EXAMPLE",
-        ["jwt eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", "abcdefghijk"].join("."),
+        ["jwt eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjM0NTY3ODkwIn0", "abcdefghijk"].join("."), // built at runtime: a literal JWT trips secret scanners
     ];
     for (const t of dirty) assert.ok(findPersonalData(withText(t)).length > 0, `should reject: ${t}`);
 });
@@ -227,4 +227,10 @@ test("markRedacted sets the flag only on real samples without findings", () => {
     assert.equal(synth.redacted, false);
     assert.equal(other.redacted, false, "not listed, not touched");
     assert.deepEqual(markRedacted([other], null).marked, ["r4"]);
+});
+
+// ---------- /analyze preflight ----------
+import { probeAnalyze } from "../lib.mjs";
+test("probeAnalyze throws when /analyze is unreachable instead of letting every sample silently score layers 1-2", async () => {
+    await assert.rejects(() => probeAnalyze("http://127.0.0.1:1"), /analyze/i);
 });

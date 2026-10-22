@@ -200,3 +200,21 @@ export function summarize(rows, { remote = false } = {}) {
         timing: { analyzeLocalAvgMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, analyzeLocalMaxMs: ms.at(-1) ?? null },
     };
 }
+
+/** Run once before a --analyze-url eval: analyzeRemote swallows errors by design, so an unreachable service would otherwise look like "layers 1-4" with empty layer 3-4. */
+export async function probeAnalyze(baseUrl) {
+    const snapshot = { url: "https://probe.invalid/", domain: "probe.invalid", title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: new Date(0).toISOString() };
+    try {
+        const res = await fetch(new URL("/analyze", baseUrl), {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer eval" },
+            body: JSON.stringify({ snapshot, localSignals: [] }),
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        if (!Array.isArray(body.signals)) throw new Error("response has no signals array");
+    } catch (e) {
+        throw new Error(`/analyze at ${baseUrl} is not usable (${e.message}); refusing to report layers 3-4 numbers`);
+    }
+}
