@@ -88,13 +88,15 @@ struct APIClientTests {
         #expect(server.unauthorizedCount == 0)
     }
 
-    @Test func any401EndsTheSessionWhateverTheBody() async {
+    /// A captive portal, proxy or edge 401 is not the backend saying the token is dead.
+    @Test(arguments: [#"{"error":{"code":"blocked_by_proxy","message":"x"}}"#, "<html>Log in to Wi-Fi</html>", ""])
+    func nonContract401KeepsTheSession(body: String) async {
         let server = StubServer()
-        server.reply { _ in .json(401, #"{"error":{"code":"blocked_by_proxy","message":"x"}}"#) }
+        server.reply { _ in .json(401, body) }
         await #expect(throws: RepositoryError.self) {
             let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
         }
-        #expect(server.unauthorizedCount == 1)
+        #expect(server.unauthorizedCount == 0)
     }
 
     @Test(arguments: [(401, APIErrorCode.unauthorized), (404, .notFound), (429, .rateLimited), (502, .internal)])
@@ -104,6 +106,7 @@ struct APIClientTests {
         await #expect(throws: RepositoryError.api(code, message: "HTTP \(status)")) {
             let _: OkResponse = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
         }
+        #expect(server.unauthorizedCount == 0)
     }
 
     @Test func successThatBreaksTheContractIsADecodingError() async {

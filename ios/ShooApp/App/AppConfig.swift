@@ -3,11 +3,12 @@ import Foundation
 /// Build-time configuration (plan/alief/ref/R5 §6). Not in Info.plist: that file is generated
 /// from ios/project.yml (lead-owned).
 enum AppConfig {
-    #if DEBUG
+    #if DEBUG && targetEnvironment(simulator)
     /// `wrangler dev` (`pnpm -C backend/api dev`); the simulator reaches the Mac at localhost.
     static let apiBaseURL = URL(string: "http://localhost:8787")!
     #else
-    /// Cloudflare Worker deployed from `main` (fase 12, TODO D8).
+    /// Cloudflare Worker deployed from `main` (fase 12, TODO D8). Also Debug builds on a real iPhone,
+    /// where localhost is the phone itself.
     static let apiBaseURL = URL(string: "https://shoo-api.afindo-mi01.workers.dev")!
     #endif
 
