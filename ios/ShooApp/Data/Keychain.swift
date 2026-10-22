@@ -35,7 +35,8 @@ struct KeychainItem: Sendable {
         let status = SecItemCopyMatching(request as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = result as? Data else { throw Failure.status(status) }
-        return String(data: data, encoding: .utf8)
+        guard let text = String(data: data, encoding: .utf8) else { throw Failure.status(errSecDecode) }
+        return text
     }
 
     /// Updates in place, so a failed write never loses the old value; adds the item when there is none.

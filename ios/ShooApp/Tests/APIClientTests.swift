@@ -84,6 +84,16 @@ struct APIClientTests {
             let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
         }
         #expect(server.requests.isEmpty)
+        // Not "Session expired": no token means never registered or just cleared (launch check covers restores).
+        #expect(server.unauthorizedCount == 0)
+    }
+
+    @Test func any401EndsTheSessionWhateverTheBody() async {
+        let server = StubServer()
+        server.reply { _ in .json(401, #"{"error":{"code":"blocked_by_proxy","message":"x"}}"#) }
+        await #expect(throws: RepositoryError.self) {
+            let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
+        }
         #expect(server.unauthorizedCount == 1)
     }
 

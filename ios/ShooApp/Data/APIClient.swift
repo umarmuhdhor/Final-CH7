@@ -28,14 +28,15 @@ final class APIClient: Sendable {
     let baseURL: URL
     private let session: URLSession
     private let token: @Sendable () throws -> String?
-    /// Called on 401, or when an authorized call has no token at all (backup restored onto another iPhone).
-    private let onUnauthorized: @Sendable () -> Void
+    /// Called on 401 with the token that request carried: a late answer for an older session must not
+    /// end the current one.
+    private let onUnauthorized: @Sendable (_ usedToken: String) -> Void
 
     init(
         baseURL: URL,
         configuration: URLSessionConfiguration = APIClient.configuration(),
         token: @escaping @Sendable () throws -> String?,
-        onUnauthorized: @escaping @Sendable () -> Void = {}
+        onUnauthorized: @escaping @Sendable (_ usedToken: String) -> Void = { _ in }
     ) {
         self.baseURL = baseURL
         session = URLSession(configuration: configuration, delegate: RedirectRefusal(), delegateQueue: nil)
@@ -54,6 +55,11 @@ final class APIClient: Sendable {
         configuration.timeoutIntervalForRequest = 20
         configuration.waitsForConnectivity = false
         return configuration
+    }
+
+    deinit {
+        // The session keeps its delegate alive until it is invalidated.
+        session.finishTasksAndInvalidate()
     }
 
     func send<Response: Decodable>(_ request: Request, as type: Response.Type = Response.self) async throws -> Response {
@@ -88,8 +94,9 @@ final class APIClient: Sendable {
                 // Keychain locked (before the first unlock): try later, the session is fine.
                 throw RepositoryError.network
             }
+            // No token: never registered, or the session was just cleared (delete, expiry). A missing
+            // token at launch is handled by `AppEnvironment.checkStoredSession()`.
             guard let token = stored else {
-                if request.reportsUnauthorized { onUnauthorized() }
                 throw RepositoryError.api(.unauthorized, message: "No device session")
             }
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -103,6 +110,7 @@ final class APIClient: Sendable {
 
     private func perform(_ request: Request) async throws -> Data {
         let urlRequest = try urlRequest(for: request)
+        let usedToken = urlRequest.value(forHTTPHeaderField: "Authorization").map { String($0.dropFirst("Bearer ".count)) }
         let data: Data
         let response: URLResponse
         do {
@@ -114,8 +122,9 @@ final class APIClient: Sendable {
         guard let http = response as? HTTPURLResponse else { throw RepositoryError.network }
         guard (200..<300).contains(http.statusCode) else {
             let error = Self.error(status: http.statusCode, body: data)
-            if error.apiCode == .unauthorized, request.authorized, request.reportsUnauthorized {
-                onUnauthorized()
+            if http.statusCode == 401 || error.apiCode == .unauthorized,
+               request.reportsUnauthorized, let usedToken {
+                onUnauthorized(usedToken)
             }
             throw error
         }

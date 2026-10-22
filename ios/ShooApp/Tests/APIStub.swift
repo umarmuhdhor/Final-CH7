@@ -36,6 +36,13 @@ final class HostStubProtocol: URLProtocol {
 
     static func requests(host: String) -> [Seen] { lock.withLock { seen[host] ?? [] } }
 
+    static func remove(host: String) {
+        lock.withLock {
+            handlers[host] = nil
+            seen[host] = nil
+        }
+    }
+
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
@@ -100,13 +107,15 @@ final class StubServer: @unchecked Sendable {
             aiBaseURL: nil
         )
         if let token {
-            try? session.save(
+            // A Keychain the test host can't write would fail every later expectation confusingly.
+            try! session.save(
                 DeviceRegistration(deviceId: "dev_me", token: token, avatarId: "avatar_01"), name: "Adhella", mode: .guardian
             )
         }
     }
 
     deinit {
+        HostStubProtocol.remove(host: host)
         session.clear()
         UserDefaults.standard.removePersistentDomain(forName: suiteName)
     }
@@ -124,7 +133,7 @@ final class StubServer: @unchecked Sendable {
         let session = session
         return APIClient(
             baseURL: baseURL, configuration: configuration, token: { try session.readToken() },
-            onUnauthorized: { [weak self] in self?.countUnauthorized() }
+            onUnauthorized: { [weak self] _ in self?.countUnauthorized() }
         )
     }
 

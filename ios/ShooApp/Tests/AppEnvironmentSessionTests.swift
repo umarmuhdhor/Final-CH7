@@ -119,13 +119,24 @@ struct AppEnvironmentSessionTests {
         let session = server.session
         let client = APIClient(
             baseURL: server.baseURL, configuration: configuration, token: { try session.readToken() },
-            onUnauthorized: { expiry.report() }
+            onUnauthorized: { expiry.report(usedToken: $0) }
         )
         await #expect(throws: RepositoryError.self) { _ = try await ApiRepository(client: client, session: session).me() }
         for _ in 0..<50 where !env.sessionExpired { try await Task.sleep(for: .milliseconds(20)) }
         #expect(env.sessionExpired)
         #expect(server.session.token == nil)
         #expect(server.session.defaults.object(forKey: AppGroup.Key.deviceToken) == nil)
+    }
+
+    /// A 401 answering a request sent with an older token never ends the current session.
+    @Test func lateUnauthorizedForAnOldTokenIsIgnored() {
+        let server = StubServer()
+        let env = environment(server: server, mode: .guardian)
+        env.handleUnauthorized(usedToken: "shoo_previous_session")
+        #expect(!env.sessionExpired)
+        #expect(server.session.token == "shoo_test_token_123")
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        #expect(env.sessionExpired)
     }
 
     @Test func registeredWithoutKeychainTokenIsExpired() {

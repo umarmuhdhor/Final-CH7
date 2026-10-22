@@ -17,6 +17,7 @@ final class AppEnvironment {
     /// The server no longer knows our token (401), or the Keychain has none (backup restored onto
     /// another iPhone). `RootView` then shows "Session expired" (fase 13 step 4).
     private(set) var sessionExpired = false
+    @ObservationIgnored private var isSyncingForeground = false
 
     init(
         repository: any ShooRepository,
@@ -60,7 +61,7 @@ final class AppEnvironment {
             let client = APIClient(
                 baseURL: AppConfig.apiBaseURL,
                 token: { try store.readToken() },
-                onUnauthorized: { expiry.report() }
+                onUnauthorized: { expiry.report(usedToken: $0) }
             )
             repository = ApiRepository(client: client, session: store)
             session = store
@@ -135,7 +136,10 @@ final class AppEnvironment {
     /// in the App Group from `GET /devices/me`.
     @MainActor
     func sceneBecameActive(now: Date = Date()) async {
-        guard settings.mode != nil, !sessionExpired else { return }
+        // One sync at a time: quick background/foreground flips don't stack requests.
+        guard settings.mode != nil, !sessionExpired, !isSyncingForeground else { return }
+        isSyncingForeground = true
+        defer { isSyncingForeground = false }
         if let lastSeen = extensionStatus().lastSeen {
             do {
                 // The server refuses times in the future (clock changes).
@@ -172,6 +176,14 @@ final class AppEnvironment {
             return
         }
         if settings.mode != nil { session.writeBaseURLs() }
+    }
+
+    /// A 401 for `usedToken`. Ignored when the session has moved on since that request left
+    /// (restart, new registration): only the current token can expire.
+    @MainActor
+    func handleUnauthorized(usedToken: String) {
+        guard let current = try? session?.readToken(), current == usedToken else { return }
+        markSessionExpired()
     }
 
     @MainActor
@@ -216,9 +228,10 @@ final class AppEnvironment {
 
 /// Hands a 401 from any URLSession thread to the environment on the main actor.
 final class SessionExpiry: @unchecked Sendable {
+    /// Written once on the main actor in `live()`, before any request can run.
     weak var environment: AppEnvironment?
 
-    func report() {
-        Task { @MainActor [weak self] in self?.environment?.markSessionExpired() }
+    func report(usedToken: String) {
+        Task { @MainActor [weak self] in self?.environment?.handleUnauthorized(usedToken: usedToken) }
     }
 }

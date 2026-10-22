@@ -116,9 +116,15 @@ final class DetailModel {
         screenshotLinkRefreshed = true
         do {
             let fresh = try await repository.scan(id: scanId)
-            guard let link = fresh.screenshotUrl, link != current.screenshotUrl else { return false }
+            // A `load()` that finished meanwhile already brought the newest link.
+            guard let link = fresh.screenshotUrl, link != current.screenshotUrl,
+                  scan?.screenshotUrl == current.screenshotUrl
+            else { return false }
             scan?.screenshotUrl = link
             return true
+        } catch let error where error.isCancellation {
+            screenshotLinkRefreshed = false
+            return false
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound

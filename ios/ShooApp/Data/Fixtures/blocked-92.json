@@ -9,7 +9,7 @@
   "signals": [
     {
       "id": "new_domain",
-      "layer": 2,
+      "layer": 3,
       "weight": 30,
       "label": {
         "en": "Domain age 3 days",
