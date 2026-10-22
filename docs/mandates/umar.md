@@ -71,7 +71,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - [x] Heartbeat membawa `allSites` (`browser.permissions.contains(<all_urls>)`) → App Group `extension.allSites`. Dikirim juga saat izin berubah dan tiap alarm 1 jam.
   - [ ] Alief: `ExtensionStatus` baca `extension.allSites == false` → Off.
   - [ ] Tes di iPhone (checklist di `docs/spikes/extension-status.md`).
-- [ ] **EX-08** (nice to have) Tap bagian yang ditandai → popup alasan singkat.
+- [x] **EX-08** (nice to have) Tap bagian yang ditandai → popup alasan singkat. Branch: `feat/EX-08-mark-reason`.
 
 ### Lead · berjalan terus
 - [ ] Review & merge PR Imelda dan Alief tiap hari. Pastikan tidak ada yang edit folder tim lain.
