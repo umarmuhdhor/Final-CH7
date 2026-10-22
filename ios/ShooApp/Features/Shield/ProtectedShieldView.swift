@@ -1,14 +1,33 @@
 import SwiftUI
 
-/// Protected Home (PR-04): is protection on, who looks after me, what was blocked last.
+/// Whose own Shield this is: the protected parent (PR-04) or the guardian with Family mode off (GD-01).
+enum ShieldPerspective {
+    case protected
+    case guardian
+
+    func statusTitle(isActive: Bool) -> String.LocalizationValue {
+        switch self {
+        case .protected: isActive ? "Protection is on" : "Protection is off"
+        case .guardian: isActive ? "You're protected" : "You're not protected"
+        }
+    }
+}
+
+/// Own Shield: is protection on, who looks after me (Protected only), what was blocked last.
 struct ProtectedShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
     @State private var model: ShieldModel
+    let perspective: ShieldPerspective
 
-    init(repository: any ShooRepository) {
-        _model = State(initialValue: ShieldModel(repository: repository))
+    init(
+        repository: any ShooRepository,
+        extensionStatus: @escaping () -> ExtensionStatus,
+        perspective: ShieldPerspective = .protected
+    ) {
+        _model = State(initialValue: ShieldModel(repository: repository, extensionStatus: extensionStatus))
+        self.perspective = perspective
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -16,8 +35,10 @@ struct ProtectedShieldView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                ExtensionStatusCard(status: model.extensionStatus)
-                guardianRow
+                ExtensionStatusCard(status: model.extensionStatus, perspective: perspective)
+                if perspective == .protected {
+                    guardianRow
+                }
                 lastBlockedSection
             }
             .padding(16)
@@ -31,7 +52,7 @@ struct ProtectedShieldView: View {
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded else { return }
             AccessibilityNotification.Announcement(
-                L10n.string(isActive ? "Protection is on" : "Protection is off", language: language)
+                L10n.string(perspective.statusTitle(isActive: isActive), language: language)
             ).post()
         }
         // Status comes from the App Group heartbeat: re-read whenever the app is back in front.
@@ -116,6 +137,9 @@ struct ProtectedShieldView: View {
 /// Big Active / Off circle (PR-04). Off offers the way to switch the extension on.
 private struct ExtensionStatusCard: View {
     let status: ExtensionStatus
+    let perspective: ShieldPerspective
+    @Environment(\.locale) private var locale
+    @State private var isTurnOnPresented = false
     @ScaledMetric(relativeTo: .largeTitle) private var circle: CGFloat = 96
 
     /// Capped so "Turn on" stays on screen at accessibility sizes.
@@ -134,7 +158,7 @@ private struct ExtensionStatusCard: View {
                 .background(fill, in: Circle())
                 .accessibilityHidden(true)
             VStack(spacing: 6) {
-                Text(status.isActive ? "Protection is on" : "Protection is off")
+                Text(verbatim: L10n.string(perspective.statusTitle(isActive: status.isActive), language: AppLanguage(locale: locale)))
                     .font(.title2.bold())
                     .accessibilityAddTraits(.isHeader)
                 Text(status.isActive ? "Shoo checks the sites you open in Safari." : "Switch on Shoo in Safari to stay safe.")
@@ -145,15 +169,12 @@ private struct ExtensionStatusCard: View {
             .accessibilityElement(children: .combine)
             if !status.isActive {
                 Button {
-                    // TODO(sync:alief): present TurnOnExtensionView (fase 02) as a sheet once 02 is in this chain
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
+                    isTurnOnPresented = true
                 } label: {
                     Text("Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.borderedProminent)
-                .accessibilityHint(Text("Opens Settings"))
+                .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
                 .accessibilityIdentifier("shield.turnOn")
             }
         }
@@ -162,6 +183,29 @@ private struct ExtensionStatusCard: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(status.isActive ? "shield.status.active" : "shield.status.off")
+        .sheet(isPresented: $isTurnOnPresented) {
+            TurnOnExtensionSheet()
+        }
+    }
+}
+
+/// ON-04's guide as a sheet (PR-04, GD-01). Closes itself once the extension reports in.
+private struct TurnOnExtensionSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            TurnOnExtensionView {
+                if env.extensionStatus().isActive { dismiss() }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                        .accessibilityIdentifier("turnOn.close")
+                }
+            }
+        }
     }
 }
 
@@ -220,6 +264,8 @@ private struct LastBlockedCard: View {
 }
 
 #Preview {
-    NavigationStack { ProtectedShieldView(repository: MockRepository(mode: .protected, latency: .zero)) }
+    NavigationStack {
+        ProtectedShieldView(repository: MockRepository(mode: .protected, latency: .zero), extensionStatus: { .off(lastSeen: nil) })
+    }
         .environment(AppEnvironment.preview(mode: .protected))
 }

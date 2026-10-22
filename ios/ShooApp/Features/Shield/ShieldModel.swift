@@ -22,7 +22,7 @@ final class ShieldModel {
     @ObservationIgnored private let readExtensionStatus: () -> ExtensionStatus
     @ObservationIgnored private var generation = 0
 
-    init(repository: any ShooRepository, extensionStatus: @escaping () -> ExtensionStatus = ExtensionStatus.live) {
+    init(repository: any ShooRepository, extensionStatus: @escaping () -> ExtensionStatus = { ExtensionStatus.current() }) {
         self.repository = repository
         readExtensionStatus = extensionStatus
     }
@@ -62,18 +62,5 @@ final class ShieldModel {
             .sorted { $0.weight > $1.weight }
             .prefix(2)
             .map { $0.labelSimple.text(for: language.code) }
-    }
-}
-
-extension ExtensionStatus {
-    /// The status the app shows: the App Group heartbeat. UI tests and screenshots can force
-    /// Active with `-UITestExtensionActive YES` (DEBUG only, D-alief-A05).
-    static func live() -> ExtensionStatus {
-        #if DEBUG
-        if UserDefaults.standard.string(forKey: "UITestExtensionActive") == "YES" {
-            return .active(lastSeen: Date())
-        }
-        #endif
-        return current()
     }
 }

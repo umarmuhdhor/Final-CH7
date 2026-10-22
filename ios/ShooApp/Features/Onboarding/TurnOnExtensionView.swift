@@ -3,7 +3,8 @@ import SwiftUI
 /// ON-04 (fallback PRD §10): where the switch is, a Turn on button, a status check whenever the app
 /// comes back, and a tutorial video. Reused as a sheet from PR-04 / GD-01 "Turn on" later.
 struct TurnOnExtensionView: View {
-    let model: OnboardingModel
+    /// Re-reads the heartbeat (on appear and when the user is back from Settings).
+    var refreshStatus: () -> Void = {}
     @Environment(\.scenePhase) private var scenePhase
     @State private var isVideoPresented = false
     @ScaledMetric(relativeTo: .headline) private var badgeSize: CGFloat = 36
@@ -54,9 +55,9 @@ struct TurnOnExtensionView: View {
             .accessibilityIdentifier("extension.turnOn")
             if !dynamicTypeSize.isAccessibilitySize { videoLink }
         }
-        .onAppear { model.refreshExtensionStatus() }
+        .onAppear(perform: refreshStatus)
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.refreshExtensionStatus() }
+            if phase == .active { refreshStatus() }
         }
         .fullScreenCover(isPresented: $isVideoPresented) {
             TutorialVideoPlayer()

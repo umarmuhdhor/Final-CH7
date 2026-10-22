@@ -9,9 +9,11 @@ struct MainTabView: View {
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.shieldPath) {
                 shieldRoot
-                    // A new repository (mode switch, later a new session) starts a fresh screen model.
-                    .id(ObjectIdentifier(env.repository))
-                    .toolbar { ProfileButton() }
+                    .id(screenIdentity)
+                    .toolbar {
+                        FamilyModeToggle()
+                        ProfileButton()
+                    }
                     .navigationDestination(for: Route.self, destination: destination)
             }
             .tabItem { Label("Shield", systemImage: "shield.lefthalf.filled") }
@@ -19,8 +21,11 @@ struct MainTabView: View {
 
             NavigationStack(path: $router.activityPath) {
                 activityRoot
-                    .id(ObjectIdentifier(env.repository))
-                    .toolbar { ProfileButton() }
+                    .id(screenIdentity)
+                    .toolbar {
+                        FamilyModeToggle()
+                        ProfileButton()
+                    }
                     .navigationDestination(for: Route.self, destination: destination)
             }
             .tabItem { Label("Activity", systemImage: "list.bullet.rectangle") }
@@ -35,21 +40,27 @@ struct MainTabView: View {
     @ViewBuilder
     private var shieldRoot: some View {
         if env.settings.mode == .protected {
-            ProtectedShieldView(repository: env.repository)
+            ProtectedShieldView(repository: env.repository, extensionStatus: env.extensionStatus)
         } else {
-            // TODO(sync:alief): Guardian Shield (GD-01) lands in fase 05
-            ShieldPlaceholderView()
+            GuardianShieldView()
         }
     }
 
-    /// Protected sees its own scans (PR-05); the guardian sees the family's (GD-05, owner shown).
+    /// Own scans (PR-05, guardian with Family mode off); Family mode → the family's, owner shown (GD-05).
     @ViewBuilder
     private var activityRoot: some View {
-        if env.settings.mode == .protected {
-            ActivityView(repository: env.repository, owner: .me)
-        } else {
+        if env.settings.mode == .guardian && env.settings.familyModeOn {
             ActivityView(repository: env.repository, owner: .family, showsOwner: true)
+        } else {
+            ActivityView(repository: env.repository, owner: .me)
         }
+    }
+
+    /// A new repository (mode switch, later a new session) or the Family toggle starts fresh screen models.
+    /// Protected screens ignore the toggle, so it never resets them.
+    private var screenIdentity: String {
+        let familyMode = env.settings.mode == .guardian && env.settings.familyModeOn
+        return "\(ObjectIdentifier(env.repository).hashValue)-\(familyMode)"
     }
 
     @ViewBuilder
@@ -58,6 +69,38 @@ struct MainTabView: View {
         case .detail(let scanId):
             DetailView(scanId: scanId, repository: env.repository)
                 .id(scanId)
+        }
+    }
+}
+
+/// Top-left Family mode switch, guardian only (GD-02). Remembered in `AppSettings.familyModeOn`.
+/// Visible text plus a filled/outlined icon, so the state is never colour only (WCAG 1.4.1, 2.5.3).
+private struct FamilyModeToggle: ToolbarContent {
+    @Environment(AppEnvironment.self) private var env
+
+    var body: some ToolbarContent {
+        if env.settings.mode == .guardian {
+            ToolbarItem(placement: .topBarLeading) {
+                let isOn = env.settings.familyModeOn
+                Button {
+                    env.settings.familyModeOn.toggle()
+                    AccessibilityNotification.Announcement(
+                        L10n.string(isOn ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
+                                    language: env.settings.language)
+                    ).post()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: isOn ? "person.3.fill" : "person.3")
+                        Text(isOn ? "Family: On" : "Family: Off")
+                    }
+                    .frame(minHeight: 44)
+                }
+                .accessibilityLabel(Text("Family mode"))
+                .accessibilityValue(Text(isOn ? "On" : "Off"))
+                .accessibilityAddTraits(.isToggle)
+                .accessibilityHint(Text("Switches between your own Shield and your family's"))
+                .accessibilityIdentifier("familyModeToggle")
+            }
         }
     }
 }

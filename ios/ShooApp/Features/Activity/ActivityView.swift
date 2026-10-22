@@ -28,16 +28,30 @@ struct ActivityView: View {
     var body: some View {
         List {
             Section {
+                if !model.people.isEmpty {
+                    PersonChips(people: model.people, selection: model.person, language: language) { person in
+                        Task { await model.select(person: person) }
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 0, trailing: 16))
+                    .listRowSeparator(.hidden)
+                }
                 FilterChips(selection: model.filter) { filter in
                     Task { await model.select(filter) }
                 }
                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                 .listRowSeparator(.hidden)
+                if model.baseOwner == .family {
+                    Text("Only your own history? Set Family to Off.")
+                        .font(.footnote)
+                        .foregroundStyle(.readableSecondary)
+                        .listRowSeparator(.hidden)
+                        .accessibilityIdentifier("activity.familyNote")
+                }
             }
             content
         }
         .listStyle(.plain)
-        .navigationTitle(localized: "Activity")
+        .navigationTitle(localized: model.baseOwner == .family ? "Family activity" : "Activity")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
@@ -122,15 +136,25 @@ struct ActivityView: View {
     }
 }
 
-/// All / Warning / Blocked. Selected chip is filled and ticked; VoiceOver hears "selected".
+/// One chip in a `ChoiceChips` bar.
+struct ChipOption<Value: Hashable>: Identifiable {
+    let value: Value
+    let title: Text
+    let identifier: String
+    var id: String { identifier }
+}
+
+/// Single-choice chips. Selected chip is filled and ticked; VoiceOver hears "selected".
 /// At accessibility sizes the chips stack full width instead of scrolling sideways out of view.
-struct FilterChips: View {
-    let selection: ActivityFilter
-    let select: (ActivityFilter) -> Void
+struct ChoiceChips<Value: Hashable>: View {
+    let label: Text
+    let options: [ChipOption<Value>]
+    let selection: Value
+    let select: (Value) -> Void
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// White text keeps 4.5:1 on this blue in light and dark mode (system accent is about 4:1).
-    private static let selectedFill = Color(red: 0, green: 0.38, blue: 0.80)
+    private static var selectedFill: Color { Color(red: 0, green: 0.38, blue: 0.80) }
 
     var body: some View {
         Group {
@@ -143,18 +167,18 @@ struct FilterChips: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Filter"))
+        .accessibilityLabel(label)
     }
 
     private func chips(fullWidth: Bool) -> some View {
-        ForEach(ActivityFilter.allCases, id: \.self) { filter in
-            let isSelected = filter == selection
-            Button { select(filter) } label: {
+        ForEach(options) { option in
+            let isSelected = option.value == selection
+            Button { select(option.value) } label: {
                 HStack(spacing: 6) {
                     if isSelected {
                         Image(systemName: "checkmark").accessibilityHidden(true)
                     }
-                    Text(filter.title)
+                    option.title
                 }
                 .font(.body.weight(.semibold))
                 .padding(.horizontal, 16)
@@ -164,8 +188,43 @@ struct FilterChips: View {
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-            .accessibilityIdentifier("filter.\(filter.rawValue)")
+            .accessibilityIdentifier(option.identifier)
         }
+    }
+}
+
+/// All / Warning / Blocked (PR-05, GD-05).
+struct FilterChips: View {
+    let selection: ActivityFilter
+    let select: (ActivityFilter) -> Void
+
+    var body: some View {
+        ChoiceChips(
+            label: Text("Filter"),
+            options: ActivityFilter.allCases.map { ChipOption(value: $0, title: Text($0.title), identifier: "filter.\($0.rawValue)") },
+            selection: selection,
+            select: select
+        )
+    }
+}
+
+/// Everyone / You / each member (GD-05).
+struct PersonChips: View {
+    let people: [FamilyMember]
+    let selection: ActivityPerson
+    let language: AppLanguage
+    let select: (ActivityPerson) -> Void
+
+    var body: some View {
+        ChoiceChips(
+            label: Text("Person"),
+            options: [
+                ChipOption(value: ActivityPerson.everyone, title: Text("Everyone"), identifier: "person.everyone"),
+                ChipOption(value: .me, title: Text("You"), identifier: "person.me"),
+            ] + people.map { ChipOption(value: .device($0.deviceId), title: Text(verbatim: $0.name), identifier: "person.\($0.deviceId)") },
+            selection: selection,
+            select: select
+        )
     }
 }
 

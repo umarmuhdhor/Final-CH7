@@ -160,4 +160,54 @@ struct ActivityModelTests {
         let root = try #require(URL(string: "https://bca-verify.top/?ref=wa"))
         #expect(ActivityRow.displayLink(root) == "bca-verify.top")
     }
+
+    @Test func familyActivityListsThePeopleToFilterBy() async {
+        let model = model(mode: .guardian, owner: .family)
+        await model.load()
+        #expect(model.people.map(\.name) == ["Mom", "Dad"])
+        #expect(Set(model.items.map(\.ownerDeviceId)).isSuperset(of: ["dev_me", "dev_mom"]))
+    }
+
+    @Test func ownActivityHasNoPeopleFilter() async {
+        let model = model(mode: .guardian, owner: .me)
+        await model.load()
+        #expect(model.people.isEmpty)
+        #expect(model.items.allSatisfy { $0.ownerDeviceId == "dev_me" })
+    }
+
+    @Test(arguments: [(ActivityPerson.me, "dev_me"), (.device("dev_mom"), "dev_mom")])
+    func personFilterShowsOnlyThatPerson(person: ActivityPerson, deviceId: String) async {
+        let model = model(mode: .guardian, owner: .family)
+        await model.load()
+        await model.select(person: person)
+        #expect(model.person == person)
+        #expect(!model.items.isEmpty)
+        #expect(model.items.allSatisfy { $0.ownerDeviceId == deviceId })
+    }
+
+    @Test func personAndStatusFiltersCombine() async {
+        let model = model(mode: .guardian, owner: .family)
+        await model.load()
+        await model.select(person: .device("dev_mom"))
+        await model.select(.blocked)
+        #expect(!model.items.isEmpty)
+        #expect(model.items.allSatisfy { $0.ownerDeviceId == "dev_mom" && $0.status == .blocked })
+        await model.select(person: .everyone)
+        #expect(model.filter == .blocked)
+        #expect(model.items.allSatisfy { $0.status == .blocked })
+        #expect(model.items.contains { $0.ownerDeviceId == "dev_dad" })
+    }
+
+    @Test func removedPersonFallsBackToEveryone() async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let model = ActivityModel(repository: repository, owner: .family)
+        await model.load()
+        await model.select(person: .device("dev_dad"))
+        try await repository.removeMember(deviceId: "dev_dad")
+        await model.refresh()
+        #expect(model.people.map(\.name) == ["Mom"])
+        #expect(model.person == .everyone)
+        #expect(model.state == .loaded)
+        #expect(!model.items.contains { $0.ownerDeviceId == "dev_dad" })
+    }
 }

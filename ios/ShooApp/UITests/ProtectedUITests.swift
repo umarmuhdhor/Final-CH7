@@ -44,6 +44,12 @@ final class ProtectedUITests: XCTestCase {
         let app = launch(extensionActive: false)
         XCTAssertTrue(app.descendants(matching: .any)["shield.status.off"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.buttons["shield.turnOn"].exists)
+
+        // Turn on opens ON-04's guide as a sheet; Close brings Shield back.
+        app.buttons["shield.turnOn"].tap()
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["turnOn.close"].tap()
+        XCTAssertTrue(app.buttons["shield.turnOn"].waitForExistence(timeout: 5))
     }
 
     @MainActor

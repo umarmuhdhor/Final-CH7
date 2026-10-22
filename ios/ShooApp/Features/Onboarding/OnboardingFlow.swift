@@ -53,7 +53,7 @@ private struct OnboardingStepView: View {
             case .mode: ModeView(model: model)
             case .greeting: GreetingView(model: model)
             case .connect: ConnectPlaceholderView(model: model)
-            case .turnOnExtension: TurnOnExtensionView(model: model)
+            case .turnOnExtension: TurnOnExtensionView(refreshStatus: model.refreshExtensionStatus)
             case .notifications: NotificationPermissionView(model: model)
             case .done: Color(.systemBackground)
             }

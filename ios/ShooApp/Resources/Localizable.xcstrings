@@ -11,6 +11,16 @@
         }
       }
     },
+    "%lld not connected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld tidak terhubung"
+          }
+        }
+      }
+    },
     "A family member looks after you.": {
       "localizations": {
         "id": {
@@ -211,6 +221,16 @@
         }
       }
     },
+    "Couldn't load your family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat keluarga"
+          }
+        }
+      }
+    },
     "Couldn't load your Shield": {
       "localizations": {
         "id": {
@@ -271,6 +291,96 @@
         }
       }
     },
+    "Everyone": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semua orang"
+          }
+        }
+      }
+    },
+    "Family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga"
+          }
+        }
+      }
+    },
+    "Family activity": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivitas keluarga"
+          }
+        }
+      }
+    },
+    "Family codes are coming soon.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode keluarga segera hadir."
+          }
+        }
+      }
+    },
+    "Family mode": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode keluarga"
+          }
+        }
+      }
+    },
+    "Family mode off. Showing your Shield.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode keluarga mati. Menampilkan Perisaimu."
+          }
+        }
+      }
+    },
+    "Family mode on. Showing your family.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode keluarga nyala. Menampilkan keluargamu."
+          }
+        }
+      }
+    },
+    "Family: Off": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga: Mati"
+          }
+        }
+      }
+    },
+    "Family: On": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga: Nyala"
+          }
+        }
+      }
+    },
     "Filter": {
       "localizations": {
         "id": {
@@ -327,6 +437,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saya dilindungi"
+          }
+        }
+      }
+    },
+    "Invite the people you want to keep safe.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undang orang yang ingin kamu jaga."
+          }
+        }
+      }
+    },
+    "Invite your family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undang keluargamu"
           }
         }
       }
@@ -471,12 +601,42 @@
         }
       }
     },
+    "No one to look after yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada yang kamu jaga"
+          }
+        }
+      }
+    },
+    "No risky sites yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada situs berisiko"
+          }
+        }
+      }
+    },
     "No warnings": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Belum ada peringatan"
+          }
+        }
+      }
+    },
+    "Not connected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidak terhubung"
           }
         }
       }
@@ -527,6 +687,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notifikasi mati"
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mati"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "On": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyala"
+          }
+        }
+      }
+    },
+    "Only your own history? Set Family to Off.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hanya riwayatmu sendiri? Ubah Keluarga ke Mati."
           }
         }
       }
@@ -591,22 +791,22 @@
         }
       }
     },
-    "Opens Settings": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Membuka Pengaturan"
-          }
-        }
-      }
-    },
     "Opens the details": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Membuka detail"
+          }
+        }
+      }
+    },
+    "Person": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orang"
           }
         }
       }
@@ -811,6 +1011,16 @@
         }
       }
     },
+    "Shows how to switch Shoo on in Safari": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menunjukkan cara menyalakan Shoo di Safari"
+          }
+        }
+      }
+    },
     "Sites that look risky will show up here.": {
       "localizations": {
         "id": {
@@ -857,6 +1067,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nyalakan Shoo di Safari agar tetap aman."
+          }
+        }
+      }
+    },
+    "Switches between your own Shield and your family's": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beralih antara Perisaimu dan Perisai keluargamu"
           }
         }
       }
@@ -1081,12 +1301,42 @@
         }
       }
     },
+    "You look after %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu menjaga %@"
+          }
+        }
+      }
+    },
     "You won't hear when your family is at risk.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Kamu tidak akan tahu saat keluargamu dalam bahaya."
+          }
+        }
+      }
+    },
+    "You're not protected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu tidak terlindungi"
+          }
+        }
+      }
+    },
+    "You're protected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu terlindungi"
           }
         }
       }
