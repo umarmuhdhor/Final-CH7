@@ -13,7 +13,7 @@ enum AppTab: String, Hashable, CaseIterable {
 }
 
 /// Navigation state for the whole app. Deep links (contracts/app-group-keys.md) land here:
-/// `shoo://join` in fase 14, `shoo://scan/{id}` + `shoo://activity` in fase 15.
+/// `shoo://join` (fase 14), `shoo://scan/{id}` + `shoo://activity` and push taps (fase 15).
 @Observable
 final class Router {
     var selectedTab: AppTab = .shield
@@ -29,6 +29,28 @@ final class Router {
     var isTurnOnPresented = false
     /// An invite link asked for Connect while another sheet was up: shown once that one is gone.
     private(set) var wantsConnect = false
+
+    /// A push tap or `shoo://scan/{id}` (GD-06): Detail on the Activity tab, whatever was open.
+    func openDetail(scanId: String) {
+        closeSheets()
+        selectedTab = .activity
+        shieldPath.removeAll()
+        activityPath = [.detail(scanId: scanId)]
+    }
+
+    /// `shoo://activity`: the Activity list, newest first.
+    func openActivity() {
+        closeSheets()
+        popToRoot()
+        selectedTab = .activity
+    }
+
+    private func closeSheets() {
+        isProfilePresented = false
+        isTurnOnPresented = false
+        isConnectPresented = false
+        wantsConnect = false
+    }
 
     /// Shows Connect now, or right after the open sheet is dismissed (SwiftUI shows one sheet at a time).
     func showConnect() {
@@ -64,10 +86,7 @@ final class Router {
     func reset() {
         popToRoot()
         selectedTab = .shield
-        isProfilePresented = false
-        isTurnOnPresented = false
-        isConnectPresented = false
-        wantsConnect = false
+        closeSheets()
     }
 
     /// Hands the pending invite code to Connect once.

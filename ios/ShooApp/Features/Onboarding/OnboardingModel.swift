@@ -131,6 +131,7 @@ final class OnboardingModel {
         if await environment.notifications.status() == .notDetermined {
             _ = await environment.notifications.request()
         }
+        await environment.registerForPushIfAllowed()
         finish()
     }
 

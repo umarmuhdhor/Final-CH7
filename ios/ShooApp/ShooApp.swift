@@ -2,12 +2,12 @@ import SwiftUI
 
 @main
 struct ShooApp: App {
-    @State private var environment = AppEnvironment.live()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(environment)
+                .environment(appDelegate.environment)
         }
     }
 }

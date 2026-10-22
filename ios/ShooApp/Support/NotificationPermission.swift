@@ -1,4 +1,3 @@
-import UIKit
 import UserNotifications
 
 /// The app's view of the notification permission (ON-05). Provisional and ephemeral count as allowed.
@@ -32,10 +31,8 @@ struct SystemNotificationPermission: NotificationPermission {
     func request() async -> NotificationAuthorization {
         do {
             // Pushes carry text and sound only (contracts/api.md "Push payloads"), so no badge.
-            if try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) {
-                // TODO(sync:alief): send the APNs token with PATCH /devices/me — replace after fase 15
-                await UIApplication.shared.registerForRemoteNotifications()
-            }
+            // The APNs registration follows in `AppEnvironment.registerForPushIfAllowed` (Guardian only, C14).
+            _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         } catch {
             Log.app.error("Notification permission request failed", error)
         }

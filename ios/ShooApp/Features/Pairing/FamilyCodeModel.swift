@@ -158,6 +158,8 @@ final class FamilyCodeModel {
         }
         membersVersion += 1
         members.removeAll { $0.deviceId == member.deviceId }
+        // Their pushes go too; one call can't pick a person's, so the lock screen is cleared (C18).
+        DeliveredPushes.clear()
         if codeState == .full { await refreshCode() }
     }
 

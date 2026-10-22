@@ -128,7 +128,8 @@ private struct CodeField: View {
 
     var body: some View {
         ZStack {
-            TextField(text: $code) { Text("4-digit code") }
+            // No placeholder: it would show through the empty boxes. VoiceOver gets the label below.
+            TextField("", text: $code)
                 .keyboardType(.numberPad)
                 .focused($focused)
                 .foregroundStyle(.clear)
