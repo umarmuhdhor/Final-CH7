@@ -122,13 +122,20 @@ final class APIClient: Sendable {
         guard let http = response as? HTTPURLResponse else { throw RepositoryError.network }
         guard (200..<300).contains(http.statusCode) else {
             let error = Self.error(status: http.statusCode, body: data)
-            if http.statusCode == 401 || error.apiCode == .unauthorized,
-               request.reportsUnauthorized, let usedToken {
+            // Only the backend's own `unauthorized` body ends the session. A 401 from a captive portal,
+            // proxy or edge has no contract body and must not wipe the token and the guardian link.
+            if Self.isContractUnauthorized(data), request.reportsUnauthorized, let usedToken {
                 onUnauthorized(usedToken)
             }
             throw error
         }
         return data
+    }
+
+    /// `{"error":{"code":"unauthorized"}}`, the body the backend sends with every 401 (backend/api/src/http/errors.ts).
+    static func isContractUnauthorized(_ body: Data) -> Bool {
+        guard let detail = try? JSONDecoder().decode(APIErrorBody.self, from: body).error else { return false }
+        return APIErrorCode(rawValue: detail.code) == .unauthorized
     }
 
     /// The contract error body, or a common code from the HTTP status when the body is not one
