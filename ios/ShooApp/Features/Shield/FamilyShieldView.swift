@@ -74,11 +74,9 @@ struct FamilyShieldView: View {
             guard scenePhase == .active else { return }
             await model.refresh()
         }
-        .alert(Text("Invite your family"), isPresented: $isInvitePresented) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            // TODO(sync:alief): open Family code (GD-04) — replace after fase 14
-            Text("Family codes are coming soon.")
+        .sheet(isPresented: $isInvitePresented, onDismiss: { Task { await model.refresh() } }) {
+            FamilyCodeView(repository: env.repository)
+                .environment(\.locale, locale)
         }
     }
 

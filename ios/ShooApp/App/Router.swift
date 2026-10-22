@@ -20,6 +20,36 @@ final class Router {
     var shieldPath: [Route] = []
     var activityPath: [Route] = []
     var isProfilePresented = false
+    /// Protected after onboarding: Connect (PR-01) as a sheet, from Shield or an invite link.
+    var isConnectPresented = false
+    /// From `shoo://join?code=` (PR-03): fills the Connect field, never joins by itself (T11).
+    /// Memory only, dropped when the app goes to the background.
+    var pendingJoinCode: String?
+    /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
+    var isTurnOnPresented = false
+    /// An invite link asked for Connect while another sheet was up: shown once that one is gone.
+    private(set) var wantsConnect = false
+
+    /// Shows Connect now, or right after the open sheet is dismissed (SwiftUI shows one sheet at a time).
+    func showConnect() {
+        guard !isConnectPresented else { return }
+        popToRoot()
+        selectedTab = .shield
+        if isProfilePresented || isTurnOnPresented {
+            wantsConnect = true
+            isProfilePresented = false
+            isTurnOnPresented = false
+        } else {
+            isConnectPresented = true
+        }
+    }
+
+    /// `onDismiss` of every other sheet.
+    func sheetDismissed() {
+        guard wantsConnect else { return }
+        wantsConnect = false
+        isConnectPresented = true
+    }
 
     func showDetail(scanId: String) {
         append(.detail(scanId: scanId))
@@ -35,6 +65,15 @@ final class Router {
         popToRoot()
         selectedTab = .shield
         isProfilePresented = false
+        isTurnOnPresented = false
+        isConnectPresented = false
+        wantsConnect = false
+    }
+
+    /// Hands the pending invite code to Connect once.
+    func takePendingJoinCode() -> String? {
+        defer { pendingJoinCode = nil }
+        return pendingJoinCode
     }
 
     private func append(_ route: Route) {

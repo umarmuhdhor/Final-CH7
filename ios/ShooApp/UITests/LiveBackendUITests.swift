@@ -94,8 +94,8 @@ final class LiveBackendUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["greeting.avatar"].firstMatch.waitForExistence(timeout: 15),
                       app.debugDescription)
         app.buttons["greeting.continue"].tap()
-        XCTAssertTrue(app.buttons["connect.continue"].waitForExistence(timeout: 5))
-        app.buttons["connect.continue"].tap()
+        XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 5))
+        app.buttons["connect.skip"].tap()
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5))
         app.buttons["notifications.skip"].tap()
         XCTAssertTrue(app.tabBars.buttons["Perisai"].waitForExistence(timeout: 10), app.debugDescription)
