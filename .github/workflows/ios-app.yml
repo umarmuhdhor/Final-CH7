@@ -1,5 +1,4 @@
-# DRAFT — inert here. The lead moves it to .github/workflows/ios-app.yml (TODO C2, D-alief-12).
-# Excluded from the Shoo target by ios/project.yml (`ci/**`).
+# iOS app tests on PRs (TODO C2, D-alief-12).
 name: iOS app
 
 on:
@@ -16,7 +15,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: macos-15
+    runs-on: macos-26 # Xcode 26.x: the app uses iOS 26.2 SDK APIs (SFSafariSettings)
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

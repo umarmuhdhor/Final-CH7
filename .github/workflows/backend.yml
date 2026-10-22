@@ -1,4 +1,4 @@
-# DRAFT, inert here. Umar moves it to .github/workflows/backend.yml (TODO C2, backend/ci/README.md).
+# Backend CI/CD (TODO C2). Secrets + steps: backend/ci/README.md.
 name: backend
 
 on:
