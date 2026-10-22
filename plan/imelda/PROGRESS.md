@@ -11,7 +11,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | 00 | Plan | – | docs/imelda-plan | [r] | 22 Okt 2026 | | #29 | Folder `plan/imelda/` lengkap (SECURITY, ARCHITECTURE, VERIFY, ref R1–R2, fase 01–08); menunggu review Umar | log/fase-00.md |
 | 01 | db_match di detector | M5-B | feat/AI-M5-detector | [~] | 22 Okt 2026 | | | Kode + 141 test selesai; menunggu izin Imelda untuk push/PR | log/fase-01.md |
 | 02 | /analyze + sinyal form | M3 | feat/AI-M3-forms | [~] | 22 Okt 2026 | | | Kode + 62 test selesai (204 total hijau); lphone-login 39 (iframe, C1); menunggu izin push/PR | log/fase-02.md |
-| 03 | Konten + new_domain | M3 | feat/AI-M3-content | [ ] | | | | | log/fase-03.md |
+| 03 | Konten + new_domain | M3 | feat/AI-M3-content | [~] | 22 Okt 2026 | | | 3 sinyal + RDAP, 133 test ai/ (hijau); warning-63 +11 dari fixture (bobot R1); menunggu izin push/PR | log/fase-03.md |
 | 04 | Data eval set 50+50 | M2 | feat/AI-M2-eval-data | [ ] | | | | | log/fase-04.md |
 | 05 | /public-blocklist | M5-A | feat/AI-M5-server | [ ] | | | | | log/fase-05.md |
 | 06 | Reality check LLM | M4 | feat/AI-M4-reality-check | [ ] | | | | | log/fase-06.md |
@@ -37,7 +37,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | M2 Kerangka eval | – | [x] | `ai/eval/test/`, PR #26 |
 | M2 Data 50+50 | 04 | [ ] | |
 | M3 `/analyze` + sinyal form | 02 | [~] | kode selesai, belum merge |
-| M3 `urgent_language`, `brand_logo_offsite`, `new_domain` | 03 | [ ] | |
+| M3 `urgent_language`, `brand_logo_offsite`, `new_domain` | 03 | [~] | kode selesai, belum merge |
 | M4 Reality check | 06 | [ ] | |
 | M5 Server `/public-blocklist` | 05 | [ ] | |
 | M5 Detector `db_match` | 01 | [x] | kode selesai di branch; PR belum dibuka |

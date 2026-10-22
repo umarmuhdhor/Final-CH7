@@ -24,13 +24,16 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | # | Ke | Isi | Status |
 |---|---|---|---|
 | C1 | Umar | Apakah snapshot menangkap **iframe**? `content.js`/`capture.js` tidak menyebut iframe dan `manifest.json` tanpa `all_frames`. Tanpa itu `asks_pin`/`asks_password` tidak menyala di situs seperti `lphone-login.com` (passcode 6 digit ada di iframe). | [ ] |
-| C2 | Umar | `new_domain`: kontrak menulis layer 2, tapi dibuat server (RDAP). `pipeline.js` hanya menerima layer 3–4 dari `/analyze` (`validSignals(remote,[3,4])`), jadi sinyal layer 2 dari server dibuang diam-diam. Usulan: kontrak diubah jadi layer 3. | [ ] |
+| C2 | Umar | `new_domain`: kontrak menulis layer 2, tapi dibuat server (RDAP). `pipeline.js` hanya menerima layer 3–4 dari `/analyze` (`validSignals(remote,[3,4])`), jadi sinyal layer 2 dari server dibuang diam-diam. Usulan: kontrak diubah jadi layer 3. | [x] terjawab: kontrak sudah layer 3 (f95b2ee, #36); fase 03 mengirim layer 3 |
 | C3 | Umar | `brands.json` perlu verifikasi manual: `bankbsi.co.id`, `jet.co.id`, `bpjsketenagakerjaan.go.id`. | [ ] |
 | C4 | Umar + Alief | Setelah fase 08: kirim URL publik `/analyze` (untuk `ai.baseURL`) dan `/public-blocklist`. | [ ] |
 | C5 | Alief + Umar | Kalau data form dikirim ke penyedia LLM, kebijakan privasi/label App Store harus menyebutnya (SECURITY Q4). Kirim setelah model dipilih (fase 06). | [ ] |
 | C6 | Umar | Bobot awal sinyal layer 3–4 (ref/R1) untuk dilihat sebelum fase 07 bila ambang 30/50/80 akan berubah. | [ ] |
 | C7 | Umar | Sinyal `asks_*` membawa `evidence` = `name`/`id` field (teks dari halaman, bukan substring `snapshot.text`). Extension harus menampilkannya sebagai teks biasa (`textContent`), bukan HTML, dan tidak men-stabilo. | [ ] |
 | C8 | Umar | Usulan: tambahkan `accept` (atribut input file) ke `PageSnapshot.forms[].fields` agar `asks_selfie_ktp` bisa memakai `accept=image/*`. Sekarang dipasangkan lewat label/nama. Perubahan kontrak. | [ ] |
+| C9 | Umar | `new_domain` membawa `evidence` = umur dalam hari (string, perintah fase 03). Fixture `blocked-92` tidak punya evidence di sinyal itu. Pastikan extension tidak men-stabilo angka itu (hanya sinyal teks), atau minta kami menghapusnya. | [ ] |
+| C10 | Umar | `brand_logo_offsite`: evidence diambil dari `imageAlts`/title, yang tidak tampil di body. Extension mungkin tidak menemukannya untuk di-stabilo. Perlu aturan: abaikan saja, atau snapshot memuat teks logo? | [ ] |
+| C11 | M7 | `/analyze` tanpa rate limit memicu 2 request keluar ke registry per host baru; cache 1000 entri bisa dibanjiri. Rate limit per IP wajib di M7 (SECURITY A9). Aktifkan adapter KV (`createKvCache`) di M7. | [ ] |
 
 ## D. Langkah manual yang diketahui
 
