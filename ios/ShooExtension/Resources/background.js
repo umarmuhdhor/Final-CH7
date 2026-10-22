@@ -5,16 +5,14 @@ import { PSL_RULES } from "./psl.js";
 import { parseRules, registrableDomain, naiveDomain } from "./domain.js";
 import { captureEvidence } from "./capture.js";
 import { createLists } from "./lists.js";
+import { createVerdicts } from "./verdicts.js";
+import { createHeartbeat } from "./heartbeat.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const SESSION_TTL_MS = 30 * 1000; // onboarding can finish while Safari is open
-const VERDICT_TTL_MS = 60 * 1000;
 const ANALYZE_TIMEOUT_MS = 8 * 1000; // contracts/api.md
-const VERDICT_TIMEOUT_MS = 3 * 1000;
 const SCAN_TIMEOUT_MS = 15 * 1000; // includes the screenshot upload
-
-let lastHeartbeatAt = 0;
 
 let rules = null;
 function domainFor(hostname) {
@@ -51,7 +49,13 @@ async function fetchJSON(url, { timeoutMs, token, ...init }) {
             signal: controller.signal,
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+            // status + Retry-After let callers tell "rate limited, retry later" (429) from a real failure.
+            throw Object.assign(new Error(`HTTP ${response.status}`), {
+                status: response.status,
+                retryAfter: response.headers.get("Retry-After"),
+            });
+        }
         return await response.json();
     } finally {
         clearTimeout(timer);
@@ -80,27 +84,8 @@ async function analyze(snapshot, localSignals) {
     }
 }
 
-const verdictCache = new Map(); // domain → { verdict, at }
-async function verdict(domain, { fresh = false } = {}) {
-    const cached = verdictCache.get(domain);
-    if (!fresh && cached && Date.now() - cached.at < VERDICT_TTL_MS) return { ok: true, verdict: cached.verdict };
-
-    const session = await getSession();
-    if (!session?.apiBaseURL) return { ok: true, verdict: null, skipped: "no_api_url" };
-    try {
-        const body = await fetchJSON(endpoint(session.apiBaseURL, `/verdicts?domain=${encodeURIComponent(domain)}`), {
-            method: "GET",
-            token: session.token,
-            timeoutMs: VERDICT_TIMEOUT_MS,
-        });
-        const value = body?.verdict ?? null;
-        verdictCache.set(domain, { verdict: value, at: Date.now() });
-        return { ok: true, verdict: value };
-    } catch (error) {
-        console.warn("[Shoo] /verdicts failed", error);
-        return { ok: true, verdict: null, skipped: "error" };
-    }
-}
+// EX-06: GET /verdicts with a short cache; a 429 is answered from the last known verdict (verdicts.js).
+const verdicts = createVerdicts({ getSession, fetchJSON: (url, init) => fetchJSON(url, init) });
 
 // Layer 1 (docs/design/blocklist.md): download + keep the lists here, content scripts only ask match().
 const lists = createLists({
@@ -110,9 +95,23 @@ const lists = createLists({
     registrableDomain: domainFor,
 });
 lists.refresh();
+// EX-01: tells the app the extension is alive and whether it still has access to every website.
+const heartbeat = createHeartbeat({
+    permissions: browser.permissions,
+    sendNative: (message) => browser.runtime.sendNativeMessage(NATIVE_APP_ID, message),
+    intervalMs: HEARTBEAT_INTERVAL_MS,
+});
+const beatNow = () => heartbeat.beat({ force: true }).catch(() => {});
+browser.permissions?.onAdded?.addListener(beatNow);
+browser.permissions?.onRemoved?.addListener(beatNow);
+
 if (browser.alarms) {
     browser.alarms.create("shoo-lists", { periodInMinutes: 60 });
-    browser.alarms.onAlarm.addListener((alarm) => alarm.name === "shoo-lists" && lists.refresh());
+    browser.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name !== "shoo-lists") return;
+        lists.refresh();
+        heartbeat.beat().catch(() => {}); // access can be narrowed while no page is open
+    });
 }
 
 const reports = new Map(); // report key → Promise<backend scan id | null>
@@ -155,13 +154,8 @@ async function startReport(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
     switch (message?.type) {
-        case "heartbeat": {
-            if (Date.now() - lastHeartbeatAt < HEARTBEAT_INTERVAL_MS) {
-                return Promise.resolve({ ok: true, throttled: true });
-            }
-            lastHeartbeatAt = Date.now();
-            return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "heartbeat" });
-        }
+        case "heartbeat":
+            return heartbeat.beat();
         case "getSession":
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
         case "profile":
@@ -183,7 +177,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
         case "recordId":
             return Promise.resolve(reports.get(message.key) ?? null).then((recordId) => ({ ok: true, recordId }));
         case "verdict":
-            return verdict(message.domain, { fresh: Boolean(message.fresh) });
+            return verdicts.lookup(message.domain, { fresh: Boolean(message.fresh) });
         default:
             return Promise.resolve({ ok: false, error: "unknown_type" });
     }

@@ -60,7 +60,7 @@ function* walk(dir) {
     for (const name of readdirSync(dir).sort()) {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) yield* walk(p);
-        else if (extname(name) === ".json") yield p;
+        else if (extname(name) === ".json" && name !== "HOLDOUT.json") yield p; // HOLDOUT.json is the split seed, not a sample
     }
 }
 
@@ -99,7 +99,8 @@ export function loadDetector() {
     return { analyzeLocal: async (snapshot) => JSON.parse(JSON.stringify(await ctx.ShooDetector.analyzeLocal(snapshot))) };
 }
 
-/** POST /analyze (M3). Resolves [] on any failure, like the extension does after 8 s. */
+/** POST /analyze (M3). Never throws, like the extension after 8 s, but says whether the call worked:
+ *  @returns {Promise<{signals: object[], ok: boolean}>} ok is false for a network error, HTTP error, bad body or any malformed signal. */
 export async function analyzeRemote(baseUrl, snapshot, localSignals) {
     try {
         const res = await fetch(new URL("/analyze", baseUrl), {
@@ -108,11 +109,14 @@ export async function analyzeRemote(baseUrl, snapshot, localSignals) {
             body: JSON.stringify({ snapshot, localSignals }),
             signal: AbortSignal.timeout(8000),
         });
-        if (!res.ok) return [];
+        if (!res.ok) return { signals: [], ok: false };
         const body = await res.json();
-        return Array.isArray(body.signals) ? body.signals : [];
+        if (!Array.isArray(body.signals)) return { signals: [], ok: false };
+        const wellFormed = (x) => x && typeof x.id === "string" && Number.isInteger(x.layer) && Number.isFinite(x.weight);
+        const signals = body.signals.filter(wellFormed);
+        return { signals, ok: signals.length === body.signals.length };
     } catch {
-        return [];
+        return { signals: [], ok: false };
     }
 }
 
@@ -139,15 +143,18 @@ export async function evaluate(sample, { detector, analyzeUrl = null }) {
     const localMs = performance.now() - t0;
     let remote = [];
     let remoteMs = null;
+    let remoteOk = null;
     if (analyzeUrl) {
         const t1 = performance.now();
-        remote = onlyLayers(await analyzeRemote(analyzeUrl, snapshot, local), [3, 4]);
+        const r = await analyzeRemote(analyzeUrl, snapshot, local);
+        remote = onlyLayers(r.signals, [3, 4]);
+        remoteOk = r.ok;
         remoteMs = performance.now() - t1;
     }
     const signals = [...local, ...remote];
     const localScore = scoreOf(local);
     const score = scoreOf(signals);
-    return { id: sample.id, label: sample.label, tags: sample.tags || [], synthetic: !!sample.synthetic, localScore, score, status: statusOf(score), signals, localMs, remoteMs };
+    return { id: sample.id, label: sample.label, tags: sample.tags || [], synthetic: !!sample.synthetic, localScore, score, status: statusOf(score), signals, localMs, remoteMs, remoteOk };
 }
 
 // ---------- metrics ----------
@@ -167,24 +174,74 @@ export function summarize(rows, { remote = false } = {}) {
 
     const ms = rows.map((r) => r.localMs).sort((a, b) => a - b);
     const enough = scam.length >= MIN_PER_CLASS && legit.length >= MIN_PER_CLASS;
-    const checks = {
-        scamAtLeast50: { value: rate(count(scam, 50), scam.length), target: TARGETS.scamAtLeast50 },
-        scamAtLeast80: { value: rate(count(scam, 80), scam.length), target: TARGETS.scamAtLeast80 },
-        legitAtLeast30: { value: legit.length ? count(legit, 30) : null, target: TARGETS.legitAtLeast30 },
-    };
-    const met = checks.scamAtLeast50.value >= checks.scamAtLeast50.target && checks.scamAtLeast80.value >= checks.scamAtLeast80.target && checks.legitAtLeast30.value <= checks.legitAtLeast30.target;
+    const checksOf = (sc, lg) => ({
+        scamAtLeast50: { value: rate(count(sc, 50), sc.length), target: TARGETS.scamAtLeast50 },
+        scamAtLeast80: { value: rate(count(sc, 80), sc.length), target: TARGETS.scamAtLeast80 },
+        legitAtLeast30: { value: lg.length ? count(lg, 30) : null, target: TARGETS.legitAtLeast30 },
+    });
+    const metOf = (c) => c.scamAtLeast50.value >= c.scamAtLeast50.target && c.scamAtLeast80.value >= c.scamAtLeast80.target && c.legitAtLeast30.value <= c.legitAtLeast30.target;
+    // A claim about the mandate targets may only rest on real pages (R2 §4): synthetic ones are written by us.
+    const realScam = scam.filter((r) => !r.synthetic);
+    const realLegit = legit.filter((r) => !r.synthetic);
+    const realEnough = realScam.length >= MIN_PER_CLASS && realLegit.length >= MIN_PER_CLASS;
+    const checksAll = checksOf(scam, legit);
+    const checks = checksOf(realScam, realLegit);
+    const remoteFailures = rows.filter((r) => r.remoteOk === false).length; // /analyze failed for this page: its layer 3-4 result is missing
+
+    const tally = (list) => ({
+        scam: { n: list.filter((r) => r.label === "scam").length, atLeast50: count(list.filter((r) => r.label === "scam"), 50), atLeast80: count(list.filter((r) => r.label === "scam"), 80) },
+        legit: { n: list.filter((r) => r.label === "legit").length, atLeast30: count(list.filter((r) => r.label === "legit"), 30) },
+    });
+    const tags = [...new Set(rows.flatMap((r) => r.tags || []))].filter((t) => t !== "holdout").sort();
+    const byTag = Object.fromEntries(tags.map((t) => [t, tally(rows.filter((r) => (r.tags || []).includes(t)))]));
+    const isHoldout = (r) => (r.tags || []).includes("holdout");
 
     return {
+        byTag,
+        bySplit: { holdout: tally(rows.filter(isHoldout)), tuning: tally(rows.filter((r) => !isHoldout(r))) },
+        real: tally(rows.filter((r) => !r.synthetic)),
+        synthetic: tally(rows.filter((r) => r.synthetic)),
         mode: remote ? "layers 1-4" : "layers 1-2 only",
         counts: { scam: scam.length, legit: legit.length },
         enough,
+        realEnough,
+        remoteFailures,
         scam: { atLeast30: count(scam, 30), atLeast50: count(scam, 50), atLeast80: count(scam, 80) },
         legit: { atLeast30: count(legit, 30), atLeast50: count(legit, 50), atLeast80: count(legit, 80) },
-        checks,
-        targetsMet: enough && remote ? met : null, // only meaningful with real layer 3-4 results and 50+ per class
+        checks, // real samples only
+        checksAll, // every sample, synthetic included: for information, not for claims
+        targetsMet: realEnough && remote && remoteFailures === 0 ? metOf(checks) : null, // needs real layer 3-4 results for every page and 50+ real per class
         falsePositives: falsePositives.map((r) => r.id),
         misses: misses.map((r) => r.id),
         falsePositiveSignals: byLevel,
         timing: { analyzeLocalAvgMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, analyzeLocalMaxMs: ms.at(-1) ?? null },
     };
+}
+
+/** Run once before a --analyze-url eval: analyzeRemote swallows errors by design, so an unreachable service would otherwise look like "layers 1-4" with empty layer 3-4. */
+export async function probeAnalyze(baseUrl) {
+    const snapshot = { url: "https://probe.invalid/", domain: "probe.invalid", title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: new Date(0).toISOString() };
+    try {
+        const res = await fetch(new URL("/analyze", baseUrl), {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer eval" },
+            body: JSON.stringify({ snapshot, localSignals: [] }),
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        if (!Array.isArray(body.signals)) throw new Error("response has no signals array");
+    } catch (e) {
+        throw new Error(`/analyze at ${baseUrl} is not usable (${e.message}); refusing to report layers 3-4 numbers`);
+    }
+}
+
+/** --strict: only a run that really judged the targets and met them passes; "nothing was judged" is not a pass. */
+export function strictExitCode(summary) {
+    return summary.targetsMet === true ? 0 : summary.targetsMet === false ? 1 : 2;
+}
+
+/** The holdout is looked at once, at the end of phase 07: rows tagged holdout stay out of per-sample output unless asked for. */
+export function visibleRows(rows, { showHoldout = false } = {}) {
+    return showHoldout ? rows : rows.filter((r) => !(r.tags || []).includes("holdout"));
 }

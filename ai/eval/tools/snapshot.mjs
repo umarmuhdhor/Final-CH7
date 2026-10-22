@@ -2,16 +2,15 @@
 // A small tolerant scanner, not a browser: it reads the static HTML only, so content that a script adds later is NOT seen
 // (e.g. a login form inside an iframe shows up in meta.iframes instead of snapshot.forms).
 
+import { fold, MASKS } from "./patterns.mjs";
+
 const MAX_TEXT = 20000; // PageSnapshot.text limit
 const MAX_ALTS = 50; // PageSnapshot.imageAlts limit
 const SKIP_INPUT_TYPES = new Set(["hidden", "submit", "button", "image", "reset"]);
 
-/** Masks things that identify a person. Order matters: phone numbers first, so "+62 812 ..." is not eaten as a long number. */
+/** Masks things that identify a person (patterns: tools/patterns.mjs). Look-alike characters are folded first. */
 export function redact(text) {
-    return String(text ?? "")
-        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
-        .replace(/(?<![\d+])\+?(?:62|0)[\s.-]?8[\d\s.-]{7,13}\d(?!\d)/g, "[phone]")
-        .replace(/(?<!\d)(?:\d[ -]?){12,18}\d(?!\d)/g, "[number]"); // card, NIK, account numbers (13-19 digits)
+    return MASKS.reduce((t, [, mask, re]) => t.replace(re, mask), fold(text));
 }
 
 /** Keeps scheme, host and path; query values and fragment can carry names, ids or tokens. */
@@ -25,6 +24,17 @@ export function redactUrl(url) {
         return redact(url);
     }
 }
+
+/** Same idea for iframe src values, which may be relative: query values become REDACTED and the fragment is dropped. */
+export function redactSrc(src) {
+    const [noHash] = String(src).split("#");
+    const [path, query] = noHash.split("?");
+    if (query === undefined) return redact(path);
+    const keys = query.split("&").map((kv) => kv.split("=")[0]).filter(Boolean);
+    return `${redact(path)}?${keys.map((k) => `${k}=REDACTED`).join("&")}`;
+}
+
+const redactAction = (a) => (a ? redactSrc(a) : null);
 
 function decode(s) {
     return s
@@ -84,7 +94,7 @@ export function parseHtml(html, { url, domain, capturedAt = new Date().toISOStri
     const forms = [];
     let outside = src;
     for (const m of src.matchAll(/<form\b([^>]*)>([\s\S]*?)<\/form>/gi)) {
-        forms.push({ action: attrs(`<form ${m[1]}>`).action || null, fields: fieldsIn(m[2]) });
+        forms.push({ action: redactAction(attrs(`<form ${m[1]}>`).action), fields: fieldsIn(m[2]) });
         outside = outside.replace(m[0], " ");
     }
     const loose = fieldsIn(outside); // single-page apps often have inputs without a <form>
@@ -96,7 +106,7 @@ export function parseHtml(html, { url, domain, capturedAt = new Date().toISOStri
         .slice(0, MAX_ALTS)
         .map(redact);
 
-    const iframes = [...src.matchAll(/<iframe\b[^>]*>/gi)].map((m) => attrs(m[0]).src).filter(Boolean);
+    const iframes = [...src.matchAll(/<iframe\b[^>]*>/gi)].map((m) => attrs(m[0]).src).filter(Boolean).map(redactSrc);
 
     const body = src
         .replace(/<(script|style|noscript|template|svg)\b[\s\S]*?<\/\1>/gi, " ")

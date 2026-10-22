@@ -42,6 +42,7 @@ Pakai `contracts/fixtures/*.json` sebagai data palsu lewat satu protocol/reposit
 - [x] **PF-01** Profile (nama, avatar, bahasa, status extension)
 
 Status extension Active/Off cukup baca `AppGroup.Key.extensionLastSeenAt`. Contohnya sudah ada di `ContentView.swift`.
+- [ ] **EX-01 (dari Umar U7)** `ExtensionStatus`: kalau `AppGroup.Key.extensionAllSites` bernilai `false` → Off walaupun heartbeat masih baru (izin Safari dipersempit ke beberapa situs). Key tidak ada → anggap `true`. Lihat contracts/app-group-keys.md.
 Layout dan copy final mengikuti designer. Wireframe di PRD bagian 7 hanya referensi.
 
 ### Fase B · Backend — `backend/`

@@ -16,6 +16,8 @@ enum AppGroup {
         static let deviceName = "device.name"
         static let guardianName = "guardian.name"
         static let extensionLastSeenAt = "extension.lastSeenAt"
+        /// Bool. `false` = Safari access narrowed to some sites → treat as Off (EX-01). Missing = unknown, treat as `true`.
+        static let extensionAllSites = "extension.allSites"
         static let apiBaseURL = "api.baseURL"
         static let aiBaseURL = "ai.baseURL"
     }

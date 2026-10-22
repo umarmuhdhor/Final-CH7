@@ -12,6 +12,7 @@ Already implemented:
 - [ ] How fast does the first heartbeat arrive after enabling? (Needs a page load. Does the user have to open Safari first?)
 - [ ] Turn extension off → how does the app find out? (Heartbeat just goes stale — pick a window; currently 24 h in `AppGroup.extensionActiveWindow`.)
 - [ ] Revoke "Allow on every website" → content script stops → same as off? (EX-01)
+- [ ] `extension.allSites` (U7): "All websites" → `true`. Change to "Ask" / a few sites → `false` right away (`permissions.onRemoved`) or on the next page / hourly alarm? Does `browser.permissions.contains` exist on iOS Safari at all? (If not, the key is never written.)
 - [ ] Any public iOS API for extension state? (`SFSafariExtensionManager` is macOS-only.)
 
 ## Result

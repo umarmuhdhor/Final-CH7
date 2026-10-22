@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 await import("../Resources/block.js"); // no ShooPipeline/browser here → helpers only
 await import("../Resources/blocked-page.js");
 const { payloadFor, encode, decode } = globalThis.ShooBlock;
-const { viewFor } = globalThis.ShooBlockedPage;
+const { viewFor, nextPollMs } = globalThis.ShooBlockedPage;
 
 const blocked92 = JSON.parse(readFileSync(new URL("../../../contracts/fixtures/blocked-92.json", import.meta.url), "utf8"));
 const state = { ...blocked92, scanId: 3, status: "blocked" };
@@ -66,4 +66,11 @@ test("App not set up → Open Shoo, nothing to poll", () => {
     assert.deepEqual(v.button, { textKey: "block_open_app", href: "shoo://activity" });
     assert.equal(v.poll, false);
     assert.equal(v.showWaiting, false);
+});
+
+test("block screen polls every 5 s, and waits out a 429's Retry-After instead of hammering", () => {
+    assert.equal(nextPollMs({ ok: true, verdict: null }), 5000);
+    assert.equal(nextPollMs(null), 5000); // offline
+    assert.equal(nextPollMs({ ok: true, verdict: null, rateLimited: true, retryAfterMs: 12000 }), 12000);
+    assert.equal(nextPollMs({ ok: true, verdict: null, rateLimited: true, retryAfterMs: 1000 }), 5000); // never faster
 });

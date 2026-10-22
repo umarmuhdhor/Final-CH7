@@ -1,0 +1,375 @@
+[
+  {
+    "id": "trap-toko-logo-bank-checkout",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "bank-logo-checkout",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: shop with bank logos at checkout, 'diskon terakhir', 'dikirim dalam 24 jam'",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent. Phase 03 flagged this as a false-positive risk (brand_logo_offsite, urgent_language).",
+    "snapshot": {
+      "url": "https://tokosepatu-nusantara.co.id/checkout",
+      "title": "Checkout - Toko Sepatu Nusantara",
+      "lang": "id",
+      "text": "Ringkasan pesanan: Sepatu lari x1. Diskon terakhir hari ini sampai pukul 23.59. Pesanan dikirim dalam 24 jam setelah pembayaran. Pilih metode pembayaran: transfer bank atau kartu kredit.",
+      "forms": [
+        {
+          "action": "/checkout",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nama",
+              "id": "nama",
+              "label": "Nama penerima",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor ponsel",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "alamat",
+              "id": "alamat",
+              "label": "Alamat pengiriman",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BCA",
+        "Logo Mandiri",
+        "Foto sepatu lari"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-blog-cek-saldo-bca",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "brand-mention-blog"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: blog that explains a bank task",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent. Shared host (blogspot) and a brand in the title.",
+    "snapshot": {
+      "url": "https://tipskeuanganku.blogspot.com/2026/10/cara-cek-saldo-bca.html",
+      "title": "Cara Cek Saldo BCA lewat HP",
+      "lang": "id",
+      "text": "Artikel ini menjelaskan cara cek saldo BCA melalui m-BCA dan ATM. Buka aplikasi, pilih info rekening, lalu pilih saldo. Jangan pernah membagikan PIN atau kode OTP kepada siapa pun, termasuk orang yang mengaku petugas bank.",
+      "forms": [
+        {
+          "action": "/komentar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nama",
+              "id": "nama",
+              "label": "Nama",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "textarea",
+              "name": "komentar",
+              "id": "komentar",
+              "label": "Komentar",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BCA",
+        "Ilustrasi m-BCA"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-github-pages-dokumentasi",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "shared-host",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: personal docs on github.io with a demo login form",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent. Shared host with a password field.",
+    "snapshot": {
+      "url": "https://andi-dev.github.io/panduan-login/",
+      "title": "Panduan Login Aplikasi",
+      "lang": "id",
+      "text": "Dokumentasi pribadi: cara membuat halaman login dengan JavaScript. Contoh form di bawah hanya demo dan tidak mengirim data ke mana pun.",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": "email",
+              "id": "email",
+              "label": "Email demo",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi demo",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Tangkapan layar login"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-sign-in-google-facebook",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "social-login"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: app with 'Sign in with Google' and social share icons",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent.",
+    "snapshot": {
+      "url": "https://catatan-harian.co.id/masuk",
+      "title": "Masuk - Catatan Harian",
+      "lang": "id",
+      "text": "Masuk untuk menyimpan catatan Anda. Anda juga bisa masuk dengan akun Google atau Facebook. Bagikan catatan ke Facebook dan Instagram.",
+      "forms": [
+        {
+          "action": "/masuk",
+          "fields": [
+            {
+              "type": "email",
+              "name": "email",
+              "id": "email",
+              "label": "Email",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi",
+              "placeholder": "",
+              "autocomplete": "current-password"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Google logo",
+        "Facebook icon",
+        "Instagram icon",
+        "Sign in with Google"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-fintech-kyc-sah",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "kyc-legit"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: regulated fintech KYC that asks for KTP and OTP",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "KNOWN HARD CASE: the data requested looks identical to a scam. Anything the detector says here is a finding to record, not a number to tune away.",
+    "snapshot": {
+      "url": "https://koinku-aset.co.id/verifikasi",
+      "title": "Verifikasi Identitas - KoinKu",
+      "lang": "id",
+      "text": "Sesuai peraturan, kami perlu memverifikasi identitas Anda. Unggah foto KTP dan swafoto, lalu masukkan kode OTP yang kami kirim ke ponsel Anda. Data Anda dilindungi dan diawasi OJK.",
+      "forms": [
+        {
+          "action": "/kyc",
+          "fields": [
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Swafoto",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "Kode OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo KoinKu",
+        "Terdaftar dan diawasi OJK"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-berita-waspada-penipuan",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "news-about-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: news article quoting scam phrases",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent. Urgent phrases appear only as quoted examples.",
+    "snapshot": {
+      "url": "https://beritakota.co.id/waspada-penipuan-bank",
+      "title": "Waspada Penipuan Mengatasnamakan Bank",
+      "lang": "id",
+      "text": "Polisi mengingatkan warga soal modus penipuan berkedok blokir kartu. Pelaku mengirim tautan palsu dan meminta kode OTP serta PIN. Segera hubungi bank jika menerima pesan seperti ini. Rekening Anda diblokir dalam 24 jam adalah kalimat yang sering dipakai pelaku.",
+      "forms": [],
+      "imageAlts": [
+        "Foto konferensi pers",
+        "Logo BRI"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-portal-orang-tua-sekolah",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "school-login"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: school parent portal",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent.",
+    "snapshot": {
+      "url": "https://smpn-harapan.sch.id/portal-orang-tua",
+      "title": "Portal Orang Tua - SMPN Harapan",
+      "lang": "id",
+      "text": "Masuk untuk melihat nilai dan absensi putra-putri Anda. Gunakan nomor induk siswa dan kata sandi dari sekolah.",
+      "forms": [
+        {
+          "action": "/portal/login",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nis",
+              "id": "nis",
+              "label": "Nomor induk siswa",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo sekolah"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-asuransi-klaim-resmi",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "insurance",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit trap, hand-written: insurance claim asking for KTP",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Must stay silent. Asks for KTP like a scam would.",
+    "snapshot": {
+      "url": "https://asuransi-sehat.co.id/klaim",
+      "title": "Klaim Asuransi - Asuransi Sehat",
+      "lang": "id",
+      "text": "Ajukan klaim rawat inap. Siapkan nomor polis, foto KTP, dan kuitansi rumah sakit. Proses klaim memerlukan waktu 3 hingga 5 hari kerja.",
+      "forms": [
+        {
+          "action": "/klaim",
+          "fields": [
+            {
+              "type": "text",
+              "name": "polis",
+              "id": "polis",
+              "label": "Nomor polis",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor ponsel",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Asuransi Sehat"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  }
+]

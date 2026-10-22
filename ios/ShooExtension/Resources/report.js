@@ -17,10 +17,23 @@
         return state.status === "warning" && state.done === true;
     }
 
+    /**
+     * `https://host/path` only: the URL is kept 14 days and shown to the Guardian, so a reset token
+     * or session id in the query/fragment (or credentials before the host) must never leave the phone.
+     */
+    function shareableUrl(url) {
+        try {
+            const parsed = new URL(url);
+            return parsed.origin + parsed.pathname;
+        } catch {
+            return String(url).split(/[?#]/)[0];
+        }
+    }
+
     /** ScanResult without id/verdict/owner (background adds the owner from the session). */
     function scanBody(state, page) {
         return {
-            url: state.url,
+            url: shareableUrl(state.url),
             domain: state.domain,
             pageTitle: page.title || undefined,
             faviconUrl: page.faviconUrl ?? null,
@@ -47,7 +60,7 @@
         return { x: left, y: top, width: right - left, height: bottom - top };
     }
 
-    globalThis.ShooReport = { shouldReport, scanBody, evidenceRect, ready: () => Promise.resolve(), keyFor: () => null };
+    globalThis.ShooReport = { shouldReport, scanBody, shareableUrl, evidenceRect, ready: () => Promise.resolve(), keyFor: () => null };
 
     // ---- Content script part -------------------------------------------------------------
 
