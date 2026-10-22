@@ -39,6 +39,9 @@ struct SplashView: View {
                             .padding(.vertical, 32)
                     }
                     .scrollBounceBehavior(.basedOnSize)
+                    // Ends above the page dots, so large text scrolls instead of running under them (QA-A P2-1).
+                    .padding(.bottom, 52)
+                    .accessibilityIdentifier("splash.slide.\(slide.id)")
                     .tag(slide.id)
                 }
             }

@@ -60,6 +60,7 @@ private struct ModeCard: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     @Binding var selection: UserMode?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var isSelected: Bool { selection == mode }
 
@@ -67,21 +68,24 @@ private struct ModeCard: View {
         Button {
             selection = mode
         } label: {
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: systemImage)
-                    .font(.title)
-                    .foregroundStyle(.tint)
-                    .frame(width: 40)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.headline)
-                    Text(message).font(.body).foregroundStyle(.secondary)
+            Group {
+                // At accessibility sizes the icons get their own row, so words are not split (QA-A P2-2).
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            icon
+                            Spacer()
+                            checkmark
+                        }
+                        texts
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 16) {
+                        icon.frame(width: 40)
+                        texts
+                        checkmark
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                    .accessibilityHidden(true)
             }
             .multilineTextAlignment(.leading)
             .padding(16)
@@ -95,5 +99,27 @@ private struct ModeCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("mode.\(mode.rawValue)")
+    }
+
+    private var icon: some View {
+        Image(systemName: systemImage)
+            .font(.title)
+            .foregroundStyle(.tint)
+            .accessibilityHidden(true)
+    }
+
+    private var texts: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.headline)
+            Text(message).font(.body).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var checkmark: some View {
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            .font(.title2)
+            .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+            .accessibilityHidden(true)
     }
 }

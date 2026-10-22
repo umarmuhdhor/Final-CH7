@@ -98,7 +98,7 @@ struct DetailView: View {
     /// DT-01 ring, DT-02 label, DT-06 note.
     private func header(_ scan: ScanResult) -> some View {
         VStack(spacing: 12) {
-            ScoreRing(score: scan.score, size: 160, lineWidth: 16)
+            ScoreRing(score: scan.score, size: 160, lineWidth: 16, maxScale: 1)
             if let badge = model.badge {
                 StatusChip(badge: badge)
             }

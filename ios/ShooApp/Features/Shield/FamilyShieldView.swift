@@ -10,23 +10,25 @@ struct GuardianShieldView: View {
     var body: some View {
         Group {
             if env.settings.familyModeOn {
-                FamilyShieldView(repository: env.repository)
+                FamilyShieldView(repository: env.repository, reminder: reminder)
             } else {
-                ProtectedShieldView(repository: env.repository, extensionStatus: env.extensionStatus, perspective: .guardian)
-            }
-        }
-        // Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
-        .safeAreaInset(edge: .top) {
-            if NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) {
-                NotificationReminderBanner(status: notificationStatus) {
-                    Task { notificationStatus = await env.notifications.request() }
-                }
-                .padding(.horizontal, 16)
+                ProtectedShieldView(
+                    repository: env.repository, extensionStatus: env.extensionStatus, perspective: .guardian, reminder: reminder
+                )
             }
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             notificationStatus = await env.notifications.status()
+        }
+    }
+
+    /// Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
+    /// It scrolls with the screen: pinned, it filled most of a small iPhone at large text sizes (QA-A P2-7).
+    private var reminder: NotificationReminderBanner? {
+        guard NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) else { return nil }
+        return NotificationReminderBanner(status: notificationStatus) {
+            Task { notificationStatus = await env.notifications.request() }
         }
     }
 }
@@ -36,11 +38,14 @@ struct FamilyShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var model: FamilyShieldModel
     @State private var isInvitePresented = false
+    private let reminder: NotificationReminderBanner?
 
-    init(repository: any ShooRepository) {
+    init(repository: any ShooRepository, reminder: NotificationReminderBanner? = nil) {
         _model = State(initialValue: FamilyShieldModel(repository: repository))
+        self.reminder = reminder
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -48,6 +53,7 @@ struct FamilyShieldView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                if let reminder { reminder }
                 content
             }
             .padding(16)
@@ -57,6 +63,12 @@ struct FamilyShieldView: View {
         .navigationTitle(localized: "Family")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
+        // Pinned above the tab bar so the only action of an empty family is in view without scrolling (QA-A P2-4).
+        .safeAreaInset(edge: .bottom) {
+            if model.state == .loaded && model.members.isEmpty && !dynamicTypeSize.isAccessibilitySize {
+                inviteButton.padding(16)
+            }
+        }
         .refreshable { await model.refresh() }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -68,6 +80,18 @@ struct FamilyShieldView: View {
             // TODO(sync:alief): open Family code (GD-04) — replace after fase 14
             Text("Family codes are coming soon.")
         }
+    }
+
+    private var inviteButton: some View {
+        Button { isInvitePresented = true } label: {
+            Text("Invite your family")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 50)
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("family.invite")
     }
 
     @ViewBuilder
@@ -93,11 +117,8 @@ struct FamilyShieldView: View {
                     title: "No one to look after yet",
                     message: "Invite the people you want to keep safe."
                 )
-                Button { isInvitePresented = true } label: {
-                    Text("Invite your family").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("family.invite")
+                // At accessibility text sizes a pinned button would take a third of the screen, so it scrolls.
+                if dynamicTypeSize.isAccessibilitySize { inviteButton }
             }
             .frame(minHeight: 320)
         case .loaded:
