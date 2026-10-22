@@ -1,0 +1,41 @@
+name: Question / proposal
+description: Ask another team (or the lead) a question, or propose a change outside your folder.
+title: "<PRD ID or area>: <short question>"
+labels: ["question"]
+body:
+  - type: input
+    id: prd
+    attributes:
+      label: PRD ID / area
+      description: e.g. EX-06, GD-04, contracts, CI. Use "—" if none.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What you're working on and why this question came up. Link files, PRs, fixtures.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What you suggest, if anything. For a contract change, show the exact field/endpoint and say if it is additive.
+  - type: textarea
+    id: questions
+    attributes:
+      label: Questions
+      description: Numbered, one decision per line, so the answer can reference "1, 2, 3".
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: default
+    attributes:
+      label: Until answered
+      description: What you'll do in the meantime (the default), and what this blocks.
+    validations:
+      required: true

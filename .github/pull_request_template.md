@@ -9,4 +9,9 @@
 
 ## Contract change?
 - [ ] No
-- [ ] Yes — describe the proposed change to `contracts/` below (lead must approve)
+- [ ] Yes — link the issue where the lead approved it: #
+
+## Open questions?
+<!-- Don't ask here. Open an issue with the "Question / proposal" template and link it: #<n> -->
+- [ ] None
+- [ ] Linked: #
