@@ -1,5 +1,4 @@
-# DRAFT — inert here. The lead moves it to .github/workflows/ios-app.yml (TODO C2, D-alief-12).
-# Excluded from the Shoo target by ios/project.yml (`ci/**`).
+# iOS app tests on PRs (TODO C2, D-alief-12).
 name: iOS app
 
 on:
