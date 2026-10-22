@@ -8,6 +8,7 @@ on:
       - "ios/ShooShared/**"
       - "ios/project.yml"
       - "contracts/fixtures/**"
+      - ".github/workflows/ios-app.yml"
 
 concurrency:
   group: ios-app-${{ github.ref }}
@@ -34,12 +35,14 @@ jobs:
           echo "name=$SIM" >> "$GITHUB_OUTPUT"
 
       # Unit tests also compare Data/Fixtures with contracts/fixtures, so the whole repo must be checked out.
+      # Ad-hoc signing ("-", no team, no profile): the simulator still gets the entitlements, so the
+      # Keychain tests work. CODE_SIGNING_ALLOWED=NO strips them and Keychain calls fail with -34018.
       - name: Test
         run: |
           xcodebuild test \
             -project ios/Shoo.xcodeproj \
             -scheme Shoo \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
             | tail -40
           exit ${PIPESTATUS[0]}
