@@ -2,7 +2,7 @@
 
 Stateless service behind the Safari extension. Stack: Cloudflare Worker + [Hono](https://hono.dev), plain JavaScript (ESM + JSDoc), no build step (decision D-imelda-01).
 
-Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) works but has **no real feed yet** (source not approved, see below). The LLM reality check (M4) is not here yet.
+Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) works but has **no real feed yet** (source not approved, see below). The LLM reality check (M4) is built and tested against a fake provider only; it stays off until a model and key are configured.
 
 ## Run it locally
 
@@ -141,3 +141,20 @@ Checked on the official pages on 22 Oct 2026. Nothing here is legal advice. No f
 | Phishing Army | Third-party catalogues list **CC BY-NC 4.0** (own licence page not reachable) | Doubtful if the app is monetised (NC) | plain domain list, hostnames only | not stated |
 
 Recommendation: **ask PhishTank** (phishing-specific, hourly, hostnames) whether the app may use the feed and read its EULA; if the answer is not clearly yes, ask OpenPhish or the Phishing Army author for written permission. Until then the endpoint stays empty in production, which is safe: layer 2 still runs and the extension treats an empty list as "no match".
+
+## Layer 4: reality check (`unreasonable_request`, M4)
+
+Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://` `LLM_BASE_URL` are set (see `.env.example`; Worker secrets in production). **No model has been chosen and the real provider was never called**: every test uses a fake `fetch`.
+
+| Rule | Detail |
+|---|---|
+| Gate (D-imelda-05, proposal) | Not an official site, a form with at least one field, and layers 1-3 so far >= 15. Otherwise no call, no cost |
+| What the model sees | `site` (host), `title` (120 chars), up to 12 field labels, ids of rules that fired. Never page text, URL path/query, typed values or the key. Sent as JSON between `DATA_START` / `DATA_END`; the system prompt (`prompts/reality-check.js`, `reality-check.v1`) is a fixed string |
+| Answer | One JSON object `{page_type, asks[], reasonable, confidence, evidence}`; anything off-schema is ignored (200, layer 3 only) |
+| Signal | `reasonable=false`, `confidence >= 0.6`, at least one `asks` -> `unreasonable_request`, layer 4, weight 30, fixed bilingual labels. `evidence` only if it is an exact substring of the title/text (original casing), else omitted |
+| Only adds | Layer 4 never lowers a score (D-imelda-06). A model that says "reasonable" changes nothing |
+| Failure | Timeout (<= 4 s, hard even if the provider ignores abort), HTTP error, bad JSON, daily cap reached -> layer 3 answer, no error, provider text never forwarded |
+| Cost breaker | `LLM_DAILY_CAP` calls per UTC day per Worker isolate (in memory). The real cap is the spend limit in the provider dashboard |
+| Determinism | `temperature: 0`; record `PROMPT_VERSION` and the model with every eval run |
+
+Privacy note for Alief/Umar (TODO C5): when layer 4 is on, the host, page title and form field labels of pages that pass the gate go to the LLM provider.

@@ -28,6 +28,7 @@ Dipakai setelah setiap run eval besar (fase 04 dan 07) atau laporan salah deteks
 | F-04-3 | P1 | Layer 3 `brand_logo_offsite`+`urgent_language` | Toko dengan alt "Logo BCA"/"Logo Mandiri" dan "Diskon terakhir hari ini" skor 40 (25+15). Sampel `trap-toko-logo-bank-checkout`. Risiko yang dicatat D-imelda-17 | [ ] | | [ ] fase 07 |
 | F-04-4 | P1 | Layer 3 `brand_logo_offsite`+`urgent_language` | Artikel berita tentang penipuan bank (alt "Logo BRI", teks mengutip "diblokir dalam 24 jam") skor 40. Sampel `trap-berita-waspada-penipuan` | [ ] | | [ ] fase 07 |
 | F-04-5 | P1 | Recall layer 3 | Scam di domain netral tanpa kolom form (chat/transfer saja): skor 0-5. `syn-loker-admin-online`, `syn-investasi-kripto-profit`, `syn-cimb-octo-limit`, `syn-samsat-pajak-kendaraan`, `syn-sicepat-apk`. Layer 3 tidak punya sinyal teks untuk biaya di muka / jaminan untung / minta chat WhatsApp | [ ] | | [ ] fase 06 (layer 4) |
+| F-04-5-note | – | Layer 4 | F-04-5 (scam tanpa kolom form, skor 0-5) bukan kasus layer 4: gerbang menuntut form + skor >= 15, jadi LLM tidak dipanggil. Butuh model asli dan keputusan gerbang (A5) untuk dinilai; tidak dikerjakan tanpa LLM | – | – | [m] fase 06 / A5 |
 | F-04-6 | P2 | Snapshot | Form login di iframe tidak terlihat: `lphone-login` 39, `syn-find-my-iphone-hilang` 25. Menunggu jawaban Umar (TODO C1) | [ ] | | [ ] tunggu Umar |
 | F-04-7 | P2 | Data | 6 halaman nyata (BRI, BTN, BNI, Shopee, BPJS, Kemenkeu) kosong di snapshot statis (halaman JS): hanya menguji layer 1-2; legit nyata efektif 33 untuk layer 3 | [ ] | | [ ] catatan |
 

@@ -7,7 +7,13 @@ import { fixtureSource } from "./blocklist/fixture.js";
 
 // RDAP (new_domain) calls real registries, so it is off unless asked: SHOO_RDAP=1. Never point it at scam domains.
 // /public-blocklist serves invented fixture domains here (ai/data/public-blocklist.seed.json), never a real feed.
-const app = createApp({ blocklistSource: fixtureSource, ...(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {}) });
+// Layer 4 (LLM) stays off unless ai/.env holds LLM_API_KEY, LLM_MODEL and LLM_BASE_URL (see .env.example).
+try {
+    process.loadEnvFile(new URL("../.env", import.meta.url));
+} catch {
+    // no .env: layer 4 off
+}
+const app = createApp({ blocklistSource: fixtureSource, llmFetch: (...args) => fetch(...args), ...(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {}) });
 const port = Number(process.env.PORT) || 8787;
 
 createServer(async (req, res) => {
@@ -19,7 +25,7 @@ createServer(async (req, res) => {
             body: hasBody ? Readable.toWeb(req) : undefined,
             duplex: "half",
         });
-        const response = await app.fetch(request);
+        const response = await app.fetch(request, process.env);
         res.writeHead(response.status, Object.fromEntries(response.headers));
         res.end(Buffer.from(await response.arrayBuffer()));
     } catch {
