@@ -91,5 +91,5 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [x] Desain cara detector mendapat `/blocklist` di HP → [`docs/design/blocklist.md`](../design/blocklist.md) (PR ke Imelda).
 - [x] **Layer 1 di extension:** `lists.js` di background (unduh, `storage.local`, refresh) + helper `ShooLists.match` untuk content script. Branch: `feat/EX-02-blocklist`.
 - [ ] **C2** Pindahkan draf CI Alief ke `.github/workflows/` + 5 secret repo (fase 12).
-- [ ] **C18** Putuskan branch protection di `main` (kalau aktif, lead juga wajib lewat PR).
+- [x] **C18** Putuskan branch protection di `main` (kalau aktif, lead juga wajib lewat PR). Diputuskan di #39: tanpa proteksi (repo private di plan Free, GitHub menolak dengan 403). Semua perubahan tetap lewat PR + review, termasuk dari lead, tanpa push langsung ke `main`.
 - [ ] **C17** Setujui `SFSafariExtensionManager` (iOS 26.2+) kalau spike S1 Alief membuktikannya di device.
