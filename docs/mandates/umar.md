@@ -30,7 +30,7 @@ Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CL
 | U3 | EX-05 | Highlight + coret form | Stabilo teks, form sensitif dicoret, Guardian bisa tutup | U1, `session.mode` |
 | U4 | EX-06 | Layar blokir | Tidak bisa di-bypass, auto-buka kalau verdict `safe` | U1, Alief B4 (mock dulu) |
 | U5 | EX-07 | Kirim hasil | Skor ≥30 → `POST /scans` + screenshot area bukti, input di-blur | U1, Alief B3 (mock dulu) |
-| U6 | EX-03 | Indikator live | Dynamic Island atau pill in-page sesuai hasil S3 | S3 |
+| U6 | EX-03 | Indikator live | Pill in-page (hasil S3: extension tidak bisa memakai Dynamic Island) | S3 ✅ |
 | U7 | EX-01 | Izin semua situs | Izin dicabut → app tampil Off | S1 (Alief) |
 | L1 | — | Tugas lead | Review PR, ubah kontrak, sinkron `detector.js`, jawab PM | — |
 
@@ -39,9 +39,9 @@ Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CL
 ### Minggu 1 · Setup & spike
 S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhone-nya sendiri — lihat `alief.md`.
 - [x] **L0** Override signing per developer: `ios/Config/Shoo.xcconfig` (default) + `Local.xcconfig` (gitignored, dari `.example`) → `DEVELOPMENT_TEAM`, `SHOO_BUNDLE_ID`, `SHOO_APP_GROUP`. `AppGroup.id` dibaca dari Info.plist `ShooAppGroup`.
-- [ ] Pastikan akun Apple tiap tim bisa memakai App Groups (akun gratis / Personal Team kemungkinan tidak bisa).
+- [x] Pastikan akun Apple tiap tim bisa memakai App Groups (akun gratis / Personal Team kemungkinan tidak bisa). Satu tim berbayar (Umar) untuk semua build, lihat #32. Alief perlu diundang ke tim.
 - [ ] Setelah S1 masuk: set `AppGroup.extensionActiveWindow` sesuai usulan Alief.
-- [ ] **S3** Dynamic Island dari extension → isi `docs/spikes/dynamic-island.md`. Coba jalur A → B → C, kalau semua gagal: pill in-page. Kabari Alief kalau jalur push dipilih (butuh endpoint tambahan).
+- [x] **S3** Dynamic Island dari extension → isi `docs/spikes/dynamic-island.md`. Coba jalur A → B → C, kalau semua gagal: pill in-page. Kabari Alief kalau jalur push dipilih (butuh endpoint tambahan). Hasil (#41): A dan B gagal, C belum dites → **pill in-page** untuk U6. Jalur push tidak dipilih.
 
 ### Extension · bisa mulai tanpa device (pakai fixtures + mock)
 - [x] **U1 · EX-02** Pipeline scan. Branch: `feat/EX-02-scan-pipeline`
@@ -82,7 +82,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [x] Merge PR kontrak #1, #3, #4, #5, #6 (di-merge lead, 21 Okt).
 - [x] Review PR `chore/APP-test-targets` dari Alief (pengecualian `project.yml` sekali saja, diff persis D-alief-24). Merged sebagai PR #8.
 - [x] **C3** Tambah di `project.yml` target Shoo: `NSCameraUsageDescription` (PR-01), entitlement `aps-environment` + Push (ON-05, GD-06), `UIBackgroundModes: [audio]` (PiP video ON-04). Merged sebagai PR #27.
-- [ ] **C3** Pilih tim Apple berbayar untuk build iPhone + TestFlight (Push & App Groups tidak ada di Personal Team gratis).
+- [x] **C3** Pilih tim Apple berbayar untuk build iPhone + TestFlight (Push & App Groups tidak ada di Personal Team gratis). Tim Umar, ditutup di #32. Sisa: undang Alief, B7 kunci APNs, B8 App Store Connect.
 - [ ] **C11** Extension mengirim `PATCH /devices/me { extensionLastSeenAt }` maks 1×/jam bersama heartbeat (setelah PR #4 merge).
 - [ ] **C6** Review manual antrean blocklist berkala (bareng Alief, lewat SQL editor) setelah fase 10 backend.
 - [x] Desain cara detector mendapat `/blocklist` di HP → [`docs/design/blocklist.md`](../design/blocklist.md) (PR ke Imelda).
