@@ -25,5 +25,12 @@
     "mark_hide": {"message": "Sembunyikan tanda", "description": "EX-05 Guardian button that hides the marks on this page"},
     "pill_score": {"message": "Skor risiko Shoo $SCORE$%", "description": "EX-03 live score pill, accessibility label", "placeholders": {"score": {"content": "$1"}}},
     "pill_checking": {"message": "Shoo sedang mengecek halaman ini, sementara $SCORE$%", "description": "EX-03 live score pill while layers are still running", "placeholders": {"score": {"content": "$1"}}},
-    "pill_hide": {"message": "Ketuk untuk sembunyikan", "description": "EX-03 live score pill hint"}
+    "pill_hide": {"message": "Sembunyikan", "description": "EX-03 live score card button: hides the bubble on this page"},
+    "pill_open": {"message": "Buka detail", "description": "EX-03 live score bubble, accessibility hint"},
+    "pill_status_checking": {"message": "Mengecek", "description": "EX-03 live score card status while layers are still running"},
+    "pill_status_safe": {"message": "Risiko rendah", "description": "EX-03 live score card status, score under 30%"},
+    "pill_status_warning": {"message": "Waspada", "description": "EX-03 live score card status, 30–49%"},
+    "pill_status_danger": {"message": "Bahaya", "description": "EX-03 live score card status, 50–79%"},
+    "pill_still_checking": {"message": "Shoo masih mengecek halaman ini.", "description": "EX-03 live score card, no reasons yet while checking"},
+    "pill_no_reasons": {"message": "Tidak ada tanda bahaya di halaman ini.", "description": "EX-03 live score card, finished with no signals"}
 }

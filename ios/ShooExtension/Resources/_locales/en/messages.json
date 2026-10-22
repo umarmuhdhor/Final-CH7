@@ -25,5 +25,12 @@
     "mark_hide": {"message": "Hide marks", "description": "EX-05 Guardian button that hides the marks on this page"},
     "pill_score": {"message": "Shoo risk score $SCORE$%", "description": "EX-03 live score pill, accessibility label", "placeholders": {"score": {"content": "$1"}}},
     "pill_checking": {"message": "Shoo is checking this page, $SCORE$% so far", "description": "EX-03 live score pill while layers are still running", "placeholders": {"score": {"content": "$1"}}},
-    "pill_hide": {"message": "Tap to hide", "description": "EX-03 live score pill hint"}
+    "pill_hide": {"message": "Hide", "description": "EX-03 live score card button: hides the bubble on this page"},
+    "pill_open": {"message": "Opens details", "description": "EX-03 live score bubble, accessibility hint"},
+    "pill_status_checking": {"message": "Checking", "description": "EX-03 live score card status while layers are still running"},
+    "pill_status_safe": {"message": "Low risk", "description": "EX-03 live score card status, score under 30%"},
+    "pill_status_warning": {"message": "Warning", "description": "EX-03 live score card status, 30–49%"},
+    "pill_status_danger": {"message": "Danger", "description": "EX-03 live score card status, 50–79%"},
+    "pill_still_checking": {"message": "Shoo is still checking this page.", "description": "EX-03 live score card, no reasons yet while checking"},
+    "pill_no_reasons": {"message": "No warning signs found on this page.", "description": "EX-03 live score card, finished with no signals"}
 }
