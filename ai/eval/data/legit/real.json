@@ -2241,5 +2241,363 @@
       "iframes": [],
       "bytes": 491498
     }
+  },
+  {
+    "id": "bank-login-bni-web",
+    "label": "legit",
+    "tags": [
+      "bank-login",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": false,
+    "source": "official public page, static GET capture 2026-10-22 (page text shortened to 1500 chars)",
+    "collectedAt": "2026-10-22T07:21:04.408Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bni.co.id/",
+      "domain": "bni.co.id",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:21:04.405Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 212
+    }
+  },
+  {
+    "id": "bank-login-mandiri-web",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": false,
+    "source": "official public page, static GET capture 2026-10-22 (page text shortened to 1500 chars)",
+    "collectedAt": "2026-10-22T07:21:04.816Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bankmandiri.co.id/",
+      "domain": "bankmandiri.co.id",
+      "title": "Bank Mandiri - Terdepan, Terpercaya, Tumbuh Bersama Anda",
+      "lang": "in-ID",
+      "text": "Navigasi Melompat ke Konten Language Selector IN [Beta] EN Mandiri Search Portlet Kalkulator Tools Suku Bunga Suku Bunga Dana Suku Bunga Dasar Kredit Kurs Tarif Tarif Layanan Kalkulator Kalkulator Finansial Kalkulator KPR Kalkulator KTA Lokasi Lokasi ATM Kantor Cabang Merchant mATM Mandiri Unit Mikro Weekend Banking Hubungi Kami Hubungi Kami email facebook twitter hubungi kami mandiri call 14000 email facebook twitter hubungi kami mandiri call 14000 Cari Log In Livin' by Mandiri Mandiri Internet Bisnis Mandiri Search Portlet Perseorangan Perseorangan Simpanan Dapatkan keuntungan dan kenyamanan yang lebih baik dengan berbagai solusi simpanan dari Bank Mandiri untuk Anda Pinjaman Solusi pinjaman dengan berbagai pilihan yang dapat disesuaikan dengan kebutuhan Anda Kartu Kredit Nikmati berbagai keunggulan dan kemudahan melalui mandiri kartu kredit sesuai kebutuhan Anda Kartu Debit Miliki Kartu Mandiri Debit dan dapatkan kemudahan, kenyamanan serta keamanan dalam bertransaksi di dalam maupun luar negeri dan bertransaksi online Investasi & Asuransi Percayakan perlindungan diri Anda dan keluarga serta investasi dengan berbagai produk investasi & asuransi kami E-Banking Mandiri e-banking memungkinkan Anda bertransaksi dengan mudah kapan saja dan dimana saja Pengiriman Uang Layanan pengiriman dan penerimaan uang secara mudah dan aman di seluruh dunia Smart Branch Sebuah dedikasi Bank Mandiri bagi nasabah tercinta dengan terus meningkatkan kenyamanan dan memberikan pengalaman terbaik",
+      "forms": [
+        {
+          "action": "https://www.bankmandiri.co.id/home?p_p_id=Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6&p_p_lifecycle=1&p_p_state=normal&p_p_mode=view&_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_javax.portlet.action=mandiriSearchAction&p_auth=hRDXgBJT",
+          "fields": [
+            {
+              "type": "text",
+              "name": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "id": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "label": null,
+              "placeholder": "Ketik untuk mencari",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": "https://www.bankmandiri.co.id/home?p_p_id=Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6&p_p_lifecycle=1&p_p_state=normal&p_p_mode=view&_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_javax.portlet.action=mandiriSearchAction&p_auth=hRDXgBJT",
+          "fields": [
+            {
+              "type": "text",
+              "name": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "id": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "label": null,
+              "placeholder": "Ketik untuk mencari",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": "#",
+          "fields": []
+        }
+      ],
+      "imageAlts": [
+        "Home Banner",
+        "Home Banner",
+        "Home Banner",
+        "Home Banner",
+        "Home Banner",
+        "Mandiri Featured Product",
+        "Mandiri Featured Product",
+        "Mandiri Featured Product",
+        "News Image",
+        "News Image",
+        "News Image",
+        "Product",
+        "Pop Up Icon"
+      ],
+      "capturedAt": "2026-10-22T07:21:04.814Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 129113
+    }
+  },
+  {
+    "id": "checkout-bhinneka",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": false,
+    "source": "official public page, static GET capture 2026-10-22 (page text shortened to 1500 chars)",
+    "collectedAt": "2026-10-22T07:21:06.502Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.bhinneka.com/",
+      "domain": "bhinneka.com",
+      "title": "Bhinneka: Toko Online B2B Terlengkap untuk Kebutuhan Bisnis",
+      "lang": "id-ID",
+      "text": "​ Kategori ​ Technology & Communications Computer & Accessory Computer Computer Accessories Computer Component Networking Software UPS & Stabilizer Server Gadget & Accessory Handphone & Tablet Gadget Accessory Wearable Device Camera & Video Drone Digital Camera Digital Camcorder Tools & Operation Tools Hand Tools Power Tools Tool Kits Rough and Finishing Tools Pneumatic Tools Cutting and Crimping and Punching Tools Wrenches and Drivers Tool Accesories Safety & Security Personal Protective Equipment Fire Equipment Footwear and Footwear Accessories Respiratory Disposable and Chemical Resistant Clothing Safety Equipment Metal Detector & Access Barriers Measuring Alat & Instrumen Pengukur Dimensi Micrometers Jangka Sorong Thickness Levelling Blok Ukur Gages Height and Depth Gages Industrial Equipment Generators Containers, Storages and Packaging Industrial Pumps and Compressors Industrial Machineries and Accessories Health, Lab & Chemical Lab Equipment Surgical Product Treatment Product Patient Monitoring Product Medical Furniture Emergency Medical Kits Antiseptics Office & Operation Supplies Office Equipment Printer, Scanner & Supplies Peralatan Kantor Digital Visual Solution Office Supplies Digital Printing Printer Inkjet Digital Cutter Desktop Engraving 3D Laser Cutter & Engraving Electronic & Home TV & Home Audio Big Appliances Small Appliances Kitchen & Bath Furniture Home Decoration Solutions & Services Solutions ERP for Automotive and Manufacture ERP for Retail Sales",
+      "forms": [
+        {
+          "action": "/jual",
+          "fields": [
+            {
+              "type": "search",
+              "name": "cari",
+              "id": null,
+              "label": null,
+              "placeholder": "Cari produk untuk bisnis Anda...",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": "contact_name",
+              "id": "contact_name-308260",
+              "label": "Nama",
+              "placeholder": "Masukkan nama",
+              "autocomplete": null
+            },
+            {
+              "type": "email",
+              "name": "contact_email",
+              "id": "contact_email-308260",
+              "label": "Email",
+              "placeholder": "Masukkan email",
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "contact_phone",
+              "id": "contact_phone-308260",
+              "label": "Telepon",
+              "placeholder": "Contoh 812xxxxxx",
+              "autocomplete": null
+            },
+            {
+              "type": "select",
+              "name": "contact_email_to",
+              "id": "contact_email_to-308260",
+              "label": "Subjek",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "textarea",
+              "name": "contact_message",
+              "id": "contact_message-308260",
+              "label": "Pesan",
+              "placeholder": "Silakan sampaikan komentar, opini, masukan / saran, nama produk dan pertanyaan",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Bhinneka ",
+        "Technology & Communications",
+        "Technology & Communications",
+        "Tools & Operation",
+        "Tools & Operation",
+        "Office & Operation Supplies",
+        "Office & Operation Supplies",
+        "Solutions & Services",
+        "Solutions & Services",
+        "Bisnis & Review",
+        "Bisnis & Review",
+        "Bhinneka",
+        "Wasabi",
+        "wasabi",
+        "Bhinneka Top Sale",
+        "Bhinneka Top Sale",
+        "Laptop Pilihan Terbaik",
+        "Laptop Pilihan Terbaik",
+        "Beli TV Gratis Wall Bracket, Netflix Gift Card* & Soundbar*",
+        "Beli TV Gratis Wall Bracket, Netflix Gift Card* & Soundbar*",
+        "Logitech Kecepatan | Presisi | Performa Tinggi",
+        "Laptop & Accessories, Gadget, Camera & Drone, Big & Small Appliances",
+        "Server, Data Storage, Hyperconverged Infrastructure, Networking, UPS & Rack System",
+        "Business Applications,  Graphics & Design, Security, Virtualization, Microsoft 365, Google Workspace",
+        "Printer & Supplies, Scanner, Projector, Professional Display, Office Furniture",
+        "Kerja di Mana Saja - Mengapa Bisnis Memilih Creative Cloud for Teams?",
+        "Kerja di Mana Saja - Pilihan Laptop Terbaik untuk Anda yang Dinamis",
+        "Kerja di Mana Saja - Mengapa Kolaborasi Kerja Sangat Penting?",
+        "Ruang Meeting - Optimalisasi Ruang Meeting dengan Teknologi Canggih",
+        "Ruang Meeting - www.bhinneka.com/blog/pengertian-proyektor-short-throw-dan-proyektor-ultra-short-throw/",
+        "Kantor - Perlunya Melakukan Pemeliharaan Kendaraan Operasional",
+        "Kantor - Lebih Efisien dengan DAAS (Device-as-a-Service)",
+        "Kantor - CCTY & IP CAMERA untuk Perlindungan Area Bisnis",
+        "Murah of The Week",
+        "Murah of The Week",
+        "Bangga Buatan Indonesia",
+        "Bitdefender Trade UP Challenge",
+        "Bitdefender Trade UP Challenge",
+        "Paket Kustomisassi Smart Meeting Room",
+        "Paket Kustomisassi Smart Meeting Room",
+        "Beralih ke Software Original",
+        "Beralih ke Software Original",
+        "Tautan Google Play Store",
+        "Facebook",
+        "Twitter",
+        "Instagram",
+        "Youtube",
+        "Blog",
+        "Tautan Google Play Store",
+        "Facebook"
+      ],
+      "capturedAt": "2026-10-22T07:21:06.498Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 329666
+    }
+  },
+  {
+    "id": "gov-kemenkeu",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": false,
+    "source": "official public page, static GET capture 2026-10-22 (page text shortened to 1500 chars)",
+    "collectedAt": "2026-10-22T07:21:07.045Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.kemenkeu.go.id/",
+      "domain": "kemenkeu.go.id",
+      "title": "Kementerian Keuangan Republik Indonesia",
+      "lang": "id",
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:21:07.044Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 25866
+    }
+  },
+  {
+    "id": "popular-merdeka",
+    "label": "legit",
+    "tags": [
+      "popular",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": false,
+    "source": "official public page, static GET capture 2026-10-22 (page text shortened to 1500 chars)",
+    "collectedAt": "2026-10-22T07:21:07.771Z",
+    "notes": "static HTML has 2 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.merdeka.com/",
+      "domain": "merdeka.com",
+      "title": "Berita Terkini Indonesia & Dunia Hari Ini - merdeka.com",
+      "lang": "id",
+      "text": "Merdeka Iklan - Scroll ke bawah untuk melanjutkan Menu Tanya apapun tentang artikel ini... News Politik Ekonomi Artis Trending Teknologi Oto Dunia Cek Fakta Sehat Sport Foto Gaya Bolasport Asia Cuma Dapat Modal Global 30 Persen, Padahal Sumbang 60 Persen Ekonomi Dunia 38 menit yang lalu KPK Ungkap Alasan Belum Cekal Nusron Wahid ke Luar Negeri 1 jam yang lalu Danantara Borong Saham BUMN 1 jam yang lalu Mabes TNI Respons Prajurit Diduga Terlibat Korupsi Dana Bencana BNPB 4 jam yang lalu BNPB soal Tawaran Asing Bantu Padamkan Karhutla: Kita Usaha Sendiri Dulu 4 jam yang lalu Advertisement Terpopuler Gen Z Berburu Kerja: Ketika Pengalaman Jadi Tantangan 6 menit yang lalu Bandara King Fahd Diserang, Otoritas Arab Saudi Ungkap Korban dan Kerusakan 8 menit yang lalu Pemprov DKI Siapkan 12 Ribu Lowongan Kerja, Begini Cara Daftarnya 9 menit yang lalu Pemilik Toko Emas di Jember Dibacok, Perampok Kabur Naik Minibus Putih 13 menit yang lalu GPM Gelar Serentak di 38 Provinsi, Ada Beras Gratis dan Voucher 15 menit yang lalu Selengkapnya Loading video... Diduga Tak Sesuai Label Gizi, 5 Merek Beras Disita! Kerugian Capai Rp 89 Triliun 00:40 00:58 01:43 01:03 00:32 00:56 00:46 00:36 Menakar Fiskal & Moneter Bagaimana Cara Mengetahui QRIS Terindikasi Judi Online? 4 jam yang lalu Marak QRIS Disalahgunakan Buat Judol, BI Ancam Cabut Izin PJP Nakal 19 jam yang lalu BI Pangkas GWM 2 Persen, Likuiditas Perbankan Bertambah Rp190 Triliun 19 jam yang lalu Lima Hari ISEF 2026: Dari Membangun",
+      "forms": [
+        {
+          "action": "https://www.merdeka.com/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": null,
+              "label": "Cari Berita",
+              "placeholder": null,
+              "autocomplete": "off"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Buku Merdeka Vol.9",
+        "Merdeka Logo",
+        "Asia Cuma Dapat Modal Global 30 Persen, Padahal Sumbang 60 Persen Ekonomi Dunia",
+        "KPK Ungkap Alasan Belum Cekal Nusron Wahid ke Luar Negeri",
+        "Danantara Borong Saham BUMN",
+        "Mabes TNI Respons Prajurit Diduga Terlibat Korupsi Dana Bencana BNPB",
+        "BNPB soal Tawaran Asing Bantu Padamkan Karhutla: Kita Usaha Sendiri Dulu",
+        "enamplus",
+        "Amarah Trump Tiba-Tiba Meledak Depan Jurnalis",
+        "Bikin Melongo! Pemotor Santai Tangkap Ular Pakai Kaki di Tengah Jalan",
+        "Dugaan Pembatasan Konten Karhutla, Menteri Komdigi Buka Suara",
+        "Hantam Pasar, Serangan Drone Tewaskan 73 Orang",
+        "Terekam CCTV Detik-Detik Gerobak Bakso Meledak",
+        "Ribuan Tikus Dianggap Suci di Kuil India",
+        "CCTV Rekam Momen Mengejutkan Beruang Santai di Perpustakaan!",
+        "Kondisi Kim Jong Un Usai Dirumorkan Meninggal Dunia",
+        "Menakar Fiskal & Moneter",
+        "Menakar Fiskal & Moneter",
+        "Bagaimana Cara Mengetahui QRIS Terindikasi Judi Online?",
+        "Marak QRIS Disalahgunakan Buat Judol, BI Ancam Cabut Izin PJP Nakal",
+        "BI Pangkas GWM 2 Persen, Likuiditas Perbankan Bertambah Rp190 Triliun",
+        "Lima Hari ISEF 2026: Dari Membangun Ekosistem hingga Merayakan Gerakan",
+        "Utang Luar Negeri RI Tembus Rp 8.242 Triliun per Agustus 2026",
+        "Rupiah Nyaris Sentuh Rp18.000 per Dolar AS, Ekonom Beri Saran untuk Bank Indonesia",
+        "Inklusi Asuransi RI Masih Rendah, AAJI Ungkap Tantangan Utama",
+        "Sandwich Generation Wajib Tahu, Ini Cara Amankan Gaji",
+        "Gaji Cepat Habis Meski Tak Banyak Belanja? Cek Biaya Tersembunyi saat Berangkat Kerja",
+        "Antrean BBM Mengancam Isi Dompet, 5 Cara Jaga Uang Bulanan Tak Jebol",
+        "DPR Dorong Santri Melek Finansial Demi Masa Depan",
+        "Tips untuk Gen Z Lawan FOMO",
+        "Bukan Tak Paham Uang, Ini Musuh Utama Keuangan Gen Z",
+        "Fenomena FOMO Spending Gen Z: Bukan Kurang Paham Uang, Tapi Sulit 'Mengerem' Diri",
+        "Menilik Sektor Riil dari Dekat",
+        "Menilik Sektor Riil dari Dekat",
+        "Petani Bali Garap Sawah Pakai Surya dan Mikrohidro, Siap Dipamerkan ke Delegasi ASEAN",
+        "Hasil Panen Petani Bulutana Melonjak Hingga 7 Ton dan 3 Kali Setahun, Ini Rahasianya",
+        "Media Tanam Apa yang Paling Subur untuk Tanaman Cabai? Ini 6 Rekomendasi Terbaik",
+        "BBRMP Maluku Pantau Program Irigasi Perpompaan di Tual, Temukan Kendala Air",
+        "Pemkab Pasaman Barat Optimalkan Konservasi Air dan Dam Parit Pasca Bencana",
+        "Kadin Indonesia Dorong Ekspor Produk Pertanian dan UMKM ke Jepang, Sasar Pasar Strategis",
+        "Gen Z Berburu Kerja: Ketika Pengalaman Jadi Tantangan",
+        "Pemilik Toko Emas di Jember Dibacok, Perampok Kabur Naik Minibus Putih",
+        "Kecelakaan Maut Mobilio Tabrak Pikap di Rasuna Said, 1 Orang Tewas",
+        "Pemerintah Buka Peluang Kampus Turun Tangan Atasi Karhutla",
+        "KPK Ungkap Alasan Belum Cekal Nusron Wahid ke Luar Negeri",
+        "Analisis SMRC: Dedi Mulyadi Paling Banyak Didukung, Tapi Belum Tentu Maju Capres",
+        "Dukung Pemulangan Aktivis Greenpeace, DPR Tekankan Kebebasan Berpendapat",
+        "Survei Capres SMRC Terbaru: Ini Hasil Head to Head AHY vs Gibran",
+        "Menuju Pemilu 2029, PDIP Mulai Dekati Pemilih Gen Z",
+        "PDIP Pecat Bupati Klaten Usai jadi Tersangka Korupsi"
+      ],
+      "capturedAt": "2026-10-22T07:21:07.768Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED",
+        "https://www.vidio.com/embed/9710789-diduga-tak-sesuai-label-gizi-5-merek-beras-disita-kerugian-capai-rp-89-triliun?player_only=REDACTED&mute=REDACTED&autoplay=REDACTED&live_chat=REDACTED"
+      ],
+      "bytes": 362991
+    }
   }
 ]

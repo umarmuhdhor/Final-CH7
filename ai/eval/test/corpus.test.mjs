@@ -212,3 +212,19 @@ test("parseHtml redacts query values and fragments of iframe URLs, relative ones
     const { meta } = parseHtml(html, { url: "https://x.site/" });
     assert.deepEqual(meta.iframes, ["https://cdn.x/p?id=REDACTED&autoplay=REDACTED", "/frame.php?u=REDACTED", "/plain"]);
 });
+
+// ---------- mark-redacted (owner tool) ----------
+import { markRedacted } from "../tools/mark-redacted.mjs";
+test("markRedacted sets the flag only on real samples without findings", () => {
+    const real = { ...clean(), id: "r1", redacted: false };
+    const dirty = { ...withText("hubungi budi@example.com"), id: "r2", redacted: false };
+    const synth = { ...clean(), id: "r3", synthetic: true, redacted: false };
+    const other = { ...clean(), id: "r4", redacted: false };
+    const out = markRedacted([real, dirty, synth, other], ["r1", "r2", "r3"]);
+    assert.deepEqual(out, { marked: ["r1"], refused: ["r2"] });
+    assert.equal(real.redacted, true);
+    assert.equal(dirty.redacted, false);
+    assert.equal(synth.redacted, false);
+    assert.equal(other.redacted, false, "not listed, not touched");
+    assert.deepEqual(markRedacted([other], null).marked, ["r4"]);
+});

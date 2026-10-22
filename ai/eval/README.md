@@ -59,5 +59,41 @@ Known limits: it reads static HTML only (content added by scripts is not seen), 
 - Check the licence of any feed you copy from, and write the source in `source`.
 - Keep a part of the set (about 30%) out of weight tuning, and look at it only at the end, or M6 will just memorise the samples.
 
-## What is here now
-13 seed samples: one real scam page (`lphone-login`), three domains from `contracts/fixtures/`, four official/popular pages (URL only) and traps for false positives (common words, a shop that sells iPhones, a 5-letter word). Everything marked `synthetic` is invented. The real work is collecting 50+ of each.
+## Sources and licences
+| Source | Licence / terms | Used for |
+|---|---|---|
+| Hand-written synthetic scam and trap samples (`synthetic: true`) | ours, repo licence | 49 scam, 12 legit traps |
+| `lphone-login` (one real scam page, captured earlier) | a single page kept as a text snapshot, fields stripped of values | 1 scam |
+| Public pages of Indonesian banks, shops, government sites, news (`legit/real.json`, `legit/seed.json`) | pages fetched once with `tools/capture.mjs` on 2026-10-22, only a short text excerpt (1500 chars), form field names and image alt text kept, for measurement only | 39 legit |
+| OpenPhish community feed | **not used**: terms forbid redistribution and derivative works without written permission | - |
+| PhishTank | **not used**: no licence stated on its developer page (refers to a Cisco EULA) | - |
+| URLhaus | **not used**: malware URLs, not phishing; no licence stated on its page | - |
+
+Captured legit pages are not copied in full: no raw HTML is stored, text is cut to 1500 characters, query values and fragments are replaced by `REDACTED`.
+
+## Composition (D-imelda-20) and live counts
+Run `node ai/eval/tools/check-corpus.mjs` for the current numbers. Each sample carries exactly one category tag.
+
+| Class | Category tag | Target |
+|---|---|---|
+| scam | `bank` 10, `e-wallet` 8, `courier` 8, `prize` 8, `government` 8, `apple` 4, `other` 4 | 50 |
+| legit | `bank-login` 8, `checkout` 12, `official-gov` 8, `popular` 10, `lookalike-trap` 12 | 50 |
+
+Extra tags: `clean-domain-scam` (scam on a neutral domain), `lookalike-brand`, `brand-plus-keyword`, `cheap-tld`, `credential-iframe`, `bank-logo-checkout`, `brand-mention-blog`, `shared-host`, `social-login`, `kyc-legit`, `news-about-scam`, `school-login`, `insurance`.
+
+**Real vs synthetic.** Synthetic samples are written by us, so they cannot prove recall: `run.mjs` prints real and synthetic separately, and only real samples may back a claim about the mandate targets. Today there is one real scam page, so the scam-side targets cannot be proven from real data until more real scam pages are available under a clear licence (see D-imelda-19, TODO A4).
+
+## Holdout (D-imelda-21)
+About 30% of the samples carry the tag `holdout`. It is **derived**, never picked: `sha256("<seed>:<id>")` read as a number in [0,1) is below 0.3. The seed is random and recorded in `data/HOLDOUT.json`; it never changes (changing it would move holdout samples into tuning). `tools/assign-holdout.mjs` writes the tags, `tools/check-corpus.mjs` fails when a tag disagrees with the seed. Weights are tuned on non-holdout samples only; the holdout is looked at once, at the end of phase 07.
+
+## Adding samples
+1. `node ai/eval/tools/capture.mjs <url> --label legit --id slug --source "..." --tags <category> --out <empty scratch dir>` (public hosts only: private addresses, odd ports and redirects to them are refused). Never use it on a scam URL; write a synthetic sample instead.
+2. Move the sample into `data/`, run `node ai/eval/tools/assign-holdout.mjs`.
+3. `node ai/eval/tools/check-redaction.mjs` must report 0 findings.
+4. Read the sample, then the owner runs `node ai/eval/tools/mark-redacted.mjs --confirm-read --ids <id>`. An agent never sets `redacted: true` on a real sample.
+5. `node ai/eval/tools/check-corpus.mjs` shows whether the set is complete.
+
+## Known limits
+- Static HTML only: pages built by JavaScript (several bank and shop shells) come out with little or no text and no forms, so they exercise layers 1-2 only.
+- `new_domain` is not measured here: scam domains must not be sent to a registry.
+- Hard cases kept on purpose: `trap-fintech-kyc-sah` (a legitimate KYC page asks for KTP and OTP like a scam) and `credential-iframe` scam pages (the login form is invisible to the snapshot).
