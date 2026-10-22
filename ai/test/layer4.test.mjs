@@ -114,14 +114,54 @@ test("gate: no form, official site, or provisional score < 15 -> the provider is
     assert.equal(f.calls.length, 0);
 });
 
-test("gate: a form with a field and score >= 15 (from local signals too) calls once", async () => {
+test("gate: a form with a field and a rule score >= 15 calls once; client-sent localSignals never open the gate", async () => {
     const f = fake(() => reply(verdict()));
     const app = appWith(f);
-    const local = [{ id: "brand_plus_keyword", layer: 2, weight: 14, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } }];
-    await post(app, { snapshot: page("https://toko.example.com/", [field({ name: "alamat" })]), localSignals: local });
-    assert.equal(f.calls.length, 0, "14 < 15");
+    const inflated = Array.from({ length: 30 }, () => ({ id: "db_match", layer: 1, weight: 100, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } }));
+    await post(app, { snapshot: page("https://toko.example.com/", [field({ name: "alamat" })]), localSignals: inflated });
+    assert.equal(f.calls.length, 0, "client numbers do not decide who costs money");
     await post(app, { snapshot: PIN(), localSignals: [] });
     assert.equal(f.calls.length, 1);
+});
+
+test("per-client limit: one IP cannot drive more than 20 provider calls an hour", async () => {
+    const f = fake(() => reply(verdict()));
+    const app = appWith(f);
+    const ip = (a) => ({ headers: { "cf-connecting-ip": a } });
+    for (let i = 0; i < 25; i++) await post(app, { snapshot: PIN(), localSignals: [] }, ip("203.0.113.1"));
+    assert.equal(f.calls.length, 20);
+    await post(app, { snapshot: PIN(), localSignals: [] }, ip("203.0.113.2"));
+    assert.equal(f.calls.length, 21);
+});
+
+test("hosts that are not public domains (IP, intranet) are never sent", async () => {
+    const f = fake(() => reply(verdict()));
+    const app = appWith(f);
+    for (const url of ["http://192.168.1.1/login", "http://nas.local/login", "http://localhost/x", "http://[::1]/x"]) {
+        await post(app, { snapshot: page(url, [field({ name: "pin" })]), localSignals: [] });
+    }
+    assert.equal(f.calls.length, 0);
+});
+
+test("only the registrable domain is sent, and emails / long digit runs in title and labels are masked", async () => {
+    const f = fake(() => reply(verdict()));
+    const snap = page("https://login.verif.shoo-fixture.xyz/a", [field({ name: "pin", label: "PIN untuk budi@mail.test" })], { title: "Halo Budi, pesanan 88123456 siap, telp 0812 3456 7890" });
+    await post(appWith(f), { snapshot: snap, localSignals: [] });
+    const user = f.calls[0].body.messages[1].content;
+    assert.ok(user.includes('"site":"shoo-fixture.xyz"'));
+    assert.ok(!user.includes("login.verif"));
+    for (const leak of ["budi@mail.test", "88123456", "0812 3456 7890"]) assert.ok(!user.includes(leak), leak);
+});
+
+test("provider response over 64 KB is ignored", async () => {
+    const f = fake(() => new Response("x".repeat(70_000), { status: 200 }));
+    const body = await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json();
+    assert.deepEqual(ids(body.signals), ["asks_pin"]);
+});
+
+test("the checker exposes prompt version and model for eval records (A13)", () => {
+    const c = createRealityCheck({ config: CONFIG, fetch: async () => null });
+    assert.deepEqual(c.meta, { promptVersion: PROMPT_VERSION, model: "fake-model" });
 });
 
 test("what leaves the server: model, temperature 0, host, title, field labels and rule ids only; never text, values or the URL path", async () => {
@@ -141,7 +181,7 @@ test("what leaves the server: model, temperature 0, host, title, field labels an
     assert.ok(call.body.max_tokens <= 300);
     const sent = JSON.stringify(call.body);
     for (const leak of ["PRIVATE-BODY-TEXT", "1234567890", "PRIVATE-ALT", "/secret/path", "ABC123", "test-key-NOT-REAL"]) assert.ok(!sent.includes(leak), `leaked ${leak}`);
-    assert.ok(sent.includes("verif.shoo-fixture.xyz") && sent.includes("Cek hadiah anda") && sent.includes("PIN m-banking") && sent.includes("asks_pin"));
+    assert.ok(sent.includes("shoo-fixture.xyz") && sent.includes("Cek hadiah anda") && sent.includes("PIN m-banking") && sent.includes("asks_pin"));
 });
 
 test("prompt injection: page words are data, in the user message only; the system prompt is fixed", async () => {
@@ -172,7 +212,8 @@ test("evidence is kept only when it is an exact substring of the page title/text
     const snap = page(SCAM_URL, [field({ name: "pin" })], { title: "Klaim Hadiah Anda Sekarang", text: "Masukkan PIN untuk klaim" });
     const cases = [
         ["klaim hadiah anda", "Klaim Hadiah Anda"],
-        ["masukkan pin", "Masukkan PIN"],
+        ["masukkan pin", undefined], // text is client-supplied and the model never saw it: only the title counts
+        ["klaim", undefined], // too short to be evidence
         ["klaim hadiah gratis", undefined],
         ["Claim your prize", undefined],
     ];
@@ -199,11 +240,12 @@ test("config from env: all of key, model, base URL needed; otherwise layer 4 is 
     assert.equal(readConfig({}), null);
     assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m" }), null);
     assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "http://insecure.test" }), null, "https only");
-    const c = readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://x.test/v1/", LLM_TIMEOUT_MS: "9000", LLM_DAILY_CAP: "10" });
-    assert.equal(c.baseUrl, "https://x.test/v1");
+    for (const bad of ["https://169.254.169.254/v1", "https://localhost/v1", "https://10.0.0.5/v1", "https://svc.internal/v1"]) assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: bad }), null, bad);
+    const c = readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com/v1/", LLM_TIMEOUT_MS: "9000", LLM_DAILY_CAP: "10" });
+    assert.equal(c.baseUrl, "https://llm.example.com/v1");
     assert.equal(c.timeoutMs, 4000, "timeout is capped at the 4 s budget");
     assert.equal(c.dailyCap, 10);
-    assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://x.test", LLM_TIMEOUT_MS: "abc" }).timeoutMs, 4000);
+    assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com", LLM_TIMEOUT_MS: "abc" }).timeoutMs, 4000);
 });
 
 test("no key configured -> /analyze works as before and nothing is called", async () => {
@@ -215,7 +257,7 @@ test("no key configured -> /analyze works as before and nothing is called", asyn
 test("Worker env bindings configure layer 4 per request (c.env), still through the injected fetch", async () => {
     const f = fake(() => reply(verdict()));
     const app = createApp({ llmFetch: f.fetch });
-    const env = { LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://x.test/v1" };
+    const env = { LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com/v1" };
     const res = await app.request("/analyze", { method: "POST", body: JSON.stringify({ snapshot: PIN(), localSignals: [] }) }, env);
     assert.ok(ids((await res.json()).signals).includes("unreasonable_request"));
     assert.equal(f.calls[0].init.headers.authorization, "Bearer k");

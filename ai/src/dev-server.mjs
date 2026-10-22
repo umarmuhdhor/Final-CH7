@@ -10,9 +10,10 @@ import { fixtureSource } from "./blocklist/fixture.js";
 // Layer 4 (LLM) stays off unless ai/.env holds LLM_API_KEY, LLM_MODEL and LLM_BASE_URL (see .env.example).
 try {
     process.loadEnvFile(new URL("../.env", import.meta.url));
-} catch {
-    // no .env: layer 4 off
+} catch (error) {
+    if (error?.code !== "ENOENT") throw error; // a broken .env must be loud, a missing one means layer 4 off
 }
+const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_")));
 const app = createApp({ blocklistSource: fixtureSource, llmFetch: (...args) => fetch(...args), ...(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {}) });
 const port = Number(process.env.PORT) || 8787;
 
@@ -25,7 +26,7 @@ createServer(async (req, res) => {
             body: hasBody ? Readable.toWeb(req) : undefined,
             duplex: "half",
         });
-        const response = await app.fetch(request, process.env);
+        const response = await app.fetch(request, llmEnv);
         res.writeHead(response.status, Object.fromEntries(response.headers));
         res.end(Buffer.from(await response.arrayBuffer()));
     } catch {

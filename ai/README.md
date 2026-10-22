@@ -148,10 +148,10 @@ Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://`
 
 | Rule | Detail |
 |---|---|
-| Gate (D-imelda-05, proposal) | Not an official site, a form with at least one field, and layers 1-3 so far >= 15. Otherwise no call, no cost |
-| What the model sees | `site` (host), `title` (120 chars), up to 12 field labels, ids of rules that fired. Never page text, URL path/query, typed values or the key. Sent as JSON between `DATA_START` / `DATA_END`; the system prompt (`prompts/reality-check.js`, `reality-check.v1`) is a fixed string |
+| Gate (D-imelda-05, proposal) | Not an official site, a form with at least one field, and OUR rules' score >= 15 (numbers in `localSignals` from the client do not count), plus 20 calls per IP per hour. Otherwise no call, no cost |
+| What the model sees | `site` (registrable domain only; IPs and intranet names are never sent), `title` (120 chars), up to 12 field labels; emails and long digit runs are masked, ids of rules that fired. Never page text, URL path/query, typed values or the key. Sent as JSON between `DATA_START` / `DATA_END`; the system prompt (`prompts/reality-check.js`, `reality-check.v1`) is a fixed string |
 | Answer | One JSON object `{page_type, asks[], reasonable, confidence, evidence}`; anything off-schema is ignored (200, layer 3 only) |
-| Signal | `reasonable=false`, `confidence >= 0.6`, at least one `asks` -> `unreasonable_request`, layer 4, weight 30, fixed bilingual labels. `evidence` only if it is an exact substring of the title/text (original casing), else omitted |
+| Signal | `reasonable=false`, `confidence >= 0.6`, at least one `asks` -> `unreasonable_request`, layer 4, weight 30, fixed bilingual labels. `evidence` only if it is an exact substring of the title, at least 8 characters (original casing), else omitted |
 | Only adds | Layer 4 never lowers a score (D-imelda-06). A model that says "reasonable" changes nothing |
 | Failure | Timeout (<= 4 s, hard even if the provider ignores abort), HTTP error, bad JSON, daily cap reached -> layer 3 answer, no error, provider text never forwarded |
 | Cost breaker | `LLM_DAILY_CAP` calls per UTC day per Worker isolate (in memory). The real cap is the spend limit in the provider dashboard |

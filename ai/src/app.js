@@ -57,7 +57,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const checked = validateRequest(body);
         if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         const checker = llm ?? llmFor(c.env);
-        return c.json({ signals: await analyze(checked.snapshot, { rdap, llm: checker, localSignals: checked.localSignals }) });
+        return c.json({ signals: await analyze(checked.snapshot, { rdap, llm: checker, client: clientKey(c.req.raw) }) });
     });
 
     app.get("/public-blocklist", async (c) => {

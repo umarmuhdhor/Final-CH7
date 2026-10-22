@@ -1,3 +1,5 @@
+import { isPublicHostname } from "../rdap/domain.js";
+
 // Layer 4 settings come from environment variables only (Worker secrets / ai/.env). Missing or unsafe -> layer 4 is off.
 export const MAX_TIMEOUT_MS = 4000; // plan/imelda/ref/R1 §3: LLM budget
 const DEFAULT_DAILY_CAP = 5000;
@@ -12,6 +14,13 @@ export function readConfig(env) {
     const base = env?.LLM_BASE_URL;
     if (!apiKey || !model || !base) return null;
     if (!base.startsWith("https://")) return null; // the key must never travel over plain HTTP
+    let host;
+    try {
+        host = new URL(base).hostname;
+    } catch {
+        return null;
+    }
+    if (!isPublicHostname(host)) return null; // never an IP, localhost or intranet name: the key goes to this host
     const timeout = Number(env.LLM_TIMEOUT_MS);
     const cap = Number(env.LLM_DAILY_CAP);
     return {

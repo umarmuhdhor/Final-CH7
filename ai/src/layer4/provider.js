@@ -2,6 +2,8 @@
 // Model, base URL and key come from config. It returns the model's text or null; it never throws and never
 // forwards anything the provider said about an error (SECURITY A10).
 
+const MAX_RESPONSE_BYTES = 64 * 1024;
+
 /**
  * @param {{ config: object, fetch: typeof fetch }} deps
  * @returns {(messages: object[], signal: AbortSignal) => Promise<string | null>}
@@ -23,7 +25,11 @@ export function createProvider({ config, fetch }) {
                 redirect: "error", // the key must not follow a redirect to another host
             });
             if (!res.ok) return null;
-            const body = await res.json();
+            const declared = Number(res.headers.get("content-length"));
+            if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) return null;
+            const raw = await res.text();
+            if (raw.length > MAX_RESPONSE_BYTES) return null;
+            const body = JSON.parse(raw);
             const content = body?.choices?.[0]?.message?.content;
             return typeof content === "string" ? content : null;
         } catch {
