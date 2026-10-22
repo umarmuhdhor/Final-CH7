@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "
 import { randomBytes } from "node:crypto";
 import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import { holdoutOf, HOLDOUT_FRACTION, HOLDOUT_TAG } from "../corpus.mjs";
 
 const dataDir = fileURLToPath(new URL("../data", import.meta.url));
@@ -54,4 +55,4 @@ function main() {
     console.log(`seed ${seed}: ${changed} file(s) updated`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

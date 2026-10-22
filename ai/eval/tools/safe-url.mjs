@@ -13,7 +13,9 @@ function v4(ip) {
         (a === 172 && b >= 16 && b <= 31) ||
         (a === 192 && b === 168) ||
         (a === 192 && b === 0 && c === 0) ||
-        (a === 198 && (b === 18 || b === 19))
+        (a === 198 && (b === 18 || b === 19)) ||
+        (a === 192 && b === 0 && c === 2) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113) || // TEST-NET
+        (a === 192 && b === 88 && c === 99) // 6to4 relay
     );
 }
 
@@ -35,7 +37,10 @@ export function isPrivateAddress(ip) {
     const g = groups6(ip.toLowerCase());
     if (g.every((x, i) => (i === 7 ? x <= 1 : x === 0))) return true; // :: and ::1
     if (g.slice(0, 5).every((x) => x === 0) && g[5] === 0xffff) return v4(`${g[6] >> 8}.${g[6] & 255}.${g[7] >> 8}.${g[7] & 255}`); // ::ffff:a.b.c.d
-    return (g[0] & 0xfe00) === 0xfc00 || (g[0] & 0xffc0) === 0xfe80 || (g[0] & 0xff00) === 0xff00 || (g[0] === 0x2001 && g[1] === 0x0db8);
+    if (g.slice(0, 6).every((x) => x === 0)) return v4(`${g[6] >> 8}.${g[6] & 255}.${g[7] >> 8}.${g[7] & 255}`); // ::a.b.c.d (IPv4-compatible)
+    if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return v4(`${g[6] >> 8}.${g[6] & 255}.${g[7] >> 8}.${g[7] & 255}`); // NAT64
+    if (g[0] === 0x2002) return v4(`${g[1] >> 8}.${g[1] & 255}.${g[2] >> 8}.${g[2] & 255}`); // 6to4
+    return (g[0] & 0xffc0) === 0xfec0 || (g[0] & 0xfe00) === 0xfc00 || (g[0] & 0xffc0) === 0xfe80 || (g[0] & 0xff00) === 0xff00 || (g[0] === 0x2001 && g[1] === 0x0db8);
 }
 
 const defaultResolve = async (host) => (await lookup(host, { all: true })).map((r) => r.address);
@@ -52,7 +57,7 @@ export async function assertPublicUrl(raw, { resolve = defaultResolve } = {}) {
     if (!["http:", "https:"].includes(u.protocol)) throw new Error(`only http(s), not ${u.protocol}`);
     if (u.username || u.password) throw new Error("URLs with credentials are refused");
     if (u.port) throw new Error(`port ${u.port} is refused (only the default 80/443)`);
-    const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase().replace(/\.$/, ""); // "localhost." is localhost
     if (isIP(host)) {
         if (isPrivateAddress(host)) throw new Error(`${host} is a private or reserved address`);
         return u;

@@ -5,6 +5,7 @@ import { findPersonalData } from "../tools/check-redaction.mjs";
 import { holdoutOf, validateCorpus, HOLDOUT_FRACTION } from "../corpus.mjs";
 import { isPrivateAddress, assertPublicUrl } from "../tools/safe-url.mjs";
 import { summarize } from "../lib.mjs";
+import { fileURLToPath } from "node:url";
 
 const clean = () => ({
     id: "clean-1",
@@ -141,10 +142,26 @@ test("validateCorpus rejects a form field with a value and unredacted personal d
     assert.match(p, /scam-8/);
 });
 
-test("validateCorpus counts samples per tag", () => {
+test("validateCorpus counts category tags per class and wants exactly one category per sample", () => {
     const c = corpus(50, 50);
-    assert.deepEqual(validateCorpus(c, { seed: "s", minPerTag: { "cat-a": 100 } }), []);
-    assert.ok(validateCorpus(c, { seed: "s", minPerTag: { "cat-a": 101 } }).some((x) => /cat-a/.test(x)));
+    const comp = (n) => ({ scam: { "cat-a": n }, legit: { "cat-a": n } });
+    assert.deepEqual(validateCorpus(c, { seed: "s", composition: comp(50) }), []);
+    assert.ok(validateCorpus(c, { seed: "s", composition: comp(51) }).some((x) => /cat-a/.test(x)));
+    // a scam sample tagged with a legit-only category must not count towards the legit total
+    const d = corpus(50, 50);
+    d[0].tags = ["cat-b"];
+    const cross = { scam: { "cat-a": 49, "cat-b": 1 }, legit: { "cat-a": 50 } };
+    assert.deepEqual(validateCorpus(d, { seed: "s", composition: cross }), []);
+    assert.ok(validateCorpus(d, { seed: "s", composition: { scam: { "cat-a": 50 }, legit: { "cat-a": 50, "cat-b": 1 } } }).some((x) => /cat-b/.test(x)), "scam sample must not fill a legit category");
+    d[1].tags = ["cat-a", "cat-b"];
+    assert.ok(validateCorpus(d, { seed: "s", composition: cross }).some((x) => /scam-1.*exactly one/.test(x)));
+});
+
+test("validateCorpus can require a real share per class", () => {
+    const c = corpus(50, 50);
+    for (let i = 0; i < 30; i++) c[50 + i].synthetic = true; // 20 of 50 legit are real = 40%
+    assert.ok(validateCorpus(c, { seed: "s", minRealShare: { legit: 0.6 } }).some((x) => /legit.*real/.test(x)));
+    assert.deepEqual(validateCorpus(c, { seed: "s", minRealShare: { legit: 0.4 } }), []);
 });
 
 // ---------- safe capture URLs ----------
@@ -233,4 +250,142 @@ test("markRedacted sets the flag only on real samples without findings", () => {
 import { probeAnalyze } from "../lib.mjs";
 test("probeAnalyze throws when /analyze is unreachable instead of letting every sample silently score layers 1-2", async () => {
     await assert.rejects(() => probeAnalyze("http://127.0.0.1:1"), /analyze/i);
+});
+
+// ======== review fixes (phase 04) ========
+import { redact } from "../tools/snapshot.mjs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, symlinkSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createServer } from "node:http";
+import { analyzeRemote, strictExitCode, visibleRows } from "../lib.mjs";
+
+test("redact and the checker fold fullwidth/Arabic digits and catch landlines, dotted NIK and obfuscated e-mail", () => {
+    const cases = [
+        ["budi [at] gmail.com", /\[email\]/],
+        ["budi (at) gmail (dot) com", /\[email\]/],
+        ["user\uFF20gmail.com", /\[email\]/],
+        ["telp 021-5551234", /\[phone\]/],
+        ["telp (021) 5551234", /\[phone\]/],
+        ["NIK 3171.0101.0101.0001", /\[number\]/],
+        ["NIK \uFF13\uFF11\uFF17\uFF11\uFF10\uFF11\uFF10\uFF11\uFF10\uFF11\uFF10\uFF11\uFF10\uFF10\uFF10\uFF11", /\[number\]/],
+        ["wa \u0660\u0668\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669\u0660", /\[phone\]/],
+        ["wa 0 8 1 2 3 4 5 6 7 8 9 0", /\[(phone|number)\]/],
+    ];
+    for (const [input, want] of cases) {
+        assert.match(redact(input), want, `redact should mask: ${input}`);
+        assert.ok(findPersonalData(withText(input)).length > 0, `checker should flag: ${input}`);
+    }
+    assert.equal(redact("Rp 150.000 pukul 08.30 tahun 2026"), "Rp 150.000 pukul 08.30 tahun 2026");
+});
+
+test("form action URLs are redacted at capture and checked by the checker", () => {
+    const { snapshot } = parseHtml('<form action="https://x.site/post.php?sid=abc123&u=budi@x.com#f"><input name="a"></form>', { url: "https://x.site/" });
+    assert.equal(snapshot.forms[0].action, "https://x.site/post.php?sid=REDACTED&u=REDACTED");
+    const s = clean();
+    s.snapshot.forms[0].action = "https://bank.example/login?p_auth=hRDXgBJT";
+    assert.ok(findPersonalData(s).some((p) => /action/.test(p)));
+    s.snapshot.forms[0].action = "https://bank.example/login?p_auth=REDACTED";
+    assert.deepEqual(findPersonalData(s), []);
+});
+
+test("a non-http snapshot.url is still scanned", () => {
+    const s = clean();
+    s.snapshot.url = "ftp://u:pw@h.example/?a=1";
+    assert.ok(findPersonalData(s).length > 0);
+});
+
+test("isPrivateAddress also covers IPv4-compatible, NAT64, 6to4, site-local and TEST-NET ranges", () => {
+    for (const ip of ["::127.0.0.1", "64:ff9b::7f00:1", "2002:7f00:1::", "fec0::1", "192.0.2.1", "198.51.100.5", "203.0.113.9", "::ffff:7f00:1"]) assert.equal(isPrivateAddress(ip), true, ip);
+    assert.equal(isPrivateAddress("64:ff9b::808:808"), false, "NAT64 of a public address");
+});
+
+test("assertPublicUrl strips a trailing dot before judging the host", async () => {
+    const pub = async () => ["93.184.216.34"];
+    for (const u of ["http://localhost./", "http://metadata.google.internal./", "http://printer.local./"]) await assert.rejects(() => assertPublicUrl(u, { resolve: pub }), u);
+});
+
+test("targets are judged on real samples only", () => {
+    const rows = [];
+    for (let i = 0; i < 50; i++) rows.push({ id: `s${i}`, label: "scam", score: 90, localMs: 1, signals: [], synthetic: true });
+    for (let i = 0; i < 50; i++) rows.push({ id: `l${i}`, label: "legit", score: 0, localMs: 1, signals: [], synthetic: false });
+    const m = summarize(rows, { remote: true });
+    assert.equal(m.targetsMet, null, "49+ synthetic scam rows cannot prove the targets");
+    assert.equal(m.realEnough, false);
+    for (let i = 0; i < 50; i++) rows[i].synthetic = false;
+    assert.equal(summarize(rows, { remote: true }).targetsMet, true);
+    rows[0].score = 10;
+    rows[1].score = 10;
+    rows[2].score = 10;
+    rows[3].score = 10;
+    rows[4].score = 10;
+    rows[5].score = 10; // 44/50 = 88% < 90%
+    assert.equal(summarize(rows, { remote: true }).targetsMet, false);
+});
+
+test("--strict only passes when the targets were actually met", () => {
+    assert.equal(strictExitCode({ targetsMet: true }), 0);
+    assert.equal(strictExitCode({ targetsMet: false }), 1);
+    assert.equal(strictExitCode({ targetsMet: null }), 2, "nothing was judged: that is not a pass");
+});
+
+test("analyzeRemote reports failures and drops malformed signals instead of scoring them", async () => {
+    let mode = "ok";
+    const server = createServer((req, res) => {
+        req.resume();
+        req.on("end", () => {
+            if (mode === "500") { res.statusCode = 500; return res.end("x"); }
+            const good = { id: "urgent_language", layer: 3, weight: 15, label: {}, labelSimple: {} };
+            const bad = mode === "nan" ? [{ id: "x", layer: 3, weight: "NaN" }, { id: "y", layer: 3 }] : [];
+            res.setHeader("content-type", "application/json");
+            res.end(JSON.stringify({ signals: [good, ...bad] }));
+        });
+    });
+    await new Promise((r) => server.listen(0, "127.0.0.1", r));
+    const base = `http://127.0.0.1:${server.address().port}`;
+    try {
+        assert.deepEqual((await analyzeRemote(base, { url: "https://a.site/" }, [])).ok, true);
+        mode = "500";
+        assert.equal((await analyzeRemote(base, { url: "https://a.site/" }, [])).ok, false);
+        mode = "nan";
+        const r = await analyzeRemote(base, { url: "https://a.site/" }, []);
+        assert.equal(r.ok, false, "malformed signals count as a failed call");
+        assert.deepEqual(r.signals.map((s) => s.id), ["urgent_language"]);
+    } finally {
+        server.close();
+    }
+    const m = summarize([{ id: "l", label: "legit", score: 0, localMs: 1, signals: [], remoteOk: false }], { remote: true });
+    assert.equal(m.remoteFailures, 1);
+});
+
+test("holdout rows are hidden unless asked for", () => {
+    const rows = [{ id: "a", tags: [] }, { id: "b", tags: ["holdout"] }];
+    assert.deepEqual(visibleRows(rows, { showHoldout: false }).map((r) => r.id), ["a"]);
+    assert.deepEqual(visibleRows(rows, { showHoldout: true }).map((r) => r.id), ["a", "b"]);
+});
+
+test("the CLI tools run when started through a symlink (a gate must not pass by doing nothing)", () => {
+    const base = mkdtempSync(join(tmpdir(), "eval-link-"));
+    const link = join(base, "linked-tools");
+    symlinkSync(fileURLToPath(new URL("../tools", import.meta.url)), link);
+    const dataDir = join(base, "data");
+    mkdirSync(dataDir);
+    writeFileSync(join(dataDir, "s.json"), JSON.stringify({ ...withText("budi@example.com"), id: "dirty" }));
+    let code = 0;
+    let out = "";
+    try {
+        out = execFileSync("node", [join(link, "check-redaction.mjs"), dataDir], { encoding: "utf8" });
+    } catch (e) {
+        code = e.status;
+        out = e.stdout;
+    }
+    assert.equal(code, 1, `expected exit 1, got ${code}: ${out}`);
+    assert.match(out, /dirty/);
+});
+
+test("run.mjs refuses an option that is missing its value", () => {
+    for (const opt of ["--analyze-url", "--tag", "--dir"]) {
+        assert.throws(() => execFileSync("node", [fileURLToPath(new URL("../run.mjs", import.meta.url)), opt], { stdio: "pipe" }), (e) => e.status === 2, opt);
+    }
 });

@@ -4,6 +4,7 @@
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 import { findPersonalData } from "./check-redaction.mjs";
 
 const dataDir = fileURLToPath(new URL("../data", import.meta.url));
@@ -38,7 +39,12 @@ function main() {
         console.error("usage: mark-redacted.mjs --confirm-read (--all | --ids a,b,c)   (only after you have read the files)");
         process.exit(2);
     }
-    const ids = argv.includes("--ids") ? argv[argv.indexOf("--ids") + 1].split(",") : null;
+    const idArg = argv.includes("--ids") ? argv[argv.indexOf("--ids") + 1] : null;
+    if (argv.includes("--ids") && (!idArg || idArg.startsWith("--"))) {
+        console.error("--ids needs a comma-separated list");
+        process.exit(2);
+    }
+    const ids = idArg ? idArg.split(",") : null;
     let total = 0;
     for (const file of jsonFiles(dataDir)) {
         const parsed = JSON.parse(readFileSync(file, "utf8"));
@@ -53,4 +59,4 @@ function main() {
     console.log(`${total} sample(s) marked redacted`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();
