@@ -3,9 +3,11 @@
 import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { createApp } from "./app.js";
+import { fixtureSource } from "./blocklist/fixture.js";
 
 // RDAP (new_domain) calls real registries, so it is off unless asked: SHOO_RDAP=1. Never point it at scam domains.
-const app = createApp(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {});
+// /public-blocklist serves invented fixture domains here (ai/data/public-blocklist.seed.json), never a real feed.
+const app = createApp({ blocklistSource: fixtureSource, ...(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {}) });
 const port = Number(process.env.PORT) || 8787;
 
 createServer(async (req, res) => {

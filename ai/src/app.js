@@ -1,4 +1,4 @@
-// POST /analyze (contracts/api.md). Stateless: nothing from a request is stored or logged.
+// POST /analyze and GET /public-blocklist (contracts/api.md). Stateless: nothing from a request is stored or logged.
 // The only cache is RDAP domain ages (domain + registration date, TTL in rdap/cache.js).
 // Authorization is accepted but never read: the AI service cannot verify device tokens in the MVP.
 import { Hono } from "hono";
@@ -8,14 +8,24 @@ import { validateRequest } from "./validate.js";
 import { analyze } from "./analyze.js";
 import { createMemoryCache } from "./rdap/cache.js";
 import { createRdapClient } from "./rdap/rdap.js";
+import { emptySource } from "./blocklist/source.js";
+import { createBlocklist } from "./blocklist/route.js";
+import { clientKey, createRateLimiter } from "./ratelimit.js";
+
+/** Per-IP limit for /public-blocklist: the extension asks every 6 h, so this is generous for a real client. */
+export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 1000 });
 
 /**
- * @param {{ fetch?: typeof fetch, cache?: object, now?: () => number, rdapTimeoutMs?: number }} [opts]
+ * @param {{ fetch?: typeof fetch, cache?: object, now?: () => number, rdapTimeoutMs?: number, blocklistSource?: object, rateLimit?: { limit: number, windowMs: number } }} [opts]
  *   fetch: network for RDAP (the Worker entry passes the real one). Without it new_domain is off, so tests never touch the network.
  *   cache: { get, set } for RDAP answers; defaults to an in-memory cache that lives as long as this app (one Worker isolate).
+ *   blocklistSource: where /public-blocklist gets its domains (blocklist/source.js). Default: an empty list.
+ *   rateLimit: per-IP limit for /public-blocklist.
  */
-export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs } = {}) {
+export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE } = {}) {
     const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: cache ?? createMemoryCache({ now }), now, timeoutMs: rdapTimeoutMs }) : null;
+    const blocklist = createBlocklist({ source: blocklistSource, now });
+    const blocklistLimiter = createRateLimiter({ ...rateLimit, now });
     const app = new Hono();
 
     // The answer is about one page view: never let a cache keep it.
@@ -37,6 +47,16 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         return c.json({ signals: await analyze(checked.snapshot, { rdap }) });
     });
 
+    app.get("/public-blocklist", async (c) => {
+        // The Bearer token is never read: the AI service cannot verify it, and a token that is not read cannot be logged.
+        const verdict = blocklistLimiter(clientKey(c.req.raw));
+        if (!verdict.ok) {
+            return errorResponse(429, "rate_limited", "Too many requests.", { "retry-after": String(verdict.retryAfterSec) });
+        }
+        return c.json(await blocklist(c.req.query("since")));
+    });
+
+    app.all("/public-blocklist", () => errorResponse(405, "method_not_allowed", "Use GET.", { allow: "GET" }));
     app.all("/analyze", () => errorResponse(405, "method_not_allowed", "Use POST.", { allow: "POST" }));
     app.notFound(() => errorResponse(404, "not_found", "Not found."));
     app.onError((err) => {
