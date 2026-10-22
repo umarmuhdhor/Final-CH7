@@ -68,9 +68,9 @@ Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
 - [ ] Token Bearer dari extension **tidak** perlu (dan tidak bisa) diverifikasi. Pakai rate limit per IP, dan jangan log token-nya.
 
 **B. Detector — `detector/`**
-- [ ] Di `analyzeLocal`: `const hit = await globalThis.ShooLists?.match(new URL(snapshot.url).hostname)`. Kalau ada → kembalikan `db_match` (layer 1, weight 100, `label`/`labelSimple` EN + ID, `evidence` = `hit.source`). Kalau `null` → lanjut ke aturan layer 2.
-- [ ] Di test: mock `globalThis.ShooLists = { match: async (h) => … }`. Test: cocok, tidak cocok, dan `ShooLists` tidak ada (harus tetap jalan tanpa error).
-- [ ] **Jangan** melakukan request jaringan, dan jangan kirim URL yang sedang dibuka ke mana pun.
+- [x] Di `analyzeLocal`: `const hit = await globalThis.ShooLists?.match(new URL(snapshot.url).hostname)`. Kalau ada → kembalikan `db_match` (layer 1, weight 100, `label`/`labelSimple` EN + ID, `evidence` = `hit.source`). Kalau `null` → lanjut ke aturan layer 2.
+- [x] Di test: mock `globalThis.ShooLists = { match: async (h) => … }`. Test: cocok, tidak cocok, dan `ShooLists` tidak ada (harus tetap jalan tanpa error).
+- [x] **Jangan** melakukan request jaringan, dan jangan kirim URL yang sedang dibuka ke mana pun.
 
 - **Selesai kalau:** endpoint mengembalikan daftar sesuai bentuk di atas, dan detector menghasilkan `db_match` untuk domain yang di-mock cocok.
 - **Bergantung pada:** tidak ada. `ShooLists` sudah ada di `main` (`ios/ShooExtension/Resources/lists-client.js`).
