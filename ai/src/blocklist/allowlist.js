@@ -21,7 +21,7 @@ export const POPULAR = new Set([
     "bpjs-kesehatan.go.id", "bpjsketenagakerjaan.go.id", "pajak.go.id", "kemenkeu.go.id", "kemdikbud.go.id", "kemkes.go.id",
     "kemensos.go.id", "polri.go.id", "indonesia.go.id", "telkomsel.com", "indosatooredoo.com", "xl.co.id", "smartfren.com",
     "pln.co.id", "pertamina.com", "jne.co.id", "jet.co.id", "sicepat.com", "pos.co.id", "anteraja.id", "tiki.id",
-    "ruangguru.com", "traveloka.co.id", "kaskus.co.id", "gramedia.com", "halodoc.com", "alodokter.com", "tokopedia.link",
+    "googleapis.com", "gstatic.com", "googleusercontent.com", "amazonaws.com", "ruangguru.com", "traveloka.co.id", "kaskus.co.id", "gramedia.com", "halodoc.com", "alodokter.com", "tokopedia.link",
 ]);
 
 /**
@@ -35,5 +35,8 @@ export const SHARED_HOSTS = new Set([
     "firebaseapp.com", "herokuapp.com", "glitch.me", "repl.co", "onrender.com", "fly.dev", "000webhostapp.com", "infinityfreeapp.com",
     "sites.google.com", "docs.google.com", "drive.google.com", "forms.gle", "bit.ly", "tinyurl.com", "t.co", "goo.gl",
     "ngrok.io", "ngrok-free.app", "trycloudflare.com", "azurewebsites.net", "amazonaws.com", "cloudfront.net", "s3.amazonaws.com",
+    "sharepoint.com", "googleapis.com", "gstatic.com", "googleusercontent.com", "linktr.ee", "youtu.be", "t.me", "wa.me", "fb.me",
+    "fbcdn.net", "akamaihd.net", "fastly.net", "mzstatic.com", "tumblr.com", "mediafire.com", "mega.nz", "canva.site", "godaddysites.com",
+    "rebrand.ly", "is.gd", "cutt.ly", "linkedin.cn", "office365.com", "microsoftonline.com", "windows.net", "live.net", "onedrive.com",
     "notion.site", "carrd.co", "typedream.app", "framer.app", "webwave.me", "mystrikingly.com", "yolasite.com", "jimdofree.com",
 ]);

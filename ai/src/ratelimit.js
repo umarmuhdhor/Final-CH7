@@ -6,7 +6,8 @@
 export function clientKey(request) {
     const raw = (request.headers.get("cf-connecting-ip") ?? "").trim().toLowerCase();
     if (!raw) return "unknown";
-    if (!raw.includes(":")) return raw.slice(0, 15);
+    const mapped = raw.startsWith("::ffff:") ? raw.slice(7) : raw; // IPv4-mapped IPv6 counts as the IPv4 address
+    if (!mapped.includes(":")) return mapped.slice(0, 15);
     const [head, tail = ""] = raw.split("::");
     const first = head.split(":").filter(Boolean);
     const rest = tail.split(":").filter(Boolean);

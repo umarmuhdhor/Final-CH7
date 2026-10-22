@@ -7,12 +7,16 @@ export const BLOCKLIST_LIMITS = Object.freeze({
     MAX_DOMAINS: 200_000,
     /** Rebuild from the source at most this often. */
     REFRESH_MS: 5 * 60 * 1000,
+    /** After a failed rebuild, do not ask the source again for this long. */
+    RETRY_MS: 60 * 1000,
 });
+
+const SINCE_FORMAT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 
 /** `since` must look like 2026-10-22T08:00:00Z (the nextSince we hand out); anything else is a client bug. */
 export function parseSince(raw) {
     if (raw === undefined) return null;
-    if (raw.length < 10 || raw.length > 40 || raw[4] !== "-" || raw[7] !== "-") throw new HttpError(400, "invalid_query", "since must be an ISO 8601 timestamp.");
+    if (!SINCE_FORMAT.test(raw)) throw new HttpError(400, "invalid_query", "since must be an ISO 8601 timestamp.");
     const ms = Date.parse(raw);
     if (Number.isNaN(ms)) throw new HttpError(400, "invalid_query", "since must be an ISO 8601 timestamp.");
     return new Date(ms).toISOString();
@@ -21,13 +25,18 @@ export function parseSince(raw) {
 /** @param {{ source: import("./source.js").BlocklistSource, now: () => number }} deps */
 export function createBlocklist({ source, now }) {
     let built = null; // { at, list }
+    let failedAt = -Infinity;
     let building = null;
     async function current() {
         if (built && now() - built.at < BLOCKLIST_LIMITS.REFRESH_MS) return built.list;
+        if (now() - failedAt < BLOCKLIST_LIMITS.RETRY_MS) {
+            if (built) return built.list;
+            throw new HttpError(500, "internal", "Something went wrong.");
+        }
         building ??= source
             .entries()
             .then((raw) => {
-                built = { at: now(), list: buildList(raw, { maxDomains: BLOCKLIST_LIMITS.MAX_DOMAINS }) };
+                built = { at: now(), list: buildList(raw, { maxDomains: BLOCKLIST_LIMITS.MAX_DOMAINS, now: now() }) };
                 return built.list;
             })
             .finally(() => {
@@ -36,6 +45,7 @@ export function createBlocklist({ source, now }) {
         try {
             return await building;
         } catch {
+            failedAt = now();
             if (built) return built.list; // keep serving the last good copy
             throw new HttpError(500, "internal", "Something went wrong.");
         }

@@ -198,3 +198,42 @@ test("allowlist data file: every popular entry is a valid registrable domain", a
     assert.ok(POPULAR.size >= 100, "about 100 popular sites");
     assert.ok(SHARED_HOSTS.size >= 10);
 });
+
+test("review fixes: platform CDNs are allowlisted", async () => {
+    const hosts = ["x.sharepoint.com", "storage.googleapis.com", "youtu.be", "t.me", "wa.me", "linktr.ee", "mega.nz"];
+    const names = (await (await get(appWith(hosts.map((h) => entry(h, T("01T10")))))).json()).domains;
+    assert.deepEqual(names, []);
+});
+
+test("review fixes: dates in the future or before 2000 are skipped (cursor cannot be parked)", async () => {
+    const app = appWith([entry("a.shoo-fixture-g.xyz", "9999-01-01T00:00:00Z"), entry("shoo-fixture-h.xyz", "+010000-01-01T00:00:00Z"), entry("shoo-fixture-i.xyz", "1999-12-31T00:00:00Z"), entry("shoo-fixture-ok2.xyz", T("01T10"))], { now: () => Date.UTC(2026, 9, 22) });
+    const body = await (await get(app)).json();
+    assert.deepEqual(body.domains.map((d) => d.domain), ["shoo-fixture-ok2.xyz"]);
+    assert.equal(body.nextSince, T("01T10"));
+});
+
+test("review fixes: since must be strict ISO 8601 UTC", async () => {
+    const app = appWith(SEED);
+    for (const q of ["2026-10-22 garbage", "2026-10-22", "2026-10-22T08:00:00+08:00", "2026-10-22T08:00:00"]) {
+        assert.equal((await get(app, `/public-blocklist?since=${encodeURIComponent(q)}`)).status, 400, q);
+    }
+    assert.equal((await get(app, "/public-blocklist?since=2026-10-22T08:00:00Z")).status, 200);
+    assert.equal((await get(app, "/public-blocklist?since=2026-10-22T08:00:00.5Z")).status, 200);
+});
+
+test("review fixes: a failing source is not retried on every request", async () => {
+    let calls = 0;
+    let t = 5_000_000_000_000;
+    const app = createApp({ now: () => t, blocklistSource: { name: "x", license: "x", entries: async () => { calls++; throw new Error("down"); } } });
+    for (let i = 0; i < 5; i++) assert.equal((await get(app)).status, 500);
+    assert.equal(calls, 1);
+    t += 61_000;
+    await get(app);
+    assert.equal(calls, 2);
+});
+
+test("review fixes: IPv4-mapped IPv6 shares the IPv4 bucket", async () => {
+    const app = appWith(SEED, { rateLimit: { limit: 1, windowMs: 60_000 } });
+    assert.equal((await get(app, "/public-blocklist", { headers: { "cf-connecting-ip": "203.0.113.50" } })).status, 200);
+    assert.equal((await get(app, "/public-blocklist", { headers: { "cf-connecting-ip": "::ffff:203.0.113.50" } })).status, 429);
+});

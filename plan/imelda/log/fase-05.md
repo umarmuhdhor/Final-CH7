@@ -21,6 +21,10 @@ Lihat tabel di `ai/README.md`. Ringkas: OpenPhish melarang pemakaian komersial; 
 - Performa: 250.000 entri mentah -> bangun daftar 1,0 s (sekali per 5 menit), respons 14,8 MB, 12 ms dari cache. **Catatan M7:** bangun 1 s melebihi batas CPU paket gratis Workers; butuh paket berbayar atau daftar pra-bangun (KV/R2). Dengan daftar kosong tidak ada masalah.
 - Catatan: tes performa NFKC di `content.test.mjs` bisa gagal bila dijalankan paralel dengan `ai/eval/test` (CPU); gunakan `--test-concurrency=1`.
 
+## Review keamanan (`ecc:security-reviewer`, 22 Okt 2026)
+Diperbaiki (+5 test, 351 total hijau): HIGH-1 allowlist melewatkan CDN/platform non-PSL (sharepoint.com, googleapis.com, youtu.be, t.me, wa.me, linktr.ee...) -> ditambah; HIGH-2 `addedAt` di masa depan / sebelum 2000 memarkir kursor klien -> ditolak (2000..sekarang+1 hari); MED-3 IPv4-mapped IPv6 -> dihitung sebagai IPv4; MED-5 sumber gagal dicoba ulang tiap request -> jeda 60 s; LOW-10 `since` wajib ISO 8601 UTC ketat.
+Ditunda (tercatat, bukan MVP): MED-3 rate limit per isolate bisa dilewati dengan banyak /64 dan tidak berlaku lintas isolate -> kontrol sesungguhnya = aturan rate limit Cloudflare (checklist fase 08); MED-4 bangun 200k + serialisasi di jalur request -> daftar pra-bangun + cache edge di fase 08 (sumber nyata belum ada, jadi tidak berdampak sekarang); MED-6 `addedAt` dari feed vs waktu pertama terlihat -> kewajiban implementasi sumber (LANGKAH MANUAL); LOW-7 merge tanpa urutan waktu removedAt; LOW-11 `removed` tanpa batas.
+
 ## DoD
 - [x] Bentuk respons persis kontrak (test bentuk + semua kasus).
 - [x] Tidak ada domain allowlist di keluaran (test: semua domain `brands.json`, subdomainnya, situs populer, platform apex, suffix).

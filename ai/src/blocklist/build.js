@@ -13,15 +13,23 @@ export function isAllowlisted(domain) {
     return false;
 }
 
-const iso = (v) => (typeof v === "string" && v.length <= 40 && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null);
+const MIN_MS = Date.UTC(2000, 0, 1);
+const SKEW_MS = 24 * 60 * 60 * 1000;
+/** ISO string, only for dates between 2000 and now + 1 day: a future date would park every client's cursor in the future. */
+const makeIso = (now) => (v) => {
+    if (typeof v !== "string" || v.length > 40) return null;
+    const ms = Date.parse(v);
+    return Number.isNaN(ms) || ms < MIN_MS || ms > now + SKEW_MS ? null : new Date(ms).toISOString();
+};
 
 /**
  * @param {object[]} raw entries from a source
- * @param {{ maxDomains: number }} opts
+ * @param {{ maxDomains: number, now?: number }} opts
  * @returns {{ active: {domain:string, addedAt:string}[], removed: {domain:string, removedAt:string}[] }}
  *   active: sorted oldest -> newest, newest `maxDomains` kept. removed: domains taken off the list.
  */
-export function buildList(raw, { maxDomains }) {
+export function buildList(raw, { maxDomains, now = Date.now() }) {
+    const iso = makeIso(now);
     const byDomain = new Map(); // domain -> { addedAt, removedAt|null }
     for (const e of Array.isArray(raw) ? raw : []) {
         if (!e || typeof e !== "object") continue;
