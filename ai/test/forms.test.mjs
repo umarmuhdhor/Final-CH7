@@ -199,8 +199,8 @@ test("n. every signal: layer 3, R1 weight, bilingual labels, plain labelSimple, 
         assert.equal(s.evidence, expected[s.id], `${s.id} evidence`);
     }
 });
-test("n. R1 starting weights", () => {
-    assert.deepEqual(WEIGHTS, { asks_pin: 35, asks_otp: 30, asks_password: 15, asks_card: 30, asks_cvv: 30, asks_ktp: 30, asks_selfie_ktp: 35 });
+test("n. weights after phase 07 calibration (D-imelda-12 / D-imelda-30; R1 started at 30 for otp, card, cvv, ktp)", () => {
+    assert.deepEqual(WEIGHTS, { asks_pin: 35, asks_otp: 25, asks_password: 15, asks_card: 25, asks_cvv: 25, asks_ktp: 25, asks_selfie_ktp: 35 });
 });
 test("n. evidence falls back to id, then is omitted; it is never a typed value", () => {
     assert.equal(scam([field({ id: "kode_pin" })])[0].evidence, "kode_pin");
