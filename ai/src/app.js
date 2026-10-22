@@ -24,7 +24,7 @@ export function createApp() {
             throw new HttpError(400, "bad_json", "Body is not valid JSON.");
         }
         const checked = validateRequest(body);
-        if ("error" in checked) throw new HttpError(400, "invalid_body", checked.error);
+        if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         return c.json({ signals: analyzeSnapshot(checked.snapshot) });
     });
 

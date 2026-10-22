@@ -75,14 +75,14 @@ test("b. body is not JSON -> 400 bad_json", async () => {
     await expectError(await post(app, ""), 400, "bad_json");
 });
 
-test("b. wrong shape -> 400 invalid_body", async () => {
+test("b. wrong shape -> 422 invalid_body", async () => {
     for (const bad of [[], 42, null, "str", {}, { snapshot: null }, { snapshot: [] }, { snapshot: {} }, { snapshot: { url: 5 } }, { snapshot: { url: "" } }, { snapshot: { url: "not a url" } }, { snapshot: { url: "ftp://x.example/" } }, { snapshot: { url: "javascript:alert(1)" } }]) {
-        await expectError(await post(app, JSON.stringify(bad)), 400, "invalid_body");
+        await expectError(await post(app, JSON.stringify(bad)), 422, "invalid_body");
     }
 });
 
-test("b. localSignals present but not an array -> 400; missing is tolerated", async () => {
-    await expectError(await post(app, { snapshot: PIN_PAGE(), localSignals: "x" }), 400, "invalid_body");
+test("b. localSignals present but not an array -> 422; missing is tolerated", async () => {
+    await expectError(await post(app, { snapshot: PIN_PAGE(), localSignals: "x" }), 422, "invalid_body");
     const res = await post(app, { snapshot: PIN_PAGE() });
     assert.equal(res.status, 200);
 });
