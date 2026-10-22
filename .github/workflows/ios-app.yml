@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: macos-15
+    runs-on: macos-26 # Xcode 26.x: the app uses iOS 26.2 SDK APIs (SFSafariSettings)
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
