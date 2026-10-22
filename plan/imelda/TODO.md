@@ -29,6 +29,8 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | C4 | Umar + Alief | Setelah fase 08: kirim URL publik `/analyze` (untuk `ai.baseURL`) dan `/public-blocklist`. | [ ] |
 | C5 | Alief + Umar | Kalau data form dikirim ke penyedia LLM, kebijakan privasi/label App Store harus menyebutnya (SECURITY Q4). Kirim setelah model dipilih (fase 06). | [ ] |
 | C6 | Umar | Bobot awal sinyal layer 3–4 (ref/R1) untuk dilihat sebelum fase 07 bila ambang 30/50/80 akan berubah. | [ ] |
+| C7 | Umar | Sinyal `asks_*` membawa `evidence` = `name`/`id` field (teks dari halaman, bukan substring `snapshot.text`). Extension harus menampilkannya sebagai teks biasa (`textContent`), bukan HTML, dan tidak men-stabilo. | [ ] |
+| C8 | Umar | Usulan: tambahkan `accept` (atribut input file) ke `PageSnapshot.forms[].fields` agar `asks_selfie_ktp` bisa memakai `accept=image/*`. Sekarang dipasangkan lewat label/nama. Perubahan kontrak. | [ ] |
 
 ## D. Langkah manual yang diketahui
 
