@@ -8,7 +8,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 |---|---|---|---|---|---|---|---|---|---|
 | – | Layer 2 nama link | M1 | feat/AI-M1-link-name | [x] | 21 Okt 2026 | 22 Okt 2026 | #25 (merged) | `cheap_tld`, `brand_plus_keyword`, `lookalike_domain`, level kecurigaan 0–3, 26 test | – |
 | – | Kerangka eval set | M2 | feat/AI-M2-eval-set | [x] | 22 Okt 2026 | 22 Okt 2026 | #26 (merged) | `run.mjs`, `capture.mjs`, `snapshot.mjs`, 13 sampel seed; data 50+50 belum | – |
-| 00 | Plan | – | docs/imelda-plan | [~] | 22 Okt 2026 | | | Folder `plan/imelda/`, branch lokal, belum di-push | log/fase-00.md |
+| 00 | Plan | – | docs/imelda-plan | [r] | 22 Okt 2026 | | #29 | Folder `plan/imelda/` lengkap (SECURITY, ARCHITECTURE, VERIFY, ref R1–R2, fase 01–08); menunggu review Umar | log/fase-00.md |
 | 01 | db_match di detector | M5-B | feat/AI-M5-detector | [ ] | | | | | log/fase-01.md |
 | 02 | /analyze + sinyal form | M3 | feat/AI-M3-forms | [ ] | | | | | log/fase-02.md |
 | 03 | Konten + new_domain | M3 | feat/AI-M3-content | [ ] | | | | | log/fase-03.md |
