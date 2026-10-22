@@ -66,8 +66,11 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [x] **U5 · EX-07** Kirim hasil. Branch: `feat/EX-07-send-scan`
   - Skor ≥30 → `POST /scans` (ScanResult sesuai schema), sekali per halaman per status.
   - Screenshot area bukti saja, isi field di-blur. Cek dulu apakah `tabs.captureVisibleTab` jalan di Safari iOS; kalau tidak, kirim tanpa screenshot dan catat di PR.
-- [ ] **U6 · EX-03** Indikator live sesuai hasil S3. Branch: `feat/EX-03-live-score`
-- [ ] **U7 · EX-01** Verifikasi "Allow on every website" + pencabutan izin → app Off (dari hasil S1).
+- [x] **U6 · EX-03** Indikator live sesuai hasil S3. Branch: `feat/EX-03-live-score`. Pill in-page, merged sebagai #43.
+- [ ] **U7 · EX-01** Verifikasi "Allow on every website" + pencabutan izin → app Off (dari hasil S1). Branch: `feat/EX-01-all-sites-permission`
+  - [x] Heartbeat membawa `allSites` (`browser.permissions.contains(<all_urls>)`) → App Group `extension.allSites`. Dikirim juga saat izin berubah dan tiap alarm 1 jam.
+  - [ ] Alief: `ExtensionStatus` baca `extension.allSites == false` → Off.
+  - [ ] Tes di iPhone (checklist di `docs/spikes/extension-status.md`).
 - [ ] **EX-08** (nice to have) Tap bagian yang ditandai → popup alasan singkat.
 
 ### Lead · berjalan terus
