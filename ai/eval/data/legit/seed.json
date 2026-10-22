@@ -4,7 +4,7 @@
     "label": "legit",
     "tags": [
       "official",
-      "e-commerce"
+      "checkout"
     ],
     "synthetic": false,
     "source": "official homepage; URL only, page not captured yet",
@@ -19,7 +19,7 @@
     "label": "legit",
     "tags": [
       "official",
-      "bank"
+      "bank-login"
     ],
     "synthetic": false,
     "source": "official homepage; URL only, page not captured yet",
@@ -34,7 +34,7 @@
     "label": "legit",
     "tags": [
       "official",
-      "e-commerce"
+      "checkout"
     ],
     "synthetic": false,
     "source": "official homepage; URL only, page not captured yet",

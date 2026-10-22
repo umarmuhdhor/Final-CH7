@@ -204,3 +204,11 @@ test("summarize reports per tag, holdout vs tuning, and real vs synthetic", () =
     assert.deepEqual(m.real, { scam: { n: 2, atLeast50: 1, atLeast80: 1 }, legit: { n: 2, atLeast30: 1 } });
     assert.deepEqual(m.synthetic, { scam: { n: 1, atLeast50: 1, atLeast80: 0 }, legit: { n: 0, atLeast30: 0 } });
 });
+
+// ---------- iframe URLs are redacted too ----------
+import { parseHtml } from "../tools/snapshot.mjs";
+test("parseHtml redacts query values and fragments of iframe URLs, relative ones included", () => {
+    const html = '<iframe src="https://cdn.x/p?id=123&autoplay=1#t"></iframe><iframe src="/frame.php?u=budi@example.com"></iframe><iframe src="/plain"></iframe>';
+    const { meta } = parseHtml(html, { url: "https://x.site/" });
+    assert.deepEqual(meta.iframes, ["https://cdn.x/p?id=REDACTED&autoplay=REDACTED", "/frame.php?u=REDACTED", "/plain"]);
+});

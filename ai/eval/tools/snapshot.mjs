@@ -26,6 +26,15 @@ export function redactUrl(url) {
     }
 }
 
+/** Same idea for iframe src values, which may be relative: query values become REDACTED and the fragment is dropped. */
+export function redactSrc(src) {
+    const [noHash] = String(src).split("#");
+    const [path, query] = noHash.split("?");
+    if (query === undefined) return redact(path);
+    const keys = query.split("&").map((kv) => kv.split("=")[0]).filter(Boolean);
+    return `${redact(path)}?${keys.map((k) => `${k}=REDACTED`).join("&")}`;
+}
+
 function decode(s) {
     return s
         .replace(/&nbsp;|&#160;/g, " ")
@@ -96,7 +105,7 @@ export function parseHtml(html, { url, domain, capturedAt = new Date().toISOStri
         .slice(0, MAX_ALTS)
         .map(redact);
 
-    const iframes = [...src.matchAll(/<iframe\b[^>]*>/gi)].map((m) => attrs(m[0]).src).filter(Boolean);
+    const iframes = [...src.matchAll(/<iframe\b[^>]*>/gi)].map((m) => attrs(m[0]).src).filter(Boolean).map(redactSrc);
 
     const body = src
         .replace(/<(script|style|noscript|template|svg)\b[\s\S]*?<\/\1>/gi, " ")
