@@ -21,8 +21,8 @@ File fase menyebut Edge Function `push` + `supabase secrets set`. Sejak D-alief-
 
 Tim Apple berbayar = **"umar muhdhor"** (koordinator, 22 Okt). Umar: B7 (kunci APNs) + B8 (App Store Connect/TestFlight). Alief: B6, D6 (+ D7 kalau sempat dulu, log fase 15).
 
-- [ ] 1. **Umar (B7, Production):** buat kunci APNs `.p8` **Production** di tim "umar muhdhor" (developer.apple.com → Keys → Apple Push Notifications service; kunci lama yang berlaku untuk Sandbox + Production juga boleh). Bagikan ke Alief lewat password manager (bukan chat): file `.p8`, Key ID, Team ID, bundle ID + App Group yang terdaftar di tim itu. Draf pesan: TODO C23 (Alief yang mengirim).
-- [ ] 2. **Umar (B8):** App Store Connect → My Apps → record untuk bundle ID itu; TestFlight → grup tester **internal**, tambahkan Apple ID Alief (dan pemegang iPhone kedua).
+- [ ] 1. **Umar (B7, Production):** buat kunci APNs `.p8` **Production** di tim "umar muhdhor" (developer.apple.com → Keys → Apple Push Notifications service; kunci lama yang berlaku untuk Sandbox + Production juga boleh). Bagikan ke Alief lewat password manager (bukan chat): file `.p8`, Key ID, Team ID, bundle ID + App Group yang terdaftar di tim itu. Sudah diminta lewat issue #55 (22 Okt, assignee Umar; TODO C23).
+- [ ] 2. **Umar (B8):** App Store Connect → My Apps → record untuk bundle ID itu; TestFlight → grup tester **internal**, tambahkan Apple ID Alief (dan pemegang iPhone kedua). Diminta lewat issue #55, termasuk undangan tim untuk Alief (App Manager).
 - [ ] 3. **Alief (B6):** `cp ios/Config/Local.xcconfig.example ios/Config/Local.xcconfig`, isi `DEVELOPMENT_TEAM` = Team ID "umar muhdhor", `SHOO_BUNDLE_ID`, `SHOO_APP_GROUP` = nilai dari butir 1; lalu `(cd ios && xcodegen)`. File ini gitignored, jangan di-commit.
 - [ ] 4. **Alief — Worker cloud ke APNs Production** (nilai ditempel di prompt, tidak pernah sebagai argumen):
   ```bash
@@ -32,7 +32,7 @@ Tim Apple berbayar = **"umar muhdhor"** (koordinator, 22 Okt). Umar: B7 (kunci A
   npx wrangler secret put APNS_TEAM_ID
   ```
   Di `backend/api/wrangler.jsonc`: `"APNS_TOPIC": "<bundle ID butir 1>"`, `"APNS_ENV": "production"`. Deploy dari `main` + perubahan var itu (`npx wrangler deploy`), catat Version ID. Hapus `.p8` dari Downloads setelah tersimpan di password manager. Perubahan var bisa dijadikan PR backend kecil oleh agent kalau diminta.
-- [ ] 5. **Build TestFlight** (Umar, atau Alief kalau sudah ditambahkan ke tim dengan peran App Manager): checkout `feat/GD-06-07-push-validation` (ujung stack 13–15, D-alief-30), `(cd ios && xcodegen)`, Xcode → Product → Archive (skema Shoo, Release) → Distribute App → TestFlight & App Store → Upload. Setelah processing: tambahkan build ke grup internal. Catat **commit app** (`git rev-parse HEAD`) + **nomor build**.
+- [ ] 5. **Build TestFlight** (Umar, atau Alief kalau sudah ditambahkan ke tim dengan peran App Manager): checkout `feat/GD-06-07-push-validation` (ujung stack 13–15, D-alief-30), `(cd ios && xcodegen)`, Xcode → Product → Archive (skema Shoo, Release) → Distribute App → TestFlight & App Store → Upload. Setelah processing: tambahkan build ke grup internal. Catat **commit app** (`git rev-parse HEAD`) + **nomor build**. Build TestFlight termasuk permintaan issue #55.
 - [ ] 6. **Alief (D6):** dua iPhone (Guardian + Protected) instal build itu dari app TestFlight. iPhone Protected: aktifkan extension Shoo di Settings → Safari → Extensions (build extension Umar dari commit yang sama).
 - [ ] 7. **Alief — data cloud bersih** (tidak bisa dibatalkan; menghapus semua device, keluarga, scan, verdict dan log push di cloud; daftar blokir publik tetap). Supabase Dashboard → SQL Editor:
   ```sql
