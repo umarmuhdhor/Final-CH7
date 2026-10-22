@@ -15,6 +15,7 @@ Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, ne
 | `device.name` | String | App | Extension | ON-02 name |
 | `guardian.name` | String? | App | Extension | Protected only: "Waiting for [name] to check" (EX-06) |
 | `extension.lastSeenAt` | Date | Extension | App | Heartbeat. App shows Active if recent (ON-04, PR-04, GD-01) |
+| `extension.allSites` | Bool | Extension | App | Safari access to every website (EX-01). `false` → app shows Off even if the heartbeat is recent. Missing → unknown, treat as `true` |
 | `api.baseURL` | String | App | Extension | Backend base URL |
 | `ai.baseURL` | String | App | Extension | AI service base URL |
 
@@ -26,7 +27,7 @@ All messages: `{ "type": string, ... }`. Response always `{ "ok": boolean, ... }
 
 | type | Request | Response |
 |---|---|---|
-| `heartbeat` | `{}` | `{ ok }` — writes `extension.lastSeenAt` |
+| `heartbeat` | `{ allSites?: boolean }` | `{ ok }` — writes `extension.lastSeenAt`, and `extension.allSites` when `allSites` is present |
 | `getSession` | `{}` | `{ ok, deviceId, token, mode, name, guardianName, apiBaseURL, aiBaseURL }` (`ok: false` if app not onboarded) |
 
 ## Deep links (extension / invite link → app)

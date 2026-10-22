@@ -6,14 +6,13 @@ import { parseRules, registrableDomain, naiveDomain } from "./domain.js";
 import { captureEvidence } from "./capture.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
+import { createHeartbeat } from "./heartbeat.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const SESSION_TTL_MS = 30 * 1000; // onboarding can finish while Safari is open
 const ANALYZE_TIMEOUT_MS = 8 * 1000; // contracts/api.md
 const SCAN_TIMEOUT_MS = 15 * 1000; // includes the screenshot upload
-
-let lastHeartbeatAt = 0;
 
 let rules = null;
 function domainFor(hostname) {
@@ -96,9 +95,23 @@ const lists = createLists({
     registrableDomain: domainFor,
 });
 lists.refresh();
+// EX-01: tells the app the extension is alive and whether it still has access to every website.
+const heartbeat = createHeartbeat({
+    permissions: browser.permissions,
+    sendNative: (message) => browser.runtime.sendNativeMessage(NATIVE_APP_ID, message),
+    intervalMs: HEARTBEAT_INTERVAL_MS,
+});
+const beatNow = () => heartbeat.beat({ force: true }).catch(() => {});
+browser.permissions?.onAdded?.addListener(beatNow);
+browser.permissions?.onRemoved?.addListener(beatNow);
+
 if (browser.alarms) {
     browser.alarms.create("shoo-lists", { periodInMinutes: 60 });
-    browser.alarms.onAlarm.addListener((alarm) => alarm.name === "shoo-lists" && lists.refresh());
+    browser.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name !== "shoo-lists") return;
+        lists.refresh();
+        heartbeat.beat().catch(() => {}); // access can be narrowed while no page is open
+    });
 }
 
 const reports = new Map(); // report key → Promise<backend scan id | null>
@@ -141,13 +154,8 @@ async function startReport(message, sender) {
 
 browser.runtime.onMessage.addListener((message, sender) => {
     switch (message?.type) {
-        case "heartbeat": {
-            if (Date.now() - lastHeartbeatAt < HEARTBEAT_INTERVAL_MS) {
-                return Promise.resolve({ ok: true, throttled: true });
-            }
-            lastHeartbeatAt = Date.now();
-            return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "heartbeat" });
-        }
+        case "heartbeat":
+            return heartbeat.beat();
         case "getSession":
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
         case "profile":

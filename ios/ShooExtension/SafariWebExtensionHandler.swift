@@ -16,6 +16,10 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         switch type {
         case "heartbeat":
             AppGroup.defaults.set(Date(), forKey: AppGroup.Key.extensionLastSeenAt)
+            // Missing when the extension can't tell (no permissions API): keep the last known value.
+            if let allSites = message?["allSites"] as? Bool {
+                AppGroup.defaults.set(allSites, forKey: AppGroup.Key.extensionAllSites)
+            }
             reply = ["ok": true]
         case "getSession":
             reply = sessionReply()
