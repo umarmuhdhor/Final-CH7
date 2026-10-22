@@ -10,6 +10,8 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | A2 | Model LLM untuk M4 | Pilih setelah eval ada. Kandidat (harga per 1 jt token masuk/keluar, 21 Okt 2026): Gemini 2.5 Flash-Lite $0.10/$0.40 · Claude Haiku 5.5 $0.10/$0.50 · GPT-5.4 nano $0.20/$1.25 (Deprecated) | [ ] |
 | A3 | Sumber daftar phishing publik (M5) | Pilih yang lisensinya boleh dipakai di app; catat di `ai/README.md`. Kandidat dicek di fase 05 | [ ] |
 | A4 | Sumber sampel scam untuk M2 | Hanya lewat `capture.mjs`/laporan publik; jangan membuka URL di browser. Cek lisensi sumber | [ ] |
+| A5 | Gerbang panggilan LLM (D-imelda-05) | Form ≥ 1 field dan skor sementara ≥ 15; situs resmi tidak memanggil | [ ] tunggu Imelda |
+| A6 | Kebijakan penyedia LLM: tidak melatih dari data API, retensi minimum (SECURITY Q3) | Catat kebijakan penyedia terpilih di DECISIONS saat memilih model | [ ] |
 
 ## B. Akun dan secret (memblokir fase 06 dan 08)
 
@@ -25,6 +27,8 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | C2 | Umar | `new_domain`: kontrak menulis layer 2, tapi dibuat server (RDAP). `pipeline.js` hanya menerima layer 3–4 dari `/analyze` (`validSignals(remote,[3,4])`), jadi sinyal layer 2 dari server dibuang diam-diam. Usulan: kontrak diubah jadi layer 3. | [ ] |
 | C3 | Umar | `brands.json` perlu verifikasi manual: `bankbsi.co.id`, `jet.co.id`, `bpjsketenagakerjaan.go.id`. | [ ] |
 | C4 | Umar + Alief | Setelah fase 08: kirim URL publik `/analyze` (untuk `ai.baseURL`) dan `/public-blocklist`. | [ ] |
+| C5 | Alief + Umar | Kalau data form dikirim ke penyedia LLM, kebijakan privasi/label App Store harus menyebutnya (SECURITY Q4). Kirim setelah model dipilih (fase 06). | [ ] |
+| C6 | Umar | Bobot awal sinyal layer 3–4 (ref/R1) untuk dilihat sebelum fase 07 bila ambang 30/50/80 akan berubah. | [ ] |
 
 ## D. Langkah manual yang diketahui
 
