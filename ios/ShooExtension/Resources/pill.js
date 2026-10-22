@@ -13,7 +13,7 @@
     const MAX_REASONS = 2;
     const SIZE = 56; // bubble diameter, px (≥ 44 pt tap target)
     const MARGIN = 10; // gap between bubble and screen edge, px
-    const DEFAULT_POS = { side: "right", y: 0.55 }; // above the EX-04 warning card at the bottom
+    const DEFAULT_POS = { side: "right", y: 0.38 }; // clear of the EX-04 warning card, even on an iPhone SE
 
     /** "safe" < 30 · "warning" 30–49 · "danger" 50–79. Blocked never reaches the bubble. */
     function toneFor(score) {
@@ -108,6 +108,7 @@
         .bubble[data-tone="warning"] { --tone: #ffb340; }
         .bubble[data-tone="danger"] { --tone: #ff453a; }
         .bubble.dragging { transition: opacity .3s ease; cursor: grabbing; }
+        .bubble.placing { transition: opacity .3s ease; }
         .bubble.out { opacity: 0; pointer-events: none; }
         .bubble[data-analyzing] { animation: ring 1.2s ease-in-out infinite; }
         @keyframes ring { 50% { box-shadow: 0 4px 14px rgba(0,0,0,.35), 0 0 0 5px color-mix(in srgb, var(--tone) 35%, transparent); } }
@@ -159,7 +160,7 @@
         .get(POS_KEY)
         .then((stored) => {
             pos = validPos(stored?.[POS_KEY]);
-            if (refs) moveTo(place(pos, area()));
+            if (refs && !refs.bubble.classList.contains("dragging")) jumpTo(place(pos, area()));
         })
         .catch(() => {});
     browser.runtime
@@ -231,7 +232,7 @@
         refs = { bubble, score: bubble.querySelector(".score"), card, chip, big, list, note, detail, probe, live };
         document.documentElement.appendChild(host);
         shown = 0;
-        moveTo(place(pos, area()));
+        jumpTo(place(pos, area()));
         drag(bubble);
         requestAnimationFrame(() => refs?.bubble.classList.remove("out"));
     }
@@ -240,13 +241,22 @@
         if (refs) refs.bubble.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     }
 
+    /** Moves without the slide animation, so a new or restored bubble doesn't glide in from 0,0. */
+    function jumpTo(xy) {
+        const bubble = refs?.bubble;
+        if (!bubble) return;
+        bubble.classList.add("placing");
+        moveTo(xy);
+        requestAnimationFrame(() => bubble.classList.remove("placing"));
+    }
+
     /** Pointer drag with tap detection. A drop snaps to the nearer edge and is remembered. */
     function drag(bubble) {
         let start = null;
         bubble.addEventListener("pointerdown", (e) => {
             if (e.button !== 0) return;
             const from = place(pos, area());
-            start = { id: e.pointerId, px: e.clientX, py: e.clientY, x: from.x, y: from.y, moved: false };
+            start = { id: e.pointerId, px: e.clientX, py: e.clientY, cx: e.clientX, cy: e.clientY, x: from.x, y: from.y, moved: false };
             bubble.setPointerCapture(e.pointerId);
         });
         bubble.addEventListener("pointermove", (e) => {
@@ -258,19 +268,24 @@
                 start.moved = true;
                 bubble.classList.add("dragging");
                 closeCard();
+                clearTimeout(hideTimer); // never fade out under the user's finger
             }
+            start.cx = e.clientX;
+            start.cy = e.clientY;
             moveTo({ x: start.x + dx, y: start.y + dy });
         });
         const end = (e) => {
             if (!start || e.pointerId !== start.id) return;
-            const { moved } = start;
+            const { moved, cx, cy } = start;
             start = null;
             bubble.classList.remove("dragging");
             if (!moved) return e.type === "pointerup" && toggleCard();
             const a = area();
-            pos = snap({ x: e.clientX, y: e.clientY }, a);
+            // pointercancel may report 0,0, so drop where the finger was last seen.
+            pos = snap({ x: cx, y: cy }, a);
             moveTo(place(pos, a));
             browser.storage?.local.set({ [POS_KEY]: pos }).catch(() => {});
+            if (last?.view.hideAfterMs) hideTimer = setTimeout(hide, last.view.hideAfterMs);
         };
         bubble.addEventListener("pointerup", end);
         bubble.addEventListener("pointercancel", end);
