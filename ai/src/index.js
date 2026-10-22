@@ -1,4 +1,5 @@
 // Cloudflare Worker entry (module syntax): the Hono app is the fetch handler.
 import { createApp } from "./app.js";
 
-export default createApp();
+// Real network only here; createApp() alone never calls out.
+export default createApp({ fetch: (...args) => fetch(...args) });
