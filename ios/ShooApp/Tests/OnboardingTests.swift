@@ -239,21 +239,6 @@ struct OnboardingModelTests {
     }
 }
 
-/// Every call fails like an offline device.
-final class FailingRepository: ShooRepository {
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration { throw RepositoryError.network }
-    func me() async throws -> DeviceProfile { throw RepositoryError.network }
-    func updateMe(_ update: DeviceUpdate) async throws { throw RepositoryError.network }
-    func createFamilyCode() async throws -> FamilyCode { throw RepositoryError.network }
-    func joinFamily(code: String) async throws -> GuardianInfo { throw RepositoryError.network }
-    func familyMembers() async throws -> [FamilyMember] { throw RepositoryError.network }
-    func removeMember(deviceId: String) async throws { throw RepositoryError.network }
-    func leaveGuardian() async throws { throw RepositoryError.network }
-    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage { throw RepositoryError.network }
-    func scan(id: String) async throws -> ScanResult { throw RepositoryError.network }
-    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { throw RepositoryError.network }
-}
-
 struct ExtensionSetupTests {
     @Test(arguments: [
         (17, 5, ExtensionSetup.Step.openSettingsLegacy),

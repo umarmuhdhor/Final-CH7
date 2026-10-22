@@ -11,22 +11,22 @@
         }
       }
     },
-    "A Guardian looks after up to 3 family members who are Protected.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Satu Guardian menjaga sampai 3 anggota keluarga yang Protected."
-          }
-        }
-      }
-    },
     "A family member looks after you.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Anggota keluarga menjagamu."
+          }
+        }
+      }
+    },
+    "A Guardian looks after up to 3 family members who are Protected.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satu Guardian menjaga sampai 3 anggota keluarga yang Protected."
           }
         }
       }
@@ -47,6 +47,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktivitas"
+          }
+        }
+      }
+    },
+    "All": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semua"
           }
         }
       }
@@ -77,6 +87,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diblokir"
+          }
+        }
+      }
+    },
+    "Blocked scam sites will show up here.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situs penipuan yang diblokir akan muncul di sini."
+          }
+        }
+      }
+    },
+    "Blocked!": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diblokir!"
           }
         }
       }
@@ -151,12 +181,52 @@
         }
       }
     },
+    "Couldn't load activity": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat aktivitas"
+          }
+        }
+      }
+    },
+    "Couldn't load more. Try again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat lagi. Coba lagi"
+          }
+        }
+      }
+    },
     "Couldn't load this item": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Item ini gagal dimuat"
+          }
+        }
+      }
+    },
+    "Couldn't load your Shield": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat Perisai"
+          }
+        }
+      }
+    },
+    "Couldn't refresh. Pull down to try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memperbarui. Tarik ke bawah untuk mencoba lagi."
           }
         }
       }
@@ -201,6 +271,16 @@
         }
       }
     },
+    "Filter": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        }
+      }
+    },
     "Get started": {
       "localizations": {
         "id": {
@@ -231,22 +311,22 @@
         }
       }
     },
-    "I'm Protected": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saya dilindungi"
-          }
-        }
-      }
-    },
     "I'm a Guardian": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Saya Guardian"
+          }
+        }
+      }
+    },
+    "I'm Protected": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saya dilindungi"
           }
         }
       }
@@ -291,12 +371,32 @@
         }
       }
     },
+    "Last blocked": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terakhir diblokir"
+          }
+        }
+      }
+    },
     "Link": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Link"
+          }
+        }
+      }
+    },
+    "Loading": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memuat"
           }
         }
       }
@@ -371,6 +471,26 @@
         }
       }
     },
+    "No warnings": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada peringatan"
+          }
+        }
+      }
+    },
+    "Not connected to a guardian yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum terhubung ke pelindung"
+          }
+        }
+      }
+    },
     "Not now": {
       "localizations": {
         "id": {
@@ -391,12 +511,32 @@
         }
       }
     },
+    "Nothing blocked yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada yang diblokir"
+          }
+        }
+      }
+    },
     "Notifications are off": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Notifikasi mati"
+          }
+        }
+      }
+    },
+    "Open any website in Safari, then come back here.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka situs apa saja di Safari, lalu kembali ke sini."
           }
         }
       }
@@ -417,16 +557,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Buka Pengaturan › Safari › Ekstensi."
-          }
-        }
-      }
-    },
-    "Open any website in Safari, then come back here.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buka situs apa saja di Safari, lalu kembali ke sini."
           }
         }
       }
@@ -461,6 +591,26 @@
         }
       }
     },
+    "Opens Settings": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membuka Pengaturan"
+          }
+        }
+      }
+    },
+    "Opens the details": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Membuka detail"
+          }
+        }
+      }
+    },
     "Profile": {
       "localizations": {
         "id": {
@@ -481,12 +631,32 @@
         }
       }
     },
+    "Protected by": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dilindungi oleh"
+          }
+        }
+      }
+    },
     "Protected by others": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Dilindungi orang lain"
+          }
+        }
+      }
+    },
+    "Protection is off": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perlindungan mati"
           }
         }
       }
@@ -591,6 +761,16 @@
         }
       }
     },
+    "Shoo checks the sites you open in Safari.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shoo memeriksa situs yang kamu buka di Safari."
+          }
+        }
+      }
+    },
     "Shoo checks the websites you open in Safari.": {
       "localizations": {
         "id": {
@@ -631,6 +811,16 @@
         }
       }
     },
+    "Sites that look risky will show up here.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situs yang terlihat berisiko akan muncul di sini."
+          }
+        }
+      }
+    },
     "Skip": {
       "localizations": {
         "id": {
@@ -657,6 +847,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masih belum bisa? Tonton videonya"
+          }
+        }
+      }
+    },
+    "Switch on Shoo in Safari to stay safe.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyalakan Shoo di Safari agar tetap aman."
           }
         }
       }
@@ -731,22 +931,22 @@
         }
       }
     },
-    "Turn on Shoo in Safari": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nyalakan Shoo di Safari"
-          }
-        }
-      }
-    },
     "Turn on notifications": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Nyalakan notifikasi"
+          }
+        }
+      }
+    },
+    "Turn on Shoo in Safari": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nyalakan Shoo di Safari"
           }
         }
       }
@@ -821,6 +1021,16 @@
         }
       }
     },
+    "When Shoo blocks a scam site, you'll see it here.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saat Shoo memblokir situs penipuan, kamu akan melihatnya di sini."
+          }
+        }
+      }
+    },
     "Why Shoo flagged this": {
       "localizations": {
         "id": {
@@ -881,16 +1091,6 @@
         }
       }
     },
-    "Your Shield screen is coming soon.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Layar Perisai segera hadir."
-          }
-        }
-      }
-    },
     "Your family sees this name. Up to 20 characters.": {
       "localizations": {
         "id": {
@@ -917,6 +1117,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Namamu"
+          }
+        }
+      }
+    },
+    "Your Shield screen is coming soon.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layar Perisai segera hadir."
           }
         }
       }
