@@ -12,8 +12,10 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHtml } from "./snapshot.mjs";
 import { domainOf, validateSample } from "../lib.mjs";
+import { assertPublicUrl } from "./safe-url.mjs";
 
 const MAX_BYTES = 500_000;
+const MAX_REDIRECTS = 3;
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 
 function parseArgs(argv) {
@@ -25,8 +27,21 @@ function parseArgs(argv) {
     return args;
 }
 
-async function fetchHtml(url) {
-    const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(15000) });
+async function fetchHtml(startUrl) {
+    // Redirects are followed by hand so every hop is checked: a public page must not bounce us to localhost or the LAN.
+    let url = startUrl;
+    let res;
+    for (let hop = 0; ; hop++) {
+        await assertPublicUrl(url);
+        res = await fetch(url, { headers: { "User-Agent": UA, Accept: "text/html" }, redirect: "manual", credentials: "omit", signal: AbortSignal.timeout(15000) });
+        if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+            if (hop >= MAX_REDIRECTS) throw new Error("too many redirects");
+            url = new URL(res.headers.get("location"), url).href;
+            await res.body?.cancel();
+            continue;
+        }
+        break;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const type = res.headers.get("content-type") || "";
     if (!/html/i.test(type)) throw new Error(`not HTML (${type})`);
@@ -43,7 +58,7 @@ async function fetchHtml(url) {
         }
         chunks.push(value);
     }
-    return { html: Buffer.concat(chunks).toString("utf8"), finalUrl: res.url };
+    return { html: Buffer.concat(chunks).toString("utf8"), finalUrl: url };
 }
 
 async function main() {

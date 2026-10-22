@@ -68,6 +68,15 @@ async function main() {
         console.log(`  legit  score >= 30         ${pad(checks.legitAtLeast30.value ?? "n/a", 10)} ${TARGETS.legitAtLeast30} pages`);
         if (summary.targetsMet === null) console.log(`  -> not judged: ${!args.analyzeUrl ? "layer 3-4 missing" : ""}${!summary.enough ? `${!args.analyzeUrl ? " and " : ""}fewer than ${MIN_PER_CLASS} per class` : ""}`);
         else console.log(`  -> targets ${summary.targetsMet ? "MET" : "NOT met"}`);
+        const line = (t) => `scam ${t.scam.atLeast50}/${t.scam.n} >=50, ${t.scam.atLeast80}/${t.scam.n} >=80 | legit ${t.legit.atLeast30}/${t.legit.n} flagged`;
+        console.log(`\nREAL vs SYNTHETIC (only real samples may back a claim about the targets)`);
+        console.log(`  real       ${line(summary.real)}`);
+        console.log(`  synthetic  ${line(summary.synthetic)}`);
+        console.log(`\nHOLDOUT vs TUNING (holdout is looked at once, at the end of phase 07)`);
+        console.log(`  holdout    ${line(summary.bySplit.holdout)}`);
+        console.log(`  tuning     ${line(summary.bySplit.tuning)}`);
+        console.log(`\nPER CATEGORY`);
+        for (const [tag, t] of Object.entries(summary.byTag)) console.log(`  ${pad(tag, 18)} ${line(t)}`);
         if (summary.falsePositives.length) {
             console.log(`\nlegit pages that were flagged (false positives): ${summary.falsePositives.join(", ")}`);
             console.log("  by signal:", JSON.stringify(summary.falsePositiveSignals));

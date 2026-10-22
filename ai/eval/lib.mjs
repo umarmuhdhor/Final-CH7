@@ -60,7 +60,7 @@ function* walk(dir) {
     for (const name of readdirSync(dir).sort()) {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) yield* walk(p);
-        else if (extname(name) === ".json") yield p;
+        else if (extname(name) === ".json" && name !== "HOLDOUT.json") yield p; // HOLDOUT.json is the split seed, not a sample
     }
 }
 
@@ -174,7 +174,19 @@ export function summarize(rows, { remote = false } = {}) {
     };
     const met = checks.scamAtLeast50.value >= checks.scamAtLeast50.target && checks.scamAtLeast80.value >= checks.scamAtLeast80.target && checks.legitAtLeast30.value <= checks.legitAtLeast30.target;
 
+    const tally = (list) => ({
+        scam: { n: list.filter((r) => r.label === "scam").length, atLeast50: count(list.filter((r) => r.label === "scam"), 50), atLeast80: count(list.filter((r) => r.label === "scam"), 80) },
+        legit: { n: list.filter((r) => r.label === "legit").length, atLeast30: count(list.filter((r) => r.label === "legit"), 30) },
+    });
+    const tags = [...new Set(rows.flatMap((r) => r.tags || []))].filter((t) => t !== "holdout").sort();
+    const byTag = Object.fromEntries(tags.map((t) => [t, tally(rows.filter((r) => (r.tags || []).includes(t)))]));
+    const isHoldout = (r) => (r.tags || []).includes("holdout");
+
     return {
+        byTag,
+        bySplit: { holdout: tally(rows.filter(isHoldout)), tuning: tally(rows.filter((r) => !isHoldout(r))) },
+        real: tally(rows.filter((r) => !r.synthetic)),
+        synthetic: tally(rows.filter((r) => r.synthetic)),
         mode: remote ? "layers 1-4" : "layers 1-2 only",
         counts: { scam: scam.length, legit: legit.length },
         enough,
