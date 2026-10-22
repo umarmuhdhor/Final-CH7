@@ -30,11 +30,16 @@
         };
     }
 
+    /** 429 → wait at least Retry-After (backend/API.md), never treat it as "no verdict yet". */
+    function nextPollMs(reply) {
+        return reply?.rateLimited ? Math.max(POLL_MS, Number(reply.retryAfterMs) || 0) : POLL_MS;
+    }
+
     function detailUrl(payload) {
         return payload.recordId ? `shoo://scan/${encodeURIComponent(payload.recordId)}` : "shoo://activity";
     }
 
-    globalThis.ShooBlockedPage = { viewFor, detailUrl };
+    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs };
 
     // ---- Page ---------------------------------------------------------------------------
 
@@ -112,12 +117,13 @@
     async function poll() {
         clearTimeout(timer);
         timer = null;
-        let verdict = null;
+        let reply = null;
         try {
-            verdict = (await send({ type: "verdict", domain: payload.domain, fresh: true }))?.verdict ?? null;
+            reply = await send({ type: "verdict", domain: payload.domain, fresh: true });
         } catch {
-            verdict = null; // offline → keep waiting
+            reply = null; // offline → keep waiting
         }
+        const verdict = reply?.verdict ?? null;
         if (verdict?.value === "safe") {
             location.replace(payload.url); // reopens; the rescan sees the safe verdict and stays quiet
             return;
@@ -129,7 +135,7 @@
             note.hidden = false;
             return; // decided — stays blocked for good
         }
-        timer = setTimeout(poll, POLL_MS);
+        timer = setTimeout(poll, nextPollMs(reply));
     }
 
     // Coming back from the Shoo app (Guardian just reviewed it) → check right away.
