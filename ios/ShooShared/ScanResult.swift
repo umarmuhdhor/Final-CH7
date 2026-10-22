@@ -62,10 +62,25 @@ enum ScoreThreshold {
 }
 
 extension JSONDecoder {
-    /// Decoder matching the API: ISO 8601 dates.
+    /// Decoder matching the API: ISO 8601 UTC dates, with or without fractional seconds
+    /// (the backend sends `2026-10-21T04:05:00.123Z`; blocklist cursors carry microseconds).
+    /// `.iso8601` alone rejects fractions on older Foundation (iOS 17), so try both shapes.
     static var shoo: JSONDecoder {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let withoutFraction = ISO8601DateFormatter()
+        withoutFraction.formatOptions = [.withInternetDateTime]
+
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let text = try container.decode(String.self)
+            if let date = withFraction.date(from: text) ?? withoutFraction.date(from: text) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "Expected an ISO 8601 date, got \"\(text)\"")
+        }
         return decoder
     }
 }
