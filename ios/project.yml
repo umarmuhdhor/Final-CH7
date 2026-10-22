@@ -46,6 +46,7 @@ targets:
             CFBundleURLSchemes: [shoo]
         NSCameraUsageDescription: Scan your family's QR code to connect.   # PR-01
         UIBackgroundModes: [audio]        # ON-04 tutorial video keeps playing in PiP over Settings
+        ITSAppUsesNonExemptEncryption: false  # standard HTTPS only → TestFlight stops asking (TODO C19)
     entitlements:
       path: ShooApp/Shoo.entitlements
       properties:
@@ -59,6 +60,18 @@ targets:
     dependencies:
       - target: ShooExtension
       - target: ShooLiveActivity
+    # Debug only: AppConfig points at http://localhost:8787 (wrangler dev), which ATS would block.
+    # Release keeps ATS untouched (HTTPS only). XcodeGen has no per-configuration Info.plist keys,
+    # so the key is added to the built Info.plist before signing.
+    postBuildScripts:
+      - name: "ATS: allow local networking (Debug only)"
+        basedOnDependencyAnalysis: false
+        script: |
+          [ "$CONFIGURATION" = "Debug" ] || exit 0
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsLocalNetworking true" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$PLIST"
 
   ShooExtension:
     type: app-extension
