@@ -26,7 +26,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 14 | Pairing GD-04, PR-01/02/03 | c | feat/GD-04-PR-01-03-pairing | [ ] | | | | | log/fase-14.md |
 | 15 | Push tap + validasi GD-06/07 | c | feat/GD-06-07-push-validation | [ ] | | | | | log/fase-15.md |
 | 16 | QA-E2E + fixbug + retest | c | fix/QA-* | [ ] | | | | | qa/QA-E2E-*.md |
-| 17 | Ditahan: Live Activity push | – | – | [!] | | | | Menunggu keputusan Umar (spike Dynamic Island) | – |
+| 17 | Ditahan: Live Activity push | – | – | [!] | | | | Spike S3 Umar (PR #41): extension tidak bisa memakai Dynamic Island, MVP memakai pill in-page. Phase 2 lewat push server (path C) diusulkan di issue #49, menunggu keputusan Umar | – |
 
 ## Gate & milestone
 
@@ -36,36 +36,36 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | G1 · Plan disetujui | PR `docs/alief-plan` di-merge | [x] | Umar approve (CODEOWNERS `*`) |
 | G2 · Target test ada | PR `chore/APP-test-targets` di-merge | [x] | PR #8 merged (`e980b7f`) |
 | G3 · Blocklist publik | `GET /blocklist` hidup di cloud, URL dikirim ke Imelda | [ ] | Akhir fase 07 (LANGKAH MANUAL deploy) |
-| G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [ ] | Hidup di cloud sejak 22 Okt (Worker 781cf277); tinggal Alief mengirim C8 ke Umar |
+| G4 · Verdict untuk EX-06 | `GET /verdicts?domain=` hidup di cloud, info ke Umar | [x] | Hidup di cloud sejak 22 Okt; C8 dikirim lewat issue #35, extension menangani 429 di PR #46 Umar (merged `e77384c`) |
 | G5 · Track app selesai | 01–06 + 06Q `[x]` (semua PR merged) | [x] | 01–06 + 06Q merged (#8, #14, #16, #18, #19, #21, #22, #23, #24), 22 Okt. 01S (spike iPhone) terpisah, belum |
 | G6 · Track be selesai | 07–12 `[x]` (semua PR merged) + TODO D8 (deploy ulang dari `main`, uji asap hijau) | [x] | 07–12 merged; D8 selesai 22 Okt (Worker `8f3df4ed` dari `main`, uji asap hijau) |
-| G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8); uji push sandbox ke satu iPhone sudah di fase 11 |
+| G7 · TestFlight | Team ID + capability Push + build internal | [ ] | Syarat QA-E2E (TODO B6–B8). Langkah Umar (kunci APNs, App Store Connect, build) di issue #55; fase 16 berhenti di LANGKAH MANUAL |
 | G8 · MVP Alief | Definisi selesai README §7 | [ ] | |
 
 ## Status requirement P0 (PRD §8)
 
 | ID | Fase | Status | Bukti (test / screenshot / log) |
 |---|---|---|---|
-| ON-01 Splash 3 slide + Skip | 02 | [ ] | |
-| ON-02 Nama 1–20 + avatar acak | 02 (+13 `POST /devices`) | [ ] | |
-| ON-03 Pilih mode permanen | 02 (+13) | [ ] | |
+| ON-01 Splash 3 slide + Skip | 02 | [x] | fase 02, PR #16 (merged) |
+| ON-02 Nama 1–20 + avatar acak | 02 (+13 `POST /devices`) | [r] | fase 02 (merged #16) + 13 `POST /devices` di PR #42 |
+| ON-03 Pilih mode permanen | 02 (+13) | [r] | fase 02 (merged #16) + 13 di PR #42 |
 | ON-04 Turn on extension | 02 (+01S hasil spike) | [ ] | |
 | Spike S1/S2 (mandat) | 01S | [ ] | |
-| ON-05 Izin notifikasi + pengingat | 02 (+15 token APNs) | [ ] | |
-| PR-01 Connect QR / kode | 14 | [ ] | |
-| PR-02 Protected by | 14 | [ ] | |
-| PR-03 Link undangan (P0), deferred (P1) | 14 | [ ] | |
-| PR-04 Shield Protected | 04 (+13 data asli) | [ ] | |
-| PR-05 Activity Protected | 04 (+13) | [ ] | |
+| ON-05 Izin notifikasi + pengingat | 02 (+15 token APNs) | [r] | fase 02 (merged #16) + 15 token APNs di PR #54 |
+| PR-01 Connect QR / kode | 14 | [r] | fase 14, PR #52 |
+| PR-02 Protected by | 14 | [r] | fase 14, PR #52 |
+| PR-03 Link undangan (P0), deferred (P1) | 14 | [r] | fase 14, PR #52 |
+| PR-04 Shield Protected | 04 (+13 data asli) | [r] | fase 04 (merged #19) + 13 data asli di PR #42 |
+| PR-05 Activity Protected | 04 (+13) | [r] | fase 04 (merged #19) + 13 di PR #42 |
 | GD-01 Shield Guardian | 05 | [x] | fase 05, PR #21 (merged) |
 | GD-02 Toggle Family mode | 05 | [x] | fase 05, PR #21 (merged) |
-| GD-03 Shield Family | 05 (+13) | [ ] | |
-| GD-04 Family code | 14 | [ ] | |
-| GD-05 Activity Family | 05 (+13) | [ ] | |
-| GD-06 Push ke guardian | 11 + 15 | [ ] | |
-| GD-07 Validasi tanpa konfirmasi | 03 (tombol) + 10 + 15 | [ ] | |
-| DT-01..06 Detail | 03 (+13) | [ ] | |
-| PF-01 Profile | 06 (+13, +14 menu Family code) | [ ] | |
+| GD-03 Shield Family | 05 (+13) | [r] | fase 05 (merged #21) + 13 di PR #42 |
+| GD-04 Family code | 14 | [r] | fase 14, PR #52 |
+| GD-05 Activity Family | 05 (+13) | [r] | fase 05 (merged #21) + 13 di PR #42 |
+| GD-06 Push ke guardian | 11 + 15 | [r] | fase 11 (merged #17) + 15 di PR #54; push nyata di iPhone menunggu issue #55 |
+| GD-07 Validasi tanpa konfirmasi | 03 (tombol) + 10 + 15 | [r] | fase 03 + 10 (merged #18, #15) + 15 di PR #54 |
+| DT-01..06 Detail | 03 (+13) | [r] | fase 03 (merged #18) + 13 di PR #42 |
+| PF-01 Profile | 06 (+13, +14 menu Family code) | [r] | fase 06 (merged #22) + 13/14 di PR #42, #52 |
 | BE Devices | 07 | [x] | `backend/api/test/devices.test.ts`, PR #9 |
 | BE Family | 08 | [x] | `backend/api/test/family.test.ts`, `join-page.test.ts`, `devices-me.test.ts`; PR #11 |
 | BE Scans | 09 | [x] | `backend/api/test/scans.test.ts`, `screenshots.test.ts`, `cache-headers.test.ts`, `images.test.ts`, `push-notify.test.ts`; PR #13 |
@@ -74,7 +74,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | BE Push APNs | 11 | [x] | `backend/api/test/push-apns.test.ts`, `push-deliver.test.ts`, `push-notify.test.ts`; cloud `logged` 22 Okt; PR #17; pending B6/B7 (D7) |
 | BE Retensi 14 hari | 12 | [x] | `backend/api/test/retention.test.ts`, `security-review.test.ts`; cron cloud `bdc661e8`; PR #20 |
 | BE Keamanan (akses Guardian, batas percobaan kode) | 08, 09, 10, 12 (checkbox mandat dicentang di 12) | [x] | `family.test.ts`, `scans.test.ts`, `security-headers.test.ts`, `security-review.test.ts`, pgTAP `grants`/`hardening`/`security_review`; PR #9–#20 |
-| EN + ID semua teks | 01–06, 13–15 | [ ] | |
+| EN + ID semua teks | 01–06, 13–15 | [r] | 01–06 merged; 13–15 di PR #42, #52, #54 |
 
 ## QA
 
