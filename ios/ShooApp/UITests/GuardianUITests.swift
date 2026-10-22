@@ -10,6 +10,7 @@ final class GuardianUITests: XCTestCase {
     private func launch(familyMode: Bool?, extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-UITestMock", "YES",
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "guardian",
             "-settings.language", "en",

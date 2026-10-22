@@ -10,6 +10,7 @@ final class ProfileUITests: XCTestCase {
     private func openProfile(mode: String, language: String = "en", extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-UITestMock", "YES",
             "-settings.onboardingCompleted", "YES",
             "-settings.onboardingConnectPassed", "YES",
             "-settings.mode", mode,

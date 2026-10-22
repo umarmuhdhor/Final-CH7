@@ -12,6 +12,7 @@ final class OnboardingUITests: XCTestCase {
     private func launch(extensionActive: Bool = true, notifications: String = "denied") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-UITestMock", "YES",
             "-UITestReset", "YES",
             "-settings.language", "en",
             "-UITestNotifications", notifications,
@@ -103,7 +104,7 @@ final class OnboardingUITests: XCTestCase {
         // Relaunch without reset: the saved mode skips straight back to ON-04.
         app.terminate()
         let again = XCUIApplication()
-        again.launchArguments += ["-settings.language", "en", "-UITestNotifications", "denied"]
+        again.launchArguments += ["-UITestMock", "YES", "-settings.language", "en", "-UITestNotifications", "denied"]
         again.launch()
         XCTAssertTrue(again.buttons["extension.turnOn"].waitForExistence(timeout: 10))
         XCTAssertFalse(again.buttons["mode.continue"].exists)

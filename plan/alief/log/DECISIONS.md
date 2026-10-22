@@ -559,3 +559,45 @@ Format:
 - Keputusan: Cincin skor Detail tidak ikut membesar dengan Dynamic Type (`ScoreRing.maxScale = 1`, angka 42 pt); kartu lain tetap boleh 2×. `EmptyStateView` memakai tata letak sendiri (judul membungkus, deskripsi `.readableSecondary`, satu elemen VoiceOver) menggantikan `ContentUnavailableView`. Slide splash berakhir 52 pt di atas titik halaman. Kartu mode ON-03 menaruh ikon di baris sendiri pada ukuran aksesibilitas.
 - Alasan: QA-A P2-1, P2-2, P2-3, P2-5 (iPhone SE, XL). Audit `performAccessibilityAudit` di simulator banyak positif palsu (efek tepi gulir iOS 26), jadi diputuskan dari screenshot + UI test frame.
 - File: `Components/{ScoreRing,EmptyStateView}.swift`, `Features/Detail/DetailView.swift`, `Features/Onboarding/{SplashView,ModeView}.swift`; test `Tests/ComponentLogicTests.swift`, `UITests/QALayoutUITests.swift`, `UITests/AccessibilityAuditUITests.swift` (atas permintaan).
+
+## D-alief-C01 · 22 Okt 2026 · track c (fase 13) · `ApiRepository` default, `-UITestMock YES` untuk UI test
+
+- Keputusan: `AppEnvironment.live()` selalu memakai `ApiRepository` (Debug → `http://localhost:8787`, Release → `https://shoo-api.afindo-mi01.workers.dev`). `MockRepository` hanya lewat argumen `-UITestMock YES` (hanya Debug) dan untuk preview; semua UI test lama memakai argumen itu. Dengan mock, `session` = `nil` sehingga fixture tidak pernah menulis App Group/Keychain asli.
+- Alasan: fase 13 langkah 2 (mock tetap untuk preview/UI test), R5 §6 (URL di `AppConfig`, bukan Info.plist).
+- Alternatif yang ditolak: memilih mock otomatis kalau ada `-mock.scenario` (diam-diam, mudah lupa); mock di Release (tidak boleh).
+- Dampak ke tim lain / kontrak: tidak ada. Uji manual app di simulator butuh `pnpm -C backend/api dev`.
+- File: `App/{AppEnvironment,AppConfig}.swift`, `UITests/*.swift`.
+
+## D-alief-C02 · 22 Okt 2026 · track c (fase 13) · App Group hanya key kontrak; avatar guardian di memori
+
+- Keputusan: `SessionStore` menulis key kontrak saja (`device.id`, `device.token`, `device.mode`, `device.name`, `guardian.name`, `api.baseURL`, `ai.baseURL`). Guardian lengkap (nama + `avatarId`) disimpan di memori, diisi dari `POST /family/join` dan setiap `GET /devices/me`; layar membaca `me()` seperti sebelumnya. `guardian.name` dihapus saat `leaveGuardian()` (ok atau 404) dan saat `GET /devices/me` → `guardian: null`; `device.name` ditulis ulang setelah `updateMe(name:)` berhasil dan dari `me()`. `extension.lastSeenAt` milik extension tidak pernah dihapus app.
+- Alasan: SECURITY §3 P4 (tidak ada data pengguna lain di `UserDefaults`), kontrak app-group-keys, D-alief-21.
+- Alternatif yang ditolak: avatar guardian di `UserDefaults` standar (data tambahan tanpa kebutuhan; `me()` selalu membawanya).
+- File: `Data/{SessionStore,ApiRepository}.swift`.
+
+## D-alief-C03 · 22 Okt 2026 · track c (fase 13) · Sesi rusak = layar "Session expired" + onboarding ulang
+
+- Keputusan: 401 dari endpoint ber-token, atau device terdaftar tanpa token di Keychain (backup dipulihkan ke iPhone lain: item `ThisDeviceOnly` tidak ikut, salinan App Group tidak dipercaya), → `SessionStore.clear()` (Keychain + key App Group, extension langsung kehilangan sesi) → layar "Session expired" (EN/ID) dengan tombol "Start again" → `AppSettings.reset()` + `Router.reset()` → onboarding dari awal (device baru). `DELETE /devices/me` yang menjawab 401/404 = sudah terhapus: sesi dibersihkan, Profile lanjut ke onboarding tanpa layar ini. 401 dengan `Retry-After` (batas token tak dikenal) tetap 401 = token mati.
+- Alasan: fase 13 langkah 4, SECURITY T3 (rotasi = onboarding ulang), P4, P13.
+- Alternatif yang ditolak: coba lagi otomatis (token mati tidak hidup lagi); memakai token dari App Group setelah restore (melemahkan P4).
+- File: `App/{AppEnvironment,RootView}.swift`, `Data/APIClient.swift`, `Features/Main/SessionExpiredView.swift`.
+
+## D-alief-C04 · 22 Okt 2026 · track c (fase 13) · Link screenshot kedaluwarsa: minta scan sekali lagi
+
+- Keputusan: kalau screenshot gagal dimuat (404 juga berarti link 1 jam sudah lewat), Detail memanggil `GET /scans/{id}` sekali per load. Link baru → dimuat ulang; link sama / tanpa link → "Screenshot isn't available anymore"; 404 → layar "tidak ada lagi". Tetap tanpa cache disk (P9), tanpa `Authorization`.
+- Alasan: instruksi koordinator + `contracts/api.md` (`screenshotUrl` 1 jam, dicek ulang tiap request). Deviasi kecil dari DoD "diff `Features/` hanya injeksi": `DetailModel.refreshScreenshotLink()` + parameter `refreshLink` di `ScreenshotView`.
+- File: `Features/Detail/{DetailModel,DetailView,ScreenshotView}.swift`, `Tests/DetailScreenshotLinkTests.swift`.
+
+## D-alief-C05 · 22 Okt 2026 · track c (fase 13) · `ai.baseURL` tidak ditulis sampai URL Imelda ada
+
+- Keputusan: `AppConfig.aiBaseURL = nil` (`TODO(sync:imelda)`); selama `nil`, key `ai.baseURL` dihapus dari App Group, sehingga extension melewati layer 3–4 (`background.js`: `skipped: "no_ai_url"`) dan tidak mengirim halaman ke host placeholder.
+- Alasan: privasi (tidak ada data ke host yang bukan milik tim), kontrak app-group-keys.
+- Dampak: Imelda/Umar memberi URL layanan AI → satu baris di `AppConfig`.
+- File: `App/AppConfig.swift`, `Data/SessionStore.swift`.
+
+## D-alief-C06 · 22 Okt 2026 · track c (fase 13) · Sinkron saat foreground dan bahasa setelah registrasi
+
+- Keputusan: setiap `scenePhase == .active` (device terdaftar, sesi sehat): `PATCH /devices/me { extensionLastSeenAt }` dengan heartbeat App Group (dipotong ke "sekarang" kalau jam extension di masa depan; dilewati kalau belum ada heartbeat), lalu `GET /devices/me` mengisi ulang `SessionStore`. Gagal = dicatat di log saja. Setelah `POST /devices`: Keychain + App Group dulu, baru `chooseMode`; kalau bahasa app ID → `PATCH /devices/me { language: "id" }` (gagal tidak membatalkan registrasi; Profile mengirim ulang, D-alief-A19).
+- Alasan: fase 13 langkah 3 + 7, kontrak `extensionLastSeenAt`.
+- Alternatif yang ditolak: throttle per jam di app (MVP: dua request kecil per foreground cukup; backend punya batas umum).
+- File: `App/{AppEnvironment,RootView}.swift`.
