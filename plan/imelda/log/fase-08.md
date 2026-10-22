@@ -12,7 +12,7 @@
 - `ai/wrangler.toml`, `ai/scripts/smoke.mjs` (cek kedua endpoint + header + p95), bagian README.
 
 ## Verifikasi
-- `node --test --test-concurrency=1 detector/test ai/test ai/eval/test ios/ShooExtension/Tests`: 394 lolos, 0 gagal.
+- `node --test --test-concurrency=1 detector/test ai/test ai/eval/test ios/ShooExtension/Tests`: 395 lolos, 0 gagal.
 - `node ai/scripts/smoke.mjs http://127.0.0.1:8797 20` (dev server): semua `ok`, p95 3 ms (lokal; bukan angka produksi).
 
 ## DoD
@@ -35,7 +35,7 @@ Batas Workers (halaman resmi Cloudflare, dibaca 22 Okt 2026): **Free = CPU 10 ms
 - [ ] Fase 05: sumber daftar publik (A3) + daftar pra-bangun sebelum daftar nyata dipasang (CPU).
 
 ## Temuan keamanan
-Lihat bagian review di bawah (diisi setelah review).
+`ecc:security-reviewer`: tidak ada CRITICAL/HIGH. Diperbaiki: smoke test memakai host `.invalid` (tanpa lookup RDAP), `runs` dibatasi 50, menolak `http://` non-lokal, timeout 15 s, gagal bila sampel latensi < 5; `Access-Control-Expose-Headers: Retry-After`; test HEAD/slash/huruf besar; komentar `wrangler.toml` soal `workers_dev`, log zona, `[limits]`. Dicatat saja: (1) tanpa header `cf-connecting-ip` semua klien berbagi kunci `unknown` - aman di Cloudflare (selalu diisi), tetapi jangan jalankan kode ini di balik proxy lain tanpa mengubahnya; (2) tabel kunci limiter 10.000 entri bisa dikuras penyerang dengan banyak IP dan limiter per isolate - kontrol keras = aturan rate limit Cloudflare; (3) respons buatan platform (error 1101, 413 platform) tidak melewati middleware.
 
 ## Catatan handoff
 - Limiter di memori per isolate: Cloudflare menjalankan banyak isolate, jadi ini hanya redam kebisingan. Kontrol keras = aturan rate limit Cloudflare di atas.

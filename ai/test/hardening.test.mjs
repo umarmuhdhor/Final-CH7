@@ -86,6 +86,7 @@ test("CORS: preflight answered without touching limits or handlers; actual answe
         const pre = await app.request("/analyze", { method: "OPTIONS", headers: { origin: "safari-web-extension://abc", "access-control-request-method": "POST", "access-control-request-headers": "authorization, content-type", ...ip("203.0.113.50") } });
         assert.equal(pre.status, 204);
         assert.equal(pre.headers.get("access-control-allow-origin"), "*");
+        assert.equal(pre.headers.get("access-control-expose-headers"), "retry-after");
         assert.match(pre.headers.get("access-control-allow-methods"), /POST/);
         assert.match(pre.headers.get("access-control-allow-headers").toLowerCase(), /authorization/);
         assert.match(pre.headers.get("access-control-allow-headers").toLowerCase(), /content-type/);
@@ -124,4 +125,12 @@ test("errors never echo input or the Authorization header", async () => {
     texts.push(await (await postAnalyze(app, h)).text());
     texts.push(await (await app.request("/SECRET-PATH", { headers: h })).text());
     for (const t of texts) assert.doesNotMatch(t, /SECRET/);
+});
+
+test("HEAD, trailing slash and case variants either use the limiter or are plain 404s", async () => {
+    const app = createApp({ blocklistSource: SOURCE, rateLimit: { limit: 1, windowMs: 60_000 } });
+    const h = ip("203.0.113.70");
+    assert.equal((await app.request("/public-blocklist", { method: "HEAD", headers: h })).status, 200);
+    assert.equal((await app.request("/public-blocklist", { headers: h })).status, 429, "HEAD used the budget");
+    for (const p of ["/public-blocklist/", "/PUBLIC-BLOCKLIST", "/analyze/"]) assert.equal((await app.request(p, { headers: ip("203.0.113.71") })).status, 404, p);
 });

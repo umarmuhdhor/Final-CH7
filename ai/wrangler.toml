@@ -10,3 +10,7 @@ enabled = false
 
 [observability.logs]
 invocation_logs = false
+
+# workers.dev stays on (the default) so the first deploy has a URL. With a custom domain, set workers_dev = false and preview_urls = false.
+# Zone-level HTTP logs / Logpush on a custom domain are NOT covered by the setting above; check them in the dashboard (A4).
+# Cost bound (A3/A9): the Free plan already caps CPU at 10 ms; on Paid add  [limits] cpu_ms = 50  once real timings are known.

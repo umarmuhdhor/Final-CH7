@@ -3,7 +3,7 @@
 // Sends ONLY an invented page (no real browsing data) and checks both endpoints, the security headers and latency.
 // Exit 0 = all good, 1 = something failed. Prints numbers, never page content.
 const base = process.argv[2];
-const runs = Math.max(5, Number(process.argv[3]) || 30);
+const runs = Math.min(50, Math.max(5, Number(process.argv[3]) || 30)); // capped: each run is a real request (and may cost LLM budget)
 if (!base) {
     console.error("usage: node ai/scripts/smoke.mjs <base-url> [runs]");
     process.exit(2);
@@ -16,8 +16,8 @@ const check = (ok, msg) => {
 };
 
 const snapshot = {
-    url: "https://verif-akun-aman.example.xyz/login",
-    domain: "verif-akun-aman.example.xyz",
+    url: "https://verif-akun-aman.invalid/login",
+    domain: "verif-akun-aman.invalid",
     title: "Verifikasi akun",
     lang: "id",
     text: "Akun Anda akan diblokir dalam 24 jam. Masukkan PIN.",
@@ -25,8 +25,12 @@ const snapshot = {
     imageAlts: [],
     capturedAt: new Date().toISOString(),
 };
+if (!/^https:\/\//.test(base) && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(base)) {
+    console.error("refusing a non-local http:// base URL");
+    process.exit(2);
+}
 const post = () =>
-    fetch(url("/analyze"), { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer smoke" }, body: JSON.stringify({ snapshot, localSignals: [] }) });
+    fetch(url("/analyze"), { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer smoke" }, body: JSON.stringify({ snapshot, localSignals: [] }), signal: AbortSignal.timeout(15000) });
 
 const res = await post();
 const body = await res.json().catch(() => null);
@@ -55,6 +59,7 @@ for (let i = 0; i < runs; i++) {
 }
 times.sort((a, b) => a - b);
 const p = (q) => times[Math.min(times.length - 1, Math.floor(times.length * q))];
+check(times.length >= 5, `enough latency samples (${times.length})`);
 if (times.length) {
     console.log(`latency /analyze over ${times.length} runs: p50 ${p(0.5).toFixed(0)} ms, p95 ${p(0.95).toFixed(0)} ms, max ${times[times.length - 1].toFixed(0)} ms`);
     check(p(0.95) < 8000, "p95 < 8000 ms");
