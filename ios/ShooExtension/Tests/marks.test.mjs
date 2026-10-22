@@ -107,16 +107,31 @@ test("signal without text in that language → null, never \"undefined\"", () =>
 
 const screen = { width: 390, height: 800 };
 const bubble = { width: 200, height: 60 };
+const finger = (x, y) => ({ x, top: y - 10, bottom: y + 10 });
 
-test("reason bubble sits under the tap, centred, and stays on screen", () => {
-    assert.deepEqual(placeReason({ x: 195, y: 300 }, bubble, screen), { left: 95, top: 320 });
-    assert.equal(placeReason({ x: 5, y: 300 }, bubble, screen).left, 10);
-    assert.equal(placeReason({ x: 385, y: 300 }, bubble, screen).left, 180);
+test("reason bubble sits under the tap, centred, arrow on the finger, kept on screen", () => {
+    assert.deepEqual(placeReason(finger(195, 300), bubble, screen), { left: 95, top: 318, above: false, arrowX: 100 });
+    const leftEdge = placeReason(finger(5, 300), bubble, screen);
+    assert.equal(leftEdge.left, 10);
+    assert.equal(leftEdge.arrowX, 16); // clamped clear of the rounded corner
+    const rightEdge = placeReason(finger(385, 300), bubble, screen);
+    assert.equal(rightEdge.left, 180);
+    assert.equal(rightEdge.arrowX, 184);
 });
 
-test("reason bubble goes above the tap near the bottom of the screen", () => {
-    assert.equal(placeReason({ x: 195, y: 760 }, bubble, screen).top, 680);
-    assert.equal(placeReason({ x: 195, y: 30 }, { width: 200, height: 790 }, screen).top, 10);
+test("reason bubble flips above the tap near the bottom of the screen", () => {
+    assert.deepEqual(placeReason(finger(195, 760), bubble, screen), { left: 95, top: 682, above: true, arrowX: 100 });
+});
+
+test("label bubble prefers above (field stays in view), falls back below near the top", () => {
+    const label = { x: 120, top: 300, bottom: 320 };
+    assert.deepEqual(placeReason(label, bubble, screen, "above"), { left: 20, top: 232, above: true, arrowX: 100 });
+    assert.equal(placeReason({ x: 120, top: 40, bottom: 60 }, bubble, screen, "above").above, false);
+});
+
+test("bubble taller than both sides → still on screen", () => {
+    assert.equal(placeReason(finger(195, 30), { width: 200, height: 790 }, screen).top, 10);
+    assert.equal(placeReason(finger(195, 400), { width: 200, height: 790 }, screen, "above").top, 10);
 });
 
 test("_locales: en and id have the same keys, every struck kind has a mark_why_ fallback", () => {
