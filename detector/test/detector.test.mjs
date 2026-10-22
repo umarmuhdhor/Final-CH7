@@ -303,3 +303,25 @@ test("layer 1: db_match has bilingual label and labelSimple, labelSimple in plai
         assert.doesNotMatch(s.labelSimple.id, TECHNICAL);
     }
 });
+
+test("layer 1: match is called with exactly one argument, the hostname", async () => {
+    const argLengths = [];
+    await withLists(async (...args) => { argLengths.push(args.length); return null; }, () => scan("https://lphone-login.com/a?b=c"));
+    assert.deepEqual(argLengths, [1]);
+});
+
+test("layer 1: a hit on an official domain still wins (the server keeps official domains off the lists)", async () => {
+    const s = await withLists(hit("shoo"), () => scan("https://www.bca.co.id/"));
+    assert.deepEqual(ids(s), ["db_match"]);
+});
+
+test("layer 1: malformed hits are ignored and layer 2 runs", async () => {
+    const bad = [true, "x", 5, {}, { source: 5 }, { source: "evil", domain: "x.com" }, { source: "" }];
+    for (const value of bad) {
+        const s = await withLists(async () => value, () => scan("https://lphone-login.com/"));
+        assert.deepEqual(ids(s), ["lookalike_domain", "brand_plus_keyword"], JSON.stringify(value));
+    }
+    const throwing = { get source() { throw new Error("boom"); } };
+    const s = await withLists(async () => throwing, () => scan("https://lphone-login.com/"));
+    assert.deepEqual(ids(s), ["lookalike_domain", "brand_plus_keyword"]);
+});

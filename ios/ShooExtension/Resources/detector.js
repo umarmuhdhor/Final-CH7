@@ -226,8 +226,8 @@
         if (!host || host.includes(":") || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return null;
         try {
             const hit = await globalThis.ShooLists?.match(host);
-            if (!hit) return null;
-            const source = typeof hit.source === "string" ? hit.source : undefined;
+            const source = hit && typeof hit === "object" ? hit.source : null;
+            if (source !== "shoo" && source !== "public") return null; // contract: only these two sources exist
             return [signal("db_match", 100, T.dbMatch(source), source, 1)];
         } catch (error) {
             return null;
