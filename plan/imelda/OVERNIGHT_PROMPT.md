@@ -15,8 +15,11 @@ Aturan semalaman MENGALAHKAN PROMPT.md bila bertentangan. Tidak ada pertanyaan k
 opsi paling aman (privasi, false positive rendah), catat di log/DECISIONS.md (D-imelda-NN), lanjut.
 
 <keadaan_awal>
-- Cabang sekarang feat/AI-M2-eval-data (fase 04, ahead 7, belum di-push). plan/imelda/fixbug.md punya perubahan
-  yang belum di-commit: commit dulu di cabang itu (`docs(plan): record F-04 findings from eval data`).
+- Fase 04 selesai (log/fase-04.md): cabang feat/AI-M2-eval-data sudah di-push dan PR-nya sudah dibuka
+  (`gh pr list --head feat/AI-M2-eval-data`). fixbug.md sudah ter-commit (F-04-1..7). Status fase 04 `[~]`:
+  50 scam + 51 legit, tapi scam NYATA hanya 1, jadi target mandat belum bisa dinilai (D-imelda-19, D-imelda-22).
+  Holdout (tag `holdout`, seed di ai/eval/data/HOLDOUT.json) tidak boleh dipakai untuk tuning di fase 07;
+  `run.mjs` menyembunyikannya kecuali `--show-holdout`.
 - Fase 02 = PR #44 (feat/AI-M3-forms), fase 03 = PR #50 (feat/AI-M3-content, sudah memuat forms). Keduanya
   masih OPEN, jadi `ai/src` (service Hono, layer3, rdap) hanya ada di feat/AI-M3-content, bukan di main.
   Data eval 50+50 hanya ada di feat/AI-M2-eval-data. Fase 05-08 butuh keduanya.
@@ -28,7 +31,9 @@ opsi paling aman (privasi, false positive rendah), catat di log/DECISIONS.md (D-
   05 feat/AI-M5-server dari wip/AI-overnight-base -> 06 feat/AI-M4-reality-check dari 05
   -> 07 feat/AI-M6-calibration dari 06 -> 08 feat/AI-M7-deploy dari 07.
   Ini beda dari PROMPT.md langkah 3 (yang bilang dari origin/main); catat di DECISIONS.
-- Fase 04 sendiri belum punya PR: buka PR-nya dulu (feat/AI-M2-eval-data -> main) sebelum mulai fase 05.
+- Jangan membuka PR fase 04 lagi (sudah ada). Kalau PR itu sudah MERGED, pakai origin/main sebagai dasar.
+- Jalankan eval dengan `--analyze-url` memakai service lokal dan tuning hanya pada sampel non-holdout.
+  Verdict target hanya dari sampel nyata; jangan menulis "target tercapai" dari 49 scam sintetis.
 </keadaan_awal>
 
 <aturan_semalaman>
