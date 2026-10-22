@@ -196,9 +196,9 @@ struct AppEnvironmentSessionTests {
     }
 
     @Test func uiTestsGetTheMockAndTheAppGetsTheAPI() {
-        #expect(AppEnvironment.live(arguments: ["-UITestMock", "YES"]).repository is MockRepository)
-        #expect(AppEnvironment.live(arguments: ["-UITestMock", "YES"]).session == nil)
-        #expect(AppEnvironment.live(arguments: []).repository is ApiRepository)
+        #expect(AppEnvironment.live(arguments: ["-UITestMock", "YES"], registerForPush: {}).repository is MockRepository)
+        #expect(AppEnvironment.live(arguments: ["-UITestMock", "YES"], registerForPush: {}).session == nil)
+        #expect(AppEnvironment.live(arguments: [], registerForPush: {}).repository is ApiRepository)
     }
 
     /// Only a Debug build in the simulator uses localhost; on a real iPhone localhost is the phone.

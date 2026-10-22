@@ -5,9 +5,9 @@ import Foundation
 enum DeepLink: Equatable {
     /// `shoo://join?code=1234`, or the invite page `https://<api host>/join?code=1234` (QR, PR-03).
     case join(code: String)
-    /// `shoo://scan/{scanId}` (routed in fase 15).
+    /// `shoo://scan/{scanId}`: Detail on the Activity tab (D-alief-C13).
     case scan(id: String)
-    /// `shoo://activity` (routed in fase 15).
+    /// `shoo://activity`: the Activity list.
     case activity
     case unknown
 

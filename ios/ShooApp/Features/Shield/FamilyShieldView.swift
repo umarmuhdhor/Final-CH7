@@ -28,7 +28,10 @@ struct GuardianShieldView: View {
     private var reminder: NotificationReminderBanner? {
         guard NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) else { return nil }
         return NotificationReminderBanner(status: notificationStatus) {
-            Task { notificationStatus = await env.notifications.request() }
+            Task {
+                notificationStatus = await env.notifications.request()
+                await env.registerForPushIfAllowed()
+            }
         }
     }
 }

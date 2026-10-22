@@ -643,3 +643,45 @@ Format:
 - Alasan: review swift fase 14 (HIGH): SwiftUI hanya menampilkan satu sheet; jeda waktu tetap (700 ms) menebak kapan animasi selesai dan bisa membuat flag Connect macet `true` tanpa sheet. Urutan dari state tidak menebak.
 - Alternatif yang ditolak: satu `enum ActiveSheet` + `.sheet(item:)` untuk semua sheet (lebih rapi, tapi menyentuh banyak layar fase 04–06; dicatat untuk refactor setelah MVP); cek `presentedViewController` UIKit + jeda (ikut menghitung alert/dialog sistem yang tidak bisa ditutup app).
 - File: `App/{Router,AppEnvironment,RootView}.swift`, `Features/Main/MainTabView.swift`, `Features/Shield/ProtectedShieldView.swift`, `Tests/PairingTests.swift` (`DeepLinkRoutingTests`).
+
+## D-alief-C13 · 22 Okt 2026 · track c (fase 15) · Tap push dan `shoo://scan/{id}` membuka Detail di tab Activity
+
+- Keputusan: tap notifikasi (GD-06) dan link `shoo://scan/{id}` dari layar blokir extension menutup semua sheet, pindah ke tab Activity dan membuka Detail di atas daftar (`Router.openDetail`). Tombol Back kembali ke daftar Activity. `shoo://activity` membuka daftar tanpa Detail. Push tanpa `scanId` yang aman, atau link rusak/asing, membuka Shield.
+- Alasan: Detail milik riwayat Activity (Guardian bisa langsung melihat kejadian lain setelah memvalidasi); satu tujuan untuk push dan link sehingga perilakunya sama dari extension maupun notifikasi.
+- Alternatif yang ditolak: Detail sebagai sheet di atas tab mana pun (menumpuk dengan Profile/Connect, sama dengan masalah C12); Detail di tab Shield (Shield tidak menampilkan riwayat).
+- File: `App/{Router,AppEnvironment}.swift`, `Tests/PushTests.swift`, `UITests/DeepLinkUITests.swift`.
+
+## D-alief-C14 · 22 Okt 2026 · track c (fase 15) · Token APNs: Guardian saja, diminta tiap app aktif, dikirim sekali per token
+
+- Keputusan: `registerForRemoteNotifications` dipanggil setiap app aktif hanya kalau mode Guardian, sesi masih berlaku dan izin notifikasi `authorized`. Token (hex) dikirim lewat `PATCH /devices/me {apnsToken}` hanya kalau berbeda dari yang terakhir sukses terkirim di sesi app ini; gagal kirim → dicoba lagi di aktivasi berikutnya. Protected tidak pernah mendaftar maupun mengirim token. Token tidak pernah di-log (hanya event "APNs registration requested" / "APNs token received").
+- Alasan: kontrak hanya mengirim push ke Guardian, jadi token Protected adalah data yang tidak perlu (P2, minimalisasi). Apple menyarankan registrasi di setiap peluncuran karena token bisa berubah (restore, install ulang).
+- Alternatif yang ditolak: kirim token kedua mode (data tak terpakai di server); simpan token terakhir di disk untuk menghindari PATCH per peluncuran (penyimpanan tambahan untuk menghemat satu request kecil).
+- File: `App/{AppDelegate,AppEnvironment}.swift`, `Support/NotificationRouter.swift`.
+
+## D-alief-C15 · 22 Okt 2026 · track c (fase 15) · Push saat app terbuka tetap tampil sebagai banner
+
+- Keputusan: `willPresent` mengembalikan `.banner, .list, .sound`; Guardian membuka Detail dengan tap seperti di background. Layar yang sedang dipakai tidak berpindah sendiri.
+- Alasan: berpindah layar tanpa tap mengganggu Guardian yang sedang mengetik/membaca; banner menjaga satu cara membuka (tap) di tiga kondisi app.
+- Alternatif yang ditolak: langsung membuka Detail saat push datang di foreground; menyembunyikan push di foreground (Guardian bisa melewatkannya).
+- File: `App/AppDelegate.swift`.
+
+## D-alief-C16 · 22 Okt 2026 · track c (fase 15) · Push dan link diabaikan selama onboarding atau "Session expired"
+
+- Keputusan: `openPush` dan `open(url)` untuk `scan`/`activity` hanya bernavigasi kalau tab utama tampil (onboarding selesai, mode ada, sesi berlaku); selain itu tidak melakukan apa-apa. `join` tetap ditangani fase 14 (ditunda sampai langkah Connect).
+- Alasan: Detail butuh sesi yang berlaku; menyimpan navigasi tertunda melewati onboarding menambah state tanpa manfaat nyata (push hanya datang ke Guardian yang sudah selesai onboarding).
+- Alternatif yang ditolak: menyimpan `scanId` tertunda sampai onboarding selesai.
+- File: `App/AppEnvironment.swift`, `Tests/PushTests.swift`.
+
+## D-alief-C17 · 22 Okt 2026 · track c (fase 15) · Delegate notifikasi memakai bentuk completion handler
+
+- Keputusan: `userNotificationCenter(_:willPresent:withCompletionHandler:)` dan `(_:didReceive:withCompletionHandler:)` di `AppDelegate` `@MainActor`, bukan bentuk `async`.
+- Alasan: uji ujung-ke-ujung fase 15 menemukan crash (`NSInternalInconsistencyException` dari `-[UIApplication _performBlockAfterCATransactionCommitSynchronizes:]`) saat tap banner dari background: completion yang dibuat Swift untuk bentuk `async` berjalan di luar main thread. Bentuk completion handler dipanggil di main thread dan selesai di sana.
+- Alternatif yang ditolak: bentuk `async` + `MainActor.run` (tetap crash, completion buatan compiler di luar kendali kita).
+- File: `App/AppDelegate.swift`.
+
+## D-alief-C18 · 22 Okt 2026 · track c (fase 15) · Notifikasi yang sudah tampil dihapus bersama datanya
+
+- Keputusan: `UNUserNotificationCenter.removeAllDeliveredNotifications()` dipanggil setelah Hapus data / putus hubungan (Profile), Remove anggota (Family code), sesi habis, dan "Start again".
+- Alasan: push yang sudah tampil memuat nama anggota + skor (P10); setelah datanya dihapus, lock screen / Notification Center tidak boleh tetap menampilkannya (P13). iOS tidak bisa memilih notifikasi per orang tanpa menyimpan pemetaan id → orang, jadi semuanya dihapus (paling menjaga privasi, kerugian kecil: notifikasi anggota lain ikut hilang, riwayatnya tetap di Activity).
+- Alternatif yang ditolak: menyimpan peta `scanId` → anggota untuk menghapus selektif (penyimpanan tambahan); membiarkan notifikasi lama (melanggar P13).
+- File: `Support/NotificationRouter.swift` (`DeliveredPushes`), `Features/Profile/ProfileView.swift`, `Features/Pairing/FamilyCodeModel.swift`, `App/AppEnvironment.swift`.

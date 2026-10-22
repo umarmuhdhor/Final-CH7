@@ -18,6 +18,12 @@ final class AppEnvironment {
     /// another iPhone). `RootView` then shows "Session expired" (fase 13 step 4).
     private(set) var sessionExpired = false
     @ObservationIgnored private var isSyncingForeground = false
+    /// Asks iOS for the APNs token; the answer comes back through `AppDelegate`.
+    @ObservationIgnored private let registerForPush: @MainActor () -> Void
+    /// The token the server has (or is getting) from this launch: the same one is not sent twice.
+    @ObservationIgnored private var sentPushToken: String?
+    /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
+    @ObservationIgnored private var pushTokenEpoch = 0
 
     init(
         repository: any ShooRepository,
@@ -25,8 +31,10 @@ final class AppEnvironment {
         router: Router = Router(),
         notifications: any NotificationPermission = SystemNotificationPermission(),
         session: SessionStore? = nil,
-        extensionStatus: @escaping () -> ExtensionStatus = { ExtensionStatus.current() }
+        extensionStatus: @escaping () -> ExtensionStatus = { ExtensionStatus.current() },
+        registerForPush: @escaping @MainActor () -> Void = {}
     ) {
+        self.registerForPush = registerForPush
         self.repository = repository
         self.settings = settings
         self.router = router
@@ -38,7 +46,10 @@ final class AppEnvironment {
     /// The app at launch: `ApiRepository` against `AppConfig.apiBaseURL`. UI tests and screenshots pass
     /// `-UITestMock YES` (Debug only) to get the fixtures of `MockRepository` instead.
     @MainActor
-    static func live(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppEnvironment {
+    static func live(
+        arguments: [String] = ProcessInfo.processInfo.arguments,
+        registerForPush: @escaping @MainActor () -> Void
+    ) -> AppEnvironment {
         #if DEBUG
         if Self.value(after: "-UITestReset", in: arguments) == "YES" {
             AppSettings.clear(defaults: .standard)
@@ -81,7 +92,8 @@ final class AppEnvironment {
         #endif
         let environment = AppEnvironment(
             repository: repository, settings: settings, notifications: notifications, session: session,
-            extensionStatus: extensionStatus
+            extensionStatus: extensionStatus,
+            registerForPush: registerForPush
         )
         expiry.environment = environment
         environment.checkStoredSession()
@@ -119,6 +131,9 @@ final class AppEnvironment {
             throw RepositoryError.network
         }
         settings.chooseMode(mode)
+        // A new device on the server: its first token must be sent even if APNs hands out the same one.
+        sentPushToken = nil
+        pushTokenEpoch += 1
         if mode == .guardian { router.pendingJoinCode = nil }
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
@@ -156,6 +171,7 @@ final class AppEnvironment {
             guard !error.isCancellation else { return }
             Log.app.error("Profile refresh failed", error)
         }
+        await registerForPushIfAllowed()
     }
 
     /// A registered device whose token is gone (backup restored onto another iPhone: the Keychain item
@@ -194,6 +210,7 @@ final class AppEnvironment {
         guard settings.mode != nil, !sessionExpired else { return }
         Log.app.info("Session expired")
         sessionExpired = true
+        DeliveredPushes.clear()
     }
 
     /// "Start again" on the Session expired screen: a fresh install (onboarding from the start).
@@ -203,10 +220,12 @@ final class AppEnvironment {
         router.reset()
         settings.reset()
         sessionExpired = false
+        DeliveredPushes.clear()
     }
 
     /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: Connect still asks
-    /// for a tap (T11). A guardian, or any unknown link, lands on Shield.
+    /// for a tap (T11). `scan` opens Detail, `activity` the Activity tab; a Guardian's join link, or any
+    /// unknown link, lands on Shield.
     @MainActor
     func open(_ url: URL) {
         switch DeepLink(url: url) {
@@ -216,10 +235,69 @@ final class AppEnvironment {
             guard settings.mode == .protected, settings.onboardingCompleted else { return }
             // Already open, `ConnectSheet` picks the new code up.
             router.showConnect()
-        default:
-            // `scan` / `activity` are routed in fase 15.
+        case .scan(let id) where isInMainScreen:
+            router.openDetail(scanId: id)
+        case .activity where isInMainScreen:
+            router.openActivity()
+        case .join, .unknown:
+            // A Guardian's join link, or a link we don't know: Shield.
+            if isInMainScreen { router.reset() }
+        case .scan, .activity:
+            // Onboarding or "Session expired" is on screen: nothing to open yet.
+            break
+        }
+    }
+
+    /// The tabs are showing (not onboarding, not "Session expired").
+    @MainActor
+    private var isInMainScreen: Bool {
+        settings.onboardingCompleted && settings.mode != nil && !sessionExpired
+    }
+
+    /// Only the Guardian gets pushes, so only the Guardian's tabs open or show one.
+    @MainActor
+    private var isGuardianInMainScreen: Bool { isInMainScreen && settings.mode == .guardian }
+
+    /// GD-06: a tapped push. A push without a usable `scanId` opens Shield.
+    @MainActor
+    func openPush(scanId: String?) {
+        guard isGuardianInMainScreen else { return }
+        if let scanId {
+            router.openDetail(scanId: scanId)
+        } else {
             router.reset()
         }
+    }
+
+    /// A push that arrives while Shoo is open: a banner only where a tap can open it (C15).
+    @MainActor
+    var showsPushBanner: Bool { isGuardianInMainScreen }
+
+    /// ON-05: only the Guardian gets pushes (contracts/api.md), so only the Guardian's token is sent.
+    @MainActor
+    func pushTokenReceived(_ token: Data) async {
+        guard settings.mode == .guardian, !sessionExpired else { return }
+        let hex = NotificationRouter.hex(token: token)
+        guard hex != sentPushToken else { return }
+        // Marked before the request: a second callback with the same token while it is in flight sends nothing.
+        sentPushToken = hex
+        let epoch = pushTokenEpoch
+        do {
+            try await repository.updateMe(DeviceUpdate(apnsToken: hex))
+        } catch {
+            // Sent again on the next activation, unless a new registration has taken over meanwhile.
+            if epoch == pushTokenEpoch, sentPushToken == hex { sentPushToken = nil }
+            guard !error.isCancellation else { return }
+            Log.app.error("APNs token sync failed", error)
+        }
+    }
+
+    /// Apple asks apps to register at every launch: the token can change (restore, reinstall).
+    @MainActor
+    func registerForPushIfAllowed() async {
+        guard settings.mode == .guardian, !sessionExpired, await notifications.status() == .authorized else { return }
+        Log.app.info("APNs registration requested")
+        registerForPush()
     }
 
     /// After ON-05: the tabs replace onboarding.
