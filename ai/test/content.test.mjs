@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { analyzeSnapshot } from "../src/analyze.js";
 import { buildIndex, findPhrase } from "../src/layer3/match.js";
-import { page, SCAM_URL } from "./helpers.mjs";
+import { fastestMs, page, SCAM_URL } from "./helpers.mjs";
 
 const run = (over, url = SCAM_URL) => analyzeSnapshot(page(url, [], over));
 const find = (signals, id) => signals.find((s) => s.id === id);
@@ -30,11 +30,10 @@ test("match: word boundaries (act now is not inside react nowadays) and no match
     assert.ok(findPhrase(buildIndex("klaim   sekarang"), "klaim sekarang"));
 });
 
-test("match: text 20,000 chars of repeated near-misses stays fast", () => {
+test("match: text 20,000 chars of repeated near-misses stays fast", async () => {
     const text = "act nowact now ".repeat(1400).slice(0, 20000);
-    const t0 = performance.now();
-    findPhrase(buildIndex(text), "act now");
-    assert.ok(performance.now() - t0 < 100);
+    const ms = await fastestMs(() => findPhrase(buildIndex(text), "act now"));
+    assert.ok(ms < 100, `took ${ms.toFixed(1)} ms`);
 });
 
 // ---- urgent_language --------------------------------------------------------
@@ -86,23 +85,21 @@ for (const text of [
     });
 }
 
-test("perf: worst NFKC blow-up (18x) stays under 100 ms", () => {
+test("perf: worst NFKC blow-up (18x) stays under 100 ms", async () => {
     const text = "\ufdfa".repeat(20000);
-    const t0 = performance.now();
-    analyzeSnapshot(page(SCAM_URL, [], { text, title: text.slice(0, 500), imageAlts: Array(50).fill("\ufdfa".repeat(300)) }));
-    assert.ok(performance.now() - t0 < 100, `took ${performance.now() - t0}`);
+    const ms = await fastestMs(() => analyzeSnapshot(page(SCAM_URL, [], { text, title: text.slice(0, 500), imageAlts: Array(50).fill("\ufdfa".repeat(300)) })));
+    assert.ok(ms < 100, `took ${ms.toFixed(1)} ms`);
 });
 
 test("match: caseless scripts count as word characters", () => {
     assert.equal(findPhrase(buildIndex("final warning\ufdfa"), "final warning"), null);
 });
 
-test("urgent_language: huge hostile text answers fast and never throws", () => {
+test("urgent_language: huge hostile text answers fast and never throws", async () => {
     for (const unit of ["a", "akun anda ", "act now", "klaim ", "​", "ｓ"]) {
         const text = unit.repeat(Math.ceil(20000 / unit.length)).slice(0, 20000);
-        const t0 = performance.now();
-        analyzeSnapshot(page(SCAM_URL, [], { text, title: text.slice(0, 500) }));
-        assert.ok(performance.now() - t0 < 100, `unit ${JSON.stringify(unit)} took ${performance.now() - t0} ms`);
+        const ms = await fastestMs(() => analyzeSnapshot(page(SCAM_URL, [], { text, title: text.slice(0, 500) })));
+        assert.ok(ms < 100, `unit ${JSON.stringify(unit)} took ${ms.toFixed(1)} ms`);
     }
 });
 

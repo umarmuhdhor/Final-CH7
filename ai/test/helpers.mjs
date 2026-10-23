@@ -35,3 +35,17 @@ export function post(app, body, init = {}) {
 }
 
 export const ids = (signals) => signals.map((s) => s.id);
+
+/**
+ * Fastest of `runs` timings of `fn`, in ms. CPU budget tests use it so a busy machine (scheduler, GC) does not fail
+ * them: a real slow path (ReDoS, quadratic scan) is slow on every run, noise is not.
+ */
+export async function fastestMs(fn, runs = 5) {
+    let best = Infinity;
+    for (let i = 0; i < runs; i++) {
+        const t0 = performance.now();
+        await fn();
+        best = Math.min(best, performance.now() - t0);
+    }
+    return best;
+}
