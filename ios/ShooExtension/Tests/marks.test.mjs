@@ -47,6 +47,15 @@ test("layer 1–2 evidence is never highlighted (db_match \"public\" must not ma
     assert.deepEqual(phrasesFrom(signals), ["segera verifikasi"]);
 });
 
+test("only text signals are highlighted (new_domain \"120\" days must not mark the number on the page, #74)", () => {
+    const signals = [
+        sig("new_domain", 3, 20, "120"),
+        sig("future_signal", 3, 10, "something long enough"), // unknown layer 3 id: not page text until listed
+        sig("unreasonable_request", 4, 30, "masukkan PIN untuk klaim hadiah"),
+    ];
+    assert.deepEqual(phrasesFrom(signals), ["masukkan PIN untuk klaim hadiah"]);
+});
+
 test("30–49: highlight only", () => {
     assert.deepEqual(marksFor({ ...warning41, status: "warning" }).highlight, true);
     assert.deepEqual(marksFor({ ...warning41, status: "warning" }).strike, false);
@@ -85,6 +94,11 @@ test("layer 1–2 and asks_* evidence never explain highlighted text", () => {
     const signals = [sig("db_match", 1, 100, "public"), sig("asks_pin", 3, 25, "pin")];
     assert.equal(reasonFor(signals, { phrase: "public" }, guardian), null);
     assert.equal(reasonFor(signals, { phrase: "pin" }, guardian), null);
+});
+
+test("non-text layer 3 evidence never explains highlighted text, even when heavier", () => {
+    const signals = [sig("urgent_language", 3, 10, "120 jam"), sig("new_domain", 3, 20, "120 jam")];
+    assert.equal(reasonFor(signals, { phrase: "120 jam" }, guardian), "urgent_language");
 });
 
 test("struck field → asks_* signal whose evidence is the field name or id (fixture: asks_ktp \"nik\")", () => {
