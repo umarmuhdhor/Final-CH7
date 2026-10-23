@@ -208,11 +208,11 @@ test("system prompt tells the model the data block is untrusted and fixes the ou
     assert.match(PROMPT_VERSION, /^reality-check\.v\d+$/);
 });
 
-test("evidence is kept only when it is an exact substring of the page title/text (case-insensitive, original casing returned)", async () => {
-    const snap = page(SCAM_URL, [field({ name: "pin" })], { title: "Klaim Hadiah Anda Sekarang", text: "Masukkan PIN untuk klaim" });
+test("evidence is kept only when it is in the title (what the model saw) AND in the page text (what can be highlighted)", async () => {
+    const snap = page(SCAM_URL, [field({ name: "pin" })], { title: "Klaim Hadiah  Anda Sekarang", text: "Selamat! KLAIM HADIAH ANDA sekarang. Masukkan PIN untuk klaim" });
     const cases = [
-        ["klaim hadiah anda", "Klaim Hadiah Anda"],
-        ["masukkan pin", undefined], // text is client-supplied and the model never saw it: only the title counts
+        ["klaim hadiah anda", "KLAIM HADIAH ANDA"], // exact slice of the text; the double space in the title still matches
+        ["masukkan pin", undefined], // in the text but not the title: the model never saw it
         ["klaim", undefined], // too short to be evidence
         ["klaim hadiah gratis", undefined],
         ["Claim your prize", undefined],
@@ -223,6 +223,82 @@ test("evidence is kept only when it is an exact substring of the page title/text
         assert.ok(s, "signal stays even when evidence is dropped");
         assert.equal(s.evidence, expected, ev);
     }
+});
+
+test("title-only phrase (not repeated in the body) gives no evidence: <title> is never highlighted", async () => {
+    const snap = page(SCAM_URL, [field({ name: "pin" })], { title: "Klaim Hadiah Anda Sekarang", text: "Masukkan PIN" });
+    const f = fake(() => reply(verdict({ evidence: "Klaim Hadiah Anda" })));
+    const s = (await (await post(appWith(f), { snapshot: snap, localSignals: [] })).json()).signals.find((x) => x.id === "unreasonable_request");
+    assert.ok(s);
+    assert.equal(s.evidence, undefined);
+});
+
+test("a phrase copied from the masked title still matches: the longest unmasked piece is used", async () => {
+    const snap = page(SCAM_URL, [field({ name: "pin" })], { title: "Pesanan 88123456 tertahan di gudang", text: "Pesanan 88123456 tertahan di gudang, bayar bea cukai" });
+    const f = fake(() => reply(verdict({ evidence: "Pesanan [number] tertahan di gudang" })));
+    const s = (await (await post(appWith(f), { snapshot: snap, localSignals: [] })).json()).signals.find((x) => x.id === "unreasonable_request");
+    assert.equal(s.evidence, "tertahan di gudang");
+});
+
+test("one ```json fence around the answer is accepted", async () => {
+    for (const wrap of [(j) => "```json\n" + j + "\n```", (j) => "```\n" + j + "\n```", (j) => "  ```JSON\n" + j + "```  "]) {
+        const f = fake(() => reply(wrap(JSON.stringify(verdict()))));
+        assert.deepEqual(ids((await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json()).signals), ["asks_pin", "unreasonable_request"]);
+    }
+    const f = fake(() => reply("Here you go: ```json\n" + JSON.stringify(verdict()) + "\n```"));
+    assert.deepEqual(ids((await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json()).signals), ["asks_pin"], "prose around the fence is still rejected");
+});
+
+test("per-client limit off: 30 requests with no IP header all reach the provider (local eval)", async () => {
+    const f = fake(() => reply(verdict()));
+    const app = createApp({ llm: createRealityCheck({ config: CONFIG, fetch: f.fetch, clientCallsPerHour: Infinity }) });
+    let flagged = 0;
+    for (let i = 0; i < 30; i++) {
+        const body = await (await post(app, { snapshot: PIN(), localSignals: [] })).json();
+        if (body.signals.some((s) => s.id === "unreasonable_request")) flagged += 1;
+    }
+    assert.equal(f.calls.length, 30);
+    assert.equal(flagged, 30);
+});
+
+test("per-client limit on (default): the 21st request in an hour from one client is not sent", async () => {
+    const f = fake(() => reply(verdict()));
+    const app = appWith(f);
+    for (let i = 0; i < 21; i++) await post(app, { snapshot: PIN(), localSignals: [] });
+    assert.equal(f.calls.length, 20);
+});
+
+test("outcome counters: every way a check ends is counted, with no page data", async () => {
+    const answers = [
+        () => reply(verdict()), // flagged
+        () => reply(verdict({ reasonable: true })), // reasonable
+        () => reply("nope"), // bad_schema
+        () => new Response("denied", { status: 400 }), // http_error
+        () => new Promise(() => {}), // timeout
+    ];
+    let n = 0;
+    const f = fake((url, init) => {
+        const a = answers[n++];
+        return a.length ? a(url, init) : a();
+    });
+    const checker = createRealityCheck({ config: { ...CONFIG, timeoutMs: 50, dailyCap: 5 }, fetch: f.fetch, clientCallsPerHour: Infinity });
+    const app = createApp({ llm: checker });
+    for (let i = 0; i < 6; i++) await post(app, { snapshot: PIN(), localSignals: [] }); // the 6th hits the daily cap
+    await post(app, { snapshot: page(SCAM_URL, [], { title: "Cek hadiah" }), localSignals: [] }); // no form -> gated
+    const stats = checker.stats();
+    assert.deepEqual(stats.outcomes, { gated: 1, capped: 1, timeout: 1, http_error: 1, bad_schema: 1, reasonable: 1, flagged: 1 });
+    assert.equal(stats.promptVersion, PROMPT_VERSION);
+    assert.equal(stats.model, CONFIG.model);
+    assert.deepEqual(Object.keys(stats).sort(), ["model", "outcomes", "promptVersion"]);
+});
+
+test("GET /_dev/layer4 exists only when devStats is on", async () => {
+    const f = fake(() => reply(verdict()));
+    const llm = createRealityCheck({ config: CONFIG, fetch: f.fetch });
+    assert.equal((await createApp({ llm }).request("/_dev/layer4")).status, 404);
+    const res = await createApp({ llm, devStats: true }).request("/_dev/layer4");
+    assert.equal(res.status, 200);
+    assert.deepEqual(Object.keys((await res.json()).outcomes).sort(), ["bad_schema", "capped", "flagged", "gated", "http_error", "reasonable", "timeout"]);
 });
 
 test("daily cap: after the cap the provider is not called again (cost breaker)", async () => {

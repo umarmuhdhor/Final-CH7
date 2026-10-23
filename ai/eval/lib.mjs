@@ -236,6 +236,29 @@ export async function probeAnalyze(baseUrl) {
     }
 }
 
+/**
+ * Layer 4 outcome counters from the local dev server (GET /_dev/layer4). null when the server has no such route
+ * (a deployed Worker) or layer 4 is off. Counters are cumulative per server process: diff a before/after pair.
+ */
+export async function layer4Stats(baseUrl) {
+    try {
+        const res = await fetch(new URL("/_dev/layer4", baseUrl), { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) return null;
+        const body = await res.json();
+        return body && typeof body.outcomes === "object" ? body : null;
+    } catch {
+        return null;
+    }
+}
+
+/** after - before, per outcome. `before` may be null (counters started at zero). */
+export function layer4Delta(before, after) {
+    if (!after) return null;
+    const outcomes = {};
+    for (const [k, v] of Object.entries(after.outcomes)) outcomes[k] = v - (before?.outcomes?.[k] ?? 0);
+    return { promptVersion: after.promptVersion, model: after.model, outcomes };
+}
+
 /** --strict: only a run that really judged the targets and met them passes; "nothing was judged" is not a pass. */
 export function strictExitCode(summary) {
     return summary.targetsMet === true ? 0 : summary.targetsMet === false ? 1 : 2;

@@ -7,7 +7,7 @@
 //   --show-holdout         also list holdout samples one by one (default: only their totals; look at them once, at the end of phase 07)
 //   --strict               exit 0 only when the targets were judged (50+ real per class, --analyze-url, no /analyze failure) AND met; 1 = not met, 2 = not judged
 import { fileURLToPath } from "node:url";
-import { loadSamples, loadDetector, evaluate, summarize, probeAnalyze, strictExitCode, visibleRows, jsonReport, normalizeSnapshot, MIN_PER_CLASS, TARGETS } from "./lib.mjs";
+import { loadSamples, loadDetector, evaluate, summarize, probeAnalyze, layer4Stats, layer4Delta, strictExitCode, visibleRows, jsonReport, normalizeSnapshot, MIN_PER_CLASS, TARGETS } from "./lib.mjs";
 
 function parseArgs(argv) {
     const args = { dir: fileURLToPath(new URL("./data", import.meta.url)), analyzeUrl: null, tag: null, json: false, strict: false, showHoldout: false };
@@ -52,14 +52,16 @@ async function main() {
     }
 
     if (args.analyzeUrl) await probeAnalyze(args.analyzeUrl);
+    const l4Before = args.analyzeUrl ? await layer4Stats(args.analyzeUrl) : null;
     const detector = loadDetector();
     const rows = [];
     await detector.analyzeLocal(normalizeSnapshot(chosen[0].snapshot)); // warm-up: the first call is slow and would skew the max timing
     for (const s of chosen) rows.push(await evaluate(s, { detector, analyzeUrl: args.analyzeUrl }));
     const summary = summarize(rows, { remote: !!args.analyzeUrl });
+    const layer4 = args.analyzeUrl ? layer4Delta(l4Before, await layer4Stats(args.analyzeUrl)) : null;
 
     if (args.json) {
-        console.log(JSON.stringify(jsonReport(rows, summary, args), null, 2));
+        console.log(JSON.stringify({ ...jsonReport(rows, summary, args), layer4 }, null, 2));
     } else {
         console.log(`${pad("id", 30)} ${pad("label", 6)} ${pad("L2", 4)} ${pad("score", 5)} ${pad("status", 9)} signals`);
         console.log("-".repeat(96));
@@ -105,6 +107,16 @@ async function main() {
             console.log("  by signal (all rows):", JSON.stringify(summary.falsePositiveSignals));
         }
         if (summary.misses.length) console.log(`scam pages under 50: ${listed(summary.misses)}`);
+        if (args.analyzeUrl) {
+            const flagged = (label) => rows.filter((r) => r.label === label && r.signals.some((x) => x.id === "unreasonable_request")).length;
+            console.log(`\nLAYER 4 (unreasonable_request): scam ${flagged("scam")}/${summary.counts.scam}, legit ${flagged("legit")}/${summary.counts.legit}`);
+            if (layer4) {
+                console.log(`  ${layer4.promptVersion} · model ${layer4.model}`);
+                console.log(`  outcomes: ${Object.entries(layer4.outcomes).map(([k, v]) => `${k} ${v}`).join(", ")}`);
+                const broken = layer4.outcomes.http_error + layer4.outcomes.timeout + layer4.outcomes.bad_schema + layer4.outcomes.capped;
+                if (broken) console.log(`  WARNING ${broken} layer 4 call(s) gave no verdict (http_error/timeout/bad_schema/capped): layer 4 numbers are incomplete`);
+            } else console.log("  outcomes: n/a (layer 4 off, or not the local dev server)");
+        }
         console.log(`\nanalyzeLocal: avg ${summary.timing.analyzeLocalAvgMs.toFixed(2)} ms, max ${summary.timing.analyzeLocalMaxMs.toFixed(2)} ms (target < 50 ms)`);
     }
     if (args.strict) process.exit(strictExitCode(summary));

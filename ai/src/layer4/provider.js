@@ -1,12 +1,15 @@
 // Generic chat-completions client (OpenAI-compatible request shape, which most providers offer).
-// Model, base URL and key come from config. It returns the model's text or null; it never throws and never
-// forwards anything the provider said about an error (SECURITY A10).
+// Model, base URL and key come from config. It returns { ok: true, content } or { ok: false, reason }; it never throws
+// and never forwards anything the provider said about an error (SECURITY A10).
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
+const HTTP_ERROR = Object.freeze({ ok: false, reason: "http_error" });
+const BAD_SCHEMA = Object.freeze({ ok: false, reason: "bad_schema" });
+const TIMEOUT = Object.freeze({ ok: false, reason: "timeout" });
 
 /**
  * @param {{ config: object, fetch: typeof fetch }} deps
- * @returns {(messages: object[], signal: AbortSignal) => Promise<string | null>}
+ * @returns {(messages: object[], signal: AbortSignal) => Promise<{ ok: true, content: string } | { ok: false, reason: "http_error" | "bad_schema" | "timeout" }>}
  */
 export function createProvider({ config, fetch }) {
     return async (messages, signal) => {
@@ -24,16 +27,21 @@ export function createProvider({ config, fetch }) {
                 signal,
                 redirect: "error", // the key must not follow a redirect to another host
             });
-            if (!res.ok) return null;
+            if (!res.ok) return HTTP_ERROR;
             const declared = Number(res.headers.get("content-length"));
-            if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) return null;
+            if (Number.isFinite(declared) && declared > MAX_RESPONSE_BYTES) return BAD_SCHEMA;
             const raw = await res.text();
-            if (raw.length > MAX_RESPONSE_BYTES) return null;
-            const body = JSON.parse(raw);
+            if (raw.length > MAX_RESPONSE_BYTES) return BAD_SCHEMA;
+            let body;
+            try {
+                body = JSON.parse(raw);
+            } catch {
+                return BAD_SCHEMA;
+            }
             const content = body?.choices?.[0]?.message?.content;
-            return typeof content === "string" ? content : null;
+            return typeof content === "string" ? { ok: true, content } : BAD_SCHEMA;
         } catch {
-            return null;
+            return signal?.aborted ? TIMEOUT : HTTP_ERROR; // network failure, redirect refused, or our abort
         }
     };
 }

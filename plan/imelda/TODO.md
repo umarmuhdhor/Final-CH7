@@ -11,7 +11,8 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | A3 | Sumber daftar phishing publik (M5) | Pilih yang lisensinya boleh dipakai di app; catat di `ai/README.md`. Kandidat dicek di fase 05: tabel di `ai/README.md`; rekomendasi tanya PhishTank dulu (lihat log/fase-05.md) | [ ] tunggu Imelda |
 | A4 | Sumber sampel scam untuk M2 | Hanya lewat `capture.mjs`/laporan publik; jangan membuka URL di browser. Cek lisensi sumber | [~] fase 04: OpenPhish/PhishTank/URLhaus tidak dipakai (lisensi); butuh sumber scam nyata berlisensi atau izin tertulis (D-imelda-19) |
 | A5 | Gerbang panggilan LLM (D-imelda-05) | Form ≥ 1 field dan skor sementara ≥ 15; situs resmi tidak memanggil | [ ] tunggu Imelda |
-| A6 | Kebijakan penyedia LLM: tidak melatih dari data API, retensi minimum (SECURITY Q3) | Catat kebijakan penyedia terpilih di DECISIONS saat memilih model | [ ] |
+| A6 | Kebijakan penyedia LLM: tidak melatih dari data API, retensi minimum (SECURITY Q3) | Catat kebijakan penyedia terpilih di DECISIONS saat memilih model. Review #59: penyedia **wajib** zero data retention atau no-training sebelum key dipasang (janji PRD: "dikirim ke `/analyze`, tidak disimpan"); label privasi App Store diperbarui di rilis yang sama | [ ] |
+| A7 | Sinyal layer 4 tanpa `evidence` (D-imelda-29 vs SECURITY A5) | Tetap tampil tanpa evidence (kontrak: `evidence` opsional). Review #59 minta keputusan lead sebelum layer 4 dinyalakan | [ ] tunggu Umar |
 
 ## B. Akun dan secret (memblokir fase 06 dan 08)
 

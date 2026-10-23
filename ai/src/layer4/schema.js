@@ -3,6 +3,15 @@ import { PAGE_TYPES, ASK_KINDS } from "../../prompts/reality-check.js";
 
 const PAGE = new Set(PAGE_TYPES);
 const ASKS = new Set(ASK_KINDS);
+const OPEN_FENCE = /^```(?:json)?[ \t]*\r?\n/i;
+const CLOSE_FENCE = /\r?\n?```$/;
+
+/** Some models ignore response_format and wrap the object in one ```json ... ``` fence. Strip exactly that, nothing more. */
+function unfence(content) {
+    const t = content.trim();
+    if (!OPEN_FENCE.test(t) || !CLOSE_FENCE.test(t)) return t;
+    return t.replace(OPEN_FENCE, "").replace(CLOSE_FENCE, "");
+}
 
 /**
  * @param {string} content the model's message text
@@ -12,7 +21,7 @@ export function parseVerdict(content) {
     if (typeof content !== "string" || content.length === 0 || content.length > 4000) return null;
     let v;
     try {
-        v = JSON.parse(content);
+        v = JSON.parse(unfence(content));
     } catch {
         return null;
     }

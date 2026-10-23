@@ -148,13 +148,14 @@ Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://`
 
 | Rule | Detail |
 |---|---|
-| Gate (D-imelda-05, proposal) | Not an official site, a form with at least one field, and OUR rules' score >= 15 (numbers in `localSignals` from the client do not count), plus 20 calls per IP per hour. Otherwise no call, no cost |
-| What the model sees | `site` (registrable domain only; IPs and intranet names are never sent), `title` (120 chars), up to 12 field labels; emails and long digit runs are masked, ids of rules that fired. Never page text, URL path/query, typed values or the key. Sent as JSON between `DATA_START` / `DATA_END`; the system prompt (`prompts/reality-check.js`, `reality-check.v1`) is a fixed string |
-| Answer | One JSON object `{page_type, asks[], reasonable, confidence, evidence}`; anything off-schema is ignored (200, layer 3 only) |
-| Signal | `reasonable=false`, `confidence >= 0.6`, at least one `asks` -> `unreasonable_request`, layer 4, weight 30, fixed bilingual labels. `evidence` only if it is an exact substring of the title, at least 8 characters (original casing), else omitted |
+| Gate (D-imelda-05, proposal) | Not an official site, a form with at least one field, and OUR rules' score >= 15 (numbers in `localSignals` from the client do not count), plus 20 calls per IP per hour (`clientCallsPerHour`; the local dev server turns it off, since every local request is one `unknown` client, unless `LLM_CLIENT_CALLS_PER_HOUR` is set). Otherwise no call, no cost |
+| What the model sees | `site` (registrable domain only; IPs and intranet names are never sent), `title` (120 chars), up to 12 field labels; emails and long digit runs are masked, ids of rules that fired. Never page text, URL path/query, typed values or the key. Sent as JSON between `DATA_START` / `DATA_END`; the system prompt (`prompts/reality-check.js`, `reality-check.v2`) is a fixed string |
+| Answer | One JSON object `{page_type, asks[], reasonable, confidence, evidence}`; one ```` ```json ```` fence around it is stripped; anything else off-schema is ignored (200, layer 3 only) |
+| Signal | `reasonable=false`, `confidence >= 0.6`, at least one `asks` -> `unreasonable_request`, layer 4, weight 30, fixed bilingual labels. `evidence` only if the phrase (at least 8 characters, folded and space-collapsed like layer 3; a `[number]`/`[email]` mask splits it and the longest piece is used) is in the title AND in the page text; the evidence is the exact slice of `text`, because the extension highlights `<body>` text, never `<title>`. Else omitted |
 | Only adds | Layer 4 never lowers a score (D-imelda-06). A model that says "reasonable" changes nothing |
 | Failure | Timeout (<= 4 s, hard even if the provider ignores abort), HTTP error, bad JSON, daily cap reached -> layer 3 answer, no error, provider text never forwarded |
-| Cost breaker | `LLM_DAILY_CAP` calls per UTC day per Worker isolate (in memory). The real cap is the spend limit in the provider dashboard |
+| Cost breaker | `LLM_DAILY_CAP` calls per UTC day per Worker isolate (in memory), so NOT a real bound in production. The real cap is the spend limit in the provider dashboard: required before deploy (phase 08 checklist) |
+| Outcomes | Each check ends as one of `gated / capped / timeout / http_error / bad_schema / reasonable / flagged` (counts only, no page data). The dev server serves them at `GET /_dev/layer4`; `eval/run.mjs --analyze-url` prints the delta under LAYER 4 and warns when calls gave no verdict. A wrong `LLM_MODEL` shows up as `http_error`/`bad_schema`, not as "always reasonable" |
 | Determinism | `temperature: 0`; record `PROMPT_VERSION` and the model with every eval run |
 
 Privacy note for Alief/Umar (TODO C5): when layer 4 is on, the host, page title and form field labels of pages that pass the gate go to the LLM provider.
