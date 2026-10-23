@@ -4,7 +4,7 @@
 > Sumber: `docs/mandates/umar.md`, `docs/mandates/imelda.md`, `plan/imelda/TODO.md`, `plan/imelda/log/fase-08.md`, issue terbuka #37, #38, #40, #55, PR #69.
 > Kode Imelda M1–M7 sudah merge semua. Yang tersisa: langkah manual (akun, deploy, secret), keputusan lead, data eval, dan tes di iPhone.
 
-## 0. Status per 23 Okt 2026 sore (QA agent)
+## 0. Status per 23 Okt 2026 malam
 
 | Item | Status | Sisa / siapa |
 |---|---|---|
@@ -13,15 +13,19 @@
 | U-1 (#73) | Diputuskan 23 Okt, #73 ditutup: target tetap, M6 tetap `[~]` sampai 50 scam nyata berlisensi; MVP boleh rilis dengan catatan risiko | E-1 |
 | D-1 … D-6 | Selesai. Smoke ulang 23 Okt sore ke `https://shoo-ai.uumaarrrrr22.workers.dev`: semua `ok`, p95 `/analyze` 28 ms (10 run) | — |
 | D-7, D-8 (#82) | Selesai: PR #92 merged, #82 ditutup. Hanya build Release yang memanggil AI; build Debug tetap layer 1–2 | T-6 pakai build Release/TestFlight |
-| G2 (L-1 … L-6) | Belum dipasang. Usulan Umar 23 Okt: `https://bandelbanget.xyz/v1`. Dicek: proxy pihak ketiga (domain dibuat 20 Jun 2026, Hostinger) yang menjual banyak model; tidak ada kebijakan retensi yang bisa diverifikasi, jadi belum memenuhi syarat zero data retention (L-1, A2/A6, C5) | Umar pilih penyedia resmi dengan ZDR tertulis, atau batasi endpoint ini ke eval lokal tanpa data pengguna |
+| G2 (L-1, L-4, L-5) | Selesai dengan risiko. L-1: `deepseek-v4-flash` lewat `https://bandelbanget.xyz/v1` (D-imelda-36); proxy pihak ketiga tanpa kebijakan retensi yang bisa diverifikasi, jadi syarat zero data retention belum terpenuhi. L-4: secret terpasang, layer 4 live di Worker sejak PR #95. L-5: eval (D-imelda-37) scam ≥ 50 31 → 38/50, ≥ 80 13 → 21/50, salah blokir tetap 1/53; 21 dari 45 panggilan kena batas 4 s; M4 dicentang (#96) | A2, A5, A6 di `plan/imelda/TODO.md` belum dicentang. Tinjau ulang kalau ada penyedia dengan ZDR tertulis |
+| L-2 (A5) | Gerbang sudah aktif di produksi (`ai/src/layer4/reality.js`: bukan situs resmi, form ≥ 1 field, `GATE_MIN_SCORE = 15`), tapi kodenya masih menandai D-imelda-05 sebagai usulan dan A5 belum dicentang | Umar konfirmasi, centang A5 |
+| L-3 | Belum tercatat | Umar pasang batas biaya di dashboard penyedia |
+| L-6 (C5) | Issue #97 ke Alief dibuka, C5 dicentang (PR #98) | Alief: kebijakan privasi + label App Store menyebut penyedia, di rilis yang sama dengan layer 4 |
 | E-1, E-2 | Belum mulai | Data scam nyata berlisensi; tidak bisa dibuat agent |
-| E-3, E-4 | Ditunda (Umar, 23 Okt): belum ada sumber yang pasti; `/public-blocklist` tetap kosong untuk MVP, layer 2 tetap jalan. Kandidat untuk nanti: **Phishing.Database** (GitHub `Phishing-Database/Phishing.Database`, lisensi MIT, ±500 rb domain, berkas `phishing-domains-ACTIVE.txt`). Belum diverifikasi apakah MIT juga mencakup datanya | Umar putuskan sumber; build daftar di luar request (E-4) |
+| E-3, E-4 | PR #101 terbuka: sumber **Phishing.Database**, daftar pra-bangun lewat GitHub Action ke Workers KV, Worker hanya melayani hasilnya. Belum dipastikan apakah lisensi MIT juga mencakup data domainnya | Umar review + merge #101, buat namespace KV, deploy ulang Worker |
 | E-5 | Selesai (PR #84, #85) | — |
-| G4 (T-1 … T-8) | Belum mulai | Butuh iPhone + tim Apple berbayar (#40, #55) |
+| G4 (T-1 … T-8) | Belum mulai. T-7 (#55): checklist portal Apple siap, signing + bundle ID + App Group cocok di ketiga target. Upload pertama terblokir: app belum punya AppIcon (#102, Alief) | Umar: undang Alief ke tim (membuka spike #40), kunci APNs, record App Store Connect. Alief: AppIcon (#102) |
 | P-1 | Selesai: #69 dan #90 merged | — |
 | P-2 (#38) | Selesai 23 Okt, #38 ditutup: 3 secret `production` terpasang (`SUPABASE_DB_URL` = Session pooler `aws-0-ap-southeast-1`, bukan host langsung yang hanya IPv6). Run 39913374469 attempt 7 hijau: migrasi "Remote database is up to date", `shoo-api` ter-deploy; live `/healthz` 200, `/healthz/db` 200 | Rotasi password DB + token Cloudflare (nilainya sempat dibagikan di chat), lalu perbarui secret dan Hyperdrive `shoo-db` |
-| P-3, P-4, P-5 | Belum | PM / Alief |
-| P-6 | Branch lokal yang sudah merge dihapus. Branch remote lama yang sudah merge masih ada | Umar hapus remote (`git push origin --delete …`) |
+| P-3, P-4 (#37) | Belum | PM |
+| P-5 (C6) | PR #100 terbuka (runbook `plan/umar/blocklist-review.md`), issue #99 ke Alief untuk jadwal dan query | Umar merge #100, Alief jawab #99 |
+| P-6 | 28 branch remote milik Umar/Imelda yang sudah merge dihapus 23 Okt malam. Sisa remote: 22 branch Alief yang sudah merge, plus `fix/QA-E2E-00-setup` (tanpa PR, isi belum masuk `main`) | Izin Alief untuk menghapus branch-nya. Branch lokal hasil squash butuh `git branch -D` (izin Umar); `spike/EX-03-dynamic-island` hanya ada di lokal, simpan |
 
 QA 23 Okt sore, `main` + PR #87–#90 digabung di worktree sementara:
 - Extension `node --test ios/ShooExtension/Tests/*.test.mjs`: 145/145 lulus.
