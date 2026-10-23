@@ -7,6 +7,7 @@ import { captureEvidence } from "./capture.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
 import { createHeartbeat } from "./heartbeat.js";
+import { createLastSeen } from "./last-seen.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -101,6 +102,12 @@ const heartbeat = createHeartbeat({
     sendNative: (message) => browser.runtime.sendNativeMessage(NATIVE_APP_ID, message),
     intervalMs: HEARTBEAT_INTERVAL_MS,
 });
+// C11: the same heartbeat also tells the backend, at most once per hour (GD-03 "Not connected").
+const lastSeen = createLastSeen({
+    storage: browser.storage.local,
+    getSession,
+    fetchJSON: (url, init) => fetchJSON(url, init),
+});
 const beatNow = () => heartbeat.beat({ force: true }).catch(() => {});
 browser.permissions?.onAdded?.addListener(beatNow);
 browser.permissions?.onRemoved?.addListener(beatNow);
@@ -111,6 +118,7 @@ if (browser.alarms) {
         if (alarm.name !== "shoo-lists") return;
         lists.refresh();
         heartbeat.beat().catch(() => {}); // access can be narrowed while no page is open
+        lastSeen.report();
     });
 }
 
@@ -155,6 +163,7 @@ async function startReport(message, sender) {
 browser.runtime.onMessage.addListener((message, sender) => {
     switch (message?.type) {
         case "heartbeat":
+            lastSeen.report();
             return heartbeat.beat();
         case "getSession":
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });

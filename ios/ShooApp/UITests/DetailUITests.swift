@@ -14,6 +14,7 @@ final class DetailUITests: XCTestCase {
     private func openDetail(_ scanId: String, mode: String = "guardian", language: String = "en") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-UITestMock", "YES",
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", mode,
             "-settings.language", language,

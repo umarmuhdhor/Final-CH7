@@ -19,6 +19,9 @@ Single source of truth for data shared between teams. **Owner: lead.** Everyone 
 | ≥ 80 | `blocked` | Block screen, no bypass |
 
 ## Changing a contract
-1. Open a PR that edits only `contracts/` + explains why.
-2. Lead approves, then each team updates its own code in separate PRs.
+Any question about a contract (unclear field, missing case, proposed change) starts as a GitHub issue with the **Question / proposal** template, label `question`, assigned to the lead. Don't ask in chat or only in a PR description.
+
+1. Open the issue: exact field/endpoint, additive or breaking, which fixtures change, what you do until answered.
+2. Lead answers in the issue. If accepted, the lead (or whoever the issue names) opens a PR that edits only `contracts/` and links the issue (`Closes #<n>`).
+3. After merge, each team updates its own code in separate PRs.
 3. Additive changes (new optional field) are cheap. Renaming/removing a field breaks other teams — avoid.

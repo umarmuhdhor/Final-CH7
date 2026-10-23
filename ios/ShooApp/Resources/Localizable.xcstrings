@@ -1,12 +1,32 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ will be told when you open a risky site, and can check it for you.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ akan diberi tahu saat kamu membuka situs berisiko, dan bisa memeriksanya untukmu."
+          }
+        }
+      }
+    },
     "%@ will no longer see the sites Shoo warns you about.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ tidak akan lagi melihat situs yang diperingatkan Shoo."
+          }
+        }
+      }
+    },
+    "%@ won't be protected by you anymore. You won't see their activity.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tidak lagi kamu jaga. Kamu tidak akan melihat aktivitasnya."
           }
         }
       }
@@ -47,6 +67,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "1–20 karakter. Keluargamu melihat nama ini."
+          }
+        }
+      }
+    },
+    "4-digit code": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode 4 angka"
           }
         }
       }
@@ -131,6 +161,16 @@
         }
       }
     },
+    "Ask your family member to scan this code, or enter the 4 digits in Shoo.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minta anggota keluarga memindai kode ini, atau memasukkan 4 angkanya di Shoo."
+          }
+        }
+      }
+    },
     "Blocked": {
       "localizations": {
         "id": {
@@ -157,6 +197,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diblokir!"
+          }
+        }
+      }
+    },
+    "Camera. Point it at the QR code on your guardian's phone.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamera. Arahkan ke kode QR di HP Guardian-mu."
           }
         }
       }
@@ -191,12 +241,52 @@
         }
       }
     },
+    "Code %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode %@"
+          }
+        }
+      }
+    },
+    "Connect": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hubungkan"
+          }
+        }
+      }
+    },
     "Connect to your guardian": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Hubungkan ke Guardian-mu"
+          }
+        }
+      }
+    },
+    "Connected %lld/%lld": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terhubung %lld/%lld"
+          }
+        }
+      }
+    },
+    "Connected, %lld of %lld people": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terhubung, %lld dari %lld orang"
           }
         }
       }
@@ -217,6 +307,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tersalin"
+          }
+        }
+      }
+    },
+    "Copy invite link": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salin link undangan"
           }
         }
       }
@@ -247,6 +347,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gagal memutus koneksi. Periksa koneksi, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Couldn't get a code": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal mengambil kode"
           }
         }
       }
@@ -291,6 +401,16 @@
         }
       }
     },
+    "Couldn't load your family. Try again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal memuat keluarga. Coba lagi"
+          }
+        }
+      }
+    },
     "Couldn't load your profile": {
       "localizations": {
         "id": {
@@ -317,6 +437,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gagal memperbarui. Tarik ke bawah untuk mencoba lagi."
+          }
+        }
+      }
+    },
+    "Couldn't remove": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal menghapus"
+          }
+        }
+      }
+    },
+    "Couldn't remove. Check your connection and try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gagal menghapus. Periksa koneksi lalu coba lagi."
           }
         }
       }
@@ -411,6 +551,16 @@
         }
       }
     },
+    "Enter code": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masukkan kode"
+          }
+        }
+      }
+    },
     "Enter your name.": {
       "localizations": {
         "id": {
@@ -467,16 +617,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kode keluarga"
-          }
-        }
-      }
-    },
-    "Family codes are coming soon.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kode keluarga segera hadir."
           }
         }
       }
@@ -561,6 +701,16 @@
         }
       }
     },
+    "Getting a code": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mengambil kode"
+          }
+        }
+      }
+    },
     "Guardian": {
       "localizations": {
         "id": {
@@ -577,6 +727,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hai, %@!"
+          }
+        }
+      }
+    },
+    "How to connect": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cara menghubungkan"
           }
         }
       }
@@ -607,6 +767,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saya dilindungi"
+          }
+        }
+      }
+    },
+    "Invite link copied": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link undangan disalin"
           }
         }
       }
@@ -647,6 +817,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Item dihapus setelah 14 hari, atau saat hubungan keluarga diputus."
+          }
+        }
+      }
+    },
+    "Join my family on Shoo so I can help keep you safe from scam sites. Open %@ or enter code %@ in Shoo.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gabung ke keluargaku di Shoo supaya aku bisa bantu menjagamu dari situs penipuan. Buka %@ atau masukkan kode %@ di Shoo."
           }
         }
       }
@@ -771,6 +951,16 @@
         }
       }
     },
+    "New code in %lld s": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode baru dalam %lld dtk"
+          }
+        }
+      }
+    },
     "Next": {
       "localizations": {
         "id": {
@@ -787,6 +977,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Belum ada aktivitas"
+          }
+        }
+      }
+    },
+    "No connection. Check your internet and try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tidak ada koneksi. Periksa internet lalu coba lagi."
+          }
+        }
+      }
+    },
+    "No one connected yet": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belum ada yang terhubung"
           }
         }
       }
@@ -931,6 +1141,16 @@
         }
       }
     },
+    "Open Settings": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka Pengaturan"
+          }
+        }
+      }
+    },
     "Open Settings › Apps › Safari › Extensions.": {
       "localizations": {
         "id": {
@@ -1061,6 +1281,46 @@
         }
       }
     },
+    "QR code to join your family": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode QR untuk bergabung ke keluargamu"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapus"
+          }
+        }
+      }
+    },
+    "Remove %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hapus %@"
+          }
+        }
+      }
+    },
+    "Remove from your family?": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarkan dari keluargamu?"
+          }
+        }
+      }
+    },
     "Risk score": {
       "localizations": {
         "id": {
@@ -1131,6 +1391,46 @@
         }
       }
     },
+    "Scan QR": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pindai QR"
+          }
+        }
+      }
+    },
+    "Scan the QR code on your guardian's phone, or enter the 4-digit code.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pindai kode QR di HP Guardian-mu, atau masukkan kode 4 angka."
+          }
+        }
+      }
+    },
+    "Scanning isn't available on this iPhone. Enter the code instead.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pemindaian tidak tersedia di iPhone ini. Masukkan kodenya saja."
+          }
+        }
+      }
+    },
+    "Scanning isn't available right now. Enter the code instead.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pemindaian belum bisa dipakai sekarang. Masukkan kodenya saja."
+          }
+        }
+      }
+    },
     "Screenshot": {
       "localizations": {
         "id": {
@@ -1161,6 +1461,16 @@
         }
       }
     },
+    "Session expired": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesi berakhir"
+          }
+        }
+      }
+    },
     "Shield": {
       "localizations": {
         "id": {
@@ -1177,6 +1487,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Shoo dan notifikasinya memakai bahasa ini."
+          }
+        }
+      }
+    },
+    "Shoo can't use the camera. Allow it in Settings, or enter the code instead.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shoo tidak bisa memakai kamera. Izinkan di Pengaturan, atau masukkan kodenya saja."
           }
         }
       }
@@ -1261,6 +1581,26 @@
         }
       }
     },
+    "Something went wrong. Try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ada yang salah. Coba lagi."
+          }
+        }
+      }
+    },
+    "Start again": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulai lagi"
+          }
+        }
+      }
+    },
     "Step %lld": {
       "localizations": {
         "id": {
@@ -1321,12 +1661,62 @@
         }
       }
     },
+    "That code doesn't match a family. Check the 4 digits and try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode itu tidak cocok dengan keluarga mana pun. Periksa 4 angkanya lalu coba lagi."
+          }
+        }
+      }
+    },
+    "That code has expired. Ask your guardian for the new code.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode itu sudah kedaluwarsa. Minta kode baru ke Guardian-mu."
+          }
+        }
+      }
+    },
+    "That QR code isn't a Shoo family code.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kode QR itu bukan kode keluarga Shoo."
+          }
+        }
+      }
+    },
     "The video isn't available right now.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Videonya belum tersedia."
+          }
+        }
+      }
+    },
+    "This family already has 3 people. Ask your guardian to remove someone first.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluarga ini sudah berisi 3 orang. Minta Guardian-mu menghapus satu orang dulu."
+          }
+        }
+      }
+    },
+    "This iPhone isn't connected to Shoo anymore. Set it up again to stay protected.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone ini tidak terhubung lagi ke Shoo. Siapkan lagi supaya tetap terlindungi."
           }
         }
       }
@@ -1347,6 +1737,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Item ini sudah tidak ada"
+          }
+        }
+      }
+    },
+    "Too many tries. Wait a few minutes, then try again.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi."
           }
         }
       }
@@ -1541,6 +1941,16 @@
         }
       }
     },
+    "You're already connected to a guardian. Disconnect in Profile first.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu sudah terhubung ke Guardian. Putuskan dulu di Profil."
+          }
+        }
+      }
+    },
     "You're not protected": {
       "localizations": {
         "id": {
@@ -1561,6 +1971,16 @@
         }
       }
     },
+    "You're protected by %@": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamu dijaga oleh %@"
+          }
+        }
+      }
+    },
     "Your family is full (3 people).": {
       "localizations": {
         "id": {
@@ -1571,22 +1991,22 @@
         }
       }
     },
+    "Your family is full (3 people). Remove someone to invite another person.": {
+      "localizations": {
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keluargamu sudah penuh (3 orang). Hapus satu orang untuk mengundang yang lain."
+          }
+        }
+      }
+    },
     "Your family sees this name. Up to 20 characters.": {
       "localizations": {
         "id": {
           "stringUnit": {
             "state": "translated",
             "value": "Keluargamu akan melihat nama ini. Paling banyak 20 karakter."
-          }
-        }
-      }
-    },
-    "Your guardian will show you a 4-digit code.": {
-      "localizations": {
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardian-mu akan menunjukkan kode 4 angka."
           }
         }
       }

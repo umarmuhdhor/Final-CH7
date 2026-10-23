@@ -57,13 +57,13 @@ Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk J
 - [x] **Keamanan:** Guardian hanya bisa melihat data perangkat yang terhubung dengannya. Kode join dibatasi jumlah percobaannya.
 
 ### Fase C · Sambungkan app ke backend
-- [ ] `ApiRepository` menggantikan `MockRepository`
-- [ ] Setelah onboarding, tulis key sesi ke App Group (`contracts/app-group-keys.md`) supaya extension bisa memanggil API
-- [ ] **GD-04** Family code: QR + kode yang berganti tiap 60 detik + hitung mundur + "Copy invite link" + daftar terhubung (x/3)
-- [ ] **PR-01, PR-02** Connect lewat Scan QR / Enter code → layar "You're protected by …"
-- [ ] **PR-03** Link undangan `shoo://join?code=1234` membuka app dengan kode terisi (P0). Deferred deep link setelah install = P1.
-- [ ] **GD-06** Tap push → buka Detail sesuai `scanId`
-- [ ] **GD-07** Tombol It's safe / Not safe langsung berlaku, tanpa konfirmasi
+- [x] `ApiRepository` menggantikan `MockRepository`
+- [x] Setelah onboarding, tulis key sesi ke App Group (`contracts/app-group-keys.md`) supaya extension bisa memanggil API
+- [x] **GD-04** Family code: QR + kode yang berganti tiap 60 detik + hitung mundur + "Copy invite link" + daftar terhubung (x/3)
+- [x] **PR-01, PR-02** Connect lewat Scan QR / Enter code → layar "You're protected by …"
+- [x] **PR-03** Link undangan `shoo://join?code=1234` membuka app dengan kode terisi (P0). Deferred deep link setelah install = P1.
+- [x] **GD-06** Tap push → buka Detail sesuai `scanId`
+- [x] **GD-07** Tombol It's safe / Not safe langsung berlaku, tanpa konfirmasi
 
 ### Ditahan dulu
 - **Live Activity lewat push:** kalau spike Dynamic Island memutuskan jalur push-to-start, nanti ada endpoint tambahan. Umar akan memberi kabar.

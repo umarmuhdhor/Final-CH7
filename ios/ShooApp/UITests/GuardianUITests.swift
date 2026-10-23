@@ -10,6 +10,7 @@ final class GuardianUITests: XCTestCase {
     private func launch(familyMode: Bool?, extra: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-UITestMock", "YES",
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "guardian",
             "-settings.language", "en",
@@ -61,7 +62,8 @@ final class GuardianUITests: XCTestCase {
         let invite = app.buttons["family.invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
         invite.tap()
-        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5))
+        // GD-04 (fase 14): the family code sheet.
+        XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 5), app.debugDescription)
     }
 
     @MainActor

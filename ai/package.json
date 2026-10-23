@@ -1,0 +1,15 @@
+{
+  "name": "shoo-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "description": "Shoo server-side detection (layer 3 now, layer 4 later). Cloudflare Worker + Hono.",
+  "scripts": {
+    "dev": "node src/dev-server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "hono": "4.13.13"
+  }
+}

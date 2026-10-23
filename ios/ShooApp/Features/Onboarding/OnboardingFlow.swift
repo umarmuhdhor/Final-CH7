@@ -52,7 +52,7 @@ private struct OnboardingStepView: View {
             case .name: NameView(model: model)
             case .mode: ModeView(model: model)
             case .greeting: GreetingView(model: model)
-            case .connect: ConnectPlaceholderView(model: model)
+            case .connect: OnboardingConnectStep(model: model)
             case .turnOnExtension: TurnOnExtensionView(refreshStatus: model.refreshExtensionStatus)
             case .notifications: NotificationPermissionView(model: model)
             case .done: Color(.systemBackground)
@@ -137,4 +137,31 @@ struct OnboardingPage<Content: View, Footer: View>: View {
     let env = AppEnvironment.preview()
     env.settings.reset()
     return OnboardingFlow().environment(env)
+}
+
+/// PR-01 inside onboarding (Protected): join now, or "Not now" and connect later from Shield.
+private struct OnboardingConnectStep: View {
+    let model: OnboardingModel
+    @Environment(AppEnvironment.self) private var env
+    @State private var connect: ConnectModel?
+
+    var body: some View {
+        Group {
+            if let connect {
+                ConnectView(model: connect, onSkip: model.continueFromConnect, onFinish: model.continueFromConnect)
+            } else {
+                // An empty Group never appears, so `onAppear` below would never run.
+                Color(.systemBackground)
+            }
+        }
+        .onAppear {
+            guard connect == nil else { return }
+            connect = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode())
+        }
+        // An invite link opened while this screen is showing.
+        .onChange(of: env.router.pendingJoinCode) { _, code in
+            guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
+            connect?.prefill(pending)
+        }
+    }
 }

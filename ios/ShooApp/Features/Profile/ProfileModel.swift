@@ -152,7 +152,7 @@ final class ProfileModel {
             actionError = "Couldn't delete your data. Check your connection and try again."
             return false
         }
-        // TODO(sync:alief): also clear the Keychain token and App Group session keys — replace after fase 13
+        // `ApiRepository.deleteMe` has already cleared the Keychain token and App Group session keys.
         onSessionEnd()
         settings.reset()
         return true
