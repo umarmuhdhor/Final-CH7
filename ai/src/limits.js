@@ -14,6 +14,8 @@ export const LIMITS = Object.freeze({
     MAX_FIELDS_PER_FORM: 60,
     /** Across all forms of one snapshot. */
     MAX_FIELDS_TOTAL: 300,
-    /** Per string of a field: name, id, label, placeholder, autocomplete. */
+    /** Per string of a field: name, id, label, placeholder, autocomplete, accept. */
     MAX_FIELD_TEXT: 120,
+    /** `capture` is a keyword ("user", "environment"). */
+    MAX_CAPTURE_CHARS: 20,
 });

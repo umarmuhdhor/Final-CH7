@@ -51,6 +51,8 @@ export function sanitizeSnapshot(snapshot) {
                 label: str(f.label, LIMITS.MAX_FIELD_TEXT),
                 placeholder: str(f.placeholder, LIMITS.MAX_FIELD_TEXT),
                 autocomplete: str(f.autocomplete, LIMITS.MAX_FIELD_TEXT),
+                accept: str(f.accept, LIMITS.MAX_FIELD_TEXT),
+                capture: str(f.capture, LIMITS.MAX_CAPTURE_CHARS),
             });
         }
         forms.push({ action: str(form.action, LIMITS.MAX_URL_CHARS), fields });

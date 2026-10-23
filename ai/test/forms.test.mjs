@@ -128,6 +128,23 @@ test("j. asks_selfie_ktp: negatives (selfie alone, KTP alone)", () => {
     expectNone([field({ type: "file", label: "Foto profil" })]);
     expectSignal("asks_ktp", [field({ type: "file", label: "Upload KTP" })], "KTP upload alone is asks_ktp only");
 });
+test("j. asks_selfie_ktp: front-camera upload (capture=user) in a form that asks for the KTP (C8)", () => {
+    const camera = (over = {}) => field({ type: "file", name: "foto", capture: "user", ...over });
+    assert.deepEqual(only([camera(), field({ name: "nik" })]).sort(), ["asks_ktp", "asks_selfie_ktp"], "no selfie word needed");
+    assert.deepEqual(only([camera({ accept: "image/*" }), field({ label: "Nomor KTP" })]).sort(), ["asks_ktp", "asks_selfie_ktp"]);
+    assert.deepEqual(only([camera({ accept: ".jpg,.png" }), field({ name: "nik" })]).sort(), ["asks_ktp", "asks_selfie_ktp"], "image extensions");
+    assert.deepEqual(only([camera({ capture: " USER " }), field({ name: "nik" })]).sort(), ["asks_ktp", "asks_selfie_ktp"], "case and spaces");
+    expectSignal("asks_selfie_ktp", [camera({ label: "Foto KTP" })], "front camera on the KTP field itself");
+    assert.deepEqual(only([camera({ label: "Foto profil" }), field({ name: "nik" })]).sort(), ["asks_ktp", "asks_selfie_ktp"], "a profile word in a label does not switch the camera off");
+});
+test("j. capture=user negatives: no KTP, back camera, accept alone, non-photo accept", () => {
+    expectNone([field({ type: "file", name: "foto", capture: "user", accept: "image/*" })], "front camera without KTP");
+    expectSignal("asks_ktp", [field({ type: "file", name: "foto", capture: "environment" }), field({ name: "nik" })], "back camera = photo of the card");
+    expectSignal("asks_ktp", [field({ type: "file", name: "foto", capture: "" }), field({ name: "nik" })], "bare capture attribute");
+    expectSignal("asks_ktp", [field({ type: "file", label: "Upload foto", accept: "image/*" }), field({ name: "nik" })], "accept=image/* alone is not a selfie");
+    expectSignal("asks_ktp", [field({ type: "file", name: "doc", capture: "user", accept: "application/pdf" }), field({ name: "nik" })], "not a photo");
+    expectSignal("asks_ktp", [field({ type: "text", name: "foto", capture: "user" }), field({ name: "nik" })], "capture only means something on file inputs");
+});
 test("j. selfie in one form and KTP in another form are not paired", () => {
     const snap = page(SCAM_URL, [], { forms: [{ action: null, fields: [field({ type: "file", label: "Selfie" })] }, { action: null, fields: [field({ name: "nik" })] }] });
     assert.deepEqual(ids(analyzeSnapshot(snap)), ["asks_ktp"]);

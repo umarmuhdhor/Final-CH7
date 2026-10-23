@@ -8,7 +8,7 @@ export const BRANDS = JSON.parse(readFileSync(fileURLToPath(new URL("../../detec
 
 /** One form field with the contract's shape; override what a test cares about. */
 export function field(over = {}) {
-    return { type: "text", name: null, id: null, label: null, placeholder: null, autocomplete: null, ...over };
+    return { type: "text", name: null, id: null, label: null, placeholder: null, autocomplete: null, accept: null, capture: null, ...over };
 }
 
 /** A PageSnapshot (contracts/detector-interface.md) with one form holding `fields`. */

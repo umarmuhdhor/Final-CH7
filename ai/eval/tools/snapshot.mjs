@@ -86,6 +86,8 @@ export function parseHtml(html, { url, domain, capturedAt = new Date().toISOStri
             label: (a.id && labelFor[a.id]) || a["aria-label"] || null,
             placeholder: a.placeholder || null,
             autocomplete: a.autocomplete || null, // field VALUES are never read
+            accept: a.accept || null,
+            capture: a.capture ?? null, // bare attribute = ""
         };
     };
     const fieldsIn = (chunk) =>

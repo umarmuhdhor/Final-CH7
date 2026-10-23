@@ -1,5 +1,6 @@
 // Layer 3, form part: which sensitive data does a form ask for?
-// Pure keyword rules over field name / id / label / placeholder / autocomplete. No model, no network.
+// Pure keyword rules over field name / id / label / placeholder / autocomplete, plus the file input's capture/accept.
+// No model, no network.
 // Words are matched whole ("pin" does not fire inside "shipping" or "pinjaman").
 import { vocabulary, hasAny } from "./text.js";
 import { buildSignal } from "./signals.js";
@@ -32,9 +33,19 @@ const NOT_A_PIN = ["location", "lokasi", "map", "peta"];
 /** A selfie field that is a profile photo, not an ID check. */
 const PROFILE_PHOTO = ["profile", "profil", "avatar"];
 const POSTAL = ["postal", "zip", "postcode", "kodepos", "kode pos"];
+/** `accept` values that allow a photo or video. Missing `accept` = any file, so it allows one too. */
+const PHOTO_ACCEPT = /image|video|\.(jpe?g|png|heic|heif|webp)\b/i;
 
 /**
- * @param {{ type: string, name: string|null, id: string|null, label: string|null, placeholder: string|null, autocomplete: string|null }} f
+ * A file input that opens the FRONT camera (`capture="user"`, C8): a selfie, whatever its label says. Not switched off
+ * by a profile word: the label is page-controlled, the camera choice is what the page actually asks for.
+ * `capture="environment"` (back camera) is a photo of a card, which is already asks_ktp.
+ */
+const asksFrontCamera = (f, type) =>
+    type === "file" && f.capture?.trim().toLowerCase() === "user" && (!f.accept || PHOTO_ACCEPT.test(f.accept));
+
+/**
+ * @param {{ type: string, name: string|null, id: string|null, label: string|null, placeholder: string|null, autocomplete: string|null, accept?: string|null, capture?: string|null }} f
  * @returns {{ kind: string|null, selfie: boolean }} kind before pairing a lone selfie with a KTP field in the same form.
  * Order of the checks is the priority: a field answers with the first kind that fits, never two.
  *
@@ -49,7 +60,7 @@ function classify(f) {
     const match = (entries, excluded = []) => some((v) => hasAny(v, entries) && !hasAny(v, excluded));
     const anywhere = (entries) => some((v) => hasAny(v, entries));
 
-    const selfie = match(SELFIE, PROFILE_PHOTO);
+    const selfie = match(SELFIE, PROFILE_PHOTO) || asksFrontCamera(f, type);
     const ktp = match(RULES.ktp, NOT_A_KTP_ID);
     let kind = null;
     if (selfie && ktp) kind = "asks_selfie_ktp";
