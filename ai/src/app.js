@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { LIMITS } from "./limits.js";
 import { HttpError, errorResponse, readTextLimited } from "./http.js";
 import { validateRequest } from "./validate.js";
-import { analyze } from "./analyze.js";
+import { analyze, SERVER_DEADLINE_MS } from "./analyze.js";
 import { createMemoryCache } from "./rdap/cache.js";
 import { createRdapClient } from "./rdap/rdap.js";
 import { emptySource } from "./blocklist/source.js";
@@ -104,6 +104,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
     });
 
     app.post("/analyze", async (c) => {
+        const startedAt = now(); // the deadline counts body upload too: the extension's 8 s clock is already running
         // Limit first: a refused request's body is never read.
         const client = clientKey(c.req.raw);
         if (!(await bindingAllows(c.env?.ANALYZE_LIMITER, client))) return errorResponse(429, "rate_limited", "Too many requests.", { "retry-after": String(BINDING_RETRY_SEC) });
@@ -122,7 +123,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const checked = validateRequest(body);
         if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         const checker = llm ?? llmFor(c.env);
-        return c.json({ signals: await analyze(checked.snapshot, { rdap, llm: checker, client, localSignals: checked.localSignals }) });
+        return c.json({ signals: await analyze(checked.snapshot, { rdap, llm: checker, client, localSignals: checked.localSignals, deadline: startedAt + SERVER_DEADLINE_MS, now }) });
     });
 
     app.get("/public-blocklist", async (c) => {

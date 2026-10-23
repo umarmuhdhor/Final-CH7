@@ -118,6 +118,7 @@ async function main() {
             } else console.log("  outcomes: n/a (layer 4 off, or not the local dev server)");
         }
         console.log(`\nanalyzeLocal: avg ${summary.timing.analyzeLocalAvgMs.toFixed(2)} ms, max ${summary.timing.analyzeLocalMaxMs.toFixed(2)} ms (target < 50 ms)`);
+        if (summary.timing.analyzeRemoteP95Ms !== null) console.log(`/analyze: p95 ${Math.round(summary.timing.analyzeRemoteP95Ms)} ms (target < 8000 ms; the server cuts layer 4 at 6500 ms, D-imelda-39)`);
     }
     if (args.strict) process.exit(strictExitCode(summary));
 }
