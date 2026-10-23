@@ -4,6 +4,32 @@
 > Sumber: `docs/mandates/umar.md`, `docs/mandates/imelda.md`, `plan/imelda/TODO.md`, `plan/imelda/log/fase-08.md`, issue terbuka #37, #38, #40, #55, PR #69.
 > Kode Imelda M1–M7 sudah merge semua. Yang tersisa: langkah manual (akun, deploy, secret), keputusan lead, data eval, dan tes di iPhone.
 
+## 0. Status per 23 Okt 2026 sore (QA agent)
+
+| Item | Status | Sisa / siapa |
+|---|---|---|
+| U-2 … U-6, U-8, U-9 | Selesai: #74, #75, #76 ditutup; U-4 = PR #78, U-6 = PR #79 merged | — |
+| U-7 (C8) | PR #87 (kontrak), #88 (extension), #89 (AI) siap: hijau saat digabung bersama | Umar merge urut #87 → #88 → #89, lalu redeploy Worker AI (D-4) supaya `/analyze` membaca `capture` |
+| U-1 (#73) | Terbuka | Keputusan Umar (Team AI sekarang milik Umar): target tetap, butuh scam nyata (E-1) |
+| D-1 … D-6 | Selesai. Smoke ulang 23 Okt sore ke `https://shoo-ai.uumaarrrrr22.workers.dev`: semua `ok`, p95 `/analyze` 28 ms (10 run) | — |
+| D-7, D-8 (#82) | Menunggu Alief isi `aiBaseURL` | Alief |
+| G2 (L-1 … L-6) | Belum mulai | Umar pilih penyedia + model LLM (zero data retention), lalu `wrangler secret put` |
+| E-1, E-2 | Belum mulai | Data scam nyata berlisensi; tidak bisa dibuat agent |
+| E-3, E-4 | Belum diputuskan. Kandidat baru: **Phishing.Database** (GitHub `Phishing-Database/Phishing.Database`, lisensi MIT, ±500 rb domain, berkas `phishing-domains-ACTIVE.txt`). Belum diverifikasi apakah MIT juga mencakup datanya | Umar putuskan sumber; build daftar di luar request (E-4) |
+| E-5 | Selesai (PR #84, #85) | — |
+| G4 (T-1 … T-8) | Belum mulai | Butuh iPhone + tim Apple berbayar (#40, #55) |
+| P-1 | Selesai (#69 merged); docs lanjutan Alief = PR #90, CI hijau | Umar merge #90 |
+| P-2 (#38) | Workflow aktif. Nilai 3 secret diterima 23 Okt. Token Cloudflare valid (akun berisi Worker `shoo-api`). **`SUPABASE_DB_URL` yang diterima memakai host langsung `db.<ref>.supabase.co` (hanya IPv6), bukan session pooler**: runner GitHub IPv4-only, jadi `deploy` akan gagal | Alief kirim string Session pooler (Dashboard → Connect → Session pooler, port 5432); Umar pasang 3 secret di environment `production`, re-run `deploy` |
+| P-3, P-4, P-5 | Belum | PM / Alief |
+| P-6 | Branch lokal yang sudah merge dihapus. 24 branch remote yang sudah merge masih ada | Umar hapus remote (`git push origin --delete …`) |
+
+QA 23 Okt sore, `main` + PR #87–#90 digabung di worktree sementara:
+- Extension `node --test ios/ShooExtension/Tests/*.test.mjs`: 145/145 lulus.
+- Detector `node --test detector/test/*.test.mjs`: 38/38 lulus. `sync-to-extension.sh` tidak mengubah `detector.js` (tidak ada drift).
+- AI `cd ai && node --test`: 267/267 lulus.
+- Backend: CI PR #90 hijau (pgTAP, typecheck, vitest, dry-run, gitleaks). Lokal gagal hanya karena Docker mati (Supabase lokal tidak jalan).
+- iOS `xcodebuild test` scheme `Shoo` di simulator iPhone 17 (perintah sama dengan `.github/workflows/ios-app.yml`): `TEST SUCCEEDED`, 51 test unit (8 dilewati) + 6 UI test, 0 gagal.
+
 ## 1. Gambaran
 
 21 item, dibagi 6 gelombang. Satu gelombang bisa mulai kalau syaratnya terpenuhi, bukan menunggu gelombang sebelumnya selesai semua.
