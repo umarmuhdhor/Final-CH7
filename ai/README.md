@@ -2,7 +2,7 @@
 
 Stateless service behind the Safari extension. Stack: Cloudflare Worker + [Hono](https://hono.dev), plain JavaScript (ESM + JSDoc), no build step (decision D-imelda-01).
 
-Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) works but has **no real feed yet** (source not approved, see below). The LLM reality check (M4) is built and tested against a fake provider only; it stays off until a model and key are configured.
+Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) serves the Phishing.Database feed once the pre-built list in Workers KV is set up (see below); until then it answers an empty list. The LLM reality check (M4) is built and tested against a fake provider only; it stays off until a model and key are configured.
 
 ## Run it locally
 
@@ -104,6 +104,8 @@ src/analyze.js        runs layer 3 (rules + RDAP in parallel)
 src/layer3/           text.js (word splitting) match.js (phrase search, exact evidence) forms.js content.js (rules) signals.js (weights + wording) official.js
 src/rdap/             domain.js (registrable domain, validation) rdap.js (IANA bootstrap + lookup) cache.js
 src/dev-server.mjs    local HTTP wrapper, development only
+src/blocklist/        /public-blocklist: source.js phishing-database.js (feed) domains.js allowlist.js build.js route.js prebuilt.js kv.js
+scripts/              build-blocklist.mjs (pre-built list -> KV, GitHub Action) smoke.mjs
 test/                 node --test files
 eval/                 labelled pages + scorer (M2)
 ```
@@ -116,7 +118,7 @@ Serves the list the extension downloads every 6 h (`docs/design/blocklist.md`). 
 
 | Case | Answer |
 |---|---|
-| No `since` | Full list (newest 200,000 at most), no `removed`, `nextSince` = newest timestamp, or `null` when the list is empty |
+| No `since` | Full list (newest 190,000 at most: the extension keeps 200,000 per source and needs room for deltas), no `removed`, `nextSince` = newest timestamp, or `null` when the list is empty |
 | `since=<ISO 8601>` | Only entries with `addedAt > since`, plus `removed` since then. Caught up: empty `domains`, `nextSince` = `since` |
 | Bad `since` | `422 invalid_body` (same code as `GET /blocklist`, `contracts/api.md`) |
 | Other method | `405 method_not_allowed` with `Allow: GET` |
@@ -125,22 +127,56 @@ Serves the list the extension downloads every 6 h (`docs/design/blocklist.md`). 
 Paging is not used (contract: optional): one response holds everything. `Authorization` is never read, so it cannot be logged. Nothing about a request is logged.
 
 How a feed entry becomes a published domain (`src/blocklist/`):
-1. `source.js`: the only part that knows the feed. Today: `emptySource` in the Worker (honest empty list), `fixtureSource` in `npm run dev` (invented `shoo-fixture-*` domains in `data/public-blocklist.seed.json`).
+1. `source.js`: the source shape. Production feed: `phishing-database.js` (Phishing.Database, run by the build script, never by the Worker). `fixtureSource` in `npm run dev` (invented `shoo-fixture-*` domains in `data/public-blocklist.seed.json`). Without KV the Worker uses `emptySource` (honest empty list).
 2. `domains.js`: hostname or URL -> registrable domain with the **same Public Suffix List copy the extension uses** (`ios/ShooExtension/Resources/psl.js`), so what we publish is what the extension looks up. Public suffixes (`co.id`, `github.io`), IPs and junk are dropped.
 3. `build.js` + `allowlist.js`: drops official domains (`detector/data/brands.json`) and their subdomains, ~100 popular sites, and platform apexes (`wordpress.com`, `github.io`, `vercel.app`...). A customer site on a platform (`bad.github.io`) is its own registrable domain and may be published. Duplicates keep the earliest `addedAt`.
 
-### Source and licence (TODO A3: NOT DECIDED)
+4. `prebuilt.js` + `scripts/build-blocklist.mjs`: builds every answer outside the Worker and stores it in Workers KV; `kv.js` serves it (next section).
 
-Checked on the official pages on 22 Oct 2026. Nothing here is legal advice. No feed was downloaded.
+### Pre-built list (Workers KV, D-imelda-38)
 
-| Candidate | Licence / terms found | Usable in the app? | Format, frequency | Size |
-|---|---|---|---|---|
-| OpenPhish Community | Terms of Use: personal/research only, **commercial use prohibited without written consent**, no redistribution or derivative works | **No**, without written permission | text file, every 12 h | not stated |
-| PhishTank | Terms point to a Cisco end-user licence agreement; **no data licence stated**. API key needed for regular downloads | **BELUM DIVERIFIKASI** (read the EULA first) | XML/CSV/JSON, hourly | not stated |
-| URLhaus (abuse.ch) | Free under "fair use principles"; commercial/for-profit users "may require a paid subscription". Auth-Key needed. Not CC0 as far as found | **BELUM DIVERIFIKASI**; mostly malware URLs, not phishing | CSV/JSON/hostfile, every 5 min | not stated |
-| Phishing Army | Third-party catalogues list **CC BY-NC 4.0** (own licence page not reachable) | Doubtful if the app is monetised (NC) | plain domain list, hostnames only | not stated |
+Building 200,000 entries takes ~1 s CPU; the Workers Free plan allows 10 ms per request. So `.github/workflows/public-blocklist.yml` runs `node ai/scripts/build-blocklist.mjs` every 6 h (and on demand), and the Worker only streams stored JSON (~1 ms CPU).
 
-Recommendation: **ask PhishTank** (phishing-specific, hourly, hostnames) whether the app may use the feed and read its EULA; if the answer is not clearly yes, ask OpenPhish or the Phishing Army author for written permission. Until then the endpoint stays empty in production, which is safe: layer 2 still runs and the extension treats an empty list as "no match".
+| KV key | Content |
+|---|---|
+| `meta` | `{ v, builtAt, builds: [newest ... oldest], source, license, active, removed }`. Written last, so the Worker never points at a half-written build |
+| `full` | Answer without `since` |
+| `delta:<build>` | Answer for `since=<build>`, one per build of the last 7 days (TTL 8 days) |
+| `state` | Gzipped entries of the last build (first-seen dates). Read by the next build only |
+
+- `addedAt` = the build in which a domain was **first seen** (the feed has no dates). A domain that leaves the feed gets `removedAt` = that build and stays in `state` and deltas for 8 days; if it comes back it is new again.
+- Because every timestamp is a build time, any `since` is answered by the delta of the newest build `<= since`. `since` >= newest build: empty list, `nextSince = since`. Older than every kept build, or delta missing: the full list (the extension's daily full refresh corrects `removed`). Nothing built yet: empty list. KV error: fixed `500`.
+- Safety: a feed under 10,000 lines, a broken `state`, a list that would shrink by more than 50%, or new domains above 25% of the previous list (`PREBUILT.MAX_NEW_SHARE`; every hit blocks a page, so a poisoned or broken feed must not reach phones; the first build is exempt) stops the build before anything is written; the last good build keeps being served.
+- Cost on the Free plan: ~30 KV writes per build, ~120 per day (limit 1,000). Each phone reads `meta` (cached 5 min per isolate) + one list key per download, 4 downloads a day, so the 100,000 reads/day limit covers roughly 12,000 to 25,000 phones. A full answer for 190,000 domains is ~12 MB of JSON (compressed in transit).
+- Local dry run without KV (downloads the real feed once, writes the files to a folder): `node ai/scripts/build-blocklist.mjs --out /tmp/shoo-blocklist`.
+
+Setup (once, by the lead; not done by the build script):
+1. `cd ai && npx wrangler kv namespace create shoo-public-blocklist`. Put the printed id in `wrangler.toml` (uncomment the `[[kv_namespaces]]` block, binding `BLOCKLIST_KV`).
+2. Cloudflare dashboard -> API Tokens -> custom token with **Account / Workers KV Storage / Edit** on this account only.
+3. GitHub repo -> Settings -> Secrets and variables -> Actions: secrets `BLOCKLIST_CF_API_TOKEN`, `BLOCKLIST_CF_ACCOUNT_ID`; variable `BLOCKLIST_KV_NAMESPACE_ID`. The workflow is skipped while the variable is empty.
+4. Actions -> public-blocklist -> Run workflow; check the log line `public blocklist built at ...: N domains`.
+5. `npm run deploy` (the Worker picks up the binding), then `curl -s https://shoo-ai.uumaarrrrr22.workers.dev/public-blocklist | head -c 300`.
+
+GitHub turns off scheduled workflows after 60 days without repository activity; re-enable it in the Actions tab if that happens.
+
+### Source and licence (TODO A3: decided 23 Oct 2026, D-imelda-38)
+
+**Source: [Phishing.Database](https://github.com/Phishing-Database/Phishing.Database) `phishing-domains-ACTIVE.txt`**, downloaded from `raw.githubusercontent.com` every 6 h.
+
+- Licence: MIT (`Copyright (c) 2018-2025 Mitchell Krog, Nissar Chababy, Phishing.Database Contributors`), repository [LICENSE](https://github.com/Phishing-Database/Phishing.Database/blob/master/LICENSE). The repository has no separate data licence, so MIT covers the list file too: commercial use and redistribution (to phones) allowed, keep the copyright notice (credit it in the app's acknowledgements).
+- Open caveat: the README does not say where the domains come from. [Issue #2315](https://github.com/Phishing-Database/Phishing.Database/issues/2315) (open since 26 Sep 2026, no maintainer answer on 23 Oct 2026) asks whether any upstream is non-commercial. If the answer is that it is, switch back to the empty list (remove the KV binding) and revisit A3.
+- Format: one hostname per line, no dates, many hosts on shared platforms. ~11 MB, ~440k lines (estimate), so the newest 190,000 registrable domains are kept after the allowlist (`BLOCKLIST_LIMITS.MAX_DOMAINS`, 10,000 below the extension's cap so delta adds still fit). On the first build every domain has the same `addedAt`, so the cut is alphabetical until dates spread out.
+- Known false positives exist (e.g. email click-tracker domains, Phishing.Database #2069). A list hit is score 100, so extend `allowlist.js` when one is reported.
+
+Other candidates, checked on the official pages on 23 Oct 2026 (not legal advice):
+
+| Candidate | Terms found | Why not (now) |
+|---|---|---|
+| PhishTank | FAQ: commercial and non-commercial API use is OK; no data licence; terms link to a Cisco EULA | New registrations are disabled, so no app key; without one only "a few downloads per day". Possible second source later |
+| OpenPhish Community | Terms: no commercial use (detection and product development named), no redistribution, no derivative works without written consent | Not allowed |
+| URLhaus (abuse.ch) | Terms (updated 21 Oct 2026): non-profit fair use; commercial use may need a paid subscription; Auth-Key required | Malware URLs, not phishing; commercial terms unclear |
+| Phishing Army | Adds no restriction of its own but grants no upstream rights; sources include OpenPhish and PhishStats | Upstreams forbid redistribution |
+| PhishStats | Terms: no sharing or redistribution of raw feeds without written permission | Not allowed |
 
 ## Layer 4: reality check (`unreasonable_request`, M4)
 
