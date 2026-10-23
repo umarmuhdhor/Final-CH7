@@ -33,16 +33,53 @@ export function due(meta, source, now) {
     return null;
 }
 
-/** Applies one response page to a Map(domain → addedAt). Mutates and returns it. */
+/**
+ * Applies one response page to a Map(domain → addedAt). Mutates and returns it.
+ * removed[] goes first so it frees room. Past MAX_ENTRIES the oldest entries go (newest scams matter most).
+ */
 export function applyPage(map, page) {
-    for (const entry of Array.isArray(page?.domains) ? page.domains : []) {
-        const domain = typeof entry?.domain === "string" ? entry.domain.toLowerCase().trim() : "";
-        if (domain && map.size < MAX_ENTRIES) map.set(domain, entry.addedAt ?? null);
-    }
     for (const entry of Array.isArray(page?.removed) ? page.removed : []) {
         if (typeof entry?.domain === "string") map.delete(entry.domain.toLowerCase().trim());
     }
+    for (const entry of Array.isArray(page?.domains) ? page.domains : []) {
+        const domain = typeof entry?.domain === "string" ? entry.domain.toLowerCase().trim() : "";
+        if (domain) map.set(domain, entry.addedAt ?? null);
+    }
+    if (map.size > MAX_ENTRIES) evictOldest(map, map.size - MAX_ENTRIES);
     return map;
+}
+
+/** a older than b? null addedAt is oldest; ties go to the earlier-inserted entry. Items: [addedAt, index, domain]. */
+const older = (a, b) => (a[0] === b[0] ? a[1] < b[1] : a[0] == null || (b[0] != null && a[0] < b[0]));
+
+/** Deletes the `count` oldest entries in one pass: max-heap of the oldest seen so far, O(n log count). */
+function evictOldest(map, count) {
+    const heap = []; // heap[0] = newest of the kept-for-eviction set
+    const down = (i) => {
+        for (;;) {
+            const l = 2 * i + 1, r = l + 1;
+            let top = i;
+            if (l < heap.length && older(heap[top], heap[l])) top = l;
+            if (r < heap.length && older(heap[top], heap[r])) top = r;
+            if (top === i) return;
+            [heap[i], heap[top]] = [heap[top], heap[i]];
+            i = top;
+        }
+    };
+    let index = 0;
+    for (const [domain, addedAt] of map) {
+        const item = [addedAt, index++, domain];
+        if (heap.length < count) {
+            heap.push(item);
+            for (let i = heap.length - 1, p; i > 0 && older(heap[(p = (i - 1) >> 1)], heap[i]); i = p) {
+                [heap[i], heap[p]] = [heap[p], heap[i]];
+            }
+        } else if (older(item, heap[0])) {
+            heap[0] = item;
+            down(0);
+        }
+    }
+    for (const [, , domain] of heap) map.delete(domain);
 }
 
 /**
