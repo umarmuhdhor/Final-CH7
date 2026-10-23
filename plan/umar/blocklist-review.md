@@ -1,7 +1,7 @@
 # Runbook review antrean blocklist (C6)
 
 > Dibuat 23 Okt 2026 · Pemilik: Umar (lead) · Bersama: Alief (Team App, pemilik `backend/`)
-> Status: **draf**, menunggu kesepakatan jadwal dan query dengan Alief (issue: _belum dibuat_)
+> Status: **draf**, menunggu kesepakatan jadwal dan query dengan Alief (issue #99)
 > Sumber: `contracts/api.md` (Blocklist), `docs/design/blocklist.md`, migrasi `backend/db/supabase/migrations/`
 > (`20261021130000_init.sql`, `…150000_blocklist_times.sql`, `…180000_verdicts.sql`, `20261022120000_hardening.sql`,
 > `…130000_security_review.sql`), `backend/api/src/db/repo/verdicts.ts`, `backend/api/src/data/allowlist.ts`,
@@ -253,7 +253,7 @@ domain ada / tidak ada (seperti log fase 10 langkah 4). Token uji tidak ditempel
 |---|---|---|---|---|---|---|---|---|
 | — | — | — | — | — | — | — | — | Belum ada sesi |
 
-## 8. Pertanyaan terbuka (ke Alief, lewat issue)
+## 8. Pertanyaan terbuka (ke Alief, issue #99)
 
 1. Jadwal §3 (Senin + Kamis, harian saat QA/demo) dan pembagian peran.
 2. Query §4 dan template §6 aman di SQL editor (apakah `begin read only` diterima; apakah editor membungkus satu
