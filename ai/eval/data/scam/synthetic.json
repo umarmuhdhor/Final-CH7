@@ -1,0 +1,2104 @@
+[
+  {
+    "id": "syn-bri-token-expired",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: bank token expiry + OTP request",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://brimo-verifikasi.top/aktivasi",
+      "title": "BRImo - Aktivasi Token",
+      "lang": "id",
+      "text": "Selamat datang di layanan nasabah BRI. Token keamanan Anda akan kedaluwarsa. Segera lakukan aktivasi ulang agar rekening tidak diblokir. Masukkan data kartu dan kode OTP yang dikirim melalui SMS untuk melanjutkan.",
+      "forms": [
+        {
+          "action": "/aktivasi.php",
+          "fields": [
+            {
+              "type": "text",
+              "name": "norek",
+              "id": "norek",
+              "label": "Nomor rekening",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN ATM",
+              "placeholder": "6 digit",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "Kode OTP",
+              "placeholder": "6 digit",
+              "autocomplete": "one-time-code"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BRI",
+        "Banner BRImo"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-mandiri-livin-upgrade",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "lookalike-brand",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: fake app update + credential harvest",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://livin-mandiri-update.site/",
+      "title": "Livin' by Mandiri - Pembaruan Aplikasi",
+      "lang": "id",
+      "text": "Pembaruan wajib Livin' by Mandiri. Akun Anda terdeteksi menggunakan versi lama dan akan dibatasi dalam 24 jam. Unduh aplikasi pembaruan atau verifikasi akun di bawah ini.",
+      "forms": [
+        {
+          "action": "/cek",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor ponsel terdaftar",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pw",
+              "id": "pw",
+              "label": "Kata sandi Livin",
+              "placeholder": "",
+              "autocomplete": "current-password"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Bank Mandiri"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bni-mobile-banking",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "brand-plus-keyword",
+      "cheap-tld",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: bank login clone on cheap TLD",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bni-mobile-banking.click/login",
+      "title": "BNI Mobile Banking",
+      "lang": "id",
+      "text": "Login BNI Mobile Banking. Untuk keamanan, masukkan User ID, kata sandi, dan nomor kartu debit Anda. Setelah itu kami kirim kode verifikasi ke ponsel Anda.",
+      "forms": [
+        {
+          "action": "/login",
+          "fields": [
+            {
+              "type": "text",
+              "name": "userid",
+              "id": "userid",
+              "label": "User ID",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Password",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu debit",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "BNI logo",
+        "icon keamanan"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bsi-sharia-bonus",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: bank reward + KTP upload",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bsi-syariah-reward.xyz/klaim",
+      "title": "BSI Reward Ramadhan",
+      "lang": "id",
+      "text": "Nasabah BSI terpilih mendapat reward Rp 2.500.000. Konfirmasi rekening Anda hari ini. Isi nomor rekening, PIN mobile, dan foto KTP untuk pencairan.",
+      "forms": [
+        {
+          "action": "/klaim",
+          "fields": [
+            {
+              "type": "text",
+              "name": "rek",
+              "id": "rek",
+              "label": "Nomor rekening BSI",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN BSI Mobile",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Unggah foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BSI"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bca-klikbca-clean",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: generic domain, brand only in content (M1 will miss it on purpose)",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://layanan-nasabah-online.com/akses",
+      "title": "Akses Layanan Perbankan",
+      "lang": "id",
+      "text": "Layanan nasabah online. Pilih bank Anda lalu masuk dengan akun internet banking. Akun yang tidak diverifikasi minggu ini akan ditutup.",
+      "forms": [
+        {
+          "action": "/akses",
+          "fields": [
+            {
+              "type": "text",
+              "name": "user",
+              "id": "user",
+              "label": "User ID internet banking",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "KeyBCA / PIN",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Pilih bank",
+        "Logo BCA"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-cimb-octo-limit",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "lookalike-brand",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: limit upgrade via chat, no form",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://octo-cimbniaga-secure.club/limit",
+      "title": "OCTO Mobile - Peningkatan Limit",
+      "lang": "id",
+      "text": "Tingkatkan limit transfer Anda hingga Rp 100 juta. Hubungi petugas kami lewat WhatsApp dan siapkan kode OTP serta data kartu kredit.",
+      "forms": [],
+      "imageAlts": [
+        "Logo CIMB Niaga"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bca-blokir-kartu",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "brand-plus-keyword",
+      "cheap-tld",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: card blocked + card details",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bca-blokir-kartu.shop/",
+      "title": "Kartu Anda Diblokir",
+      "lang": "id",
+      "text": "Kartu ATM BCA Anda diblokir sementara karena aktivitas mencurigakan. Verifikasi sekarang sebelum pukul 23.59 atau rekening ditutup permanen. Masukkan nomor kartu, tanggal berlaku, dan CVV.",
+      "forms": [
+        {
+          "action": "/verif",
+          "fields": [
+            {
+              "type": "text",
+              "name": "cardno",
+              "id": "cardno",
+              "label": "Nomor kartu",
+              "placeholder": "16 digit",
+              "autocomplete": "cc-number"
+            },
+            {
+              "type": "text",
+              "name": "exp",
+              "id": "exp",
+              "label": "Berlaku sampai",
+              "placeholder": "MM/YY",
+              "autocomplete": "cc-exp"
+            },
+            {
+              "type": "password",
+              "name": "cvv",
+              "id": "cvv",
+              "label": "CVV",
+              "placeholder": "3 digit",
+              "autocomplete": "cc-csc"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BCA",
+        "gambar kartu ATM"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bri-cashback-survey",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: survey reward + PIN",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://survey-bri-cashback.top/mulai",
+      "title": "Survei Kepuasan Nasabah BRI",
+      "lang": "id",
+      "text": "Isi survei singkat dan dapatkan cashback Rp 500.000. Hadiah dikirim ke rekening setelah Anda memasukkan nomor rekening dan PIN untuk validasi.",
+      "forms": [
+        {
+          "action": "/kirim",
+          "fields": [
+            {
+              "type": "text",
+              "name": "norek",
+              "id": "norek",
+              "label": "Nomor rekening",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BRI",
+        "Cashback"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-mandiri-kyc-update",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: KYC update scam, domain without brand",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://data-nasabah-update.net/mandiri",
+      "title": "Update Data Nasabah",
+      "lang": "id",
+      "text": "Bank wajib memperbarui data nasabah sesuai peraturan OJK. Lengkapi data berikut: nama ibu kandung, nomor KTP, dan swafoto memegang KTP. Batas waktu 2 hari.",
+      "forms": [
+        {
+          "action": "/update",
+          "fields": [
+            {
+              "type": "text",
+              "name": "ibu",
+              "id": "ibu",
+              "label": "Nama ibu kandung",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "nik",
+              "id": "nik",
+              "label": "Nomor KTP",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Swafoto dengan KTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Selfie dengan KTP",
+        "Logo Bank Mandiri"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-dana-kaget-bonus",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: free balance + OTP",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://dana-kaget-bonus.xyz/",
+      "title": "DANA Kaget - Bonus Saldo",
+      "lang": "id",
+      "text": "Dapatkan saldo DANA gratis Rp 300.000 untuk 1000 pengguna pertama. Masukkan nomor DANA dan kode OTP untuk klaim. Terbatas hari ini saja.",
+      "forms": [
+        {
+          "action": "/klaim",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor DANA",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "Kode OTP",
+              "placeholder": "4 digit",
+              "autocomplete": "one-time-code"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo DANA",
+        "Saldo gratis"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-ovo-upgrade-premier",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: wallet limit + KTP",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://ovo-premier-upgrade.top/",
+      "title": "Upgrade OVO Premier",
+      "lang": "id",
+      "text": "Akun OVO Anda akan dibatasi jika tidak di-upgrade ke Premier. Siapkan KTP dan PIN OVO 6 digit. Proses hanya 5 menit.",
+      "forms": [
+        {
+          "action": "/up",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor OVO",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN OVO",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo OVO"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-gopay-driver-refund",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: double-charge refund",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://gopay-refund-center.site/klaim",
+      "title": "Refund GoPay",
+      "lang": "id",
+      "text": "Kami mendeteksi pembayaran ganda pada akun GoPay Anda. Ajukan pengembalian dana dengan memasukkan nomor GoPay, PIN, dan kode OTP.",
+      "forms": [
+        {
+          "action": "/refund",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor GoPay",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN GoPay",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo GoPay"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-shopeepay-limit",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: wallet verification login",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://shopeepay-verifikasi.click/",
+      "title": "ShopeePay - Verifikasi Akun",
+      "lang": "id",
+      "text": "Akun ShopeePay Anda belum terverifikasi. Selesaikan verifikasi sekarang untuk menghindari penutupan akun. Login dengan akun Shopee Anda.",
+      "forms": [
+        {
+          "action": "/login",
+          "fields": [
+            {
+              "type": "text",
+              "name": "user",
+              "id": "user",
+              "label": "Username / no. HP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo ShopeePay",
+        "Logo Shopee"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-linkaja-hadiah",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "clean-domain-scam",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: free balance, generic domain",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://promo-saldo-gratis.id/linkaja",
+      "title": "Saldo LinkAja Gratis",
+      "lang": "id",
+      "text": "Klaim saldo LinkAja gratis dengan mengisi nomor ponsel dan PIN. Penawaran berakhir dalam 1 jam.",
+      "forms": [
+        {
+          "action": "/klaim",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor LinkAja",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "LinkAja"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-dana-premium-pin",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "brand-plus-keyword",
+      "cheap-tld",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: login clone",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://dana-premium-login.cfd/",
+      "title": "Masuk DANA Premium",
+      "lang": "id",
+      "text": "Masuk ke akun DANA Premium Anda. Demi keamanan, kami meminta PIN dan kode OTP sebelum menampilkan saldo.",
+      "forms": [
+        {
+          "action": "/in",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor ponsel",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN DANA",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "Kode OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo DANA"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-ovo-undian-grab",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: winner + admin fee, chat only",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://ovo-undian-2026.top/pemenang",
+      "title": "Selamat! Anda Pemenang Undian OVO",
+      "lang": "id",
+      "text": "Nomor Anda terpilih sebagai pemenang undian OVO senilai Rp 10.000.000. Hubungi admin lewat WhatsApp dan bayar biaya admin Rp 150.000 untuk pencairan.",
+      "forms": [],
+      "imageAlts": [
+        "Trofi",
+        "Logo OVO"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-gopay-later-pinjam",
+    "label": "scam",
+    "tags": [
+      "e-wallet",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: loan + KTP selfie",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://gopaylater-cair.site/ajukan",
+      "title": "GoPayLater - Pencairan Dana",
+      "lang": "id",
+      "text": "Dana pinjaman Rp 5.000.000 siap cair. Syarat: foto KTP, swafoto, dan nomor rekening. Cair dalam 10 menit.",
+      "forms": [
+        {
+          "action": "/ajukan",
+          "fields": [
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Selfie dengan KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "rek",
+              "id": "rek",
+              "label": "Nomor rekening",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo GoPay"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-jne-paket-tertahan",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: package held fee + card",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://jne-paket-tertahan.top/cek",
+      "title": "JNE - Paket Tertahan",
+      "lang": "id",
+      "text": "Paket Anda tertahan karena alamat tidak lengkap. Bayar biaya penyimpanan Rp 3.500 dengan kartu debit atau kredit agar paket dikirim ulang.",
+      "forms": [
+        {
+          "action": "/bayar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu",
+              "placeholder": "16 digit",
+              "autocomplete": "cc-number"
+            },
+            {
+              "type": "text",
+              "name": "exp",
+              "id": "exp",
+              "label": "Masa berlaku",
+              "placeholder": "MM/YY",
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "cvv",
+              "id": "cvv",
+              "label": "CVV",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo JNE"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-jnt-tarif-selisih",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: shipping difference",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://jnt-selisih-ongkir.site/",
+      "title": "J&T Express - Selisih Ongkir",
+      "lang": "id",
+      "text": "Terdapat selisih ongkos kirim pada paket Anda. Lunasi sekarang. Nomor resi: JP00000000.",
+      "forms": [
+        {
+          "action": "/bayar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nama",
+              "id": "nama",
+              "label": "Nama penerima",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor WhatsApp",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo J&T Express"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-sicepat-apk",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: APK malware lure",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://sicepat-lacak-resi.click/unduh",
+      "title": "SiCepat - Lihat Foto Paket",
+      "lang": "id",
+      "text": "Foto bukti paket Anda sudah tersedia. Unduh aplikasi SiCepat untuk melihat foto paket (file .apk).",
+      "forms": [],
+      "imageAlts": [
+        "Logo SiCepat",
+        "Unduh APK"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-anteraja-alamat",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: address confirm, generic domain",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://konfirmasi-pengiriman.com/alamat",
+      "title": "Konfirmasi Alamat Pengiriman",
+      "lang": "id",
+      "text": "Kurir tidak dapat menemukan alamat Anda. Konfirmasi alamat dan data kartu pembayaran COD sekarang atau paket dikembalikan.",
+      "forms": [
+        {
+          "action": "/alamat",
+          "fields": [
+            {
+              "type": "text",
+              "name": "alamat",
+              "id": "alamat",
+              "label": "Alamat lengkap",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Kurir"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-pos-kiriman-luar-negeri",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: customs fee, typo domain (indonesla)",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://pos-indonesla.com/bea-cukai",
+      "title": "Pos Indonesia - Bea Cukai",
+      "lang": "id",
+      "text": "Kiriman luar negeri atas nama Anda tertahan di bea cukai. Bayar bea masuk Rp 450.000 melalui transfer. Hubungi petugas lewat WhatsApp.",
+      "forms": [],
+      "imageAlts": [
+        "Logo Pos Indonesia"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-tiki-nomor-resi",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "brand-plus-keyword",
+      "cheap-tld"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: tracking + OTP",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://tiki-cek-resi.top/",
+      "title": "TIKI Cek Resi",
+      "lang": "id",
+      "text": "Masukkan nomor resi dan nomor ponsel Anda untuk melihat status. Kode OTP akan dikirim untuk verifikasi.",
+      "forms": [
+        {
+          "action": "/cek",
+          "fields": [
+            {
+              "type": "text",
+              "name": "resi",
+              "id": "resi",
+              "label": "Nomor resi",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor ponsel",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo TIKI"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-ninja-ganti-rugi",
+    "label": "scam",
+    "tags": [
+      "courier",
+      "clean-domain-scam",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: damage compensation",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://klaim-ganti-rugi-paket.xyz/",
+      "title": "Klaim Ganti Rugi Paket",
+      "lang": "id",
+      "text": "Paket Anda rusak. Klaim ganti rugi hingga Rp 2.000.000 dengan mengisi nomor rekening dan PIN kartu.",
+      "forms": [
+        {
+          "action": "/klaim",
+          "fields": [
+            {
+              "type": "text",
+              "name": "rek",
+              "id": "rek",
+              "label": "Nomor rekening",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN kartu",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Paket rusak"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-tokopedia-undian",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "lookalike-brand",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: anniversary lottery",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://tokopedia-undian-hut.top/menang",
+      "title": "Undian HUT Tokopedia",
+      "lang": "id",
+      "text": "Selamat! Anda terpilih menerima voucher belanja Rp 5.000.000. Verifikasi dengan login akun Tokopedia dalam 15 menit.",
+      "forms": [
+        {
+          "action": "/login",
+          "fields": [
+            {
+              "type": "text",
+              "name": "email",
+              "id": "email",
+              "label": "Email atau nomor HP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Tokopedia",
+        "Hadiah"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-telkomsel-poin",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: points expiry",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://tukar-poin-hadiah.net/",
+      "title": "Tukar Poin Telkomsel",
+      "lang": "id",
+      "text": "Poin Anda akan hangus hari ini. Tukarkan dengan hadiah. Masukkan nomor ponsel dan kode OTP.",
+      "forms": [
+        {
+          "action": "/tukar",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor Telkomsel",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "Kode OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Poin"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-lazada-giveaway",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: free phone shipping fee",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://lazada-giveaway-iphone.click/",
+      "title": "Giveaway iPhone 16 Lazada",
+      "lang": "id",
+      "text": "Menangkan iPhone 16 gratis. Bayar ongkos kirim Rp 29.000 saja dengan kartu kredit.",
+      "forms": [
+        {
+          "action": "/bayar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nama",
+              "id": "nama",
+              "label": "Nama",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu kredit",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "cvv",
+              "id": "cvv",
+              "label": "CVV",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "iPhone 16",
+        "Logo Lazada"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-shopee-flash-undian",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "brand-plus-keyword",
+      "cheap-tld"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: prize claim collecting identity",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://shopee-flash-undian.site/ambil",
+      "title": "Shopee Flash Hadiah",
+      "lang": "id",
+      "text": "Anda berhak atas hadiah Shopee. Klaim sebelum pukul 24.00. Klik tombol dan isi data pengiriman.",
+      "forms": [
+        {
+          "action": "/ambil",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nama",
+              "id": "nama",
+              "label": "Nama lengkap",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor HP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "alamat",
+              "id": "alamat",
+              "label": "Alamat",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Shopee"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bpjs-bonus-iuran",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: refund bonus",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bpjs-bonus-iuran.top/",
+      "title": "Bonus Iuran BPJS",
+      "lang": "id",
+      "text": "Peserta BPJS menerima pengembalian iuran Rp 1.200.000. Isi nomor kartu BPJS dan rekening bank.",
+      "forms": [
+        {
+          "action": "/klaim",
+          "fields": [
+            {
+              "type": "text",
+              "name": "bpjs",
+              "id": "bpjs",
+              "label": "Nomor kartu BPJS",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "rek",
+              "id": "rek",
+              "label": "Nomor rekening",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BPJS"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-pertamina-subsidi",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: subsidy registration",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://subsidi-bbm-2026.com/daftar",
+      "title": "Pendaftaran Subsidi BBM",
+      "lang": "id",
+      "text": "Daftar sekarang untuk subsidi BBM Rp 600.000 per bulan. Unggah KTP dan swafoto. Kuota terbatas.",
+      "forms": [
+        {
+          "action": "/daftar",
+          "fields": [
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Swafoto",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor HP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Subsidi"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bukalapak-voucher",
+    "label": "scam",
+    "tags": [
+      "prize",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: voucher OTP",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bukalapak-voucher-gratis.xyz/",
+      "title": "Voucher Gratis Bukalapak",
+      "lang": "id",
+      "text": "Voucher Rp 1.000.000 untuk pengguna baru. Scan kode dan masukkan OTP.",
+      "forms": [
+        {
+          "action": "/v",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor HP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Bukalapak"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-bpjs-kesehatan-nonaktif",
+    "label": "scam",
+    "tags": [
+      "government",
+      "lookalike-brand",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: membership reactivation",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bpjs-kesehatan-aktivasi.site/",
+      "title": "BPJS Kesehatan - Aktivasi Kepesertaan",
+      "lang": "id",
+      "text": "Kepesertaan BPJS Kesehatan Anda dinonaktifkan. Aktifkan kembali dengan memasukkan NIK, nama ibu kandung, dan foto KTP.",
+      "forms": [
+        {
+          "action": "/aktif",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nik",
+              "id": "nik",
+              "label": "NIK",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "ibu",
+              "id": "ibu",
+              "label": "Nama ibu kandung",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo BPJS"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-pajak-djp-sptp",
+    "label": "scam",
+    "tags": [
+      "government",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: tax refund",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://djp-pajak-refund.top/",
+      "title": "DJP Online - Restitusi Pajak",
+      "lang": "id",
+      "text": "Anda berhak atas restitusi pajak Rp 3.400.000. Login dengan EFIN dan kata sandi DJP Online.",
+      "forms": [
+        {
+          "action": "/login",
+          "fields": [
+            {
+              "type": "text",
+              "name": "npwp",
+              "id": "npwp",
+              "label": "NPWP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "efin",
+              "id": "efin",
+              "label": "EFIN",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo DJP"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-etilang-denda",
+    "label": "scam",
+    "tags": [
+      "government",
+      "clean-domain-scam",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: e-tilang fine",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://cek-etilang-online.com/bayar",
+      "title": "Cek Tilang Elektronik",
+      "lang": "id",
+      "text": "Kendaraan Anda terkena tilang elektronik. Bayar denda Rp 250.000 sekarang. Masukkan nomor kartu untuk pembayaran.",
+      "forms": [
+        {
+          "action": "/bayar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "plat",
+              "id": "plat",
+              "label": "Nomor polisi",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Polisi"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-samsat-pajak-kendaraan",
+    "label": "scam",
+    "tags": [
+      "government",
+      "clean-domain-scam",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: vehicle tax transfer",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://bayar-pajak-kendaraan.online/",
+      "title": "Bayar Pajak Kendaraan Online",
+      "lang": "id",
+      "text": "Bayar pajak kendaraan tanpa antre. Transfer ke rekening yang tertera lalu kirim bukti ke WhatsApp admin.",
+      "forms": [],
+      "imageAlts": [
+        "Samsat"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-prakerja-gelombang",
+    "label": "scam",
+    "tags": [
+      "government",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: program registration",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://prakerja-gelombang-baru.id/daftar",
+      "title": "Kartu Prakerja Gelombang Baru",
+      "lang": "id",
+      "text": "Pendaftaran Prakerja dibuka. Isi NIK, foto KTP, swafoto, dan kode OTP. Kuota terbatas hari ini.",
+      "forms": [
+        {
+          "action": "/daftar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nik",
+              "id": "nik",
+              "label": "NIK",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Swafoto",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Prakerja"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-dukcapil-ktp-digital",
+    "label": "scam",
+    "tags": [
+      "government",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: digital ID activation",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://ktp-digital-aktivasi.com/",
+      "title": "Aktivasi KTP Digital",
+      "lang": "id",
+      "text": "Wajib aktivasi KTP digital sebelum akhir bulan. Scan wajah dan masukkan kode OTP.",
+      "forms": [
+        {
+          "action": "/aktif",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nik",
+              "id": "nik",
+              "label": "NIK",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Swafoto wajah",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Dukcapil"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-kemensos-bansos-pkh",
+    "label": "scam",
+    "tags": [
+      "government",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: social aid",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://kemensos-bansos-pkh.shop/cek",
+      "title": "Cek Penerima Bansos PKH",
+      "lang": "id",
+      "text": "Nama Anda terdaftar sebagai penerima bansos PKH tahap 3. Konfirmasi data rekening dan PIN untuk pencairan.",
+      "forms": [
+        {
+          "action": "/cek",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nik",
+              "id": "nik",
+              "label": "NIK",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "rek",
+              "id": "rek",
+              "label": "Nomor rekening",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "pin",
+              "id": "pin",
+              "label": "PIN",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Kemensos"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-icloud-terkunci",
+    "label": "scam",
+    "tags": [
+      "apple",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: locked Apple ID",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://icloud-unlock-support.top/",
+      "title": "iCloud - Akun Terkunci",
+      "lang": "id",
+      "text": "Apple ID Anda terkunci karena aktivitas tidak biasa. Masuk untuk membuka kunci. Masukkan Apple ID, kata sandi, dan kode 6 digit.",
+      "forms": [
+        {
+          "action": "/unlock",
+          "fields": [
+            {
+              "type": "email",
+              "name": "appleid",
+              "id": "appleid",
+              "label": "Apple ID",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "password",
+              "id": "password",
+              "label": "Kata sandi",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "code",
+              "id": "code",
+              "label": "Kode verifikasi",
+              "placeholder": "6 digit",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "iCloud",
+        "Apple logo"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-find-my-iphone-hilang",
+    "label": "scam",
+    "tags": [
+      "apple",
+      "lookalike-brand",
+      "credential-iframe"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: found-device lure; real login sits in an iframe, so snapshot.forms is empty",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://findmy-iphone-lokasi.click/",
+      "title": "Find My - Perangkat Ditemukan",
+      "lang": "id",
+      "text": "iPhone Anda ditemukan. Masuk untuk melihat lokasinya.",
+      "forms": [],
+      "imageAlts": [
+        "iPhone",
+        "Apple"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-apple-pay-tagihan",
+    "label": "scam",
+    "tags": [
+      "apple",
+      "lookalike-brand"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: unknown charge",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://apple-billing-receipt.xyz/",
+      "title": "Tagihan Apple - Pembelian Tidak Dikenal",
+      "lang": "id",
+      "text": "Pembelian Rp 2.499.000 pada akun Anda. Jika bukan Anda, batalkan dengan memasukkan data kartu pembayaran.",
+      "forms": [
+        {
+          "action": "/batal",
+          "fields": [
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu",
+              "placeholder": "16 digit",
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": "cvv",
+              "id": "cvv",
+              "label": "CVV",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Apple",
+        "tagihan"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-loker-admin-online",
+    "label": "scam",
+    "tags": [
+      "other",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: job scam with upfront fee",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://lowongan-admin-online.com/daftar",
+      "title": "Lowongan Admin Online Gaji 8 Juta",
+      "lang": "id",
+      "text": "Dibutuhkan admin online dari rumah. Gaji Rp 8.000.000. Bayar biaya seragam Rp 250.000 untuk lolos seleksi, lalu kirim bukti ke WhatsApp.",
+      "forms": [
+        {
+          "action": "/daftar",
+          "fields": [
+            {
+              "type": "text",
+              "name": "nama",
+              "id": "nama",
+              "label": "Nama",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor WhatsApp",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Lowongan"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-pinjol-cair-cepat",
+    "label": "scam",
+    "tags": [
+      "other",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: predatory loan",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://pinjaman-cair-cepat.xyz/",
+      "title": "Pinjaman Cair Cepat Tanpa Jaminan",
+      "lang": "id",
+      "text": "Pinjaman Rp 10 juta cair 5 menit tanpa BI checking. Syarat: foto KTP, swafoto, dan akses kontak.",
+      "forms": [
+        {
+          "action": "/ajukan",
+          "fields": [
+            {
+              "type": "file",
+              "name": "ktp",
+              "id": "ktp",
+              "label": "Foto KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "file",
+              "name": "selfie",
+              "id": "selfie",
+              "label": "Swafoto dengan KTP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor HP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Pinjaman"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-investasi-kripto-profit",
+    "label": "scam",
+    "tags": [
+      "other",
+      "clean-domain-scam"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: guaranteed crypto returns",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://profit-kripto-harian.net/",
+      "title": "Profit Kripto 20% per Hari",
+      "lang": "id",
+      "text": "Deposit minimal Rp 500.000, keuntungan 20% per hari dijamin. Bergabung di grup Telegram kami.",
+      "forms": [
+        {
+          "action": "/join",
+          "fields": [
+            {
+              "type": "tel",
+              "name": "hp",
+              "id": "hp",
+              "label": "Nomor HP",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "dep",
+              "id": "dep",
+              "label": "Jumlah deposit",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Grafik profit"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-olx-pembeli-cod",
+    "label": "scam",
+    "tags": [
+      "other",
+      "clean-domain-scam",
+      "holdout"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written from a documented scam pattern: marketplace buyer escrow",
+    "collectedAt": "2026-10-22T00:00:00.000Z",
+    "notes": "Invented page. Domain, wording and form fields are made up to exercise the rules; not copied from a real scam site.",
+    "snapshot": {
+      "url": "https://pembayaran-aman-marketplace.com/terima",
+      "title": "Terima Pembayaran Aman",
+      "lang": "id",
+      "text": "Pembeli sudah membayar barang Anda. Untuk menerima dana, masukkan data kartu atau rekening Anda dan kode OTP.",
+      "forms": [
+        {
+          "action": "/terima",
+          "fields": [
+            {
+              "type": "text",
+              "name": "kartu",
+              "id": "kartu",
+              "label": "Nomor kartu / rekening",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "otp",
+              "id": "otp",
+              "label": "OTP",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Pembayaran aman"
+      ],
+      "capturedAt": "2026-10-22T00:00:00.000Z"
+    }
+  }
+]

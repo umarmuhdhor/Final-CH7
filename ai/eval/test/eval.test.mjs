@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { redact, redactUrl, parseHtml } from "../tools/snapshot.mjs";
-import { validateSample, loadSamples, normalizeSnapshot, scoreOf, statusOf, summarize, evaluate, loadDetector, domainOf } from "../lib.mjs";
+import { validateSample, loadSamples, normalizeSnapshot, scoreOf, statusOf, summarize, evaluate, loadDetector, domainOf, jsonReport } from "../lib.mjs";
 
 const dataDir = fileURLToPath(new URL("../data", import.meta.url));
 
@@ -98,6 +98,21 @@ test("score and status follow the contract", () => {
     assert.equal(scoreOf([{ id: "x", weight: 60 }, { id: "y", weight: 70 }]), 100);
     assert.equal(scoreOf([{ id: "db_match", weight: 100 }, { id: "y", weight: 1 }]), 100);
     assert.deepEqual([0, 29, 30, 49, 50, 79, 80, 100].map(statusOf), ["normal", "normal", "warning 1", "warning 1", "warning 2", "warning 2", "blocked", "blocked"]);
+});
+
+test("--json hides holdout rows and holdout ids in the summary unless showHoldout", () => {
+    const row = (id, label, score, tags = []) => ({ id, label, score, tags, localMs: 1, signals: score ? [{ id: "lookalike_domain", weight: score, evidence: "" }] : [] });
+    const rows = [row("s1", "scam", 90), row("s-hold", "scam", 20, ["holdout"]), row("l-hold", "legit", 40, ["holdout"]), row("l1", "legit", 35)];
+    const summary = summarize(rows, { remote: true });
+    const hidden = jsonReport(rows, summary, {});
+    assert.deepEqual(hidden.rows.map((r) => r.id), ["s1", "l1"]);
+    assert.deepEqual(hidden.summary.misses, []);
+    assert.deepEqual(hidden.summary.falsePositives, ["l1"]);
+    assert.equal(hidden.summary.holdoutRowsHidden, 2);
+    assert.ok(!JSON.stringify(hidden).includes("-hold"), "no holdout id anywhere in the output");
+    const shown = jsonReport(rows, summary, { showHoldout: true });
+    assert.equal(shown.rows.length, 4);
+    assert.deepEqual(shown.summary.misses, ["s-hold"]);
 });
 
 test("summarize counts hits, misses, false positives and judges targets only when meaningful", () => {

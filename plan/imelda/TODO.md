@@ -9,7 +9,7 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | A1 | Stack service `/analyze` + `/public-blocklist` | Cloudflare Worker + Hono (sama dengan Alief, memudahkan M7) — D-imelda-01 | [ ] tunggu Imelda |
 | A2 | Model LLM untuk M4 | Pilih setelah eval ada. Kandidat (harga per 1 jt token masuk/keluar, 21 Okt 2026): Gemini 2.5 Flash-Lite $0.10/$0.40 · Claude Haiku 5.5 $0.10/$0.50 · GPT-5.4 nano $0.20/$1.25 (Deprecated) | [ ] |
 | A3 | Sumber daftar phishing publik (M5) | Pilih yang lisensinya boleh dipakai di app; catat di `ai/README.md`. Kandidat dicek di fase 05 | [ ] |
-| A4 | Sumber sampel scam untuk M2 | Hanya lewat `capture.mjs`/laporan publik; jangan membuka URL di browser. Cek lisensi sumber | [ ] |
+| A4 | Sumber sampel scam untuk M2 | Hanya lewat `capture.mjs`/laporan publik; jangan membuka URL di browser. Cek lisensi sumber | [~] fase 04: OpenPhish/PhishTank/URLhaus tidak dipakai (lisensi); butuh sumber scam nyata berlisensi atau izin tertulis (D-imelda-19) |
 | A5 | Gerbang panggilan LLM (D-imelda-05) | Form ≥ 1 field dan skor sementara ≥ 15; situs resmi tidak memanggil | [ ] tunggu Imelda |
 | A6 | Kebijakan penyedia LLM: tidak melatih dari data API, retensi minimum (SECURITY Q3) | Catat kebijakan penyedia terpilih di DECISIONS saat memilih model | [ ] |
 
@@ -37,7 +37,7 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 
 ## D. Langkah manual yang diketahui
 
-- [ ] D1 Kumpulkan/izinkan sumber sampel (fase 04): ≥ 50 scam, ≥ 50 legit mirip (login bank, checkout e-commerce).
+- [~] D1 Kumpulkan/izinkan sumber sampel (fase 04): ≥ 50 scam, ≥ 50 legit mirip (login bank, checkout e-commerce). Jumlah terpenuhi (50 + 51), tapi scam nyata hanya 1; sisanya sintetis.
 - [ ] D2 `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` bila ingin uji di simulator (butuh password; dilakukan Imelda).
 - [ ] D3 Uji di iPhone/Safari sungguhan (belum pernah; risiko App Group di akun Apple gratis).
 

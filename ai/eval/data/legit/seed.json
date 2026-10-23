@@ -2,81 +2,125 @@
   {
     "id": "official-tokopedia-home",
     "label": "legit",
-    "tags": ["official", "e-commerce"],
+    "tags": [
+      "official",
+      "checkout"
+    ],
     "synthetic": false,
     "source": "official homepage; URL only, page not captured yet",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "",
-    "snapshot": { "url": "https://www.tokopedia.com/" }
+    "snapshot": {
+      "url": "https://www.tokopedia.com/"
+    },
+    "redacted": true
   },
   {
     "id": "official-bca-home",
     "label": "legit",
-    "tags": ["official", "bank"],
+    "tags": [
+      "official",
+      "bank-login"
+    ],
     "synthetic": false,
     "source": "official homepage; URL only, page not captured yet",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "",
-    "snapshot": { "url": "https://www.bca.co.id/" }
+    "snapshot": {
+      "url": "https://www.bca.co.id/"
+    },
+    "redacted": true
   },
   {
     "id": "official-shopee-home",
     "label": "legit",
-    "tags": ["official", "e-commerce"],
+    "tags": [
+      "official",
+      "checkout"
+    ],
     "synthetic": false,
     "source": "official homepage; URL only, page not captured yet",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "",
-    "snapshot": { "url": "https://shopee.co.id/" }
+    "snapshot": {
+      "url": "https://shopee.co.id/"
+    },
+    "redacted": true
   },
   {
     "id": "popular-wikipedia",
     "label": "legit",
-    "tags": ["popular"],
+    "tags": [
+      "popular"
+    ],
     "synthetic": false,
     "source": "popular site that is not a brand in brands.json; URL only",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "",
-    "snapshot": { "url": "https://id.wikipedia.org/wiki/Bank_Central_Asia" }
+    "snapshot": {
+      "url": "https://id.wikipedia.org/wiki/Bank_Central_Asia"
+    },
+    "redacted": true
   },
   {
     "id": "trap-dana-sosial",
     "label": "legit",
-    "tags": ["lookalike-trap", "common-word"],
+    "tags": [
+      "lookalike-trap",
+      "common-word"
+    ],
     "synthetic": true,
     "source": "invented name: 'dana' is an everyday Indonesian word and also a brand",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "Must stay silent: a charity page called dana-sosial.",
-    "snapshot": { "url": "https://dana-sosial.org/" }
+    "snapshot": {
+      "url": "https://dana-sosial.org/"
+    }
   },
   {
     "id": "trap-mandiri-jaya",
     "label": "legit",
-    "tags": ["lookalike-trap", "common-word"],
+    "tags": [
+      "lookalike-trap",
+      "common-word"
+    ],
     "synthetic": true,
     "source": "invented name: 'mandiri' means independent",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "Must stay silent: an ordinary company page.",
-    "snapshot": { "url": "https://mandiri-jaya.co.id/" }
+    "snapshot": {
+      "url": "https://mandiri-jaya.co.id/"
+    }
   },
   {
     "id": "trap-toko-iphone-bekas",
     "label": "legit",
-    "tags": ["lookalike-trap", "shop-sells-brand"],
+    "tags": [
+      "lookalike-trap",
+      "shop-sells-brand",
+      "holdout"
+    ],
     "synthetic": true,
     "source": "invented name: a shop that sells used iPhones",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "Level 1 only (+10): it uses the name 'iphone' on a domain that is not Apple's. Must stay under 30.",
-    "snapshot": { "url": "https://toko-iphone-bekas.co.id/" }
+    "snapshot": {
+      "url": "https://toko-iphone-bekas.co.id/"
+    }
   },
   {
     "id": "trap-cloud-storage",
     "label": "legit",
-    "tags": ["lookalike-trap", "five-letter-word"],
+    "tags": [
+      "lookalike-trap",
+      "five-letter-word"
+    ],
     "synthetic": true,
     "source": "invented name: 'cloud' is one edit away from 'icloud'",
     "collectedAt": "2026-10-22T00:00:00.000Z",
     "notes": "Must stay silent: typo matching skips tokens under 6 letters on purpose.",
-    "snapshot": { "url": "https://cloud-storage.com/" }
+    "snapshot": {
+      "url": "https://cloud-storage.com/"
+    }
   }
 ]

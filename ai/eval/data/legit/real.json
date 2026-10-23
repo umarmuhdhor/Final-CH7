@@ -1,0 +1,2173 @@
+[
+  {
+    "id": "bank-login-bri",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:20.598Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://ib.bri.co.id/",
+      "domain": "bri.co.id",
+      "title": "BRI",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:20.597Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 271
+    }
+  },
+  {
+    "id": "bank-login-btn",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:26.374Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.btn.co.id/",
+      "domain": "btn.co.id",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:26.373Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 212
+    }
+  },
+  {
+    "id": "bank-login-danamon",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:21.985Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.danamon.co.id/",
+      "domain": "danamon.co.id",
+      "title": "Bank Danamon - Tumbuh Bersama Danamon Group",
+      "lang": "id",
+      "text": "Personal Bisnis Digital Banking Privilege Optimal Syariah Tentang Danamon 日本語サービス ID ID EN Ketik Suggession Personal Bisnis Digital Banking Privilege Optimal Syariah Tentang Danamon 日本語サービス ID EN Ketik Suggession Menu Cepat Hubungi Kami Lokasi Kami E-Form Layanan Whistleblower Edukasi Anti-Fraud Menu Cepat Hubungi Kami Lokasi Kami E-Form Layanan Whistleblower Edukasi Anti-Fraud Kalkulator Pilih Kalkulator Untuk Kebutuhanmu **Pilih salah satu kalkulator Asuransi Investasi KPR Pinjaman KTA Pinjaman SME Asuransi Investasi KPR Pinjaman KTA Pinjaman SME Simulasi Proteksi Proteksi masa depan dengan aman 1 Kebutuhan Proteksi yang sedang dibutuhkan? Asuransi Jiwa Asuransi Perencanaan Masa Depan Asuransi Kesehatan Proteksi Aset Asuransi Perjalanan Kembali Kembali Simulasi Investasi 1 Tujuan Investasi Menambahkan Penghasilan Investasi Masa Depan Masa Tua 2 Pilih Komparasi Jenis Aset Pilih Produk Deposito Tabungan Aset Konvensional Pilih Produk Aggresive Balanced Funds Balanced Funds Big Cap Equity Funds Developed Marked Equity Funds Emerging Market Equity Funds Aset Investasi 3 Nominal Investasi Awal IDR IDR USD EUR 4 Nominal Investasi Bulanan IDR IDR USD EUR Kembali Hitung Kalkulator KPR 1 Harga Properti Rp. 2 Uang Muka Rp. 3 Jangka Waktu Investasi 1 Tahunan 1 Tahunan 20 Tahunan Suku Bunga per Tahun (%) Kembali Hitung Kalkulator KTA Kredit Tanpa Angunan yang akan membantu anda 1 Nominal Pinjaman Anda Rp. 2 Bulanan 5 Bulan Bulan 5 Bulan Bulan 48 Bulan Bulan 3 Suku Bunga Pinjaman per",
+      "forms": [
+        {
+          "action": "/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": "search-bar-desktop",
+              "label": "Ketik",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": "/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": "search-bar-mobile",
+              "label": "Ketik",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "product",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "product",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "product",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "product",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "product",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "purpose",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "purpose",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "purpose",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "initial_invest",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "monthly_invest",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "property_value",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "down_payment",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "range",
+              "name": "invest_period",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "interest_rate",
+              "id": null,
+              "label": null,
+              "placeholder": "0.00",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "loan_value",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "range",
+              "name": "loan_period",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "loan_interest",
+              "id": null,
+              "label": null,
+              "placeholder": "0.00",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "monthly_rev",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "ongoing_loan",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "average_sells",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "base_value",
+              "id": null,
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "payment_due",
+              "id": null,
+              "label": null,
+              "placeholder": "Tulis Hari Saja",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "item_holding",
+              "id": null,
+              "label": null,
+              "placeholder": "Tulis Hari Saja",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "supply_due",
+              "id": null,
+              "label": null,
+              "placeholder": "Tulis Hari Saja",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": null,
+              "id": "dcw-amount-one",
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": null,
+              "id": "dcw-amount-two",
+              "label": null,
+              "placeholder": "0",
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": "dcw-lifeJourneyRes-toggle",
+              "label": "Konvensional Syariah",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "search icon",
+        "search icon",
+        "kalkulator icon",
+        "kalkulator icon",
+        "id Lang",
+        "id Lang",
+        "en Lang",
+        "search icon",
+        "close icon",
+        "search icon"
+      ],
+      "capturedAt": "2026-10-22T07:18:21.977Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 226877
+    }
+  },
+  {
+    "id": "bank-login-klikbca",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:20.209Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://ibank.klikbca.com/",
+      "domain": "klikbca.com",
+      "title": "klikBCA Individual",
+      "lang": null,
+      "text": "[ HOME ] USER ID dan PIN Internet Banking dapat diperoleh pada saat Anda melakukan Registrasi Internet melalui ATM BCA. Untuk informasi lebih lanjut hubungi Halo BCA 1500888. HOW TO GET STARTED: To start using BCA Internet Banking, You must first register through any BCA ATM. For further information, please contact Halo BCA 1500888. [ PRIVACY POLICY ] Silakan memasukkan USER ID Anda Please enter Your USER ID Silakan memasukkan PIN Internet Banking Anda Please enter Your Internet Banking PIN &#10094; &#10095; BCA berizin dan diawasi oleh Otoritas Jasa Keuangan & Bank Indonesia. BCA merupakan peserta penjaminan LPS. Maksimum nilai simpanan yang dijamin LPS per nasabah per bank adalah Rp2 miliar. Untuk cek Tingkat Bunga Penjaminan LPS, klik disini . BCA is licensed and supervised by Financial Services Authority (Otoritas Jasa Keuangan) & Bank Indonesia. BCA is a member of Indonesia Deposit Insurance Corporation (LPS). The maximum deposit value guaranteed by LPS per customer per bank is IDR 2 billion. To check the LPS Guarantee Interest Rate, click here . Copyright &copy; 2000 All Rights",
+      "forms": [
+        {
+          "action": "/authentication.do",
+          "fields": []
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": "txt_user_id",
+              "id": "txt_user_id",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": "off"
+            },
+            {
+              "type": "password",
+              "name": "txt_pswd",
+              "id": "txt_pswd",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": "off"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:20.207Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 17744
+    }
+  },
+  {
+    "id": "bank-login-mega",
+    "label": "legit",
+    "tags": [
+      "bank-login",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:26.043Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://bankmega.com/id/",
+      "domain": "bankmega.com",
+      "title": "Bank Mega - Keuntungan Sepanjang Masa",
+      "lang": "id",
+      "text": "x Search Personal Kartu Kredit Simpanan Individu Pinjaman Mega Cash Line Wealth Management Layanan Individu MPC Bisnis Simpanan Bisnis Pinjaman Bisnis Pinjaman Dana Pembiayaan Khusus Pasar Modal Treasury Layanan Internasional Layanan Bisnis Katalog AYDA MegaFirst Promo Layanan M-Smile Mega Internet Mega ATM MegaCash Mega Pass M-Money Laporan Keuangan Konsolidasi dan E-Statement Tentang Kami Profil Manajemen Komite Hubungan Investor Tata Kelola Perusahaan CSR MegaZine Jaringan Kontak Kami Karir Blog Apply CC BELANJA BANYAK HEMAT BANYAK Dapatkan berbagai keuntungan dengan Kartu Kredit Bank Mega Lihat Promosi UPDATE BERITA DAN TIPS Seputar Keuangan dan gaya hidup di MegaZine Lihat Selengkapnya Previous Next Kartu Kredit Promo istimewa dengan pilihan beragam Selengkapnya Simpanan Dapatkan keuntungan sepanjang masa Selengkapnya Digital Banking Nikmati berbagai fasilitas untuk produk Mega Anda Selengkapnya Promo Dapatkan promo menarik dari Bank Mega Selengkapnya #MegaZine Mega Travel Fair Fase 2 Hadir di Jakarta, Tawarkan Liburan Berkualitas Selengkapnya Kurs Mata Uang Hari Ini | 22 Okt 2026 08:57 Mata Uang Lainnya Mata Uang Jual Beli USD 18.150 17.950 AUD 12.758 12.569 EUR 20.402 20.129 SGD 14.220 14.031 x Launch demo modal MEGA CALL | [phone] | +62 21 29601600 (dari luar negeri) © 2025 PT Bank Mega, Tbk. | Privacy Policy | Report Vulnerability Bank Mega Berizin dan Diawasi oleh Otoritas Jasa Keuangan & Bank Indonesia serta merupakan peserta penjaminan LPS *Maksimum nilai",
+      "forms": [
+        {
+          "action": "/pencarian",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": null,
+              "label": null,
+              "placeholder": "Search",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Bank Mega",
+        "Indonesian",
+        "English",
+        "Indonesian",
+        "English",
+        "Suku Bunga Dasar Kredit",
+        "Lembaga Alternatif Penyelesaian Sengketa",
+        "Mila"
+      ],
+      "capturedAt": "2026-10-22T07:18:26.041Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 70798
+    }
+  },
+  {
+    "id": "bank-login-permata",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:21.128Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.permatabank.com/",
+      "domain": "permatabank.com",
+      "title": "Growing Together with Permata Bank",
+      "lang": "en",
+      "text": "Skip to main content Login: Permata Net Permata QR Merchant Permata eBusiness Permata eValue Chain Permata API Main navigation PRIVATE Consumer Syariah Commercial Corporate DIGITAL Karir TENTANG KAMI PERMATA STORE PROMO Login: Permata Net Permata QR Merchant Permata eBusiness Permata eValue Chain Permata API ID ID EN KONTAK KAMI HUBUNGI KAMI SEARCH Homepage Landing Page Info Lengkap - Any - Aspirasi Terkini Aspirasi Keluarga Aspirasi Masa Depan Aspirasi Ke Tanah Suci Aspirasi Ekspor Impor Aspirasi Pengelolaan Piutang Aspirasi Pinjaman Usaha Solusi Pengelolaan Dana Solusi Pengelolaan Ekspor Solusi Pengelolaan Impor Wealth Wisdom 2026 Selengkapnya Tata Kelola Perusahaan & Keberlanjutan Selengkapnya Layanan Weekend Banking Permata Bank Selengkapnya Sistem Pelaporan Pelanggaran-Whistleblowing Selengkapnya Kabar Konvensional Permata Kartu Kredit dan Permata Debit Plus Contactless Kabar Konvensional Sustainability - Linked Loan untuk Mendukung Target Keberlanjutan Ingin Dapat Promo? Mewujudkan aspirasi Anda kini semakin menarik dengan beragam promo istimewa Lihat ... Pemberitahuan Privasi Pemberitahuan Privasi Permata Bank Informasi Pelindungan Data Pribadi berdasarkan Undang-undang Pelindungan Data Pribadi di Indonesia. PT Bank Permata Tbk , suatu Perusahaan perbankan yang berizin dan diawasi oleh Otoritas Jasa Keuangan (“ Bank ” dan/atau “kami”) bermaksud memberikan layanan berkualitas kepada anda untuk memenuhi harapan anda, dan kami menyadari pentingnya kepatuhan terhadap",
+      "forms": [
+        {
+          "action": "/id/home/",
+          "fields": [
+            {
+              "type": "select",
+              "name": "field_id_aspirasi_value",
+              "id": "edit-field-id-aspirasi-value",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": "Masukkan pencarian",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Map Icon"
+      ],
+      "capturedAt": "2026-10-22T07:18:21.123Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 117905
+    }
+  },
+  {
+    "id": "checkout-bukalapak",
+    "label": "legit",
+    "tags": [
+      "checkout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:28.490Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bukalapak.com/",
+      "domain": "bukalapak.com",
+      "title": "Situs Belanja Online dan Jual Beli Mudah Terpercaya | Bukalapak",
+      "lang": null,
+      "text": "Selamat Datang! 👋🏻 Silakan login/register terlebih dahulu. Pulsa Paket Data Listrik Prabayar E-Wallet BukaEmas Lapakgaming Itemku Semua Bukalapak – Solusi Digital untuk Kebutuhan Sehari-hari Bukalapak kini hadir sebagai platform digital untuk memenuhi berbagai kebutuhan transaksi online Anda. Bukalapak menyediakan metode pembayaran yang praktis dan beragam, serta harga kompetitif dengan berbagai promo menarik. Top Up Pulsa, Paket Data dan Token Listrik dalam Satu Tempat Tidak perlu lagi antri atau keluar rumah, cukup buka aplikasi Bukalapak dan selesaikan pembayaran dalam hitungan detik. Bukalapak menyediakan berbagai layanan pembayaran online, mulai dari top up pulsa, beli paket data, pembayaran token listrik , hingga top up e-wallet , semua bisa dilakukan dengan mudah, cepat, dan aman dalam satu aplikasi. Top Up E-Wallet Instan dan Praktis Bukalapak kini menyediakan layanan top-up e-Wallet dengan cepat dan aman. Anda dapat mengisi saldo berbagai dompet digital seperti AstraPay, DANA, GoPay, InDrive, LinkAja, Maxim Driver, OVO , dan ShopeePay hanya dalam hitungan detik. Dengan metode pembayaran yang fleksibel dan proses transaksi instan, isi saldo e-Wallet kini semakin mudah dan bebas ribet di Bukalapak. Mulai Usaha Jualan Virtual Produk di Mitra Bukalapak Ingin mendapatkan penghasilan tambahan tanpa modal besar? Yuk, bergabunglah dengan Mitra Bukalapak ! Jadi agen pulsa , agen kuota , jualan token listrik , ataupun buka usaha konter pulsa prosesnya cepat dan aman. Tanpa",
+      "forms": [],
+      "imageAlts": [
+        "Highlight banner",
+        "Perlindungan Konsumen"
+      ],
+      "capturedAt": "2026-10-22T07:18:28.486Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 96094
+    }
+  },
+  {
+    "id": "checkout-lazada",
+    "label": "legit",
+    "tags": [
+      "checkout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:29.577Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.lazada.co.id/",
+      "domain": "lazada.co.id",
+      "title": "Lazada Indonesia | Toko Online, Diskon Terbaik Setiap Hari",
+      "lang": null,
+      "text": "hanasui maybelline parfum wardah top up dana Search Ambil Koin Dana LazNew Review Best Sellers LazMom LazPanen Savings Tiket Kategori MergeBoss 00 : 00 : 00 Lihat Semua SAVE 64 Rp 10.890 Rp30.000 Sisa stok 9 SAVE 69 Rp 30.500 Rp99.999 60 terjual SAVE 56 Rp 83.150 Rp190.000 Segera Habis Hanya Untukmu PROMO LIPSTICK LIPCREAM MYBELLINE SUPERSTAY LIPCREAM MATTE TAHAN LAMA Rp 9.073 4.4 Trove Life Rak Sepatu Susun Tertutup Lapisan Anti Debu, Rak Penyimpanan Sepatu Besi Kokoh, Rak Serbaguna Untuk Sepatu Dan Aksesoris Rp 72.680 4.7 {BISA COD} SOFTLENS LIVING COLOR DREAM NORMAL & MINUS (-0.50 SD -6.00) DIA 15MM BY IRISLAB Rp 27.500 4.8 Tropical Minyak Goreng Botol 6x2L [Karton] Rp 267.330 5 Sepatu Casual Pria Wanita Sepatu Olahraga Sepatu Jogging Kekinian Sneakers Terbaru Rp 47.040 4.4 Handuk Dewasa Polos/ Handuk Mandi Polos/Souvenir Handuk Ukuran 80cmX150cm Termurah Rp 22.499 4.4 Home Categories Cart Account Lazada",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "search",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "flash sale",
+        "home",
+        "category",
+        "cart",
+        "account"
+      ],
+      "capturedAt": "2026-10-22T07:18:29.572Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 420823
+    }
+  },
+  {
+    "id": "checkout-orami",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:33.786Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.orami.co.id/",
+      "domain": "orami.co.id",
+      "title": "Orami - One-stop Solution for Parents",
+      "lang": "id",
+      "text": "Notifikasi Saya • Shopping Articles Community IbuSibuk Baby name finder New Worksheet Anak Kalkulator kesuburan New Resep Masalah bikin pusing kepala? Moira bantu cari jawabannya! Kategori artikel Kehamilan Bayi Balita dan Anak Gaya Hidup Keluarga Hiburan Kesehatan Review Religi Resep dan Makanan Momspiration IbuSibuk Jadwal Sholat Jadwal Imsakiyah Edukasi Artikel Terbaru 25 Makanan Bayi 1 Tahun yang Dianjurkan dan Dilarang 3-12 bulan 18 Rekomendasi Drama Korea tentang Pernikahan, Recommended! K-Wave Kebutuhan Cairan Anak yang Harus Dipenuhi Sesuai Usianya Di atas 5 tahun Orgasme Kering: Penyebab, Gejala, dan Cara Mengatasinya Kesehatan Umum Salawat Munjiyat: Lafal, Keistimewaan, dan Waktu Terbaik untuk Membacanya! Islami 9 Adab Menerima Tamu dalam Islam, Ajari Si Kecil, Yuk! Islami Metode Program Hamil Kembar Berdasarkan Pendekatan Medis Program Hamil 10 Jenis Pohon Palem Terpopuler untuk Menghias Rumah Home & Living 32 Arti Mimpi Gigi Copot, Pertanda Ada Kerabat Meninggal? Rupa-rupa 11 Padu Padan Warna Ivory untuk Outfit Klasik dan Elegan Fashion & Beauty FAQ | Syarat & ketentuan | Kebijakan privasi Orami - one-stop solution for parents Copyright © 2026 Orami. All rights reserved. Home Shopping Articles IbuSibuk",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": "Cara mengatasi bayi demam",
+              "autocomplete": "off"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder",
+        "placeholder"
+      ],
+      "capturedAt": "2026-10-22T07:18:33.782Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 207867
+    }
+  },
+  {
+    "id": "checkout-ruparupa",
+    "label": "legit",
+    "tags": [
+      "checkout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:32.820Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.ruparupa.com/",
+      "domain": "ruparupa.com",
+      "title": "ruparupa: Solusi Kebutuhan Rumah Terlengkap & Berkualitas",
+      "lang": "id",
+      "text": "Belanja lebih mudah di aplikasi ruparupa Buka Cari di ruparupa         ruparupa: Tempat Belanja Kebutuhan Rumah, Gaya Hidup, dan Hobi Terlengkap & Berkualitas di Indonesia ruparupa adalah solusi omni-channel tepercaya dari Kawan Lama Group dengan menggabungkan unit bisnisnya dalam satu atap dan memberikan pengalaman tanpa batas berbelanja online maupun offline. Temukan produk untuk kebutuhan rumah, gaya hidup, dan hobi yang lengkap serta berkualitas dari partner resmi ruparupa mulai dari AZKO , INFORMA, INFORMA Electronics, Krisbow, Toys Kingdom, Pendopo, Pet Kingdom, SELMA, ATARU, EYE SOUL, THYS, ROLKA, hingga Chatime. Di ruparupa kamu akan mendapatkan produk original, bergaransi resmi dengan pilihan harga yang bisa disesuaikan dengan kebutuhanmu, mulai dari perlengkapan rumah tangga, dapur minimalis, furnitur, rak dan penyimpanan, dekorasi, renovasi, otomotif, hobi dan gaya hidup, kesehatan dan olahraga, elektronik dan gadget, hingga mainan anak. Kamu dapat membeli produk secara online dan mengambil pesanan langsung di lebih dari 600 toko di Indonesia dan khusus produk AZKO pengembalian produk bisa dilakukan di toko AZKO terdekat. Dapatkan juga garansi 7 hari*, gratis ongkos kirim ke seluruh Indonesia*, cicilan 0% tanpa biaya admin* dari Bank ternama seperti BCA, Mandiri, BNI, BRI, Permata, HSBC, UOB, OCBC NISP, Bank Mega, dan Digibank. Ada juga pilihan pembayaran digital seperti Danakini, Kredivo, serta e-wallet seperti GoPay dan OVO. Top Kategori Furnitur Sofa |",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "email",
+              "name": "newsletter-email",
+              "id": null,
+              "label": null,
+              "placeholder": "Email kamu di sini",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": null,
+              "id": "search-bar",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:32.814Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 478322
+    }
+  },
+  {
+    "id": "checkout-shopee-cart",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:27.317Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://shopee.co.id/cart",
+      "domain": "shopee.co.id",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:27.313Z"
+    },
+    "meta": {
+      "iframes": [
+        "//www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 285101
+    }
+  },
+  {
+    "id": "checkout-sociolla",
+    "label": "legit",
+    "tags": [
+      "checkout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:34.040Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.sociolla.com/",
+      "domain": "sociolla.com",
+      "title": "Situs Beauty Terlengkap & Terpercaya di Indonesia - Sociolla",
+      "lang": "en",
+      "text": "SOCIOLLA LILLA BEAUTY JOURNAL SOCO [email] [phone] Help center Login with Categories Brands Bestie Deals New Arrivals Best Sellers E-Gift",
+      "forms": [],
+      "imageAlts": [
+        "Mail",
+        "wa",
+        "help",
+        "logo",
+        "logo-soco",
+        "cart",
+        "categorues",
+        "brands",
+        "promo",
+        "new-arrivals"
+      ],
+      "capturedAt": "2026-10-22T07:18:34.037Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 36728
+    }
+  },
+  {
+    "id": "checkout-tokopedia-cart",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:26.869Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.tokopedia.com/login?ld=REDACTED",
+      "domain": "tokopedia.com",
+      "title": "Masuk / Login | Tokopedia",
+      "lang": "id",
+      "text": "Masuk ke Tokopedia Daftar Nomor HP atau Email Nomor HP atau Email Contoh: [phone] Butuh bantuan? Selanjutnya atau masuk dengan Google Masuk dengan TikTok Belum punya akun?",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": "login",
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:26.868Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 42983
+    }
+  },
+  {
+    "id": "checkout-traveloka",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:30.187Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.traveloka.com/id-id",
+      "domain": "traveloka.com",
+      "title": "Traveloka Indonesia | Tiket Pesawat, Hotel & Tiket Wisata",
+      "lang": "id-id",
+      "text": "Dapatkan diskon hingga 10% untuk trip kamu pakai kode JALANYUK di aplikasi! Unduh Sekarang Hotel Tiket Pesawat Xperience Tiket Bus & Travel Tiket Kereta Api Pesawat + Hotel Antar Jemput Bandara Rental Mobil Asuransi Attractions Kupon Diskon 10% untuk Pengguna Baru Berlaku untuk Transaksi Pertama di Traveloka App Diskon hingga 7% untuk Pemesanan Hotel Pertama Berlaku untuk Pengguna Baru. JALANYUK Hotel Diskon hingga 7% untuk Pemesanan Xperience Pertama Berlaku untuk Pengguna Baru. JALANYUK Attraction Diskon s.d. 12% untuk Pemesanan Antar Jemput Bandara Pertama Berlaku untuk Pengguna Baru. JALANYUK Airport Transfer Diskon s.d. 10% untuk Pemesanan Rental Mobil Pertama Berlaku untuk Pengguna Baru. JALANYUK Car Rental Promo Saat Ini Lebih hemat dengan berbagai penawaran kami Promo WOW World&#x27;s Best Hotel Nonton Konser Impianmu di Thailand 💜 Travel to Vietnam Partner Maskapai Hotel Partners Partner Kereta Api Penerbangan Domestik Tiket Pesawat Jakarta ke Bali Tiket Pesawat Jakarta ke Makassar Tiket Pesawat Jakarta ke Medan Tiket Pesawat Jakarta ke Surabaya Tiket Pesawat Jakarta ke Balikpapan Tiket Pesawat Jakarta ke Padang Tiket Pesawat Jakarta ke Batam Tiket Pesawat Jakarta ke Semarang Tiket Pesawat Jakarta ke Pontianak Tiket Pesawat Jakarta ke Banda Aceh Tiket Pesawat Jakarta ke Bandar Lampung Tiket Pesawat Jakarta ke Yogyakarta Tiket Pesawat Jakarta ke Palembang Tiket Pesawat Jakarta ke Pekanbaru Tiket Pesawat Jakarta ke Malang Tiket Pesawat Jakarta ke Lombok Tiket Pesawat",
+      "forms": [],
+      "imageAlts": [
+        "Garuda Indonesia",
+        "Citilink",
+        "Sriwijaya Air",
+        "Lion Air",
+        "Batik Air",
+        "AirAsia",
+        "Super Air Jet",
+        "Scoot",
+        "Singapore Airlines",
+        "Cathay Pacific"
+      ],
+      "capturedAt": "2026-10-22T07:18:30.174Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 491520
+    }
+  },
+  {
+    "id": "checkout-zalora",
+    "label": "legit",
+    "tags": [
+      "checkout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:32.283Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.zalora.co.id/",
+      "domain": "zalora.co.id",
+      "title": "ZALORA Indonesia: Belanja Online Fashion & Lifestyle Terbaru",
+      "lang": "id-ID",
+      "text": "Wanita Pria Sports Anak Luxury Beauty Wanita Pria Sports Anak Luxury Beauty Belanja Fashion Online di ZALORA Indonesia ZALORA Indonesia merupakan yang terdepan dalam belanja fashion online, menyediakan brand lokal dan internasional yang terus bertambah untuk para konsumer di seluruh Indonesia. Kami memiliki lebih dari 150.000 produk yang dapat memenuhi kebutuhan fashion Anda, mulai dari rok hingga gaun, sepatu kets hingga sandal, pakaian olahraga hingga jam tangan, dan masih banyak lagi. Awali penemuan gaya Anda dengan memiliki beberapa perlengkapan fashion dasar yang penting, seperti kaos dan celana denim jeans, Baju Koko dan Gamis, dan kebutuhan fashion dasar lainnya. Temukan inspirasi fashion pilihan kami, mulai dari pakaian formal hingga dress untuk ke pesta. Tampil menawan dengan mengenakan jas dan blazer untuk pergi ke kantor. Jangan lupa untuk memadukan keseluruhan penampilan Anda dengan sepatu, ada banyak sekali pilihannya mulai dari flats, high heels, boots, atau sepatu formal. Persiapkan diri Anda untuk segala musim dengan berbelanja berbagai macam outerwear, mulai dari jaket ringan hingga sweater yang nyaman. Koleksi fashion kami pun dilengkapi dengan berbagai macam aksesoris -- seperti tas dan perlengkapan olahraga. Para pelanggan ZALORA Indonesia juga dapat berbelanja berdasarkan tren terbaru yang sedang mendominasi di dunia fashion, apakah itu gaya monokrom, athleisure, atau tren terbaru di musim ini. Belanja Fashion di Toko Online ZALORA Indonesia! ZALORA",
+      "forms": [],
+      "imageAlts": [
+        "Hero Banner",
+        "New Arrivals",
+        "Category",
+        "WOMEN",
+        "MEN",
+        "KIDS",
+        "Beauty",
+        "Sports",
+        "Luxury",
+        "New Arrivals"
+      ],
+      "capturedAt": "2026-10-22T07:18:32.279Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 147261
+    }
+  },
+  {
+    "id": "gov-bi",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:44.122Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bi.go.id/id/default.aspx",
+      "domain": "bi.go.id",
+      "title": "Bank Indonesia",
+      "lang": "en-US",
+      "text": "Turn on more accessible mode Turn off more accessible mode Skip Ribbon Commands Skip to main content Turn off Animations Turn on Animations To navigate through the Ribbon, use standard browser navigation keys. To skip between groups, use Ctrl+LEFT or Ctrl+RIGHT. To jump to the first Ribbon tab use Ctrl+[. To jump to the last selected command use Ctrl+]. To activate a command, use Enter. Browse Tab 1 of 2. Page Tab 2 of 2. Not following Bank Indonesia Currently selected Bank Indonesia Tentang BI Tentang BI Informasi seputar organisasi, transformasi dan sejarah Bank Indonesia sebagai bank sentral Republik Indonesia. Profil Sejarah Bank Indonesia Transformasi Bank Indonesia Organisasi Governance Undang-Undang BI Fungsi Utama Fungsi Utama Informasi terkait fungsi utama yang menjadi kewenangan pengelolaan Bank Indonesia demi mencapai dan memelihara stabilitas nilai Rupiah. Moneter Stabilitas Sistem Keuangan Sistem Pembayaran dan Pengelolaan Uang Rupiah Inflasi Indikator Moneter BI-Rate Operasi Moneter INDONIA dan Harga Pasar Uang Lainnya JISDOR, Kurs Acuan Non-USD/IDR, dan Kurs Transaksi Pasar Keuangan Ekonomi dan Keuangan Syariah Ikhtisar Instrumen Kebijakan Makroprudensial Protokol Manajemen Krisis Koordinasi BI dengan Lembaga/Otoritas Lain Pengembangan UMKM Keuangan Inklusif Keuangan Hijau Sistem Pembayaran Nilai Besar Sistem Pembayaran Ritel Pengelolaan Uang Rupiah Perizinan Anti Pencucian Uang dan Pencegahan Pendanaan Terorisme Standardisasi Kompetensi Blueprint Sistem",
+      "forms": [],
+      "imageAlts": [
+        "Not following",
+        "Focus on Content",
+        "Focus on Content",
+        "Bank Indonesia",
+        "Bank Indonesia",
+        "menu thumbnail",
+        "menu thumbnail",
+        "menu thumbnail",
+        "menu thumbnail",
+        "menu thumbnail"
+      ],
+      "capturedAt": "2026-10-22T07:18:44.115Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 493262
+    }
+  },
+  {
+    "id": "gov-bpjs-kesehatan",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:39.403Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bpjs-kesehatan.go.id/",
+      "domain": "bpjs-kesehatan.go.id",
+      "title": "BPJS Kesehatan",
+      "lang": "id",
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:39.400Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 16065
+    }
+  },
+  {
+    "id": "gov-dukcapil",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:42.184Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://dukcapil.kemendagri.go.id/",
+      "domain": "kemendagri.go.id",
+      "title": "DITJEN DUKCAPIL KEMENDAGRI",
+      "lang": "en",
+      "text": "Tentang Kami Alamat Kantor Profil Lembaga Struktur Organisasi Visi & Misi Tugas & Fungsi Arti Logo Sejarah Dukcapil Sejarah Kemendagri Dirjen Masa ke Masa Mendagri Masa ke Masa Berita Sekretariat Dafdukcapil Kelola Informasi Aparatur Dukcapil Integrasi Data Nasional Integrasi Data Daerah Artikel Siaran Pers IKD Nasional Pinjaman/Hibah Luar Negeri Produk Hukum Informasi Publik SOP LHKPN Renstra/Renja Laporan Kinerja Laporan Tahunan Laporan Keuangan Reformasi Birokrasi Rencana Kerja Anggaran Agenda Polling Publikasi Materi Rumusan Siaran Live Penghargaan Realisasi PNBP Inovasi Layanan Data Kependudukan Proposal Inovasi KIPP Pengaduan Galeri Galeri Foto Galeri Video Galeri Infografis Kanal Email Email Dukcapil Email Kemendagri Dukcapil GIS Dukcapil Database Pejabat Daerah Layanan Online Eksternal PPID JDIH Kemendagri e-Database Pengaduan Lapor ULA Kemendagri SI Desa/Kelurahan SIPD Online LPSE Kemendagri RB Kemendagri Puja Indah Simpol PP e-Perda e-Prodeskel Website Kemendagri Kemendagri Sekretaris Jenderal Polpum Adwil Otda Bina Bangda Bina Pemdes Bina Keuda Itjen BSKDN BPSDM BPSDM Media Sosial Medsos Sosialisasi Medsos Pengaduan Tim Redaksi Layanan Syarat/Prosedur Pengaduan Dukcapil raih 48 penghargaan dari lembaga nasional dan internasional hingga Maret 2024 | Data kependudukan sumbang Rp793,8M bagi negara melalui PNBP di tahun 2023 | Jumlah penduduk Indonesia capai 280.725.428 jiwa di tahun 2023 | Yuk aktivasi Identitas Kependudukan Digital (IKD) di smarphone-mu agar lebih",
+      "forms": [
+        {
+          "action": "https://dukcapil.kemendagri.go.id/blog/search_submit",
+          "fields": [
+            {
+              "type": "search",
+              "name": "keyword",
+              "id": null,
+              "label": "Search",
+              "placeholder": "Cari tokoh, topik, atau peristiwa",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:18:42.181Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.google.com/maps/embed?pb=REDACTED"
+      ],
+      "bytes": 96103
+    }
+  },
+  {
+    "id": "gov-kemensos",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:34.739Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://kemensos.go.id/",
+      "domain": "kemensos.go.id",
+      "title": "Kementerian Sosial Republik Indonesia",
+      "lang": "id",
+      "text": "Bahasa Indonesia English &ensp;Beranda &ensp;Sekolah Rakyat &ensp;Profil Struktur Organisasi Tugas dan Fungsi Makna dan Logo Profil Menteri Wakil Menteri Sosial Visi dan Misi &ensp;Unit Pelaksana Teknis Balai Diklat Politeknik Pusat Pendidikan dan Pelatihan Sentra Terpadu dan Sentra &ensp;Berita Berita Menteri Sosial Wakil Menteri Sosial Sekretariat Jenderal Direktorat Jenderal Rehabilitasi Sosial Direktorat Jenderal Perlindungan dan Jaminan Sosial Direktorat Jenderal Pemberdayaan Sosial Inspektorat Jenderal Respon Kasus Sentra Balai Dharma Wanita Persatuan Berita Foto Menteri Sosial Wakil Menteri Sosial Sekretariat Jenderal Direktorat Jenderal Rehabilitasi Sosial Direktorat Jenderal Perlindungan dan Jaminan Sosial Direktorat Jenderal Pemberdayaan Sosial Inspektorat Jenderal Berita Video Menteri Sosial Sekretariat Jenderal Direktorat Jenderal Rehabilitasi Sosial Direktorat Jenderal Perlindungan dan Jaminan Sosial Direktorat Jenderal Pemberdayaan Sosial Inspektorat Jenderal Jurnal dan Artikel Menteri Sosial Sekretariat Jenderal Inspektorat Jenderal Direktorat Jenderal Rehabilitasi Sosial Direktorat Jenderal Perlindungan dan Jaminan Sosial Direktorat Jenderal Pemberdayaan Sosial Pemerintah Daerah Infografis Sekretariat Jenderal Inspektorat Jenderal Direktorat Jenderal Rehabilitasi Sosial Direktorat Jenderal Perlindungan dan Jaminan Sosial Direktorat Jenderal Pemberdayaan Sosial &ensp;Layanan Publik PPSE PPSE PPID Kemensos JDIH Kemensos SIMPPSDBS Reformasi Birokrasi UPG",
+      "forms": [],
+      "imageAlts": [
+        "Logo Kemensos",
+        "Logo Kemensos",
+        "ID",
+        "ID",
+        "EN",
+        "Gambar Berita",
+        "Gambar Berita"
+      ],
+      "capturedAt": "2026-10-22T07:18:34.722Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 497491
+    }
+  },
+  {
+    "id": "gov-komdigi",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:40.555Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.komdigi.go.id/",
+      "domain": "komdigi.go.id",
+      "title": "Kementerian Komunikasi dan Digital",
+      "lang": "id",
+      "text": "grid - 0 - 0 Total 2026 0 Goverment Public Relation Jln Merdeka Barat No 9, Jakarta Pusat [phone] [email] .",
+      "forms": [],
+      "imageAlts": [
+        "Transformasi digital",
+        "topik-pilihan-pattern-2",
+        "topik-pilihan-pattern-4",
+        "topik-pilihan-pattern-1",
+        "Footer Pattern 1",
+        "Logo Komdigi Putih"
+      ],
+      "capturedAt": "2026-10-22T07:18:40.551Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 75913
+    }
+  },
+  {
+    "id": "gov-ojk",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:46.209Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.ojk.go.id/Default.aspx",
+      "domain": "ojk.go.id",
+      "title": "Portal OJK",
+      "lang": "en",
+      "text": "Sign In Portal OJK Indonesia English Tentang OJK FAQ OJK-Pedia Kontak Personalisasi Login Pers Bisnis Publik Tentang OJK Visi Misi Tugas dan Fungsi Struktur Organisasi Nilai-Nilai Kode Etik Pegawai Anggota Dewan Komisioner Kontak Fungsi Utama OJK Wide Stabilitas Sistem Keuangan Ikhtisar Komite Stabilitas Sistem Keuangan Protokol Manajemen Krisis Status Pengawasan Bank Keuangan Berkelanjutan Prinsip Mengenal Nasabah dan Anti Pencucian Uang Sistem Layanan Informasi Keuangan (SLIK) Perbankan Fungsi dan Tugas Pokok Struktur Organisasi Jenis-jenis Bank Bank Umum Bank Perekonomian Rakyat Bank Syariah Daftar Alamat Kantor Perbankan Daftar Alamat Kantor Pusat Bank Umum dan Syariah Daftar Alamat Kantor Perwakilan Bank Luar Negeri di Indonesia Daftar Jaringan Kantor Bank Umum dan Syariah Indonesia di Luar Negeri Daftar Alamat Kantor Pusat BPR Daftar Alamat Kantor Pusat BPR Syariah Direktori Perbankan Indonesia Ikhtisar Perbankan Lembaga Perbankan Peraturan dan Pengawasan Perbankan Arah Kebijakan Informasi Perbankan Booklet Perbankan Indonesia Lembaga Pemeringkat dan Peringkat yang Diakui OJK Laporan Surveillance Perbankan Indonesia Survei Perbankan Pedoman Akuntansi Perbankan Bank Umum Konvensional Bank Umum Syariah dan UUS Bank Perekonomian Rakyat Bank Perekonomian Rakyat Syariah Implementasi Basel Perkembangan Standar Basel Consultative Papers Keanggotaan OJK di BCBS Implementasi Kerangka Basel di Indonesia Pasar Modal, Keuangan Derivatif, dan Bursa Karbon Fungsi dan Tugas Pokok",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "search",
+              "name": null,
+              "id": "ctl00_PlaceHolderSearchArea_g_b97e9dc2_f8c2_434c_bd07_78f57bc202f3_csr_sbox",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": "off"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Portal OJK",
+        "Search"
+      ],
+      "capturedAt": "2026-10-22T07:18:46.205Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 491122
+    }
+  },
+  {
+    "id": "gov-pajak",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:40.098Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.pajak.go.id/",
+      "domain": "pajak.go.id",
+      "title": "Direktorat Jenderal Pajak",
+      "lang": "id",
+      "text": "Lompat ke isi utama Navigasi kedua Profil Overview Visi, Misi, Tujuan, dan Maklumat Pelayanan Tugas dan Fungsi Logo DJP Kode Etik dan Kode Perilaku Struktur Organisasi Daftar Pejabat Unit Kerja Hasil Survei Peraturan Peraturan Kurs Tarif Bunga Unduh Aplikasi Perpajakan Formulir Perpajakan Informasi Publik Daftar Informasi Publik Daftar Informasi yang Wajib Disediakan dan Diinformasikan Secara Berkala Daftar Informasi yang Wajib Diumumkan Dengan Serta Merta Daftar Informasi yang Wajib Tersedia Setiap Saat Anggaran dan Realisasi Keuangan Rencana Kerja dan Anggaran Daftar Isian Pelaksanaan Anggaran Realisasi Belanja Laporan Keuangan DJP Transparansi Kinerja Ditjen Pajak Sasaran dan Rencana Strategis Rencana Kerja Ditjen Pajak Laporan Kinerja DJP Laporan Kinerja Unit Kerja Laporan Tahunan DJP Realisasi Pendapatan Pajak Layanan Digital PPID Profil PPID DJP Regulasi Informasi Publik Prosedur Permohonan Laporan PPID Statistik Akses Informasi Publik Jalur dan Waktu Layanan Pengaduan Penyalahgunaan Wewenang Penyediaan Pembicara, Pembahas, atau Moderator pada Kegiatan Standar Pelayanan di Lingkungan Direktorat Jenderal Pajak Internasional APA & MAP EOI AEOI CRS CbCR AEOI-WHT FATCA CARF EOIR SEOI GloBE Tax Treaty Tax Treaty Rates Tax Treaty dan Multilateral Instrument Tema UU Harmonisasi Peraturan Perpajakan Program Pengungkapan Sukarela DJP Tanggap Covid-19 Pajak Digital Infografis Jurnal Pajak Lapor Tahunan Buku Elektronik Kerja Sama dan Kemitraan Klaster Kemudahan Berusaha Bidang",
+      "forms": [
+        {
+          "action": "/id/search/node",
+          "fields": [
+            {
+              "type": "search",
+              "name": "keys",
+              "id": "edit-keys",
+              "label": "Pencarian",
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "radio",
+              "name": "identitas",
+              "id": "identitas1",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "identitas",
+              "id": "identitas2",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "npwpLiveChat",
+              "id": "npwpLiveChat",
+              "label": null,
+              "placeholder": "NPWP/NIK",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "namaLiveChat",
+              "id": "namaLiveChat",
+              "label": null,
+              "placeholder": "Nama",
+              "autocomplete": null
+            },
+            {
+              "type": "email",
+              "name": "emailLiveChat",
+              "id": "emailLiveChat",
+              "label": null,
+              "placeholder": "Email",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": "telpLiveChat",
+              "id": "telpLiveChat",
+              "label": null,
+              "placeholder": "Telepon",
+              "autocomplete": null
+            },
+            {
+              "type": "select",
+              "name": null,
+              "id": "topikLiveChat",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "radio",
+              "name": "language",
+              "id": "lang-id",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "radio",
+              "name": "language",
+              "id": "lang-en",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "select",
+              "name": null,
+              "id": "topikLiveChat2",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": null,
+              "id": "outmessage",
+              "label": null,
+              "placeholder": "Ketik pesan...",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Porto",
+        "Lapor SPT Coretax",
+        "Lapor SPT di Coretax",
+        "marketplace",
+        "marketplace1",
+        "Yuk, aktivasi akun Coretax",
+        "Yuk aktivasi akun",
+        "Popup Lapor SPT",
+        "VAT Refund",
+        "Coretaxpedia"
+      ],
+      "capturedAt": "2026-10-22T07:18:40.093Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 135704
+    }
+  },
+  {
+    "id": "popular-cnnindonesia",
+    "label": "legit",
+    "tags": [
+      "popular"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:49.240Z",
+    "notes": "static HTML has 3 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.cnnindonesia.com/",
+      "domain": "cnnindonesia.com",
+      "title": "CNN Indonesia | Berita Terbaru, Terkini Indonesia, Dunia",
+      "lang": "en",
+      "text": "CNN Indonesia Get CLOSE AD SCROLL TO CONTINUE WITH CONTENT CNN TV MENU Keluar MASUK DAFTAR Features Home Nasional Politik Hukum & Kriminal Peristiwa Pemilu Info Politik Internasional Asean Asia Pasifik Timur Tengah Eropa Amerika Ekonomi Keuangan Energi Bisnis Makro Corporate Action Olahraga Sepakbola Moto GP F1 Raket Teknologi Gadget AI Telekomunikasi Sains Climate Otomotif Tren Mobil Motor E-Vehicle Commercial Info Otomotif Hiburan Film Musik Seleb Seni Budaya Music At Newsroom Gaya Hidup Health Food Travel Trends Fokus Kolom Terpopuler Infografis Foto Video TV Indeks Download Apps Ikuti Kami For You Nasional Internasional Ekonomi Olahraga Teknologi Otomotif Hiburan Gaya Hidup Fokus Kolom Terpopuler Infografis Foto Video Indeks &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; &emsp;&emsp;&emsp;&emsp;&emsp;&emsp; _pt($el))\" x-show=\"opensearch\" x-transition :class=\"opensearch ? '!flex':''\" class=\"w-5 h-[43px] mr-3 items-center justify-center search-back\" dtr-evt=\"search bar\" dtr-sec=\"back\" dtr-act=\"back\"> _pt($el)); opensearch = true;\" x-model=\"inputValue\" @keyup=\"showSuggestion = inputValue.length > 0\" placeholder=\"Masukkan kata kunci...\" class=\"py-2 px-0 block w-full text-sm border-0 placeholder-gray-500 focus:border-cnn_light_grey2 focus:ring-0\" dtr-evt=\"search bar\" dtr-sec=\"search bar\" dtr-act=\"search bar\" autocomplete=\"off\"> Search",
+      "forms": [
+        {
+          "action": "https://www.cnnindonesia.com/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "query",
+              "id": "searchinput",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "avatar",
+        "ilustrasi kecelakaan",
+        "Wakil Ketua Umum PSI, Bro Ron, menyambangi kediaman Jokowi di Solo, menyampaikan",
+        "Eks Wamenlu Dino Patti Djalal memenuhi undangan Presiden RI Prabowo Subianto ke ",
+        "Soccer Football - UEFA Champions League - Como v Manchester United - Stadio Gius",
+        "Ketua sekaligus pendiri Foreign Policy Community of Indonesia (FPCI) Dino Patti ",
+        "The flag of Malaysia is composed of a field of 14 alternating red and white stri",
+        "Presiden Prabowo Subianto memimpin Sidang Kabinet Paripurna di Istana Kepresiden",
+        "AiMOGA Robotics meluncurkan robot humanoid bernama Mobo yang dirancang untuk men",
+        "Soccer Football - UEFA Champions League - Como v Manchester United - Stadio Gius"
+      ],
+      "capturedAt": "2026-10-22T07:18:49.238Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED",
+        "https://connect.cnnindonesia.com/api/mpc/quickcard/html?ci=REDACTED",
+        "https://www.cnnindonesia.com/tv/embed"
+      ],
+      "bytes": 250945
+    }
+  },
+  {
+    "id": "popular-detik",
+    "label": "legit",
+    "tags": [
+      "popular"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:48.436Z",
+    "notes": "static HTML has 2 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.detik.com/",
+      "domain": "detik.com",
+      "title": "detikcom - Informasi Berita Terkini dan Terbaru Hari Ini",
+      "lang": "id-ID",
+      "text": "Berita Terbaru dan Terpecaya Hari ini - Detikcom 0 Berita Terbaru UPDATE Terpopuler Rekomendasi Signature Awards Indeks Halo Detiker Mohon Tunggu... detikcom Terpopuler Live TV Kirim Tulisan Kategori Berita detikNews detikFinance detikInet detikHot detikSport Sepakbola detikOto detikTravel detikFood detikHealth Wolipop DetikX 20Detik detikFoto detikEdu detikHikmah detikProperti detikPop Daerah detikJateng detikJatim detikJabar detikSulsel detikSumut detikBali detikSumbagsel detikJogja detikKalimantan Layanan For Your Business Pasang Mata adsmart detikEvent Trans Snow World Trans Studio Flying Over Indonesia berbuatbaik.id ziswafctarsa.id Signature Awards Bingkai.id Trans Hotel Group Community Connect NEW Rekomendit NEW Hipdut NEW Top Up & Tagihan Game Paket Data Pulsa Prabayar Token PLN E-wallet BPJS Kesehatan PLN Pascabayar PDAM TV & Internet Streaming Detik Network IndonesiaNow.co NEW Hai Bunda CNN Indonesia CNBC Indonesia Beautynesia Female Daily CXO Media Yang sedang ramai dicari Loading... Promoted Terakhir yang dicari Loading... IndonesiaNow.co DPD RI Awards Pertamina Talks Bold Riders Podium Picks Sumatera Bangkit Indonesia Bersinar Community Connect FYB Adsmart detikX STATIC BANNER 300x250 Peduli Karhutla detikHealth Hujan Sudah Turun, Mengapa Kabut Asap Karhutla RI Masih Selimuti Malaysia? 7 menit yang lalu Berita Terbaru Anggota Parlemen Malaysia Mendadak Berbahasa Jawa, Singgung Karhutla 39 menit yang lalu Video Dikritik M Lutfi, Syed Saddiq: Karhutla Bukan",
+      "forms": [
+        {
+          "action": "https://www.detik.com/search/searchall",
+          "fields": [
+            {
+              "type": "text",
+              "name": "query",
+              "id": "search-text",
+              "label": null,
+              "placeholder": "Cari berita...",
+              "autocomplete": "off"
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "textarea",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "textarea",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "detikcom",
+        "Stop Karhutla",
+        "Hujan Sudah Turun, Mengapa Kabut Asap Karhutla RI Masih Selimuti Malaysia?",
+        "Anggota Parlemen Malaysia Mendadak Berbahasa Jawa, Singgung Karhutla",
+        "Video Dikritik M Lutfi, Syed Saddiq: Karhutla Bukan Malaysia Lawan Indonesia",
+        "Stop Karhutla",
+        "Hujan Sudah Turun, Mengapa Kabut Asap Karhutla RI Masih Selimuti Malaysia?",
+        "${row.title}",
+        "Kuala Lumpurs skyline shrouded in haze from regional wildfires, in Kuala Lumpur,",
+        "Hujan Sudah Turun, Mengapa Kabut Asap Karhutla RI Masih Selimuti Malaysia?"
+      ],
+      "capturedAt": "2026-10-22T07:18:48.432Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED",
+        "https://cdn.detik.net.id/berbuatbaik-id/channel-box-embed-4.html"
+      ],
+      "bytes": 411842
+    }
+  },
+  {
+    "id": "popular-idntimes",
+    "label": "legit",
+    "tags": [
+      "popular"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:51.417Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.idntimes.com/",
+      "domain": "idntimes.com",
+      "title": "Berita Terkini Hari Ini yang Terpercaya untuk Gen Z dan Milenial | IDN Times",
+      "lang": "id",
+      "text": "Baca artikel IDN Times lainnya di IDN App Install Home News Business Sport Tech Hype Korea Life Health Automotive Food Travel Science Men Opinion For You MUST READ: Kisah Perempuan Tangguh di Tepi Rel # Yuk Vote Iklanin di IDN INSIDENESIA Quiz #LokalBerdaya Profil Dokter Join Community Kualitas Udara Jakarta Tidak Sehat Kamis Pagi, Membaik Bertahap 22 Oct 2026, 07:47 WIB News AS Gelontorkan Rp4 Miliar untuk Jaga Bangkai USS Houston di Indonesia 22 Oct 2026, 06:53 WIB News GoPay Masuk Bisnis Investasi, Emas Digital Bisa Dibeli Mulai Rp1.000 22 Oct 2026, 00:20 WIB Business Wamendagri Bima Arya Ungkap Akar Korupsi Kepala Daerah, OTT Saja Tak Cukup 22 Oct 2026, 07:32 WIB News 2 Tahun Prabowo-Gibran, Pemerintah Diminta Perbaiki Komunikasi Publik 22 Oct 2026, 07:01 WIB News Bersiap Tampil Debut, Zaidhar Maulana Bidik Podium Youth Olympic Games 2026 22 Oct 2026, 06:10 WIB Sport Sayur dan Buah Terpapar Abu Karhutla, Masih Aman Dimakan? 22 Oct 2026, 05:04 WIB Health Kenapa Karhutla Bisa Memengaruhi Pembentukan Awan? 22 Oct 2026, 07:20 WIB Science Trending Zaskia Adya Mecca Bagikan Perjuangan Relawan Karhutla Berusia 15 Tahun 21 Oct 2026, 09:19 WIB Hype Bayern vs Arsenal Live di TV Mana? Ini Link Streamingnya 21 Oct 2026, 21:10 WIB Sport Kebiasaan Bersih-bersih Rumah ala Masha and The Bear, Contoh buat Anak 20 Oct 2026, 20:03 WIB Life Dari Fesyen hingga Keuangan, Ini 5 Tren Halal Lifestyle ala Gen Z 20 Oct 2026, 13:20 WIB Life 5 Tanaman Hias dengan Pola Daun Jaring yang Bikin Rumah",
+      "forms": [],
+      "imageAlts": [
+        "IDN Times logo",
+        "Kualitas Udara Jakarta Tidak Sehat Kamis Pagi, Membaik Bertahap",
+        "AS Gelontorkan Rp4 Miliar untuk Jaga Bangkai USS Houston di Indonesia",
+        "GoPay Masuk Bisnis Investasi, Emas Digital Bisa Dibeli Mulai Rp1.000",
+        "Wamendagri Bima Arya Ungkap Akar Korupsi Kepala Daerah, OTT Saja Tak Cukup",
+        "2 Tahun Prabowo-Gibran, Pemerintah Diminta Perbaiki Komunikasi Publik",
+        "Bersiap Tampil Debut, Zaidhar Maulana Bidik Podium Youth Olympic Games 2026",
+        "Sayur dan Buah Terpapar Abu Karhutla, Masih Aman Dimakan?",
+        "Kenapa Karhutla Bisa Memengaruhi Pembentukan Awan?",
+        "Zaskia Adya Mecca Bagikan Perjuangan Relawan Karhutla Berusia 15 Tahun"
+      ],
+      "capturedAt": "2026-10-22T07:18:51.403Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 491452
+    }
+  },
+  {
+    "id": "popular-kompas",
+    "label": "legit",
+    "tags": [
+      "popular",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:48.912Z",
+    "notes": "static HTML has 4 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.kompas.com/",
+      "domain": "kompas.com",
+      "title": "Berita Terkini Hari Ini, Kabar Akurat Terpercaya - Kompas.com",
+      "lang": null,
+      "text": "× × KOMPAS.com Official App Gratis Install Terpopuler News Kolom Event Jagat Literasi Cahaya Tekno Otomotif Bola Lifestyle Tren Lestari Money Properti Sains Edukasi Travel Jernih 360 Parapuan JEO Video Foto VIK Store Play Setelan Perangkat Mode Gelap Mode Terang KG Media ID Login Paratroopers Beta Membership Gabung KOMPAS.com+ Aktivitas Konten yang disimpan Konten yang disukai Atur Minat Atur Mode Berikan Masukanmu Jelajahi Kanal Home Nasional Regional Megapolitan Global Kilas Daerah Kilas Korporasi Kilas Kementerian Sorot Politik Kilas Badan Negara Kilas Parlemen Pemilu IKN Tren Hype Food Money UMKM Foto Kilas BUMN Kilas Badan Penjaga Negeri Sumatera Pulih Kilas Transportasi Agri Bola Video Lestari Tekno Sains Otomotif Lifestyle Health Homey Parapuan Properti Buku Sorot Properti Travel Ohayo Jepang Edukasi Kilas Pendidikan Kolom Kata Netizen Event Store Warta Jaringan KG Media Kompas.com Harian KOMPAS KompasTV Kompasiana KG Media KGNow! Pasangiklan.com Kontan Sonora Grid.ID GridOto.com BolaSport.com Parapuan Tribunnews Gramedia.com Gramedia Digital Santika Indonesia Ikuti kami Download aplikasi Kompas.com sekarang Copyright 2008 - 2026 PT. Kompas Cyber Media (Kompas Gramedia Digital Group). All rights reserved. Living Assistance Harga Beli Emas 0 jt /gr (0%) 31 °C Peristiwa di - Kualitas Udara Jadwal Sholat Living Assistance Cuaca Emas Plus Baca Cepat Cek Kesehatan Atur Keuangan Klasemen Olahraga Jadwal Salat Game & Kuis Beri Masukan Atur Minat Peta Publik Brief Update oleh",
+      "forms": [
+        {
+          "action": "https://search.kompas.com/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": "cSearch",
+              "label": null,
+              "placeholder": "Cari tokoh, topik atau peristiwa",
+              "autocomplete": "off"
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": "Cari tokoh, topik atau peristiwa",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Kompas.com",
+        "Kompas.com",
+        "Icon Kompascom+",
+        "appstore",
+        "playstore",
+        "Cerah Berawan",
+        "Logo Lapangbola",
+        "Kompas.com Plus",
+        "Cek Kesehatan",
+        "Atur Keuangan"
+      ],
+      "capturedAt": "2026-10-22T07:18:48.908Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://adsimg.kompas.com/html5/assets_ads/pushdown/images/backup-random-2026.html?v=REDACTED",
+        "//www.googletagmanager.com/ns.html?id=REDACTED",
+        "https://widget.kompas.com/prabowo-gibran-2tahun",
+        "https://video.kompas.com/embed/1962966?autoplay=REDACTED&accountid=REDACTED&customid=REDACTED&source=REDACTED&position=REDACTED&domain_referral=REDACTED&thumbnail=REDACTED&detail=REDACTED"
+      ],
+      "bytes": 488007
+    }
+  },
+  {
+    "id": "popular-kumparan",
+    "label": "legit",
+    "tags": [
+      "popular"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:53.995Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://m.kumparan.com/",
+      "domain": "kumparan.com",
+      "title": "kumparan.com - Bicara Fakta Lewat Berita",
+      "lang": "id-ID",
+      "text": "Breaking News Video Story Audio Story Trending Sumatera Pulih Green Initiative Menu Masuk Berlangganan Mode Gelap Informasi Kerja Sama Beranda Video Story Audio Story Baru Trending Kabar Daerah Galeri Foto Opini & Cerita Peringkat Penulis Cara Menulis di kumparan Tentang kumparan Instagram Facebook Tiktok Youtube Whatsapp X 2026 © PT Dynamo Media Network Version 1.137.1 kumparan.com - Bicara Fakta Lewat Berita Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat Sedang memuat... S Sedang memuat... 0 Suka · 0 Komentar · 01 April 2020 Sedang memuat... S Sedang memuat... 0 Suka · 0 Komentar · 01 April 2020 Sedang memuat... S Sedang memuat... 0 Suka · 0 Komentar · 01 April 2020 Sedang memuat... S Sedang memuat... 0 Suka · 0 Komentar · 01 April 2020 Sedang memuat... S Sedang memuat... 0 Suka · 0 Komentar · 01 April",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": null,
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "hamburger-menu",
+        "Kumparan Logo",
+        "search",
+        "notification",
+        "close",
+        "profile",
+        "ic-new-kumplus-outline-black",
+        "moon",
+        "mail",
+        "home"
+      ],
+      "capturedAt": "2026-10-22T07:18:53.993Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 132107
+    }
+  },
+  {
+    "id": "popular-liputan6",
+    "label": "legit",
+    "tags": [
+      "popular",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:49.569Z",
+    "notes": "static HTML has 2 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.liputan6.com/",
+      "domain": "liputan6.com",
+      "title": "Berita Terkini, Kabar Terbaru Hari Ini Indonesia dan Dunia - Liputan6.com",
+      "lang": "id",
+      "text": "Berita Terkini, Kabar Terbaru Hari Ini Indonesia dan Dunia - Liputan6.com Iklan - Scroll ke bawah untuk melanjutkan Masuk Berita Utama Terkini Populer Rekomendasi Menu Berita Utama Cek Fakta Terkini Terpopuler Rekomendasi News Bisnis ShowBiz Bola Lifestyle Kesehatan Tekno Otomotif Enam Plus Saham Crypto TV Foto Regional Global Hot On Off Islami Citizen6 Opini Feeds Otosia Spotlight English Disabilitas Berita Health Sport Kontak Kebijakan Privasi Korupsi BNPB Rupiah Kebakaran Hutan Kaum Tengah Prabowo Subianto Danantara Pasang Syarat bagi Investor Data Center Skala Besar 2026-10-22 14:00:55 Ada 12 Ribu Lowongan Kerja di DKI, Bisa Daftar Online dan Offline 2026-10-22 13:50:48 Kronologi Perampokan Toko Emas, Pelaku Acungkan Celurit 2026-10-22 13:50:15 Pesawat Tempur TNI Mendarat di Tol Probolinggo 2026-10-22 13:09:16 Susul Prancis, Ribuan Pelajar dan Guru Demo di Yunani 2026-10-22 12:30:59 Kecelakaan Mobilio Tabrak Pikap di Rasuna Said, 1 Orang Tewas 2026-10-22 12:15:32 Masyarakat Tetap Belanja Meski Biaya Hidup Meroket 2026-10-22 12:15:10 KMP Batumandi Tenggelam di Merak, Tim Salvage Diterjunkan 2026-10-22 12:30:25 Alasan KPK Belum Cekal Nusron Wahid ke Luar Negeri 2026-10-22 12:27:07 SMRC: Dedi Mulyadi Paling Banyak Dipilih, Tapi Belum Tentu Maju Capres [number]:00:52 Deretan Janji Gubernur Kaltim: Atasi Kebakaran Hutan hingga Pecat Ajudan Arogan 2026-10-22 11:29:16 Advertisement Terpopuler Alasan Bareskrim Belum Tetapkan Tersangka Kasus Beras Fortifikasi Peristiwa DPR",
+      "forms": [
+        {
+          "action": "https://www.liputan6.com/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": "q",
+              "label": null,
+              "placeholder": "Mau cari berita apa?",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Live Streaming Banner",
+        "Liputan6 Logo",
+        "Danantara Pasang Syarat bagi Investor Data Center Skala Besar",
+        "Ada 12 Ribu Lowongan Kerja di DKI, Bisa Daftar Online dan Offline",
+        "Kronologi Perampokan Toko Emas, Pelaku Acungkan Celurit",
+        "Pesawat Tempur TNI Mendarat di Tol Probolinggo",
+        "Susul Prancis, Ribuan Pelajar dan Guru Demo di Yunani",
+        "Kecelakaan Mobilio Tabrak Pikap di Rasuna Said, 1 Orang Tewas",
+        "Masyarakat Tetap Belanja Meski Biaya Hidup Meroket",
+        "KMP Batumandi Tenggelam di Merak, Tim Salvage Diterjunkan"
+      ],
+      "capturedAt": "2026-10-22T07:18:49.567Z"
+    },
+    "meta": {
+      "iframes": [
+        "${a}",
+        "https://www.vidio.com/embed/9710885-highlights-bali-united-tumbangkan-ps-freeport-aksi-koprol-anak-anak-papua-kiper-doa-doa-bola?autoplay=REDACTED&player_only=REDACTED&live_chat=REDACTED&mute=REDACTED&enable_websocket=REDACTED&sticky=REDACTED"
+      ],
+      "bytes": 346210
+    }
+  },
+  {
+    "id": "popular-tribunnews",
+    "label": "legit",
+    "tags": [
+      "popular",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:18:53.266Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://m.tribunnews.com/",
+      "domain": "tribunnews.com",
+      "title": "TribunNews.com - Berita dan video terkini dari Indonesia dengan sudut pandang lokal",
+      "lang": "id-ID",
+      "text": "&#x2716; Tunggu 3.0 detik untuk membaca artikel &#10006; Menyoroti 2 Tahun Prabowo-Gibran Simak di Aplikasi Klik disini Tribunnews.com LIVE ● Hi, Logout Login Daftar Home Regional News Bisnis Seleb Lifestyle Energi untuk Rakyat Pendidikan GO Sport Musik Travel PARAPUAN Otomotif Techno Kesehatan Tribunners Video Kilas Kementerian Images Indeks Berita Tribun Network Tribun Travel Tribunnews Wiki Tribun Shopping Tribun Health Tribun Trends About Us Redaksi Info Iklan Contact Us Help Terms of Use Privacy Policy Pedoman Media Siber Desktop Version TribunNews.com - Berita dan video terkini dari Indonesia dengan sudut pandang lokal Cerita WNI di Malaysia Terdampak Asap Karhutla: Bukan Hanya soal Jarak Pandang, tapi Kualitas Udara BREAKING NEWS: Eks Ajudan Jokowi Letjen Widi Prasetijono Dituntut 10 Tahun Bui dan Dipecat dari TNI Aksi Teatrikal Warnai Demo Karhutla di DPRD Kalsel, Mahasiswa Gambarkan Korban Kabut Asap Gol Perdana Bernardo Silva Warnai Pesta Real Madrid, Mourinho Dapat Modal El Clasico Prabowo: Dunia Sekarang Hampir Tak Ada Tatanan, Siapa Kuat Dia Survive Top Stories 1 Cerita Mahfud MD soal Jokowi Ancam Pecat Pangdam hingga Kapolda yang Tak Bisa Atasi Karhutla 2 Prabowo: Dunia Sekarang Hampir Tak Ada Tatanan, Siapa Kuat Dia Survive 3 Mansur Tewas saat Berusaha Padamkan Api yang Melahap Kebunnya, Korban Dikenal Sebagai Imam Masjid 4 Respons Temuan BPK, BGN Kembalikan Rp 160,37 Miliar ke Kas Negara 5 Pakar Iran dan Eks Analis CIA Peringatkan AS: Teheran Tak Lagi Percaya",
+      "forms": [
+        {
+          "action": "https://m.tribunnews.com/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": "searchbox",
+              "label": null,
+              "placeholder": "cari berita dan tekan 'enter'",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Aplikasi Tribun",
+        "Tribun",
+        "Gebrakan Sang Pemimpin",
+        "superskor",
+        "lokal asri",
+        "Pendidikan Ganesha Operation",
+        "cerita-wni-di-malaysia-soal-karhutla.jpg",
+        "Letjen-Widi-Prasetijono-dituntut-10-tahun-penjara-dan-dipecat-dari-TNI.jpg",
+        "Puluhan-mahasiswa-dan-masyarakat-sipil-berunjuk-rasa-di-depan-DPRD-Kalimantan-Se",
+        "Bernardo-Silva-Madrid-Liga-Champions.jpg"
+      ],
+      "capturedAt": "2026-10-22T07:18:53.262Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 182448
+    }
+  },
+  {
+    "id": "popular-wikipedia-id",
+    "label": "legit",
+    "tags": [
+      "popular"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation. Wikipedia text is CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/), page https://id.wikipedia.org/wiki/Indonesia, authors listed in the page history.",
+    "collectedAt": "2026-10-22T07:18:51.764Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://id.wikipedia.org/wiki/Indonesia",
+      "domain": "wikipedia.org",
+      "title": "Indonesia - Wikipedia bahasa Indonesia, ensiklopedia bebas",
+      "lang": "id",
+      "text": "Beranda Sembarang Sekitaran Buat akun Masuk log Pengaturan Donate Now If Wikipedia is useful to you, please give today. Tentang Wikipedia Penyangkalan Cari Menu pengguna Buat akun Masuk log Indonesia negara di Asia Tenggara dan Oseania Bahasa Tambahkan markah Lihat sumber Untuk kegunaan lain, lihat Indonesia (disambiguasi) . Indonesia , dengan nama resmi Republik Indonesia , [ b ] adalah sebuah negara di Asia Tenggara dan Oseania , yang terletak di antara Samudra Hindia dan Samudra Pasifik . Letak geografis negara ini secara maritim diapit oleh Samudra Hindia di sisi barat daya dan Samudra Pasifik di sisi timur laut, juga merupakan negara di ujung tenggara wilayah Asia. Secara daratan berada di antara superbenua Afro-Eurasia dan daratan benua Oseania ( Australia ), juga menjadi salah satu negara tropis yang dilalui oleh garis ekuator khatulistiwa . Indonesia memiliki luas wilayah darat sebesar 1.904.569 km2, sehingga menjadikannya sebagai negara terluas ke-14 dunia. [ 10 ] Republik Indonesia Bendera Lambang negara Semboyan: \" Bhinneka Tunggal Ika \" ( Jawa Kuno ) (\"Berbeda-beda tetapi satu jua\") Lagu kebangsaan: Indonesia Raya Falsafah dan ideologi nasional: Pancasila ( Sanskerta ) Tampilkan globe Tampilkan peta ASEAN Tampilkan peta pembagian administratif Ibu kota (dan kota terbesar) Jakarta 6°11′S 106°50′E / 6.183°S 106.833°E / -6.183; 106.833 Bahasa resmi Indonesia (berakar dari Melayu Johor-Riau ) Bahasa daerah Lebih dari 700 bahasa [ 1 ] Kelompok etnik (2010) [ 2 ]",
+      "forms": [
+        {
+          "action": "/w/index.php",
+          "fields": [
+            {
+              "type": "search",
+              "name": "search",
+              "id": "searchInput",
+              "label": "Telusuri Wikipedia",
+              "placeholder": "Telusuri Wikipedia",
+              "autocomplete": "off"
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": "main-menu-input",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": "minerva-user-menu-checkbox",
+              "label": "Menu pengguna",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "checkbox",
+              "name": null,
+              "id": "toctogglecheckbox",
+              "label": null,
+              "placeholder": null,
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Wikipedia",
+        "Bendera Indonesia",
+        "Lambang negara Indonesia",
+        "Lokasi Indonesia",
+        "Increase neutral",
+        "Kenaikan",
+        "Kenaikan",
+        "Kenaikan",
+        "Kenaikan",
+        "Steady"
+      ],
+      "capturedAt": "2026-10-22T07:18:51.759Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 491498
+    }
+  },
+  {
+    "id": "bank-login-bni-web",
+    "label": "legit",
+    "tags": [
+      "bank-login",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:21:04.408Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bni.co.id/",
+      "domain": "bni.co.id",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:21:04.405Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 212
+    }
+  },
+  {
+    "id": "bank-login-mandiri-web",
+    "label": "legit",
+    "tags": [
+      "bank-login"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:21:04.816Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.bankmandiri.co.id/",
+      "domain": "bankmandiri.co.id",
+      "title": "Bank Mandiri - Terdepan, Terpercaya, Tumbuh Bersama Anda",
+      "lang": "in-ID",
+      "text": "Navigasi Melompat ke Konten Language Selector IN [Beta] EN Mandiri Search Portlet Kalkulator Tools Suku Bunga Suku Bunga Dana Suku Bunga Dasar Kredit Kurs Tarif Tarif Layanan Kalkulator Kalkulator Finansial Kalkulator KPR Kalkulator KTA Lokasi Lokasi ATM Kantor Cabang Merchant mATM Mandiri Unit Mikro Weekend Banking Hubungi Kami Hubungi Kami email facebook twitter hubungi kami mandiri call 14000 email facebook twitter hubungi kami mandiri call 14000 Cari Log In Livin' by Mandiri Mandiri Internet Bisnis Mandiri Search Portlet Perseorangan Perseorangan Simpanan Dapatkan keuntungan dan kenyamanan yang lebih baik dengan berbagai solusi simpanan dari Bank Mandiri untuk Anda Pinjaman Solusi pinjaman dengan berbagai pilihan yang dapat disesuaikan dengan kebutuhan Anda Kartu Kredit Nikmati berbagai keunggulan dan kemudahan melalui mandiri kartu kredit sesuai kebutuhan Anda Kartu Debit Miliki Kartu Mandiri Debit dan dapatkan kemudahan, kenyamanan serta keamanan dalam bertransaksi di dalam maupun luar negeri dan bertransaksi online Investasi & Asuransi Percayakan perlindungan diri Anda dan keluarga serta investasi dengan berbagai produk investasi & asuransi kami E-Banking Mandiri e-banking memungkinkan Anda bertransaksi dengan mudah kapan saja dan dimana saja Pengiriman Uang Layanan pengiriman dan penerimaan uang secara mudah dan aman di seluruh dunia Smart Branch Sebuah dedikasi Bank Mandiri bagi nasabah tercinta dengan terus meningkatkan kenyamanan dan memberikan pengalaman terbaik",
+      "forms": [
+        {
+          "action": "https://www.bankmandiri.co.id/home?p_p_id=REDACTED&p_p_lifecycle=REDACTED&p_p_state=REDACTED&p_p_mode=REDACTED&_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_javax.portlet.action=REDACTED&p_auth=REDACTED",
+          "fields": [
+            {
+              "type": "text",
+              "name": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "id": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "label": null,
+              "placeholder": "Ketik untuk mencari",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": "https://www.bankmandiri.co.id/home?p_p_id=REDACTED&p_p_lifecycle=REDACTED&p_p_state=REDACTED&p_p_mode=REDACTED&_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_javax.portlet.action=REDACTED&p_auth=REDACTED",
+          "fields": [
+            {
+              "type": "text",
+              "name": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "id": "_Mandiri_Search_Portlet_INSTANCE_4SvAROe7pol6_keywords",
+              "label": null,
+              "placeholder": "Ketik untuk mencari",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": "",
+          "fields": []
+        }
+      ],
+      "imageAlts": [
+        "Home Banner",
+        "Home Banner",
+        "Home Banner",
+        "Home Banner",
+        "Home Banner",
+        "Mandiri Featured Product",
+        "Mandiri Featured Product",
+        "Mandiri Featured Product",
+        "News Image",
+        "News Image"
+      ],
+      "capturedAt": "2026-10-22T07:21:04.814Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 129113
+    }
+  },
+  {
+    "id": "checkout-bhinneka",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:21:06.502Z",
+    "notes": "static HTML has 1 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.bhinneka.com/",
+      "domain": "bhinneka.com",
+      "title": "Bhinneka: Toko Online B2B Terlengkap untuk Kebutuhan Bisnis",
+      "lang": "id-ID",
+      "text": " Kategori  Technology & Communications Computer & Accessory Computer Computer Accessories Computer Component Networking Software UPS & Stabilizer Server Gadget & Accessory Handphone & Tablet Gadget Accessory Wearable Device Camera & Video Drone Digital Camera Digital Camcorder Tools & Operation Tools Hand Tools Power Tools Tool Kits Rough and Finishing Tools Pneumatic Tools Cutting and Crimping and Punching Tools Wrenches and Drivers Tool Accesories Safety & Security Personal Protective Equipment Fire Equipment Footwear and Footwear Accessories Respiratory Disposable and Chemical Resistant Clothing Safety Equipment Metal Detector & Access Barriers Measuring Alat & Instrumen Pengukur Dimensi Micrometers Jangka Sorong Thickness Levelling Blok Ukur Gages Height and Depth Gages Industrial Equipment Generators Containers, Storages and Packaging Industrial Pumps and Compressors Industrial Machineries and Accessories Health, Lab & Chemical Lab Equipment Surgical Product Treatment Product Patient Monitoring Product Medical Furniture Emergency Medical Kits Antiseptics Office & Operation Supplies Office Equipment Printer, Scanner & Supplies Peralatan Kantor Digital Visual Solution Office Supplies Digital Printing Printer Inkjet Digital Cutter Desktop Engraving 3D Laser Cutter & Engraving Electronic & Home TV & Home Audio Big Appliances Small Appliances Kitchen & Bath Furniture Home Decoration Solutions & Services Solutions ERP for Automotive and Manufacture ERP for Retail Sales",
+      "forms": [
+        {
+          "action": "/jual",
+          "fields": [
+            {
+              "type": "search",
+              "name": "cari",
+              "id": null,
+              "label": null,
+              "placeholder": "Cari produk untuk bisnis Anda...",
+              "autocomplete": null
+            }
+          ]
+        },
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": "contact_name",
+              "id": "contact_name-308260",
+              "label": "Nama",
+              "placeholder": "Masukkan nama",
+              "autocomplete": null
+            },
+            {
+              "type": "email",
+              "name": "contact_email",
+              "id": "contact_email-308260",
+              "label": "Email",
+              "placeholder": "Masukkan email",
+              "autocomplete": null
+            },
+            {
+              "type": "tel",
+              "name": "contact_phone",
+              "id": "contact_phone-308260",
+              "label": "Telepon",
+              "placeholder": "Contoh 812xxxxxx",
+              "autocomplete": null
+            },
+            {
+              "type": "select",
+              "name": "contact_email_to",
+              "id": "contact_email_to-308260",
+              "label": "Subjek",
+              "placeholder": null,
+              "autocomplete": null
+            },
+            {
+              "type": "textarea",
+              "name": "contact_message",
+              "id": "contact_message-308260",
+              "label": "Pesan",
+              "placeholder": "Silakan sampaikan komentar, opini, masukan / saran, nama produk dan pertanyaan",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Bhinneka ",
+        "Technology & Communications",
+        "Technology & Communications",
+        "Tools & Operation",
+        "Tools & Operation",
+        "Office & Operation Supplies",
+        "Office & Operation Supplies",
+        "Solutions & Services",
+        "Solutions & Services",
+        "Bisnis & Review"
+      ],
+      "capturedAt": "2026-10-22T07:21:06.498Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED"
+      ],
+      "bytes": 329666
+    }
+  },
+  {
+    "id": "gov-kemenkeu",
+    "label": "legit",
+    "tags": [
+      "official-gov"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:21:07.045Z",
+    "notes": "",
+    "snapshot": {
+      "url": "https://www.kemenkeu.go.id/",
+      "domain": "kemenkeu.go.id",
+      "title": "Kementerian Keuangan Republik Indonesia",
+      "lang": "id",
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-22T07:21:07.044Z"
+    },
+    "meta": {
+      "iframes": [],
+      "bytes": 25866
+    }
+  },
+  {
+    "id": "popular-merdeka",
+    "label": "legit",
+    "tags": [
+      "popular",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "public page, static GET capture 2026-10-22. Short excerpt only (text up to 1500 chars, up to 10 image alts of 80 chars) kept for measurement; no licence granted by the site, limited quotation",
+    "collectedAt": "2026-10-22T07:21:07.771Z",
+    "notes": "static HTML has 2 iframe(s); form content inside them is not captured",
+    "snapshot": {
+      "url": "https://www.merdeka.com/",
+      "domain": "merdeka.com",
+      "title": "Berita Terkini Indonesia & Dunia Hari Ini - merdeka.com",
+      "lang": "id",
+      "text": "Merdeka Iklan - Scroll ke bawah untuk melanjutkan Menu Tanya apapun tentang artikel ini... News Politik Ekonomi Artis Trending Teknologi Oto Dunia Cek Fakta Sehat Sport Foto Gaya Bolasport Asia Cuma Dapat Modal Global 30 Persen, Padahal Sumbang 60 Persen Ekonomi Dunia 38 menit yang lalu KPK Ungkap Alasan Belum Cekal Nusron Wahid ke Luar Negeri 1 jam yang lalu Danantara Borong Saham BUMN 1 jam yang lalu Mabes TNI Respons Prajurit Diduga Terlibat Korupsi Dana Bencana BNPB 4 jam yang lalu BNPB soal Tawaran Asing Bantu Padamkan Karhutla: Kita Usaha Sendiri Dulu 4 jam yang lalu Advertisement Terpopuler Gen Z Berburu Kerja: Ketika Pengalaman Jadi Tantangan 6 menit yang lalu Bandara King Fahd Diserang, Otoritas Arab Saudi Ungkap Korban dan Kerusakan 8 menit yang lalu Pemprov DKI Siapkan 12 Ribu Lowongan Kerja, Begini Cara Daftarnya 9 menit yang lalu Pemilik Toko Emas di Jember Dibacok, Perampok Kabur Naik Minibus Putih 13 menit yang lalu GPM Gelar Serentak di 38 Provinsi, Ada Beras Gratis dan Voucher 15 menit yang lalu Selengkapnya Loading video... Diduga Tak Sesuai Label Gizi, 5 Merek Beras Disita! Kerugian Capai Rp 89 Triliun 00:40 00:58 01:43 01:03 00:32 00:56 00:46 00:36 Menakar Fiskal & Moneter Bagaimana Cara Mengetahui QRIS Terindikasi Judi Online? 4 jam yang lalu Marak QRIS Disalahgunakan Buat Judol, BI Ancam Cabut Izin PJP Nakal 19 jam yang lalu BI Pangkas GWM 2 Persen, Likuiditas Perbankan Bertambah Rp190 Triliun 19 jam yang lalu Lima Hari ISEF 2026: Dari Membangun",
+      "forms": [
+        {
+          "action": "https://www.merdeka.com/search",
+          "fields": [
+            {
+              "type": "text",
+              "name": "q",
+              "id": null,
+              "label": "Cari Berita",
+              "placeholder": null,
+              "autocomplete": "off"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Buku Merdeka Vol.9",
+        "Merdeka Logo",
+        "Asia Cuma Dapat Modal Global 30 Persen, Padahal Sumbang 60 Persen Ekonomi Dunia",
+        "KPK Ungkap Alasan Belum Cekal Nusron Wahid ke Luar Negeri",
+        "Danantara Borong Saham BUMN",
+        "Mabes TNI Respons Prajurit Diduga Terlibat Korupsi Dana Bencana BNPB",
+        "BNPB soal Tawaran Asing Bantu Padamkan Karhutla: Kita Usaha Sendiri Dulu",
+        "enamplus",
+        "Amarah Trump Tiba-Tiba Meledak Depan Jurnalis",
+        "Bikin Melongo! Pemotor Santai Tangkap Ular Pakai Kaki di Tengah Jalan"
+      ],
+      "capturedAt": "2026-10-22T07:21:07.768Z"
+    },
+    "meta": {
+      "iframes": [
+        "https://www.googletagmanager.com/ns.html?id=REDACTED",
+        "https://www.vidio.com/embed/9710789-diduga-tak-sesuai-label-gizi-5-merek-beras-disita-kerugian-capai-rp-89-triliun?player_only=REDACTED&mute=REDACTED&autoplay=REDACTED&live_chat=REDACTED"
+      ],
+      "bytes": 362991
+    }
+  }
+]
