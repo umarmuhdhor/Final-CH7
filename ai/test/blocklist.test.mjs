@@ -527,12 +527,14 @@ test("build script: first run writes state, full and meta (meta last), no deltas
 
 test("build script: second run keeps first-seen dates and writes a delta for the first build", async () => {
     const kv = fakeKvStore();
-    await runBuild({ kv, fetchText: feed("shoo-fixture-a.xyz", "shoo-fixture-b.top"), now: () => Date.parse(B("00")), minHosts: 1 });
-    await runBuild({ kv, fetchText: feed("shoo-fixture-a.xyz", "shoo-fixture-c.site"), now: () => Date.parse(B("06")), minHosts: 1 });
+    // Four domains, so one new one stays within PREBUILT.MAX_NEW_SHARE.
+    const kept = ["shoo-fixture-a.xyz", "shoo-fixture-d.xyz", "shoo-fixture-e.xyz"];
+    await runBuild({ kv, fetchText: feed(...kept, "shoo-fixture-b.top"), now: () => Date.parse(B("00")), minHosts: 1 });
+    await runBuild({ kv, fetchText: feed(...kept, "shoo-fixture-c.site"), now: () => Date.parse(B("06")), minHosts: 1 });
     const delta = JSON.parse(kv.values.get(deltaKey(B("00"))));
     assert.deepEqual(delta, { domains: [{ domain: "shoo-fixture-c.site", addedAt: B("06") }], removed: [{ domain: "shoo-fixture-b.top", removedAt: B("06") }], nextSince: B("06") });
     const full = JSON.parse(kv.values.get(PREBUILT.FULL_KEY));
-    assert.deepEqual(full.domains, [{ domain: "shoo-fixture-a.xyz", addedAt: B("00") }, { domain: "shoo-fixture-c.site", addedAt: B("06") }]);
+    assert.deepEqual(full.domains, [...kept.map((domain) => ({ domain, addedAt: B("00") })), { domain: "shoo-fixture-c.site", addedAt: B("06") }]);
     assert.deepEqual(JSON.parse(kv.values.get(PREBUILT.META_KEY)).builds, [B("06"), B("00")]);
 });
 
@@ -543,6 +545,34 @@ test("build script: a big drop in the list aborts before anything is written", a
     const before = kv.batches.length;
     await assert.rejects(runBuild({ kv, fetchText: feed(...many.slice(0, 4)), now: () => Date.parse(B("06")), minHosts: 1 }), /drop/);
     assert.equal(kv.batches.length, before);
+});
+
+test("build script: a flood of new domains aborts before anything is written", async () => {
+    const kv = fakeKvStore();
+    const many = Array.from({ length: 10 }, (_, i) => `shoo-fixture-${i}.xyz`);
+    await runBuild({ kv, fetchText: feed(...many), now: () => Date.parse(B("00")), minHosts: 1 });
+    const before = kv.batches.length;
+    const flood = Array.from({ length: Math.floor(10 * PREBUILT.MAX_NEW_SHARE) + 1 }, (_, i) => `shoo-flood-${i}.top`);
+    await assert.rejects(runBuild({ kv, fetchText: feed(...many, ...flood), now: () => Date.parse(B("06")), minHosts: 1 }), /new domains/);
+    assert.equal(kv.batches.length, before);
+    assert.equal(JSON.parse(kv.values.get(PREBUILT.META_KEY)).builtAt, B("00"), "the last good build keeps being served");
+});
+
+test("build script: normal growth is published", async () => {
+    const kv = fakeKvStore();
+    const many = Array.from({ length: 10 }, (_, i) => `shoo-fixture-${i}.xyz`);
+    await runBuild({ kv, fetchText: feed(...many), now: () => Date.parse(B("00")), minHosts: 1 });
+    const grown = Array.from({ length: Math.floor(10 * PREBUILT.MAX_NEW_SHARE) }, (_, i) => `shoo-new-${i}.top`);
+    const meta = await runBuild({ kv, fetchText: feed(...many, ...grown), now: () => Date.parse(B("06")), minHosts: 1 });
+    assert.equal(meta.active, 10 + grown.length);
+    assert.equal(JSON.parse(kv.values.get(PREBUILT.META_KEY)).builtAt, B("06"));
+});
+
+test("build script: the first build is exempt from the growth guard", async () => {
+    const kv = fakeKvStore();
+    const many = Array.from({ length: 50 }, (_, i) => `shoo-fixture-${i}.xyz`);
+    const meta = await runBuild({ kv, fetchText: feed(...many), now: () => Date.parse(B("00")), minHosts: 1 });
+    assert.equal(meta.active, 50);
 });
 
 test("build script: a broken feed or stored state never writes", async () => {

@@ -146,7 +146,7 @@ Building 200,000 entries takes ~1 s CPU; the Workers Free plan allows 10 ms per 
 
 - `addedAt` = the build in which a domain was **first seen** (the feed has no dates). A domain that leaves the feed gets `removedAt` = that build and stays in `state` and deltas for 8 days; if it comes back it is new again.
 - Because every timestamp is a build time, any `since` is answered by the delta of the newest build `<= since`. `since` >= newest build: empty list, `nextSince = since`. Older than every kept build, or delta missing: the full list (the extension's daily full refresh corrects `removed`). Nothing built yet: empty list. KV error: fixed `500`.
-- Safety: a feed under 10,000 lines, a broken `state`, or a list that would shrink by more than 50% stops the build before anything is written; the last good build keeps being served.
+- Safety: a feed under 10,000 lines, a broken `state`, a list that would shrink by more than 50%, or new domains above 25% of the previous list (`PREBUILT.MAX_NEW_SHARE`; every hit blocks a page, so a poisoned or broken feed must not reach phones; the first build is exempt) stops the build before anything is written; the last good build keeps being served.
 - Cost on the Free plan: ~30 KV writes per build, ~120 per day (limit 1,000). Each phone reads `meta` (cached 5 min per isolate) + one list key per download, 4 downloads a day, so the 100,000 reads/day limit covers roughly 12,000 to 25,000 phones. A full answer for 190,000 domains is ~12 MB of JSON (compressed in transit).
 - Local dry run without KV (downloads the real feed once, writes the files to a folder): `node ai/scripts/build-blocklist.mjs --out /tmp/shoo-blocklist`.
 

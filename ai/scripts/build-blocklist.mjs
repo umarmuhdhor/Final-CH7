@@ -39,6 +39,11 @@ export async function runBuild({ kv, fetchText, now = Date.now, minHosts }) {
     if (before && meta.active < before * (1 - PREBUILT.MAX_DROP)) {
         throw new Error(`list would drop from ${before} to ${meta.active} domains; refusing to publish (check the feed)`);
     }
+    // Counted in the served list, not the feed: the cap keeps the newest, so a flood can push old domains out.
+    const added = full.domains.filter((d) => d.addedAt === builtAt).length;
+    if (before && added > before * PREBUILT.MAX_NEW_SHARE) {
+        throw new Error(`list would add ${added} new domains to ${before}; refusing to publish (check the feed)`);
+    }
     await kv.putMany([
         { key: PREBUILT.STATE_KEY, value: gzipSync(JSON.stringify(entries)) },
         { key: PREBUILT.FULL_KEY, value: JSON.stringify(full) },

@@ -27,6 +27,12 @@ export const PREBUILT = Object.freeze({
     META_CACHE_MS: 5 * 60 * 1000,
     /** A build whose list shrinks by more than this share is refused (broken feed, not a good day). */
     MAX_DROP: 0.5,
+    /**
+     * A build that adds more new domains than this share of the previous list is refused (poisoned or broken feed).
+     * Every hit blocks the page (db_match = 100). A normal 6 h build adds a few % at most; 25% still lets a few
+     * missed days through, while a flood (and a flood pushing old domains out of the newest-MAX_DOMAINS cap) stops.
+     */
+    MAX_NEW_SHARE: 0.25,
 });
 
 export const deltaKey = (since) => `delta:${since}`;
