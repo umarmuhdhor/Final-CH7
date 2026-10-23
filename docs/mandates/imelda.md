@@ -42,18 +42,18 @@ Target awal ini bisa diubah oleh lead:
 - Branch: `feat/AI-M2-eval-set`
 
 ### M3 · Layer 3: isi halaman & form (server) — `ai/`
-- [ ] Buat service `POST /analyze` persis seperti di `contracts/api.md`. Stateless, tanpa log isi halaman.
-- [ ] Buat sinyal form sensitif: `asks_pin`, `asks_otp`, `asks_password`, `asks_card`, `asks_cvv`, `asks_ktp`, `asks_selfie_ktp`. Bahan: `snapshot.forms[].fields` (label, name, placeholder, autocomplete). Harus mengenali kata dalam Bahasa Indonesia dan English.
-- [ ] Buat sinyal `urgent_language` ("diblokir dalam 24 jam", "klaim sekarang") dan `brand_logo_offsite` (nama brand muncul di `imageAlts`/title, tapi domainnya bukan domain resmi). `evidence` = potongan teks **persis** dari `snapshot.text`/title, supaya bisa di-stabilo.
-- [ ] Buat sinyal `new_domain` lewat lookup RDAP/WHOIS **di server**, bukan di HP, supaya riwayat browsing tidak bocor ke pihak ketiga dari perangkat user. Simpan hasil lookup di cache.
+- [x] Buat service `POST /analyze` persis seperti di `contracts/api.md`. Stateless, tanpa log isi halaman.
+- [x] Buat sinyal form sensitif: `asks_pin`, `asks_otp`, `asks_password`, `asks_card`, `asks_cvv`, `asks_ktp`, `asks_selfie_ktp`. Bahan: `snapshot.forms[].fields` (label, name, placeholder, autocomplete). Harus mengenali kata dalam Bahasa Indonesia dan English.
+- [x] Buat sinyal `urgent_language` ("diblokir dalam 24 jam", "klaim sekarang") dan `brand_logo_offsite` (nama brand muncul di `imageAlts`/title, tapi domainnya bukan domain resmi). `evidence` = potongan teks **persis** dari `snapshot.text`/title, supaya bisa di-stabilo.
+- [x] Buat sinyal `new_domain` lewat lookup RDAP/WHOIS **di server**, bukan di HP, supaya riwayat browsing tidak bocor ke pihak ketiga dari perangkat user. Simpan hasil lookup di cache.
 - **Selesai kalau:** `fixtures/blocked-92.json` dan `warning-63.json` bisa direproduksi kira-kira (sinyal sama, skor ±10).
 - Branch: `feat/AI-M3-content-forms`
 
 ### M4 · Layer 4: reality check (LLM) — `ai/`
-- [ ] Buat prompt di `ai/prompts/`. Input: jenis halaman + data yang diminta. Output: apakah permintaannya wajar (contoh di PRD §5: toko meminta alamat itu wajar, halaman "cek hadiah" meminta PIN itu tidak wajar).
-- [ ] Output LLM wajib JSON terstruktur, lalu dipetakan ke sinyal `unreasonable_request`.
-- [ ] Model bisa diganti lewat `.env`. Pilih model cepat, karena latensi lebih penting. Batas waktu: kalau LLM belum menjawab saat total waktu mendekati 8 detik, kembalikan sinyal layer 3 saja.
-- [ ] API key hanya di `.env`. Commit `.env.example`.
+- [x] Buat prompt di `ai/prompts/`. Input: jenis halaman + data yang diminta. Output: apakah permintaannya wajar (contoh di PRD §5: toko meminta alamat itu wajar, halaman "cek hadiah" meminta PIN itu tidak wajar).
+- [x] Output LLM wajib JSON terstruktur, lalu dipetakan ke sinyal `unreasonable_request`.
+- [~] Model bisa diganti lewat `.env`. Pilih model cepat, karena latensi lebih penting. Batas waktu: kalau LLM belum menjawab saat total waktu mendekati 8 detik, kembalikan sinyal layer 3 saja. (`.env` + batas waktu sudah ada; model belum dipilih, layer 4 masih mati: TODO A2, A6 di `plan/imelda/TODO.md`)
+- [x] API key hanya di `.env`. Commit `.env.example`.
 - **Selesai kalau:** eval M2 menunjukkan layer 4 mengurangi salah blokir di halaman resmi tanpa menurunkan deteksi scam.
 - Branch: `feat/AI-M4-reality-check`
 
@@ -62,10 +62,10 @@ Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
 **Yang bukan tugasmu:** mengunduh, menyimpan, dan me-refresh daftar. Itu sudah dikerjakan Umar di extension (`lists.js`). `GET /blocklist` milik Alief juga diunduh extension, jadi kamu **tidak** memanggilnya.
 
 **A. Server — `GET /public-blocklist?since=` di `ai/`**
-- [ ] Pilih sumber daftar phishing publik yang lisensinya boleh dipakai di app, lalu catat sumber dan lisensinya di `ai/README.md`.
-- [ ] Ubah setiap entri ke domain utama (registrable domain, pakai Public Suffix List). Buang domain resmi/allowlist (`detector/data/brands.json` + situs populer) dan situs sah yang hanya disusupi (mis. `wordpress.com`, `github.io` tanpa subdomain).
-- [ ] Respons persis `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }`. `since` kosong = daftar lengkap. Target ≤ 200.000 domain.
-- [ ] Token Bearer dari extension **tidak** perlu (dan tidak bisa) diverifikasi. Pakai rate limit per IP, dan jangan log token-nya.
+- [ ] Pilih sumber daftar phishing publik yang lisensinya boleh dipakai di app, lalu catat sumber dan lisensinya di `ai/README.md`. (Belum dipilih: TODO A3. Endpoint sekarang mengembalikan daftar kosong)
+- [x] Ubah setiap entri ke domain utama (registrable domain, pakai Public Suffix List). Buang domain resmi/allowlist (`detector/data/brands.json` + situs populer) dan situs sah yang hanya disusupi (mis. `wordpress.com`, `github.io` tanpa subdomain).
+- [x] Respons persis `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }`. `since` kosong = daftar lengkap. Target ≤ 200.000 domain.
+- [x] Token Bearer dari extension **tidak** perlu (dan tidak bisa) diverifikasi. Pakai rate limit per IP, dan jangan log token-nya.
 
 **B. Detector — `detector/`**
 - [x] Di `analyzeLocal`: `const hit = await globalThis.ShooLists?.match(new URL(snapshot.url).hostname)`. Kalau ada → kembalikan `db_match` (layer 1, weight 100, `label`/`labelSimple` EN + ID, `evidence` = `hit.source`). Kalau `null` → lanjut ke aturan layer 2.
@@ -77,14 +77,14 @@ Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
 - Branch: `feat/AI-M5-database`
 
 ### M6 · Kalibrasi bobot
-- [ ] Atur bobot semua sinyal sampai target di "Definisi sukses" tercapai di eval set.
-- [ ] Tempel tabel hasil eval sebelum/sesudah di PR.
+- [~] Atur bobot semua sinyal sampai target di "Definisi sukses" tercapai di eval set. (#60: legit ≥ 30 turun ke 1/51, tapi scam ≥ 50 baru 66% dan ≥ 80 baru 32%. Target belum tercapai dan belum bisa dinilai karena scam nyata hanya 1 sampel. Butuh data scam nyata berlisensi, lalu kalibrasi ulang)
+- [x] Tempel tabel hasil eval sebelum/sesudah di PR. (#60)
 - Branch: `feat/AI-M6-calibration`
 
 ### M7 · Deploy `/analyze`
-- [ ] Deploy ke URL publik HTTPS, lalu kirim URL-nya ke Umar dan Alief (dipakai untuk `ai.baseURL`).
-- [ ] Pasang rate limit sederhana per IP dan batas ukuran body (snapshot maks. ±200 KB). Berlaku untuk `/analyze` dan `/public-blocklist`.
-- [ ] `/public-blocklist` (M5) ikut di-deploy di URL yang sama.
+- [ ] Deploy ke URL publik HTTPS, lalu kirim URL-nya ke Umar dan Alief (dipakai untuk `ai.baseURL`). (Kode + `wrangler.toml` + smoke test merged di #61; deploy masih langkah manual, lihat `plan/imelda/log/fase-08.md`)
+- [x] Pasang rate limit sederhana per IP dan batas ukuran body (snapshot maks. ±200 KB). Berlaku untuk `/analyze` dan `/public-blocklist`.
+- [ ] `/public-blocklist` (M5) ikut di-deploy di URL yang sama. (Sudah satu Worker dengan `/analyze`; tercentang setelah deploy)
 - Branch: `feat/AI-M7-deploy`
 
 ## Bukan tugasmu di MVP
