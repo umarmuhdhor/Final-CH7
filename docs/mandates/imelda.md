@@ -84,9 +84,9 @@ Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
 - Branch: `feat/AI-M6-calibration`
 
 ### M7 · Deploy `/analyze`
-- [ ] Deploy ke URL publik HTTPS, lalu kirim URL-nya ke Umar dan Alief (dipakai untuk `ai.baseURL`). (Kode + `wrangler.toml` + smoke test merged di #61; deploy masih langkah manual, lihat `plan/imelda/log/fase-08.md`)
+- [x] Deploy ke URL publik HTTPS, lalu kirim URL-nya ke Umar dan Alief (dipakai untuk `ai.baseURL`). (Deploy 23 Okt 2026: `https://shoo-ai.uumaarrrrr22.workers.dev`, smoke test hijau, p95 `/analyze` 171 ms. URL ke Alief lewat issue #82. Bukti: `plan/imelda/log/fase-08.md`)
 - [x] Pasang rate limit sederhana per IP dan batas ukuran body (snapshot maks. ±200 KB). Berlaku untuk `/analyze` dan `/public-blocklist`.
-- [ ] `/public-blocklist` (M5) ikut di-deploy di URL yang sama. (Sudah satu Worker dengan `/analyze`; tercentang setelah deploy)
+- [x] `/public-blocklist` (M5) ikut di-deploy di URL yang sama. (`https://shoo-ai.uumaarrrrr22.workers.dev/public-blocklist`, 200; daftar masih kosong sampai sumber dipilih di M5-A)
 - Branch: `feat/AI-M7-deploy`
 
 ## Bukan tugasmu di MVP

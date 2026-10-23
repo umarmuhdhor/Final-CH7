@@ -53,14 +53,14 @@ Checklist lengkap ada di `plan/imelda/log/fase-08.md` § Langkah manual. Urutan:
 
 | # | Langkah | Selesai kalau |
 |---|---|---|
-| D-1 | Login/buat akun Cloudflare. Mulai Free untuk uji; naik ke Workers Paid sebelum pengguna sungguhan (Free = CPU 10 ms per request) | Akun aktif |
-| D-2 | `cd ai && npm ci && npx wrangler login` | `wrangler whoami` menampilkan akun |
-| D-3 | Cek `namespace_id` di `ai/wrangler.toml` (`1001`, `1002`) belum dipakai Worker lain | Tidak bentrok |
-| D-4 | `npm run deploy` → `https://shoo-ai.<akun>.workers.dev` | Deploy sukses |
-| D-5 | `node ai/scripts/smoke.mjs <URL> 30` + cek CORS (fase-08) | Semua `ok`, p95 `/analyze` < 8 s |
-| D-6 | Catat URL + keluaran smoke test di `plan/imelda/log/fase-08.md` (lewat PR, atau minta Imelda), centang M7 di `docs/mandates/imelda.md` | PR merged |
-| D-7 | **`aiBaseURL` ada di `ios/ShooApp/App/AppConfig.swift` (milik Alief), sekarang `nil`.** Buka issue ke Alief: isi URL dari D-4 untuk build release (dan debug kalau mau) | Issue dijawab, PR Alief merged |
-| D-8 | Kirim URL ke Imelda dan Alief lewat issue (TODO C4) | Issue ditutup |
+| [x] D-1 | Login/buat akun Cloudflare. Mulai Free untuk uji; naik ke Workers Paid sebelum pengguna sungguhan (Free = CPU 10 ms per request) | Akun aktif |
+| [x] D-2 | `cd ai && npm ci && npx wrangler login` | `wrangler whoami` menampilkan akun |
+| [x] D-3 | Cek `namespace_id` di `ai/wrangler.toml` (`1001`, `1002`) belum dipakai Worker lain | Tidak bentrok |
+| [x] D-4 | `npm run deploy` → `https://shoo-ai.<akun>.workers.dev` | Deploy sukses: `https://shoo-ai.uumaarrrrr22.workers.dev` (23 Okt 2026) |
+| [x] D-5 | `node ai/scripts/smoke.mjs <URL> 30` + cek CORS (fase-08) | Semua `ok`, p95 `/analyze` 171 ms |
+| [x] D-6 | Catat URL + keluaran smoke test di `plan/imelda/log/fase-08.md` (lewat PR, atau minta Imelda), centang M7 di `docs/mandates/imelda.md` | Dicatat di branch `docs/AI-M7-deploy-record` |
+| D-7 | **`aiBaseURL` ada di `ios/ShooApp/App/AppConfig.swift` (milik Alief), sekarang `nil`.** Buka issue ke Alief: isi URL dari D-4 untuk build release (dan debug kalau mau) | Issue dijawab, PR Alief merged. Issue #82 dibuka 23 Okt 2026 |
+| D-8 | Kirim URL ke Imelda dan Alief lewat issue (TODO C4) | Issue ditutup. Alief: #82 (sama dengan D-7) |
 
 Catatan: layer 4 tetap mati sampai G2. Daftar publik tetap kosong sampai G3 (A3).
 

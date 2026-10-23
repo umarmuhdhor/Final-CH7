@@ -1,6 +1,6 @@
 # Fase 08 — Deploy `/analyze` + `/public-blocklist` (M7)
 
-**Status:** `[m]` kode, test, `wrangler.toml` dan smoke test siap. **Tidak ada deploy** (aksi cloud = LANGKAH MANUAL).
+**Status:** `[x]` kode merged (#61); **deploy selesai 23 Okt 2026** oleh Umar (lihat "Hasil deploy"). Sisa: layer 4 (secret LLM, G2), sumber daftar publik (A3), URL di app (issue ke Alief).
 **Branch:** `feat/AI-M7-deploy` dari `feat/AI-M6-calibration` (stacked). 22 Okt 2026.
 
 ## Yang dikerjakan (TDD, `ai/test/hardening.test.mjs`, 9 test)
@@ -16,23 +16,53 @@
 - `node --test --test-concurrency=1 detector/test ai/test ai/eval/test ios/ShooExtension/Tests`: 395 lolos, 0 gagal.
 - `node ai/scripts/smoke.mjs http://127.0.0.1:8797 20` (dev server): semua `ok`, p95 3 ms (lokal; bukan angka produksi).
 
+## Hasil deploy (23 Okt 2026, Umar)
+- **URL:** `https://shoo-ai.uumaarrrrr22.workers.dev` (Worker `shoo-ai`, `npm run deploy` di `ai/`, wrangler 4.151.3, ±11:48 WITA). `/analyze` dan `/public-blocklist` di Worker yang sama.
+- `namespace_id` `1001`/`1002` dicek di dashboard: tidak dipakai Worker lain.
+- Secret: **tidak ada** (`wrangler secret list` = `[]`). Layer 4 mati; `/analyze` menjawab layer 3 saja.
+- `/public-blocklist`: 200, 0 domain (sumber belum dipilih, A3).
+- Smoke test `node ai/scripts/smoke.mjs https://shoo-ai.uumaarrrrr22.workers.dev 30` (11:51 WITA, dari laptop di Indonesia), exit 0:
+
+```
+ok   POST /analyze -> 200
+ok   /analyze returns the asks_pin signal (layer 3)
+ok   header x-content-type-options
+ok   header referrer-policy
+ok   header cache-control
+ok   header cross-origin-resource-policy
+ok   header strict-transport-security
+ok   header content-security-policy
+ok   OPTIONS /analyze from the extension -> 204, allow-origin echoed
+ok   OPTIONS /analyze from a web page -> no allow-origin
+ok   text/plain POST /analyze -> 422 (want 422)
+ok   GET /public-blocklist -> 200
+ok   /public-blocklist shape (0 domains)
+ok   bad since -> 422 (want 422 invalid_body)
+ok   enough latency samples (30)
+latency /analyze over 30 runs: p50 75 ms, p95 171 ms, max 193 ms
+ok   p95 < 8000 ms
+```
+
+- **p95 `/analyze`: 171 ms** (p50 75 ms, maks 193 ms, 30 run; termasuk jaringan, tanpa LLM). Target < 8 s.
+- **CORS** (`curl -X OPTIONS .../analyze`): `origin: safari-web-extension://x` -> `HTTP/2 204` + `access-control-allow-origin: safari-web-extension://x`; `origin: https://x` -> `HTTP/2 204` tanpa `access-control-allow-origin`.
+
 ## DoD
-- [ ] Kedua endpoint hidup di HTTPS publik; smoke test hijau (LANGKAH MANUAL).
+- [x] Kedua endpoint hidup di HTTPS publik; smoke test hijau (23 Okt 2026, lihat "Hasil deploy").
 - [x] Rate limit dan batas body teruji (429/413).
-- [ ] p95 `/analyze` < 8 s tercatat dari URL publik (LANGKAH MANUAL; lokal 3 ms).
+- [x] p95 `/analyze` < 8 s tercatat dari URL publik: 171 ms (lokal 3 ms).
 - [x] Tidak ada secret/URL halaman di log; `.env.example` terbaru.
-- [ ] URL dikirim ke Umar dan Alief oleh Imelda (TODO C4).
+- [x] URL dikirim ke Umar dan Alief (TODO C4). Umar punya URL; Alief lewat issue #82.
 
 ## LANGKAH MANUAL (Imelda) — urutan
 Batas Workers (halaman resmi Cloudflare, dibaca 22 Okt 2026): **Free = CPU 10 ms per request**, 100.000 request/hari; Paid = CPU default 30 s, tanpa batas harian. `/analyze` sekarang p50 ±2 ms, maks 20 ms di laptop (belum diukur di Workers); membangun daftar publik 200.000 entri butuh ±1 s CPU. Karena itu:
-- [ ] (B2) Buat/login akun Cloudflare. Pilih paket: **Free cukup untuk uji** (daftar publik masih kosong), tetapi 10 ms CPU berisiko untuk `/analyze` yang berat (teks 20.000 karakter) dan 100.000 request/hari bisa habis. Rekomendasi: Workers Paid (±US$5/bulan) sebelum pengguna sungguhan. BELUM DIVERIFIKASI: harga terkini.
-- [ ] `cd ai && npm ci && npx wrangler login` (wrangler versi terkunci di `package.json`; buka browser; kamu yang login).
-- [ ] Cek `namespace_id` di `wrangler.toml` (`1001`, `1002`) belum dipakai Worker lain di akun yang sama.
-- [ ] Deploy: `npm run deploy` (nama `shoo-ai`, URL `https://shoo-ai.<akun>.workers.dev`). Rate limit per IP sudah ikut lewat binding `[[ratelimits]]`. Aturan WAF hanya berlaku di custom domain (zona), bukan `workers.dev`.
+- [x] (B2) Buat/login akun Cloudflare. Pilih paket: **Free cukup untuk uji** (daftar publik masih kosong), tetapi 10 ms CPU berisiko untuk `/analyze` yang berat (teks 20.000 karakter) dan 100.000 request/hari bisa habis. Rekomendasi: Workers Paid (±US$5/bulan) sebelum pengguna sungguhan. BELUM DIVERIFIKASI: harga terkini.
+- [x] `cd ai && npm ci && npx wrangler login` (wrangler versi terkunci di `package.json`; buka browser; kamu yang login).
+- [x] Cek `namespace_id` di `wrangler.toml` (`1001`, `1002`) belum dipakai Worker lain di akun yang sama.
+- [x] Deploy: `npm run deploy` (nama `shoo-ai`, URL `https://shoo-ai.<akun>.workers.dev`). Rate limit per IP sudah ikut lewat binding `[[ratelimits]]`. Aturan WAF hanya berlaku di custom domain (zona), bukan `workers.dev`.
 - [ ] Layer 4 (opsional, setelah A2): **wajib dulu** batas pengeluaran (spend limit) di dashboard penyedia LLM: `LLM_DAILY_CAP` hanya per isolate, jadi bukan batas biaya sungguhan (review #59). Penyedia harus zero data retention / tanpa training (TODO A6). Lalu `npx wrangler secret put LLM_API_KEY`, `... LLM_MODEL`, `... LLM_BASE_URL` (isi di prompt, jangan ditulis ke file).
-- [ ] Smoke test: `node ai/scripts/smoke.mjs https://shoo-ai.<akun>.workers.dev 30`. Tempel keluarannya (termasuk p95) ke sini.
-- [ ] Cek (smoke test juga memeriksanya): `curl -s -X OPTIONS -H 'origin: safari-web-extension://x' -H 'access-control-request-method: POST' -i $URL/analyze | head` -> 204 + origin di-echo; dengan `origin: https://x` -> tanpa `access-control-allow-origin`.
-- [ ] Kirim URL ke Umar (`ai.baseURL`) dan Alief (TODO C4). Agent tidak mengirim pesan.
+- [x] Smoke test: `node ai/scripts/smoke.mjs https://shoo-ai.<akun>.workers.dev 30`. Tempel keluarannya (termasuk p95) ke sini.
+- [x] Cek (smoke test juga memeriksanya): `curl -s -X OPTIONS -H 'origin: safari-web-extension://x' -H 'access-control-request-method: POST' -i $URL/analyze | head` -> 204 + origin di-echo; dengan `origin: https://x` -> tanpa `access-control-allow-origin`.
+- [x] Kirim URL ke Umar (`ai.baseURL`) dan Alief (TODO C4). Agent tidak mengirim pesan. Alief: issue #82.
 - [ ] Fase 05: sumber daftar publik (A3) + daftar pra-bangun sebelum daftar nyata dipasang (CPU).
 
 ## Temuan keamanan

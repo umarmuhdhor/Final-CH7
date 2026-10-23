@@ -16,7 +16,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | 05 | /public-blocklist | M5-A | feat/AI-M5-server | [m] | 22 Okt 2026 | | #58 (base wip/AI-overnight-base) | Endpoint + 19 test (346 total hijau), daftar kosong di produksi; sumber + lisensi (A3) menunggu Imelda | log/fase-05.md |
 | 06 | Reality check LLM | M4 | feat/AI-M4-reality-check | [m] | 22 Okt 2026 | | #59 (base feat/AI-M5-server) | Layer 4 + 374 test hijau (penyedia palsu); model, key, eval dengan LLM menunggu Imelda (A2, A5) | log/fase-06.md |
 | 07 | Kalibrasi bobot | M6 | feat/AI-M6-calibration | [m] | 22 Okt 2026 | | #60 (base feat/AI-M4-reality-check) | Legit >=30: 4 -> 1/51; scam >=50 66%, >=80 32%: target TIDAK tercapai/tidak dinilai (1 scam nyata); 385 test hijau | log/fase-07.md |
-| 08 | Deploy | M7 | feat/AI-M7-deploy | [m] | 22 Okt 2026 | | #61 (base feat/AI-M6-calibration) | Rate limit + 413 + header + CORS + wrangler.toml + smoke test, 394 test hijau; deploy/akun/secret/URL menunggu Imelda | log/fase-08.md |
+| 08 | Deploy | M7 | feat/AI-M7-deploy | [x] | 22 Okt 2026 | 23 Okt 2026 | #61 (merged) | Deploy ke `https://shoo-ai.uumaarrrrr22.workers.dev` (23 Okt 2026, Umar), smoke test hijau dengan p95 `/analyze` 171 ms; layer 4 mati (tanpa secret) dan daftar publik masih kosong (A3) | log/fase-08.md |
 
 ## Gate
 
@@ -53,4 +53,4 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | Scam skor ≥ 50 | ≥ 90% | 66% (33/50; nyata 0/1) | 66% (33/50; nyata 0/1) |
 | Scam skor ≥ 80 | ≥ 70% | 40% (20/50) | 32% (16/50) |
 | `analyzeLocal` | < 50 ms | – | p95 1,0 ms |
-| `/analyze` p95 | < 8 s | – | p95 2,5 ms lokal (tanpa jaringan/RDAP/LLM) |
+| `/analyze` p95 | < 8 s | – | p95 171 ms dari URL publik (30 run, 23 Okt 2026, termasuk jaringan, tanpa LLM); lokal 2,5 ms |
