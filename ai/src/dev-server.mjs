@@ -8,8 +8,9 @@ import { fixtureSource } from "./blocklist/fixture.js";
 // RDAP (new_domain) calls real registries, so it is off unless asked: SHOO_RDAP=1. Never point it at scam domains.
 // /public-blocklist serves invented fixture domains here (ai/data/public-blocklist.seed.json), never a real feed.
 // Layer 4 (LLM) stays off unless ai/.env holds LLM_API_KEY, LLM_MODEL and LLM_BASE_URL (see .env.example).
-// Every local request is the same "unknown" client, so the per-IP layer 4 limit is off here unless
-// LLM_CLIENT_CALLS_PER_HOUR is set (dev only); LLM_DAILY_CAP stays the cost breaker.
+// Every local request is the same "unknown" client (no cf-connecting-ip), so per-IP limits would put the whole eval in
+// one bucket. Here they are off: /analyze and /public-blocklist unless SHOO_DEV_RATE_LIMIT=1, layer 4 unless
+// LLM_CLIENT_CALLS_PER_HOUR is set. LLM_DAILY_CAP stays the cost breaker.
 try {
     process.loadEnvFile(new URL("../.env", import.meta.url));
 } catch (error) {
@@ -17,7 +18,10 @@ try {
 }
 const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_")));
 const clientCalls = Number(process.env.LLM_CLIENT_CALLS_PER_HOUR);
+const NO_LIMIT = { limit: Number.MAX_SAFE_INTEGER, windowMs: 60_000 };
+const devLimits = process.env.SHOO_DEV_RATE_LIMIT === "1" ? {} : { rateLimit: NO_LIMIT, analyzeRateLimit: NO_LIMIT };
 const app = createApp({
+    ...devLimits,
     blocklistSource: fixtureSource,
     llmFetch: (...args) => fetch(...args),
     llmClientCallsPerHour: Number.isInteger(clientCalls) && clientCalls > 0 ? clientCalls : Infinity,

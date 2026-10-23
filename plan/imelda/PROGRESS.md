@@ -16,7 +16,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | 05 | /public-blocklist | M5-A | feat/AI-M5-server | [m] | 22 Okt 2026 | | #58 (base wip/AI-overnight-base) | Endpoint + 19 test (346 total hijau), daftar kosong di produksi; sumber + lisensi (A3) menunggu Imelda | log/fase-05.md |
 | 06 | Reality check LLM | M4 | feat/AI-M4-reality-check | [m] | 22 Okt 2026 | | #59 (base feat/AI-M5-server) | Layer 4 + 374 test hijau (penyedia palsu); model, key, eval dengan LLM menunggu Imelda (A2, A5) | log/fase-06.md |
 | 07 | Kalibrasi bobot | M6 | feat/AI-M6-calibration | [m] | 22 Okt 2026 | | #60 (base feat/AI-M4-reality-check) | Legit >=30: 4 -> 1/51; scam >=50 66%, >=80 32%: target TIDAK tercapai/tidak dinilai (1 scam nyata); 385 test hijau | log/fase-07.md |
-| 08 | Deploy | M7 | feat/AI-M7-deploy | [ ] | | | | | log/fase-08.md |
+| 08 | Deploy | M7 | feat/AI-M7-deploy | [m] | 22 Okt 2026 | | #61 (base feat/AI-M6-calibration) | Rate limit + 413 + header + CORS + wrangler.toml + smoke test, 394 test hijau; deploy/akun/secret/URL menunggu Imelda | log/fase-08.md |
 
 ## Gate
 

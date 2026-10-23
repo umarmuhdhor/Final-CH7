@@ -334,7 +334,7 @@ test("Worker env bindings configure layer 4 per request (c.env), still through t
     const f = fake(() => reply(verdict()));
     const app = createApp({ llmFetch: f.fetch });
     const env = { LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com/v1" };
-    const res = await app.request("/analyze", { method: "POST", body: JSON.stringify({ snapshot: PIN(), localSignals: [] }) }, env);
+    const res = await app.request("/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ snapshot: PIN(), localSignals: [] }) }, env);
     assert.ok(ids((await res.json()).signals).includes("unreasonable_request"));
     assert.equal(f.calls[0].init.headers.authorization, "Bearer k");
 });

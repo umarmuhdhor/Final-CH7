@@ -8,7 +8,7 @@ Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `br
 
 ```bash
 cd ai
-npm install            # one dependency: hono
+npm ci                 # hono, plus wrangler (dev, pinned) for deploy
 npm run dev            # http://127.0.0.1:8787  (PORT=... to change)
 npm test               # node --test, calls app.request(), no server needed
 ```
@@ -21,7 +21,7 @@ node ai/eval/run.mjs --analyze-url http://localhost:8787
 
 `npm run dev` does not call RDAP (so eval runs never send a scam domain to a registry). To try `new_domain` by hand: `SHOO_RDAP=1 npm run dev`, and only with neutral public domains such as `example.com`.
 
-The dev server is plain HTTP with no rate limit. Deploying the Worker (wrangler config, per-IP rate limit, secrets) is M7.
+The dev server is plain HTTP; the same app (rate limits, headers) runs in it. Deploying the Worker is a manual step: see the checklist in `plan/imelda/log/fase-08.md`.
 
 ## Endpoint
 
@@ -159,3 +159,15 @@ Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://`
 | Determinism | `temperature: 0`; record `PROMPT_VERSION` and the model with every eval run |
 
 Privacy note for Alief/Umar (TODO C5): when layer 4 is on, the host, page title and form field labels of pages that pass the gate go to the LLM provider.
+
+## Deploy, limits, headers (M7)
+
+- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). Nothing is deployed from this repo; secrets (`LLM_*`) are set with `wrangler secret put`.
+- Per-IP rate limits, two layers; over either `429 rate_limited` with `Retry-After`, and the body is not read:
+  - Workers Rate Limiting binding (`[[ratelimits]]` in `wrangler.toml`, shared across isolates, works on `workers.dev`): `/analyze` 60 per 60 s, `/public-blocklist` 10 per 60 s. This is the hard limit. A Cloudflare WAF rule would need a custom domain (zone rules do not apply to `workers.dev`).
+  - In memory, per isolate: `/analyze` 300 per 10 min, `/public-blocklist` 30 per 10 min. The only limiter in tests; the dev server turns both off (`SHOO_DEV_RATE_LIMIT=1` turns them on), because every local request is one `unknown` client.
+- Body: `/analyze` max 200 KB (`413 too_large`); a `GET /public-blocklist` that declares a body over 1 KB gets `413`.
+- Every answer (also errors and preflights) carries `X-Content-Type-Options`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store`, HSTS and a `default-src 'none'` CSP. CORS: only a `safari-web-extension://` origin is echoed back (the extension fetches from `background.js` with `<all_urls>`, so it does not need CORS at all); a web page gets no allow headers. `/analyze` accepts `Content-Type: application/json` only (`422 invalid_body` otherwise), so a no-preflight `text/plain` POST from a web page is refused. `OPTIONS` on `/analyze` and `/public-blocklist` answers `204`, any other path `404`.
+- No logging: the code never writes URL, text, form, IP or token anywhere; observability is off in `wrangler.toml`.
+- Smoke test against any base URL: `node ai/scripts/smoke.mjs <base-url> [runs]` (sends one invented page only).
+- Workers Free allows 10 ms CPU per request and 100,000 requests a day; plan for Workers Paid before real users.
