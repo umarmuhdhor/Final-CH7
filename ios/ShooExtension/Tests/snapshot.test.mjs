@@ -36,9 +36,21 @@ const frame = (contentDocument) => ({ contentDocument });
 test("page forms keep the PageSnapshot field shape and never the typed value", () => {
     const doc = makeDoc({ forms: [[{ type: "password", name: "pin", id: "pin", placeholder: "PIN", autocomplete: "off" }]], labels: { pin: "Masukkan PIN" } });
     assert.deepEqual(formsOf(doc), [
-        { action: "/submit", fields: [{ type: "password", name: "pin", id: "pin", label: "Masukkan PIN", placeholder: "PIN", autocomplete: "off" }] },
+        { action: "/submit", fields: [{ type: "password", name: "pin", id: "pin", label: "Masukkan PIN", placeholder: "PIN", autocomplete: "off", accept: null, capture: null }] },
     ]);
     assert.ok(!JSON.stringify(formsOf(doc)).includes("typed-secret"));
+});
+
+test("file inputs report accept and capture (C8); a bare capture attribute stays an empty string", () => {
+    const doc = makeDoc({ forms: [[
+        { type: "file", name: "selfie", accept: "image/*", capture: "user" },
+        { type: "file", name: "doc", capture: "" },
+    ]] });
+    const [selfie, docField] = formsOf(doc)[0].fields;
+    assert.equal(selfie.accept, "image/*");
+    assert.equal(selfie.capture, "user");
+    assert.equal(docField.accept, null);
+    assert.equal(docField.capture, "");
 });
 
 test("same-origin iframe forms come after the page's, labels read from the iframe's own document (lphone-login, #75)", () => {
