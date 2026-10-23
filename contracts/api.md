@@ -77,6 +77,7 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 - Client: repeat with `since=nextSince` until a response has no `domains` and no `removed`. A full refresh is the first request without `since`, then the same loop; replace the stored list only after the last page.
 - An empty response returns `nextSince` = the `since` it was given (caught up).
 - `nextSince` is `null` only when the list is empty and no `since` was sent. Keep no cursor; the next request is a full refresh.
+- A `since` that is not a valid ISO 8601 timestamp (or is out of range) → HTTP 422 `invalid_body`, the same code as a bad body. The client only ever sends back a `nextSince` it was given, so this only happens on a client bug.
 
 The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
 
@@ -92,7 +93,7 @@ Tap → open Detail for `scanId` (GD-06).
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/analyze` | `{ snapshot: PageSnapshot, localSignals: Signal[] }` | `{ signals: Signal[] }` — layer 3–4 only |
-| GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape and `nextSince` rules as `GET /blocklist`; paging is optional here (one response with every entry is fine). Downloaded by the extension every 6 h (full daily) |
+| GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape, `nextSince` rules and bad-`since` error (422 `invalid_body`) as `GET /blocklist`; paging is optional here (one response with every entry is fine). Downloaded by the extension every 6 h (full daily) |
 
 **Auth on the AI service:** the extension sends `Authorization: Bearer <device token>` on both calls, but the AI service has no access to the backend's device table, so in MVP it does **not** verify the token. Protect it with a per-IP rate limit and a body-size limit instead (M7). Never log the token.
 

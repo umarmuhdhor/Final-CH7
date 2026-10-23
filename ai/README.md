@@ -31,7 +31,7 @@ The dev server is plain HTTP with no rate limit. Deploying the Worker (wrangler 
 |---|---|
 | Valid | `200 { "signals": [...] }`, strongest signal first, `Cache-Control: no-store` |
 | Not JSON | `400 bad_json` |
-| Wrong shape, no `snapshot.url`, URL not http(s) | `400 invalid_body` |
+| Wrong shape, no `snapshot.url`, URL not http(s) | `422 invalid_body` |
 | Body over 200 KB | `413 too_large`, decided from `Content-Length` or while streaming, before parsing |
 | Other method on `/analyze` | `405 method_not_allowed` with `Allow: POST` |
 | Other path | `404 not_found` |
@@ -118,7 +118,7 @@ Serves the list the extension downloads every 6 h (`docs/design/blocklist.md`). 
 |---|---|
 | No `since` | Full list (newest 200,000 at most), no `removed`, `nextSince` = newest timestamp, or `null` when the list is empty |
 | `since=<ISO 8601>` | Only entries with `addedAt > since`, plus `removed` since then. Caught up: empty `domains`, `nextSince` = `since` |
-| Bad `since` | `400 invalid_query` |
+| Bad `since` | `422 invalid_body` (same code as `GET /blocklist`, `contracts/api.md`) |
 | Other method | `405 method_not_allowed` with `Allow: GET` |
 | Too many requests | `429 rate_limited` with `Retry-After` (30 per IP per 10 min; IPv6 counted per /64) |
 

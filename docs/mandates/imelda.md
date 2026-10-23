@@ -35,17 +35,17 @@ Target awal ini bisa diubah oleh lead:
 - Branch: `feat/AI-M1-link-name`
 
 ### M2 · Eval set — `ai/eval/`
-- [x] Kumpulkan ≥ 50 halaman scam (URL + HTML/teks + label) dan ≥ 50 halaman resmi yang mirip (halaman login bank, checkout e-commerce, dll). (50 scam + 51 legit ada; scam nyata hanya 1, sisanya sintetis: lihat plan/imelda/log/fase-04.md)
-- [ ] Buat skrip eval yang menjalankan detector + `/analyze`, lalu mencetak skor per halaman dan metrik di "Definisi sukses".
+- [~] Kumpulkan ≥ 50 halaman scam (URL + HTML/teks + label) dan ≥ 50 halaman resmi yang mirip (halaman login bank, checkout e-commerce, dll). (50 scam + 51 legit ada; scam nyata hanya 1, sisanya sintetis: lihat plan/imelda/log/fase-04.md)
+- [x] Buat skrip eval yang menjalankan detector + `/analyze`, lalu mencetak skor per halaman dan metrik di "Definisi sukses".
 - [x] Data pribadi apa pun di sampel harus disamarkan dulu.
 - **Selesai kalau:** skrip bisa dijalankan dengan satu perintah dan hasilnya ditempel di PR.
 - Branch: `feat/AI-M2-eval-set`
 
 ### M3 · Layer 3: isi halaman & form (server) — `ai/`
-- [x] Buat service `POST /analyze` persis seperti di `contracts/api.md`. Stateless, tanpa log isi halaman.
-- [x] Buat sinyal form sensitif: `asks_pin`, `asks_otp`, `asks_password`, `asks_card`, `asks_cvv`, `asks_ktp`, `asks_selfie_ktp`. Bahan: `snapshot.forms[].fields` (label, name, placeholder, autocomplete). Harus mengenali kata dalam Bahasa Indonesia dan English.
-- [x] Buat sinyal `urgent_language` ("diblokir dalam 24 jam", "klaim sekarang") dan `brand_logo_offsite` (nama brand muncul di `imageAlts`/title, tapi domainnya bukan domain resmi). `evidence` = potongan teks **persis** dari `snapshot.text`/title, supaya bisa di-stabilo.
-- [x] Buat sinyal `new_domain` lewat lookup RDAP/WHOIS **di server**, bukan di HP, supaya riwayat browsing tidak bocor ke pihak ketiga dari perangkat user. Simpan hasil lookup di cache.
+- [ ] Buat service `POST /analyze` persis seperti di `contracts/api.md`. Stateless, tanpa log isi halaman.
+- [ ] Buat sinyal form sensitif: `asks_pin`, `asks_otp`, `asks_password`, `asks_card`, `asks_cvv`, `asks_ktp`, `asks_selfie_ktp`. Bahan: `snapshot.forms[].fields` (label, name, placeholder, autocomplete). Harus mengenali kata dalam Bahasa Indonesia dan English.
+- [ ] Buat sinyal `urgent_language` ("diblokir dalam 24 jam", "klaim sekarang") dan `brand_logo_offsite` (nama brand muncul di `imageAlts`/title, tapi domainnya bukan domain resmi). `evidence` = potongan teks **persis** dari `snapshot.text`/title, supaya bisa di-stabilo.
+- [ ] Buat sinyal `new_domain` lewat lookup RDAP/WHOIS **di server**, bukan di HP, supaya riwayat browsing tidak bocor ke pihak ketiga dari perangkat user. Simpan hasil lookup di cache.
 - **Selesai kalau:** `fixtures/blocked-92.json` dan `warning-63.json` bisa direproduksi kira-kira (sinyal sama, skor ±10).
 - Branch: `feat/AI-M3-content-forms`
 

@@ -245,3 +245,14 @@ export function strictExitCode(summary) {
 export function visibleRows(rows, { showHoldout = false } = {}) {
     return showHoldout ? rows : rows.filter((r) => !(r.tags || []).includes("holdout"));
 }
+
+/** What `--json` prints: the same holdout hiding as the table, for the rows and for the id lists in the summary. */
+export function jsonReport(rows, summary, { showHoldout = false } = {}) {
+    const shown = visibleRows(rows, { showHoldout });
+    const ids = new Set(shown.map((r) => r.id));
+    const keep = (list) => list.filter((id) => ids.has(id));
+    return {
+        summary: { ...summary, falsePositives: keep(summary.falsePositives), misses: keep(summary.misses), holdoutRowsHidden: rows.length - shown.length },
+        rows: shown,
+    };
+}

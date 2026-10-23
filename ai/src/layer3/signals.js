@@ -99,6 +99,6 @@ export function buildNewDomainSignal(days) {
         weight,
         label: { en: `Domain age ${days} ${days === 1 ? "day" : "days"}`, id: `Umur domain ${days} hari` },
         labelSimple: { en: days === 1 ? "This site was made 1 day ago" : `This site was made ${days} days ago`, id: `Situs ini baru dibuat ${days} hari lalu` },
-        evidence: String(days),
+        // no `evidence`: the extension highlights it on the page, and an age is not page text (contracts/fixtures)
     };
 }

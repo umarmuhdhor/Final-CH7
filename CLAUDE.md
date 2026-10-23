@@ -27,8 +27,9 @@ Lead: @umarmuhdhor (Umar) · Team AI: @imeldamayanti (Imelda) · Team App: @alie
 
 ## Hard rules
 1. Only edit files inside your team's folder. If the task needs a change elsewhere, stop and tell the user.
-2. NEVER edit `contracts/`, `ios/project.yml`, or `ios/ShooShared/`. If you need a change, write the proposal in the PR description and ask the lead.
+2. NEVER edit `contracts/`, `ios/project.yml`, or `ios/ShooShared/`. If you need a change, open a GitHub issue (rule 7) and wait for the lead's answer there.
 3. Every JSON you send or receive must match `contracts/`. Use `contracts/fixtures/` as mock data instead of waiting for another team.
 4. One branch = one PRD ID: `feat/EX-04-popup-warning`, `fix/GD-04-code-expiry`. Keep PRs small, merge at least daily.
 5. Never commit secrets (API keys, APNs keys, LLM keys). Use `.env` (gitignored) and `.env.example`.
 6. Read the `CLAUDE.md` inside the folder you work in — it has more rules.
+7. Every question or proposal for another person (lead, other team, PM) goes into a GitHub issue, not chat, a PR description, or a plan file only. Use the **Question / proposal** template (`.github/ISSUE_TEMPLATE/question.yml`): label `question`, assign the person who must answer, title `<PRD ID or area>: <short question>`, numbered questions, and what you do until answered. One issue = one topic. Link the issue number wherever the question is tracked (plan TODO, PR). The answer and decision stay in the issue; close it once decided.

@@ -179,6 +179,19 @@ test("bootstrap: a thrown/aborted download is remembered, and concurrent request
     assert.equal(g.calls.filter((x) => x.url === BOOTSTRAP_URL).length, 1, "one shared download");
 });
 
+test("bootstrap: one request's deadline does not kill the shared download, and the miss is not cached per domain", async () => {
+    let release;
+    const gate = new Promise((resolve) => (release = resolve));
+    const f = mockFetch({ bootstrap: async () => { await gate; return json(BOOTSTRAP); } });
+    const cache = createMemoryCache({ now: () => NOW });
+    const c = client({ fetch: f, cache, timeoutMs: 20 });
+    assert.equal(await c.lookupAgeDays("a.example.com"), null, "request hit its own deadline while the bootstrap was slow");
+    assert.equal(await cache.get("example.com"), null, "a missing bootstrap must not be cached as a domain failure");
+    release();
+    assert.equal(await c.lookupAgeDays("a.example.com"), 3, "same domain works as soon as the bootstrap is back");
+    assert.equal(f.calls.filter((x) => x.url === BOOTSTRAP_URL).length, 1, "the download was not aborted and restarted");
+});
+
 test("KV adapter ignores a poisoned entry (future or ancient date)", async () => {
     const store = new Map([["rdap:a.com", JSON.stringify({ registeredAt: Date.now() + 10 * DAY })], ["rdap:b.com", JSON.stringify({ registeredAt: 5 })]]);
     const cache = createKvCache({ get: async (k) => store.get(k) ?? null, put: async () => {} });
@@ -201,7 +214,7 @@ test("KV adapter (not enabled in phase 03) works against a fake binding and sets
 const SCAM = "https://bca-verifikasi.example.com/login";
 const body = (url = SCAM, over = {}) => ({ snapshot: page(url, [field({ name: "pin" })], over), localSignals: [] });
 
-test("analyze: 3-day-old domain -> new_domain 30, layer 3, bilingual label, evidence = age as string", async () => {
+test("analyze: 3-day-old domain -> new_domain 30, layer 3, bilingual label, no evidence", async () => {
     const app = createApp({ fetch: mockFetch(), now: () => NOW });
     const res = await post(app, body());
     assert.equal(res.status, 200);
@@ -209,7 +222,7 @@ test("analyze: 3-day-old domain -> new_domain 30, layer 3, bilingual label, evid
     assert.ok(s);
     assert.equal(s.layer, 3);
     assert.equal(s.weight, 30);
-    assert.equal(s.evidence, "3");
+    assert.equal("evidence" in s, false);
     assert.equal(s.label.en, "Domain age 3 days");
     assert.equal(s.label.id, "Umur domain 3 hari");
     assert.equal(s.labelSimple.en, "This site was made 3 days ago");

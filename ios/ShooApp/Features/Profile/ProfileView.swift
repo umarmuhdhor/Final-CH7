@@ -54,7 +54,10 @@ struct ProfileView: View {
             }
             .task {
                 // Disconnect / delete hand the app back to onboarding: clear navigation first.
-                model.onSessionEnd = { [router = env.router] in router.reset() }
+                model.onSessionEnd = { [router = env.router] in
+                    router.reset()
+                    DeliveredPushes.clear()
+                }
                 await model.load()
             }
             .task(id: scenePhase) {
@@ -63,11 +66,9 @@ struct ProfileView: View {
             .sheet(isPresented: $isTurnOnPresented, onDismiss: { extensionStatus = env.extensionStatus() }) {
                 TurnOnExtensionSheet()
             }
-            .alert(Text("Family code"), isPresented: $isFamilyCodePresented) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                // TODO(sync:alief): open Family code (GD-04) — replace after fase 14
-                Text("Family codes are coming soon.")
+            .sheet(isPresented: $isFamilyCodePresented, onDismiss: { Task { await model.load() } }) {
+                FamilyCodeView(repository: env.repository)
+                    .environment(\.locale, locale)
             }
             .onChange(of: model.nameError) { _, message in
                 guard let message else { return }

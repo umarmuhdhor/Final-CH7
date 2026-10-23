@@ -559,3 +559,129 @@ Format:
 - Keputusan: Cincin skor Detail tidak ikut membesar dengan Dynamic Type (`ScoreRing.maxScale = 1`, angka 42 pt); kartu lain tetap boleh 2×. `EmptyStateView` memakai tata letak sendiri (judul membungkus, deskripsi `.readableSecondary`, satu elemen VoiceOver) menggantikan `ContentUnavailableView`. Slide splash berakhir 52 pt di atas titik halaman. Kartu mode ON-03 menaruh ikon di baris sendiri pada ukuran aksesibilitas.
 - Alasan: QA-A P2-1, P2-2, P2-3, P2-5 (iPhone SE, XL). Audit `performAccessibilityAudit` di simulator banyak positif palsu (efek tepi gulir iOS 26), jadi diputuskan dari screenshot + UI test frame.
 - File: `Components/{ScoreRing,EmptyStateView}.swift`, `Features/Detail/DetailView.swift`, `Features/Onboarding/{SplashView,ModeView}.swift`; test `Tests/ComponentLogicTests.swift`, `UITests/QALayoutUITests.swift`, `UITests/AccessibilityAuditUITests.swift` (atas permintaan).
+
+## D-alief-C01 · 22 Okt 2026 · track c (fase 13) · `ApiRepository` default, `-UITestMock YES` untuk UI test
+
+- Keputusan: `AppEnvironment.live()` selalu memakai `ApiRepository` (Debug → `http://localhost:8787`, Release → `https://shoo-api.afindo-mi01.workers.dev`). `MockRepository` hanya lewat argumen `-UITestMock YES` (hanya Debug) dan untuk preview; semua UI test lama memakai argumen itu. Dengan mock, `session` = `nil` sehingga fixture tidak pernah menulis App Group/Keychain asli.
+- Alasan: fase 13 langkah 2 (mock tetap untuk preview/UI test), R5 §6 (URL di `AppConfig`, bukan Info.plist).
+- Alternatif yang ditolak: memilih mock otomatis kalau ada `-mock.scenario` (diam-diam, mudah lupa); mock di Release (tidak boleh).
+- Dampak ke tim lain / kontrak: tidak ada. Uji manual app di simulator butuh `pnpm -C backend/api dev`.
+- File: `App/{AppEnvironment,AppConfig}.swift`, `UITests/*.swift`.
+
+## D-alief-C02 · 22 Okt 2026 · track c (fase 13) · App Group hanya key kontrak; avatar guardian di memori
+
+- Keputusan: `SessionStore` menulis key kontrak saja (`device.id`, `device.token`, `device.mode`, `device.name`, `guardian.name`, `api.baseURL`, `ai.baseURL`). Guardian lengkap (nama + `avatarId`) disimpan di memori, diisi dari `POST /family/join` dan setiap `GET /devices/me`; layar membaca `me()` seperti sebelumnya. `guardian.name` dihapus saat `leaveGuardian()` (ok atau 404) dan saat `GET /devices/me` → `guardian: null`; `device.name` ditulis ulang setelah `updateMe(name:)` berhasil dan dari `me()`. `extension.lastSeenAt` milik extension tidak pernah dihapus app.
+- Alasan: SECURITY §3 P4 (tidak ada data pengguna lain di `UserDefaults`), kontrak app-group-keys, D-alief-21.
+- Alternatif yang ditolak: avatar guardian di `UserDefaults` standar (data tambahan tanpa kebutuhan; `me()` selalu membawanya).
+- File: `Data/{SessionStore,ApiRepository}.swift`.
+
+## D-alief-C03 · 22 Okt 2026 · track c (fase 13) · Sesi rusak = layar "Session expired" + onboarding ulang
+
+- Keputusan: 401 dari endpoint ber-token, atau device terdaftar tanpa token di Keychain (backup dipulihkan ke iPhone lain: item `ThisDeviceOnly` tidak ikut, salinan App Group tidak dipercaya), → `SessionStore.clear()` (Keychain + key App Group, extension langsung kehilangan sesi) → layar "Session expired" (EN/ID) dengan tombol "Start again" → `AppSettings.reset()` + `Router.reset()` → onboarding dari awal (device baru). `DELETE /devices/me` yang menjawab 401/404 = sudah terhapus: sesi dibersihkan, Profile lanjut ke onboarding tanpa layar ini. 401 dengan `Retry-After` (batas token tak dikenal) tetap 401 = token mati.
+- Alasan: fase 13 langkah 4, SECURITY T3 (rotasi = onboarding ulang), P4, P13.
+- Alternatif yang ditolak: coba lagi otomatis (token mati tidak hidup lagi); memakai token dari App Group setelah restore (melemahkan P4).
+- File: `App/{AppEnvironment,RootView}.swift`, `Data/APIClient.swift`, `Features/Main/SessionExpiredView.swift`.
+
+## D-alief-C04 · 22 Okt 2026 · track c (fase 13) · Link screenshot kedaluwarsa: minta scan sekali lagi
+
+- Keputusan: kalau screenshot gagal dimuat (404 juga berarti link 1 jam sudah lewat), Detail memanggil `GET /scans/{id}` sekali per load. Link baru → dimuat ulang; link sama / tanpa link → "Screenshot isn't available anymore"; 404 → layar "tidak ada lagi". Tetap tanpa cache disk (P9), tanpa `Authorization`.
+- Alasan: instruksi koordinator + `contracts/api.md` (`screenshotUrl` 1 jam, dicek ulang tiap request). Deviasi kecil dari DoD "diff `Features/` hanya injeksi": `DetailModel.refreshScreenshotLink()` + parameter `refreshLink` di `ScreenshotView`.
+- File: `Features/Detail/{DetailModel,DetailView,ScreenshotView}.swift`, `Tests/DetailScreenshotLinkTests.swift`.
+
+## D-alief-C05 · 22 Okt 2026 · track c (fase 13) · `ai.baseURL` tidak ditulis sampai URL Imelda ada
+
+- Keputusan: `AppConfig.aiBaseURL = nil` (`TODO(sync:imelda)`); selama `nil`, key `ai.baseURL` dihapus dari App Group, sehingga extension melewati layer 3–4 (`background.js`: `skipped: "no_ai_url"`) dan tidak mengirim halaman ke host placeholder.
+- Alasan: privasi (tidak ada data ke host yang bukan milik tim), kontrak app-group-keys.
+- Dampak: Imelda/Umar memberi URL layanan AI → satu baris di `AppConfig`.
+- File: `App/AppConfig.swift`, `Data/SessionStore.swift`.
+
+## D-alief-C06 · 22 Okt 2026 · track c (fase 13) · Sinkron saat foreground dan bahasa setelah registrasi
+
+- Keputusan: setiap `scenePhase == .active` (device terdaftar, sesi sehat): `PATCH /devices/me { extensionLastSeenAt }` dengan heartbeat App Group (dipotong ke "sekarang" kalau jam extension di masa depan; dilewati kalau belum ada heartbeat), lalu `GET /devices/me` mengisi ulang `SessionStore`. Gagal = dicatat di log saja. Setelah `POST /devices`: Keychain + App Group dulu, baru `chooseMode`; kalau bahasa app ID → `PATCH /devices/me { language: "id" }` (gagal tidak membatalkan registrasi; Profile mengirim ulang, D-alief-A19).
+- Alasan: fase 13 langkah 3 + 7, kontrak `extensionLastSeenAt`.
+- Alternatif yang ditolak: throttle per jam di app (MVP: dua request kecil per foreground cukup; backend punya batas umum).
+- File: `App/{AppEnvironment,RootView}.swift`.
+
+## D-alief-C07 · 22 Okt 2026 · track c (fase 14) · Link/QR hanya mengisi kode; join selalu lewat tap "Connect" (T11)
+
+- Keputusan: `shoo://join?code=`, `https://<host API>/join?code=` dan hasil scan QR hanya mengisi 4 digit di ConnectView (`ConnectModel.prefill` / `scanned` tidak pernah memanggil `joinFamily`). Pengguna melihat kodenya lalu menekan "Connect". Setelah onboarding, link membuka sheet Connect di tab Shield; sebelum registrasi, kode disimpan di `Router.pendingJoinCode` (memori saja, tidak ke disk) sampai langkah Connect onboarding. Mode Guardian, link rusak, host lain, `http` di luar localhost Debug, kode ganda (`code=1&code=2`), atau digit non-ASCII → Shield (kontrak "Deep links"). `scan`/`activity` diterima parser tapi dirutekan di fase 15.
+- Alasan: SECURITY T11 (link tidak boleh menghubungkan tanpa konfirmasi). Kontrak tidak punya endpoint "preview" (nama guardian sebelum join), jadi konfirmasinya adalah tap eksplisit pada kode yang terlihat; nama guardian muncul di PR-02 setelah join, dan Profile → Disconnect membatalkannya.
+- Alternatif yang ditolak: join otomatis dari link (melanggar T11); dialog "Join Adhella's family?" (butuh endpoint preview baru di `contracts/`, bukan wewenang Team App); menyimpan kode tertunda di UserDefaults (data undangan tidak perlu hidup setelah app ditutup, P1).
+- File: `App/{DeepLink,AppEnvironment,Router}.swift`, `Features/Pairing/{ConnectModel,ConnectView}.swift`, `Features/Onboarding/OnboardingFlow.swift`, `Features/Main/MainTabView.swift`.
+
+## D-alief-C08 · 22 Okt 2026 · track c (fase 14) · Tab default "Enter code"; kamera diminta saat tab Scan QR dibuka
+
+- Keputusan: ConnectView membuka tab "Enter code". Tab "Scan QR" memakai `DataScannerViewController` (VisionKit) khusus QR; izin kamera diminta (`AVCaptureDevice.requestAccess`) baru saat tab itu dibuka. Tidak ada foto/frame yang disimpan; hanya string QR yang dibaca, dan hanya link undangan dari host yang diizinkan yang diterima (lainnya: "That QR code isn't a Shoo family code."). Simulator / iPhone tanpa dukungan / izin ditolak → catatan + "Open Settings" (saat ditolak), tab Enter code tetap ada. `AppConfig.cameraEnabled = true` karena C3 (`NSCameraUsageDescription`) sudah masuk lewat #27.
+- Alasan: SECURITY P7 (izin tepat waktu, minimal), PRD PR-01; kode 4 digit bisa dibaca lewat telepon, jadi tidak memaksa kamera.
+- Alternatif yang ditolak: `AVCaptureSession` + `AVCaptureMetadataOutput` manual (lebih banyak kode, sama hasilnya); minta izin kamera saat ConnectView muncul.
+- File: `Features/Pairing/{QRScannerView,ConnectView}.swift`, `App/AppConfig.swift`.
+
+## D-alief-C09 · 22 Okt 2026 · track c (fase 14) · Kode keluarga: refresh di 0 s, jam miring = 60 s, keluarga penuh = tanpa kode
+
+- Keputusan: FamilyCodeView meminta `POST /family/code` saat muncul dan setiap hitung mundur mencapai 0. `secondsLeft` dihitung dari `expiresAt` server; kalau hasilnya di luar 1…60 s (jam iPhone miring dari server) dipakai 60 s, supaya tidak macet di 0 atau meminta kode terus-menerus. Kalau anggota sudah 3 (`FamilyShieldModel.maxMembers`), tidak ada kode yang diminta: tampil "Your family is full (3 people)…" dan daftar anggota dengan Remove; setelah ada yang dihapus kode langsung diminta. Gagal → "Couldn't get a code" + Try again. Sheet memakai `.privacyCover()` (kode tidak terlihat di app switcher).
+- Alasan: PRD GD-04 + §10 risiko kode 4 digit (umur pendek, refresh otomatis), kontrak `family_full`.
+- Alternatif yang ditolak: memakai jam iPhone apa adanya (kode bisa terlihat "0 s" terus); tetap meminta kode saat penuh (server menolak join, pengguna bingung).
+- File: `Features/Pairing/{FamilyCodeModel,FamilyCodeView}.swift`.
+
+## D-alief-C10 · 22 Okt 2026 · track c (fase 14) · Anggota dibaca ulang tiap 5 s selama kode tampil
+
+- Keputusan: selama FamilyCodeView terbuka, `GET /family/members` diulang tiap 5 s (bersama loop hitung mundur, berhenti saat sheet ditutup). Saat ditutup, Family Shield / Profile memuat ulang.
+- Alasan: Guardian perlu melihat "Mom connected" segera setelah Mom memasukkan kode; kontrak tidak punya push/event untuk join, dan polling hanya berjalan selama layar ini terbuka (paling lama beberapa menit).
+- Alternatif yang ditolak: push "X joined" (butuh perubahan kontrak + fase 11); tanpa refresh (Guardian harus menutup sheet untuk melihat).
+- File: `Features/Pairing/FamilyCodeModel.swift`.
+
+## D-alief-C11 · 22 Okt 2026 · track c (fase 14) · "Copy invite link": pasteboard lokal, hilang saat kode kedaluwarsa
+
+- Keputusan: teks undangan EN/ID (berisi `inviteUrl` + kode) disalin dengan `UIPasteboard.setItems(_:options:)` memakai `.localOnly: true` (tidak ke Universal Clipboard) dan `.expirationDate` = `expiresAt` kode (dijepit 1…60 s). Tombol berubah jadi "Copied" + pengumuman VoiceOver; kembali saat kode baru muncul.
+- Alasan: SECURITY P8; kode tidak berguna setelah kedaluwarsa, jadi tidak perlu tinggal di clipboard.
+- Alternatif yang ditolak: `UIPasteboard.general.string = …` (sinkron ke Mac/iPad, tidak kedaluwarsa); `ShareLink` (bisa ditambah nanti, tapi PRD meminta "Copy invite link" untuk WhatsApp).
+- File: `Features/Pairing/FamilyCodeModel.swift`, `Tests/PairingTests.swift`.
+
+## D-alief-C12 · 22 Okt 2026 · track c (fase 14) · Link saat sheet lain terbuka: sheet itu ditutup dulu, Connect menyusul dari `onDismiss`
+
+- Keputusan: `Router.showConnect()` kembali ke tab Shield; kalau Profile atau "Turn on" (PR-04) sedang terbuka, keduanya ditutup dan `wantsConnect` dicatat, lalu Connect dibuka dari `onDismiss` sheet itu (`Router.sheetDismissed()`). Status sheet "Turn on" di Shield pindah ke `Router.isTurnOnPresented` supaya link bisa menutupnya. Link kedua saat Connect sudah terbuka hanya mengisi ulang kode. Kode tertunda dibuang saat app ke background dan saat registrasi sebagai Guardian.
+- Alasan: review swift fase 14 (HIGH): SwiftUI hanya menampilkan satu sheet; jeda waktu tetap (700 ms) menebak kapan animasi selesai dan bisa membuat flag Connect macet `true` tanpa sheet. Urutan dari state tidak menebak.
+- Alternatif yang ditolak: satu `enum ActiveSheet` + `.sheet(item:)` untuk semua sheet (lebih rapi, tapi menyentuh banyak layar fase 04–06; dicatat untuk refactor setelah MVP); cek `presentedViewController` UIKit + jeda (ikut menghitung alert/dialog sistem yang tidak bisa ditutup app).
+- File: `App/{Router,AppEnvironment,RootView}.swift`, `Features/Main/MainTabView.swift`, `Features/Shield/ProtectedShieldView.swift`, `Tests/PairingTests.swift` (`DeepLinkRoutingTests`).
+
+## D-alief-C13 · 22 Okt 2026 · track c (fase 15) · Tap push dan `shoo://scan/{id}` membuka Detail di tab Activity
+
+- Keputusan: tap notifikasi (GD-06) dan link `shoo://scan/{id}` dari layar blokir extension menutup semua sheet, pindah ke tab Activity dan membuka Detail di atas daftar (`Router.openDetail`). Tombol Back kembali ke daftar Activity. `shoo://activity` membuka daftar tanpa Detail. Push tanpa `scanId` yang aman, atau link rusak/asing, membuka Shield.
+- Alasan: Detail milik riwayat Activity (Guardian bisa langsung melihat kejadian lain setelah memvalidasi); satu tujuan untuk push dan link sehingga perilakunya sama dari extension maupun notifikasi.
+- Alternatif yang ditolak: Detail sebagai sheet di atas tab mana pun (menumpuk dengan Profile/Connect, sama dengan masalah C12); Detail di tab Shield (Shield tidak menampilkan riwayat).
+- File: `App/{Router,AppEnvironment}.swift`, `Tests/PushTests.swift`, `UITests/DeepLinkUITests.swift`.
+
+## D-alief-C14 · 22 Okt 2026 · track c (fase 15) · Token APNs: Guardian saja, diminta tiap app aktif, dikirim sekali per token
+
+- Keputusan: `registerForRemoteNotifications` dipanggil setiap app aktif hanya kalau mode Guardian, sesi masih berlaku dan izin notifikasi `authorized`. Token (hex) dikirim lewat `PATCH /devices/me {apnsToken}` hanya kalau berbeda dari yang terakhir sukses terkirim di sesi app ini; gagal kirim → dicoba lagi di aktivasi berikutnya. Protected tidak pernah mendaftar maupun mengirim token. Token tidak pernah di-log (hanya event "APNs registration requested" / "APNs token received").
+- Alasan: kontrak hanya mengirim push ke Guardian, jadi token Protected adalah data yang tidak perlu (P2, minimalisasi). Apple menyarankan registrasi di setiap peluncuran karena token bisa berubah (restore, install ulang).
+- Alternatif yang ditolak: kirim token kedua mode (data tak terpakai di server); simpan token terakhir di disk untuk menghindari PATCH per peluncuran (penyimpanan tambahan untuk menghemat satu request kecil).
+- File: `App/{AppDelegate,AppEnvironment}.swift`, `Support/NotificationRouter.swift`.
+
+## D-alief-C15 · 22 Okt 2026 · track c (fase 15) · Push saat app terbuka tetap tampil sebagai banner
+
+- Keputusan: `willPresent` mengembalikan `.banner, .list, .sound`; Guardian membuka Detail dengan tap seperti di background. Layar yang sedang dipakai tidak berpindah sendiri.
+- Alasan: berpindah layar tanpa tap mengganggu Guardian yang sedang mengetik/membaca; banner menjaga satu cara membuka (tap) di tiga kondisi app.
+- Alternatif yang ditolak: langsung membuka Detail saat push datang di foreground; menyembunyikan push di foreground (Guardian bisa melewatkannya).
+- File: `App/AppDelegate.swift`.
+
+## D-alief-C16 · 22 Okt 2026 · track c (fase 15) · Push dan link diabaikan selama onboarding atau "Session expired"
+
+- Keputusan: `openPush` dan `open(url)` untuk `scan`/`activity` hanya bernavigasi kalau tab utama tampil (onboarding selesai, mode ada, sesi berlaku); selain itu tidak melakukan apa-apa. `join` tetap ditangani fase 14 (ditunda sampai langkah Connect).
+- Alasan: Detail butuh sesi yang berlaku; menyimpan navigasi tertunda melewati onboarding menambah state tanpa manfaat nyata (push hanya datang ke Guardian yang sudah selesai onboarding).
+- Alternatif yang ditolak: menyimpan `scanId` tertunda sampai onboarding selesai.
+- File: `App/AppEnvironment.swift`, `Tests/PushTests.swift`.
+
+## D-alief-C17 · 22 Okt 2026 · track c (fase 15) · Delegate notifikasi memakai bentuk completion handler
+
+- Keputusan: `userNotificationCenter(_:willPresent:withCompletionHandler:)` dan `(_:didReceive:withCompletionHandler:)` di `AppDelegate` `@MainActor`, bukan bentuk `async`.
+- Alasan: uji ujung-ke-ujung fase 15 menemukan crash (`NSInternalInconsistencyException` dari `-[UIApplication _performBlockAfterCATransactionCommitSynchronizes:]`) saat tap banner dari background: completion yang dibuat Swift untuk bentuk `async` berjalan di luar main thread. Bentuk completion handler dipanggil di main thread dan selesai di sana.
+- Alternatif yang ditolak: bentuk `async` + `MainActor.run` (tetap crash, completion buatan compiler di luar kendali kita).
+- File: `App/AppDelegate.swift`.
+
+## D-alief-C18 · 22 Okt 2026 · track c (fase 15) · Notifikasi yang sudah tampil dihapus bersama datanya
+
+- Keputusan: `UNUserNotificationCenter.removeAllDeliveredNotifications()` dipanggil setelah Hapus data / putus hubungan (Profile), Remove anggota (Family code), sesi habis, dan "Start again".
+- Alasan: push yang sudah tampil memuat nama anggota + skor (P10); setelah datanya dihapus, lock screen / Notification Center tidak boleh tetap menampilkannya (P13). iOS tidak bisa memilih notifikasi per orang tanpa menyimpan pemetaan id → orang, jadi semuanya dihapus (paling menjaga privasi, kerugian kecil: notifikasi anggota lain ikut hilang, riwayatnya tetap di Activity).
+- Alternatif yang ditolak: menyimpan peta `scanId` → anggota untuk menghapus selektif (penyimpanan tambahan); membiarkan notifikasi lama (melanggar P13).
+- File: `Support/NotificationRouter.swift` (`DeliveredPushes`), `Features/Profile/ProfileView.swift`, `Features/Pairing/FamilyCodeModel.swift`, `App/AppEnvironment.swift`.

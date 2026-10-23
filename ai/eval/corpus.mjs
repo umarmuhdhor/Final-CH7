@@ -57,5 +57,5 @@ export function validateCorpus(samples, { seed, minPerClass = MIN_PER_CLASS, com
 /** Minimum samples per category tag, inside each class (plan/imelda D-imelda-20). A sample carries exactly one category tag. */
 export const COMPOSITION = {
     scam: { bank: 10, "e-wallet": 8, courier: 8, prize: 8, government: 8, apple: 4, other: 4 }, // 50
-    legit: { "bank-login": 8, checkout: 12, "official-gov": 8, popular: 10, "lookalike-trap": 12 }, // 50
+    legit: { "bank-login": 8, checkout: 11, "official-gov": 8, popular: 10, "lookalike-trap": 12 }, // 49; checkout back to 12 once real checkout pages land (README "Known limits")
 };

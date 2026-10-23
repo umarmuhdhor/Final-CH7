@@ -22,9 +22,9 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 10 | Verdicts + blocklist | be | feat/BE-verdicts | [x] | 21 Okt 2026 | 22 Okt 2026 | #15 (merged) | `POST/GET /verdicts`, antrean blocklist dari verdict layak (snapshot, allowlist, sufiks publik, maks 10/24 jam per Guardian), review manual tetap; verdict Guardian lama terhapus saat putus hubungan (P13, D-alief-B10); 3 review + cek P1–P13; pgTAP 77, vitest 242; cloud Worker 781cf277, smoke hijau (verdict di GET pertama, antrean → disetujui → `/blocklist` → dihapus); deviasi p95 (1547 ms dari ID) → fase 12 (D-alief-B10 g); stacked on #13; C8 dikirim Alief | log/fase-10.md |
 | 11 | Push APNs | be | feat/BE-push | [x] | 22 Okt 2026 | 22 Okt 2026 | #17 (merged) | `ApnsSender` langsung dari Worker (D-alief-B01/B11): JWT ES256 di-cache, 410 → token dikosongkan, maks 10 push / 10 menit per Guardian, `push_log` tanpa teks (privasi), route spike dihapus; 3 review + cek P1–P13; pgTAP 92, vitest 274; cloud Worker ac2025ec, `push_log` `logged` lewat waitUntil; stacked on #15; pending B6/B7/C3 (kunci APNs + D7 di fase 15 / G7) | log/fase-11.md |
 | 12 | Retensi + hardening + deploy | be | feat/BE-retention-hardening | [x] | 22 Okt 2026 | 22 Okt 2026 | #20 (merged) | Cron retensi 14 hari (objek dulu, scan tanpa screenshot chunk besar), hardening (timeout role, header, 413 awal, batas 401/IP, HMAC `RATE_KEY_SECRET` wajib, Worker tidak bisa menyetujui blocklist), `service_role` dicabut, tombstone Storage (P13), batas global, `GET /privacy`; 3 review + cek P1–P13; pgTAP 113, vitest 310; cloud Worker `bdc661e8` (cron `0 19 * * *`), smoke hijau, `/verdicts` p95 317 ms (deviasi kecil diterima, D-alief-B12 k); stacked on #17; run cron pertama terbukti 22 Okt 03:00 WITA (ops_heartbeat, tombstone 0); screenshot Triggers + log retensi (`failed: 0`) tercatat; pending toggle Data API (opsional, Alief) | log/fase-12.md |
-| 13 | ApiRepository + sesi App Group | c | feat/APP-api-repository | [ ] | | | | | log/fase-13.md |
-| 14 | Pairing GD-04, PR-01/02/03 | c | feat/GD-04-PR-01-03-pairing | [ ] | | | | | log/fase-14.md |
-| 15 | Push tap + validasi GD-06/07 | c | feat/GD-06-07-push-validation | [ ] | | | | | log/fase-15.md |
+| 13 | ApiRepository + sesi App Group | c | feat/APP-api-repository | [x] | 22 Okt 2026 | 22 Okt 2026 | #42 (merged `b609562`) | `ApiRepository` + `APIClient` (tanpa cache, 401 → Session expired hanya untuk token saat ini), token Keychain `ThisDeviceOnly` + key kontrak App Group, bahasa ID setelah registrasi, heartbeat saat foreground, link screenshot baru sekali; security + swift review diperbaiki; 233 unit + 38 UI (36 lulus, 2 audit dilewati), uji live lokal 3/3 | log/fase-13.md |
+| 14 | Pairing GD-04, PR-01/02/03 | c | feat/GD-04-PR-01-03-pairing | [x] | 22 Okt 2026 | 22 Okt 2026 | #52 (merged `c026120`) | Family code (QR, 60 s, salin lokal, x/3 + Remove), Connect (kode / Scan QR, error EN/ID, "You're protected by"), link undangan hanya mengisi kode (T11); review security + swift diperbaiki; 262 unit + 47 UI (40 lulus, 7 opt-in dilewati), uji live dua simulator 2/2 (kode + link), gerbang UI 24 screenshot | log/fase-14.md |
+| 15 | Push tap + validasi GD-06/07 | c | feat/GD-06-07-push-validation | [x] | 22 Okt 2026 | 22 Okt 2026 | #54 (merged `dd36e3e`) | Tap push / `shoo://scan` → Detail di tab Activity (juga cold start), token APNs Guardian saja via `PATCH /devices/me`, banner foreground Guardian saja, notifikasi tampil dihapus bersama datanya (P13); crash tap dari background ditemukan e2e dan diperbaiki; review security + swift diperbaiki; 281 unit + 51 UI (43 lulus, 8 opt-in dilewati), e2e lokal tiga kondisi lulus (verdict `safe` di Protected ≤ 551 ms); pending B6/B7 + D7 (uji iPhone) | log/fase-15.md |
 | 16 | QA-E2E + fixbug + retest | c | fix/QA-* | [ ] | | | | | qa/QA-E2E-*.md |
 | 17 | Ditahan: Live Activity push | – | – | [!] | | | | Spike S3 Umar (PR #41): extension tidak bisa memakai Dynamic Island, MVP memakai pill in-page. Phase 2 lewat push server (path C) diusulkan di issue #49, menunggu keputusan Umar | – |
 
@@ -47,25 +47,25 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | ID | Fase | Status | Bukti (test / screenshot / log) |
 |---|---|---|---|
 | ON-01 Splash 3 slide + Skip | 02 | [x] | fase 02, PR #16 (merged) |
-| ON-02 Nama 1–20 + avatar acak | 02 (+13 `POST /devices`) | [r] | fase 02 (merged #16) + 13 `POST /devices` di PR #42 |
-| ON-03 Pilih mode permanen | 02 (+13) | [r] | fase 02 (merged #16) + 13 di PR #42 |
+| ON-02 Nama 1–20 + avatar acak | 02 (+13 `POST /devices`) | [x] | fase 02 (merged #16) + 13 `POST /devices` PR #42 (merged) |
+| ON-03 Pilih mode permanen | 02 (+13) | [x] | fase 02 (merged #16) + 13 PR #42 (merged) |
 | ON-04 Turn on extension | 02 (+01S hasil spike) | [ ] | |
 | Spike S1/S2 (mandat) | 01S | [ ] | |
-| ON-05 Izin notifikasi + pengingat | 02 (+15 token APNs) | [r] | fase 02 (merged #16) + 15 token APNs di PR #54 |
-| PR-01 Connect QR / kode | 14 | [r] | fase 14, PR #52 |
-| PR-02 Protected by | 14 | [r] | fase 14, PR #52 |
-| PR-03 Link undangan (P0), deferred (P1) | 14 | [r] | fase 14, PR #52 |
-| PR-04 Shield Protected | 04 (+13 data asli) | [r] | fase 04 (merged #19) + 13 data asli di PR #42 |
-| PR-05 Activity Protected | 04 (+13) | [r] | fase 04 (merged #19) + 13 di PR #42 |
+| ON-05 Izin notifikasi + pengingat | 02 (+15 token APNs) | [x] | fase 02 (merged #16) + 15 token APNs PR #54 (merged) |
+| PR-01 Connect QR / kode | 14 | [x] | fase 14, PR #52 (merged) |
+| PR-02 Protected by | 14 | [x] | fase 14, PR #52 (merged) |
+| PR-03 Link undangan (P0), deferred (P1) | 14 | [x] | fase 14, PR #52 (merged) |
+| PR-04 Shield Protected | 04 (+13 data asli) | [x] | fase 04 (merged #19) + 13 data asli PR #42 (merged) |
+| PR-05 Activity Protected | 04 (+13) | [x] | fase 04 (merged #19) + 13 PR #42 (merged) |
 | GD-01 Shield Guardian | 05 | [x] | fase 05, PR #21 (merged) |
 | GD-02 Toggle Family mode | 05 | [x] | fase 05, PR #21 (merged) |
-| GD-03 Shield Family | 05 (+13) | [r] | fase 05 (merged #21) + 13 di PR #42 |
-| GD-04 Family code | 14 | [r] | fase 14, PR #52 |
-| GD-05 Activity Family | 05 (+13) | [r] | fase 05 (merged #21) + 13 di PR #42 |
-| GD-06 Push ke guardian | 11 + 15 | [r] | fase 11 (merged #17) + 15 di PR #54; push nyata di iPhone menunggu issue #55 |
-| GD-07 Validasi tanpa konfirmasi | 03 (tombol) + 10 + 15 | [r] | fase 03 + 10 (merged #18, #15) + 15 di PR #54 |
-| DT-01..06 Detail | 03 (+13) | [r] | fase 03 (merged #18) + 13 di PR #42 |
-| PF-01 Profile | 06 (+13, +14 menu Family code) | [r] | fase 06 (merged #22) + 13/14 di PR #42, #52 |
+| GD-03 Shield Family | 05 (+13) | [x] | fase 05 (merged #21) + 13 PR #42 (merged) |
+| GD-04 Family code | 14 | [x] | fase 14, PR #52 (merged) |
+| GD-05 Activity Family | 05 (+13) | [x] | fase 05 (merged #21) + 13 PR #42 (merged) |
+| GD-06 Push ke guardian | 11 + 15 | [x] | fase 11 (merged #17) + 15 PR #54 (merged); push nyata di iPhone diuji di fase 16 (issue #55) |
+| GD-07 Validasi tanpa konfirmasi | 03 (tombol) + 10 + 15 | [x] | fase 03 + 10 (merged #18, #15) + 15 PR #54 (merged) |
+| DT-01..06 Detail | 03 (+13) | [x] | fase 03 (merged #18) + 13 PR #42 (merged) |
+| PF-01 Profile | 06 (+13, +14 menu Family code) | [x] | fase 06 (merged #22) + 13/14 PR #42, #52 (merged) |
 | BE Devices | 07 | [x] | `backend/api/test/devices.test.ts`, PR #9 |
 | BE Family | 08 | [x] | `backend/api/test/family.test.ts`, `join-page.test.ts`, `devices-me.test.ts`; PR #11 |
 | BE Scans | 09 | [x] | `backend/api/test/scans.test.ts`, `screenshots.test.ts`, `cache-headers.test.ts`, `images.test.ts`, `push-notify.test.ts`; PR #13 |
@@ -74,7 +74,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | BE Push APNs | 11 | [x] | `backend/api/test/push-apns.test.ts`, `push-deliver.test.ts`, `push-notify.test.ts`; cloud `logged` 22 Okt; PR #17; pending B6/B7 (D7) |
 | BE Retensi 14 hari | 12 | [x] | `backend/api/test/retention.test.ts`, `security-review.test.ts`; cron cloud `bdc661e8`; PR #20 |
 | BE Keamanan (akses Guardian, batas percobaan kode) | 08, 09, 10, 12 (checkbox mandat dicentang di 12) | [x] | `family.test.ts`, `scans.test.ts`, `security-headers.test.ts`, `security-review.test.ts`, pgTAP `grants`/`hardening`/`security_review`; PR #9–#20 |
-| EN + ID semua teks | 01–06, 13–15 | [r] | 01–06 merged; 13–15 di PR #42, #52, #54 |
+| EN + ID semua teks | 01–06, 13–15 | [x] | 01–06 merged; 13–15 PR #42, #52, #54 (merged) |
 
 ## QA
 

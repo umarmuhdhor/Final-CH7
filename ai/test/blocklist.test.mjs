@@ -129,12 +129,12 @@ test("size cap: at most 200,000 domains, newest kept", async () => {
     assert.ok(body.domains.some((d) => d.domain === "shoo-fixture-200004.xyz"));
 });
 
-test("bad since -> 400 invalid_query; other methods -> 405", async () => {
+test("bad since -> 422 invalid_body; other methods -> 405", async () => {
     const app = appWith(SEED);
     for (const q of ["since=yesterday", "since=", "since=2026-13-45T00:00:00Z", `since=${"9".repeat(200)}`]) {
         const res = await get(app, `/public-blocklist?${q}`);
-        assert.equal(res.status, 400, q);
-        assert.equal((await res.json()).error.code, "invalid_query");
+        assert.equal(res.status, 422, q);
+        assert.equal((await res.json()).error.code, "invalid_body");
     }
     const res = await app.request("/public-blocklist", { method: "POST", body: "{}" });
     assert.equal(res.status, 405);
@@ -215,7 +215,7 @@ test("review fixes: dates in the future or before 2000 are skipped (cursor canno
 test("review fixes: since must be strict ISO 8601 UTC", async () => {
     const app = appWith(SEED);
     for (const q of ["2026-10-22 garbage", "2026-10-22", "2026-10-22T08:00:00+08:00", "2026-10-22T08:00:00"]) {
-        assert.equal((await get(app, `/public-blocklist?since=${encodeURIComponent(q)}`)).status, 400, q);
+        assert.equal((await get(app, `/public-blocklist?since=${encodeURIComponent(q)}`)).status, 422, q);
     }
     assert.equal((await get(app, "/public-blocklist?since=2026-10-22T08:00:00Z")).status, 200);
     assert.equal((await get(app, "/public-blocklist?since=2026-10-22T08:00:00.5Z")).status, 200);

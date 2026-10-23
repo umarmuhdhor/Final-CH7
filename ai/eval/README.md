@@ -77,7 +77,7 @@ Run `node ai/eval/tools/check-corpus.mjs` for the current numbers. Each sample c
 | Class | Category tag | Target |
 |---|---|---|
 | scam | `bank` 10, `e-wallet` 8, `courier` 8, `prize` 8, `government` 8, `apple` 4, `other` 4 | 50 |
-| legit | `bank-login` 8, `checkout` 12, `official-gov` 8, `popular` 10, `lookalike-trap` 12 | 50 |
+| legit | `bank-login` 8, `checkout` 11, `official-gov` 8, `popular` 10, `lookalike-trap` 12 | 49 (checkout goes back to 12 later, see "Known limits") |
 
 Extra tags: `clean-domain-scam` (scam on a neutral domain), `lookalike-brand`, `brand-plus-keyword`, `cheap-tld`, `credential-iframe`, `bank-logo-checkout`, `brand-mention-blog`, `shared-host`, `social-login`, `kyc-legit`, `news-about-scam`, `school-login`, `insurance`.
 
@@ -94,6 +94,8 @@ About 30% of the samples carry the tag `holdout`. It is **derived**, never picke
 5. `node ai/eval/tools/check-corpus.mjs` shows whether the set is complete.
 
 ## Known limits
+- "Real legit 0/39 flagged" is weaker than it sounds: the real legit pages are mostly homepages, 6 are JavaScript shells with empty text, and only `bank-login-klikbca` has a password field. `asks_pin` / `asks_otp` / `asks_ktp` are barely exercised against real legit pages. About 8-10 real pages with a login or checkout form still have to be added (a later PR).
+- `checkout-tokopedia-cart` is not a checkout: the capture is a redirect to `/login`, so it is tagged `bank-login` (a login page), not `checkout`. That leaves 11 checkout samples, so the `checkout` target in `corpus.mjs` is 11 for now. It goes back to 12 in the later PR that adds real login/checkout pages.
 - Static HTML only: pages built by JavaScript (several bank and shop shells) come out with little or no text and no forms, so they exercise layers 1-2 only.
 - The redaction checker is pattern based (e-mail incl. spelled-out, mobile and landline numbers, 13-19 digit runs with space/dot/hyphen separators, fullwidth and Arabic digits folded, common token formats, URL query values). It cannot know a person's name; names in page text are the owner's job when reading.
 - `capture.mjs` resolves the host name and then `fetch` resolves it again, so a host that changes its DNS answer in between (rebinding) is not stopped.

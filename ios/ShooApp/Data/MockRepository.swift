@@ -116,7 +116,7 @@ actor MockRepository: ShooRepository {
         return FamilyCode(
             code: code,
             expiresAt: now().addingTimeInterval(60),
-            inviteUrl: URL(string: "https://shoo.example/join?code=\(code)")!
+            inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/join?code=\(code)")!
         )
     }
 

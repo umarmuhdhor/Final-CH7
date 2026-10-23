@@ -16,9 +16,9 @@ const SINCE_FORMAT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 /** `since` must look like 2026-10-22T08:00:00Z (the nextSince we hand out); anything else is a client bug. */
 export function parseSince(raw) {
     if (raw === undefined) return null;
-    if (!SINCE_FORMAT.test(raw)) throw new HttpError(400, "invalid_query", "since must be an ISO 8601 timestamp.");
+    if (!SINCE_FORMAT.test(raw)) throw new HttpError(422, "invalid_body", "since must be an ISO 8601 timestamp.");
     const ms = Date.parse(raw);
-    if (Number.isNaN(ms)) throw new HttpError(400, "invalid_query", "since must be an ISO 8601 timestamp.");
+    if (Number.isNaN(ms)) throw new HttpError(422, "invalid_body", "since must be an ISO 8601 timestamp.");
     return new Date(ms).toISOString();
 }
 

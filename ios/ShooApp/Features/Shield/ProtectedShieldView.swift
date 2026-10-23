@@ -60,6 +60,11 @@ struct ProtectedShieldView: View {
                 L10n.string(perspective.statusTitle(isActive: isActive), language: language)
             ).post()
         }
+        // Back from Connect (PR-01): show the new guardian.
+        .onChange(of: env.router.isConnectPresented) { _, isPresented in
+            guard !isPresented else { return }
+            Task { await model.refresh() }
+        }
         // Status comes from the App Group heartbeat: re-read whenever the app is back in front.
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -82,7 +87,6 @@ struct ProtectedShieldView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
                         .accessibilityHidden(true)
-                    // TODO(sync:alief): link to PR-01 Connect — replace after fase 14
                     Text("Not connected to a guardian yet").font(.headline)
                 }
                 Spacer(minLength: 0)
@@ -91,6 +95,13 @@ struct ProtectedShieldView: View {
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("shield.guardian")
+            if model.guardian == nil {
+                Button { env.router.isConnectPresented = true } label: {
+                    Text("Connect to your guardian").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("shield.connect")
+            }
         }
     }
 
@@ -143,8 +154,8 @@ struct ProtectedShieldView: View {
 private struct ExtensionStatusCard: View {
     let status: ExtensionStatus
     let perspective: ShieldPerspective
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
-    @State private var isTurnOnPresented = false
     @ScaledMetric(relativeTo: .largeTitle) private var circle: CGFloat = 96
 
     /// Capped so "Turn on" stays on screen at accessibility sizes.
@@ -174,7 +185,7 @@ private struct ExtensionStatusCard: View {
             .accessibilityElement(children: .combine)
             if !status.isActive {
                 Button {
-                    isTurnOnPresented = true
+                    env.router.isTurnOnPresented = true
                 } label: {
                     Text("Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
                 }
@@ -188,7 +199,10 @@ private struct ExtensionStatusCard: View {
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(status.isActive ? "shield.status.active" : "shield.status.off")
-        .sheet(isPresented: $isTurnOnPresented) {
+        .sheet(
+            isPresented: Binding(get: { env.router.isTurnOnPresented }, set: { env.router.isTurnOnPresented = $0 }),
+            onDismiss: env.router.sheetDismissed
+        ) {
             TurnOnExtensionSheet()
         }
     }

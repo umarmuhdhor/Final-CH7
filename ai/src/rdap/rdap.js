@@ -13,6 +13,7 @@ export const TIMEOUT_MS = 1500;
 const MAX_BOOTSTRAP_BYTES = 1_500_000;
 const MAX_RDAP_BYTES = 256 * 1024;
 const BOOTSTRAP_FAIL_TTL_MS = 60_000;
+const BOOTSTRAP_TIMEOUT_MS = 5000;
 const DAY_MS = 86_400_000;
 const EARLIEST = Date.parse("1985-01-01T00:00:00Z"); // first .com registration; older dates are nonsense
 
@@ -81,18 +82,29 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
 
     let inflight = null; // one bootstrap download at a time, shared by concurrent requests
 
-    function getServers(signal) {
+    function getServers() {
         if (bootstrap && bootstrap.expires > now()) return Promise.resolve(bootstrap.map);
-        inflight ??= loadBootstrap(signal).finally(() => (inflight = null));
+        inflight ??= loadBootstrap().finally(() => (inflight = null));
         return inflight;
     }
 
-    async function loadBootstrap(signal) {
+    // The download is shared by every request that arrives meanwhile, so it must not borrow one request's
+    // abort signal or deadline: it gets its own timeout.
+    async function loadBootstrap() {
+        const controller = new AbortController();
+        let timer;
+        const timeout = new Promise((resolve) => {
+            timer = setTimeout(() => {
+                controller.abort();
+                resolve(null);
+            }, BOOTSTRAP_TIMEOUT_MS);
+        });
         let map = null;
         try {
-            map = await downloadBootstrap(signal);
-        } catch {
-            map = null; // network error or abort: remember the failure briefly instead of retrying on every request
+            // network error, abort or timeout: remember the failure briefly instead of retrying on every request
+            map = await Promise.race([downloadBootstrap(controller.signal).catch(() => null), timeout]);
+        } finally {
+            clearTimeout(timer);
         }
         bootstrap = { map, expires: now() + (map ? SUCCESS_TTL_MS : BOOTSTRAP_FAIL_TTL_MS) };
         return map;
@@ -105,9 +117,12 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
         return text ? parseBootstrap(JSON.parse(text)) : null;
     }
 
-    async function fetchRegistration(domain, signal) {
-        const servers = await getServers(signal);
-        const server = servers && servers.get(domain.slice(domain.lastIndexOf(".") + 1));
+    /** `state.serversReady` tells the caller whether a failure is about this domain (cacheable) or about a missing bootstrap. */
+    async function fetchRegistration(domain, signal, state) {
+        const servers = await getServers();
+        if (!servers) return null; // no bootstrap: says nothing about this domain
+        state.serversReady = true;
+        const server = servers.get(domain.slice(domain.lastIndexOf(".") + 1));
         if (!server) return null;
         const res = await doFetch(`${server}domain/${domain}`, { method: "GET", headers: { accept: "application/rdap+json, application/json" }, redirect: "manual", signal });
         if (res.status !== 200) {
@@ -121,6 +136,7 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
     /** One deadline for the whole lookup, even if fetch ignores the abort signal. */
     async function withDeadline(domain) {
         const controller = new AbortController();
+        const state = { serversReady: false };
         let timer;
         const deadline = new Promise((resolve) => {
             timer = setTimeout(() => {
@@ -128,9 +144,10 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
                 resolve(null);
             }, timeoutMs);
         });
-        const work = fetchRegistration(domain, controller.signal).catch(() => null);
+        const work = fetchRegistration(domain, controller.signal, state).catch(() => null);
         try {
-            return await Promise.race([work, deadline]);
+            const registeredAt = await Promise.race([work, deadline]);
+            return { registeredAt, cacheable: state.serversReady };
         } finally {
             clearTimeout(timer);
         }
@@ -152,11 +169,13 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
             } catch {
                 /* a broken cache must not break the answer */
             }
-            const registeredAt = await withDeadline(domain);
-            try {
-                await cache.set(domain, { registeredAt }, registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
-            } catch {
-                /* ignore */
+            const { registeredAt, cacheable } = await withDeadline(domain);
+            if (cacheable) {
+                try {
+                    await cache.set(domain, { registeredAt }, registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
+                } catch {
+                    /* ignore */
+                }
             }
             return ageOf(registeredAt);
         },
