@@ -54,9 +54,10 @@ Target awal ini bisa diubah oleh lead:
 ### M4 · Layer 4: reality check (LLM) — `ai/`
 - [x] Buat prompt di `ai/prompts/`. Input: jenis halaman + data yang diminta. Output: apakah permintaannya wajar (contoh di PRD §5: toko meminta alamat itu wajar, halaman "cek hadiah" meminta PIN itu tidak wajar).
 - [x] Output LLM wajib JSON terstruktur, lalu dipetakan ke sinyal `unreasonable_request`.
-- [~] Model bisa diganti lewat `.env`. Pilih model cepat, karena latensi lebih penting. Batas waktu: kalau LLM belum menjawab saat total waktu mendekati 8 detik, kembalikan sinyal layer 3 saja. (`.env` + batas waktu sudah ada; model belum dipilih, layer 4 masih mati: TODO A2, A6 di `plan/imelda/TODO.md`)
+- [x] Model bisa diganti lewat `.env`. Pilih model cepat, karena latensi lebih penting. Batas waktu: kalau LLM belum menjawab saat total waktu mendekati 8 detik, kembalikan sinyal layer 3 saja. (23 Okt 2026: `deepseek-v4-flash` lewat `https://bandelbanget.xyz/v1`, D-imelda-36; layer 4 live sejak #95, dicek di Worker: halaman scam karangan dapat `unreasonable_request`. Penyedia lambat 3-5 s: 21 dari 45 panggilan eval kena batas 4 s)
 - [x] API key hanya di `.env`. Commit `.env.example`.
 - **Selesai kalau:** eval M2 menunjukkan layer 4 mengurangi salah blokir di halaman resmi tanpa menurunkan deteksi scam.
+  - Hasil L-5 (23 Okt, D-imelda-37): deteksi naik (scam >=50 31 -> 38 dari 50, >=80 13 -> 21), salah blokir tetap 1/53 (dari layer 3), layer 4 tidak menandai halaman sah mana pun (0/53). Layer 4 hanya bisa menambah skor (D-imelda-06), jadi bagian "mengurangi salah blokir" tidak bisa dicapai lewat layer 4; dinilai lulus untuk "tidak menambah salah blokir, tidak menurunkan deteksi".
 - Branch: `feat/AI-M4-reality-check`
 
 ### M5 · Layer 1: database — `ai/` + `detector/`
