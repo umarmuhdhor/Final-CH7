@@ -32,14 +32,14 @@ Pertanyaan Imelda di `plan/imelda/TODO.md` masih terbuka. Jawab di issue, lalu I
 
 | # | Item | Usulan jawaban | Hasil | Branch / issue |
 |---|---|---|---|---|
-| U-1 | **Target eval M6** belum tercapai (scam ≥ 50: 66%, ≥ 80: 32%; scam nyata hanya 1) | Target **tidak diturunkan**. M6 tetap `[~]` sampai ada ≥ 20 scam nyata berlisensi; MVP boleh rilis dengan catatan risiko | Issue `AI-M6: target eval vs data scam nyata`, assign Imelda | issue |
-| U-2 | **A7** sinyal layer 4 tanpa `evidence` | Boleh (kontrak: `evidence` opsional). Extension sudah melewati sinyal tanpa evidence di stabilo; label tetap tampil | Satu issue "aturan evidence" untuk A7 + C7 + C9 + C10 | issue |
-| U-3 | **C7** `asks_*` evidence = nama field | Sudah ditangani: `marks.js` tidak men-stabilo `asks_*`, semua teks lewat `textContent` | sama dengan U-2 | — |
-| U-4 | **C9** `new_domain` evidence = umur (angka) | Perbaiki di extension: stabilo hanya untuk sinyal teks (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`), bukan semua layer ≥ 3. Sekarang `phrasesFrom` di `marks.js` akan men-stabilo angka ≥ 3 digit | PR kecil + test | `fix/EX-05-text-evidence-only` |
-| U-5 | **C10** `brand_logo_offsite` evidence dari `imageAlts`/title | Abaikan: kalau teks tidak ada di body, tidak ada stabilo; alasan tetap tampil di pill/detail | sama dengan U-2 | — |
-| U-6 | **C1** form di dalam iframe tidak tertangkap | MVP: `capture.js` juga membaca form di iframe **same-origin** (`iframe.contentDocument`), tanpa `all_frames` (pipeline/pill tidak boleh jalan per frame). Iframe cross-origin → Fase 2. Test dengan fixture mirip `lphone-login` | Spike dulu, lalu PR | `feat/EX-02-iframe-forms` |
-| U-7 | **C8** tambah `accept` di `PageSnapshot.forms[].fields` | Setuju, aditif. PR `contracts/` + `capture.js` mengisi `accept`. Prioritas rendah | PR kontrak | `feat/EX-02-field-accept` |
-| U-8 | **C3** verifikasi `bankbsi.co.id`, `jet.co.id`, `bpjsketenagakerjaan.go.id` di `brands.json` | Cek manual di situs resmi, jawab di issue | issue | issue |
+| U-1 | **Target eval M6** belum tercapai (scam ≥ 50: 66%, ≥ 80: 32%; scam nyata hanya 1) | Target **tidak diturunkan**. M6 tetap `[~]` sampai eval bisa dinilai: 50 scam nyata berlisensi (`MIN_PER_CLASS` di `ai/eval/lib.mjs`), atau angka lebih kecil kalau disepakati di #73; MVP boleh rilis dengan catatan risiko | Issue dibuka, assign Imelda | #73 |
+| U-2 | **A7** sinyal layer 4 tanpa `evidence` | Boleh (kontrak: `evidence` opsional). Extension sudah melewati sinyal tanpa evidence di stabilo; label tetap tampil | Satu issue "aturan evidence" untuk A7 + C7 + C9 + C10 | #74 |
+| U-3 | **C7** `asks_*` evidence = nama field | Sudah ditangani: `marks.js` tidak men-stabilo `asks_*`, semua teks lewat `textContent` | sama dengan U-2 | #74 |
+| U-4 | **C9** `new_domain` evidence = umur (angka) | Perbaiki di extension: stabilo hanya untuk sinyal teks (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`), bukan semua layer ≥ 3. Sekarang `phrasesFrom` di `marks.js` akan men-stabilo angka ≥ 3 digit | PR kecil + test | `fix/EX-05-text-evidence-only` (#74) |
+| U-5 | **C10** `brand_logo_offsite` evidence dari `imageAlts`/title | Abaikan: kalau teks tidak ada di body, tidak ada stabilo; alasan tetap tampil di pill/detail | sama dengan U-2 | #74 |
+| U-6 | **C1** form di dalam iframe tidak tertangkap | MVP: `takeSnapshot` di `content.js` juga membaca form di iframe **same-origin** (`iframe.contentDocument`), tanpa `all_frames` (pipeline/pill tidak boleh jalan per frame). Iframe cross-origin → Fase 2. Test dengan fixture mirip `lphone-login` | Spike dulu, lalu PR | `feat/EX-02-iframe-forms` (#75) |
+| U-7 | **C8** tambah `accept` di `PageSnapshot.forms[].fields` | Setuju, aditif. PR `contracts/` + `content.js` mengisi `accept`. Prioritas rendah | PR kontrak | `feat/EX-02-field-accept` |
+| U-8 | **C3** verifikasi `bankbsi.co.id`, `jet.co.id`, `bpjsketenagakerjaan.go.id` di `brands.json` | Cek manual di situs resmi, jawab di issue | issue | #76 |
 | U-9 | **C6** bobot awal layer 3–4 | Sudah lewat (M6 merged, ambang 30/50/80 tidak berubah) → tutup | Imelda mencentang | — |
 
 **Selesai kalau:** semua TODO C1, C3, C6–C10, A7 di `plan/imelda/TODO.md` punya jawaban di issue; PR U-4 merged.
@@ -84,7 +84,7 @@ Syarat: U-2 (A7) dijawab, D-4 selesai.
 
 | # | Langkah | Selesai kalau |
 |---|---|---|
-| E-1 | **A4/D1** kumpulkan scam nyata berlisensi (laporan publik yang boleh dipakai, atau izin tertulis). Hanya lewat `capture.mjs`, data pribadi disamarkan | ≥ 20 scam nyata di eval set (angka dari U-1) |
+| E-1 | **A4/D1** kumpulkan scam nyata berlisensi (laporan publik yang boleh dipakai, atau izin tertulis). Hanya lewat `capture.mjs`, data pribadi disamarkan | ≥ 50 scam nyata di eval set (`MIN_PER_CLASS`), atau angka yang disepakati di #73 |
 | E-2 | Kalibrasi ulang bobot (M6) dengan data baru | Target scam ≥ 50 ≥ 90%, ≥ 80 ≥ 70%, situs resmi < 30, atau laporan angka ke Umar |
 | E-3 | **A3** pilih sumber daftar phishing publik yang lisensinya boleh dipakai di app, catat di `ai/README.md`, ganti `emptySource` | `/public-blocklist` mengembalikan daftar nyata; centang M5-A |
 | E-4 | Daftar pra-bangun (membangun 200.000 entri ±1 s CPU, tidak muat di Free) | Build daftar di luar request |
@@ -123,7 +123,7 @@ Syarat: U-2 (A7) dijawab, D-4 selesai.
 
 ## 8. Urutan kerja yang disarankan untuk Umar
 
-1. G0 sekarang: buka 4 issue (U-1, U-2/3/5, U-6, U-8), kerjakan PR U-4.
+1. G0 sekarang: 4 issue sudah dibuka (#73 U-1, #74 U-2/3/5, #75 U-6, #76 U-8). Tunggu jawaban Imelda, kerjakan PR U-4.
 2. G1 D-1 … D-8 (butuh kamu login Cloudflare).
 3. P-1, P-2 sambil menunggu Alief/Imelda.
 4. U-6 spike iframe, lalu U-7 kalau sempat.
