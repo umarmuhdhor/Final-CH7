@@ -25,6 +25,8 @@
                 label: labelFor(el),
                 placeholder: el.getAttribute("placeholder"),
                 autocomplete: el.getAttribute("autocomplete"),
+                accept: el.getAttribute("accept"),
+                capture: el.getAttribute("capture"), // "user" = front camera (selfie hint, C8)
             })),
         }));
     }
