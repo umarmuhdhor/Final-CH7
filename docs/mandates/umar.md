@@ -8,7 +8,7 @@ Kamu memegang **semua yang terjadi di Safari**: mengambil isi halaman, memanggil
 
 | Boleh diedit | Jangan disentuh (milik tim lain) |
 |---|---|
-| `contracts/`, `ios/project.yml`, `ios/ShooShared/`, `ios/ShooExtension/` (kecuali `Resources/detector.js`), `ios/ShooLiveActivity/`, `docs/` | `ios/ShooApp/`, `backend/` (Alief) · `detector/`, `ai/`, `Resources/detector.js` (Imelda) |
+| `contracts/`, `ios/project.yml`, `ios/ShooShared/`, `ios/ShooExtension/` (kecuali `Resources/detector.js`), `ios/ShooLiveActivity/`, `docs/` · sejak 23 Okt 2026 (diambil alih dari Imelda): `detector/`, `ai/`, `plan/imelda/`, `Resources/detector.js` (hanya lewat `detector/scripts/sync-to-extension.sh`) | `ios/ShooApp/`, `backend/` (Alief) |
 
 Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CLAUDE.md` · `ios/ShooLiveActivity/CLAUDE.md` · `docs/spikes/`.
 
