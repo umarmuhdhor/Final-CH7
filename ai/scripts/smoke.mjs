@@ -36,15 +36,24 @@ const res = await post();
 const body = await res.json().catch(() => null);
 check(res.status === 200, `POST /analyze -> ${res.status}`);
 check(Array.isArray(body?.signals) && body.signals.some((s) => s.id === "asks_pin" && s.layer === 3), "/analyze returns the asks_pin signal (layer 3)");
-for (const [h, want] of [["x-content-type-options", "nosniff"], ["referrer-policy", "no-referrer"], ["cache-control", "no-store"]]) check(res.headers.get(h) === want, `header ${h}`);
+for (const [h, want] of [["x-content-type-options", "nosniff"], ["referrer-policy", "no-referrer"], ["cache-control", "no-store"], ["cross-origin-resource-policy", "cross-origin"]]) check(res.headers.get(h) === want, `header ${h}`);
 check(/max-age=/.test(res.headers.get("strict-transport-security") ?? ""), "header strict-transport-security");
+check(/default-src 'none'/.test(res.headers.get("content-security-policy") ?? ""), "header content-security-policy");
+
+// CORS: only an extension origin is ever allowed; a web page gets nothing, and text/plain (no preflight) is refused.
+const pre = await fetch(url("/analyze"), { method: "OPTIONS", headers: { origin: "safari-web-extension://smoke", "access-control-request-method": "POST", "access-control-request-headers": "content-type" } });
+check(pre.status === 204 && pre.headers.get("access-control-allow-origin") === "safari-web-extension://smoke", `OPTIONS /analyze from the extension -> ${pre.status}, allow-origin echoed`);
+const web = await fetch(url("/analyze"), { method: "OPTIONS", headers: { origin: "https://evil.invalid", "access-control-request-method": "POST" } });
+check(web.headers.get("access-control-allow-origin") === null, "OPTIONS /analyze from a web page -> no allow-origin");
+const plain = await fetch(url("/analyze"), { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ snapshot, localSignals: [] }) });
+check(plain.status === 422, `text/plain POST /analyze -> ${plain.status} (want 422)`);
 
 const bl = await fetch(url("/public-blocklist"), { headers: { authorization: "Bearer smoke" } });
 const list = await bl.json().catch(() => null);
 check(bl.status === 200, `GET /public-blocklist -> ${bl.status}`);
 check(Array.isArray(list?.domains) && "nextSince" in (list ?? {}), `/public-blocklist shape (${list?.domains?.length ?? "?"} domains)`);
 const bad = await fetch(url("/public-blocklist?since=bad"));
-check(bad.status === 400, "bad since -> 400");
+check(bad.status === 422, `bad since -> ${bad.status} (want 422 invalid_body)`);
 
 const times = [];
 for (let i = 0; i < runs; i++) {

@@ -85,7 +85,7 @@ test("CORS: preflight answered without touching limits or handlers; actual answe
     for (let i = 0; i < 3; i++) {
         const pre = await app.request("/analyze", { method: "OPTIONS", headers: { origin: "safari-web-extension://abc", "access-control-request-method": "POST", "access-control-request-headers": "authorization, content-type", ...ip("203.0.113.50") } });
         assert.equal(pre.status, 204);
-        assert.equal(pre.headers.get("access-control-allow-origin"), "*");
+        assert.equal(pre.headers.get("access-control-allow-origin"), "safari-web-extension://abc", "only the extension origin is echoed");
         assert.equal(pre.headers.get("access-control-expose-headers"), "retry-after");
         assert.match(pre.headers.get("access-control-allow-methods"), /POST/);
         assert.match(pre.headers.get("access-control-allow-headers").toLowerCase(), /authorization/);
@@ -94,8 +94,52 @@ test("CORS: preflight answered without touching limits or handlers; actual answe
     }
     const real = await app.request("/public-blocklist", { headers: { origin: "safari-web-extension://abc", ...ip("203.0.113.50") } });
     assert.equal(real.status, 200, "preflights did not use up the limit");
-    assert.equal(real.headers.get("access-control-allow-origin"), "*");
+    assert.equal(real.headers.get("access-control-allow-origin"), "safari-web-extension://abc");
     assert.equal(real.headers.get("access-control-allow-credentials"), null);
+});
+
+test("review #61: a web page origin gets no CORS allow headers, on preflights or answers", async () => {
+    const app = createApp({ blocklistSource: SOURCE });
+    for (const origin of ["https://evil.example", "null", "http://localhost:3000"]) {
+        const pre = await app.request("/analyze", { method: "OPTIONS", headers: { origin, "access-control-request-method": "POST" } });
+        assert.equal(pre.status, 204);
+        assert.equal(pre.headers.get("access-control-allow-origin"), null, origin);
+        const res = await postAnalyze(app, { origin });
+        assert.equal(res.status, 200, "the request itself works (non-browser clients); a browser just cannot read it");
+        assert.equal(res.headers.get("access-control-allow-origin"), null, origin);
+    }
+});
+
+test("review #61: /analyze refuses anything but application/json (text/plain is a no-preflight CORS request)", async () => {
+    const app = createApp({ blocklistSource: SOURCE });
+    for (const type of ["text/plain", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x", ""]) {
+        const headers = type ? { "content-type": type } : {};
+        const res = await app.request("/analyze", { method: "POST", headers, body: analyzeBody() });
+        assert.equal(res.status, 422, type || "(none)");
+        assert.equal((await res.json()).error.code, "invalid_body");
+    }
+    assert.equal((await postAnalyze(app, { "content-type": "application/json; charset=utf-8" })).status, 200);
+});
+
+test("review #61: OPTIONS on an unknown path is a 404, not a 204", async () => {
+    const res = await createApp().request("/nowhere", { method: "OPTIONS", headers: { origin: "safari-web-extension://abc" } });
+    assert.equal(res.status, 404);
+});
+
+test("review #61: the Workers Rate Limiting binding is used when present (per client key), and its errors never block", async () => {
+    const keys = [];
+    const deny = { limit: async ({ key }) => (keys.push(key), { success: false }) };
+    const app = createApp({ blocklistSource: SOURCE });
+    const env = { ANALYZE_LIMITER: deny, BLOCKLIST_LIMITER: deny };
+    const a = await app.request("/analyze", { method: "POST", headers: { "content-type": "application/json", ...ip("203.0.113.60") }, body: analyzeBody() }, env);
+    assert.equal(a.status, 429);
+    assert.equal(a.headers.get("retry-after"), "60");
+    const b = await app.request("/public-blocklist", { headers: ip("203.0.113.60") }, env);
+    assert.equal(b.status, 429);
+    assert.deepEqual(keys, ["203.0.113.60", "203.0.113.60"]);
+    const broken = { limit: async () => { throw new Error("binding down"); } };
+    const ok = await app.request("/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: analyzeBody() }, { ANALYZE_LIMITER: broken });
+    assert.equal(ok.status, 200);
 });
 
 test("no logging of the request on any path (IP, token, body, URL)", async () => {

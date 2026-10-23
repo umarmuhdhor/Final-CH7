@@ -14,3 +14,16 @@ invocation_logs = false
 # workers.dev stays on (the default) so the first deploy has a URL. With a custom domain, set workers_dev = false and preview_urls = false.
 # Zone-level HTTP logs / Logpush on a custom domain are NOT covered by the setting above; check them in the dashboard (A4).
 # Cost bound (A3/A9): the Free plan already caps CPU at 10 ms; on Paid add  [limits] cpu_ms = 50  once real timings are known.
+
+# Per-IP rate limit shared by all isolates (Workers Rate Limiting binding; works on workers.dev, unlike WAF zone rules).
+# The in-memory limiter in src/app.js stays as a second layer and is the only one in tests and the dev server.
+# period may only be 10 or 60 s. namespace_id: any number unique within the Cloudflare account.
+[[ratelimits]]
+name = "ANALYZE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
+[[ratelimits]]
+name = "BLOCKLIST_LIMITER"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }
