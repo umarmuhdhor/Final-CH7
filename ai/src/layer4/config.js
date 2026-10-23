@@ -1,7 +1,7 @@
 import { isPublicHostname } from "../rdap/domain.js";
 
 // Layer 4 settings come from environment variables only (Worker secrets / ai/.env). Missing or unsafe -> layer 4 is off.
-// D-imelda-38: 6 s (was 4 s). The provider answers in 3-5 s, so 4 s cut almost half the calls. The real limit is the
+// D-imelda-39: 6 s (was 4 s). The provider answers in 3-5 s, so 4 s cut almost half the calls. The real limit is the
 // server deadline in analyze.js (6.5 s after the request arrived); this cap only keeps one call from using all of it.
 export const MAX_TIMEOUT_MS = 6000;
 const DEFAULT_DAILY_CAP = 5000;

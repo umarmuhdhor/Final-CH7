@@ -107,7 +107,7 @@ test("timeout also holds when the provider ignores the abort signal", async () =
     assert.ok(Date.now() - started < 1000);
 });
 
-test("budget: server deadline 6.5 s leaves 1.5 s of the client's 8 s for the network; the LLM cap fits inside (D-imelda-38)", () => {
+test("budget: server deadline 6.5 s leaves 1.5 s of the client's 8 s for the network; the LLM cap fits inside (D-imelda-39)", () => {
     assert.equal(SERVER_DEADLINE_MS, 6500);
     assert.ok(SERVER_DEADLINE_MS + 1500 <= 8000, "extension gives up after 8 s (background.js ANALYZE_TIMEOUT_MS)");
     assert.equal(MAX_TIMEOUT_MS, 6000);
@@ -357,7 +357,7 @@ test("config from env: all of key, model, base URL needed; otherwise layer 4 is 
     for (const bad of ["https://169.254.169.254/v1", "https://localhost/v1", "https://10.0.0.5/v1", "https://svc.internal/v1"]) assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: bad }), null, bad);
     const c = readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com/v1/", LLM_TIMEOUT_MS: "9000", LLM_DAILY_CAP: "10" });
     assert.equal(c.baseUrl, "https://llm.example.com/v1");
-    assert.equal(c.timeoutMs, 6000, "timeout is capped at the 6 s budget (D-imelda-38)");
+    assert.equal(c.timeoutMs, 6000, "timeout is capped at the 6 s budget (D-imelda-39)");
     assert.equal(c.dailyCap, 10);
     assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com", LLM_TIMEOUT_MS: "abc" }).timeoutMs, 6000);
 });

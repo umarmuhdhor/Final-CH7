@@ -7,7 +7,7 @@ import { buildNewDomainSignal } from "./layer3/signals.js";
 import { hostOf, isOfficialHost } from "./layer3/official.js";
 
 /**
- * D-imelda-38: answer within 6.5 s of the request arriving. The extension gives up after 8 s, so 1.5 s is left for the
+ * D-imelda-39: answer within 6.5 s of the request arriving. The extension gives up after 8 s, so 1.5 s is left for the
  * network (connect, upload, download). Layer 4 gets what is left of this, never more than its own cap (layer4/config.js).
  */
 export const SERVER_DEADLINE_MS = 6500;
