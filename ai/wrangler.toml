@@ -29,8 +29,8 @@ namespace_id = "1002"
 simple = { limit = 10, period = 60 }
 
 # Pre-built /public-blocklist (D-imelda-38): written every 6 h by .github/workflows/public-blocklist.yml, only read here.
-# Without this binding the Worker serves an empty list. Create the namespace once (ai/README.md "Pre-built list"),
-# put its id below and uncomment. The id is not a secret.
-# [[kv_namespaces]]
-# binding = "BLOCKLIST_KV"
-# id = "<namespace id from: npx wrangler kv namespace create shoo-public-blocklist>"
+# Without this binding the Worker serves an empty list. Namespace "shoo-public-blocklist", created once with
+# `npx wrangler kv namespace create shoo-public-blocklist` (ai/README.md "Pre-built list"). The id is not a secret.
+[[kv_namespaces]]
+binding = "BLOCKLIST_KV"
+id = "c0d0b3975fbd4f22a979a8baa8069d1d"
