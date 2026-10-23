@@ -13,7 +13,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | 02 | /analyze + sinyal form | M3 | feat/AI-M3-forms | [~] | 22 Okt 2026 | | | Kode + 62 test selesai (204 total hijau); lphone-login 39 (iframe, C1); menunggu izin push/PR | log/fase-02.md |
 | 03 | Konten + new_domain | M3 | feat/AI-M3-content | [~] | 22 Okt 2026 | | | 3 sinyal + RDAP, 133 test ai/ (hijau); warning-63 +11 dari fixture (bobot R1); menunggu izin push/PR | log/fase-03.md |
 | 04 | Data eval set 50+50 | M2 | feat/AI-M2-eval-data | [r] | 22 Okt 2026 | | #57 | 50 scam + 51 legit, 194 test hijau, 2 review ditutup; scam nyata hanya 1 (target tak bisa dinilai); menunggu review Umar | log/fase-04.md |
-| 05 | /public-blocklist | M5-A | feat/AI-M5-server | [ ] | | | | | log/fase-05.md |
+| 05 | /public-blocklist | M5-A | feat/AI-M5-server | [m] | 22 Okt 2026 | | #58 (base wip/AI-overnight-base) | Endpoint + 19 test (346 total hijau), daftar kosong di produksi; sumber + lisensi (A3) menunggu Imelda | log/fase-05.md |
 | 06 | Reality check LLM | M4 | feat/AI-M4-reality-check | [ ] | | | | | log/fase-06.md |
 | 07 | Kalibrasi bobot | M6 | feat/AI-M6-calibration | [ ] | | | | | log/fase-07.md |
 | 08 | Deploy | M7 | feat/AI-M7-deploy | [ ] | | | | | log/fase-08.md |

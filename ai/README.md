@@ -2,7 +2,7 @@
 
 Stateless service behind the Safari extension. Stack: Cloudflare Worker + [Hono](https://hono.dev), plain JavaScript (ESM + JSDoc), no build step (decision D-imelda-01).
 
-Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). The public blocklist (M5 server) and the LLM reality check (M4) are not here yet.
+Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) works but has **no real feed yet** (source not approved, see below). The LLM reality check (M4) is not here yet.
 
 ## Run it locally
 
@@ -109,3 +109,35 @@ eval/                 labelled pages + scorer (M2)
 ```
 
 `.env.example` lists variable names only. Real values go in `.env` / `.dev.vars`, both gitignored.
+
+## Public blocklist: `GET /public-blocklist?since=` (layer 1, server side)
+
+Serves the list the extension downloads every 6 h (`docs/design/blocklist.md`). Shape exactly as in `contracts/api.md`: `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }`.
+
+| Case | Answer |
+|---|---|
+| No `since` | Full list (newest 200,000 at most), no `removed`, `nextSince` = newest timestamp, or `null` when the list is empty |
+| `since=<ISO 8601>` | Only entries with `addedAt > since`, plus `removed` since then. Caught up: empty `domains`, `nextSince` = `since` |
+| Bad `since` | `422 invalid_body` (same code as `GET /blocklist`, `contracts/api.md`) |
+| Other method | `405 method_not_allowed` with `Allow: GET` |
+| Too many requests | `429 rate_limited` with `Retry-After` (30 per IP per 10 min; IPv6 counted per /64) |
+
+Paging is not used (contract: optional): one response holds everything. `Authorization` is never read, so it cannot be logged. Nothing about a request is logged.
+
+How a feed entry becomes a published domain (`src/blocklist/`):
+1. `source.js`: the only part that knows the feed. Today: `emptySource` in the Worker (honest empty list), `fixtureSource` in `npm run dev` (invented `shoo-fixture-*` domains in `data/public-blocklist.seed.json`).
+2. `domains.js`: hostname or URL -> registrable domain with the **same Public Suffix List copy the extension uses** (`ios/ShooExtension/Resources/psl.js`), so what we publish is what the extension looks up. Public suffixes (`co.id`, `github.io`), IPs and junk are dropped.
+3. `build.js` + `allowlist.js`: drops official domains (`detector/data/brands.json`) and their subdomains, ~100 popular sites, and platform apexes (`wordpress.com`, `github.io`, `vercel.app`...). A customer site on a platform (`bad.github.io`) is its own registrable domain and may be published. Duplicates keep the earliest `addedAt`.
+
+### Source and licence (TODO A3: NOT DECIDED)
+
+Checked on the official pages on 22 Oct 2026. Nothing here is legal advice. No feed was downloaded.
+
+| Candidate | Licence / terms found | Usable in the app? | Format, frequency | Size |
+|---|---|---|---|---|
+| OpenPhish Community | Terms of Use: personal/research only, **commercial use prohibited without written consent**, no redistribution or derivative works | **No**, without written permission | text file, every 12 h | not stated |
+| PhishTank | Terms point to a Cisco end-user licence agreement; **no data licence stated**. API key needed for regular downloads | **BELUM DIVERIFIKASI** (read the EULA first) | XML/CSV/JSON, hourly | not stated |
+| URLhaus (abuse.ch) | Free under "fair use principles"; commercial/for-profit users "may require a paid subscription". Auth-Key needed. Not CC0 as far as found | **BELUM DIVERIFIKASI**; mostly malware URLs, not phishing | CSV/JSON/hostfile, every 5 min | not stated |
+| Phishing Army | Third-party catalogues list **CC BY-NC 4.0** (own licence page not reachable) | Doubtful if the app is monetised (NC) | plain domain list, hostnames only | not stated |
+
+Recommendation: **ask PhishTank** (phishing-specific, hourly, hostnames) whether the app may use the feed and read its EULA; if the answer is not clearly yes, ask OpenPhish or the Phishing Army author for written permission. Until then the endpoint stays empty in production, which is safe: layer 2 still runs and the extension treats an empty list as "no match".

@@ -8,7 +8,7 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 |---|---|---|---|
 | A1 | Stack service `/analyze` + `/public-blocklist` | Cloudflare Worker + Hono (sama dengan Alief, memudahkan M7) — D-imelda-01 | [ ] tunggu Imelda |
 | A2 | Model LLM untuk M4 | Pilih setelah eval ada. Kandidat (harga per 1 jt token masuk/keluar, 21 Okt 2026): Gemini 2.5 Flash-Lite $0.10/$0.40 · Claude Haiku 5.5 $0.10/$0.50 · GPT-5.4 nano $0.20/$1.25 (Deprecated) | [ ] |
-| A3 | Sumber daftar phishing publik (M5) | Pilih yang lisensinya boleh dipakai di app; catat di `ai/README.md`. Kandidat dicek di fase 05 | [ ] |
+| A3 | Sumber daftar phishing publik (M5) | Pilih yang lisensinya boleh dipakai di app; catat di `ai/README.md`. Kandidat dicek di fase 05: tabel di `ai/README.md`; rekomendasi tanya PhishTank dulu (lihat log/fase-05.md) | [ ] tunggu Imelda |
 | A4 | Sumber sampel scam untuk M2 | Hanya lewat `capture.mjs`/laporan publik; jangan membuka URL di browser. Cek lisensi sumber | [~] fase 04: OpenPhish/PhishTank/URLhaus tidak dipakai (lisensi); butuh sumber scam nyata berlisensi atau izin tertulis (D-imelda-19) |
 | A5 | Gerbang panggilan LLM (D-imelda-05) | Form ≥ 1 field dan skor sementara ≥ 15; situs resmi tidak memanggil | [ ] tunggu Imelda |
 | A6 | Kebijakan penyedia LLM: tidak melatih dari data API, retensi minimum (SECURITY Q3) | Catat kebijakan penyedia terpilih di DECISIONS saat memilih model | [ ] |
@@ -31,6 +31,7 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | C6 | Umar | Bobot awal sinyal layer 3–4 (ref/R1) untuk dilihat sebelum fase 07 bila ambang 30/50/80 akan berubah. | [ ] |
 | C7 | Umar | Sinyal `asks_*` membawa `evidence` = `name`/`id` field (teks dari halaman, bukan substring `snapshot.text`). Extension harus menampilkannya sebagai teks biasa (`textContent`), bukan HTML, dan tidak men-stabilo. | [ ] |
 | C8 | Umar | Usulan: tambahkan `accept` (atribut input file) ke `PageSnapshot.forms[].fields` agar `asks_selfie_ktp` bisa memakai `accept=image/*`. Sekarang dipasangkan lewat label/nama. Perubahan kontrak. | [ ] |
+| C10 | Umar | `ai/src/blocklist/domains.js` mengimpor `ios/ShooExtension/Resources/psl.js` dan `domain.js` (read-only) agar registrable domain sama dengan extension. Jangan pindahkan tanpa kabar. | [ ] |
 | C9 | Umar | `new_domain` membawa `evidence` = umur dalam hari (string, perintah fase 03). Fixture `blocked-92` tidak punya evidence di sinyal itu. Pastikan extension tidak men-stabilo angka itu (hanya sinyal teks), atau minta kami menghapusnya. | [ ] |
 | C10 | Umar | `brand_logo_offsite`: evidence diambil dari `imageAlts`/title, yang tidak tampil di body. Extension mungkin tidak menemukannya untuk di-stabilo. Perlu aturan: abaikan saja, atau snapshot memuat teks logo? | [ ] |
 | C11 | M7 | `/analyze` tanpa rate limit memicu 2 request keluar ke registry per host baru; cache 1000 entri bisa dibanjiri. Rate limit per IP wajib di M7 (SECURITY A9). Aktifkan adapter KV (`createKvCache`) di M7. | [ ] |
