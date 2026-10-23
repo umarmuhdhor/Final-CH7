@@ -52,12 +52,15 @@ type PageSnapshot = {
       label: string | null;        // associated <label> text
       placeholder: string | null;
       autocomplete: string | null;
+      accept?: string | null;      // <input accept>, e.g. "image/*"
+      capture?: string | null;     // <input capture>: "user" (front camera), "environment", "" (bare attribute)
     }[];                   // field VALUES are never included
   }[];
   imageAlts: string[];     // alt text of images (logo hints), max 50
   capturedAt: string;      // ISO date-time
 };
 ```
+`accept` and `capture` are optional (additive, #86): older extensions don't send them, so readers treat a missing value as `null`.
 
 ## Signal
 Defined in `scan-result.schema.json#/$defs/Signal`.
