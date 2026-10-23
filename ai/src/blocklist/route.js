@@ -3,8 +3,10 @@ import { HttpError } from "../http.js";
 import { buildList, pageSince } from "./build.js";
 
 export const BLOCKLIST_LIMITS = Object.freeze({
-    /** The extension keeps at most this many per source. */
-    MAX_DOMAINS: 200_000,
+    /** Served at most. Below the extension's 200,000 per source (lists.js MAX_ENTRIES), which skips every add once full. */
+    MAX_DOMAINS: 190_000,
+    /** Room the extension keeps for domains that arrive in deltas between two full downloads (24 h). */
+    DELTA_HEADROOM: 10_000,
     /** Rebuild from the source at most this often. */
     REFRESH_MS: 5 * 60 * 1000,
     /** After a failed rebuild, do not ask the source again for this long. */

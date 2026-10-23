@@ -10,6 +10,7 @@ import { createMemoryCache } from "./rdap/cache.js";
 import { createRdapClient } from "./rdap/rdap.js";
 import { emptySource } from "./blocklist/source.js";
 import { createBlocklist } from "./blocklist/route.js";
+import { createKvBlocklist } from "./blocklist/kv.js";
 import { readConfig } from "./layer4/config.js";
 import { createRealityCheck, CLIENT_CALLS_PER_HOUR } from "./layer4/reality.js";
 import { clientKey, createRateLimiter } from "./ratelimit.js";
@@ -67,6 +68,7 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  *   fetch: network for RDAP (the Worker entry passes the real one). Without it new_domain is off, so tests never touch the network.
  *   cache: { get, set } for RDAP answers; defaults to an in-memory cache that lives as long as this app (one Worker isolate).
  *   blocklistSource: where /public-blocklist gets its domains (blocklist/source.js). Default: an empty list.
+ *     When the Worker has a BLOCKLIST_KV binding, the pre-built list in KV is served instead (blocklist/kv.js, D-imelda-38).
  *   rateLimit: per-IP limit for /public-blocklist.
  *   llm: a layer 4 checker ({ check }) for tests. Otherwise layer 4 is configured from the request's env bindings (LLM_*), using llmFetch (the Worker entry passes the real fetch).
  *   llmClientCallsPerHour: per-IP limit on layer 4 calls (default CLIENT_CALLS_PER_HOUR; Infinity = off, local eval only).
@@ -76,6 +78,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
     let envLlm = { key: "", checker: null }; // built once per distinct configuration, so the daily counter survives requests
     const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: cache ?? createMemoryCache({ now }), now, timeoutMs: rdapTimeoutMs }) : null;
     const blocklist = createBlocklist({ source: blocklistSource, now });
+    const kvBlocklist = createKvBlocklist({ now });
     const blocklistLimiter = createRateLimiter({ ...rateLimit, now });
     const analyzeLimiter = createRateLimiter({ ...analyzeRateLimit, now });
     function llmFor(env) {
@@ -132,7 +135,10 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         if (!verdict.ok) {
             return errorResponse(429, "rate_limited", "Too many requests.", { "retry-after": String(verdict.retryAfterSec) });
         }
-        return c.json(await blocklist(c.req.query("since")));
+        const kv = c.env?.BLOCKLIST_KV;
+        if (!kv) return c.json(await blocklist(c.req.query("since")));
+        const answer = await kvBlocklist(kv, c.req.query("since"));
+        return "stream" in answer ? c.body(answer.stream, 200, { "content-type": "application/json; charset=UTF-8" }) : c.json(answer.json);
     });
 
     if (devStats) {
