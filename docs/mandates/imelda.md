@@ -65,7 +65,7 @@ Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
 **Yang bukan tugasmu:** mengunduh, menyimpan, dan me-refresh daftar. Itu sudah dikerjakan Umar di extension (`lists.js`). `GET /blocklist` milik Alief juga diunduh extension, jadi kamu **tidak** memanggilnya.
 
 **A. Server — `GET /public-blocklist?since=` di `ai/`**
-- [ ] Pilih sumber daftar phishing publik yang lisensinya boleh dipakai di app, lalu catat sumber dan lisensinya di `ai/README.md`. (Belum dipilih: TODO A3. Endpoint sekarang mengembalikan daftar kosong)
+- [x] Pilih sumber daftar phishing publik yang lisensinya boleh dipakai di app, lalu catat sumber dan lisensinya di `ai/README.md`. (Phishing.Database, MIT, D-imelda-38; dibangun di luar Worker tiap 6 jam ke Workers KV. Daftar tetap kosong sampai namespace KV + secret Action dipasang, langkah di `ai/README.md`)
 - [x] Ubah setiap entri ke domain utama (registrable domain, pakai Public Suffix List). Buang domain resmi/allowlist (`detector/data/brands.json` + situs populer) dan situs sah yang hanya disusupi (mis. `wordpress.com`, `github.io` tanpa subdomain).
 - [x] Respons persis `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }`. `since` kosong = daftar lengkap. Target ≤ 200.000 domain.
 - [x] Token Bearer dari extension **tidak** perlu (dan tidak bisa) diverifikasi. Pakai rate limit per IP, dan jangan log token-nya.
