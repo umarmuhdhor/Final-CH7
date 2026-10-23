@@ -9,6 +9,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { PHISHING_DATABASE, parseHostList, trackFirstSeen, createPhishingDatabaseSource } from "../src/blocklist/phishing-database.js";
 import { PREBUILT, buildArtifacts, deltaKey } from "../src/blocklist/prebuilt.js";
 import { runBuild, createKvRest } from "../scripts/build-blocklist.mjs";
+import { MAX_ENTRIES, applyPage } from "../../ios/ShooExtension/Resources/lists.js";
 
 const T = (s) => `2026-10-${s}:00:00.000Z`;
 const entry = (host, addedAt, removedAt) => ({ host, addedAt, ...(removedAt ? { removedAt } : {}) });
@@ -124,12 +125,12 @@ test("entries given as URLs are reduced to their host", async () => {
     assert.deepEqual((await (await get(app)).json()).domains.map((d) => d.domain), ["shoo-fixture-f.xyz"]);
 });
 
-test("size cap: at most 200,000 domains, newest kept", async () => {
+test("size cap: at most MAX_DOMAINS, newest kept", async () => {
     const entries = [];
     for (let i = 0; i < 200_005; i++) entries.push(entry(`shoo-fixture-${i}.xyz`, new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString()));
     const app = appWith(entries);
     const body = await (await get(app)).json();
-    assert.equal(body.domains.length, 200_000);
+    assert.equal(body.domains.length, BLOCKLIST_LIMITS.MAX_DOMAINS);
     assert.ok(!body.domains.some((d) => d.domain === "shoo-fixture-0.xyz"));
     assert.ok(body.domains.some((d) => d.domain === "shoo-fixture-200004.xyz"));
 });
@@ -357,7 +358,27 @@ test("prebuilt: builds older than the retention window get no delta", () => {
     assert.deepEqual(meta.builds, [builtAt, B("06")]);
 });
 
-test("prebuilt: at most 200,000 domains, newest kept", () => {
+test("size cap leaves the extension room for deltas (lists.js MAX_ENTRIES)", () => {
+    assert.ok(BLOCKLIST_LIMITS.MAX_DOMAINS <= MAX_ENTRIES - BLOCKLIST_LIMITS.DELTA_HEADROOM);
+    assert.ok(BLOCKLIST_LIMITS.DELTA_HEADROOM >= 10_000);
+});
+
+test("prebuilt: a phone holding the full list still takes the next build's new domains", () => {
+    const source = { name: "t", license: "t" };
+    const entries = [];
+    for (let i = 0; i < 200_003; i++) entries.push({ host: `shoo-fixture-${i}.xyz`, addedAt: B("06") });
+    const first = buildArtifacts({ entries, builtAt: B("06"), previousMeta: null, source });
+    const phone = applyPage(new Map(), first.full);
+    const fresh = ["shoo-fixture-new-a.xyz", "shoo-fixture-new-b.xyz"];
+    for (const host of fresh) entries.push({ host, addedAt: B("12") });
+    const second = buildArtifacts({ entries, builtAt: B("12"), previousMeta: first.meta, source });
+    const delta = second.deltas.find((d) => d.since === first.full.nextSince);
+    assert.ok(delta, "a delta exists for the cursor the phone holds");
+    applyPage(phone, delta.body);
+    for (const host of fresh) assert.ok(phone.has(host), `${host} reached the phone`);
+});
+
+test("prebuilt: at most MAX_DOMAINS, newest kept", () => {
     const entries = [];
     for (let i = 0; i < 200_003; i++) entries.push({ host: `shoo-fixture-${i}.xyz`, addedAt: i < 3 ? B("00") : B("06") });
     const { full, meta } = buildArtifacts({ entries, builtAt: B("06"), previousMeta: null, source: { name: "t", license: "t" } });

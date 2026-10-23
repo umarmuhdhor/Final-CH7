@@ -118,7 +118,7 @@ Serves the list the extension downloads every 6 h (`docs/design/blocklist.md`). 
 
 | Case | Answer |
 |---|---|
-| No `since` | Full list (newest 200,000 at most), no `removed`, `nextSince` = newest timestamp, or `null` when the list is empty |
+| No `since` | Full list (newest 190,000 at most: the extension keeps 200,000 per source and needs room for deltas), no `removed`, `nextSince` = newest timestamp, or `null` when the list is empty |
 | `since=<ISO 8601>` | Only entries with `addedAt > since`, plus `removed` since then. Caught up: empty `domains`, `nextSince` = `since` |
 | Bad `since` | `422 invalid_body` (same code as `GET /blocklist`, `contracts/api.md`) |
 | Other method | `405 method_not_allowed` with `Allow: GET` |
@@ -147,7 +147,7 @@ Building 200,000 entries takes ~1 s CPU; the Workers Free plan allows 10 ms per 
 - `addedAt` = the build in which a domain was **first seen** (the feed has no dates). A domain that leaves the feed gets `removedAt` = that build and stays in `state` and deltas for 8 days; if it comes back it is new again.
 - Because every timestamp is a build time, any `since` is answered by the delta of the newest build `<= since`. `since` >= newest build: empty list, `nextSince = since`. Older than every kept build, or delta missing: the full list (the extension's daily full refresh corrects `removed`). Nothing built yet: empty list. KV error: fixed `500`.
 - Safety: a feed under 10,000 lines, a broken `state`, or a list that would shrink by more than 50% stops the build before anything is written; the last good build keeps being served.
-- Cost on the Free plan: ~30 KV writes per build, ~120 per day (limit 1,000). Each phone reads `meta` (cached 5 min per isolate) + one list key per download, 4 downloads a day, so the 100,000 reads/day limit covers roughly 12,000 to 25,000 phones. A full answer for 200,000 domains is ~12 MB of JSON (compressed in transit).
+- Cost on the Free plan: ~30 KV writes per build, ~120 per day (limit 1,000). Each phone reads `meta` (cached 5 min per isolate) + one list key per download, 4 downloads a day, so the 100,000 reads/day limit covers roughly 12,000 to 25,000 phones. A full answer for 190,000 domains is ~12 MB of JSON (compressed in transit).
 - Local dry run without KV (downloads the real feed once, writes the files to a folder): `node ai/scripts/build-blocklist.mjs --out /tmp/shoo-blocklist`.
 
 Setup (once, by the lead; not done by the build script):
@@ -165,7 +165,7 @@ GitHub turns off scheduled workflows after 60 days without repository activity; 
 
 - Licence: MIT (`Copyright (c) 2018-2025 Mitchell Krog, Nissar Chababy, Phishing.Database Contributors`), repository [LICENSE](https://github.com/Phishing-Database/Phishing.Database/blob/master/LICENSE). The repository has no separate data licence, so MIT covers the list file too: commercial use and redistribution (to phones) allowed, keep the copyright notice (credit it in the app's acknowledgements).
 - Open caveat: the README does not say where the domains come from. [Issue #2315](https://github.com/Phishing-Database/Phishing.Database/issues/2315) (open since 26 Sep 2026, no maintainer answer on 23 Oct 2026) asks whether any upstream is non-commercial. If the answer is that it is, switch back to the empty list (remove the KV binding) and revisit A3.
-- Format: one hostname per line, no dates, many hosts on shared platforms. ~11 MB, ~440k lines (estimate), so the newest 200,000 registrable domains are kept after the allowlist. On the first build every domain has the same `addedAt`, so the cut is alphabetical until dates spread out.
+- Format: one hostname per line, no dates, many hosts on shared platforms. ~11 MB, ~440k lines (estimate), so the newest 190,000 registrable domains are kept after the allowlist (`BLOCKLIST_LIMITS.MAX_DOMAINS`, 10,000 below the extension's cap so delta adds still fit). On the first build every domain has the same `addedAt`, so the cut is alphabetical until dates spread out.
 - Known false positives exist (e.g. email click-tracker domains, Phishing.Database #2069). A list hit is score 100, so extend `allowlist.js` when one is reported.
 
 Other candidates, checked on the official pages on 23 Oct 2026 (not legal advice):
