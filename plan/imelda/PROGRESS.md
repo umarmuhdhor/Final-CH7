@@ -15,7 +15,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 | 04 | Data eval set 50+50 | M2 | feat/AI-M2-eval-data | [r] | 22 Okt 2026 | | #57 | 50 scam + 51 legit, 194 test hijau, 2 review ditutup; scam nyata hanya 1 (target tak bisa dinilai); menunggu review Umar | log/fase-04.md |
 | 05 | /public-blocklist | M5-A | feat/AI-M5-server | [m] | 22 Okt 2026 | | #58 (base wip/AI-overnight-base) | Endpoint + 19 test (346 total hijau), daftar kosong di produksi; sumber + lisensi (A3) menunggu Imelda | log/fase-05.md |
 | 06 | Reality check LLM | M4 | feat/AI-M4-reality-check | [m] | 22 Okt 2026 | | #59 (base feat/AI-M5-server) | Layer 4 + 374 test hijau (penyedia palsu); model, key, eval dengan LLM menunggu Imelda (A2, A5) | log/fase-06.md |
-| 07 | Kalibrasi bobot | M6 | feat/AI-M6-calibration | [ ] | | | | | log/fase-07.md |
+| 07 | Kalibrasi bobot | M6 | feat/AI-M6-calibration | [m] | 22 Okt 2026 | | #60 (base feat/AI-M4-reality-check) | Legit >=30: 4 -> 1/51; scam >=50 66%, >=80 32%: target TIDAK tercapai/tidak dinilai (1 scam nyata); 385 test hijau | log/fase-07.md |
 | 08 | Deploy | M7 | feat/AI-M7-deploy | [ ] | | | | | log/fase-08.md |
 
 ## Gate
@@ -49,8 +49,8 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 
 | Metrik | Target | Sebelum | Sesudah |
 |---|---|---|---|
-| Situs resmi skor < 30 | 100% | | |
-| Scam skor ≥ 50 | ≥ 90% | | |
-| Scam skor ≥ 80 | ≥ 70% | | |
-| `analyzeLocal` | < 50 ms | | |
-| `/analyze` p95 | < 8 s | | |
+| Situs resmi skor < 30 | 100% | 47/51 legit < 30 (nyata 39/39) | 50/51 legit < 30 (nyata 39/39); semua domain brands.json + populer < 30 (test) |
+| Scam skor ≥ 50 | ≥ 90% | 66% (33/50; nyata 0/1) | 66% (33/50; nyata 0/1) |
+| Scam skor ≥ 80 | ≥ 70% | 40% (20/50) | 32% (16/50) |
+| `analyzeLocal` | < 50 ms | – | p95 1,0 ms |
+| `/analyze` p95 | < 8 s | – | p95 2,5 ms lokal (tanpa jaringan/RDAP/LLM) |

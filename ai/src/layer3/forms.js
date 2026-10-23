@@ -84,6 +84,9 @@ export function formSignals(snapshot, { official }) {
             if (final) raise(final, f);
         }
     }
+    // A card form always asks number + expiry + CVV: that is ONE request for card data, not two (review #60).
+    // Otherwise every small shop with its own card checkout scores 50 (struck-out fields). CVV alone still counts.
+    if (found.has("asks_card")) found.delete("asks_cvv");
     return [...found.entries()]
         .map(([id, evidence]) => buildSignal(id, evidence))
         .sort((a, b) => b.weight - a.weight || (a.id < b.id ? -1 : 1));
