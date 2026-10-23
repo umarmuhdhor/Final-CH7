@@ -20,27 +20,9 @@
         return hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
     }
 
-    function labelFor(input) {
-        if (input.id) {
-            const label = document.querySelector(`label[for="${CSS.escape(input.id)}"]`);
-            if (label) return label.innerText.trim();
-        }
-        return input.closest("label")?.innerText.trim() || null;
-    }
-
     /** PageSnapshot — contracts/detector-interface.md. Never includes typed values. */
     async function takeSnapshot() {
-        const forms = [...document.forms].map((form) => ({
-            action: form.getAttribute("action"),
-            fields: [...form.querySelectorAll("input, select, textarea")].map((el) => ({
-                type: el.type || el.tagName.toLowerCase(),
-                name: el.getAttribute("name"),
-                id: el.id || null,
-                label: labelFor(el),
-                placeholder: el.getAttribute("placeholder"),
-                autocomplete: el.getAttribute("autocomplete"),
-            })),
-        }));
+        const forms = ShooSnapshot.pageForms(document); // page + same-origin iframes (snapshot.js)
 
         return {
             url: location.href,

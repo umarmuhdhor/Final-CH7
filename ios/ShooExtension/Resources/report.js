@@ -9,6 +9,8 @@
     const PADDING = 16;
     const SENSITIVE = /pin|otp|cvv|cvc|card|kartu|ktp|nik|password|sandi|kata ?kunci|rekening/i;
     const BLUR_SKIP = new Set(["hidden", "checkbox", "radio", "submit", "button", "reset", "image", "range", "color", "file"]);
+    const FIELD_SELECTOR = "input, textarea, select, [contenteditable='true']";
+    const MAX_FRAME_DEPTH = 3;
 
     /** Report now? Once per page: on blocked, or on a finished warning. */
     function shouldReport(state, reportedScanIds) {
@@ -60,7 +62,34 @@
         return { x: left, y: top, width: right - left, height: bottom - top };
     }
 
-    globalThis.ShooReport = { shouldReport, scanBody, shareableUrl, evidenceRect, ready: () => Promise.resolve(), keyFor: () => null };
+    /**
+     * What to change before the screenshot, so no typed value is readable in it (PRD §10, #75).
+     * blur: text-like fields of the page and of every same-origin iframe, nested too.
+     * hide: iframes we can't look into (cross-origin, or nested deeper than MAX_FRAME_DEPTH): their fields
+     * can't be blurred, so the whole frame is hidden.
+     */
+    function screenshotTargets(doc, depth = 0) {
+        const blur = [...doc.querySelectorAll(FIELD_SELECTOR)].filter((el) => !BLUR_SKIP.has(el.type));
+        const hide = [];
+        for (const frame of doc.querySelectorAll("iframe, frame")) {
+            let inner = null;
+            try {
+                inner = frame.contentDocument;
+            } catch {
+                // cross-origin → hide
+            }
+            if (!inner || depth >= MAX_FRAME_DEPTH) {
+                hide.push(frame);
+                continue;
+            }
+            const nested = screenshotTargets(inner, depth + 1);
+            blur.push(...nested.blur);
+            hide.push(...nested.hide);
+        }
+        return { blur, hide };
+    }
+
+    globalThis.ShooReport = { shouldReport, scanBody, shareableUrl, evidenceRect, screenshotTargets, ready: () => Promise.resolve(), keyFor: () => null };
 
     // ---- Content script part -------------------------------------------------------------
 
@@ -96,15 +125,15 @@
         return null;
     }
 
-    /** Blurs every text-like field and hides our own popup; returns a function that undoes it. */
+    /** Blurs every text-like field (iframes too), hides unreadable iframes and our own popup; returns an undo. */
     function prepareForScreenshot() {
         const touched = [];
-        for (const el of document.querySelectorAll("input, textarea, select, [contenteditable='true']")) {
-            if (BLUR_SKIP.has(el.type)) continue;
+        const { blur, hide } = screenshotTargets(document);
+        for (const el of blur) {
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("filter", "blur(8px)", "important");
         }
-        for (const el of document.querySelectorAll("shoo-warning")) {
+        for (const el of [...hide, ...document.querySelectorAll("shoo-warning")]) {
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("visibility", "hidden", "important");
         }
