@@ -8,7 +8,7 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 |---|---|---|---|---|---|---|---|---|---|
 | – | Layer 2 nama link | M1 | feat/AI-M1-link-name | [x] | 21 Okt 2026 | 22 Okt 2026 | #25 (merged) | `cheap_tld`, `brand_plus_keyword`, `lookalike_domain`, level kecurigaan 0–3, 26 test | – |
 | – | Kerangka eval set | M2 | feat/AI-M2-eval-set | [x] | 22 Okt 2026 | 22 Okt 2026 | #26 (merged) | `run.mjs`, `capture.mjs`, `snapshot.mjs`, 13 sampel seed; data 50+50 belum | – |
-| 00 | Plan | – | docs/imelda-plan | [r] | 22 Okt 2026 | | #29 | Folder `plan/imelda/` lengkap (SECURITY, ARCHITECTURE, VERIFY, ref R1–R2, fase 01–08); menunggu review Umar | log/fase-00.md |
+| 00 | Plan | – | docs/imelda-plan | [x] | 22 Okt 2026 | 22 Okt 2026 | #29 (ditutup), masuk lewat #30 | Folder `plan/imelda/` lengkap (SECURITY, ARCHITECTURE, VERIFY, ref R1–R2, fase 01–08); masuk ke `main` bersama #30 | log/fase-00.md |
 | 01 | db_match di detector | M5-B | feat/AI-M5-detector | [x] | 22 Okt 2026 | 22 Okt 2026 | #30 (merged) | `db_match` dari `ShooLists.match` (layer 1), 141 test hijau, tanpa request jaringan | log/fase-01.md |
 | 02 | /analyze + sinyal form | M3 | feat/AI-M3-forms | [x] | 22 Okt 2026 | 22 Okt 2026 | #44 (merged) | `POST /analyze` + 7 sinyal form, 62 test (204 total hijau); lphone-login 39 sampai snapshot diambil ulang dengan form iframe (#75, #79) | log/fase-02.md |
 | 03 | Konten + new_domain | M3 | feat/AI-M3-content | [x] | 22 Okt 2026 | 22 Okt 2026 | #50 (merged) | `urgent_language`, `brand_logo_offsite`, `new_domain` (RDAP, layer 3), 133 test ai/; warning-63 +11 dari fixture (bobot R1) | log/fase-03.md |
@@ -22,11 +22,11 @@ Waktu dalam WITA. Setiap fase hanya mengedit barisnya sendiri. Aturan push/PR: a
 
 | Titik | Syarat | Status | Catatan |
 |---|---|---|---|
-| G0 · Jawaban Umar | (1) snapshot menangkap iframe? (2) `new_domain` layer 2 atau 3? Lihat TODO C1–C2 | [ ] | Blokir sebagian akurasi fase 02 dan fase 03, bukan kodenya |
+| G0 · Jawaban Umar | (1) snapshot menangkap iframe? (2) `new_domain` layer 2 atau 3? Lihat TODO C1–C2 | [x] | (1) #75: form iframe same-origin dibaca (#79), cross-origin Fase 2; (2) layer 3 (kontrak f95b2ee, #36) |
 | G1 · Stack service | D-imelda-01 dikonfirmasi Imelda | [x] | Sebelum fase 02 |
 | G2 · Data eval | ≥ 50 scam + ≥ 50 legit tersamarkan | [ ] | Fase 04; syarat fase 07 |
 | G3 · Model + key LLM | Model dipilih setelah eval, key di `.env` | [ ] | Fase 06 |
-| G4 · URL publik | `/analyze` + `/public-blocklist` di HTTPS, URL dikirim ke Umar dan Alief | [ ] | Fase 08 |
+| G4 · URL publik | `/analyze` + `/public-blocklist` di HTTPS, URL dikirim ke Umar dan Alief | [x] | `https://shoo-ai.uumaarrrrr22.workers.dev` (23 Okt 2026, fase 08); Alief lewat #82 |
 | G5 · MVP Imelda | Definisi selesai README §6 tercapai di eval | [ ] | |
 
 ## Status requirement mandat
