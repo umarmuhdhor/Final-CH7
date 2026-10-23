@@ -22,7 +22,8 @@ Jalur kritis: **G1 deploy → URL di app (Alief) → tes end-to-end di iPhone (G
 Aturan yang berlaku di semua langkah:
 - Semua pertanyaan/keputusan antar orang lewat **GitHub issue** (template Question / proposal), bukan chat (CLAUDE.md aturan 7).
 - Satu branch = satu PRD ID, PR kecil.
-- `ios/ShooApp/` milik Alief, `detector/` + `ai/` + `plan/imelda/` milik Imelda. Umar tidak mengedit di sana; cukup buka issue.
+- `ios/ShooApp/` milik Alief. Umar tidak mengedit di sana; cukup buka issue.
+- `detector/` + `ai/` + `plan/imelda/` diambil alih Umar sejak 23 Okt 2026 (dulu milik Imelda). `ios/ShooExtension/Resources/detector.js` tetap hanya diubah lewat `detector/scripts/sync-to-extension.sh`.
 
 ---
 
