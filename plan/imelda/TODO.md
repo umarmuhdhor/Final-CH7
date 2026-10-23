@@ -17,7 +17,7 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 ## B. Akun dan secret (memblokir fase 06 dan 08)
 
 - [ ] B1 Key API LLM (satu penyedia dulu) → `ai/.env` (gitignored). Agent tidak meminta key di chat.
-- [ ] B2 Akun hosting untuk Worker/service (A1) + domain/URL HTTPS publik.
+- [x] B2 Akun hosting untuk Worker/service (A1) + domain/URL HTTPS publik. — 23 Okt 2026: akun Cloudflare (Umar), `https://shoo-ai.uumaarrrrr22.workers.dev` (log/fase-08.md).
 - [ ] B3 Kalau RDAP/WHOIS butuh akun atau kuota berbayar: catat batasnya di fase 03.
 
 ## C. Pesan ke tim (Imelda yang mengirim, agent tidak)
@@ -27,7 +27,7 @@ Hal yang tidak bisa diputuskan atau dikerjakan agent sendiri. Centang kalau sele
 | C1 | Umar | Apakah snapshot menangkap **iframe**? `content.js`/`capture.js` tidak menyebut iframe dan `manifest.json` tanpa `all_frames`. Tanpa itu `asks_pin`/`asks_password` tidak menyala di situs seperti `lphone-login.com` (passcode 6 digit ada di iframe). | [ ] |
 | C2 | Umar | `new_domain`: kontrak menulis layer 2, tapi dibuat server (RDAP). `pipeline.js` hanya menerima layer 3–4 dari `/analyze` (`validSignals(remote,[3,4])`), jadi sinyal layer 2 dari server dibuang diam-diam. Usulan: kontrak diubah jadi layer 3. | [x] terjawab: kontrak sudah layer 3 (f95b2ee, #36); fase 03 mengirim layer 3 |
 | C3 | Umar | `brands.json` perlu verifikasi manual: `bankbsi.co.id`, `jet.co.id`, `bpjsketenagakerjaan.go.id`. | [ ] |
-| C4 | Umar + Alief | Setelah fase 08: kirim URL publik `/analyze` (untuk `ai.baseURL`) dan `/public-blocklist`. | [ ] |
+| C4 | Umar + Alief | Setelah fase 08: kirim URL publik `/analyze` (untuk `ai.baseURL`) dan `/public-blocklist`. | [x] `https://shoo-ai.uumaarrrrr22.workers.dev` (23 Okt 2026); Umar sudah punya, Alief lewat issue #82 |
 | C5 | Alief + Umar | **Layer 4 sudah dibangun (mati sampai model dipilih):** host, title halaman dan label field halaman yang lolos gerbang akan dikirim ke penyedia LLM. Kalau data form dikirim ke penyedia LLM, kebijakan privasi/label App Store harus menyebutnya (SECURITY Q4). Kirim setelah model dipilih (fase 06). | [ ] |
 | C6 | Umar | Bobot awal sinyal layer 3–4 (ref/R1) untuk dilihat sebelum fase 07 bila ambang 30/50/80 akan berubah. | [ ] |
 | C7 | Umar | Sinyal `asks_*` membawa `evidence` = `name`/`id` field (teks dari halaman, bukan substring `snapshot.text`). Extension harus menampilkannya sebagai teks biasa (`textContent`), bukan HTML, dan tidak men-stabilo. | [ ] |
