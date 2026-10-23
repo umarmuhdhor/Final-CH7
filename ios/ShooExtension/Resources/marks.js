@@ -9,8 +9,10 @@
     const MAX_PHRASES = 10;
     const MAX_RANGES = 50;
 
-    // Only content signals (layer ≥ 3) quote page text. Field signals (asks_*) carry a field name and are
-    // shown as struck fields; layer 1–2 evidence is free-form (e.g. db_match → "shoo"/"public").
+    // Only these signals quote page text (docs/mandates/imelda.md). Field signals (asks_*) carry a field name and
+    // are shown as struck fields; other evidence is free-form (db_match → "shoo"/"public", new_domain → age in
+    // days). A new text signal must be added here (#74).
+    const TEXT_SIGNALS = new Set(["urgent_language", "brand_logo_offsite", "unreasonable_request"]);
     const FIELD_SIGNAL = /^asks_/;
 
     const FIELD_KINDS = [
@@ -30,11 +32,11 @@
         return type === "password" ? "password" : null;
     }
 
-    /** Text to highlight: evidence of non-field signals, deduped, longest first (so overlaps prefer the full phrase). */
+    /** Text to highlight: evidence of text signals, deduped, longest first (so overlaps prefer the full phrase). */
     function phrasesFrom(signals) {
         const phrases = new Set();
         for (const s of signals) {
-            if (!(s.layer >= 3) || FIELD_SIGNAL.test(s.id) || typeof s.evidence !== "string") continue;
+            if (!TEXT_SIGNALS.has(s.id) || typeof s.evidence !== "string") continue;
             const text = s.evidence.trim();
             if (text.length >= 3) phrases.add(text);
         }
@@ -53,7 +55,7 @@
 
     /**
      * EX-08: short reason for one mark — the heaviest signal behind it, in the viewer's wording.
-     * Text mark: a layer ≥ 3 text signal whose evidence is that phrase. Field mark: the asks_* signal whose
+     * Text mark: a text signal (TEXT_SIGNALS) whose evidence is that phrase. Field mark: the asks_* signal whose
      * evidence is the field's name/id, else the asks_<kind> signal.
      * @param {object[]} signals
      * @param {{phrase: string} | {field: {kind: string, name?: string, id?: string}}} mark
@@ -65,7 +67,7 @@
         let matches;
         if (typeof mark.phrase === "string") {
             const phrase = mark.phrase.trim().toLowerCase();
-            matches = (signals ?? []).filter((s) => s.layer >= 3 && !FIELD_SIGNAL.test(s.id) && evidenceOf(s) === phrase);
+            matches = (signals ?? []).filter((s) => TEXT_SIGNALS.has(s.id) && evidenceOf(s) === phrase);
         } else {
             const { kind, name, id } = mark.field;
             const names = [name, id].filter(Boolean).map((v) => v.toLowerCase());
