@@ -3,7 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createApp } from "../src/app.js";
 import { createRealityCheck } from "../src/layer4/reality.js";
-import { readConfig } from "../src/layer4/config.js";
+import { readConfig, MAX_TIMEOUT_MS } from "../src/layer4/config.js";
+import { analyze, SERVER_DEADLINE_MS } from "../src/analyze.js";
 import { SYSTEM_PROMPT, PROMPT_VERSION } from "../prompts/reality-check.js";
 import { field, page, post, SCAM_URL, ids } from "./helpers.mjs";
 
@@ -104,6 +105,41 @@ test("timeout also holds when the provider ignores the abort signal", async () =
     const res = await post(appWith(f, { ...CONFIG, timeoutMs: 80 }), { snapshot: PIN(), localSignals: [] });
     assert.deepEqual(ids((await res.json()).signals), ["asks_pin"]);
     assert.ok(Date.now() - started < 1000);
+});
+
+test("budget: server deadline 6.5 s leaves 1.5 s of the client's 8 s for the network; the LLM cap fits inside (D-imelda-38)", () => {
+    assert.equal(SERVER_DEADLINE_MS, 6500);
+    assert.ok(SERVER_DEADLINE_MS + 1500 <= 8000, "extension gives up after 8 s (background.js ANALYZE_TIMEOUT_MS)");
+    assert.equal(MAX_TIMEOUT_MS, 6000);
+    assert.ok(MAX_TIMEOUT_MS < SERVER_DEADLINE_MS);
+});
+
+test("budget: /analyze starts the clock when the request arrives and hands layer 4 the full server deadline", async () => {
+    let seen;
+    const app = createApp({ now: () => 1_000_000, llm: { check: async (s, ctx) => ((seen = ctx), null) } });
+    await post(app, { snapshot: PIN(), localSignals: [] });
+    assert.equal(seen.deadlineMs, SERVER_DEADLINE_MS);
+});
+
+test("budget: layer 4 gets only what is left of the deadline (slow body upload eats into it)", async () => {
+    let seen;
+    await analyze(PIN(), { llm: { check: async (s, ctx) => ((seen = ctx), null) }, deadline: 10_000, now: () => 7_500 });
+    assert.equal(seen.deadlineMs, 2_500);
+    await analyze(PIN(), { llm: { check: async (s, ctx) => ((seen = ctx), null) } });
+    assert.equal(seen.deadlineMs, Infinity, "no deadline given -> the checker's own cap applies");
+});
+
+test("budget: a deadline shorter than the cap wins; nothing left -> the provider is never called", async () => {
+    const f = fake(() => new Promise(() => {}));
+    const checker = createRealityCheck({ config: { ...CONFIG, timeoutMs: 5000 }, fetch: f.fetch, clientCallsPerHour: Infinity });
+    const ctx = { official: false, score: 50, ruleIds: ["asks_pin"] };
+    const started = Date.now();
+    assert.equal(await checker.check(PIN(), { ...ctx, deadlineMs: 60 }), null);
+    assert.ok(Date.now() - started < 1000, "cut at the 60 ms deadline, not the 5 s cap");
+    assert.equal(await checker.check(PIN(), { ...ctx, deadlineMs: 0 }), null);
+    assert.equal(f.calls.length, 1);
+    assert.equal(checker.stats().outcomes.timeout, 1);
+    assert.equal(checker.stats().outcomes.capped, 1);
 });
 
 test("gate: no form, official site, or provisional score < 15 -> the provider is never called", async () => {
@@ -321,9 +357,9 @@ test("config from env: all of key, model, base URL needed; otherwise layer 4 is 
     for (const bad of ["https://169.254.169.254/v1", "https://localhost/v1", "https://10.0.0.5/v1", "https://svc.internal/v1"]) assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: bad }), null, bad);
     const c = readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com/v1/", LLM_TIMEOUT_MS: "9000", LLM_DAILY_CAP: "10" });
     assert.equal(c.baseUrl, "https://llm.example.com/v1");
-    assert.equal(c.timeoutMs, 4000, "timeout is capped at the 4 s budget");
+    assert.equal(c.timeoutMs, 6000, "timeout is capped at the 6 s budget (D-imelda-38)");
     assert.equal(c.dailyCap, 10);
-    assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com", LLM_TIMEOUT_MS: "abc" }).timeoutMs, 4000);
+    assert.equal(readConfig({ LLM_API_KEY: "k", LLM_MODEL: "m", LLM_BASE_URL: "https://llm.example.com", LLM_TIMEOUT_MS: "abc" }).timeoutMs, 6000);
 });
 
 test("no key configured -> /analyze works as before and nothing is called", async () => {

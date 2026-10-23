@@ -173,6 +173,7 @@ export function summarize(rows, { remote = false } = {}) {
     for (const r of falsePositives) for (const s of r.signals) byLevel[`level ${level(s)} ${s.id}`] = (byLevel[`level ${level(s)} ${s.id}`] || 0) + 1;
 
     const ms = rows.map((r) => r.localMs).sort((a, b) => a - b);
+    const remoteMs = rows.map((r) => r.remoteMs).filter(Number.isFinite).sort((a, b) => a - b);
     const enough = scam.length >= MIN_PER_CLASS && legit.length >= MIN_PER_CLASS;
     const checksOf = (sc, lg) => ({
         scamAtLeast50: { value: rate(count(sc, 50), sc.length), target: TARGETS.scamAtLeast50 },
@@ -214,7 +215,7 @@ export function summarize(rows, { remote = false } = {}) {
         falsePositives: falsePositives.map((r) => r.id),
         misses: misses.map((r) => r.id),
         falsePositiveSignals: byLevel,
-        timing: { analyzeLocalAvgMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, analyzeLocalMaxMs: ms.at(-1) ?? null },
+        timing: { analyzeLocalAvgMs: ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null, analyzeLocalMaxMs: ms.at(-1) ?? null, analyzeRemoteP95Ms: remoteMs.length ? remoteMs[Math.ceil(remoteMs.length * 0.95) - 1] : null },
     };
 }
 

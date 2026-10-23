@@ -129,6 +129,13 @@ test("summarize counts hits, misses, false positives and judges targets only whe
     assert.equal(summarize(rows, { remote: false }).targetsMet, null);
 });
 
+test("summarize reports /analyze p95 (mandate: < 8 s), ignoring rows without a remote call", () => {
+    const rows = Array.from({ length: 20 }, (_, i) => ({ id: `s${i}`, label: "scam", score: 0, localMs: 1, remoteMs: (i + 1) * 100, signals: [] }));
+    rows.push({ id: "l", label: "legit", score: 0, localMs: 1, remoteMs: null, signals: [] });
+    assert.equal(summarize(rows, { remote: true }).timing.analyzeRemoteP95Ms, 1900);
+    assert.equal(summarize([rows[20]], { remote: false }).timing.analyzeRemoteP95Ms, null);
+});
+
 test("summarize judges the targets with 50+ per class and layers 3-4", () => {
     const rows = [];
     for (let i = 0; i < 50; i++) rows.push({ id: `s${i}`, label: "scam", score: i < 46 ? 85 : 10, localMs: 1, signals: [] });
