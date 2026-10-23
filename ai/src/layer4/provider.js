@@ -25,7 +25,9 @@ export function createProvider({ config, fetch }) {
                     response_format: { type: "json_object" },
                 }),
                 signal,
-                redirect: "error", // the key must not follow a redirect to another host
+                // The key must not follow a redirect to another host. "manual" (not "error": Workers reject it and every call
+                // failed in production) hands back the 3xx, which `!res.ok` below turns into http_error. Same as rdap.js.
+                redirect: "manual",
             });
             if (!res.ok) return HTTP_ERROR;
             const declared = Number(res.headers.get("content-length"));

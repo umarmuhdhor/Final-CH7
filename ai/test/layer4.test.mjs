@@ -71,13 +71,14 @@ test("broken output is ignored, never an error (200, layer 3 only)", async () =>
     }
 });
 
-test("provider error shapes: 500, 429, throw, empty choices, non-JSON body -> layer 3 only", async () => {
+test("provider error shapes: 500, 429, throw, empty choices, non-JSON body, redirect -> layer 3 only", async () => {
     const handlers = [
         () => new Response("upstream exploded with secret detail", { status: 500 }),
         () => new Response("{}", { status: 429 }),
         () => { throw new Error("network down"); },
         () => new Response(JSON.stringify({ choices: [] }), { status: 200 }),
         () => new Response("<html>", { status: 200 }),
+        () => new Response(null, { status: 302, headers: { location: "https://evil.test/steal" } }),
     ];
     for (const h of handlers) {
         const res = await post(appWith(fake(h)), { snapshot: PIN(), localSignals: [] });
@@ -176,6 +177,7 @@ test("what leaves the server: model, temperature 0, host, title, field labels an
     assert.equal(call.url, "https://llm.test/v1/chat/completions");
     assert.equal(call.init.method, "POST");
     assert.equal(call.init.headers.authorization, "Bearer test-key-NOT-REAL");
+    assert.equal(call.init.redirect, "manual"); // Workers reject "error"; a 3xx comes back and is not followed
     assert.equal(call.body.model, "fake-model");
     assert.equal(call.body.temperature, 0);
     assert.ok(call.body.max_tokens <= 300);
