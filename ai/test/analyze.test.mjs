@@ -151,6 +151,18 @@ test("d. a sensitive field past the cap does not produce a signal", async () => 
     assert.deepEqual((await res.json()).signals, []);
 });
 
+test("d. accept and capture are kept and capped; an older extension that omits them gives null (C8)", () => {
+    const out = sanitizeSnapshot({ url: "https://a.example/", forms: [{ fields: [
+        { type: "file", accept: "a".repeat(LIMITS.MAX_FIELD_TEXT + 50), capture: "user".repeat(20) },
+        { type: "text", name: "pin" },
+    ] }] });
+    const [file, old] = out.forms[0].fields;
+    assert.equal(file.accept.length, LIMITS.MAX_FIELD_TEXT);
+    assert.equal(file.capture.length, LIMITS.MAX_CAPTURE_CHARS);
+    assert.equal(old.accept, null);
+    assert.equal(old.capture, null);
+});
+
 test("d. unknown keys on fields are dropped (typed values never travel further)", () => {
     const out = sanitizeSnapshot({ url: "https://a.example/", forms: [{ fields: [{ type: "text", name: "pin", value: "123456" }] }] });
     assert.equal("value" in out.forms[0].fields[0], false);
@@ -200,7 +212,8 @@ test("p. largest allowed input answers in < 100 ms CPU (no ReDoS)", async () => 
 });
 
 test("p. a 200 KB request end to end stays fast", async () => {
-    const fields = Array.from({ length: 30 }, (_, i) => field({ name: `n${i}`, label: "pin ".repeat(25) }));
+    // ~199 KB with the full field shape (accept + capture since C8), just under MAX_BODY_BYTES.
+    const fields = Array.from({ length: 30 }, (_, i) => field({ name: `n${i}`, label: "pin ".repeat(20) }));
     const snap = { ...page("https://slow.example.com/"), text: "otp ".repeat(5000), forms: Array.from({ length: 30 }, () => ({ action: null, fields })) };
     const raw = JSON.stringify({ snapshot: snap, localSignals: [] });
     assert.ok(raw.length < LIMITS.MAX_BODY_BYTES, `fixture ${raw.length} bytes`);

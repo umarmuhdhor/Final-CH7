@@ -44,7 +44,7 @@ test("parseHtml reads title, lang, text, forms, alts and iframes", () => {
     const [form, loose] = snapshot.forms;
     assert.equal(form.action, "/post");
     assert.deepEqual(form.fields.map((f) => f.name), ["pin", "bank"]); // hidden/submit skipped
-    assert.deepEqual(form.fields[0], { type: "password", name: "pin", id: "p", label: "PIN Anda", placeholder: null, autocomplete: "off" });
+    assert.deepEqual(form.fields[0], { type: "password", name: "pin", id: "p", label: "PIN Anda", placeholder: null, autocomplete: "off", accept: null, capture: null });
     assert.equal(loose.action, null);
     assert.equal(loose.fields[0].name, "loose");
 });
