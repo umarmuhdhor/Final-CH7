@@ -208,6 +208,12 @@ struct AppEnvironmentSessionTests {
         #else
         #expect(AppConfig.apiBaseURL.absoluteString == "https://shoo-api.afindo-mi01.workers.dev")
         #endif
+        // Only Release builds hand the AI Worker to the extension (#82).
+        #if DEBUG
         #expect(AppConfig.aiBaseURL == nil)
+        #else
+        #expect(AppConfig.aiBaseURL?.absoluteString == "https://shoo-ai.uumaarrrrr22.workers.dev")
+        #expect(AppConfig.aiBaseURL.map(SessionStore.isAllowed) == true)
+        #endif
     }
 }

@@ -14,8 +14,14 @@ enum AppConfig {
 
     /// Team AI service (`POST /analyze`, `GET /public-blocklist`). `nil` = not written to the App Group,
     /// so the extension skips layer 3–4 instead of sending pages to a placeholder host.
-    // TODO(sync:imelda): AI service URL — replace after the ai/ service is deployed
+    #if DEBUG
+    /// Debug builds (simulator and Xcode installs on an iPhone) stay on layer 1–2, so local testing
+    /// never sends pages to the deployed AI Worker (#82).
     static let aiBaseURL: URL? = nil
+    #else
+    /// AI Worker deployed 23 Oct 2026 (#82).
+    static let aiBaseURL: URL? = URL(string: "https://shoo-ai.uumaarrrrr22.workers.dev")!
+    #endif
 
     /// Scan QR (PR-01): `NSCameraUsageDescription` came with C3 (#27). Off = Enter code only.
     static let cameraEnabled = true
