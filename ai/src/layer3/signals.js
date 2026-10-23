@@ -5,7 +5,7 @@ export const WEIGHTS = Object.freeze({
     asks_pin: 35,
     asks_otp: 25,
     asks_password: 15,
-    asks_card: 25,
+    asks_card: 20,
     asks_cvv: 25,
     asks_ktp: 25,
     asks_selfie_ktp: 35,

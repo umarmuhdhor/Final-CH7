@@ -48,7 +48,9 @@ export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "
     const age = rdap && !official ? rdap.lookupAgeDays(host).catch(() => null) : Promise.resolve(null);
     const signals = rules(snapshot, official, looksLikeImpersonation(localSignals));
     // Layer 4 starts right after the rules and runs while RDAP is still answering. Its budget is separate (<= 4 s).
-    const score = signals.reduce((sum, s) => sum + s.weight, 0); // our rules only, never client-supplied numbers
+    // Our rules' weights only, never the client's numbers. But localSignals can lift the WORD weights (impersonation
+    // above), so a client can move this gate score by up to +20 (D-imelda-27). Low risk: the client controls the snapshot anyway.
+    const score = signals.reduce((sum, s) => sum + s.weight, 0);
     const reality = llm ? llm.check(snapshot, { official, score, ruleIds: signals.map((s) => s.id), client }).catch(() => null) : Promise.resolve(null);
     const [days, layer4] = await Promise.all([age, reality]);
     if (layer4) signals.push(layer4);

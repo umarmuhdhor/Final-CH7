@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import { analyze } from "../src/analyze.js";
 import { BRANDS, field, page } from "./helpers.mjs";
 import { POPULAR, SHARED_HOSTS } from "../src/blocklist/allowlist.js";
+import { LAYER3_QUIET, isOfficialHost } from "../src/layer3/official.js";
+import { isAllowlisted } from "../src/blocklist/build.js";
 
 const score = (signals) => Math.min(100, signals.reduce((s, x) => s + x.weight, 0));
 const run = (url, fields, over) => analyze(page(url, fields, over));
@@ -29,8 +31,8 @@ test("official domains and their subdomains: every sensitive form stays below 30
     }
 });
 
-test("popular sites (allowlist): login / OTP / card forms stay below 30", async () => {
-    for (const domain of POPULAR) {
+test("popular sites (layer 3 quiet set): login / OTP / card forms stay below 30", async () => {
+    for (const domain of LAYER3_QUIET) {
         if (SHARED_HOSTS.has(domain)) continue;
         for (const [kind, fields] of Object.entries(FORMS)) {
             const signals = await run(`https://www.${domain}/login`, fields);
@@ -103,4 +105,42 @@ test("review: government suffixes and link shorteners are not popular sites (onl
     for (const host of ["dinas-xyz.go.id", "kecil.ac.id"]) {
         assert.ok((await run(`https://${host}/bayar`, FORMS.pin)).some((x) => x.id === "asks_pin"), host);
     }
+});
+
+test("review #60: a full native card checkout on a neutral shop stays below 30", async () => {
+    const card = [
+        field({ name: "name", label: "Nama di kartu", autocomplete: "cc-name" }),
+        field({ name: "cc-number", label: "Nomor kartu", autocomplete: "cc-number" }),
+        field({ name: "cc-exp", label: "Berlaku sampai", autocomplete: "cc-exp" }),
+        field({ name: "cc-csc", label: "CVV", autocomplete: "cc-csc" }),
+    ];
+    for (const url of ["https://tokokopi-senja.com/checkout", "https://toko-kecil.example.xyz/checkout"]) {
+        const signals = await run(url, card);
+        assert.deepEqual(signals.map((x) => x.id), ["asks_card"], url);
+        assert.ok(score(signals) < POPUP, `${url}: ${score(signals)}`);
+    }
+});
+
+test("review #60: go.id and tokopedia.link are never published on the blocklist, yet get no layer 3 silence", async () => {
+    for (const d of ["go.id", "jakarta.go.id", "dinas-xyz.go.id", "tokopedia.link"]) assert.equal(isAllowlisted(d), true, d);
+    assert.equal(POPULAR.has("go.id"), true);
+    for (const d of ["go.id", "tokopedia.link"]) assert.equal(LAYER3_QUIET.has(d), false, d);
+    for (const host of ["jakarta.go.id", "tokopedia.link"]) assert.equal(isOfficialHost(host), false, host);
+    assert.equal(isOfficialHost("kominfo.go.id"), true, "a named agency stays quiet");
+});
+
+test("review #60: user-made pages on popular domains do not get the popular-site silence", () => {
+    for (const host of ["express.adobe.com", "new.express.adobe.com", "acrobat.adobe.com", "paper.dropbox.com", "alice.medium.com", "gist.github.com"]) {
+        assert.equal(isOfficialHost(host), false, host);
+    }
+    for (const host of ["www.adobe.com", "www.dropbox.com", "medium.com", "www.medium.com", "github.com"]) assert.equal(isOfficialHost(host), true, host);
+});
+
+test("impersonation boundary: layer 1-2 sum >= 10 turns on full word weights, a cheap TLD alone (5) does not", async () => {
+    const snap = { imageAlts: ["Logo OVO"], text: "Undian berhadiah. Klaim sekarang!", title: "Undian OVO" };
+    const sig = (id, weight) => ({ id, layer: 2, weight, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } });
+    const logo = async (localSignals) => (await analyze(page("https://undian-ovo.example.xyz/", [], snap), { localSignals })).find((x) => x.id === "brand_logo_offsite").weight;
+    assert.equal(await logo([sig("lookalike_domain", 10)]), 25, "lookalike level 1 (10) -> full");
+    assert.equal(await logo([sig("cheap_tld", 5)]), 12, "cheap TLD alone (5) -> quiet");
+    assert.equal(await logo([sig("cheap_tld", 9)]), 12, "9 is under the boundary");
 });

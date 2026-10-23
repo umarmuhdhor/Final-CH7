@@ -5,7 +5,11 @@ import brands from "../../../detector/data/brands.json" with { type: "json" };
 /** Official domains of every brand in detector/data/brands.json (shared with layers 2 and 3). */
 export const OFFICIAL = new Set(brands.brands.flatMap((b) => b.domains.map((d) => d.toLowerCase())));
 
-/** Popular sites (global + Indonesia), registrable domains. Starting list; extend it freely. */
+/**
+ * Popular sites (global + Indonesia). Starting list; extend it freely. Job: NEVER publish these on /public-blocklist.
+ * It is wider than "known safe": it also holds a public suffix (go.id: a hacked kabupaten site must not get the whole
+ * name blocked) and a link shortener (tokopedia.link). Layer 3 uses its own narrower set (layer3/official.js).
+ */
 export const POPULAR = new Set([
     "google.com", "youtube.com", "facebook.com", "instagram.com", "whatsapp.com", "twitter.com", "x.com", "linkedin.com",
     "microsoft.com", "live.com", "outlook.com", "office.com", "apple.com", "icloud.com", "amazon.com", "netflix.com",
@@ -17,11 +21,11 @@ export const POPULAR = new Set([
     "tiket.com", "olx.co.id", "jd.id", "zalora.co.id", "sociolla.com", "bri.co.id", "bni.co.id", "bca.co.id",
     "mandiri.co.id", "cimbniaga.co.id", "danamon.co.id", "permatabank.com", "btn.co.id", "ocbc.id", "uob.co.id", "jenius.com",
     "gopay.co.id", "ovo.id", "dana.id", "linkaja.id", "shopeepay.co.id", "kompas.com", "detik.com", "tribunnews.com",
-    "liputan6.com", "cnnindonesia.com", "tempo.co", "kumparan.com", "idntimes.com", "antaranews.com", "kominfo.go.id",
+    "liputan6.com", "cnnindonesia.com", "tempo.co", "kumparan.com", "idntimes.com", "antaranews.com", "go.id", "kominfo.go.id",
     "bpjs-kesehatan.go.id", "bpjsketenagakerjaan.go.id", "pajak.go.id", "kemenkeu.go.id", "kemdikbud.go.id", "kemkes.go.id",
     "kemensos.go.id", "polri.go.id", "indonesia.go.id", "telkomsel.com", "indosatooredoo.com", "xl.co.id", "smartfren.com",
     "pln.co.id", "pertamina.com", "jne.co.id", "jet.co.id", "sicepat.com", "pos.co.id", "anteraja.id", "tiki.id",
-    "microsoftonline.com", "office365.com", "googleapis.com", "gstatic.com", "googleusercontent.com", "amazonaws.com", "ruangguru.com", "traveloka.co.id", "kaskus.co.id", "gramedia.com", "halodoc.com", "alodokter.com", "tokopedia.com",
+    "microsoftonline.com", "office365.com", "googleapis.com", "gstatic.com", "googleusercontent.com", "amazonaws.com", "ruangguru.com", "traveloka.co.id", "kaskus.co.id", "gramedia.com", "halodoc.com", "alodokter.com", "tokopedia.link",
 ]);
 
 /**

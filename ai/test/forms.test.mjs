@@ -97,8 +97,9 @@ test("i. asks_cvv: Indonesian and English", () => {
 test("i. asks_cvv: negatives", () => {
     expectNone([field({ label: "Security question" }), field({ label: "Keamanan akun" }), field({ label: "Kode pos" })]);
 });
-test("i. a card form gives card and cvv, one signal each", () => {
-    assert.deepEqual(only([field({ name: "cardnumber" }), field({ name: "exp" }), field({ name: "cvv" })]).sort(), ["asks_card", "asks_cvv"]);
+test("i. a card form (number + expiry + CVV) is ONE card request: asks_card only (review #60)", () => {
+    assert.deepEqual(only([field({ name: "cardnumber" }), field({ name: "exp" }), field({ name: "cvv" })]), ["asks_card"]);
+    assert.deepEqual(only([field({ name: "cvv" })]), ["asks_cvv"], "a CVV with no card number still counts");
 });
 
 // ---- j. asks_ktp / asks_selfie_ktp ----------------------------------------
@@ -182,8 +183,8 @@ test("l. hidden and button fields never count", () => {
 const JARGON = ["otp", "cvv", "cvc", "nik", "kyc", "html", "field", "form", "input", "layer", "weight"];
 test("n. every signal: layer 3, R1 weight, bilingual labels, plain labelSimple, evidence is the field name/id", () => {
     const expected = { asks_pin: "pin", asks_otp: "otp", asks_password: "pwd", asks_card: "cardnumber", asks_cvv: "cvv", asks_ktp: "nik", asks_selfie_ktp: "selfie_ktp" };
-    const fields = [field({ name: "pin" }), field({ name: "otp" }), field({ type: "password", name: "pwd" }), field({ name: "cardnumber" }), field({ name: "cvv" }), field({ name: "nik" }), field({ type: "file", id: "selfie_ktp" })];
-    const out = scam(fields);
+    const fields = [field({ name: "pin" }), field({ name: "otp" }), field({ type: "password", name: "pwd" }), field({ name: "cardnumber" }), field({ name: "nik" }), field({ type: "file", id: "selfie_ktp" })];
+    const out = [...scam(fields), ...scam([field({ name: "cvv" })])]; // CVV next to a card number folds into asks_card
     assert.deepEqual(ids(out).sort(), Object.keys(expected).sort());
     for (const s of out) {
         assert.equal(s.layer, 3);
@@ -200,7 +201,7 @@ test("n. every signal: layer 3, R1 weight, bilingual labels, plain labelSimple, 
     }
 });
 test("n. weights after phase 07 calibration (D-imelda-12 / D-imelda-30; R1 started at 30 for otp, card, cvv, ktp)", () => {
-    assert.deepEqual(WEIGHTS, { asks_pin: 35, asks_otp: 25, asks_password: 15, asks_card: 25, asks_cvv: 25, asks_ktp: 25, asks_selfie_ktp: 35 });
+    assert.deepEqual(WEIGHTS, { asks_pin: 35, asks_otp: 25, asks_password: 15, asks_card: 20, asks_cvv: 25, asks_ktp: 25, asks_selfie_ktp: 35 });
 });
 test("n. evidence falls back to id, then is omitted; it is never a typed value", () => {
     assert.equal(scam([field({ id: "kode_pin" })])[0].evidence, "kode_pin");

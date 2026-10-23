@@ -371,5 +371,139 @@
       ],
       "capturedAt": "2026-10-22T00:00:00.000Z"
     }
+  },
+  {
+    "id": "trap-toko-kopi-kartu-native",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "native-card"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit, hand-written: small shop with its own card form (number, expiry, CVV) on a non-popular domain (review #60)",
+    "collectedAt": "2026-10-23T00:00:00.000Z",
+    "notes": "Must stay under 30. A card form is one request: asks_card only.",
+    "snapshot": {
+      "url": "https://tokokopi-senja.com/checkout",
+      "title": "Pembayaran - Toko Kopi Senja",
+      "lang": "id",
+      "text": "Ringkasan pesanan: Kopi arabika Gayo 250 g x2. Ongkos kirim dihitung saat checkout. Bayar dengan kartu kredit atau debit.",
+      "forms": [
+        {
+          "action": "/checkout/pay",
+          "fields": [
+            {
+              "type": "text",
+              "name": "cc-name",
+              "id": "cc-name",
+              "label": "Nama di kartu",
+              "placeholder": null,
+              "autocomplete": "cc-name"
+            },
+            {
+              "type": "text",
+              "name": "cc-number",
+              "id": "cc-number",
+              "label": "Nomor kartu",
+              "placeholder": null,
+              "autocomplete": "cc-number"
+            },
+            {
+              "type": "text",
+              "name": "cc-exp",
+              "id": "cc-exp",
+              "label": "Berlaku sampai (BB/TT)",
+              "placeholder": null,
+              "autocomplete": "cc-exp"
+            },
+            {
+              "type": "text",
+              "name": "cc-csc",
+              "id": "cc-csc",
+              "label": "CVV",
+              "placeholder": null,
+              "autocomplete": "cc-csc"
+            },
+            {
+              "type": "text",
+              "name": "alamat",
+              "id": "alamat",
+              "label": "Alamat pengiriman",
+              "placeholder": null,
+              "autocomplete": "street-address"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Logo Visa",
+        "Logo Mastercard",
+        "Foto kopi arabika"
+      ],
+      "capturedAt": "2026-10-23T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "trap-batik-card-checkout-en",
+    "label": "legit",
+    "tags": [
+      "checkout",
+      "native-card"
+    ],
+    "synthetic": true,
+    "source": "synthetic legit, hand-written: small batik shop, English card checkout on a .xyz domain (review #60)",
+    "collectedAt": "2026-10-23T00:00:00.000Z",
+    "notes": "Must stay under 30 even with a cheap TLD: card number + expiry + security code is one card request.",
+    "snapshot": {
+      "url": "https://batik-lestari.xyz/checkout",
+      "title": "Checkout - Batik Lestari",
+      "lang": "en",
+      "text": "Order summary: Batik tulis shirt, size M. Free shipping in Java. Pay by credit card.",
+      "forms": [
+        {
+          "action": "/pay",
+          "fields": [
+            {
+              "type": "email",
+              "name": "email",
+              "id": "email",
+              "label": "Email for the receipt",
+              "placeholder": null,
+              "autocomplete": "email"
+            },
+            {
+              "type": "text",
+              "name": "cardnumber",
+              "id": "cardnumber",
+              "label": "Card number",
+              "placeholder": null,
+              "autocomplete": "cc-number"
+            },
+            {
+              "type": "text",
+              "name": "expiry",
+              "id": "expiry",
+              "label": "Expiry date",
+              "placeholder": null,
+              "autocomplete": "cc-exp"
+            },
+            {
+              "type": "text",
+              "name": "cvc",
+              "id": "cvc",
+              "label": "Security code (CVC)",
+              "placeholder": null,
+              "autocomplete": "cc-csc"
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "Visa",
+        "Mastercard",
+        "Batik tulis shirt"
+      ],
+      "capturedAt": "2026-10-23T00:00:00.000Z"
+    }
   }
 ]
