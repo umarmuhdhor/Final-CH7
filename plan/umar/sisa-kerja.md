@@ -9,19 +9,19 @@
 | Item | Status | Sisa / siapa |
 |---|---|---|
 | U-2 … U-6, U-8, U-9 | Selesai: #74, #75, #76 ditutup; U-4 = PR #78, U-6 = PR #79 merged | — |
-| U-7 (C8) | PR #87 (kontrak), #88 (extension), #89 (AI) siap: hijau saat digabung bersama | Umar merge urut #87 → #88 → #89, lalu redeploy Worker AI (D-4) supaya `/analyze` membaca `capture` |
-| U-1 (#73) | Terbuka | Keputusan Umar (Team AI sekarang milik Umar): target tetap, butuh scam nyata (E-1) |
+| U-7 (C8) | Selesai: #87, #88, #89 merged; Worker AI di-deploy ulang 23 Okt, cek live: form KTP + `capture=user` → `asks_selfie_ktp`, `capture=environment` → hanya `asks_ktp` | — |
+| U-1 (#73) | Diputuskan 23 Okt, #73 ditutup: target tetap, M6 tetap `[~]` sampai 50 scam nyata berlisensi; MVP boleh rilis dengan catatan risiko | E-1 |
 | D-1 … D-6 | Selesai. Smoke ulang 23 Okt sore ke `https://shoo-ai.uumaarrrrr22.workers.dev`: semua `ok`, p95 `/analyze` 28 ms (10 run) | — |
-| D-7, D-8 (#82) | Menunggu Alief isi `aiBaseURL` | Alief |
-| G2 (L-1 … L-6) | Belum mulai | Umar pilih penyedia + model LLM (zero data retention), lalu `wrangler secret put` |
+| D-7, D-8 (#82) | Selesai: PR #92 merged, #82 ditutup. Hanya build Release yang memanggil AI; build Debug tetap layer 1–2 | T-6 pakai build Release/TestFlight |
+| G2 (L-1 … L-6) | Belum dipasang. Usulan Umar 23 Okt: `https://bandelbanget.xyz/v1`. Dicek: proxy pihak ketiga (domain dibuat 20 Jun 2026, Hostinger) yang menjual banyak model; tidak ada kebijakan retensi yang bisa diverifikasi, jadi belum memenuhi syarat zero data retention (L-1, A2/A6, C5) | Umar pilih penyedia resmi dengan ZDR tertulis, atau batasi endpoint ini ke eval lokal tanpa data pengguna |
 | E-1, E-2 | Belum mulai | Data scam nyata berlisensi; tidak bisa dibuat agent |
-| E-3, E-4 | Belum diputuskan. Kandidat baru: **Phishing.Database** (GitHub `Phishing-Database/Phishing.Database`, lisensi MIT, ±500 rb domain, berkas `phishing-domains-ACTIVE.txt`). Belum diverifikasi apakah MIT juga mencakup datanya | Umar putuskan sumber; build daftar di luar request (E-4) |
+| E-3, E-4 | Ditunda (Umar, 23 Okt): belum ada sumber yang pasti; `/public-blocklist` tetap kosong untuk MVP, layer 2 tetap jalan. Kandidat untuk nanti: **Phishing.Database** (GitHub `Phishing-Database/Phishing.Database`, lisensi MIT, ±500 rb domain, berkas `phishing-domains-ACTIVE.txt`). Belum diverifikasi apakah MIT juga mencakup datanya | Umar putuskan sumber; build daftar di luar request (E-4) |
 | E-5 | Selesai (PR #84, #85) | — |
 | G4 (T-1 … T-8) | Belum mulai | Butuh iPhone + tim Apple berbayar (#40, #55) |
-| P-1 | Selesai (#69 merged); docs lanjutan Alief = PR #90, CI hijau | Umar merge #90 |
-| P-2 (#38) | Workflow aktif. Nilai 3 secret diterima 23 Okt. Token Cloudflare valid (akun berisi Worker `shoo-api`). **`SUPABASE_DB_URL` yang diterima memakai host langsung `db.<ref>.supabase.co` (hanya IPv6), bukan session pooler**: runner GitHub IPv4-only, jadi `deploy` akan gagal | Alief kirim string Session pooler (Dashboard → Connect → Session pooler, port 5432); Umar pasang 3 secret di environment `production`, re-run `deploy` |
+| P-1 | Selesai: #69 dan #90 merged | — |
+| P-2 (#38) | Selesai 23 Okt, #38 ditutup: 3 secret `production` terpasang (`SUPABASE_DB_URL` = Session pooler `aws-0-ap-southeast-1`, bukan host langsung yang hanya IPv6). Run 39913374469 attempt 7 hijau: migrasi "Remote database is up to date", `shoo-api` ter-deploy; live `/healthz` 200, `/healthz/db` 200 | Rotasi password DB + token Cloudflare (nilainya sempat dibagikan di chat), lalu perbarui secret dan Hyperdrive `shoo-db` |
 | P-3, P-4, P-5 | Belum | PM / Alief |
-| P-6 | Branch lokal yang sudah merge dihapus. 24 branch remote yang sudah merge masih ada | Umar hapus remote (`git push origin --delete …`) |
+| P-6 | Branch lokal yang sudah merge dihapus. Branch remote lama yang sudah merge masih ada | Umar hapus remote (`git push origin --delete …`) |
 
 QA 23 Okt sore, `main` + PR #87–#90 digabung di worktree sementara:
 - Extension `node --test ios/ShooExtension/Tests/*.test.mjs`: 145/145 lulus.
