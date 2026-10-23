@@ -12,9 +12,9 @@
 |---|---|---|---|
 | G0 | Keputusan lead + perbaikan kecil extension | Tidak ada | Umar |
 | G1 | Deploy `/analyze` + `/public-blocklist`, pasang URL | Akun Cloudflare | Umar → Alief |
-| G2 | Layer 4 (LLM) dinyalakan | G0 (A7), G1, model dipilih | Imelda |
-| G3 | Data scam nyata, kalibrasi ulang, sumber blocklist | G0 (target M6) | Imelda |
-| G4 | Tes di iPhone + TestFlight | Build tim berbayar, hasil spike Alief | Umar, Alief, Imelda |
+| G2 | Layer 4 (LLM) dinyalakan | G0 (A7), G1, model dipilih | Imelda - Umar |
+| G3 | Data scam nyata, kalibrasi ulang, sumber blocklist | G0 (target M6) | Imelda - Umar |
+| G4 | Tes di iPhone + TestFlight | Build tim berbayar, hasil spike Alief | Umar, Alief, Imelda - Umar |
 | G5 | CI, PM, antrean blocklist | Tidak ada (bisa paralel) | Umar (+ Alief) |
 
 Jalur kritis: **G1 deploy → URL di app (Alief) → tes end-to-end di iPhone (G4)**. G2 dan G3 hanya menaikkan akurasi, tidak memblokir MVP berjalan (layer 1–3 sudah jalan tanpa LLM).
@@ -65,7 +65,7 @@ Catatan: layer 4 tetap mati sampai G2. Daftar publik tetap kosong sampai G3 (A3)
 
 ---
 
-## 4. G2 · Nyalakan layer 4 / LLM (Imelda)
+## 4. G2 · Nyalakan layer 4 / LLM (Imelda - Umar)
 
 | # | Langkah | Selesai kalau |
 |---|---|---|
@@ -80,7 +80,7 @@ Syarat: U-2 (A7) dijawab, D-4 selesai.
 
 ---
 
-## 5. G3 · Data + kalibrasi + sumber blocklist (Imelda)
+## 5. G3 · Data + kalibrasi + sumber blocklist (Imelda - Umar)
 
 | # | Langkah | Selesai kalau |
 |---|---|---|
@@ -101,7 +101,7 @@ Syarat: U-2 (A7) dijawab, D-4 selesai.
 | T-3 | Umar | **C17** setujui/tolak `SFSafariExtensionManager` (iOS 26.2+) di #40 | T-1 |
 | T-4 | Alief | `ExtensionStatus` baca `extension.allSites == false` → Off | — |
 | T-5 | Umar | **U7 · EX-01** tes izin "Allow on every website" + pencabutan → app Off (checklist `docs/spikes/extension-status.md`), centang U7 | T-4, build di iPhone |
-| T-6 | Imelda | **D3** uji detector + `/analyze` di Safari iPhone sungguhan | D-7, build |
+| T-6 | Imelda - Umar | **D3** uji detector + `/analyze` di Safari iPhone sungguhan | D-7, build |
 | T-7 | Umar + Alief | **#55** TestFlight: undang Alief ke tim, kunci APNs (B7), App Store Connect (B8), build pertama | Tim berbayar |
 | T-8 | Umar | Uji 5 definisi sukses MVP Umar di iPhone (skor bertahap, server mati, It's safe membuka blokir, input tidak terkirim) | T-5, D-7 |
 

@@ -3,6 +3,8 @@
 > Dari: Umar (lead) · Untuk: Imelda (@imeldamayanti) dan Claude-nya
 > Cara pakai: di Claude Code, ketik `/mandate`. Claude akan membaca file ini, memilih tugas berikutnya yang belum dicentang, lalu mulai kerja.
 
+> **Catatan:** sejak 23 Okt 2026 mandat ini dikerjakan oleh Umar (@umarmuhdhor). Tugas tetap sama.
+
 ## Peran
 Kamu yang menentukan **seberapa berbahaya sebuah halaman**. Semua yang menghasilkan sinyal dan bobot skor adalah tanggung jawabmu. Extension (Umar) cuma menjumlahkan bobot dan menampilkan UI. App (Alief) cuma menampilkan hasilnya.
 
