@@ -17,6 +17,19 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     expect(html).not.toContain("<script");
   });
 
+  it("discloses the AI layer 4 summary to a third party, what is never sent, and unknown retention (#97)", async () => {
+    const en = await (await call("/privacy")).text();
+    for (const s of ["third-party AI provider", "the page title", "form fields", "never send the page's text", "full web address",
+      "anything you type", "device ID", "cannot guarantee how long", "25 October 2026"]) {
+      expect(en).toContain(s);
+    }
+    const id = await (await call("/privacy?lang=id")).text();
+    for (const s of ["penyedia AI pihak ketiga", "judul halaman", "kolom formulir", "tidak pernah mengirim isi teks halaman",
+      "alamat web lengkap", "yang kamu ketik", "ID device", "tidak bisa menjamin berapa lama", "25 Oktober 2026"]) {
+      expect(id).toContain(s);
+    }
+  });
+
   it("Indonesian by ?lang=id or Accept-Language", async () => {
     for (const res of [await call("/privacy?lang=id"), await call("/privacy", { headers: { "accept-language": "id-ID,id;q=0.9" } })]) {
       const html = await res.text();
