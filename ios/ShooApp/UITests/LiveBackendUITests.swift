@@ -48,12 +48,18 @@ final class LiveBackendUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Hi, \(name)!"].waitForExistence(timeout: 15), app.debugDescription)
         shot(app, "\(mode)-1-greeting")
         app.buttons["greeting.continue"].tap()
+        if mode == "guardian" {
+            XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
+            app.buttons["invite.skip"].tap()
+        }
     }
 
     @MainActor
     func testGuardianOnboardingActivityAndProfile() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
+        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.buttons["notifications.allow"].waitForExistence(timeout: 5))
         app.buttons["notifications.allow"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
@@ -96,6 +102,8 @@ final class LiveBackendUITests: XCTestCase {
         app.buttons["greeting.continue"].tap()
         XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 5))
         app.buttons["connect.skip"].tap()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
+        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5))
         app.buttons["notifications.skip"].tap()
         XCTAssertTrue(app.tabBars.buttons["Perisai"].waitForExistence(timeout: 10), app.debugDescription)

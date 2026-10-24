@@ -7,9 +7,9 @@ struct TurnOnExtensionSheet: View {
 
     var body: some View {
         NavigationStack {
-            TurnOnExtensionView {
+            TurnOnExtensionView(refreshStatus: {
                 if env.extensionStatus().isActive { dismiss() }
-            }
+            })
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }

@@ -51,7 +51,7 @@ enum ExtensionSetup {
 extension ExtensionSetup.Step {
     var text: LocalizedStringKey {
         switch self {
-        case .tapTurnOn: "Tap Turn on below."
+        case .tapTurnOn: "Tap the button below to open Safari settings."
         case .openSettingsModern: "Open Settings › Apps › Safari › Extensions."
         case .openSettingsLegacy: "Open Settings › Safari › Extensions."
         case .switchOn: "Tap Shoo and switch it on."

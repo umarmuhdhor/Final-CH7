@@ -131,37 +131,61 @@ struct OnboardingHeaderBackground: View {
 }
 
 /// Name and mode screens: header gradient, back button, title, scrolling content, button pinned at the bottom.
-struct OnboardingFormPage<Content: View, Footer: View>: View {
+/// `hero` is the 300 pt illustration above the title (invite, ON-04); it sits beside the back button.
+struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     /// `nil` where there is no way back (e.g. Connect inside onboarding, after the mode is saved).
     let onBack: (() -> Void)?
     /// `id` of a view to keep visible above the button, e.g. the focused field once the keyboard is up.
     var scrollTarget: String?
+    @ViewBuilder let hero: Hero
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
     @State private var footerHeight: CGFloat = 92
+
+    init(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        onBack: (() -> Void)?,
+        scrollTarget: String? = nil,
+        @ViewBuilder hero: () -> Hero,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.title = title
+        self.message = message
+        self.onBack = onBack
+        self.scrollTarget = scrollTarget
+        self.hero = hero()
+        self.content = content()
+        self.footer = footer()
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
-                    HStack {
-                        if let onBack {
-                            OnboardingBackButton(action: onBack)
-                        } else {
-                            Color.clear.frame(width: 50, height: 50)
+                    ZStack(alignment: .top) {
+                        hero
+                            .padding(.top, Hero.self == EmptyView.self ? 0 : 18)
+                        HStack {
+                            if let onBack {
+                                OnboardingBackButton(action: onBack)
+                            } else {
+                                Color.clear.frame(width: 50, height: 50)
+                            }
+                            Spacer()
                         }
-                        Spacer()
+                        .padding(.horizontal, 24)
                     }
-                    .padding(.horizontal, 24)
 
                     VStack(spacing: 4) {
                         Text(title).onboardingTitleStyle()
                         Text(message).onboardingBodyStyle()
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 30)
+                    .padding(.top, Hero.self == EmptyView.self ? 30 : 14)
 
                     content
                         .padding(.horizontal, 24)
@@ -216,6 +240,32 @@ struct OnboardingFormPage<Content: View, Footer: View>: View {
     }
 }
 
+extension OnboardingFormPage where Hero == EmptyView {
+    init(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        onBack: (() -> Void)?,
+        scrollTarget: String? = nil,
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.init(title: title, message: message, onBack: onBack, scrollTarget: scrollTarget, hero: { EmptyView() }, content: content, footer: footer)
+    }
+}
+
+/// 300 pt illustration at the top of an onboarding page (Figma "image 1").
+struct OnboardingHeroImage: View {
+    let name: String
+
+    var body: some View {
+        Image(name)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 300, height: 300)
+            .accessibilityHidden(true)
+    }
+}
+
 /// Red line under a field or the scanner, e.g. "Kode kadaluarsa…" (Figma "Kode Kadaluarsa").
 struct OnboardingErrorLabel: View {
     let text: Text
@@ -230,14 +280,70 @@ struct OnboardingErrorLabel: View {
     }
 }
 
-/// Text-only secondary action under the pill ("Lewati", "Nanti saja").
+/// Text-only secondary action under the pill ("Lewati", "Nanti saja"; dark for "Terkendala? Tonton Tutorial").
 struct OnboardingLinkButtonStyle: ButtonStyle {
+    var color = OnboardingTheme.link
+    var weight = Font.Weight.medium
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
-            .foregroundStyle(OnboardingTheme.link)
+            .onboardingFont(15, weight: weight, relativeTo: .subheadline)
+            .foregroundStyle(color)
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())
             .opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+
+/// Blue success screen: illustration, white title + message, "Next" at the bottom
+/// (Figma "Berhasil Terhubung", "Yeay, kamu berhasil"). Ids: `<idPrefix>.title`, `<idPrefix>.continue`.
+struct OnboardingSuccessPage<Hero: View>: View {
+    let title: Text
+    let message: Text
+    let idPrefix: String
+    let onContinue: () -> Void
+    @ViewBuilder let hero: Hero
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                hero
+
+                VStack(spacing: 4) {
+                    title
+                        .onboardingFont(30, weight: .medium, relativeTo: .title)
+                        .tracking(-0.3)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("\(idPrefix).title")
+                    message
+                        .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
+                        .lineSpacing(3)
+                        .opacity(0.9)
+                }
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.top, 44)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .contentMargins(.bottom, 104, for: .scrollContent)
+        .background {
+            Image("SuccessBackground")
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
+                .accessibilityHidden(true)
+        }
+        .overlay(alignment: .bottom) {
+            Button("Next", action: onContinue)
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .accessibilityIdentifier("\(idPrefix).continue")
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
+        }
+        .environment(\.colorScheme, .light)
     }
 }

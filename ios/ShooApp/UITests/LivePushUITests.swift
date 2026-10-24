@@ -80,6 +80,10 @@ final class LivePushUITests: XCTestCase {
         app.buttons["mode.continue"].tap()
         XCTAssertTrue(app.staticTexts["Hi, Rina!"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["greeting.continue"].tap()
+        XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["invite.skip"].tap()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["extensionOn.continue"].tap()
         // ON-05, then the system alert.
         let allow = app.buttons["notifications.allow"]
         XCTAssertTrue(allow.waitForExistence(timeout: 10), app.debugDescription)

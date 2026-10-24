@@ -41,6 +41,33 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
+    private func skipInvite(_ app: XCUIApplication) {
+        XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["invite.skip"].tap()
+    }
+
+    @MainActor
+    func testGuardianInviteSheetShowsCodeThenGoesToExtension() {
+        let app = launch(extensionActive: false)
+        register(app, name: "Rina", mode: "guardian")
+        app.buttons["greeting.continue"].tap()
+        XCTAssertTrue(app.buttons["invite.open"].waitForExistence(timeout: 5))
+        app.buttons["invite.open"].tap()
+        XCTAssertTrue(app.images["invite.qr"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["invite.code"].exists)
+        XCTAssertTrue(app.buttons["invite.copy"].isEnabled)
+        // Close keeps the Guardian on the invite screen; Done moves on to ON-04.
+        app.buttons["invite.close"].tap()
+        XCTAssertTrue(app.buttons["invite.open"].waitForExistence(timeout: 5))
+        app.buttons["invite.open"].tap()
+        XCTAssertTrue(app.buttons["invite.done"].waitForExistence(timeout: 5))
+        app.buttons["invite.done"].tap()
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["onboarding.back"].tap()
+        XCTAssertTrue(app.buttons["invite.open"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSplashHasTwoSlidesSkipAndBack() {
         let app = launch()
         XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 10))
@@ -75,7 +102,12 @@ final class OnboardingUITests: XCTestCase {
         // No way back to ON-03.
         XCTAssertFalse(app.navigationBars.buttons.firstMatch.exists)
         app.buttons["greeting.continue"].tap()
+        XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["onboarding.back"].exists)
+        app.buttons["invite.skip"].tap()
         // ON-04 passes on its own because the extension counts as on.
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
+        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.buttons["notifications.allow"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["notifications.skip"].exists)
         app.buttons["notifications.allow"].tap()
@@ -90,6 +122,8 @@ final class OnboardingUITests: XCTestCase {
         app.buttons["greeting.continue"].tap()
         XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 5))
         app.buttons["connect.skip"].tap()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
+        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5))
         app.buttons["notifications.skip"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
@@ -101,6 +135,7 @@ final class OnboardingUITests: XCTestCase {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
         app.buttons["greeting.continue"].tap()
+        skipInvite(app)
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Shoo is off."].exists)
 
@@ -118,6 +153,7 @@ final class OnboardingUITests: XCTestCase {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
         app.buttons["greeting.continue"].tap()
+        skipInvite(app)
         XCTAssertTrue(app.buttons["extension.video"].waitForExistence(timeout: 5))
         app.buttons["extension.video"].tap()
         XCTAssertTrue(app.buttons["video.close"].waitForExistence(timeout: 5))
@@ -130,6 +166,7 @@ final class OnboardingUITests: XCTestCase {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
         app.buttons["greeting.continue"].tap()
+        skipInvite(app)
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
         app.buttons["extension.turnOn"].tap()
         let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")

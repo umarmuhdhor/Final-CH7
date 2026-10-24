@@ -85,6 +85,8 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(title.label.contains("Adhella"), title.label)
         app.buttons["protectedBy.continue"].tap()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5), app.debugDescription)
     }
 
