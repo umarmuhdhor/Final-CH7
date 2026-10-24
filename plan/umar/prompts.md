@@ -1,6 +1,6 @@
 # Prompt siap tempel — sisa kerja Umar + Imelda - Umar
 
-> Dibuat 23 Okt 2026. Sejak hari ini **semua tugas Imelda (Team AI) diambil alih Umar**, ditandai **Imelda - Umar**.
+> Dibuat 23 Okt 2026, status tabel diperbarui 24 Okt 2026. Sejak hari ini **semua tugas Imelda (Team AI) diambil alih Umar**, ditandai **Imelda - Umar**.
 > Sumber: [`sisa-kerja.md`](sisa-kerja.md), `docs/mandates/umar.md`, `docs/mandates/imelda.md`, `plan/imelda/TODO.md`, `plan/imelda/log/fase-08.md`, issue #37, #38, #40, #55, #73–#76.
 > Tugas yang hanya milik Alief (#3, #13, #15, #17) tidak diberi prompt.
 
@@ -14,36 +14,36 @@
 
 ## Tabel sisa kerja
 
-| # | Siapa | Tugas | Menunggu | Prompt |
-|---|---|---|---|---|
-| 00 | Umar | Catat pengambilalihan Team AI di `CLAUDE.md` + mandat | — | [00](#prompt-00--catat-pengambilalihan-team-ai) |
-| 1 | Umar | G1 deploy `/analyze` + `/public-blocklist` | Kamu login Cloudflare | [1](#prompt-1--deploy-worker-shoo-ai-g1-d-1d-5) |
-| 2 | Umar | Catat hasil deploy, centang M7, issue `aiBaseURL` ke Alief | #1 | [2](#prompt-2--catat-deploy--issue-aibaseurl-d-6d-8) |
-| 3 | Alief | Isi `aiBaseURL` di `AppConfig.swift` | #2 | — |
-| 4 | Umar | Verifikasi 3 domain `brands.json` (#76) | — | [4](#prompt-4--verifikasi-domain-brandsjson-76) |
-| 5 | Imelda - Umar | Putuskan + tutup #73, #74, #75, #76 | #4 (untuk #76) | [5](#prompt-5--putuskan-dan-tutup-issue-g0-7376) |
-| 6 | Imelda - Umar | Pilih model LLM (A2, A5, A6), pasang secret | #1, #5 | [6](#prompt-6--pilih-model-llm-dan-nyalakan-layer-4) |
-| 7 | Imelda - Umar | Eval layer 4 dengan LLM nyata, centang M4 | #6 | [7](#prompt-7--eval-layer-4-dengan-llm-nyata) |
-| 8 | Imelda - Umar | Issue privasi LLM ke Alief (C5) | #6 | [8](#prompt-8--issue-privasi-llm-ke-alief-c5) |
-| 9 | Imelda - Umar | Data scam nyata berlisensi (E-1) | #5 (#73) | [9](#prompt-9--kumpulkan-data-scam-nyata-e-1) |
-| 10 | Imelda - Umar | Kalibrasi ulang M6 (E-2) | #9 | [10](#prompt-10--kalibrasi-ulang-m6-e-2) |
-| 11 | Imelda - Umar | Sumber blocklist publik + daftar pra-bangun (E-3, E-4) | — | [11](#prompt-11--sumber-blocklist-publik-e-3-e-4) |
-| 12 | Imelda - Umar | Sinkronkan `PROGRESS.md` + `TODO.md` Imelda (E-5) | #5 | [12](#prompt-12--sinkronkan-progress-dan-todo-team-ai-e-5) |
-| 13 | Alief | PR docs 3 temuan review #69 + kirim 3 secret CI | — | — |
-| 14 | Umar | Isi secret CI `production`, jalankan ulang `deploy`, tutup #38 | #13 | [14](#prompt-14--secret-ci-dan-deploy-backend-38) |
-| 15 | Alief | Spike 01S di iPhone (#40) | Akses tim Apple | — |
-| 16 | Umar | `extensionActiveWindow` + keputusan C17 (#40) | #15 | [16](#prompt-16--extensionactivewindow-dan-keputusan-c17-40) |
-| 17 | Alief | `ExtensionStatus` baca `allSites` | — | — |
-| 18 | Umar | Tes U7 / EX-01 di iPhone, centang U7 | #17 | [18](#prompt-18--tes-u7--ex-01-di-iphone) |
-| 19 | Umar | TestFlight bagian Umar (#55): undang Alief, kunci APNs, App Store Connect | — | [19](#prompt-19--testflight-bagian-umar-55) |
-| 20 | Imelda - Umar | Uji detector + `/analyze` di Safari iPhone (D3) | #3, build | [20](#prompt-20--uji-detector-dan-analyze-di-safari-iphone-d3) |
-| 21 | Umar | Uji 5 definisi sukses MVP + #78/#79 di iPhone | #3, #18 | [21](#prompt-21--uji-definisi-sukses-mvp-di-iphone) |
-| 22 | Umar | `accept` di `PageSnapshot` (C8 / U-7) | — | [22](#prompt-22--field-accept-di-pagesnapshot-c8) |
-| 23 | Umar | Pertanyaan PM + video ON-04 (#37) | PM | [23](#prompt-23--pertanyaan-pm-dan-video-on-04-37) |
-| 24 | Umar | Runbook review antrean blocklist (bareng Alief) | Fase 10 backend | [24](#prompt-24--runbook-review-antrean-blocklist-c6) |
-| 25 | Umar | Hapus branch yang sudah merge | — | [25](#prompt-25--hapus-branch-yang-sudah-merge) |
+| # | Siapa | Tugas | Menunggu | Prompt | Status 24 Okt |
+|---|---|---|---|---|---|
+| 00 | Umar | Catat pengambilalihan Team AI di `CLAUDE.md` + mandat | — | [00](#prompt-00--catat-pengambilalihan-team-ai) | Selesai |
+| 1 | Umar | G1 deploy `/analyze` + `/public-blocklist` | Kamu login Cloudflare | [1](#prompt-1--deploy-worker-shoo-ai-g1-d-1d-5) | Selesai 23 Okt. Deploy ulang perlu untuk #101, #105, #106 |
+| 2 | Umar | Catat hasil deploy, centang M7, issue `aiBaseURL` ke Alief | #1 | [2](#prompt-2--catat-deploy--issue-aibaseurl-d-6d-8) | Selesai (#92, #82 ditutup) |
+| 3 | Alief | Isi `aiBaseURL` di `AppConfig.swift` | #2 | — | Selesai (#92) |
+| 4 | Umar | Verifikasi 3 domain `brands.json` (#76) | — | [4](#prompt-4--verifikasi-domain-brandsjson-76) | Selesai (#76 ditutup) |
+| 5 | Imelda - Umar | Putuskan + tutup #73, #74, #75, #76 | #4 (untuk #76) | [5](#prompt-5--putuskan-dan-tutup-issue-g0-7376) | Selesai (#73–#76 ditutup) |
+| 6 | Imelda - Umar | Pilih model LLM (A2, A5, A6), pasang secret | #1, #5 | [6](#prompt-6--pilih-model-llm-dan-nyalakan-layer-4) | Selesai dengan risiko. Centang A2/A5/A6 di PR #107 (terbuka) |
+| 7 | Imelda - Umar | Eval layer 4 dengan LLM nyata, centang M4 | #6 | [7](#prompt-7--eval-layer-4-dengan-llm-nyata) | Selesai (#96). Timeout 4 s → 6 s di #105 |
+| 8 | Imelda - Umar | Issue privasi LLM ke Alief (C5) | #6 | [8](#prompt-8--issue-privasi-llm-ke-alief-c5) | Selesai (#97, #98) |
+| 9 | Imelda - Umar | Data scam nyata berlisensi (E-1) | #5 (#73) | [9](#prompt-9--kumpulkan-data-scam-nyata-e-1) | Belum |
+| 10 | Imelda - Umar | Kalibrasi ulang M6 (E-2) | #9 | [10](#prompt-10--kalibrasi-ulang-m6-e-2) | Belum |
+| 11 | Imelda - Umar | Sumber blocklist publik + daftar pra-bangun (E-3, E-4) | — | [11](#prompt-11--sumber-blocklist-publik-e-3-e-4) | Kode selesai (#101, #104, #106). Sisa manual: secret, variable, run workflow, deploy |
+| 12 | Imelda - Umar | Sinkronkan `PROGRESS.md` + `TODO.md` Imelda (E-5) | #5 | [12](#prompt-12--sinkronkan-progress-dan-todo-team-ai-e-5) | Selesai (#84, #85) |
+| 13 | Alief | PR docs 3 temuan review #69 + kirim 3 secret CI | — | — | Selesai (#69, #90) |
+| 14 | Umar | Isi secret CI `production`, jalankan ulang `deploy`, tutup #38 | #13 | [14](#prompt-14--secret-ci-dan-deploy-backend-38) | Selesai (#38 ditutup). Sisa: rotasi password DB + token Cloudflare |
+| 15 | Alief | Spike 01S di iPhone (#40) | Akses tim Apple | — | Belum |
+| 16 | Umar | `extensionActiveWindow` + keputusan C17 (#40) | #15 | [16](#prompt-16--extensionactivewindow-dan-keputusan-c17-40) | Belum |
+| 17 | Alief | `ExtensionStatus` baca `allSites` | — | — | Belum |
+| 18 | Umar | Tes U7 / EX-01 di iPhone, centang U7 | #17 | [18](#prompt-18--tes-u7--ex-01-di-iphone) | Belum |
+| 19 | Umar | TestFlight bagian Umar (#55): undang Alief, kunci APNs, App Store Connect | — | [19](#prompt-19--testflight-bagian-umar-55) | Checklist selesai. Sisa manual: undang Alief, kunci APNs, App Store Connect |
+| 20 | Imelda - Umar | Uji detector + `/analyze` di Safari iPhone (D3) | #3, build | [20](#prompt-20--uji-detector-dan-analyze-di-safari-iphone-d3) | Belum |
+| 21 | Umar | Uji 5 definisi sukses MVP + #78/#79 di iPhone | #3, #18 | [21](#prompt-21--uji-definisi-sukses-mvp-di-iphone) | Belum |
+| 22 | Umar | `accept` di `PageSnapshot` (C8 / U-7) | — | [22](#prompt-22--field-accept-di-pagesnapshot-c8) | Selesai (#87–#89) |
+| 23 | Umar | Pertanyaan PM + video ON-04 (#37) | PM | [23](#prompt-23--pertanyaan-pm-dan-video-on-04-37) | Draf siap, ditunda Umar |
+| 24 | Umar | Runbook review antrean blocklist (bareng Alief) | Fase 10 backend | [24](#prompt-24--runbook-review-antrean-blocklist-c6) | Selesai (#100). #99 menunggu Alief |
+| 25 | Umar | Hapus branch yang sudah merge | — | [25](#prompt-25--hapus-branch-yang-sudah-merge) | Sebagian: 28 branch dihapus, 22 branch Alief menunggu izin |
 
-Urutan yang disarankan: 00 → 1 → 2 → 4 → 5 → 6 → 7 → 8 → 11 → 9 → 10 → 12 → 22 → 25, lalu 14, 16, 18, 19, 20, 21 saat syaratnya terpenuhi; 23 dan 24 kapan saja.
+Sisa yang disarankan (24 Okt): langkah manual Prompt 11 (secret, variable, run workflow, `npm run deploy`) → langkah manual 19 → 9 → 10, lalu 16, 18, 20, 21 saat syaratnya terpenuhi; 23 kapan Umar siap. Daftar langkah manual ada di [`sisa-kerja.md`](sisa-kerja.md) bagian 0.
 
 ---
 
