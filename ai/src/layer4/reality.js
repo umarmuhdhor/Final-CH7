@@ -15,7 +15,7 @@ import { parseVerdict } from "./schema.js";
 
 export const WEIGHT = 30; // plan/imelda/ref/R1: starting proposal, tuned in phase 07
 export const MIN_CONFIDENCE = 0.6;
-export const GATE_MIN_SCORE = 15; // D-imelda-05 (proposal, not yet approved)
+export const GATE_MIN_SCORE = 15; // D-imelda-05 (in force)
 export const CLIENT_CALLS_PER_HOUR = 20; // per IP; /analyze itself gets its limit in phase 08
 /** How each check ended. Counts only: no page data (SECURITY A1). */
 export const OUTCOMES = Object.freeze(["gated", "capped", "timeout", "http_error", "bad_schema", "reasonable", "flagged"]);
