@@ -57,6 +57,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID)
+        TARGETED_DEVICE_FAMILY: "1"   # the iOS target preset sets 1,2; App Store rejects iPad without all orientations
     dependencies:
       - target: ShooExtension
       - target: ShooLiveActivity
@@ -105,6 +106,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID).extension
+        TARGETED_DEVICE_FAMILY: "1"   # the iOS target preset sets 1,2; App Store rejects iPad without all orientations
     dependencies:
       - sdk: SafariServices.framework
 
@@ -130,6 +132,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID).liveactivity
+        TARGETED_DEVICE_FAMILY: "1"   # the iOS target preset sets 1,2; App Store rejects iPad without all orientations
     dependencies:
       - sdk: WidgetKit.framework
       - sdk: SwiftUI.framework
