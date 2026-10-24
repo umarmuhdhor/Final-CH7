@@ -1,6 +1,6 @@
 # C6 — Tinjauan bobot layer 3–4 dan ambang 30/50/80
 
-**Status:** `[x]` laporan selesai; **usulan menunggu keputusan Umar**. Tidak ada bobot, ambang, atau kontrak yang diubah.
+**Status:** `[x]` laporan selesai; **diputuskan Umar 24 Okt 2026: S0** (bobot layer 3–4 dan ambang 30/50/80 tidak diubah sampai ada data scam nyata; lihat D-imelda-41 di `DECISIONS.md`). Tidak ada bobot, ambang, atau kontrak yang diubah.
 **Branch:** `docs/AI-M6-c6-weight-review` dari `main` (5bca568). 24 Okt 2026.
 **Bahan:** eval M2 lokal tanpa LLM dan tanpa RDAP, lalu skor ulang offline dari sinyal yang terekam (tanpa mengubah `src/`).
 
