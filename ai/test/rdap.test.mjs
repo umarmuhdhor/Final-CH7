@@ -199,7 +199,7 @@ test("KV adapter ignores a poisoned entry (future or ancient date)", async () =>
     assert.equal(await cache.get("b.com"), null);
 });
 
-test("KV adapter (not enabled in phase 03) works against a fake binding and sets a TTL", async () => {
+test("KV adapter works against a fake binding and sets a TTL", async () => {
     const store = new Map();
     const puts = [];
     const kv = { get: async (k) => store.get(k) ?? null, put: async (k, v, o) => { puts.push([k, o]); store.set(k, v); } };

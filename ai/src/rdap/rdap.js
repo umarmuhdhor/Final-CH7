@@ -134,7 +134,7 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
     }
 
     /** One deadline for the whole lookup, even if fetch ignores the abort signal. */
-    async function withDeadline(domain) {
+    async function withDeadline(domain, budgetMs) {
         const controller = new AbortController();
         const state = { serversReady: false };
         let timer;
@@ -142,7 +142,7 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
             timer = setTimeout(() => {
                 controller.abort();
                 resolve(null);
-            }, timeoutMs);
+            }, budgetMs);
         });
         const work = fetchRegistration(domain, controller.signal, state).catch(() => null);
         try {
@@ -158,21 +158,24 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
     return {
         /**
          * Whole days since registration, or null for anything that goes wrong. Never throws, never logs.
+         * The cache read and the network share one deadline (`timeoutMs`).
          * @param {string} host hostname of the page
+         * @param {{ cache?: object }} [opts] cache for this request only (memory + KV tiers, app.js); default: the client's cache
          */
-        async lookupAgeDays(host) {
+        async lookupAgeDays(host, { cache: requestCache = cache } = {}) {
             const domain = registrableDomain(host);
             if (!domain) return null;
+            const startedAt = now();
             try {
-                const cached = await cache.get(domain);
+                const cached = await requestCache.get(domain);
                 if (cached) return ageOf(cached.registeredAt);
             } catch {
                 /* a broken cache must not break the answer */
             }
-            const { registeredAt, cacheable } = await withDeadline(domain);
+            const { registeredAt, cacheable } = await withDeadline(domain, Math.max(0, timeoutMs - (now() - startedAt)));
             if (cacheable) {
                 try {
-                    await cache.set(domain, { registeredAt }, registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
+                    await requestCache.set(domain, { registeredAt }, registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
                 } catch {
                     /* ignore */
                 }

@@ -34,3 +34,10 @@ simple = { limit = 10, period = 60 }
 [[kv_namespaces]]
 binding = "BLOCKLIST_KV"
 id = "c0d0b3975fbd4f22a979a8baa8069d1d"
+
+# RDAP cache shared by all isolates (D-imelda-40): key `rdap:<registrable domain>`, value { registeredAt } only.
+# Separate namespace: the blocklist build owns every key in BLOCKLIST_KV. Without this binding the cache stays in memory.
+# Namespace "shoo-rdap-cache", created with `npx wrangler kv namespace create shoo-rdap-cache`. The id is not a secret.
+[[kv_namespaces]]
+binding = "RDAP_KV"
+id = "5ab0aaecad5b4194b252a755076b2dbb"

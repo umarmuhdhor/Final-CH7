@@ -1,12 +1,13 @@
 // POST /analyze and GET /public-blocklist (contracts/api.md). Stateless: nothing from a request is stored or logged.
-// The only cache is RDAP domain ages (domain + registration date, TTL in rdap/cache.js).
+// The only cache is RDAP domain ages (domain + registration date, TTL in rdap/cache.js): memory, plus Workers KV
+// when the RDAP_KV binding exists (D-imelda-40).
 // Authorization is accepted but never read: the AI service cannot verify device tokens in the MVP.
 import { Hono } from "hono";
 import { LIMITS } from "./limits.js";
 import { HttpError, errorResponse, readTextLimited } from "./http.js";
 import { validateRequest } from "./validate.js";
 import { analyze, SERVER_DEADLINE_MS } from "./analyze.js";
-import { createMemoryCache } from "./rdap/cache.js";
+import { createMemoryCache, createKvCache, createKvBudget, createTieredCache } from "./rdap/cache.js";
 import { createRdapClient } from "./rdap/rdap.js";
 import { emptySource } from "./blocklist/source.js";
 import { createBlocklist } from "./blocklist/route.js";
@@ -60,6 +61,16 @@ async function bindingAllows(binding, key) {
     }
 }
 
+/** KV writes outlive the answer through the Worker's waitUntil; tests and the dev server have no execution context. */
+function waitUntilOf(c) {
+    try {
+        const ctx = c.executionCtx;
+        return (p) => ctx.waitUntil(p);
+    } catch {
+        return undefined;
+    }
+}
+
 /** Per-IP limit for /public-blocklist: the extension asks every 6 h, so this is generous for a real client. */
 export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 1000 });
 
@@ -67,6 +78,7 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  * @param {{ fetch?: typeof fetch, cache?: object, now?: () => number, rdapTimeoutMs?: number, llm?: object, llmFetch?: typeof fetch, llmClientCallsPerHour?: number, devStats?: boolean, blocklistSource?: object, rateLimit?: { limit: number, windowMs: number }, analyzeRateLimit?: { limit: number, windowMs: number } }} [opts]
  *   fetch: network for RDAP (the Worker entry passes the real one). Without it new_domain is off, so tests never touch the network.
  *   cache: { get, set } for RDAP answers; defaults to an in-memory cache that lives as long as this app (one Worker isolate).
+ *     With an RDAP_KV binding in the request's env, Workers KV is a second tier behind it (rdap/cache.js createTieredCache).
  *   blocklistSource: where /public-blocklist gets its domains (blocklist/source.js). Default: an empty list.
  *     When the Worker has a BLOCKLIST_KV binding, the pre-built list in KV is served instead (blocklist/kv.js, D-imelda-38).
  *   rateLimit: per-IP limit for /public-blocklist.
@@ -76,7 +88,16 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  */
 export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false } = {}) {
     let envLlm = { key: "", checker: null }; // built once per distinct configuration, so the daily counter survives requests
-    const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: cache ?? createMemoryCache({ now }), now, timeoutMs: rdapTimeoutMs }) : null;
+    const memoryCache = cache ?? createMemoryCache({ now });
+    const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: memoryCache, now, timeoutMs: rdapTimeoutMs }) : null;
+    const kvBudget = createKvBudget({ now }); // lives with the isolate, like the memory cache
+    /** The RDAP client for one request: memory only, or memory + KV when the Worker has the RDAP_KV binding. */
+    function rdapFor(c) {
+        const kv = c.env?.RDAP_KV;
+        if (!rdap || typeof kv?.get !== "function" || typeof kv?.put !== "function") return rdap;
+        const requestCache = createTieredCache({ memory: memoryCache, kv: createKvCache(kv), budget: kvBudget, waitUntil: waitUntilOf(c) });
+        return { lookupAgeDays: (host) => rdap.lookupAgeDays(host, { cache: requestCache }) };
+    }
     const blocklist = createBlocklist({ source: blocklistSource, now });
     const kvBlocklist = createKvBlocklist({ now });
     const blocklistLimiter = createRateLimiter({ ...rateLimit, now });
@@ -123,7 +144,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const checked = validateRequest(body);
         if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         const checker = llm ?? llmFor(c.env);
-        return c.json({ signals: await analyze(checked.snapshot, { rdap, llm: checker, client, localSignals: checked.localSignals, deadline: startedAt + SERVER_DEADLINE_MS, now }) });
+        return c.json({ signals: await analyze(checked.snapshot, { rdap: rdapFor(c), llm: checker, client, localSignals: checked.localSignals, deadline: startedAt + SERVER_DEADLINE_MS, now }) });
     });
 
     app.get("/public-blocklist", async (c) => {
