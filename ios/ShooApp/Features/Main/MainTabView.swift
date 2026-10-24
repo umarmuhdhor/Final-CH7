@@ -141,7 +141,7 @@ private struct ConnectSheet: View {
     var body: some View {
         Group {
             if let model {
-                ConnectView(model: model, onSkip: { dismiss() }, onFinish: { dismiss() })
+                ConnectView(model: model, onBack: { dismiss() }, onSkip: { dismiss() }, onFinish: { dismiss() })
             } else {
                 // An empty Group never appears, so `onAppear` below would never run.
                 Color(.systemBackground)

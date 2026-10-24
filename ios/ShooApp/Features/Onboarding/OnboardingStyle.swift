@@ -10,6 +10,8 @@ enum OnboardingTheme {
     static let selectedStroke = Color(red: 0x0E / 255, green: 0xA1 / 255, blue: 0xDE / 255)
     static let disabledFill = Color(red: 0xDB / 255, green: 0xE2 / 255, blue: 0xE7 / 255)
     static let placeholder = Color(red: 0x93 / 255, green: 0x93 / 255, blue: 0x93 / 255)
+    static let error = Color(red: 0xC8 / 255, green: 0x14 / 255, blue: 0x14 / 255)
+    static let link = Color(red: 0x0A / 255, green: 0x6C / 255, blue: 0xB4 / 255)
     static let buttonGradient = LinearGradient(
         colors: [Color(red: 0x19 / 255, green: 0x1C / 255, blue: 0x25 / 255), Color(red: 0x3C / 255, green: 0x43 / 255, blue: 0x5A / 255)],
         startPoint: .top,
@@ -132,7 +134,8 @@ struct OnboardingHeaderBackground: View {
 struct OnboardingFormPage<Content: View, Footer: View>: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey
-    let onBack: () -> Void
+    /// `nil` where there is no way back (e.g. Connect inside onboarding, after the mode is saved).
+    let onBack: (() -> Void)?
     /// `id` of a view to keep visible above the button, e.g. the focused field once the keyboard is up.
     var scrollTarget: String?
     @ViewBuilder let content: Content
@@ -144,7 +147,11 @@ struct OnboardingFormPage<Content: View, Footer: View>: View {
             ScrollView {
                 VStack(spacing: 0) {
                     HStack {
-                        OnboardingBackButton(action: onBack)
+                        if let onBack {
+                            OnboardingBackButton(action: onBack)
+                        } else {
+                            Color.clear.frame(width: 50, height: 50)
+                        }
                         Spacer()
                     }
                     .padding(.horizontal, 24)
@@ -206,5 +213,31 @@ struct OnboardingFormPage<Content: View, Footer: View>: View {
                 }
         }
         .environment(\.colorScheme, .light)
+    }
+}
+
+/// Red line under a field or the scanner, e.g. "Kode kadaluarsa…" (Figma "Kode Kadaluarsa").
+struct OnboardingErrorLabel: View {
+    let text: Text
+    var systemImage = "exclamationmark.circle"
+
+    var body: some View {
+        Label { text } icon: { Image(systemName: systemImage) }
+            .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
+            .foregroundStyle(OnboardingTheme.error)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Text-only secondary action under the pill ("Lewati", "Nanti saja").
+struct OnboardingLinkButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
+            .foregroundStyle(OnboardingTheme.link)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }

@@ -92,6 +92,6 @@ final class ProfileUITests: XCTestCase {
         let confirm = app.buttons["profile.disconnect.confirm"].firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
         confirm.tap()
-        XCTAssertTrue(app.staticTexts["Connect to your guardian"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Connect your account"].waitForExistence(timeout: 10), app.debugDescription)
     }
 }

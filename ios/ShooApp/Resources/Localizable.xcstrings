@@ -1,16 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ will be told when you open a risky site, and can check it for you." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ akan diberi tahu saat kamu membuka situs berisiko, dan bisa memeriksanya untukmu."
-          }
-        }
-      }
-    },
     "%@ will no longer see the sites Shoo warns you about." : {
       "localizations" : {
         "id" : {
@@ -290,6 +280,16 @@
         }
       }
     },
+    "Code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode"
+          }
+        }
+      }
+    },
     "Code %@" : {
       "localizations" : {
         "id" : {
@@ -301,7 +301,6 @@
       }
     },
     "Connect" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -321,6 +320,16 @@
         }
       }
     },
+    "Connect your account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan Akun"
+          }
+        }
+      }
+    },
     "Connected %lld/%lld" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -328,6 +337,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terhubung %lld/%lld"
+          }
+        }
+      }
+    },
+    "Connected to %@!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berhasil Terhubung dengan %@!"
           }
         }
       }
@@ -613,12 +632,12 @@
         }
       }
     },
-    "Enter code" : {
+    "Enter the invite code" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Masukkan kode"
+            "value" : "Masukkan kode undangan"
           }
         }
       }
@@ -796,16 +815,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hai, %@!"
-          }
-        }
-      }
-    },
-    "How to connect" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cara menghubungkan"
           }
         }
       }
@@ -1525,13 +1534,12 @@
         }
       }
     },
-    "Scan the QR code on your guardian's phone, or enter the 4-digit code." : {
-      "extractionState" : "stale",
+    "Scan the QR or enter the invite code from your Guardian." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pindai kode QR di HP Guardian-mu, atau masukkan kode 4 angka."
+            "value" : "Scan QR atau masukkan kode undangan dari Guardian."
           }
         }
       }
@@ -1835,12 +1843,11 @@
       }
     },
     "That code has expired. Ask your guardian for the new code." : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kode itu sudah kedaluwarsa. Minta kode baru ke Guardian-mu."
+            "value" : "Kode kedaluwarsa, minta kode baru dan coba lagi."
           }
         }
       }
@@ -2130,16 +2137,6 @@
         }
       }
     },
-    "You're protected by %@" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu dijaga oleh %@"
-          }
-        }
-      }
-    },
     "Your Shield screen is coming soon." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2147,6 +2144,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Layar Perisai segera hadir."
+          }
+        }
+      }
+    },
+    "Your account is connected. You now get online protection with your Guardian's support." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akunmu berhasil terhubung. Kini kamu bisa menikmati perlindungan digital dengan dukungan Guardian-mu."
           }
         }
       }
