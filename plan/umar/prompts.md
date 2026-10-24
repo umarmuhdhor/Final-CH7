@@ -30,7 +30,7 @@
 | 11 | Imelda - Umar | Sumber blocklist publik + daftar pra-bangun (E-3, E-4) | — | [11](#prompt-11--sumber-blocklist-publik-e-3-e-4) | Kode selesai (#101, #104, #106). Sisa manual: secret, variable, run workflow, deploy |
 | 12 | Imelda - Umar | Sinkronkan `PROGRESS.md` + `TODO.md` Imelda (E-5) | #5 | [12](#prompt-12--sinkronkan-progress-dan-todo-team-ai-e-5) | Selesai (#84, #85) |
 | 13 | Alief | PR docs 3 temuan review #69 + kirim 3 secret CI | — | — | Selesai (#69, #90) |
-| 14 | Umar | Isi secret CI `production`, jalankan ulang `deploy`, tutup #38 | #13 | [14](#prompt-14--secret-ci-dan-deploy-backend-38) | Selesai (#38 ditutup). Sisa: rotasi password DB + token Cloudflare |
+| 14 | Umar | Isi secret CI `production`, jalankan ulang `deploy`, tutup #38 | #13 | [14](#prompt-14--secret-ci-dan-deploy-backend-38) | Selesai (#38 ditutup) |
 | 15 | Alief | Spike 01S di iPhone (#40) | Akses tim Apple | — | Belum |
 | 16 | Umar | `extensionActiveWindow` + keputusan C17 (#40) | #15 | [16](#prompt-16--extensionactivewindow-dan-keputusan-c17-40) | Belum |
 | 17 | Alief | `ExtensionStatus` baca `allSites` | — | — | Belum |

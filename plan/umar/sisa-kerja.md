@@ -16,7 +16,6 @@
 | D-7, D-8 (#82) | Selesai: PR #92 merged, #82 ditutup. Hanya build Release yang memanggil AI; build Debug tetap layer 1–2 | T-6 pakai build Release/TestFlight |
 | G2 (L-1, L-4, L-5) | Selesai dengan risiko. L-1: `deepseek-v4-flash` lewat `https://bandelbanget.xyz/v1` (D-imelda-36); proxy pihak ketiga tanpa kebijakan retensi yang bisa diverifikasi, jadi syarat zero data retention belum terpenuhi. L-4: secret terpasang, layer 4 live di Worker sejak PR #95. L-5: eval (D-imelda-37) scam ≥ 50 31 → 38/50, ≥ 80 13 → 21/50, salah blokir tetap 1/53; M4 dicentang (#96). Timeout: PR #105 merged (D-imelda-39), batas layer 4 dari tenggat server 6,5 s, maks 6 s; eval ulang: timeout 47% → 29% (21 → 13 dari 45), scam ≥ 50 38 → 39/50, salah blokir tetap 1/53. Belum live (lihat baris Worker AI produksi) | PR #107 terbuka: D-imelda-05 + D-imelda-39 jadi Berlaku, centang A2/A5/A6 (A6 dengan risiko). Umar merge #107. Tinjau ulang kalau ada penyedia dengan ZDR tertulis |
 | L-2 (A5) | Dikonfirmasi Umar (PR #107). Gerbang aktif di produksi (`ai/src/layer4/reality.js`: bukan situs resmi, form ≥ 1 field, `GATE_MIN_SCORE = 15`). PR #107 (DECISIONS + centang A5) dan PR #108 (komentar kode "in force") terbuka | Umar merge #107, #108 |
-| L-3 | Belum tercatat | Umar pasang batas biaya di dashboard penyedia |
 | L-6 (C5) | Issue #97 ke Alief dibuka, C5 dicentang (PR #98) | Alief: kebijakan privasi + label App Store menyebut penyedia, di rilis yang sama dengan layer 4 |
 | E-1, E-2 | Belum mulai | Data scam nyata berlisensi; tidak bisa dibuat agent |
 | E-3, E-4 | Kode selesai. PR #101 merged: sumber **Phishing.Database** (MIT mencakup data; asal upstream belum dijawab maintainer), daftar pra-bangun lewat GitHub Action `public-blocklist.yml` ke Workers KV. Perbaikan review: maks 190.000 domain, build ditolak kalau domain baru > 25%, action dikunci ke SHA. PR #106 merged: namespace KV `shoo-public-blocklist` di-bind di `ai/wrangler.toml`. PR #104 merged: `lists.js` extension membuang domain terlama saat penuh (200.000). Workflow jalan sekali (jadwal, 23 Okt 21:29 UTC) → `skipped`; repo belum punya secret maupun variable Actions | Umar: token Cloudflare (Workers KV Storage: Edit), secret `BLOCKLIST_CF_API_TOKEN` + `BLOCKLIST_CF_ACCOUNT_ID`, variable `BLOCKLIST_KV_NAMESPACE_ID`, jalankan workflow pertama kali, deploy Worker. Setelah build pertama, Worker butuh ≤ 5 menit untuk menampilkan domain |
@@ -33,7 +32,6 @@ Langkah manual Umar yang tersisa (agent tidak boleh deploy atau menulis secret):
 2. Cloudflare: token KV (Workers KV Storage: Edit). GitHub Actions: secret `BLOCKLIST_CF_API_TOKEN` + `BLOCKLIST_CF_ACCOUNT_ID`, variable `BLOCKLIST_KV_NAMESPACE_ID`. Jalankan `public-blocklist.yml` pertama kali.
 3. `cd ai && npm run deploy`, lalu `curl …/public-blocklist` dan `node ai/scripts/smoke.mjs https://shoo-ai.uumaarrrrr22.workers.dev 10`.
 4. Undang Alief ke tim Apple (#55), kunci APNs, record App Store Connect.
-5. Rotasi password DB + token Cloudflare (P-2). Batas biaya LLM di dashboard penyedia (L-3).
 
 QA 23 Okt sore, `main` + PR #87–#90 digabung di worktree sementara:
 - Extension `node --test ios/ShooExtension/Tests/*.test.mjs`: 145/145 lulus.
@@ -110,7 +108,6 @@ Catatan: layer 4 tetap mati sampai G2. Daftar publik tetap kosong sampai G3 (A3)
 |---|---|---|
 | L-1 | **A2 + A6** pilih model cepat dari penyedia yang **zero data retention / tanpa training**. Catat model + kebijakan di `plan/imelda/log/DECISIONS.md` | Keputusan tercatat |
 | L-2 | **A5** konfirmasi gerbang LLM (form ≥ 1 field dan skor ≥ 15; situs resmi tidak memanggil) | Dikonfirmasi |
-| L-3 | Pasang **batas biaya** di dashboard penyedia (`LLM_DAILY_CAP` hanya per isolate) | Spend limit aktif |
 | L-4 | `npx wrangler secret put LLM_API_KEY / LLM_MODEL / LLM_BASE_URL` (diketik di prompt, tidak ke file) | Secret terpasang |
 | L-5 | Jalankan eval M2 dengan LLM nyata. Bandingkan dengan tanpa LLM | Salah blokir di situs resmi turun, deteksi scam tidak turun → centang M4 |
 | L-6 | **C5** issue ke Alief + Umar: data form dikirim ke penyedia LLM → kebijakan privasi + label App Store diperbarui di rilis yang sama | Issue dijawab |
