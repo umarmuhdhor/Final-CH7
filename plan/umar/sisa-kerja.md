@@ -1,37 +1,52 @@
 # Plan sisa kerja — Umar (lead) + Imelda (Team AI)
 
-> Dibuat 23 Okt 2026, setelah PR #71 (mandat Imelda M3–M7 dicentang).
-> Sumber: `docs/mandates/umar.md`, `docs/mandates/imelda.md`, `plan/imelda/TODO.md`, `plan/imelda/log/fase-08.md`, issue terbuka #37, #38, #40, #55, PR #69.
-> Kode Imelda M1–M7 sudah merge semua. Yang tersisa: langkah manual (akun, deploy, secret), keputusan lead, data eval, dan tes di iPhone.
+> Dibuat 23 Okt 2026, setelah PR #71 (mandat Imelda M3–M7 dicentang). Status bagian 0 diperbarui 24 Okt 2026 sore (`main` @ `d82cf2f`).
+> Sumber: `docs/mandates/umar.md`, `docs/mandates/imelda.md`, `plan/imelda/TODO.md`, `plan/imelda/log/fase-08.md`, issue terbuka #37, #40, #55, #97, #99, #102, PR terbuka #110, #114.
+> Kode Imelda M1–M7 sudah merge semua dan sudah live di Worker. Yang tersisa: langkah manual (akun Apple, TestFlight), balasan Alief, data eval nyata, dan tes di iPhone.
 
-## 0. Status per 24 Okt 2026
+## 0. Status per 24 Okt 2026 (sore)
 
 | Item | Status | Sisa / siapa |
 |---|---|---|
 | U-2 … U-6, U-8, U-9 | Selesai: #74, #75, #76 ditutup; U-4 = PR #78, U-6 = PR #79 merged | — |
-| Worker AI produksi | Cek read-only 24 Okt: versi live `516e25b0` dari deploy 23 Okt 09:07 UTC, **sebelum** #101/#105/#106 merge. Binding hanya `ANALYZE_LIMITER` + `BLOCKLIST_LIMITER`, tanpa `BLOCKLIST_KV`; layer 4 masih batas 4 s. Smoke 5 run: semua `ok`, p95 `/analyze` 146 ms, 0 panggilan LLM (halaman smoke `.invalid` tidak lolos gerbang). `/public-blocklist` → `{"domains":[],"nextSince":null}` | Umar `npm run deploy` (bawa #101, #105, #106), lalu curl + smoke |
+| Worker AI produksi | **Live: versi `936c6d61`, deploy 24 Okt 09:01 UTC** (`npx wrangler deployments list`; sebelumnya `9dea3d7f` 06:36 UTC, `516e25b0` 23 Okt). Binding (`wrangler versions view`): `BLOCKLIST_KV`, `RDAP_KV`, `ANALYZE_LIMITER` (60/60 s), `BLOCKLIST_LIMITER` (10/60 s); secret `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`. Membawa #101, #105, #106, #113. Smoke 24 Okt sore, 5 run ke `https://shoo-ai.uumaarrrrr22.workers.dev`: semua `ok` (CORS, header, 422, `/public-blocklist` 190000 domain), p95 `/analyze` 214 ms (p50 144 ms), 0 panggilan LLM (halaman smoke `.invalid` tidak lolos gerbang) | — |
 | U-7 (C8) | Selesai: #87, #88, #89 merged; Worker AI di-deploy ulang 23 Okt, cek live: form KTP + `capture=user` → `asks_selfie_ktp`, `capture=environment` → hanya `asks_ktp` | — |
 | U-1 (#73) | Diputuskan 23 Okt, #73 ditutup: target tetap, M6 tetap `[~]` sampai 50 scam nyata berlisensi; MVP boleh rilis dengan catatan risiko | E-1 |
 | D-1 … D-6 | Selesai. Smoke ulang 23 Okt sore ke `https://shoo-ai.uumaarrrrr22.workers.dev`: semua `ok`, p95 `/analyze` 28 ms (10 run) | — |
 | D-7, D-8 (#82) | Selesai: PR #92 merged, #82 ditutup. Hanya build Release yang memanggil AI; build Debug tetap layer 1–2 | T-6 pakai build Release/TestFlight |
-| G2 (L-1, L-4, L-5) | Selesai dengan risiko. L-1: `deepseek-v4-flash` lewat `https://bandelbanget.xyz/v1` (D-imelda-36); proxy pihak ketiga tanpa kebijakan retensi yang bisa diverifikasi, jadi syarat zero data retention belum terpenuhi. L-4: secret terpasang, layer 4 live di Worker sejak PR #95. L-5: eval (D-imelda-37) scam ≥ 50 31 → 38/50, ≥ 80 13 → 21/50, salah blokir tetap 1/53; M4 dicentang (#96). Timeout: PR #105 merged (D-imelda-39), batas layer 4 dari tenggat server 6,5 s, maks 6 s; eval ulang: timeout 47% → 29% (21 → 13 dari 45), scam ≥ 50 38 → 39/50, salah blokir tetap 1/53. Belum live (lihat baris Worker AI produksi) | PR #107 terbuka: D-imelda-05 + D-imelda-39 jadi Berlaku, centang A2/A5/A6 (A6 dengan risiko). Umar merge #107. Tinjau ulang kalau ada penyedia dengan ZDR tertulis |
-| L-2 (A5) | Dikonfirmasi Umar (PR #107). Gerbang aktif di produksi (`ai/src/layer4/reality.js`: bukan situs resmi, form ≥ 1 field, `GATE_MIN_SCORE = 15`). PR #107 (DECISIONS + centang A5) dan PR #108 (komentar kode "in force") terbuka | Umar merge #107, #108 |
+| G2 (L-1, L-4, L-5) | Selesai dengan risiko. L-1: `deepseek-v4-flash` lewat `https://bandelbanget.xyz/v1` (D-imelda-36); proxy pihak ketiga tanpa kebijakan retensi yang bisa diverifikasi, jadi syarat zero data retention belum terpenuhi. L-4: secret terpasang, layer 4 live di Worker sejak PR #95. L-5: eval (D-imelda-37) scam ≥ 50 31 → 38/50, ≥ 80 13 → 21/50, salah blokir tetap 1/53; M4 dicentang (#96). Timeout: PR #105 merged (D-imelda-39), batas layer 4 dari tenggat server 6,5 s, maks 6 s; eval ulang: timeout 47% → 29% (21 → 13 dari 45), scam ≥ 50 38 → 39/50, salah blokir tetap 1/53. **Live** sejak deploy `9dea3d7f`/`936c6d61` 24 Okt. PR #107 merged: D-imelda-05 + D-imelda-39 Berlaku, A2/A5/A6 dicentang (A6 dengan risiko). Batas biaya (L-3) dibuang Umar di #115 | Tinjau ulang kalau ada penyedia dengan ZDR tertulis |
+| L-2 (A5) | Dikonfirmasi Umar. Gerbang aktif di produksi (`ai/src/layer4/reality.js`: bukan situs resmi, form ≥ 1 field, `GATE_MIN_SCORE = 15`). PR #107 (DECISIONS + centang A5) dan #108 (komentar kode "in force") merged 24 Okt | — |
 | L-6 (C5) | Issue #97 ke Alief dibuka, C5 dicentang (PR #98) | Alief: kebijakan privasi + label App Store menyebut penyedia, di rilis yang sama dengan layer 4 |
 | E-1, E-2 | Belum mulai | Data scam nyata berlisensi; tidak bisa dibuat agent |
-| E-3, E-4 | Kode selesai. PR #101 merged: sumber **Phishing.Database** (MIT mencakup data; asal upstream belum dijawab maintainer), daftar pra-bangun lewat GitHub Action `public-blocklist.yml` ke Workers KV. Perbaikan review: maks 190.000 domain, build ditolak kalau domain baru > 25%, action dikunci ke SHA. PR #106 merged: namespace KV `shoo-public-blocklist` di-bind di `ai/wrangler.toml`. PR #104 merged: `lists.js` extension membuang domain terlama saat penuh (200.000). Workflow jalan sekali (jadwal, 23 Okt 21:29 UTC) → `skipped`; repo belum punya secret maupun variable Actions | Umar: token Cloudflare (Workers KV Storage: Edit), secret `BLOCKLIST_CF_API_TOKEN` + `BLOCKLIST_CF_ACCOUNT_ID`, variable `BLOCKLIST_KV_NAMESPACE_ID`, jalankan workflow pertama kali, deploy Worker. Setelah build pertama, Worker butuh ≤ 5 menit untuk menampilkan domain |
+| E-3, E-4 | **Live dengan 190.000 domain.** Sumber **Phishing.Database** (PR #101; MIT mencakup data; asal upstream belum dijawab maintainer), daftar pra-bangun lewat GitHub Action `public-blocklist.yml` ke Workers KV (maks 190.000 domain, build ditolak kalau domain baru > 25%). PR #106: namespace KV di-bind; PR #104: `lists.js` extension membuang domain terlama saat penuh (200.000). Secret `BLOCKLIST_CF_API_TOKEN` + `BLOCKLIST_CF_ACCOUNT_ID` dan variable `BLOCKLIST_KV_NAMESPACE_ID` sudah dipasang Umar (`gh secret list` / `gh variable list`, 24 Okt 06:50–07:47 UTC). Run `workflow_dispatch` 40080641999 (24 Okt 09:06 UTC) sukses di action v7 (#112: `checkout` v7.0.1, `setup-node` v7.1.0), tanpa peringatan Node 20 (satu anotasi `notice` soal label `ubuntu-latest` → Ubuntu 26, bukan Node). Otomatis tiap 6 jam (`cron: 17 */6 * * *`). `GET /public-blocklist` → `{"domains":[{"domain":"conisbaseproslogiun.gitbook.io","addedAt":"2026-10-24T07:48:34.000Z"},…` (190000 domain, `nextSince` `2026-10-24T07:48:34.000Z`) | — (risiko terbuka: asal data upstream, D-imelda-38) |
+| C11 (RDAP cache) | Selesai dan live: PR #113 (D-imelda-40), cache RDAP dua tingkat (memori lalu Workers KV `RDAP_KV`, TTL 7 hari); binding `RDAP_KV` ada di versi live `936c6d61` | Pantau tulis KV di dashboard (risiko terbuka D-imelda-40); Workers Paid sebelum pengguna sungguhan |
+| C6 (bobot layer 3–4) | Selesai: PR #116 (laporan `plan/imelda/log/c6-weight-review.md`). Umar memilih **S0**: semua bobot layer 3–4 dan ambang 30/50/80 tidak diubah sampai ada data scam nyata (D-imelda-41). Opsi S1 (`brand_logo_offsite` 25 → 30) / ambang blokir 75 ditunda ke kalibrasi ulang M6 dengan data nyata | E-1/E-2 |
 | E-5 | Selesai (PR #84, #85) | — |
-| G4 (T-1 … T-8) | Belum mulai. T-7 (#55): checklist portal Apple siap (Prompt 19), signing + bundle ID + App Group cocok di ketiga target. Upload pertama terblokir: app belum punya AppIcon (#102 terbuka, Alief, belum ada balasan) | Umar: undang Alief ke tim (membuka spike #40), kunci APNs, record App Store Connect. Alief: AppIcon (#102) |
+| G4 (T-1 … T-8) | Belum mulai. T-7 (#55): checklist portal Apple siap (Prompt 19), signing + bundle ID + App Group cocok di ketiga target. Upload pertama terblokir: app belum punya AppIcon (#102 terbuka). PR #110 (placeholder AppIcon) terbuka, menunggu review Alief | Umar: undang Alief ke tim (membuka spike #40), kunci APNs, record App Store Connect, archive + upload (#55). Alief: review #110 |
 | P-1 | Selesai: #69 dan #90 merged | — |
-| P-2 (#38) | Selesai 23 Okt, #38 ditutup: 3 secret `production` terpasang (`SUPABASE_DB_URL` = Session pooler `aws-0-ap-southeast-1`, bukan host langsung yang hanya IPv6). Run 39913374469 attempt 7 hijau: migrasi "Remote database is up to date", `shoo-api` ter-deploy; live `/healthz` 200, `/healthz/db` 200 | Rotasi password DB + token Cloudflare (nilainya sempat dibagikan di chat), lalu perbarui secret dan Hyperdrive `shoo-db` |
-| P-3, P-4 (#37) | Draf pesan ke PM siap (Prompt 23), ditunda Umar | Umar kirim kalau sudah siap, lalu PM |
-| P-5 (C6) | PR #100 merged (runbook `plan/umar/blocklist-review.md`). Issue #99 ke Alief (jadwal + query) masih terbuka, belum ada balasan | Alief jawab #99 |
+| P-2 (#38, C2) | Selesai. CI sudah pindah ke `.github/workflows/` di #48; 3 secret `production` (`SUPABASE_DB_URL` = Session pooler `aws-0-ap-southeast-1`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) terpasang 23 Okt; #38 ditutup. Run 39913374469 attempt 7 hijau: migrasi "Remote database is up to date", `shoo-api` ter-deploy; live `/healthz` 200, `/healthz/db` 200. PR #114 (centang C2 di `docs/mandates/umar.md` dan `plan/alief/TODO.md`) terbuka, review diminta ke Alief. Rotasi kredensial dibuang Umar (#115) | Alief review #114 |
+| P-3, P-4 (#37) | Draf pesan ke PM siap (Prompt 23), ditunda Umar. #37 masih terbuka | Umar kirim pesan PM kalau sudah siap, lalu PM |
+| P-5 (C6 antrean blocklist) | PR #100 merged (runbook `plan/umar/blocklist-review.md`). Issue #99 ke Alief (jadwal + query) masih terbuka, belum ada balasan. Bukan C6 bobot (lihat baris C6 di atas) | Alief jawab #99 |
 | P-6 | 28 branch remote milik Umar/Imelda yang sudah merge dihapus 23 Okt malam. Sisa remote: 22 branch Alief yang sudah merge, plus `fix/QA-E2E-00-setup` (tanpa PR, isi belum masuk `main`) | Izin Alief untuk menghapus branch-nya. Branch lokal hasil squash butuh `git branch -D` (izin Umar); `spike/EX-03-dynamic-island` hanya ada di lokal, simpan |
 
 Langkah manual Umar yang tersisa (agent tidak boleh deploy atau menulis secret):
-1. Merge #107, #108.
-2. Cloudflare: token KV (Workers KV Storage: Edit). GitHub Actions: secret `BLOCKLIST_CF_API_TOKEN` + `BLOCKLIST_CF_ACCOUNT_ID`, variable `BLOCKLIST_KV_NAMESPACE_ID`. Jalankan `public-blocklist.yml` pertama kali.
-3. `cd ai && npm run deploy`, lalu `curl …/public-blocklist` dan `node ai/scripts/smoke.mjs https://shoo-ai.uumaarrrrr22.workers.dev 10`.
-4. Undang Alief ke tim Apple (#55), kunci APNs, record App Store Connect.
+1. #55: undang Alief ke tim Apple, kunci APNs, record App Store Connect, archive + upload build pertama (setelah #110 merge).
+2. Workers Paid sebelum pengguna sungguhan (Free = CPU 10 ms per request; KV Free dibagi blocklist + cache RDAP).
+3. Pesan ke PM (#37), kalau sudah siap.
+
+Merge 24 Okt 2026 (`gh pr list --state merged`): #107, #108, #109, #111, #112, #113, #115, #116 (#110 dan #114 masih terbuka, lihat di bawah). Merge 23 Okt yang relevan: #104, #105, #106.
+
+PR terbuka (`gh pr list`): #110 (placeholder AppIcon, review Alief) dan #114 (centang C2, review Alief).
+
+Menunggu Alief:
+- Review #110 dan #114.
+- Balas #97 (kebijakan privasi + label App Store menyebut penyedia LLM) dan #99 (jadwal + query review antrean blocklist).
+- Spike #40 di iPhone (butuh undangan tim Apple dari #55) dan `ExtensionStatus` membaca `allSites`.
+- Izin menghapus 22 branch miliknya yang sudah merge (+ `fix/QA-E2E-00-setup`, tanpa PR).
+
+Terblokir:
+- A4/M2/M6 (E-1/E-2): butuh scam nyata berlisensi, ≥ 50 (#73 ditutup, targetnya tetap). Agent tidak bisa membuat datanya.
+- Tes iPhone (Prompt 16, 18, 20, 21): butuh #55 (akun tim Apple + build di iPhone).
 
 QA 23 Okt sore, `main` + PR #87–#90 digabung di worktree sementara:
 - Extension `node --test ios/ShooExtension/Tests/*.test.mjs`: 145/145 lulus.
@@ -53,7 +68,7 @@ QA 23 Okt sore, `main` + PR #87–#90 digabung di worktree sementara:
 | G4 | Tes di iPhone + TestFlight | Build tim berbayar, hasil spike Alief | Umar, Alief, Imelda - Umar |
 | G5 | CI, PM, antrean blocklist | Tidak ada (bisa paralel) | Umar (+ Alief) |
 
-Jalur kritis: **G1 deploy → URL di app (Alief) → tes end-to-end di iPhone (G4)**. G2 dan G3 hanya menaikkan akurasi, tidak memblokir MVP berjalan (layer 1–3 sudah jalan tanpa LLM).
+Jalur kritis (G1 deploy dan URL di app sudah selesai): **#55 TestFlight → tes end-to-end di iPhone (G4)**. G2 dan G3 hanya menaikkan akurasi, tidak memblokir MVP berjalan (layer 1–3 sudah jalan tanpa LLM).
 
 Aturan yang berlaku di semua langkah:
 - Semua pertanyaan/keputusan antar orang lewat **GitHub issue** (template Question / proposal), bukan chat (CLAUDE.md aturan 7).
@@ -157,13 +172,14 @@ Syarat: U-2 (A7) dijawab, D-4 selesai.
 
 ---
 
-## 8. Urutan kerja yang disarankan untuk Umar
+## 8. Urutan kerja yang disarankan untuk Umar (24 Okt sore)
 
-1. G0 sekarang: 4 issue sudah dibuka (#73 U-1, #74 U-2/3/5, #75 U-6, #76 U-8). Tunggu jawaban Imelda, kerjakan PR U-4.
-2. G1 D-1 … D-8 (butuh kamu login Cloudflare).
-3. P-1, P-2 sambil menunggu Alief/Imelda.
-4. U-6 spike iframe, lalu U-7 kalau sempat.
-5. G4 begitu build tim berbayar bisa dipasang di iPhone.
+G0, G1, G2, G5 (kode dan infra) sudah selesai dan live. Yang tersisa:
+1. #55: undang Alief ke tim Apple, kunci APNs, App Store Connect, archive + upload (setelah Alief review #110).
+2. G4 begitu build tim berbayar bisa dipasang di iPhone: T-1 … T-8 (Prompt 16, 18, 20, 21).
+3. Workers Paid sebelum pengguna sungguhan.
+4. Pesan ke PM (#37) kalau sudah siap.
+5. E-1/E-2 kalau ada sumber scam nyata berlisensi.
 
-Yang bisa dikerjakan agent tanpa kamu: U-4, U-6, U-7, D-6 (setelah kamu kirim URL + output smoke test), draf semua issue, P-2 (tanpa mengisi secret).
-Yang harus kamu sendiri: login Cloudflare + deploy, mengisi secret, tes di iPhone, keputusan U-1 … U-8, menghubungi PM.
+Yang bisa dikerjakan agent tanpa kamu: dokumen, draf issue, review kode, tes lokal.
+Yang harus kamu sendiri: deploy Cloudflare, mengisi secret, akun Apple, tes di iPhone, menghubungi PM.
