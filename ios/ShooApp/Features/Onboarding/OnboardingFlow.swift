@@ -61,7 +61,10 @@ private struct OnboardingStepView: View {
         .transition(
             reduceMotion
                 ? .opacity
-                : .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)).combined(with: .opacity)
+                : .asymmetric(
+                    insertion: .move(edge: model.movedBack ? .leading : .trailing),
+                    removal: .move(edge: model.movedBack ? .trailing : .leading)
+                ).combined(with: .opacity)
         )
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: model.step)
     }

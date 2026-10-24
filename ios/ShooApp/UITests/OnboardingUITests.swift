@@ -41,16 +41,19 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testSplashHasThreeSwipeableSlidesAndSkip() {
+    func testSplashHasTwoSlidesSkipAndBack() {
         let app = launch()
-        XCTAssertTrue(app.staticTexts["Shoo keeps scam sites away"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 10))
         app.swipeLeft()
-        XCTAssertTrue(app.staticTexts["A warning before it's too late"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Scams look real.\nShoo looks closer."].waitForExistence(timeout: 5))
+        app.swipeRight()
+        XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 5))
         app.buttons["splash.next"].tap()
-        XCTAssertTrue(app.staticTexts["Look after each other"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.pageIndicators.firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Scams look real.\nShoo looks closer."].waitForExistence(timeout: 5))
         app.buttons["splash.skip"].tap()
         XCTAssertTrue(app.textFields["name.field"].waitForExistence(timeout: 5))
+        app.buttons["onboarding.back"].tap()
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 5))
     }
 
     @MainActor

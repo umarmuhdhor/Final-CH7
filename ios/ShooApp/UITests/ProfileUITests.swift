@@ -47,7 +47,7 @@ final class ProfileUITests: XCTestCase {
         let confirm = app.buttons["profile.delete.confirm"].firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
         confirm.tap()
-        XCTAssertTrue(app.staticTexts["Shoo keeps scam sites away"].waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 15), app.debugDescription)
     }
 
     @MainActor

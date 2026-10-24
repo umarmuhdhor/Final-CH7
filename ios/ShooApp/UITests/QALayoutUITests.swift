@@ -15,15 +15,17 @@ final class QALayoutUITests: XCTestCase {
         return app
     }
 
-    /// P2-1: the slide text never scrolls under the page dots.
+    /// P2-1: at large text the slide text scrolls above Skip / Next instead of running under them.
     @MainActor
-    func testSplashDotsDoNotCoverText() {
+    func testSplashControlsStayReachableAtLargeText() {
         let app = launch(["-UITestReset", "YES"])
-        let dots = app.pageIndicators.firstMatch
-        XCTAssertTrue(dots.waitForExistence(timeout: 10), app.debugDescription)
-        let slide = app.scrollViews["splash.slide.0"]
-        XCTAssertTrue(slide.exists, app.debugDescription)
-        XCTAssertFalse(slide.frame.intersects(dots.frame), "slide \(slide.frame) under dots \(dots.frame)")
+        let next = app.buttons["splash.next"]
+        XCTAssertTrue(next.waitForExistence(timeout: 10), app.debugDescription)
+        let title = app.staticTexts["Browse calmer, feeling safe."]
+        XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(next.isHittable)
+        XCTAssertTrue(app.buttons["splash.skip"].isHittable)
+        XCTAssertLessThanOrEqual(title.frame.maxY, next.frame.minY, "title \(title.frame) under controls \(next.frame)")
     }
 
     /// P2-4: an empty family shows Invite above the tab bar without scrolling (fails on iPhone SE before the fix).
