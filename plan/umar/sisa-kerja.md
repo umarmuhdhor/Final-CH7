@@ -19,7 +19,7 @@
 | L-6 (C5) | Issue #97 ke Alief dibuka, C5 dicentang (PR #98) | Alief: kebijakan privasi + label App Store menyebut penyedia, di rilis yang sama dengan layer 4 |
 | E-1, E-2 | Belum mulai | Data scam nyata berlisensi; tidak bisa dibuat agent |
 | E-3, E-4 | **Live dengan 190.000 domain.** Sumber **Phishing.Database** (PR #101; MIT mencakup data; asal upstream belum dijawab maintainer), daftar pra-bangun lewat GitHub Action `public-blocklist.yml` ke Workers KV (maks 190.000 domain, build ditolak kalau domain baru > 25%). PR #106: namespace KV di-bind; PR #104: `lists.js` extension membuang domain terlama saat penuh (200.000). Secret `BLOCKLIST_CF_API_TOKEN` + `BLOCKLIST_CF_ACCOUNT_ID` dan variable `BLOCKLIST_KV_NAMESPACE_ID` sudah dipasang Umar (`gh secret list` / `gh variable list`, 24 Okt 06:50–07:47 UTC). Run `workflow_dispatch` 40080641999 (24 Okt 09:06 UTC) sukses di action v7 (#112: `checkout` v7.0.1, `setup-node` v7.1.0), tanpa peringatan Node 20 (satu anotasi `notice` soal label `ubuntu-latest` → Ubuntu 26, bukan Node). Otomatis tiap 6 jam (`cron: 17 */6 * * *`). `GET /public-blocklist` → `{"domains":[{"domain":"conisbaseproslogiun.gitbook.io","addedAt":"2026-10-24T07:48:34.000Z"},…` (190000 domain, `nextSince` `2026-10-24T07:48:34.000Z`) | — (risiko terbuka: asal data upstream, D-imelda-38) |
-| C11 (RDAP cache) | Selesai dan live: PR #113 (D-imelda-40), cache RDAP dua tingkat (memori lalu Workers KV `RDAP_KV`, TTL 7 hari); binding `RDAP_KV` ada di versi live `936c6d61` | Pantau tulis KV di dashboard (risiko terbuka D-imelda-40); Workers Paid sebelum pengguna sungguhan |
+| C11 (RDAP cache) | Selesai dan live: PR #113 (D-imelda-40), cache RDAP dua tingkat (memori lalu Workers KV `RDAP_KV`, TTL 7 hari); binding `RDAP_KV` ada di versi live `936c6d61` | — |
 | C6 (bobot layer 3–4) | Selesai: PR #116 (laporan `plan/imelda/log/c6-weight-review.md`). Umar memilih **S0**: semua bobot layer 3–4 dan ambang 30/50/80 tidak diubah sampai ada data scam nyata (D-imelda-41). Opsi S1 (`brand_logo_offsite` 25 → 30) / ambang blokir 75 ditunda ke kalibrasi ulang M6 dengan data nyata | E-1/E-2 |
 | E-5 | Selesai (PR #84, #85) | — |
 | G4 (T-1 … T-8) | Belum mulai. T-7 (#55): checklist portal Apple siap (Prompt 19), signing + bundle ID + App Group cocok di ketiga target. Upload pertama terblokir: app belum punya AppIcon (#102 terbuka). PR #110 (placeholder AppIcon) terbuka, menunggu review Alief | Umar: undang Alief ke tim (membuka spike #40), kunci APNs, record App Store Connect, archive + upload (#55). Alief: review #110 |
@@ -31,8 +31,7 @@
 
 Langkah manual Umar yang tersisa (agent tidak boleh deploy atau menulis secret):
 1. #55: undang Alief ke tim Apple, kunci APNs, record App Store Connect, archive + upload build pertama (setelah #110 merge).
-2. Workers Paid sebelum pengguna sungguhan (Free = CPU 10 ms per request; KV Free dibagi blocklist + cache RDAP).
-3. Pesan ke PM (#37), kalau sudah siap.
+2. Pesan ke PM (#37), kalau sudah siap.
 
 Merge 24 Okt 2026 (`gh pr list --state merged`): #107, #108, #109, #111, #112, #113, #115, #116 (#110 dan #114 masih terbuka, lihat di bawah). Merge 23 Okt yang relevan: #104, #105, #106.
 
@@ -104,7 +103,7 @@ Checklist lengkap ada di `plan/imelda/log/fase-08.md` § Langkah manual. Urutan:
 
 | # | Langkah | Selesai kalau |
 |---|---|---|
-| [x] D-1 | Login/buat akun Cloudflare. Mulai Free untuk uji; naik ke Workers Paid sebelum pengguna sungguhan (Free = CPU 10 ms per request) | Akun aktif |
+| [x] D-1 | Login/buat akun Cloudflare (paket Free) | Akun aktif |
 | [x] D-2 | `cd ai && npm ci && npx wrangler login` | `wrangler whoami` menampilkan akun |
 | [x] D-3 | Cek `namespace_id` di `ai/wrangler.toml` (`1001`, `1002`) belum dipakai Worker lain | Tidak bentrok |
 | [x] D-4 | `npm run deploy` → `https://shoo-ai.<akun>.workers.dev` | Deploy sukses: `https://shoo-ai.uumaarrrrr22.workers.dev` (23 Okt 2026) |
@@ -177,9 +176,8 @@ Syarat: U-2 (A7) dijawab, D-4 selesai.
 G0, G1, G2, G5 (kode dan infra) sudah selesai dan live. Yang tersisa:
 1. #55: undang Alief ke tim Apple, kunci APNs, App Store Connect, archive + upload (setelah Alief review #110).
 2. G4 begitu build tim berbayar bisa dipasang di iPhone: T-1 … T-8 (Prompt 16, 18, 20, 21).
-3. Workers Paid sebelum pengguna sungguhan.
-4. Pesan ke PM (#37) kalau sudah siap.
-5. E-1/E-2 kalau ada sumber scam nyata berlisensi.
+3. Pesan ke PM (#37) kalau sudah siap.
+4. E-1/E-2 kalau ada sumber scam nyata berlisensi.
 
 Yang bisa dikerjakan agent tanpa kamu: dokumen, draf issue, review kode, tes lokal.
 Yang harus kamu sendiri: deploy Cloudflare, mengisi secret, akun Apple, tes di iPhone, menghubungi PM.
