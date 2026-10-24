@@ -3,6 +3,7 @@
  * Indonesian banks, e-wallets, public services and very popular sites, plus government and
  * education suffixes. A family's own not_safe verdict still applies to that family.
  * Lowercase registrable domains; a subdomain of an entry also matches.
+ * Must cover every domain in detector/data/brands.json (test/allowlist.test.ts checks it).
  */
 const ALLOWLIST = new Set([
   // Government, education, military (whole suffix)
@@ -15,13 +16,15 @@ const ALLOWLIST = new Set([
   // E-wallets, payments
   "dana.id", "ovo.id", "gopay.co.id", "linkaja.id", "shopeepay.co.id", "doku.com", "midtrans.com", "xendit.co",
   // Marketplaces, transport, travel, telco, utilities, post
-  "tokopedia.com", "shopee.co.id", "bukalapak.com", "lazada.co.id", "blibli.com", "gojek.com", "grab.com",
-  "traveloka.com", "tiket.com", "kai.id", "telkomsel.com", "indihome.co.id", "telkom.co.id", "xl.co.id",
-  "indosatooredoo.com", "pln.co.id", "posindonesia.co.id", "pertamina.com", "jne.co.id", "jntexpress.id",
+  "tokopedia.com", "shopee.co.id", "shopee.com", "bukalapak.com", "lazada.co.id", "lazada.com", "blibli.com",
+  "gojek.com", "grab.com", "traveloka.com", "tiket.com", "kai.id", "telkomsel.com", "indihome.co.id", "telkom.co.id",
+  "xl.co.id",
+  "indosatooredoo.com", "pln.co.id", "posindonesia.co.id", "pertamina.com", "jne.co.id", "jntexpress.id", "jet.co.id",
   // Global popular
-  "google.com", "google.co.id", "youtube.com", "facebook.com", "instagram.com", "whatsapp.com", "tiktok.com",
-  "x.com", "twitter.com", "apple.com", "icloud.com", "microsoft.com", "live.com", "outlook.com", "yahoo.com",
-  "wikipedia.org", "linkedin.com", "netflix.com", "spotify.com", "amazon.com", "github.com", "zoom.us",
+  "google.com", "google.co.id", "gmail.com", "youtube.com", "facebook.com", "fb.com", "meta.com", "instagram.com",
+  "whatsapp.com", "tiktok.com", "x.com", "twitter.com", "apple.com", "icloud.com", "microsoft.com", "live.com",
+  "outlook.com", "office.com", "microsoftonline.com", "yahoo.com", "wikipedia.org", "linkedin.com", "netflix.com",
+  "spotify.com", "amazon.com", "paypal.com", "github.com", "zoom.us",
   // Indonesian news
   "detik.com", "kompas.com", "tribunnews.com", "liputan6.com", "cnnindonesia.com", "tempo.co", "kumparan.com",
 ]);

@@ -71,7 +71,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `family_codes`, `join_attempts` | 4-digit codes (60 s) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path |
 | `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
-| `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served |
+| `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
 | `push_log` | one row per push: guardian, scan, result code (`sent`, `logged`, `failed:<status> <reason>`, `failed:timeout\|network\|config`; CHECK). No notification text (D-alief-B11) |
 | `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP |
@@ -82,8 +82,10 @@ Approving a blocklist domain (Supabase SQL editor). A trigger stamps `approved_a
 
 ```sql
 select domain, families, first_seen_at from blocklist_entries
- where approved_at is null and removed_at is null and families > 0 order by families desc, first_seen_at;
+ where approved_at is null and removed_at is null and rejected_at is null and families > 0 order by families desc, first_seen_at;
 update blocklist_entries set approved_at = now(), approved_by = 'alief' where domain = 'example-scam.id';
+update blocklist_entries set rejected_at = now(), rejected_by = 'alief' where domain = 'not-a-scam.id';    -- reject
+update blocklist_entries set rejected_at = null, rejected_by = null where domain = 'not-a-scam.id';       -- undo reject
 update blocklist_entries set removed_at = now() where domain = 'false-positive.id';       -- take one off
 update blocklist_entries set removed_at = null where domain = 'false-positive.id';        -- put it back (new addedAt)
 ```

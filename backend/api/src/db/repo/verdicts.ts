@@ -104,7 +104,7 @@ async function recountFamilies(tx: TransactionSql, domain: string): Promise<void
              where blocklist_entries.families is distinct from excluded.families`;
   } else {
     // A queued domain nobody supports any more is browsing history without a purpose (D-alief-40):
-    // drop it. Approved or removed rows are the reviewer's record and stay.
+    // drop it, rejected or not. Approved or removed rows are the reviewer's record and stay.
     await tx`delete from blocklist_entries where domain = ${domain} and approved_at is null and removed_at is null`;
     await tx`update blocklist_entries set families = 0 where domain = ${domain} and families <> 0`;
   }
