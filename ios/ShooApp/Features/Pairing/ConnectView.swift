@@ -284,55 +284,24 @@ struct ProtectedByView: View {
     let onContinue: () -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                Image("ConnectedIllustration")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 300, height: 300)
-                    .overlay(alignment: .topLeading) {
-                        // Sits on the "+" badge of the illustration.
-                        AvatarView(id: guardian.avatarId, size: 55)
-                            .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
-                            .offset(x: 198.5, y: 186.5)
-                    }
-                    .accessibilityHidden(true)
-
-                VStack(spacing: 4) {
-                    Text("Connected to \(guardian.name)!")
-                        .onboardingFont(30, weight: .medium, relativeTo: .title)
-                        .tracking(-0.3)
-                        .accessibilityAddTraits(.isHeader)
-                        .accessibilityIdentifier("protectedBy.title")
-                    Text("Your account is connected. You now get online protection with your Guardian's support.")
-                        .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
-                        .lineSpacing(3)
-                        .opacity(0.9)
-                }
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 24)
-                .padding(.top, 44)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .contentMargins(.bottom, 104, for: .scrollContent)
-        .background {
-            Image("SuccessBackground")
+        OnboardingSuccessPage(
+            title: Text("Connected to \(guardian.name)!"),
+            message: Text("Your account is connected. You now get online protection with your Guardian's support."),
+            idPrefix: "protectedBy",
+            onContinue: onContinue
+        ) {
+            Image("ConnectedIllustration")
                 .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
+                .scaledToFit()
+                .frame(width: 300, height: 300)
+                .overlay(alignment: .topLeading) {
+                    // Sits on the "+" badge of the illustration.
+                    AvatarView(id: guardian.avatarId, size: 55)
+                        .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
+                        .offset(x: 198.5, y: 186.5)
+                }
                 .accessibilityHidden(true)
         }
-        .overlay(alignment: .bottom) {
-            Button("Next", action: onContinue)
-                .buttonStyle(OnboardingCapsuleButtonStyle())
-                .accessibilityIdentifier("protectedBy.continue")
-                .padding(.horizontal, 24)
-                .padding(.bottom, 12)
-        }
-        .environment(\.colorScheme, .light)
     }
 }
 

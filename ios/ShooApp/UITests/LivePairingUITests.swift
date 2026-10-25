@@ -48,6 +48,10 @@ final class LivePairingUITests: XCTestCase {
         app.buttons["mode.continue"].tap()
         XCTAssertTrue(app.staticTexts["Hi, \(name)!"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["greeting.continue"].tap()
+        if mode == "guardian" {
+            XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
+            app.buttons["invite.skip"].tap()
+        }
     }
 
     private func read(_ name: String) -> String? {
@@ -73,6 +77,7 @@ final class LivePairingUITests: XCTestCase {
     func testGuardianShowsTheFamilyCode() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")
+        if app.buttons["extensionOn.continue"].waitForExistence(timeout: 5) { app.buttons["extensionOn.continue"].tap() }
         // ON-05: a Guardian only has "Allow" (`-UITestNotifications denied` answers it).
         if app.buttons["notifications.allow"].waitForExistence(timeout: 5) { app.buttons["notifications.allow"].tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)

@@ -33,10 +33,14 @@ enum OnboardingStep: Equatable {
     case mode
     /// "Hi, [name]" with the random avatar (D-alief-22).
     case greeting
-    /// Protected only: PR-01 placeholder until fase 14.
+    /// Protected only: PR-01.
     case connect
+    /// Guardian only: "Protect yourself and your loved ones", invite now (GD-04 sheet) or skip.
+    case invite
     /// ON-04
     case turnOnExtension
+    /// ON-04 passed: "Yeay, you're better protected!"
+    case extensionOn
     /// ON-05
     case notifications
     case done
@@ -100,12 +104,14 @@ final class OnboardingModel {
         step = .mode
     }
 
-    /// Back from ON-02 or ON-03. Only before registration: after that the mode is saved for good.
+    /// Back from ON-02 or ON-03 (only before registration: after that the mode is saved for good),
+    /// and from ON-04 to the Guardian's invite screen.
     func goBack() {
-        guard !isWorking, mode == nil else { return }
-        switch step {
-        case .name: step = .splash
-        case .mode: step = .name
+        guard !isWorking else { return }
+        switch (step, mode) {
+        case (.name, nil): step = .splash
+        case (.mode, nil): step = .name
+        case (.turnOnExtension, .guardian): step = .invite
         default: return
         }
         movedBack = true
@@ -130,8 +136,18 @@ final class OnboardingModel {
 
     func continueFromGreeting() {
         guard step == .greeting else { return }
-        step = mode == .protected ? .connect : .turnOnExtension
+        step = mode == .protected ? .connect : .invite
     }
+
+    /// "Skip", or the invite sheet's Done. Inviting later stays possible from Shield and Profile.
+    func continueFromInvite() {
+        guard step == .invite else { return }
+        movedBack = false
+        step = .turnOnExtension
+    }
+
+    /// Only Guardians see the invite screen before ON-04, so only they get a way back to it.
+    var canGoBackFromExtension: Bool { mode == .guardian }
 
     func continueFromConnect() {
         guard step == .connect else { return }
@@ -142,6 +158,12 @@ final class OnboardingModel {
     /// Called on appear and every time the app comes back to the foreground (ON-04).
     func refreshExtensionStatus() {
         guard step == .turnOnExtension, environment.extensionStatus().isActive else { return }
+        movedBack = false
+        step = .extensionOn
+    }
+
+    func continueFromExtensionOn() {
+        guard step == .extensionOn else { return }
         step = .notifications
     }
 
@@ -169,6 +191,7 @@ final class OnboardingModel {
         registeredName = "Rina"
         selectedMode = mode ?? .guardian
         avatarId = "avatar_05"
+        movedBack = false
         self.step = step
     }
     #endif

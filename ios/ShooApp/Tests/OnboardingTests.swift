@@ -120,7 +120,13 @@ struct OnboardingModelTests {
         #expect(settings.mode == .guardian)
         #expect(!settings.onboardingCompleted)
         model.continueFromGreeting()
+        #expect(model.step == .invite)
+        model.continueFromInvite()
         #expect(model.step == .turnOnExtension)
+        // Back to the invite screen is allowed; the mode stays saved.
+        model.goBack()
+        #expect(model.step == .invite)
+        #expect(settings.mode == .guardian)
     }
 
     @Test func protectedPathGoesThroughConnect() async {
@@ -128,6 +134,9 @@ struct OnboardingModelTests {
         model.continueFromGreeting()
         #expect(model.step == .connect)
         model.continueFromConnect()
+        #expect(model.step == .turnOnExtension)
+        // Protected has no invite screen to go back to.
+        model.goBack()
         #expect(model.step == .turnOnExtension)
     }
 
@@ -178,19 +187,31 @@ struct OnboardingModelTests {
     @Test func extensionOffStaysActiveContinues() async {
         let model = await registered(.guardian)
         model.continueFromGreeting()
+        model.continueFromInvite()
         model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
         model.refreshExtensionStatus()
+        #expect(model.step == .extensionOn)
+        model.continueFromExtensionOn()
         #expect(model.step == .notifications)
+    }
+
+    @Test func guardianRelaunchSkipsTheInviteScreen() async {
+        let first = await registered(.guardian)
+        first.continueFromGreeting()
+        #expect(first.step == .invite)
+        #expect(model().step == .turnOnExtension)
     }
 
     @Test func guardianFinishesEvenWhenPermissionIsDenied() async {
         notifications.answer = .denied
         let model = await registered(.guardian)
         model.continueFromGreeting()
+        model.continueFromInvite()
         box.status = .active(lastSeen: Date())
         model.refreshExtensionStatus()
+        model.continueFromExtensionOn()
         await model.requestNotifications()
         #expect(notifications.requestCount == 1)
         #expect(model.step == .done)
@@ -204,6 +225,8 @@ struct OnboardingModelTests {
         model.continueFromConnect()
         box.status = .active(lastSeen: Date())
         model.refreshExtensionStatus()
+        model.continueFromExtensionOn()
+        #expect(model.step == .notifications)
         #expect(model.canSkipNotifications)
         model.skipNotifications()
         #expect(notifications.requestCount == 0)
@@ -221,8 +244,10 @@ struct OnboardingModelTests {
         notifications.current = .authorized
         let model = await registered(.guardian)
         model.continueFromGreeting()
+        model.continueFromInvite()
         box.status = .active(lastSeen: Date())
         model.refreshExtensionStatus()
+        model.continueFromExtensionOn()
         await model.requestNotifications()
         #expect(notifications.requestCount == 0)
         #expect(settings.onboardingCompleted)

@@ -383,6 +383,16 @@
         }
       }
     },
+    "Copy" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salin"
+          }
+        }
+      }
+    },
     "Copy invite link" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -809,6 +819,16 @@
         }
       }
     },
+    "Having trouble? Watch the tutorial" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkendala? Tonton Tutorial"
+          }
+        }
+      }
+    },
     "Hi, %@!" : {
       "localizations" : {
         "id" : {
@@ -847,6 +867,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Saya dilindungi oleh orang lain"
+          }
+        }
+      }
+    },
+    "Invite" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undang"
           }
         }
       }
@@ -901,6 +931,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Item dihapus setelah 14 hari, atau saat hubungan keluarga diputus."
+          }
+        }
+      }
+    },
+    "Join my family on Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gabung ke keluargaku di Shoo"
           }
         }
       }
@@ -977,6 +1017,16 @@
         }
       }
     },
+    "Mail" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail"
+          }
+        }
+      }
+    },
     "Marked safe" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1006,6 +1056,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ditandai aman oleh kamu"
+          }
+        }
+      }
+    },
+    "Messages" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pesan"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lainnya"
           }
         }
       }
@@ -1369,6 +1439,16 @@
         }
       }
     },
+    "Protect yourself and your loved ones" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi dirimu\ndan orang terdekat"
+          }
+        }
+      }
+    },
     "Protected" : {
       "localizations" : {
         "id" : {
@@ -1417,6 +1497,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode QR untuk bergabung ke keluargamu"
+          }
+        }
+      }
+    },
+    "Refresh code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh Kode"
           }
         }
       }
@@ -1534,6 +1624,16 @@
         }
       }
     },
+    "Scan the QR code or send the link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindai melalui kode QR atau kirim dengan tautan"
+          }
+        }
+      }
+    },
     "Scan the QR or enter the invite code from your Guardian." : {
       "localizations" : {
         "id" : {
@@ -1597,6 +1697,16 @@
         }
       }
     },
+    "Send invite" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim Undangan"
+          }
+        }
+      }
+    },
     "Session expired" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1614,6 +1724,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Atur Profilmu"
+          }
+        }
+      }
+    },
+    "Share an invite with a QR code or an invite link." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan undangan dengan kode QR atau tautan undangan."
           }
         }
       }
@@ -1677,17 +1797,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo masih mati."
-          }
-        }
-      }
-    },
-    "Shoo only works after you switch it on." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shoo baru bekerja setelah kamu menyalakannya."
           }
         }
       }
@@ -1768,16 +1877,6 @@
         }
       }
     },
-    "Still can't? Watch the video" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Masih belum bisa? Tonton videonya"
-          }
-        }
-      }
-    },
     "Switch on Shoo in Safari to stay safe." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1810,13 +1909,12 @@
         }
       }
     },
-    "Tap Turn on below." : {
-      "extractionState" : "stale",
+    "Tap the button below to open Safari settings." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ketuk Nyalakan di bawah."
+            "value" : "Tekan tombol di bawah untuk membuka pengaturan Safari."
           }
         }
       }
@@ -1848,6 +1946,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode kedaluwarsa, minta kode baru dan coba lagi."
+          }
+        }
+      }
+    },
+    "The extension is on and ready to help spot possible scams on the internet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi berhasil diaktifkan dan siap membantu mengenali potensi penipuan di internet."
           }
         }
       }
@@ -1926,6 +2034,16 @@
         }
       }
     },
+    "Turn it on in Safari to get protection right away." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktifkan di Safari untuk mendapatkan perlindungan secara langsung."
+          }
+        }
+      }
+    },
     "Turn on" : {
       "localizations" : {
         "id" : {
@@ -1946,12 +2064,32 @@
         }
       }
     },
+    "Turn on extension" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktifkan Ekstensi"
+          }
+        }
+      }
+    },
     "Turn on notifications" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nyalakan notifikasi"
+          }
+        }
+      }
+    },
+    "Turn on the extension" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktifkan Ekstensi"
           }
         }
       }
@@ -2048,6 +2186,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tulis namamu"
+          }
+        }
+      }
+    },
+    "Yeay, you're better protected now!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yeay, kamu berhasil lebih terlindungi!"
           }
         }
       }
