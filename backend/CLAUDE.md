@@ -3,7 +3,7 @@
 Devices, family pairing, scans (Activity), verdicts, push, 14-day retention. Spec: contracts/api.md.
 
 - No login: device token auth (PRD §10). Guardians only see devices linked to them.
-- Family code: 4 digits, valid 60 s, rate-limited attempts, max 3 protected per guardian (GD-04, PRD §10).
+- Family code: 6 digits, valid 30 min, reused while more than 5 min is left (`refresh` replaces it), rate-limited attempts, max 3 protected per guardian (GD-04, PR-03, PRD §10, issue #128).
 - Verdicts apply per domain (PRD §5). A `safe` verdict must reach the protected device's block screen (EX-06).
 - Push via APNs when a protected device posts a scan (GD-06). APNs key only in `.env`, never committed.
 - Delete scans + screenshots older than 14 days automatically.

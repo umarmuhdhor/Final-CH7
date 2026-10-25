@@ -10,8 +10,20 @@ export async function readJson<S extends z.ZodType>(
   schema: S,
   maxBytes = DEFAULT_MAX_BYTES,
 ): Promise<z.infer<S>> {
-  const text = await readText(c.req.raw, maxBytes);
+  return parseJson(schema, await readText(c.req.raw, maxBytes));
+}
 
+/** Like readJson, but an empty body counts as `{}` (POST /family/code from older clients sends none). */
+export async function readOptionalJson<S extends z.ZodType>(
+  c: Context,
+  schema: S,
+  maxBytes = DEFAULT_MAX_BYTES,
+): Promise<z.infer<S>> {
+  const text = await readText(c.req.raw, maxBytes);
+  return text.trim() === "" ? parse(schema, {}) : parseJson(schema, text);
+}
+
+function parseJson<S extends z.ZodType>(schema: S, text: string): z.infer<S> {
   let data: unknown;
   try {
     data = JSON.parse(text);

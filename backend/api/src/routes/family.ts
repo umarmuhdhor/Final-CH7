@@ -6,22 +6,24 @@ import { requireDevice, requireMode } from "../http/auth";
 import { errors } from "../http/errors";
 import { keyHash } from "../http/keyHash";
 import { clientIp, hit, limits } from "../http/rateLimit";
-import { readJson } from "../http/validate";
+import { readJson, readOptionalJson } from "../http/validate";
 import { issueCode, joinFamily } from "../services/family";
 
-const joinBody = z.object({ code: z.string().regex(/^\d{4}$/, "must be 4 digits") });
+const joinBody = z.object({ code: z.string().regex(/^\d{6}$/, "must be 6 digits") });
+const codeBody = z.object({ refresh: z.boolean().optional() }).strict();
 
 export const family = new Hono<AppEnv>();
 
 family.use("/family/*", requireDevice);
 
-/** GD-04, R4 §1. */
+/** GD-04, PR-03, R4 §1. No body (or `{}`) returns the active code; `{ refresh: true }` replaces it. */
 family.post("/family/code", requireMode("guardian"), async (c) => {
   const sql = c.get("sql");
   const { deviceId } = c.get("principal");
+  const { refresh } = await readOptionalJson(c, codeBody);
   await hit(sql, limits.familyCode, deviceId);
-  const { code, expiresAt } = await issueCode(sql, deviceId);
-  return c.json({ code, expiresAt, inviteUrl: `${c.env.INVITE_BASE_URL}/join?code=${code}` });
+  const { code, expiresAt } = await issueCode(sql, deviceId, refresh === true);
+  return c.json({ code, expiresAt, inviteUrl: `${c.env.INVITE_BASE_URL}/j/${code}` });
 });
 
 /** PR-01, PR-03, R4 §2. Attempts are limited per device and per IP (/64 for IPv6), hashed. */

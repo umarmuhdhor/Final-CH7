@@ -13,36 +13,72 @@ beforeEach(() => resetDb(sql));
 
 const errorCode = async (res: Response) => ((await res.json()) as { error: { code: string } }).error.code;
 
-const newCode = async (g: Created) => {
-  const res = await call("/family/code", { method: "POST", token: g.token });
+const newCode = async (g: Created, json?: unknown) => {
+  const res = await call("/family/code", { method: "POST", token: g.token, json });
   expect(res.status).toBe(200);
   return (await res.json()) as { code: string; expiresAt: string; inviteUrl: string };
 };
 const join = (p: Created, code: string, ip?: string) =>
   call("/family/join", { method: "POST", token: p.token, json: { code }, ip });
 
-/** Any 4-digit code that is not the active one. */
-const otherCode = (code: string) => String((Number(code) + 1) % 10000).padStart(4, "0");
+/** Any 6-digit code that is not the active one. */
+const otherCode = (code: string, step = 1) => String((Number(code) + step) % 1_000_000).padStart(6, "0");
 
 describe("POST /family/code", () => {
-  it("returns a 4-digit code valid 60 s with an https invite link", async () => {
+  it("returns a 6-digit code valid 30 min with an invite link /j/<code>", async () => {
     const g = await createDevice("Adhella", "guardian");
     const before = Date.now();
     const body = await newCode(g);
     expect(Object.keys(body).sort()).toEqual(["code", "expiresAt", "inviteUrl"]);
-    expect(body.code).toMatch(/^\d{4}$/);
+    expect(body.code).toMatch(/^\d{6}$/);
     const ttl = new Date(body.expiresAt).getTime() - before;
-    expect(ttl).toBeGreaterThan(55_000);
-    expect(ttl).toBeLessThanOrEqual(61_000);
-    expect(body.inviteUrl).toBe(`http://localhost:8787/join?code=${body.code}`);
+    expect(ttl).toBeGreaterThan(30 * 60_000 - 5_000);
+    expect(ttl).toBeLessThanOrEqual(30 * 60_000 + 1_000);
+    expect(body.inviteUrl).toBe(`http://localhost:8787/j/${body.code}`);
   });
 
-  it("a new code replaces the guardian's old one", async () => {
+  it("returns the same active code again (no body or {}), so the screen and a shared link match", async () => {
     const g = await createDevice("G", "guardian");
-    await newCode(g);
-    const second = await newCode(g);
+    const first = await newCode(g);
+    expect(await newCode(g)).toEqual(first);
+    expect(await newCode(g, {})).toEqual(first);
+    expect(await newCode(g, { refresh: false })).toEqual(first);
+  });
+
+  it("refresh: true makes a new code; the old one stops working at once", async () => {
+    const g = await createDevice("G", "guardian");
+    const first = await newCode(g);
+    const second = await newCode(g, { refresh: true });
+    expect(second.code).not.toBe(first.code);
     const rows = await sql`select code from family_codes where guardian_id = ${g.deviceId}`;
     expect(rows.map((r) => r.code)).toEqual([second.code]);
+    const res = await join(await createDevice("Mom"), first.code);
+    expect(res.status).toBe(404);
+    expect(await errorCode(res)).toBe("code_invalid");
+  });
+
+  it("a code with 5 min or less left is replaced, so a shared link is not dead on arrival", async () => {
+    const g = await createDevice("G", "guardian");
+    const first = await newCode(g);
+    await sql`update family_codes set expires_at = now() + interval '6 minutes' where code = ${first.code}`;
+    expect((await newCode(g)).code).toBe(first.code);
+    await sql`update family_codes set expires_at = now() + interval '4 minutes' where code = ${first.code}`;
+    const second = await newCode(g);
+    expect(second.code).not.toBe(first.code);
+    expect(new Date(second.expiresAt).getTime() - Date.now()).toBeGreaterThan(29 * 60_000);
+  });
+
+  it("parallel requests for the active code agree on one code", async () => {
+    const g = await createDevice("G", "guardian");
+    const codes = await Promise.all(Array.from({ length: 4 }, () => newCode(g).then((b) => b.code)));
+    expect(new Set(codes).size).toBe(1);
+  });
+
+  it.each([[{ refresh: "yes" }], [{ refresh: 1 }], [{ other: true }], [[]]])("422 invalid_body for %j", async (json) => {
+    const g = await createDevice("G", "guardian");
+    const res = await call("/family/code", { method: "POST", token: g.token, json });
+    expect(res.status).toBe(422);
+    expect(await errorCode(res)).toBe("invalid_body");
   });
 
   it("403 forbidden for a protected device", async () => {
@@ -69,13 +105,13 @@ describe("POST /family/code", () => {
     const g1 = await createDevice("G1", "guardian");
     const g2 = await createDevice("G2", "guardian");
     await sql`insert into family_codes (code, guardian_id, expires_at)
-      select lpad(n::text, 4, '0'), ${g1.deviceId}, now() + interval '60 seconds' from generate_series(0, 9999) n`;
+      select lpad(n::text, 6, '0'), ${g1.deviceId}, now() + interval '30 minutes' from generate_series(0, 999999) n`;
     const res = await call("/family/code", { method: "POST", token: g2.token });
     expect(res.status).toBe(503);
     expect(await errorCode(res)).toBe("code_unavailable");
     const [row] = await sql<{ n: number }[]>`select count(*)::int as n from family_codes where guardian_id = ${g1.deviceId}`;
-    expect(row!.n).toBe(10000);
-  });
+    expect(row!.n).toBe(1_000_000);
+  }, 60_000); // a million rows take longer than the default 5 s
 });
 
 describe("claimCode", () => {
@@ -83,18 +119,18 @@ describe("claimCode", () => {
     const g1 = await createDevice("G1", "guardian");
     const g2 = await createDevice("G2", "guardian");
     await sql`insert into family_codes (code, guardian_id, expires_at) values
-      ('1111', ${g1.deviceId}, now() - interval '1 second'),
-      ('2222', ${g1.deviceId}, now() + interval '60 seconds')`;
-    const taken = await sql.begin((tx) => claimCode(tx, g2.deviceId, "1111"));
-    expect(taken?.code).toBe("1111");
+      ('111111', ${g1.deviceId}, now() - interval '1 second'),
+      ('222222', ${g1.deviceId}, now() + interval '30 minutes')`;
+    const taken = await sql.begin((tx) => claimCode(tx, g2.deviceId, "111111"));
+    expect(taken?.code).toBe("111111");
     expect(new Date(taken!.expiresAt).getTime()).toBeGreaterThan(Date.now());
-    expect(await sql.begin((tx) => claimCode(tx, g2.deviceId, "2222"))).toBeUndefined();
+    expect(await sql.begin((tx) => claimCode(tx, g2.deviceId, "222222"))).toBeUndefined();
     const rows = await sql`select code, guardian_id from family_codes order by code`;
-    expect(rows.map((r) => [r.code, r.guardian_id])).toEqual([["1111", g2.deviceId], ["2222", g1.deviceId]]);
+    expect(rows.map((r) => [r.code, r.guardian_id])).toEqual([["111111", g2.deviceId], ["222222", g1.deviceId]]);
   });
 
-  it("randomCode is always 4 digits", () => {
-    for (let i = 0; i < 2000; i++) expect(randomCode()).toMatch(/^\d{4}$/);
+  it("randomCode is always 6 digits", () => {
+    for (let i = 0; i < 2000; i++) expect(randomCode()).toMatch(/^\d{6}$/);
   });
 });
 
@@ -121,7 +157,7 @@ describe("POST /family/join", () => {
     expect(await errorCode(res)).toBe("family_full");
   });
 
-  it("410 code_expired after 60 s", async () => {
+  it("410 code_expired after 30 min", async () => {
     const g = await createDevice("G", "guardian");
     const p = await createDevice("Mom");
     const { code } = await newCode(g);
@@ -132,12 +168,12 @@ describe("POST /family/join", () => {
   });
 
   it("404 code_invalid for an unknown code", async () => {
-    const res = await join(await createDevice("Mom"), "0000");
+    const res = await join(await createDevice("Mom"), "000000");
     expect(res.status).toBe(404);
     expect(await errorCode(res)).toBe("code_invalid");
   });
 
-  it.each([[{}], [{ code: "12345" }], [{ code: "12a4" }], [{ code: 1234 }]])("422 invalid_body for %j", async (json) => {
+  it.each([[{}], [{ code: "1234" }], [{ code: "1234567" }], [{ code: "12a456" }], [{ code: 123456 }]])("422 invalid_body for %j", async (json) => {
     const p = await createDevice("Mom");
     const res = await call("/family/join", { method: "POST", token: p.token, json });
     expect(res.status).toBe(422);
@@ -226,7 +262,7 @@ describe("POST /family/join", () => {
     const p = await createDevice("Mom");
     const { code } = await newCode(g);
     const statuses = await Promise.all(
-      Array.from({ length: 12 }, (_, i) => join(p, String((Number(code) + 1 + i) % 10000).padStart(4, "0")).then((r) => r.status)),
+      Array.from({ length: 12 }, (_, i) => join(p, otherCode(code, 1 + i)).then((r) => r.status)),
     );
     expect(statuses.filter((s) => s === 404 || s === 410)).toHaveLength(5);
     expect(statuses.filter((s) => s === 429)).toHaveLength(7);

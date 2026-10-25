@@ -20,6 +20,11 @@
   "vars": {
     // Cloud Worker URL (fase 07 manual step 4).
     "INVITE_BASE_URL": "https://shoo-api.afindo-mi01.workers.dev",
+    // PR-03 invite page: TestFlight public link now, App Store later. Empty → https://apps.apple.com/.
+    "APP_STORE_URL": "",
+    // Universal Link (issue #129): `<Team ID>.<bundle ID>` of the builds that open /j/<code>, comma-separated.
+    // Not a secret. Empty → the AASA lists no app and the link stays a web page.
+    "APPLINKS_APP_IDS": "",
     // APNs (fase 11): bundle ID of the build that receives pushes (B6) and the APNs host.
     // Empty topic → pushes are only logged. Key, key id and team id are secrets (wrangler secret put).
     "APNS_TOPIC": "",
