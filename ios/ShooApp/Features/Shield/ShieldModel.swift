@@ -19,10 +19,10 @@ final class ShieldModel {
     private(set) var lastBlocked: ScanResult?
 
     @ObservationIgnored private let repository: any ShooRepository
-    @ObservationIgnored private let readExtensionStatus: () -> ExtensionStatus
+    @ObservationIgnored private let readExtensionStatus: () async -> ExtensionStatus
     @ObservationIgnored private var generation = 0
 
-    init(repository: any ShooRepository, extensionStatus: @escaping () -> ExtensionStatus = { ExtensionStatus.current() }) {
+    init(repository: any ShooRepository, extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() }) {
         self.repository = repository
         readExtensionStatus = extensionStatus
     }
@@ -32,8 +32,9 @@ final class ShieldModel {
     func refresh() async {
         generation += 1
         let request = generation
-        // Local and instant: never waits for the network.
-        extensionStatus = readExtensionStatus()
+        // Local (App Group + Safari's switch): never waits for the network.
+        extensionStatus = await readExtensionStatus()
+        guard request == generation else { return }
         do {
             async let profile = repository.me()
             async let blocked = repository.scans(owner: .me, status: .blocked, cursor: nil)

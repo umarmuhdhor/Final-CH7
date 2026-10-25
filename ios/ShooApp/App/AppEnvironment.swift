@@ -12,8 +12,8 @@ final class AppEnvironment {
     /// Keychain token + App Group keys. `nil` with `MockRepository` (previews, UI tests): fixtures never
     /// touch the real App Group.
     @ObservationIgnored let session: SessionStore?
-    /// Safari extension Active/Off right now (heartbeat in the App Group).
-    @ObservationIgnored let extensionStatus: () -> ExtensionStatus
+    /// Safari extension Active/Off right now (Safari's switch + heartbeat in the App Group).
+    @ObservationIgnored let extensionStatus: () async -> ExtensionStatus
     /// The server no longer knows our token (401), or the Keychain has none (backup restored onto
     /// another iPhone). `RootView` then shows "Session expired" (fase 13 step 4).
     private(set) var sessionExpired = false
@@ -31,7 +31,7 @@ final class AppEnvironment {
         router: Router = Router(),
         notifications: any NotificationPermission = SystemNotificationPermission(),
         session: SessionStore? = nil,
-        extensionStatus: @escaping () -> ExtensionStatus = { ExtensionStatus.current() },
+        extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
         registerForPush: @escaping @MainActor () -> Void = {}
     ) {
         self.registerForPush = registerForPush
@@ -78,7 +78,7 @@ final class AppEnvironment {
             session = store
         }
         var notifications: any NotificationPermission = SystemNotificationPermission()
-        var extensionStatus: () -> ExtensionStatus = { ExtensionStatus.current() }
+        var extensionStatus: () async -> ExtensionStatus = { await ExtensionStatus.load() }
         #if DEBUG
         // UI tests: no system alert, and the extension counts as on without a real heartbeat.
         switch Self.value(after: "-UITestNotifications", in: arguments) {
@@ -156,7 +156,7 @@ final class AppEnvironment {
         guard settings.mode != nil, !sessionExpired, !isSyncingForeground else { return }
         isSyncingForeground = true
         defer { isSyncingForeground = false }
-        if let lastSeen = extensionStatus().lastSeen {
+        if let lastSeen = await extensionStatus().lastSeen {
             do {
                 // The server refuses times in the future (clock changes).
                 try await repository.updateMe(DeviceUpdate(extensionLastSeenAt: min(lastSeen, now)))

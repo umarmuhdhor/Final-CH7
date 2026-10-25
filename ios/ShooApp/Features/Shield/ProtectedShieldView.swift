@@ -25,7 +25,7 @@ struct ProtectedShieldView: View {
 
     init(
         repository: any ShooRepository,
-        extensionStatus: @escaping () -> ExtensionStatus,
+        extensionStatus: @escaping () async -> ExtensionStatus,
         perspective: ShieldPerspective = .protected,
         reminder: NotificationReminderBanner? = nil
     ) {
