@@ -49,7 +49,14 @@ enum OnboardingStep: Equatable {
 final class OnboardingModel {
     private(set) var step: OnboardingStep
     var name = ""
+    /// ON-02 avatar picker. Local only: `POST /devices` has no `avatarId` yet (issue #120), so the server
+    /// still picks the avatar that is saved and shown after registration.
+    var selectedAvatarId = OnboardingAvatar.ids[0]
     var selectedMode: UserMode?
+    /// The last step change was a Back tap, so the screens slide the other way.
+    private(set) var movedBack = false
+    /// The brand splash shows once per launch, not again after Back from ON-02.
+    var brandSplashShown = false
     /// The random avatar from `POST /devices`. The token is not kept here (fase 13 stores it in the Keychain).
     private(set) var avatarId: String?
     private(set) var registeredName = ""
@@ -83,12 +90,26 @@ final class OnboardingModel {
 
     func skipSplash() {
         guard step == .splash else { return }
+        movedBack = false
         step = .name
     }
 
     func submitName() {
         guard step == .name, canSubmitName else { return }
+        movedBack = false
         step = .mode
+    }
+
+    /// Back from ON-02 or ON-03. Only before registration: after that the mode is saved for good.
+    func goBack() {
+        guard !isWorking, mode == nil else { return }
+        switch step {
+        case .name: step = .splash
+        case .mode: step = .name
+        default: return
+        }
+        movedBack = true
+        registrationFailed = false
     }
 
     func register() async {
@@ -99,6 +120,7 @@ final class OnboardingModel {
         do {
             avatarId = try await environment.register(name: trimmed, mode: selectedMode).avatarId
             registeredName = trimmed
+            movedBack = false
             step = .greeting
         } catch {
             Log.app.error("Registration failed", error)

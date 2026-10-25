@@ -1,48 +1,65 @@
 import SwiftUI
 
-/// ON-03: Guardian or Protected, saved for good. Saving registers the device.
+/// ON-03: Guardian or Protected, saved for good. Saving registers the device (Figma "Choose Mode").
 struct ModeView: View {
     @Bindable var model: OnboardingModel
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        OnboardingPage {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("How will you use Shoo?")
-                    .font(.largeTitle.bold())
-                    .accessibilityAddTraits(.isHeader)
-                ModeCard(
-                    mode: .guardian,
-                    systemImage: "shield.lefthalf.filled",
-                    title: "Protect myself and my family",
-                    message: "You get alerts and decide which sites are safe.",
-                    selection: $model.selectedMode
-                )
-                ModeCard(
-                    mode: .protected,
-                    systemImage: "heart.fill",
-                    title: "Protected by others",
-                    message: "A family member looks after you.",
-                    selection: $model.selectedMode
-                )
-                Label { Text("You can't change this later.") } icon: { Image(systemName: "exclamationmark.triangle.fill") }
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
+        OnboardingFormPage(
+            title: "Choose your mode",
+            message: "Pick one mode to use Shoo",
+            onBack: model.goBack
+        ) {
+            VStack(spacing: 16) {
+                // Side by side as in Figma; stacked at accessibility sizes so words are not split (QA-A P2-2).
+                let layout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(spacing: 16))
+                    : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+                layout {
+                    ModeCard(
+                        mode: .guardian,
+                        image: "ModeGuardian",
+                        title: "Guardian",
+                        message: "Protect myself and my loved ones",
+                        selection: $model.selectedMode
+                    )
+                    ModeCard(
+                        mode: .protected,
+                        image: "ModeProtected",
+                        title: "Protected",
+                        message: "I'm protected by someone else",
+                        selection: $model.selectedMode
+                    )
+                }
+
+                Label { Text("You can't change this later.") } icon: { Image(systemName: "info.circle") }
+                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .foregroundStyle(OnboardingTheme.secondaryInk)
+
                 if model.registrationFailed {
                     Label { Text("Couldn't save. Check your connection and try again.") } icon: {
                         Image(systemName: "wifi.exclamationmark")
                     }
-                    .font(.callout)
+                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .foregroundStyle(.red)
                     .accessibilityIdentifier("mode.error")
                 }
             }
+            .padding(.top, 99)
         } footer: {
-            OnboardingPrimaryButton(title: "Continue", isWorking: model.isWorking) {
+            Button {
                 Task { await model.register() }
+            } label: {
+                ZStack {
+                    Text("Next").opacity(model.isWorking ? 0 : 1)
+                    if model.isWorking { ProgressView().tint(.white) }
+                }
             }
+            .buttonStyle(OnboardingCapsuleButtonStyle())
             .disabled(model.selectedMode == nil || model.isWorking)
             .accessibilityIdentifier("mode.continue")
         }
@@ -54,72 +71,66 @@ struct ModeView: View {
     }
 }
 
+/// White card with the mode's icon tile; blue border when chosen (Figma "Build progress", 169 × 198).
 private struct ModeCard: View {
     let mode: UserMode
-    let systemImage: String
+    let image: String
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     @Binding var selection: UserMode?
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var isSelected: Bool { selection == mode }
 
     var body: some View {
         Button {
-            selection = mode
+            withAnimation(.snappy(duration: 0.25)) { selection = mode }
         } label: {
-            Group {
-                // At accessibility sizes the icons get their own row, so words are not split (QA-A P2-2).
-                if dynamicTypeSize.isAccessibilitySize {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            icon
-                            Spacer()
-                            checkmark
-                        }
-                        texts
-                    }
-                } else {
-                    HStack(alignment: .top, spacing: 16) {
-                        icon.frame(width: 40)
-                        texts
-                        checkmark
-                    }
-                }
+            VStack(spacing: 0) {
+                Image(image)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .onboardingFont(20, relativeTo: .title3)
+                    .tracking(-0.2)
+                    .foregroundStyle(OnboardingTheme.ink)
+                    .padding(.top, 7)
+                Text(message)
+                    .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
+                    .foregroundStyle(OnboardingTheme.secondaryInk)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
             }
-            .multilineTextAlignment(.leading)
-            .padding(16)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 17)
+            .padding(.top, 17)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, minHeight: 198, alignment: .top)
+            .background {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(LinearGradient(
+                        colors: [Color(red: 0xF5 / 255, green: 0xFA / 255, blue: 1).opacity(0.86), .white.opacity(0.7)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ))
+            }
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .strokeBorder(isSelected ? OnboardingTheme.selectedStroke : OnboardingTheme.cardStroke, lineWidth: isSelected ? 1.5 : 1)
             }
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("mode.\(mode.rawValue)")
     }
+}
 
-    private var icon: some View {
-        Image(systemName: systemImage)
-            .font(.title)
-            .foregroundStyle(.tint)
-            .accessibilityHidden(true)
-    }
-
-    private var texts: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.headline)
-            Text(message).font(.body).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var checkmark: some View {
-        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-            .font(.title2)
-            .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-            .accessibilityHidden(true)
-    }
+#Preview {
+    let env = AppEnvironment.preview()
+    env.settings.reset()
+    let model = OnboardingModel(environment: env)
+    model.skipSplash()
+    model.name = "Rina"
+    model.submitName()
+    return ModeView(model: model).environment(env)
 }

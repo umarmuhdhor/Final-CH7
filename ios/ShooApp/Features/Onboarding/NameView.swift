@@ -1,49 +1,125 @@
 import SwiftUI
 
-/// ON-02: name only (D-alief-22). 1–20 characters, Continue stays disabled until valid.
+/// The four memoji of the ON-02 picker (Figma "Atur Profilmu"). Ids follow the avatar catalog;
+/// whether the server accepts them is issue #120.
+enum OnboardingAvatar {
+    static let ids = ["avatar_01", "avatar_02", "avatar_03", "avatar_04"]
+
+    static func imageName(for id: String) -> String {
+        let index = ids.firstIndex(of: id) ?? 0
+        return String(format: "Memoji%02d", index + 1)
+    }
+}
+
+/// ON-02: avatar + name (D-alief-22). 1–20 characters, Next stays disabled until valid.
 struct NameView: View {
     @Bindable var model: OnboardingModel
     @FocusState private var focused: Bool
     @Environment(\.locale) private var locale
 
     var body: some View {
-        OnboardingPage {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("What's your name?")
-                    .font(.largeTitle.bold())
-                    .accessibilityAddTraits(.isHeader)
-                Text("Your family sees this name. Up to 20 characters.")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                TextField(text: $model.name) { Text("Your name") }
-                    .font(.title2)
-                    .textContentType(.givenName)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .submitLabel(.continue)
-                    .focused($focused)
-                    .onSubmit { model.submitName() }
-                    .padding(16)
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .accessibilityIdentifier("name.field")
-                if let message = problemMessage {
-                    Label { Text(message) } icon: { Image(systemName: "exclamationmark.circle.fill") }
-                        .font(.callout)
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("name.error")
-                }
+        OnboardingFormPage(
+            title: "Set up your profile",
+            message: "Choose an avatar and enter your name!",
+            onBack: model.goBack,
+            scrollTarget: focused ? "name.form" : nil
+        ) {
+            VStack(spacing: 0) {
+                Image(OnboardingAvatar.imageName(for: model.selectedAvatarId))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 100)
+                    .accessibilityHidden(true)
+                    .padding(.top, 34)
+
+                avatarPicker
+                    .padding(.top, 40)
+
+                nameField
+                    .padding(.top, 33)
+                    .id("name.form")
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         } footer: {
-            OnboardingPrimaryButton(title: "Continue") { model.submitName() }
+            Button("Next") { model.submitName() }
+                .buttonStyle(OnboardingCapsuleButtonStyle())
                 .disabled(!model.canSubmitName)
                 .accessibilityIdentifier("name.continue")
         }
-        .onAppear { focused = true }
         .onChange(of: visibleProblem) { _, problem in
             guard let problem else { return }
             let key: String.LocalizationValue = problem == .empty ? "Enter your name." : "Use 20 characters or fewer."
             AccessibilityNotification.Announcement(L10n.string(key, language: AppLanguage(locale: locale))).post()
+        }
+    }
+
+    private var avatarPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(OnboardingAvatar.ids.enumerated()), id: \.element) { index, id in
+                if index > 0 { Spacer(minLength: 8) }
+                AvatarChoice(
+                    imageName: OnboardingAvatar.imageName(for: id),
+                    number: index + 1,
+                    isSelected: model.selectedAvatarId == id
+                ) {
+                    withAnimation(.snappy(duration: 0.25)) { model.selectedAvatarId = id }
+                }
+                .accessibilityIdentifier("name.avatar.\(index + 1)")
+            }
+        }
+    }
+
+    private var nameField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                TextField(text: $model.name) {
+                    Text("Write your name").foregroundStyle(OnboardingTheme.placeholder)
+                }
+                .onboardingFont(17, relativeTo: .body)
+                .tracking(-0.34)
+                .foregroundStyle(OnboardingTheme.ink)
+                .tint(OnboardingTheme.ink)
+                .textContentType(.givenName)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .submitLabel(.continue)
+                .focused($focused)
+                .onSubmit { model.submitName() }
+                .accessibilityIdentifier("name.field")
+
+                if !model.name.isEmpty {
+                    Button {
+                        model.name = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 17))
+                            .foregroundStyle(OnboardingTheme.placeholder)
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Clear name"))
+                }
+            }
+            .padding(.leading, 18)
+            .padding(.trailing, 6)
+            .frame(minHeight: 56)
+            .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(visibleProblem == nil ? OnboardingTheme.ink.opacity(0.25) : Color.red, lineWidth: 1)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { focused = true }
+
+            if let message = problemMessage {
+                Label { Text(message) } icon: { Image(systemName: "exclamationmark.circle.fill") }
+                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("name.error")
+            } else if !model.name.isEmpty {
+                Text("*Your name can be up to 20 characters")
+                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .foregroundStyle(.black)
+            }
         }
     }
 
@@ -59,4 +135,38 @@ struct NameView: View {
         case .tooLong: return "Use 20 characters or fewer."
         }
     }
+}
+
+/// One 79 pt memoji; the chosen one gets the green ring from Figma ("Main Avatar", stroke #2CBF81 → #8EE9EC).
+private struct AvatarChoice: View {
+    let imageName: String
+    let number: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 79, height: 79)
+                .overlay {
+                    Circle()
+                        .strokeBorder(OnboardingTheme.avatarRing, lineWidth: 3)
+                        .opacity(isSelected ? 1 : 0)
+                }
+                .scaleEffect(isSelected ? 1 : 0.94)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Avatar \(number)"))
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+#Preview {
+    let env = AppEnvironment.preview()
+    env.settings.reset()
+    let model = OnboardingModel(environment: env)
+    model.skipSplash()
+    return NameView(model: model).environment(env)
 }
