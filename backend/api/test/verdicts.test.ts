@@ -300,6 +300,23 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect(await entry("flip.example")).toBeUndefined();
   });
 
+  it("a rejected entry stays rejected and unserved as support grows, and goes when support ends", async () => {
+    const a = await family();
+    const b = await family();
+    const id = await scan(a.p, blocked92 as Fixture, "rejected.example");
+    await verdict(a.g, id, "not_safe");
+    await admin`update blocklist_entries set rejected_at = now(), rejected_by = 'test' where domain = 'rejected.example'`;
+    await verdict(b.g, await scan(b.p, blocked92 as Fixture, "rejected.example"), "not_safe");
+    const [row] = await sql`select families, rejected_at from blocklist_entries where domain = 'rejected.example'`;
+    expect(row!.families).toBe(2);
+    expect(row!.rejected_at).not.toBeNull();
+    expect((await blocklist(a.p)).domains).toEqual([]);
+
+    await verdict(a.g, id, "safe");
+    await call("/family/guardian", { method: "DELETE", token: b.p.token });
+    expect(await entry("rejected.example")).toBeUndefined();
+  });
+
   it("families counts distinct guardians", async () => {
     const a = await family();
     const b = await family();

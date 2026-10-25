@@ -37,6 +37,7 @@ describe("GET /blocklist", () => {
       ('b-scam.example', '2026-10-21T05:00:00.000002Z', 't'),
       ('a-scam.example', '2026-10-21T05:00:00.000001Z', 't')`;
     await admin`insert into blocklist_entries (domain) values ('pending.example')`;
+    await admin`insert into blocklist_entries (domain, rejected_at, rejected_by) values ('rejected.example', now(), 't')`;
     await admin`insert into blocklist_entries (domain, approved_at, approved_by, removed_at) values
       ('gone.example', '2026-10-21T04:00:00Z', 't', '2026-10-21T06:00:00Z')`;
 
