@@ -4,7 +4,9 @@ import type { AppEnv } from "../env";
 // Privacy policy (SECURITY §3 P12): what Shoo stores, for how long, and how to delete it.
 // Static, no auth, no DB. Must match the backend: 14-day retention (src/cron/retention.ts),
 // DELETE /devices/me, verdicts deleted on disconnect (D-alief-B10), push_log without text (B11),
-// dedupe reuse bounded to 15 days and storage tombstones (D-alief-B12).
+// dedupe reuse bounded to 15 days and storage tombstones (D-alief-B12), and what AI layer 4 sends to a
+// third-party LLM provider (ai/src/layer4/reality.js buildInput, issue #97), and the RDAP domain-age lookup with its
+// 7-day KV cache of domain + registration date (ai/src/rdap/, D-imelda-40).
 
 // TODO(sync:alief): team contact address — replace before external TestFlight / App Store (TODO E).
 const CONTACT = "the Shoo team (contact address coming before public release)";
@@ -13,7 +15,7 @@ type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; sections: Section[] }> = {
   en: {
     title: "Shoo privacy policy",
-    updated: "Last updated: 22 October 2026",
+    updated: "Last updated: 25 October 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
       { h: "What we store", items: [
@@ -25,7 +27,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
       ] },
       { h: "What we do not do", items: [
         "No ads, no analytics, no tracking, and we never sell data.",
-        "Pages scored below 30 may be analysed but are not stored. We keep no other browsing history.",
+        "Pages scored below 30 may be analysed but are not stored by us. Apart from the short domain-age cache described below, we keep no other browsing history.",
       ] },
       { h: "Who can see it", items: [
         "You, and your Guardian while you are connected. When you disconnect, your Guardian loses access at once and their decisions about your sites are deleted.",
@@ -41,15 +43,26 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
       { h: "Delete your data", items: [
         "In the app: Profile → Delete my data. Your device, flagged pages, screenshots, decisions and family links are deleted immediately. Screenshot links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable).",
       ] },
+      { h: "Site age check", items: [
+        "To check how old a site is, our server asks the public domain registry (RDAP) about the site's domain. We keep only the domain name and its registration date, for up to 7 days, not linked to you or your device.",
+      ] },
+      { h: "AI check of suspicious pages", items: [
+        "When a page already looks suspicious and has a form, Shoo's server may send a small summary of it to a third-party AI provider, to check whether the data the page asks for fits that kind of page.",
+        "The summary is only: the site's domain (for example bank-prize.xyz, without the rest of the address), the page title, the names of up to 12 form fields (for example \"OTP\" or \"card number\") with their type (such as text or password), and which of our own checks fired. Emails and runs of 4 or more digits in the title and field names are hidden first.",
+        "We never send the page's text, the full web address, anything you type, or your Shoo name, device ID or token. The page title can still contain what the site itself shows, such as a name. The request comes from our server, so the provider does not see your IP address. We do not store the request or the answer.",
+        "We cannot guarantee how long the AI provider keeps this summary.",
+      ] },
       { h: "Service providers", items: [
         "Cloudflare (runs our API), Supabase (database and screenshot storage, Singapore region) and Apple (push notifications). They process data only to provide these services.",
+        "Public domain registries (RDAP) receive the domain of a site we check, to tell us when it was registered.",
+        "A third-party AI provider receives the page summary described above.",
       ] },
       { h: "Contact", items: [`Questions: ${CONTACT}.`] },
     ],
   },
   id: {
     title: "Kebijakan privasi Shoo",
-    updated: "Terakhir diperbarui: 22 Oktober 2026",
+    updated: "Terakhir diperbarui: 25 Oktober 2026",
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
       { h: "Yang kami simpan", items: [
@@ -61,7 +74,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
       ] },
       { h: "Yang tidak kami lakukan", items: [
         "Tanpa iklan, tanpa analytics, tanpa pelacakan, dan kami tidak pernah menjual data.",
-        "Halaman dengan skor di bawah 30 bisa dianalisis tetapi tidak disimpan. Kami tidak menyimpan riwayat browsing lain.",
+        "Halaman dengan skor di bawah 30 bisa dianalisis tetapi tidak kami simpan. Selain cache umur domain singkat yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
       ] },
       { h: "Siapa yang bisa melihat", items: [
         "Kamu, dan Guardian-mu selama kalian terhubung. Saat kamu memutus hubungan, Guardian langsung kehilangan akses dan keputusannya tentang situs-situsmu dihapus.",
@@ -77,8 +90,19 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
       { h: "Hapus datamu", items: [
         "Di app: Profil → Hapus dataku. Device, halaman yang ditandai, screenshot, keputusan, dan hubungan keluarga dihapus seketika. Link screenshot langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi).",
       ] },
+      { h: "Pemeriksaan umur situs", items: [
+        "Untuk memeriksa umur sebuah situs, server kami bertanya ke registry domain publik (RDAP) tentang domain situs itu. Kami hanya menyimpan nama domain dan tanggal registrasinya, maksimal 7 hari, tidak terhubung ke kamu atau device-mu.",
+      ] },
+      { h: "Pemeriksaan AI untuk halaman mencurigakan", items: [
+        "Kalau sebuah halaman sudah terlihat mencurigakan dan punya formulir, server Shoo bisa mengirim ringkasan kecil halaman itu ke penyedia AI pihak ketiga, untuk memeriksa apakah data yang diminta wajar untuk jenis halaman itu.",
+        "Ringkasannya hanya: domain situs (misalnya bank-hadiah.xyz, tanpa sisa alamatnya), judul halaman, nama maksimal 12 kolom formulir (misalnya \"OTP\" atau \"nomor kartu\") beserta jenisnya (misalnya teks atau password), dan pemeriksaan kami yang terpicu. Email dan deretan 4 angka atau lebih di judul dan nama kolom disembunyikan dulu.",
+        "Kami tidak pernah mengirim isi teks halaman, alamat web lengkap, apa pun yang kamu ketik, atau nama Shoo-mu, ID device, maupun token. Judul halaman tetap bisa berisi apa yang ditampilkan situs itu sendiri, misalnya nama. Permintaan dikirim dari server kami, jadi penyedia tidak melihat alamat IP-mu. Kami tidak menyimpan permintaan maupun jawabannya.",
+        "Kami tidak bisa menjamin berapa lama penyedia AI menyimpan ringkasan ini.",
+      ] },
       { h: "Penyedia layanan", items: [
         "Cloudflare (menjalankan API kami), Supabase (database dan penyimpanan screenshot, region Singapura), dan Apple (notifikasi push). Mereka memproses data hanya untuk menyediakan layanan itu.",
+        "Registry domain publik (RDAP) menerima domain situs yang kami periksa, untuk memberi tahu kapan domain itu didaftarkan.",
+        "Penyedia AI pihak ketiga menerima ringkasan halaman yang dijelaskan di atas.",
       ] },
       { h: "Kontak", items: [`Pertanyaan: ${CONTACT}.`] },
     ],
