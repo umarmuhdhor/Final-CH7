@@ -111,8 +111,8 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
         openLink("shoo://join?code=4821", in: app)
         XCTAssertTrue(app.textFields["connect.code"].waitForExistence(timeout: 10), app.debugDescription)
-        app.segmentedControls["connect.tabs"].buttons["Scan QR"].tap()
-        // The simulator has no camera: a note and the Enter code tab stay, never a blank screen.
+        app.buttons["connect.tab.scan"].tap()
+        // The simulator has no camera: a note and the Code tab stay, never a blank screen.
         XCTAssertTrue(app.descendants(matching: .any)["connect.scanner"].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
     }
 

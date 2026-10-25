@@ -60,7 +60,8 @@ struct ModeView: View {
                 }
             }
             .buttonStyle(OnboardingCapsuleButtonStyle())
-            .disabled(model.selectedMode == nil || model.isWorking)
+            // Stays dark while saving so the spinner is visible; `register()` ignores taps then.
+            .disabled(model.selectedMode == nil)
             .accessibilityIdentifier("mode.continue")
         }
         .onChange(of: model.registrationFailed) { _, failed in
