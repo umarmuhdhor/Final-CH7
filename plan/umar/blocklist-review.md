@@ -1,10 +1,11 @@
 # Runbook review antrean blocklist (C6)
 
 > Dibuat 23 Okt 2026 · Pemilik: Umar (lead) · Bersama: Alief (Team App, pemilik `backend/`)
-> Status: **draf**, menunggu kesepakatan jadwal dan query dengan Alief (issue #99)
+> Status: **disepakati** dengan Alief di issue #99 (25 Okt 2026). Status "ditolak" (`rejected_at`, `rejected_by`) dan
+> 9 domain `brands.json` di allowlist masuk lewat PR #125, live 25 Okt 2026
 > Sumber: `contracts/api.md` (Blocklist), `docs/design/blocklist.md`, migrasi `backend/db/supabase/migrations/`
 > (`20261021130000_init.sql`, `…150000_blocklist_times.sql`, `…180000_verdicts.sql`, `20261022120000_hardening.sql`,
-> `…130000_security_review.sql`), `backend/api/src/db/repo/verdicts.ts`, `backend/api/src/data/allowlist.ts`,
+> `…130000_security_review.sql`, `20261025100000_blocklist_rejected.sql`), `backend/api/src/db/repo/verdicts.ts`, `backend/api/src/data/allowlist.ts`,
 > `plan/alief/fase-10-be-verdicts.md`, `plan/alief/log/fase-10.md`, `plan/alief/ref/R2-skema-db.md` §5,
 > `plan/alief/SECURITY.md` T5, `plan/alief/log/DECISIONS.md` D-alief-25, `docs/mandates/umar.md` C6.
 > Prasyarat dicek: fase 10 backend merge di PR #15 (21 Okt 2026).
@@ -34,11 +35,12 @@ Guardian tekan "Not safe" (GD-07)
          • Guardian ini belum menaruh 10 domain baru di antrean dalam 24 jam terakhir
        └─ recountFamilies(): families = jumlah Guardian berbeda dengan verdict not_safe layak untuk domain itu
             families > 0 → INSERT blocklist_entries(domain, families), approved_at = null   ← ANTREAN
-            families = 0 → baris antrean yang belum diputuskan DIHAPUS; baris disetujui/dicabut tetap (families = 0)
+            families = 0 → baris antrean yang belum diputuskan DIHAPUS (ditolak juga); baris disetujui/dicabut tetap (families = 0)
 
 Reviewer (Umar/Alief) di SQL editor Supabase, sebagai role postgres
   └─ UPDATE … set approved_at, approved_by                   trigger blocklist_entries_times → clock_timestamp()
-       Worker (role shoo_api) TIDAK bisa menulis approved_at/approved_by/removed_at (grant + RLS, fase 12)
+     UPDATE … set rejected_at, rejected_by  (tolak)           CHECK: baris ditolak tidak bisa disetujui
+       Worker (role shoo_api) TIDAK bisa menulis approved_*/rejected_*/removed_at (grant + RLS, fase 12, #125)
 
 GET /blocklist?since=   backend/api/src/db/repo/blocklist.ts
   └─ hanya approved_at not null and removed_at null → domains[]; removed_at > since → removed[]
@@ -60,15 +62,15 @@ Review hanya menentukan daftar global.
 | # | Risiko | Kenapa bisa terjadi | Penangkal |
 |---|---|---|---|
 | R1 | **Situs resmi masuk blocklist global** (peracunan, SECURITY T5) | Penyerang membuat Guardian + Protected anonim miliknya sendiri, join, kirim scan palsu skor 100 untuk domain sah, lalu Not safe. Lolos filter otomatis | Allowlist memblokir antrean untuk domain yang tercatat; review manual = gerbang terakhir; query Q2 |
-| R2 | **Celah allowlist backend vs `brands.json`** | 9 domain resmi di `detector/data/brands.json` **tidak ada** di `allowlist.ts`, jadi bisa masuk antrean: `shopee.com`, `lazada.com`, `jet.co.id`, `gmail.com`, `office.com`, `microsoftonline.com`, `fb.com`, `meta.com`, `paypal.com`. Bank/instansi kecil (BPD, koperasi, pemda non-`go.id`) juga tidak tercakup | Q2 menandai domain `brands.json`; minta Alief menambah 9 domain ke `allowlist.ts` (issue, pertanyaan 4) |
+| R2 | **Celah allowlist backend vs `brands.json`** | Ditutup di #125: 9 domain yang dulu hilang (`shopee.com`, `lazada.com`, `jet.co.id`, `gmail.com`, `office.com`, `microsoftonline.com`, `fb.com`, `meta.com`, `paypal.com`) sudah di `allowlist.ts`, dan `test/allowlist.test.ts` gagal kalau ada domain `brands.json` yang tidak tercakup. Sisa celah: (a) test itu hanya jalan di PR yang mengubah `backend/**`, jadi perubahan `brands.json` saja belum dicek; (b) verdict lama dengan `global_eligible = true` untuk 9 domain itu tetap menaruhnya di antrean; (c) bank/instansi kecil (BPD, koperasi, pemda non-`go.id`) tidak tercakup | Q2 menandai domain `brands.json`; baris `queued` di Q2 → tolak (§6) |
 | R3 | `families` digelembungkan | Banyak pasangan device anonim → `families` tinggi. Angka ini hanya petunjuk | Jangan pernah menyetujui hanya karena `families` besar (kriteria §5) |
 | R4 | Host sah yang diretas | Situs UMKM/sekolah lama dibobol dan dipakai phishing. Memblokir domainnya memblokir seluruh situs sah | Domain tua dengan riwayat normal → tolak (§5 T4) |
 | R5 | Salah ketik di SQL editor | Editor berjalan sebagai `postgres` (melewati grant dan RLS). `UPDATE` tanpa `WHERE` menyetujui seluruh antrean | Hanya pakai template §6 dengan penjaga status + `returning`; cek "1 row" |
 | R6 | Baris disetujui dihapus dengan `DELETE` | Tidak ada `removed[]` → domain tetap di HP sampai full refresh (≤ 24 jam) dan catatan reviewer hilang | Jangan pernah `DELETE` baris disetujui/dicabut; cabut dengan `removed_at` |
-| R7 | Antrean menumpuk / ditolak muncul lagi | Belum ada status "ditolak" di skema: baris yang ditolak tetap `approved_at null` dan muncul lagi setiap sesi | Kolom `rejected_at` diusulkan ke Alief (issue, pertanyaan 3); sementara lihat §7 |
+| R7 | Antrean menumpuk / ditolak muncul lagi | Baris ditolak (`rejected_at`) keluar dari Q1. Tetapi kalau semua keluarga menarik dukungan, baris itu dihapus (D-alief-40), dan kalau domain itu ditandai lagi nanti, ia masuk antrean sebagai baris baru tanpa riwayat tolak | Nilai ulang dengan kriteria §5 seperti domain baru; Q2 tetap menandai domain resmi |
 | R8 | Privasi | Domain di antrean = jejak browsing keluarga yang terhubung | Query hanya membaca domain + angka agregat, tanpa id device, nama, URL, atau judul halaman. Nama domain tidak disalin ke git/chat (§7) |
 
-## 3. Jadwal (usulan)
+## 3. Jadwal (disepakati di #99)
 
 | Kapan | Siapa | Durasi |
 |---|---|---|
@@ -81,8 +83,10 @@ Antrean kosong → sesi selesai setelah Q1 dan Q4–Q5 (cek kesehatan daftar yan
 ## 4. Query baca (SELECT saja)
 
 Jalankan di SQL editor Supabase (project `shoo`, produksi). Bungkus dengan `begin read only;` … `commit;` supaya
-satu tab baca tidak bisa mengubah data. Kalau editor menolak `begin`, jalankan SELECT tanpa pembungkus dan jangan
-pernah menempel `UPDATE` di tab yang sama.
+satu tab baca tidak bisa mengubah data. Dites Alief 25 Okt 2026 (#99): pembungkus diterima, panel Results tetap
+menampilkan SELECT terakhir, dan `UPDATE` di dalamnya gagal dengan `25006: cannot execute UPDATE in a read-only
+transaction`. Satu Run = satu transaksi: kalau satu statement gagal, seluruh Run dibatalkan. Tetap jangan pernah
+menempel `UPDATE` di tab baca.
 
 ### Q1 · Antrean yang menunggu review
 
@@ -91,7 +95,7 @@ begin read only;
 select domain, families, first_seen_at,
        date_trunc('hour', now() - first_seen_at) as waiting
 from blocklist_entries
-where approved_at is null and removed_at is null and families > 0
+where approved_at is null and removed_at is null and rejected_at is null and families > 0
 order by families desc, first_seen_at;
 commit;
 ```
@@ -113,7 +117,8 @@ with official(d) as (values
   ('posindonesia.co.id'), ('shopee.co.id'), ('shopee.com'), ('tokopedia.com'), ('whatsapp.com'), ('youtube.com')
 )
 select b.domain,
-       case when b.approved_at is null then 'queued'
+       case when b.rejected_at is not null then 'rejected'
+            when b.approved_at is null then 'queued'
             when b.removed_at is null then 'SERVED'
             else 'removed' end as state,
        coalesce(o.d, 'gov/edu suffix') as matched
@@ -124,7 +129,8 @@ order by state, b.domain;
 commit;
 ```
 
-Hasil yang diharapkan: **kosong**. Baris `SERVED` = insiden, langsung cabut (§6). Baris `queued` = tolak.
+Hasil yang diharapkan: **kosong**, atau hanya `rejected`/`removed`. Baris `SERVED` = insiden, langsung cabut (§6).
+Baris `queued` = tolak (§6).
 
 ### Q3 · Bukti untuk satu domain (agregat, tanpa id/nama)
 
@@ -167,7 +173,8 @@ Baris di sini = kandidat salah blokir: periksa ulang dengan kriteria §5, cabut 
 
 ```sql
 begin read only;
-select count(*) filter (where approved_at is null and removed_at is null)     as queued,
+select count(*) filter (where approved_at is null and removed_at is null and rejected_at is null) as queued,
+       count(*) filter (where rejected_at is not null)                        as rejected,
        count(*) filter (where approved_at is not null and removed_at is null) as served,
        count(*) filter (where removed_at is not null)                         as removed,
        count(*) filter (where approved_at is not null and removed_at is null and families = 0) as served_no_support,
@@ -218,8 +225,18 @@ dengan `WHERE` lebih longgar. Trigger mengganti waktu dengan `clock_timestamp()`
 ```sql
 -- Setujui (domain mulai tersaji di GET /blocklist)
 update blocklist_entries set approved_at = now(), approved_by = 'umar'   -- atau 'alief'
-where domain = 'GANTI-DOMAIN' and approved_at is null and removed_at is null
+where domain = 'GANTI-DOMAIN' and approved_at is null and removed_at is null and rejected_at is null
 returning domain, approved_at, approved_by;
+
+-- Tolak (keluar dari Q1, tidak pernah tersaji)
+update blocklist_entries set rejected_at = now(), rejected_by = 'umar'   -- atau 'alief'
+where domain = 'GANTI-DOMAIN' and approved_at is null and rejected_at is null
+returning domain, rejected_at, rejected_by;
+
+-- Batalkan tolak (kembali ke antrean Q1)
+update blocklist_entries set rejected_at = null, rejected_by = null
+where domain = 'GANTI-DOMAIN' and rejected_at is not null
+returning domain, families;
 
 -- Cabut (salah blokir / situs resmi): dikirim lewat removed[], hilang dari HP ≤ ± 65 menit
 update blocklist_entries set removed_at = now()
@@ -233,7 +250,8 @@ returning domain, approved_at;
 ```
 
 Dilarang: `UPDATE`/`DELETE` tanpa `domain = '…'`, `DELETE` baris yang disetujui atau dicabut (R6), mengubah
-`families` (milik Worker), dan menyetujui massal. Menolak = **tidak mengubah apa pun** sampai ada status ditolak (§7).
+`families` (milik Worker), dan menyetujui atau menolak massal. Menahan = tidak mengubah apa pun. Baris ditolak tidak
+bisa langsung disetujui (CHECK `blocklist_rejected_not_approved`): batalkan tolak dulu, lalu setujui di Run terpisah.
 
 Setelah menyetujui atau mencabut: `curl -s "$API/blocklist" -H "authorization: Bearer $TOKEN_UJI"` dan pastikan
 domain ada / tidak ada (seperti log fase 10 langkah 4). Token uji tidak ditempel di chat atau berkas.
@@ -244,8 +262,9 @@ domain ada / tidak ada (seperti log fase 10 langkah 4). Token uji tidak ditempel
 |---|---|
 | Disetujui: siapa, kapan | DB: `approved_by`, `approved_at` (otomatis) |
 | Dicabut: kapan | DB: `removed_at` (otomatis). Alasan pencabutan situs resmi → GitHub issue `C6: removed <domain>` (domain resmi itu publik; tanpa data keluarga) |
-| Ditolak / ditahan | Belum ada tempat di DB (R7). Sementara: baris tetap di antrean dan dinilai ulang tiap sesi. Usulan: kolom `rejected_at`, `rejected_by` (migrasi Alief), Q1 lalu memfilter `rejected_at is null` |
-| Ringkasan sesi | Tabel di bawah: **angka saja**, tanpa nama domain antrean (jejak browsing keluarga tidak disimpan di git) |
+| Ditolak: siapa, kapan | DB: `rejected_by`, `rejected_at` (template §6) |
+| Ditahan | Tidak dicatat di DB: baris tetap di Q1 dan dinilai ulang sesi berikutnya |
+| Ringkasan sesi | Tabel di bawah **dan** log fase aktif Alief (D9), baris yang sama: **angka saja**, tanpa nama domain antrean (jejak browsing keluarga tidak disimpan di git) |
 
 ### Log sesi
 
@@ -253,11 +272,12 @@ domain ada / tidak ada (seperti log fase 10 langkah 4). Token uji tidak ditempel
 |---|---|---|---|---|---|---|---|---|
 | — | — | — | — | — | — | — | — | Belum ada sesi |
 
-## 8. Pertanyaan terbuka (ke Alief, issue #99)
+## 8. Keputusan (issue #99, dijawab Alief 25 Okt 2026)
 
-1. Jadwal §3 (Senin + Kamis, harian saat QA/demo) dan pembagian peran.
-2. Query §4 dan template §6 aman di SQL editor (apakah `begin read only` diterima; apakah editor membungkus satu
-   transaksi).
-3. Status "ditolak": kolom `rejected_at`/`rejected_by` atau tetap tanpa status.
-4. Menambah 9 domain `brands.json` yang belum ada ke `allowlist.ts` (R2).
-5. Tempat log sesi: tabel §7 di sini, atau log fase aktif Alief (D9). Satu tempat saja.
+1. Jadwal §3 disetujui: Senin + Kamis 15:00 WITA mulai 26 Okt 2026, Alief menjalankan SQL, Umar memeriksa
+   kriteria, dua sesi pertama berdua. Harian saat minggu QA-E2E / demo, seketika kalau situs resmi terblokir.
+2. Query §4 dan template §6 aman di SQL editor (lihat §4). Tab baca dan tulis dipisah, satu domain per Run,
+   `returning` harus tepat 1 baris.
+3. Status "ditolak": kolom `rejected_at`, `rejected_by` (PR #125, migrasi `20261025100000_blocklist_rejected.sql`).
+4. 9 domain `brands.json` masuk `allowlist.ts`, dijaga test (PR #125).
+5. Log sesi di dua tempat dengan baris yang sama: tabel §7 dan log fase aktif Alief.
