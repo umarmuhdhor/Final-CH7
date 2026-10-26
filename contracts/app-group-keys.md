@@ -37,6 +37,6 @@ URL scheme `shoo://` (registered in `ios/project.yml`). The app handles these in
 |---|---|---|---|
 | `shoo://scan/{scanId}` | Extension popup "See detail" (EX-04), block screen "Review in Shoo" (EX-06) | Detail for that scan (`GET /scans/{id}`) | DT-* |
 | `shoo://activity` | Same buttons, before the scan has an id (EX-07 not finished or offline) | Activity tab, newest first | PR-05, GD-05 |
-| `shoo://join?code=1234` | WhatsApp invite link (GD-04) | Connect with the code filled in | PR-03 |
+| `shoo://join?code=123456` | Invite link `https://<api host>/j/<code>` (GD-04), 6-digit code | Connect with the code filled in | PR-03 |
 
 `scanId` is the backend id returned by `POST /scans`. Safari asks "Open in Shoo?" the first time — expected.

@@ -31,15 +31,15 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 ### Family (max 3 protected per guardian)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/family/code` | — (guardian) | `{ code: "4821", expiresAt, inviteUrl }` — 60 s validity, replaces the guardian's previous code. `503 code_unavailable` when no free code is found: show "Try again" | GD-04 |
-| POST | `/family/join` | `{ code }` (protected) | `{ guardian: { deviceId, name, avatarId } }` | PR-01, PR-03 |
+| POST | `/family/code` | `{ refresh?: boolean }` (guardian; empty body allowed) | `{ code: "482193", expiresAt, inviteUrl }` — 6 digits, valid 30 min, multi-use until the family is full. Returns the guardian's active code while it has more than 5 min left, otherwise a new one. `refresh: true` always makes a new code and the old one stops working at once (`code_invalid`). `503 code_unavailable` when no free code is found: show "Try again" | GD-04, PR-03 |
+| POST | `/family/join` | `{ code }` (protected, 6 digits) | `{ guardian: { deviceId, name, avatarId } }` | PR-01, PR-03 |
 | GET | `/family/members` | — (guardian) | `{ members: [{ deviceId, name, avatarId, extensionActive, lastScan? }] }` | GD-03 |
 | DELETE | `/family/members/{deviceId}` | — (guardian) | `{ ok }` | GD-04 |
 | DELETE | `/family/guardian` | — (protected) | `{ ok }` | PF-01 |
 
 Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` (rate-limit attempts, PRD §10; HTTP 429 with `Retry-After`, like `rate_limited`), `already_connected`.
 
-`inviteUrl` is an **https** link, e.g. `https://<api host>/join?code=4821`: a small page that opens `shoo://join?code=4821` (contracts/app-group-keys.md "Deep links"). WhatsApp doesn't make `shoo://` links tappable.
+`inviteUrl` is an **https** link, `https://<api host>/j/<code>` (e.g. `/j/482193`), and a Universal Link (`GET /.well-known/apple-app-site-association` lists `/j/*`): with Shoo installed it opens the app. Otherwise a small page with "Open Shoo" (`shoo://join?code=482193`, contracts/app-group-keys.md "Deep links") and "Install" (copies the invite, then goes to TestFlight / the App Store). WhatsApp doesn't make `shoo://` links tappable. The 4-digit code and `/join?code=` are removed with no transition (#128).
 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
