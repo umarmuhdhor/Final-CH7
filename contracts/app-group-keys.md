@@ -14,7 +14,7 @@ Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, ne
 | `device.mode` | `"guardian"` \| `"protected"` | App | Extension | Chosen in ON-03, never changes |
 | `device.name` | String | App | Extension | ON-02 name |
 | `guardian.name` | String? | App | Extension | Protected only: "Waiting for [name] to check" (EX-06) |
-| `extension.lastSeenAt` | Date | Extension | App | Heartbeat. App shows Active if recent (ON-04, PR-04, GD-01) |
+| `extension.lastSeenAt` | Date | Extension | App | Heartbeat. App shows Active if recent (ON-04, PR-04, GD-01). On iOS 26.2+ the app asks Safari's switch first and uses this only as fallback (#40) |
 | `extension.allSites` | Bool | Extension | App | Safari access to every website (EX-01). `false` → app shows Off even if the heartbeat is recent. Missing → unknown, treat as `true` |
 | `api.baseURL` | String | App | Extension | Backend base URL |
 | `ai.baseURL` | String | App | Extension | AI service base URL |
