@@ -2,14 +2,13 @@
 // The extension can't drive the Dynamic Island (docs/spikes/dynamic-island.md), so the running
 // score floats on the page instead: a round button the user can drag to either edge (like a chat
 // head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
-// Rules: visible while the page is being checked · stays for warnings (30–79) · fades out a few
-// seconds after a low final score (not while its card is open) · hidden when blocked (block screen
+// Rules: always on screen while a page is open, whatever the score · the number follows every
+// (re)scan live (content.js re-checks the page when it changes) · hidden when blocked (block screen
 // owns the page, EX-06) · tap opens a small card (status, score, top reasons, See detail, Hide) ·
 // Hide hides it for the rest of this page · the dragged position is remembered across pages.
 
 (() => {
     const { THRESHOLD } = globalThis.ShooPipeline;
-    const LINGER_MS = 3000; // how long a low final score stays before fading out
     const MAX_REASONS = 2;
     const SIZE = 56; // bubble diameter, px (≥ 44 pt tap target)
     const MARGIN = 10; // gap between bubble and screen edge, px
@@ -25,15 +24,13 @@
     /**
      * Pure decision: what the bubble shows for the newest pipeline state. Free of DOM so it can be
      * tested in Node.
-     * @returns {{ memo, view: { visible: boolean, score?, tone?, analyzing?, hideAfterMs? } }}
+     * @returns {{ memo, view: { visible: boolean, score?, tone?, analyzing? } }}
      */
     function decide(memo, state) {
         if (!memo || memo.scanId !== state.scanId) memo = { scanId: state.scanId, dismissed: false };
         if (memo.dismissed || state.status === "blocked") return { memo, view: { visible: false } };
 
-        const view = { visible: true, score: state.score, tone: toneFor(state.score), analyzing: !state.done };
-        if (state.done && state.score < THRESHOLD.firstWarning) view.hideAfterMs = LINGER_MS;
-        return { memo, view };
+        return { memo, view: { visible: true, score: state.score, tone: toneFor(state.score), analyzing: !state.done } };
     }
 
     /** The user tapped Hide: the bubble stays hidden until the next page. */
@@ -80,7 +77,7 @@
         return ok ? { side: pos.side, y: pos.y } : { ...DEFAULT_POS };
     }
 
-    globalThis.ShooPill = { toneFor, decide, dismissed, reasonTexts, snap, place, validPos, LINGER_MS, SIZE, MARGIN };
+    globalThis.ShooPill = { toneFor, decide, dismissed, reasonTexts, snap, place, validPos, SIZE, MARGIN };
 
     // ---- View (browser only) -------------------------------------------------------------
 
@@ -151,7 +148,6 @@
     let refs = null;
     let shown = 0; // the number on screen, counts toward the real score
     let tween = null;
-    let hideTimer = null;
     let pos = { ...DEFAULT_POS };
     let simple = false; // Protected → plain reason wording
     let last = null; // newest pipeline state + view, for the card
@@ -268,7 +264,6 @@
                 start.moved = true;
                 bubble.classList.add("dragging");
                 closeCard();
-                clearTimeout(hideTimer); // never fade out under the user's finger
             }
             start.cx = e.clientX;
             start.cy = e.clientY;
@@ -285,7 +280,6 @@
             pos = snap({ x: cx, y: cy }, a);
             moveTo(place(pos, a));
             browser.storage?.local.set({ [POS_KEY]: pos }).catch(() => {});
-            if (last?.view.hideAfterMs) hideTimer = setTimeout(hide, last.view.hideAfterMs);
         };
         bubble.addEventListener("pointerup", end);
         bubble.addEventListener("pointercancel", end);
@@ -302,7 +296,6 @@
     }
 
     function openCard() {
-        clearTimeout(hideTimer); // never fade out under the user's finger
         refs.card.hidden = false;
         refs.bubble.setAttribute("aria-expanded", "true");
         fillCard();
@@ -317,7 +310,6 @@
         refs.bubble.setAttribute("aria-expanded", "false");
         document.removeEventListener("pointerdown", outside, true);
         document.removeEventListener("keydown", escape, true);
-        if (last?.view.hideAfterMs) hideTimer = setTimeout(hide, last.view.hideAfterMs);
     }
 
     function outside(e) {
@@ -382,7 +374,6 @@
     }
 
     function show(state, view) {
-        clearTimeout(hideTimer);
         last = { state, view };
         mount();
         const { bubble, live, card } = refs;
@@ -396,15 +387,13 @@
         if (!card.hidden) {
             fillCard();
             positionCard();
-        } else if (view.hideAfterMs) hideTimer = setTimeout(hide, view.hideAfterMs);
+        }
     }
 
     function hide() {
-        clearTimeout(hideTimer);
         cancelAnimationFrame(tween);
         if (!refs) return;
         closeCard();
-        clearTimeout(hideTimer); // closeCard may have queued the linger timer
         const gone = host;
         refs.bubble.classList.add("out");
         host = null;
@@ -417,6 +406,14 @@
         moveTo(place(pos, area()));
         if (!refs.card.hidden) positionCard();
     });
+
+    // Some pages rebuild <html>'s children (hydration, document.write): put the bubble back.
+    new MutationObserver(() => {
+        if (refs && last && !host.isConnected) {
+            refs = null;
+            show(last.state, last.view);
+        }
+    }).observe(document.documentElement, { childList: true });
 
     let memo = null;
     globalThis.ShooPipeline.subscribe((state) => {

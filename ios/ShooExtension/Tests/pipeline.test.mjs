@@ -12,7 +12,7 @@ const fixture = (name) =>
 const snapshotFor = (result) => ({ url: result.url, domain: result.domain, title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: "" });
 
 /** Runs a scan with fakes; returns every published state and which deps were called. */
-async function run({ local = [], remote = [], verdict = null, current = () => true, snapshot } = {}) {
+async function run({ local = [], remote = [], verdict = null, current = () => true, snapshot, previous } = {}) {
     const states = [];
     const calls = { remote: 0, verdict: [] };
     await P.runScan({
@@ -28,6 +28,7 @@ async function run({ local = [], remote = [], verdict = null, current = () => tr
         },
         isCurrent: current,
         publish: (s) => states.push(s),
+        previous,
     });
     return { states, calls, last: states.at(-1) };
 }
@@ -139,4 +140,43 @@ test("navigating away mid-scan publishes nothing more", async () => {
     });
     assert.equal(states.length, 1); // only the initial 0
     assert.equal(calls.remote, 0);
+});
+
+const settled = (signals) => ({ score: P.scoreFrom(signals), status: P.statusFor(P.scoreFrom(signals)), signals, layersDone: [1, 2, 3, 4] });
+
+test("re-check: nothing new on the page → server asked again, publishes nothing", async () => {
+    const before = settled([sig("cheap_tld", 2, 10), sig("asks_otp", 3, 20)]);
+    const { states, calls } = await run({ previous: before, local: [sig("cheap_tld", 2, 10)], remote: [sig("asks_otp", 3, 20)] });
+    assert.equal(states.length, 0);
+    assert.equal(calls.remote, 1);
+});
+
+test("re-check: only the server finds something new (page text changed) → score climbs", async () => {
+    const before = settled([sig("cheap_tld", 2, 10)]);
+    const { states, last } = await run({ previous: before, local: [sig("cheap_tld", 2, 10)], remote: [sig("asks_pin", 3, 30)] });
+    assert.equal(states.length, 1);
+    assert.equal(last.score, 40);
+    assert.equal(last.status, "warning");
+    assert.equal(last.done, true);
+});
+
+test("re-check: new local signal → score climbs from where it was, earlier server signals kept", async () => {
+    const before = settled([sig("cheap_tld", 2, 10), sig("asks_otp", 3, 20)]);
+    const { states, calls, last } = await run({
+        previous: before,
+        local: [sig("cheap_tld", 2, 10), sig("asks_pin", 2, 25)],
+        remote: [sig("urgent_language", 3, 5)],
+    });
+    assert.ok(states.every((s) => s.score >= before.score), "never drops below the earlier score");
+    assert.equal(states[0].done, false);
+    assert.equal(calls.remote, 1);
+    assert.deepEqual(last.signals.map((s) => s.id).sort(), ["asks_otp", "asks_pin", "cheap_tld", "urgent_language"]);
+    assert.equal(last.score, 60);
+    assert.equal(last.done, true);
+});
+
+test("re-check: a heavier copy of a known signal counts as new", async () => {
+    const before = settled([sig("asks_pin", 2, 10)]);
+    const { last } = await run({ previous: before, local: [sig("asks_pin", 2, 30)] });
+    assert.equal(last.score, 30);
 });
