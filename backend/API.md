@@ -17,7 +17,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
-- [Web pages](#web-pages): `GET /j/{code}`, `GET /.well-known/apple-app-site-association`, `GET /privacy`
+- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`
 - [Push notification](#push-notification) sent by `POST /scans`
 
 ## General rules
@@ -579,7 +579,17 @@ invite link to the clipboard, so the app can offer "Paste invite" on first launc
 - Language: Bahasa Indonesia when `Accept-Language` starts with `id`, else English.
 - Strict CSP: the one inline script (copy, then go to the store) runs under a per-request `nonce`.
   No cookies, no analytics, nothing sent.
+- Link preview: Open Graph tags (`og:title`, `og:description`, `og:image` = `INVITE_BASE_URL/og/invite.jpg`,
+  `twitter:card`), so WhatsApp / Messages show the Shoo picture above the invite text. The same tags for
+  every invite: no code, no name.
 - The old `GET /join?code=` page and 4-digit codes are gone (`404`).
+
+### `GET /og/invite.jpg`
+
+**For:** link preview crawlers (WhatsApp, Messages, Telegram) reading `og:image` on `/j/{code}`.
+1200×628 JPEG under 300 KB (WhatsApp skips larger images), bundled into the Worker (`src/assets/`).
+
+- **Auth:** none. `Cache-Control: public, max-age=86400` (no user data).
 
 ### `GET /.well-known/apple-app-site-association`
 

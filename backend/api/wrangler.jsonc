@@ -4,6 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Images bundled into the Worker as ArrayBuffer (PR-03 invite link preview, src/routes/join-page.ts).
+  "rules": [{ "type": "Data", "globs": ["**/*.jpg"], "fallthrough": false }],
   // Our own JSON logs only: invocation logs record full request URLs, which carry
   // screenshot link ids/signatures and invite codes (SECURITY §3, D-alief-40).
   "observability": { "enabled": true, "logs": { "invocation_logs": false } },

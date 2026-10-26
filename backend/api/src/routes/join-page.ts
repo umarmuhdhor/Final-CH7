@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
 import { base64url, randomBytes } from "../http/crypto";
+import ogImage from "../assets/og-invite.jpg";
 
 // Invite page behind `inviteUrl` (R3 §4, SECURITY T13, PR-03 issue #128). No auth, no DB lookup:
 // it never tells whether a code is active. Only a strict 6-digit code is echoed.
@@ -15,6 +16,8 @@ const TEXT = {
     noCode: "This invite link has no valid code. Ask for a new one.",
     install: "Don't have Shoo yet? Install it",
     installHint: "We copy the invite, so Shoo can paste it after you install.",
+    preview: "Tap to join and get protected from scam sites.",
+    imageAlt: "Shoo logo",
   },
   id: {
     title: "Bergabung ke keluarga di Shoo",
@@ -24,6 +27,8 @@ const TEXT = {
     noCode: "Link undangan ini tidak berisi kode yang valid. Minta kode baru.",
     install: "Belum punya Shoo? Install dulu",
     installHint: "Undangan kami salin, jadi Shoo bisa menempelnya setelah kamu install.",
+    preview: "Ketuk untuk bergabung dan terlindungi dari situs penipuan.",
+    imageAlt: "Logo Shoo",
   },
 } as const;
 
@@ -58,7 +63,35 @@ if(!l||!navigator.clipboard)return;e.preventDefault();navigator.clipboard.writeT
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 
+/** Link preview image (Open Graph): what WhatsApp, Messages and Telegram show above the invite text. */
+const OG_IMAGE_PATH = "/og/invite.jpg";
+
+// Link preview tags. Static on purpose: no name, no code, the same for every invite (T13).
+const ogTags = (base: string, lang: "en" | "id") => {
+  const t = TEXT[lang];
+  const tag = (property: string, content: string) => `<meta property="${property}" content="${escapeHtml(content)}">`;
+  return [
+    tag("og:type", "website"),
+    tag("og:site_name", "Shoo"),
+    tag("og:title", t.title),
+    tag("og:description", t.preview),
+    tag("og:image", `${base}${OG_IMAGE_PATH}`),
+    tag("og:image:type", "image/jpeg"),
+    tag("og:image:width", "1200"),
+    tag("og:image:height", "628"),
+    tag("og:image:alt", t.imageAlt),
+    `<meta name="twitter:card" content="summary_large_image">`,
+  ].join("\n");
+};
+
 export const joinPage = new Hono<AppEnv>();
+
+// Carries no user data, so link preview crawlers and CDNs may cache it.
+joinPage.get(OG_IMAGE_PATH, (c) => {
+  c.header("Content-Type", "image/jpeg");
+  c.header("Cache-Control", "public, max-age=86400");
+  return c.body(ogImage);
+});
 
 joinPage.get("/j/:code", (c) => {
   const raw = c.req.param("code");
@@ -76,6 +109,7 @@ joinPage.get("/j/:code", (c) => {
     : `<p>${t.noCode}</p><p><a href="${store}">${escapeHtml(t.install)}</a></p>`;
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(t.title)}</title>
+${ogTags(c.env.INVITE_BASE_URL.replace(/\/+$/, ""), lang)}
 <style>${STYLE}</style></head><body><main><h1>${escapeHtml(t.title)}</h1>${body}</main></body></html>`;
 
   c.header("Content-Security-Policy", csp(nonce));

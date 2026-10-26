@@ -77,8 +77,36 @@ describe("GET /j/:code", () => {
     expect(strip(a.html).replaceAll("000000", "")).toBe(strip(b.html).replaceAll("999999", ""));
   });
 
+  it("link preview: static Open Graph tags with an absolute image URL, no code in them", async () => {
+    const { html } = await page("/j/482193");
+    expect(html).toContain('<meta property="og:title" content="Join a family on Shoo">');
+    expect(html).toContain('<meta property="og:image" content="http://localhost:8787/og/invite.jpg">');
+    expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
+    const og = html.match(/<meta (?:property|name)="(?:og|twitter):[^>]*>/g)!;
+    expect(og.length).toBeGreaterThanOrEqual(8);
+    for (const tag of og) expect(tag).not.toContain("482193");
+  });
+
+  it("link preview in Indonesian for Accept-Language id, and also on the no-code page", async () => {
+    expect((await page("/j/482193", "id")).html).toContain('<meta property="og:title" content="Bergabung ke keluarga di Shoo">');
+    expect((await page("/j/12345")).html).toContain('<meta property="og:image" content="http://localhost:8787/og/invite.jpg">');
+  });
+
   it("the old /join?code= page is gone (4-digit codes removed)", async () => {
     expect((await call("/join?code=4821")).status).toBe(404);
+  });
+});
+
+describe("GET /og/invite.jpg", () => {
+  it("serves the preview image, cacheable (no user data), under WhatsApp's 300 KB limit", async () => {
+    const res = await call("/og/invite.jpg");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(res.headers.get("cache-control")).toBe("public, max-age=86400");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect([...bytes.slice(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+    expect(bytes.length).toBeLessThan(300 * 1024);
   });
 });
 
