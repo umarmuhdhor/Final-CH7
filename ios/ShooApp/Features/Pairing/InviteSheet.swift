@@ -10,7 +10,7 @@ struct InviteSheet: View {
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
     @State private var model: FamilyCodeModel
-    /// Text for the system share sheet ("More", or Messages / Mail when they can't open).
+    /// Text for the system share sheet ("More", or WhatsApp / Messages when they can't open).
     @State private var shareText: ShareText?
 
     init(repository: any ShooRepository, onDone: @escaping () -> Void) {
@@ -146,6 +146,8 @@ struct InviteSheet: View {
     }
 
     private static let refreshBlue = Color(red: 0x03 / 255, green: 0x67 / 255, blue: 0xB6 / 255)
+    /// WhatsApp's brand green, so the tile is recognised at a glance.
+    private static let whatsAppGreen = Color(red: 0x25 / 255, green: 0xD3 / 255, blue: 0x66 / 255)
 
     private var shareRow: some View {
         let text = model.code.map { FamilyCodeModel.inviteText(for: $0, language: language) }
@@ -157,15 +159,16 @@ struct InviteSheet: View {
             }
             .accessibilityIdentifier("invite.copy")
             Spacer(minLength: 4)
+            // WhatsApp first: that is where families send the link (PR-03), without a detour through "More".
+            ShareTile(title: "WhatsApp", systemImage: "phone.bubble.fill", style: .filled(Self.whatsAppGreen)) {
+                send(text, via: text.flatMap(InviteShare.whatsAppURL))
+            }
+            .accessibilityIdentifier("invite.whatsapp")
+            Spacer(minLength: 4)
             ShareTile(title: "Messages", systemImage: "message.fill", style: .filled(.green)) {
                 send(text, via: text.flatMap(InviteShare.messagesURL))
             }
             .accessibilityIdentifier("invite.messages")
-            Spacer(minLength: 4)
-            ShareTile(title: "Mail", systemImage: "envelope.fill", style: .filled(.blue)) {
-                send(text, via: text.flatMap { InviteShare.mailURL(subject: L10n.string("Join my family on Shoo", language: language), body: $0) })
-            }
-            .accessibilityIdentifier("invite.mail")
             Spacer(minLength: 4)
             ShareTile(title: "More", systemImage: "square.and.arrow.up", style: .plain) {
                 shareText = text.map(ShareText.init)
@@ -175,7 +178,8 @@ struct InviteSheet: View {
         .disabled(text == nil || model.inviteURL == nil)
     }
 
-    /// Opens Messages / Mail with the invite filled in; the share sheet when that app can't open (e.g. no Mail account).
+    /// Opens WhatsApp / Messages with the invite filled in; the share sheet when that app can't open
+    /// (WhatsApp not installed).
     private func send(_ text: String?, via url: URL?) {
         guard let text else { return }
         guard let url else {
@@ -188,7 +192,7 @@ struct InviteSheet: View {
     }
 }
 
-/// `sms:` and `mailto:` links with the invite as the body. Nothing is sent until the user taps Send there.
+/// `whatsapp:` and `sms:` links with the invite as the body. Nothing is sent until the user taps Send there.
 enum InviteShare {
     /// RFC 3986 unreserved only: `&`, `=`, `+` and `?` in the text must not split the query.
     private static let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
@@ -197,12 +201,10 @@ enum InviteShare {
         body.addingPercentEncoding(withAllowedCharacters: allowed).flatMap { URL(string: "sms:&body=\($0)") }
     }
 
-    static func mailURL(subject: String, body: String) -> URL? {
-        guard
-            let subject = subject.addingPercentEncoding(withAllowedCharacters: allowed),
-            let body = body.addingPercentEncoding(withAllowedCharacters: allowed)
-        else { return nil }
-        return URL(string: "mailto:?subject=\(subject)&body=\(body)")
+    /// WhatsApp's own scheme opens its contact picker with the text filled in. `open` needs no
+    /// `LSApplicationQueriesSchemes` entry (only `canOpenURL` does); not installed → the share sheet.
+    static func whatsAppURL(text: String) -> URL? {
+        text.addingPercentEncoding(withAllowedCharacters: allowed).flatMap { URL(string: "whatsapp://send?text=\($0)") }
     }
 }
 

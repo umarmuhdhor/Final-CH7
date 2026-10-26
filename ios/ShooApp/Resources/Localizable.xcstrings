@@ -954,16 +954,6 @@
         }
       }
     },
-    "Join my family on Shoo" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gabung ke keluargaku di Shoo"
-          }
-        }
-      }
-    },
     "Join my family on Shoo so I can help keep you safe from scam sites. Open %@ or enter code %@ in Shoo." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1032,16 +1022,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Memuat tangkapan layar"
-          }
-        }
-      }
-    },
-    "Mail" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mail"
           }
         }
       }
@@ -2254,6 +2234,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kami kabari saat anggota keluarga membuka situs berisiko."
+          }
+        }
+      }
+    },
+    "WhatsApp" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "WhatsApp"
           }
         }
       }

@@ -457,3 +457,20 @@ private actor SlowMembersRepository: ShooRepository {
         try await base.setVerdict(scanId: scanId, value: value)
     }
 }
+
+struct InviteShareTests {
+    @Test func whatsAppGetsTheWholeInviteAsOneParameter() throws {
+        let text = "Join me: https://x.dev/join?code=1234&a=b + more"
+        let url = try #require(InviteShare.whatsAppURL(text: text))
+        #expect(url.scheme == "whatsapp")
+        let items = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+        #expect(items.map(\.name) == ["text"])
+        #expect(items.first?.value == text)
+    }
+
+    @Test func messagesKeepsTheBodyInOnePiece() throws {
+        let text = "code=1234&x"
+        let url = try #require(InviteShare.messagesURL(body: text))
+        #expect(url.absoluteString == "sms:&body=code%3D1234%26x")
+    }
+}
