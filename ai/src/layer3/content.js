@@ -1,10 +1,11 @@
-// Layer 3 content signals: urgent_language and brand_logo_offsite (phase 03).
+// Layer 3 content signals: urgent_language and brand_logo_offsite (phase 03; brand_logo_offsite also from a copied sign-in form, fingerprints.js).
 // Text is matched against fixed phrase lists with plain string search (no regex, no backtracking).
 // Evidence is an exact piece of the page; labels only ever contain OUR wording (phrase list / brand name).
 import brands from "../../../detector/data/brands.json" with { type: "json" };
 import { buildIndex, findPhrase, evidenceOf } from "./match.js";
 import { hasAny, vocabulary } from "./text.js";
-import { buildUrgentSignal, buildBrandLogoSignal } from "./signals.js";
+import { buildUrgentSignal, buildBrandLogoSignal, buildBrandFormSignal } from "./signals.js";
+import { FIELD_FINGERPRINTS } from "./fingerprints.js";
 
 // Always urgent: an account threat or a countdown that scams use. Bilingual (ID + EN).
 const URGENT_PHRASES = [
@@ -60,6 +61,8 @@ const ALT_EXEMPT = new Set(["meta", "google", "apple", "microsoft"]);
 const TITLE_ACTION_WORDS = ["login", "signin", "masuk", "verifikasi", "verify", "verification", "secure"];
 /** Three or more different brands among the alts looks like a payment-method strip, not an imitation. */
 const PAYMENT_STRIP_BRANDS = 3;
+/** Most brand names layer 4 gets (detectBrands). */
+const MAX_LLM_BRANDS = 3;
 
 const BRANDS = brands.brands.map((b) => {
     const common = new Set(b.commonNames || []);
@@ -93,8 +96,55 @@ function findBrandLogo(snapshot) {
     return null;
 }
 
+const brandNameOf = (brandId) => brands.brands.find((b) => b.id === brandId)?.name ?? null;
+
 /**
- * @param {{ text: string, title: string, imageAlts: string[] }} snapshot sanitised
+ * A form copied from a brand's own sign-in page (fingerprints.js). Whole `name` / `id` values only, case-insensitive,
+ * and at least `minHits` DIFFERENT values, so one generic name never fires it. Not for official hosts: the caller skips them.
+ * @returns {{ brand: string } | null}
+ */
+function findBrandForm(snapshot) {
+    for (const fp of FIELD_FINGERPRINTS) {
+        const hits = new Set();
+        for (const form of snapshot.forms) {
+            for (const f of form.fields) {
+                const name = f.name?.trim().toLowerCase();
+                const id = f.id?.trim().toLowerCase();
+                if (name && fp.names.includes(name)) hits.add(`name:${name}`);
+                if (id && fp.ids.includes(id)) hits.add(`id:${id}`);
+            }
+        }
+        const brand = hits.size >= fp.minHits ? brandNameOf(fp.brandId) : null;
+        if (brand) return { brand };
+    }
+    return null;
+}
+
+/**
+ * Brand names the page shows, for layer 4 (the LLM). Our own wording from brands.json, never page text (D-imelda-42).
+ * Sources: a copied sign-in form, the title, and image alts. Alts of brands that ordinary sites show as "sign in with"
+ * buttons (ALT_EXEMPT) do not count on their own, and 3+ different brands in the alts look like a payment strip: skipped.
+ * @param {{ title: string, imageAlts: string[], forms: { fields: any[] }[] }} snapshot sanitised
+ * @returns {string[]} at most MAX_LLM_BRANDS names, no duplicates
+ */
+export function detectBrands(snapshot) {
+    const found = [];
+    const add = (name) => {
+        if (name && !found.includes(name)) found.push(name);
+    };
+    add(findBrandForm(snapshot)?.brand);
+    if (snapshot.title) add(matchBrand(snapshot.title, "titleTerms")?.brand);
+    const fromAlts = new Set();
+    for (const alt of snapshot.imageAlts) {
+        const hit = matchBrand(alt, "altTerms");
+        if (hit) fromAlts.add(hit.brand);
+    }
+    if (fromAlts.size < PAYMENT_STRIP_BRANDS) for (const name of fromAlts) add(name);
+    return found.slice(0, MAX_LLM_BRANDS);
+}
+
+/**
+ * @param {{ text: string, title: string, imageAlts: string[], forms: { fields: any[] }[] }} snapshot sanitised
  * @param {{ official: boolean, asksData?: boolean }} ctx asksData: a form signal (asks_*) fired; without it the words weigh less
  * @returns {object[]} 0-2 signals
  */
@@ -104,8 +154,14 @@ export function contentSignals(snapshot, { official, asksData = true }) {
     const urgent = findUrgent(snapshot.text) ?? findUrgent(snapshot.title);
     if (urgent) out.push(buildUrgentSignal(urgent.phrase, urgent.evidence, { quiet }));
     if (!official) {
-        const logo = findBrandLogo(snapshot);
-        if (logo) out.push(buildBrandLogoSignal(logo.brand, logo.evidence, { quiet }));
+        // One brand_logo_offsite at most. A copied sign-in form is the stronger claim, so it wins over a logo/title hit.
+        const form = findBrandForm(snapshot);
+        if (form) {
+            out.push(buildBrandFormSignal(form.brand));
+        } else {
+            const logo = findBrandLogo(snapshot);
+            if (logo) out.push(buildBrandLogoSignal(logo.brand, logo.evidence, { quiet }));
+        }
     }
     return out;
 }
