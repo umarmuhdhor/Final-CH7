@@ -1,12 +1,13 @@
 // Layer 4: "is the data this page asks for reasonable for this kind of page?" (M4).
-// - Only a small summary leaves the server: host, title (<= 120 chars), field labels (<= 12) and ids of rules that fired.
-//   No page text, no URL path or query, no typed values (SECURITY A1, A4).
+// - Only a small summary leaves the server: host, title (<= 120 chars), field labels (<= 12), brand names (<= 3, from
+//   brands.json, D-imelda-42) and ids of rules that fired. No page text, no URL path or query, no typed values (SECURITY A1, A4).
 // - Page words go into the user message as JSON data; the system prompt is a fixed string.
 // - The answer must match schema.js, else it is ignored. Layer 4 can only ADD a signal (D-imelda-06).
 // - Any failure, timeout or cap -> no signal; layer 3 already answered.
 import { SYSTEM_PROMPT, PROMPT_VERSION } from "../../prompts/reality-check.js";
 import { hostOf } from "../layer3/official.js";
 import { buildIndex, findPhrase, evidenceOf } from "../layer3/match.js";
+import { detectBrands } from "../layer3/content.js";
 import { fold } from "../layer3/text.js";
 import { registrableDomain } from "../rdap/domain.js";
 import { createRateLimiter } from "../ratelimit.js";
@@ -53,8 +54,8 @@ export function buildInput(snapshot, ruleIds) {
             if (label || f.type) fields.push({ type: clean(f.type, 20) || "text", label });
         }
     }
-    // site is null for IPs, intranet names and junk
-    return { site: registrableDomain(hostOf(snapshot.url)), title: clean(snapshot.title, MAX_TITLE), fields, rules: ruleIds.slice(0, 20) };
+    // site is null for IPs, intranet names and junk. brands: names from brands.json (our wording), at most 3, [] when none (D-imelda-42)
+    return { site: registrableDomain(hostOf(snapshot.url)), title: clean(snapshot.title, MAX_TITLE), fields, brands: detectBrands(snapshot), rules: ruleIds.slice(0, 20) };
 }
 
 const MASKED = /\[(?:number|email)\]/;

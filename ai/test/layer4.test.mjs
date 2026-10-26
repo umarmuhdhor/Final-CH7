@@ -390,3 +390,37 @@ test("privacy: nothing logged, key and page data absent from the response", asyn
     assert.deepEqual(seen, []);
     assert.doesNotMatch(text, /test-key-NOT-REAL/);
 });
+
+// ---- brands go to the model (D-imelda-42, prompt v3) -----------------------------------------------------------------
+const sentData = (call) => {
+    const user = call.body.messages[1].content;
+    return JSON.parse(user.slice(user.indexOf("DATA_START\n") + "DATA_START\n".length, user.indexOf("\nDATA_END")));
+};
+const MS_FORM = () => [field({ type: "email", name: "loginfmt", id: "i0116" }), field({ type: "password", name: "passwd", id: "i0118" })];
+
+test("brands: a copied Microsoft sign-in form sends the brand NAME, nothing else from the page (D-imelda-42)", async () => {
+    const f = fake(() => reply(verdict({ asks: ["password"] })));
+    const snap = page("https://verif.shoo-fixture.xyz/login", MS_FORM(), { title: "Sign in to your account", text: "PRIVATE-BODY-TEXT", imageAlts: ["Microsoft", "PRIVATE-ALT"] });
+    await post(appWith(f), { snapshot: snap, localSignals: [] });
+    assert.equal(f.calls.length, 1, "layer 3 score (password 15 + brand 25) passes the gate");
+    const data = sentData(f.calls[0]);
+    assert.deepEqual(data.brands, ["Microsoft"]);
+    assert.ok(data.rules.includes("brand_logo_offsite") && data.rules.includes("asks_password"));
+    const sent = JSON.stringify(f.calls[0].body);
+    for (const leak of ["PRIVATE-BODY-TEXT", "PRIVATE-ALT", "i0116", "i0118"]) assert.ok(!sent.includes(leak), `leaked ${leak}`);
+});
+
+test("brands: the key is always there, an empty array when the page names no brand", async () => {
+    const f = fake(() => reply(verdict()));
+    await post(appWith(f), { snapshot: PIN(), localSignals: [] });
+    const data = sentData(f.calls[0]);
+    assert.ok("brands" in data);
+    assert.deepEqual(data.brands, []);
+});
+
+test("prompt v3: names the brands field, keeps the untrusted-data rule and the same output keys", () => {
+    assert.equal(PROMPT_VERSION, "reality-check.v3");
+    assert.match(SYSTEM_PROMPT, /brands/);
+    assert.match(SYSTEM_PROMPT, /untrusted/i);
+    for (const k of ["page_type", "asks", "reasonable", "confidence", "evidence"]) assert.ok(SYSTEM_PROMPT.includes(k), k);
+});

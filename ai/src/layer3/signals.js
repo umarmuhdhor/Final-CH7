@@ -84,6 +84,23 @@ export function buildBrandLogoSignal(brandName, evidence, { quiet = false } = {}
     };
 }
 
+/**
+ * Same id as the logo signal (no new id, no contract change), raised when the FORM is a copy of a brand's sign-in form
+ * (fingerprints.js). Always the full weight: a copied form is not "words", it is the page claiming to be the brand while
+ * it collects the login. No `evidence`: a field name is not text on the page, so there is nothing for the extension to
+ * highlight (evidence is optional, D-imelda decision on A7).
+ * @param {string} brandName display name from brands.json
+ */
+export function buildBrandFormSignal(brandName) {
+    return {
+        id: "brand_logo_offsite",
+        layer: 3,
+        weight: CONTENT_WEIGHTS.brand_logo_offsite,
+        label: { en: `${brandName} sign-in form copied on an unofficial site`, id: `Form login ${brandName} ditiru di situs tidak resmi` },
+        labelSimple: { en: `Pretends to be ${brandName}`, id: `Berpura-pura menjadi ${brandName}` },
+    };
+}
+
 /** Weight by domain age (D-imelda-15). null = old enough, no signal. */
 export function newDomainWeight(days) {
     if (days < 7) return 30;
