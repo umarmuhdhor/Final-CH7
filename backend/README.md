@@ -21,6 +21,7 @@ Needs Node 24, pnpm, Docker, Supabase CLI. Run from the repo root.
 (cd backend/db && supabase db reset && supabase test db)   # migrations + seed + pgTAP
 pnpm -C backend/api install
 pnpm -C backend/api typecheck && pnpm -C backend/api test  # vitest inside workerd, against local Postgres
+SHOO_SLOW_TESTS=1 pnpm -C backend/api test                 # plus slow opt-in cases (all 10^6 family codes taken)
 cp backend/api/.dev.vars.example backend/api/.dev.vars     # once
 pnpm -C backend/api dev                                    # http://localhost:8787
 ```
@@ -100,7 +101,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `DB` | Hyperdrive binding | `shoo-db` (id filled in at first deploy) |
 | `INVITE_BASE_URL` | var | Worker URL (used from fase 08) |
 | `APP_STORE_URL` | var | "Install" link on the invite page: TestFlight public link now, App Store later. Only `https://testflight.apple.com` / `https://apps.apple.com`; `""` or anything else → `https://apps.apple.com/` |
-| `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129); `""` until the entitlement is in |
+| `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129): `DWTZNGA7Y8.com.umarmuhdhor.shoo` (dev builds and TestFlight share that team and bundle ID); `""` → no app listed |
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |

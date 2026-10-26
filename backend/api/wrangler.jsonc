@@ -24,7 +24,7 @@
     "APP_STORE_URL": "",
     // Universal Link (issue #129): `<Team ID>.<bundle ID>` of the builds that open /j/<code>, comma-separated.
     // Not a secret. Empty → the AASA lists no app and the link stays a web page.
-    "APPLINKS_APP_IDS": "",
+    "APPLINKS_APP_IDS": "DWTZNGA7Y8.com.umarmuhdhor.shoo",
     // APNs (fase 11): bundle ID of the build that receives pushes (B6) and the APNs host.
     // Empty topic → pushes are only logged. Key, key id and team id are secrets (wrangler secret put).
     "APNS_TOPIC": "",

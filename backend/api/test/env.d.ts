@@ -17,6 +17,8 @@ declare namespace Cloudflare {
     SCREENSHOT_MAX_BYTES?: string;
     SCREENSHOT_URL_SECRET?: string;
     RATE_KEY_SECRET?: string;
+    /** Tests only: "1" runs the slow opt-in cases (vitest.config.ts). */
+    SHOO_SLOW_TESTS?: string;
   }
   interface GlobalProps {
     mainModule: typeof import("../src/index");

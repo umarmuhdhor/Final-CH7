@@ -2,7 +2,8 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import fixture from "../../../contracts/fixtures/family-members.json";
 import { claimCode } from "../src/db/repo/codes";
-import { randomCode } from "../src/services/family";
+import { ApiError } from "../src/http/errors";
+import { issueCode, randomCode } from "../src/services/family";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
@@ -101,7 +102,22 @@ describe("POST /family/code", () => {
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
   });
 
-  it("503 code_unavailable when every code is active; never steals one", async () => {
+  it("503 code_unavailable when every drawn code is active; never steals one", async () => {
+    const g1 = await createDevice("G1", "guardian");
+    const g2 = await createDevice("G2", "guardian");
+    await sql`insert into family_codes (code, guardian_id, expires_at)
+      values ('123456', ${g1.deviceId}, now() + interval '30 minutes')`;
+    let draws = 0;
+    const err = await issueCode(sql, g2.deviceId, false, () => (draws++, "123456")).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect([(err as ApiError).status, (err as ApiError).code]).toEqual([503, "code_unavailable"]);
+    expect(draws).toBe(20); // CODE_TRIES
+    const rows = await sql`select code, guardian_id from family_codes`;
+    expect(rows.map((r) => [r.code, r.guardian_id])).toEqual([["123456", g1.deviceId]]);
+  });
+
+  // Whole code space taken, end to end. Inserting 10^6 rows is too slow for CI: opt in with SHOO_SLOW_TESTS=1.
+  it.runIf(env.SHOO_SLOW_TESTS === "1")("503 over HTTP when all 10^6 codes are active", async () => {
     const g1 = await createDevice("G1", "guardian");
     const g2 = await createDevice("G2", "guardian");
     await sql`insert into family_codes (code, guardian_id, expires_at)

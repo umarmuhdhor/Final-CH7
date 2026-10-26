@@ -22,8 +22,14 @@ export function randomCode(): string {
 /**
  * R4 §1, issue #128: the guardian's active code while it has more than 5 min left, else a new free
  * random one. `refresh` always makes a new one; the old code stops working at once.
+ * `nextCode` is swapped only in tests, to reach the 503 path without filling all 10^6 codes.
  */
-export async function issueCode(sql: Sql, guardianId: string, refresh = false): Promise<FamilyCode> {
+export async function issueCode(
+  sql: Sql,
+  guardianId: string,
+  refresh = false,
+  nextCode: () => string = randomCode,
+): Promise<FamilyCode> {
   const code = await sql.begin(async (tx) => {
     // Parallel requests (sheet opened twice, share tap) must agree on one code: serialize per guardian.
     await lockGuardian(tx, guardianId);
@@ -33,7 +39,7 @@ export async function issueCode(sql: Sql, guardianId: string, refresh = false): 
     }
     await deleteGuardianCodes(tx, guardianId);
     for (let i = 0; i < CODE_TRIES; i++) {
-      const claimed = await claimCode(tx, guardianId, randomCode());
+      const claimed = await claimCode(tx, guardianId, nextCode());
       if (claimed) return claimed;
     }
     return null;
