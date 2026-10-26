@@ -48,6 +48,12 @@
         return [...byId.values()].sort((a, b) => b.weight - a.weight);
     }
 
+    /** True when `fresh` has a signal `kept` lacks, or the same one with more weight. */
+    function addsToKept(fresh, kept) {
+        const weights = new Map(kept.map((s) => [s.id, s.weight]));
+        return fresh.some((s) => !weights.has(s.id) || s.weight > weights.get(s.id));
+    }
+
     /**
      * Runs layer 1–2 (on device), then 3–4 (server), publishing the score after each layer.
      * The verdict is looked up only once the score reaches 30 — the domain would be sent with
@@ -60,15 +66,20 @@
      * @param {(domain) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict
      * @param {() => boolean} deps.isCurrent  false once the user navigated away — stop and publish nothing
      * @param {(state) => void} deps.publish
+     * @param {object} [deps.previous]  last state of this page when it is re-checked after a change
+     *   (content.js). Its signals are kept, so the score only goes up. Layer 1–2 only look at the
+     *   domain, so layer 3–4 (which read the page) always run again; nothing is published unless a
+     *   layer finds a signal that's new or heavier than before.
      */
-    async function runScan({ snapshot, analyzeLocal, analyzeRemote, lookupVerdict, isCurrent, publish }) {
+    async function runScan({ snapshot, analyzeLocal, analyzeRemote, lookupVerdict, isCurrent, publish, previous }) {
+        const kept = previous?.signals ?? [];
         const state = {
             url: snapshot.url,
             domain: snapshot.domain,
-            score: 0,
-            status: "normal",
-            signals: [],
-            layersDone: [],
+            score: previous?.score ?? 0,
+            status: previous?.status ?? "normal",
+            signals: [...kept],
+            layersDone: previous ? [...previous.layersDone] : [],
             verdict: null,
             done: false,
         };
@@ -106,7 +117,7 @@
             return false;
         };
 
-        emit({});
+        if (!previous) emit({});
 
         // Layer 1–2
         let local = [];
@@ -116,13 +127,16 @@
             local = []; // detector must never break the page
         }
         if (!isCurrent()) return;
-        Object.assign(state, settle(mergeSignals(local)), { layersDone: [1, 2] });
-        if (await applyVerdict()) return;
-        if (local.some((s) => s.id === DB_MATCH)) {
-            emit({ done: true });
-            return;
+        const localAdds = !previous || addsToKept(local, kept);
+        if (localAdds) {
+            Object.assign(state, settle(mergeSignals(kept, local)), { layersDone: previous ? state.layersDone : [1, 2] });
+            if (await applyVerdict()) return;
+            if (local.some((s) => s.id === DB_MATCH)) {
+                emit({ done: true });
+                return;
+            }
+            emit({});
         }
-        emit({});
 
         // Layer 3–4
         let remote = [];
@@ -132,7 +146,8 @@
             remote = [];
         }
         if (!isCurrent()) return;
-        Object.assign(state, settle(mergeSignals(local, remote)), { layersDone: [1, 2, 3, 4] });
+        if (!localAdds && !addsToKept(remote, kept)) return; // re-check found nothing new
+        Object.assign(state, settle(mergeSignals(kept, local, remote)), { layersDone: [1, 2, 3, 4] });
         if (await applyVerdict()) return;
         emit({ done: true });
     }

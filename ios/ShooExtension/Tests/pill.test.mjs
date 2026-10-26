@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 await import("../Resources/pipeline.js");
 await import("../Resources/pill.js"); // view part skips itself outside the browser
-const { decide, dismissed, toneFor, reasonTexts, snap, place, validPos, LINGER_MS, SIZE, MARGIN } = globalThis.ShooPill;
+const { decide, dismissed, toneFor, reasonTexts, snap, place, validPos, SIZE, MARGIN } = globalThis.ShooPill;
 
 /** Feeds a page's pipeline states through decide(); returns the views. */
 function play(states, { scanId = 1, memo = null } = {}) {
@@ -29,18 +29,22 @@ test("visible and analyzing while layers run, score moves with each layer", () =
     );
 });
 
-test("low final score fades out after a few seconds", () => {
+test("low final score stays on screen", () => {
     const { views } = play([{ score: 10 }, { score: 10, done: true }]);
     assert.equal(views[1].visible, true);
     assert.equal(views[1].analyzing, false);
-    assert.equal(views[1].hideAfterMs, LINGER_MS);
+    assert.equal(views[1].tone, "safe");
+});
+
+test("a re-check after the page changed moves the score live", () => {
+    const { views } = play([{ score: 10, done: true }, { score: 35 }, { score: 35, done: true, status: "warning" }]);
+    assert.deepEqual(views.map((v) => [v.visible, v.score, v.analyzing]), [[true, 10, false], [true, 35, true], [true, 35, false]]);
 });
 
 test("warning final score stays on screen", () => {
     const { views } = play([{ score: 55, done: true, status: "warning" }]);
     assert.equal(views[0].visible, true);
     assert.equal(views[0].tone, "danger");
-    assert.equal(views[0].hideAfterMs, undefined);
 });
 
 test("blocked → hidden (block screen owns the page)", () => {
@@ -48,11 +52,11 @@ test("blocked → hidden (block screen owns the page)", () => {
     assert.deepEqual(views.map((v) => v.visible), [true, false]);
 });
 
-test("safe verdict → score 0, then fades out", () => {
+test("safe verdict → score 0, still on screen", () => {
     const { views } = play([{ score: 40 }, { score: 0, done: true, verdict: { value: "safe" } }]);
+    assert.equal(views[1].visible, true);
     assert.equal(views[1].score, 0);
     assert.equal(views[1].tone, "safe");
-    assert.equal(views[1].hideAfterMs, LINGER_MS);
 });
 
 test("Hide tapped → stays hidden on this page, comes back on the next one", () => {
