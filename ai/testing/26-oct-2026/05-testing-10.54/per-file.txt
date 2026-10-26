@@ -1,0 +1,13 @@
+== per file (tests / pass / fail / duration_ms)
+test/analyze.test.mjs              22 tests, 22 pass, 0 fail, 237 ms
+test/blocklist.test.mjs            54 tests, 54 pass, 0 fail, 4823 ms
+test/calibration.test.mjs          15 tests, 15 pass, 0 fail, 97 ms
+test/content.test.mjs              54 tests, 54 pass, 0 fail, 288 ms
+test/fixtures.test.mjs             2 tests, 2 pass, 0 fail, 115 ms
+test/forms.test.mjs                43 tests, 43 pass, 0 fail, 83 ms
+test/hardening.test.mjs            14 tests, 14 pass, 0 fail, 334 ms
+test/layer4.test.mjs               37 tests, 37 pass, 0 fail, 485 ms
+test/rdap-kv.test.mjs              15 tests, 15 pass, 0 fail, 873 ms
+test/rdap.test.mjs                 27 tests, 27 pass, 0 fail, 582 ms
+eval/test/corpus.test.mjs          32 tests, 32 pass, 0 fail, 394 ms
+eval/test/eval.test.mjs            15 tests, 15 pass, 0 fail, 95 ms
