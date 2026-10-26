@@ -32,11 +32,12 @@ function world({ contains = true } = {}) {
     return { heartbeat, sent, asked, tick: (ms) => (clock += ms) };
 }
 
-test("access to every website → allSites: true, asked with <all_urls>", async () => {
+test("access to every website → allSites: true, asked as every http(s) host", async () => {
     const { heartbeat, sent, asked } = world({ contains: true });
     assert.deepEqual(await heartbeat.beat(), { ok: true });
     assert.deepEqual(sent, [{ type: "heartbeat", allSites: true }]);
-    assert.deepEqual(asked, [{ origins: ["<all_urls>"] }]);
+    // Never <all_urls>: Safari's "Allow" grant (*://*/*) doesn't cover it, so it read false with full access.
+    assert.deepEqual(asked, [{ origins: ["*://*/*"] }]);
 });
 
 test("access narrowed to some sites → allSites: false", async () => {

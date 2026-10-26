@@ -2,8 +2,11 @@
 // A heartbeat alone only proves the content script ran on *some* site. If the user narrows Safari's
 // access from "All websites" to a few sites, it keeps arriving from those sites, so it also carries
 // `allSites`: whether the extension still has access to every website (contracts/app-group-keys.md).
+// Asked as every http(s) host, not `<all_urls>`: Safari's "Allow" on every website grants `*://*/*`,
+// and WebKit never lets that grant cover a `<all_urls>` query (WebExtensionMatchPattern::matchesPattern),
+// so `<all_urls>` read false with full access. A `<all_urls>` grant still covers `*://*/*`.
 
-const ALL_URLS = { origins: ["<all_urls>"] };
+const ALL_HOSTS = { origins: ["*://*/*"] };
 
 /**
  * @param {object} deps
@@ -17,7 +20,7 @@ export function createHeartbeat({ permissions, sendNative, intervalMs, now = () 
     async function allSites() {
         if (typeof permissions?.contains !== "function") return undefined;
         try {
-            return Boolean(await permissions.contains(ALL_URLS));
+            return Boolean(await permissions.contains(ALL_HOSTS));
         } catch (error) {
             console.warn("[Shoo] permissions.contains failed", error);
             return undefined;
