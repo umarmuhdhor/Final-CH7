@@ -188,10 +188,10 @@ struct OnboardingModelTests {
         let model = await registered(.guardian)
         model.continueFromGreeting()
         model.continueFromInvite()
-        model.refreshExtensionStatus()
+        await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
-        model.refreshExtensionStatus()
+        await model.refreshExtensionStatus()
         #expect(model.step == .extensionOn)
         model.continueFromExtensionOn()
         #expect(model.step == .notifications)
@@ -210,7 +210,7 @@ struct OnboardingModelTests {
         model.continueFromGreeting()
         model.continueFromInvite()
         box.status = .active(lastSeen: Date())
-        model.refreshExtensionStatus()
+        await model.refreshExtensionStatus()
         model.continueFromExtensionOn()
         await model.requestNotifications()
         #expect(notifications.requestCount == 1)
@@ -224,7 +224,7 @@ struct OnboardingModelTests {
         model.continueFromGreeting()
         model.continueFromConnect()
         box.status = .active(lastSeen: Date())
-        model.refreshExtensionStatus()
+        await model.refreshExtensionStatus()
         model.continueFromExtensionOn()
         #expect(model.step == .notifications)
         #expect(model.canSkipNotifications)
@@ -246,7 +246,7 @@ struct OnboardingModelTests {
         model.continueFromGreeting()
         model.continueFromInvite()
         box.status = .active(lastSeen: Date())
-        model.refreshExtensionStatus()
+        await model.refreshExtensionStatus()
         model.continueFromExtensionOn()
         await model.requestNotifications()
         #expect(notifications.requestCount == 0)
@@ -266,17 +266,15 @@ struct OnboardingModelTests {
 
 struct ExtensionSetupTests {
     @Test(arguments: [
-        (17, 5, ExtensionSetup.Step.openSettingsLegacy),
-        (18, 0, .openSettingsModern),
-        (26, 1, .openSettingsModern),
-        (26, 2, .tapTurnOn),
-        (27, 0, .tapTurnOn),
+        (17, 5, [ExtensionSetup.Step.openSettingsLegacy, .switchOn, .allowEveryWebsite, .openAWebsite]),
+        (18, 0, [.openSettingsModern, .switchOn, .allowEveryWebsite, .openAWebsite]),
+        (26, 1, [.openSettingsModern, .switchOn, .allowEveryWebsite, .openAWebsite]),
+        // iOS 26.2+ reads Safari's switch directly: no website visit needed to be detected.
+        (26, 2, [.tapTurnOn, .switchOn, .allowEveryWebsite]),
+        (27, 0, [.tapTurnOn, .switchOn, .allowEveryWebsite]),
     ])
-    func firstStepFollowsIOSVersion(major: Int, minor: Int, first: ExtensionSetup.Step) {
-        let steps = ExtensionSetup.steps(for: OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0))
-        #expect(steps.first == first)
-        #expect(steps.last == .openAWebsite)
-        #expect(steps.count == 4)
+    func stepsFollowIOSVersion(major: Int, minor: Int, expected: [ExtensionSetup.Step]) {
+        #expect(ExtensionSetup.steps(for: OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0)) == expected)
     }
 
     @Test func extensionIdentifierIsDerivedFromTheAppBundle() throws {

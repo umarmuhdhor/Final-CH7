@@ -156,8 +156,11 @@ final class OnboardingModel {
     }
 
     /// Called on appear and every time the app comes back to the foreground (ON-04).
-    func refreshExtensionStatus() {
-        guard step == .turnOnExtension, environment.extensionStatus().isActive else { return }
+    func refreshExtensionStatus() async {
+        guard step == .turnOnExtension else { return }
+        let isActive = await environment.extensionStatus().isActive
+        // The step may have moved on (Back) while Safari answered.
+        guard step == .turnOnExtension, isActive else { return }
         movedBack = false
         step = .extensionOn
     }

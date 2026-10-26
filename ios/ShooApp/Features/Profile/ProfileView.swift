@@ -61,9 +61,9 @@ struct ProfileView: View {
                 await model.load()
             }
             .task(id: scenePhase) {
-                if scenePhase == .active { extensionStatus = env.extensionStatus() }
+                if scenePhase == .active { extensionStatus = await env.extensionStatus() }
             }
-            .sheet(isPresented: $isTurnOnPresented, onDismiss: { extensionStatus = env.extensionStatus() }) {
+            .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
                 TurnOnExtensionSheet()
             }
             .sheet(isPresented: $isFamilyCodePresented, onDismiss: { Task { await model.load() } }) {

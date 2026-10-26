@@ -3,8 +3,8 @@ import SwiftUI
 /// ON-04 (fallback PRD §10, Figma "Aktifkan Ekstensi"): where the switch is, a Turn on button, a status
 /// check whenever the app comes back, and a tutorial video. Reused as a sheet from PR-04 / GD-01 "Turn on".
 struct TurnOnExtensionView: View {
-    /// Re-reads the heartbeat (on appear and when the user is back from Settings).
-    var refreshStatus: () -> Void = {}
+    /// Re-reads Safari's switch and the heartbeat (on appear and when the user is back from Settings).
+    var refreshStatus: () async -> Void = {}
     /// Guardian onboarding only: back to the invite screen.
     var onBack: (() -> Void)?
     @Environment(\.scenePhase) private var scenePhase
@@ -43,9 +43,9 @@ struct TurnOnExtensionView: View {
                 .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
                 .accessibilityIdentifier("extension.video")
         }
-        .onAppear(perform: refreshStatus)
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { refreshStatus() }
+        // On appear and every time the user is back from Settings or Safari.
+        .task(id: scenePhase) {
+            if scenePhase == .active { await refreshStatus() }
         }
         .fullScreenCover(isPresented: $isVideoPresented) {
             TutorialVideoPlayer()

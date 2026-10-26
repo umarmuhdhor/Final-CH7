@@ -22,7 +22,9 @@ enum ExtensionSetup {
         } else {
             first = .openSettingsLegacy
         }
-        // A heartbeat needs a page load, so the last step sends the user to Safari (S1, BELUM DIVERIFIKASI).
+        // iOS 26.2+ reads Safari's switch directly (ExtensionStatus). Before that only a heartbeat tells,
+        // and it needs a page load, so the last step sends the user to Safari (S1, BELUM DIVERIFIKASI).
+        if first == .tapTurnOn { return [first, .switchOn, .allowEveryWebsite] }
         return [first, .switchOn, .allowEveryWebsite, .openAWebsite]
     }
 
