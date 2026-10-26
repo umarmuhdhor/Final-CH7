@@ -155,12 +155,22 @@ final class OnboardingModel {
         step = .turnOnExtension
     }
 
-    /// Called on appear and every time the app comes back to the foreground (ON-04).
-    func refreshExtensionStatus() async {
-        guard step == .turnOnExtension else { return }
-        let isActive = await environment.extensionStatus().isActive
+    /// Called on appear and every time the app comes back to the foreground (ON-04). Moves on only once
+    /// Shoo is on and has checked in from Safari, so a new install never shows On before "Allow" (#135).
+    @discardableResult
+    func refreshExtensionStatus() async -> ExtensionStatus? {
+        guard step == .turnOnExtension else { return nil }
+        let status = await environment.extensionStatus()
         // The step may have moved on (Back) while Safari answered.
-        guard step == .turnOnExtension, isActive else { return }
+        guard step == .turnOnExtension, status.nextStep == nil else { return status }
+        movedBack = false
+        step = .extensionOn
+        return status
+    }
+
+    /// "Continue without checking": Safari says the switch is on, but no page has checked in yet.
+    func skipExtensionCheck() {
+        guard step == .turnOnExtension else { return }
         movedBack = false
         step = .extensionOn
     }

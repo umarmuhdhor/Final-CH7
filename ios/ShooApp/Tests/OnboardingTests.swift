@@ -197,6 +197,31 @@ struct OnboardingModelTests {
         #expect(model.step == .notifications)
     }
 
+    @Test func switchOnWithoutAPageWaitsForTheCheckOrASkip() async {
+        let model = await registered(.guardian)
+        model.continueFromGreeting()
+        model.continueFromInvite()
+        // #135: Safari's switch is on, but no page has said whether Shoo may read every site.
+        box.status = .active(lastSeen: nil)
+        let status = await model.refreshExtensionStatus()
+        #expect(status == .active(lastSeen: nil))
+        #expect(model.step == .turnOnExtension)
+        model.skipExtensionCheck()
+        #expect(model.step == .extensionOn)
+    }
+
+    @Test func narrowedAccessStaysOnTurnOn() async {
+        let model = await registered(.guardian)
+        model.continueFromGreeting()
+        model.continueFromInvite()
+        box.status = .off(lastSeen: Date(), reason: .someSitesOnly)
+        #expect(await model.refreshExtensionStatus()?.nextStep == .allowEveryWebsite)
+        #expect(model.step == .turnOnExtension)
+        box.status = .active(lastSeen: Date())
+        await model.refreshExtensionStatus()
+        #expect(model.step == .extensionOn)
+    }
+
     @Test func guardianRelaunchSkipsTheInviteScreen() async {
         let first = await registered(.guardian)
         first.continueFromGreeting()

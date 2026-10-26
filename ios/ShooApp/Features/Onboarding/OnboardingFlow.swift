@@ -59,7 +59,8 @@ private struct OnboardingStepView: View {
             case .turnOnExtension:
                 TurnOnExtensionView(
                     refreshStatus: model.refreshExtensionStatus,
-                    onBack: model.canGoBackFromExtension ? { model.goBack() } as (() -> Void)? : nil
+                    onBack: model.canGoBackFromExtension ? { model.goBack() } as (() -> Void)? : nil,
+                    onSkipCheck: model.skipExtensionCheck
                 )
             case .extensionOn: ExtensionOnView(onContinue: model.continueFromExtensionOn)
             case .notifications: NotificationPermissionView(model: model)
