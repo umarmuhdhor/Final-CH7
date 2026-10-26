@@ -8,7 +8,10 @@ struct TurnOnExtensionSheet: View {
     var body: some View {
         NavigationStack {
             TurnOnExtensionView(refreshStatus: {
-                if await env.extensionStatus().isActive { dismiss() }
+                let status = await env.extensionStatus()
+                // Closes once Shoo is on and has checked in; until then the sheet says what is left (#135).
+                if status.nextStep == nil { dismiss() }
+                return status
             })
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

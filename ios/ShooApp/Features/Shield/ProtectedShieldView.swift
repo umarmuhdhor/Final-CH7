@@ -165,6 +165,17 @@ private struct ExtensionStatusCard: View {
         status.isActive ? Color(red: 0.10, green: 0.47, blue: 0.24) : Color(red: 0.42, green: 0.42, blue: 0.44)
     }
 
+    /// The reason in a few words (#135); the Turn on sheet holds the full steps.
+    private var subtitle: LocalizedStringKey {
+        switch status.nextStep {
+        case nil: "Shoo checks the sites you open in Safari."
+        case .openAWebsite: "Open any website in Safari to finish setup."
+        case .switchOn: "Shoo is switched off in Safari."
+        case .allowEveryWebsite: "Shoo can't check every website yet."
+        case .switchOnThenOpenAWebsite: "Switch on Shoo in Safari to stay safe."
+        }
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: status.isActive ? "checkmark.shield.fill" : "shield.slash.fill")
@@ -177,17 +188,17 @@ private struct ExtensionStatusCard: View {
                 Text(verbatim: L10n.string(perspective.statusTitle(isActive: status.isActive), language: AppLanguage(locale: locale)))
                     .font(.title2.bold())
                     .accessibilityAddTraits(.isHeader)
-                Text(status.isActive ? "Shoo checks the sites you open in Safari." : "Switch on Shoo in Safari to stay safe.")
+                Text(subtitle)
                     .font(.body)
                     .foregroundStyle(.readableSecondary)
             }
             .multilineTextAlignment(.center)
             .accessibilityElement(children: .combine)
-            if !status.isActive {
+            if status.nextStep != nil {
                 Button {
                     env.router.isTurnOnPresented = true
                 } label: {
-                    Text("Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
+                    Text(status.isActive ? "Finish setup" : "Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.borderedProminent)
                 .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))

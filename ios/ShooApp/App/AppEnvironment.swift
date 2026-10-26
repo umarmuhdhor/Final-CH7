@@ -89,6 +89,14 @@ final class AppEnvironment {
         if Self.value(after: "-UITestExtensionActive", in: arguments) == "YES" {
             extensionStatus = { .active(lastSeen: Date()) }
         }
+        // ON-04 messages (#135): `-UITestExtensionStatus switchedOff|someSitesOnly|notSeen|unchecked`.
+        switch Self.value(after: "-UITestExtensionStatus", in: arguments) {
+        case "switchedOff": extensionStatus = { .off(lastSeen: nil, reason: .switchedOff) }
+        case "someSitesOnly": extensionStatus = { .off(lastSeen: Date(), reason: .someSitesOnly) }
+        case "notSeen": extensionStatus = { .off(lastSeen: nil, reason: .notSeen) }
+        case "unchecked": extensionStatus = { .active(lastSeen: nil) }
+        default: break
+        }
         #endif
         let environment = AppEnvironment(
             repository: repository, settings: settings, notifications: notifications, session: session,

@@ -6,7 +6,7 @@ struct ExtensionStatusTests {
     let now = Date(timeIntervalSince1970: 2_000_000_000)
 
     @Test func neverSeenIsOff() {
-        #expect(ExtensionStatus.evaluate(lastSeen: nil, now: now) == .off(lastSeen: nil))
+        #expect(ExtensionStatus.evaluate(lastSeen: nil, now: now) == .off(lastSeen: nil, reason: .notSeen))
     }
 
     @Test func recentHeartbeatIsActive() {
@@ -16,12 +16,12 @@ struct ExtensionStatusTests {
 
     @Test func heartbeatOlderThanWindowIsOff() {
         let seen = now.addingTimeInterval(-AppGroup.extensionActiveWindow)
-        #expect(ExtensionStatus.evaluate(lastSeen: seen, now: now) == .off(lastSeen: seen))
+        #expect(ExtensionStatus.evaluate(lastSeen: seen, now: now) == .off(lastSeen: seen, reason: .notSeen))
     }
 
     @Test func narrowedSafariAccessIsOffEvenWithARecentHeartbeat() {
         let seen = now.addingTimeInterval(-60)
-        #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: false, now: now) == .off(lastSeen: seen))
+        #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: false, now: now) == .off(lastSeen: seen, reason: .someSitesOnly))
         #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: true, now: now) == .active(lastSeen: seen))
         // Missing = unknown, treated as every site (contracts/app-group-keys.md).
         #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: nil, now: now) == .active(lastSeen: seen))
@@ -29,8 +29,8 @@ struct ExtensionStatusTests {
 
     @Test func safariSwitchOffIsOffEvenWithARecentHeartbeat() {
         let seen = now.addingTimeInterval(-60)
-        #expect(ExtensionStatus.evaluate(lastSeen: seen, enabled: false, now: now) == .off(lastSeen: seen))
-        #expect(ExtensionStatus.evaluate(lastSeen: nil, enabled: false, now: now) == .off(lastSeen: nil))
+        #expect(ExtensionStatus.evaluate(lastSeen: seen, enabled: false, now: now) == .off(lastSeen: seen, reason: .switchedOff))
+        #expect(ExtensionStatus.evaluate(lastSeen: nil, enabled: false, now: now) == .off(lastSeen: nil, reason: .switchedOff))
     }
 
     @Test func safariSwitchOnIsActiveBeforeAnyHeartbeat() {
@@ -42,13 +42,42 @@ struct ExtensionStatusTests {
 
     @Test func narrowedAccessStaysOffWhenTheSwitchIsOn() {
         let seen = now.addingTimeInterval(-60)
-        #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: false, enabled: true, now: now) == .off(lastSeen: seen))
+        #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: false, enabled: true, now: now) == .off(lastSeen: seen, reason: .someSitesOnly))
     }
 
     @Test func unknownSwitchFallsBackToTheHeartbeat() {
         let seen = now.addingTimeInterval(-60)
         #expect(ExtensionStatus.evaluate(lastSeen: seen, enabled: nil, now: now) == .active(lastSeen: seen))
-        #expect(ExtensionStatus.evaluate(lastSeen: nil, enabled: nil, now: now) == .off(lastSeen: nil))
+        #expect(ExtensionStatus.evaluate(lastSeen: nil, enabled: nil, now: now) == .off(lastSeen: nil, reason: .notSeen))
+    }
+
+    @Test func switchOffWinsOverNarrowedAccess() {
+        let seen = now.addingTimeInterval(-60)
+        #expect(ExtensionStatus.evaluate(lastSeen: seen, allSites: false, enabled: false, now: now) == .off(lastSeen: seen, reason: .switchedOff))
+    }
+
+    @Test(arguments: [
+        (ExtensionStatus.active(lastSeen: Date(timeIntervalSince1970: 1)), nil as ExtensionStatus.NextStep?),
+        // #135: Safari says on, no page yet, so "Allow" vs "Ask" is still unknown.
+        (.active(lastSeen: nil), .openAWebsite),
+        (.off(lastSeen: nil, reason: .switchedOff), .switchOn),
+        (.off(lastSeen: Date(timeIntervalSince1970: 1), reason: .someSitesOnly), .allowEveryWebsite),
+        (.off(lastSeen: nil, reason: .notSeen), .switchOnThenOpenAWebsite),
+    ])
+    func eachStatusHasOneNextStep(status: ExtensionStatus, expected: ExtensionStatus.NextStep?) {
+        #expect(status.nextStep == expected)
+    }
+
+    @Test func safariOpensFirstOnlyWhenTheSwitchIsKnownToBeOn() {
+        #expect(ExtensionStatus.NextStep.allowEveryWebsite.opensSafariFirst)
+        #expect(ExtensionStatus.NextStep.openAWebsite.opensSafariFirst)
+        #expect(!ExtensionStatus.NextStep.switchOn.opensSafariFirst)
+        #expect(!ExtensionStatus.NextStep.switchOnThenOpenAWebsite.opensSafariFirst)
+        #expect(!ExtensionStatus.NextStep.switchOn.hasSecondAction)
+    }
+
+    @Test func checkPageIsShoosOwnHost() {
+        #expect(ExtensionSetup.checkPageURL.host() == AppConfig.apiBaseURL.host())
     }
 
     @Test func readsTheSwitchTogetherWithTheAppGroup() throws {

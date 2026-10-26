@@ -127,6 +127,16 @@
         }
       }
     },
+    "Almost done. Open any website in Safari so Shoo can check in. Nothing changes? In Safari settings, set All Websites to Allow." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sedikit lagi. Buka situs apa saja di Safari agar Shoo bisa memeriksa. Tidak berubah? Di pengaturan Safari, atur Semua Situs Web ke Izinkan."
+          }
+        }
+      }
+    },
     "Applies right away. You can change it later." : {
       "localizations" : {
         "id" : {
@@ -225,17 +235,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Periksa koneksi, lalu coba lagi."
-          }
-        }
-      }
-    },
-    "Choose Allow for every website." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pilih Izinkan untuk semua situs web."
           }
         }
       }
@@ -368,6 +367,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lanjut"
+          }
+        }
+      }
+    },
+    "Continue without checking" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut tanpa memeriksa"
           }
         }
       }
@@ -785,6 +794,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Filter"
+          }
+        }
+      }
+    },
+    "Finish setup" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesaikan pengaturan"
           }
         }
       }
@@ -1313,6 +1332,26 @@
         }
       }
     },
+    "Open Safari" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Safari"
+          }
+        }
+      }
+    },
+    "Open Safari settings" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka pengaturan Safari"
+          }
+        }
+      }
+    },
     "Open Settings" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1342,6 +1381,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buka Pengaturan › Safari › Ekstensi."
+          }
+        }
+      }
+    },
+    "Open any website in Safari to finish setup." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka situs apa saja di Safari untuk menyelesaikan pengaturan."
           }
         }
       }
@@ -1759,6 +1808,26 @@
         }
       }
     },
+    "Shoo can't check every website yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum bisa memeriksa semua situs web."
+          }
+        }
+      }
+    },
+    "Shoo can't check every website yet. In Safari settings, tap All Websites and choose Allow. Already did? Open a website so Shoo can see it." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo belum bisa memeriksa semua situs web. Di pengaturan Safari, ketuk Semua Situs Web lalu pilih Izinkan. Sudah? Buka satu situs agar Shoo bisa melihatnya."
+          }
+        }
+      }
+    },
     "Shoo can't use the camera. Allow it in Settings, or enter the code instead." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1791,12 +1860,32 @@
         }
       }
     },
-    "Shoo is off." : {
+    "Shoo hasn't checked in yet. Switch it on in Safari settings, then open any website in Safari." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shoo masih mati."
+            "value" : "Shoo belum terhubung. Nyalakan di pengaturan Safari, lalu buka situs apa saja di Safari."
+          }
+        }
+      }
+    },
+    "Shoo is switched off in Safari." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo dimatikan di Safari."
+          }
+        }
+      }
+    },
+    "Shoo is switched off in Safari. Switch it on to stay safe." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo dimatikan di Safari. Nyalakan agar tetap aman."
           }
         }
       }
@@ -1894,6 +1983,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beralih antara Perisaimu dan Perisai keluargamu"
+          }
+        }
+      }
+    },
+    "Tap All Websites and choose Allow, not Ask." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Semua Situs Web, lalu pilih Izinkan, bukan Tanya."
           }
         }
       }

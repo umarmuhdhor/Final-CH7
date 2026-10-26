@@ -9,7 +9,7 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    private func launch(extensionActive: Bool = true, notifications: String = "denied") -> XCUIApplication {
+    private func launch(extensionActive: Bool = true, extensionStatus: String? = nil, notifications: String = "denied") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-UITestMock", "YES",
@@ -18,6 +18,7 @@ final class OnboardingUITests: XCTestCase {
             "-UITestNotifications", notifications,
         ]
         if extensionActive { app.launchArguments += ["-UITestExtensionActive", "YES"] }
+        if let extensionStatus { app.launchArguments += ["-UITestExtensionStatus", extensionStatus] }
         app.launch()
         return app
     }
@@ -137,7 +138,7 @@ final class OnboardingUITests: XCTestCase {
         app.buttons["greeting.continue"].tap()
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Shoo is off."].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5))
 
         // Relaunch without reset: the saved mode skips straight back to ON-04.
         app.terminate()
@@ -146,6 +147,30 @@ final class OnboardingUITests: XCTestCase {
         again.launch()
         XCTAssertTrue(again.buttons["extension.turnOn"].waitForExistence(timeout: 10))
         XCTAssertFalse(again.buttons["mode.continue"].exists)
+    }
+
+    @MainActor
+    func testNarrowedAccessOffersSafariAndSettings() {
+        let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")
+        register(app, name: "Rina", mode: "guardian")
+        app.buttons["greeting.continue"].tap()
+        skipInvite(app)
+        XCTAssertTrue(app.buttons["extension.openSafari"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["extension.settings"].exists)
+        XCTAssertFalse(app.buttons["extension.skipCheck"].exists)
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "can't check every website")).firstMatch.exists)
+    }
+
+    @MainActor
+    func testSwitchOnWithoutAPageCanContinueWithoutChecking() {
+        let app = launch(extensionActive: false, extensionStatus: "unchecked")
+        register(app, name: "Rina", mode: "guardian")
+        app.buttons["greeting.continue"].tap()
+        skipInvite(app)
+        XCTAssertTrue(app.buttons["extension.skipCheck"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["extension.openSafari"].exists)
+        app.buttons["extension.skipCheck"].tap()
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
     }
 
     @MainActor

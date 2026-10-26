@@ -11,7 +11,27 @@ import SafariServices
 enum ExtensionStatus: Equatable, Sendable {
     /// `lastSeen` is nil when Safari reports the switch on but no page has loaded since.
     case active(lastSeen: Date?)
-    case off(lastSeen: Date?)
+    case off(lastSeen: Date?, reason: OffReason = .notSeen)
+
+    /// Why Shoo is Off, so the app can say what to do (#135). Same Off rule as before, only told apart.
+    enum OffReason: Equatable, Sendable {
+        /// Safari's switch for Shoo is off (iOS 26.2+).
+        case switchedOff
+        /// `extension.allSites == false`: Safari lets Shoo read only some sites, or still asks per site (EX-01).
+        case someSitesOnly
+        /// No recent heartbeat: before iOS 26.2, or Safari couldn't tell.
+        case notSeen
+    }
+
+    /// The one thing the user still has to do, or nil when Shoo is on and has checked in.
+    enum NextStep: Equatable, Sendable {
+        case switchOn
+        case allowEveryWebsite
+        /// No heartbeat and Safari can't say whether the switch is on (before iOS 26.2): both steps.
+        case switchOnThenOpenAWebsite
+        /// The switch is on: load one page in Safari so the extension reports in, with its site access.
+        case openAWebsite
+    }
 
     var isActive: Bool {
         if case .active = self { return true }
@@ -21,7 +41,18 @@ enum ExtensionStatus: Equatable, Sendable {
     var lastSeen: Date? {
         switch self {
         case .active(let date): date
-        case .off(let date): date
+        case .off(let date, _): date
+        }
+    }
+
+    var nextStep: NextStep? {
+        switch self {
+        // Safari says on, but no page has run Shoo yet, so its access (Allow vs Ask) is still unknown (#135).
+        case .active(.none): .openAWebsite
+        case .active: nil
+        case .off(_, .switchedOff): .switchOn
+        case .off(_, .someSitesOnly): .allowEveryWebsite
+        case .off(_, .notSeen): .switchOnThenOpenAWebsite
         }
     }
 
@@ -30,14 +61,14 @@ enum ExtensionStatus: Equatable, Sendable {
     /// heartbeat decides alone.
     static func evaluate(lastSeen: Date?, allSites: Bool? = nil, enabled: Bool? = nil, now: Date = Date()) -> ExtensionStatus {
         // Switched off in Settings: a heartbeat from before still sits in the App Group.
-        if enabled == false { return .off(lastSeen: lastSeen) }
+        if enabled == false { return .off(lastSeen: lastSeen, reason: .switchedOff) }
         // A recent heartbeat from a page Shoo may read does not mean it can protect every site.
-        if allSites == false { return .off(lastSeen: lastSeen) }
+        if allSites == false { return .off(lastSeen: lastSeen, reason: .someSitesOnly) }
         if enabled == true { return .active(lastSeen: lastSeen) }
-        guard let lastSeen else { return .off(lastSeen: nil) }
+        guard let lastSeen else { return .off(lastSeen: nil, reason: .notSeen) }
         let age = now.timeIntervalSince(lastSeen)
         // A heartbeat from the future (clock change) still counts as recent.
-        return age < AppGroup.extensionActiveWindow ? .active(lastSeen: lastSeen) : .off(lastSeen: lastSeen)
+        return age < AppGroup.extensionActiveWindow ? .active(lastSeen: lastSeen) : .off(lastSeen: lastSeen, reason: .notSeen)
     }
 
     /// Reads the heartbeat and the Safari access from the App Group, with Safari's switch if known.
