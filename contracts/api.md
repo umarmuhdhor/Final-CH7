@@ -19,10 +19,12 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 ### Devices
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/devices` | `{ name, mode: "guardian"\|"protected", apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
+| POST | `/devices` | `{ name, mode: "guardian"\|"protected", avatarId?, apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
 | GET | `/devices/me` | — | `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } \| null }` — Protected learns its guardian, or that it was disconnected | PR-04, PF-01, EX-06 |
 | PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` | `{ ok }` | ON-05, PF-01, GD-03 |
 | DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
+
+`avatarId` (ON-02, #120): optional, one of `avatar_01`…`avatar_12`. The 4 memoji in the ON-02 picker are `avatar_01`…`avatar_04`; `avatar_05`…`avatar_12` stay for the random pick. Missing or unknown → the server picks at random, as before. The response `avatarId` is the source of truth. Chosen once at registration: `PATCH /devices/me` does not change it (not in the MVP).
 
 `extensionLastSeenAt` (ISO): sent by the **extension** at most once per hour with its heartbeat, and by the app when it comes to the foreground. The backend uses it for `extensionActive` in `GET /family/members` ("Not connected", GD-03). No data yet → `extensionActive: true` (never "Not connected" without evidence).
 
