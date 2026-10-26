@@ -1,0 +1,62 @@
+[
+  {
+    "name": "stream#1",
+    "http": 200,
+    "first": 44.69274999999925,
+    "rStart": null,
+    "rEnd": null,
+    "cStart": 44.69274999999925,
+    "last": 44.73008299999947,
+    "rChunks": 0,
+    "cChunks": 1,
+    "content": "AI provider temporarily unavailable\n----\nRequest ID: req_26cfa2af\nRef: 0.1793001502356\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above.",
+    "usage": {
+      "prompt_tokens": 1000,
+      "completion_tokens": 1000,
+      "total_tokens": 2000,
+      "prompt_tokens_details": {
+        "cached_tokens": 1000
+      }
+    }
+  },
+  {
+    "name": "stream#2",
+    "http": 200,
+    "first": 64.27970800000003,
+    "rStart": null,
+    "rEnd": null,
+    "cStart": 64.27970800000003,
+    "last": 64.29804200000035,
+    "rChunks": 0,
+    "cChunks": 1,
+    "content": "AI provider temporarily unavailable\n----\nRequest ID: req_14723469\nRef: 0.1793001502421\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above.",
+    "usage": {
+      "prompt_tokens": 1000,
+      "completion_tokens": 1000,
+      "total_tokens": 2000,
+      "prompt_tokens_details": {
+        "cached_tokens": 1000
+      }
+    }
+  },
+  {
+    "name": "stream#3",
+    "http": 200,
+    "first": 46.68050000000039,
+    "rStart": null,
+    "rEnd": null,
+    "cStart": 46.68050000000039,
+    "last": 46.70604200000071,
+    "rChunks": 0,
+    "cChunks": 1,
+    "content": "AI provider temporarily unavailable\n----\nRequest ID: req_a9ea783f\nRef: 0.1793001502469\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above.",
+    "usage": {
+      "prompt_tokens": 1000,
+      "completion_tokens": 1000,
+      "total_tokens": 2000,
+      "prompt_tokens_details": {
+        "cached_tokens": 1000
+      }
+    }
+  }
+]

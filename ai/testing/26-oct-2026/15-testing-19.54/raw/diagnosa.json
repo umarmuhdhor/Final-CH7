@@ -1,0 +1,173 @@
+[
+  {
+    "name": "diagnosa#1",
+    "model": "deepseek-v4-flash",
+    "extra": {
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "http": 200,
+    "headersMs": 6774.754583000002,
+    "totalMs": 6776.205625000002,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1693,
+      "completion_tokens_details": {
+        "reasoning_tokens": 634
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3535
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer single JSON. Need judge page type. Site cloudfront.net, title DHL EXpress, fields email password, brands empty, rules asks_password. Page presents as DHL? Title DHL EXpress. Site is cloudfront.net not dhl.com. But brands empty per data. Need classify. Fields email password. Page type likely courier? Title DHL Express. Asking password. A courier page might have login (email/password) reasonable? But site cloudfront.net not DHL domain. Brands empty though title says DHL EXpress. Instruction: brands are names of well-known companies page shows or copies, found by checks; can be empty. If brands empty ignore brand paragraph. But title includes DHL EXpress; we can use title evidence. Need decide reasonable. A page titled DHL Express on cloudfront.net asking email/password could be phishing. However \"brands\" empty means our checks didn't list DHL? But title explicitly. The rule asks_password fired. Need answer: page_type courier? asks password. reasonable false? Let's reason: DHL Express is well-known company. Site cloudfront.net is not dhl.com. Page imitates DHL. It asks password. That is not reasonable. Even if brands empty, title evidence \"DHL EXpress\" indicates brand. But instruction says if brands empty ignore this paragraph (about brands). But we can still infer page type from title. A courier login asking password is normal if on official domain. On cloudfront.net, not. Need likely false. Confidence maybe 0.85. Evidence exact phrase from title \"DHL EXpress\". Page type courier. asks [\"password\"] (also email? asks array includes personal_data? Email address maybe personal_data? The fields include email and password. asks options: pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. Email address is personal_data? Usually yes. But labels: Email address, Password. We should include password and personal_data? The schema asks what form requests. Email address is personal data. Could include \"personal_data\". But many examples maybe asks email + password = password only? We can include both password and personal_data. But if asks password, rule fired. Need concise.\n\nNeed output exactly JSON. No markdown. Ensure valid JSON. \"reasonable\": false. \"confidence\": 0.9. Evidence \"DHL EXpress\" exact from title. Page_type \"courier\". asks [\"password\",\"personal_data\"]. But if page_type courier, password login could fit; but domain mismatch. Since brands empty? Hmm.\n\nLet's re-evaluate: The decision is does requested data fit kind of page. It asks email/password on DHL Express titled page. A courier legitimately has account login. But site cloudfront.net is a generic CDN. The title says DHL Express. Without brands, but title is evidence. A real DHL page would be dhl.com. So false due impersonation. Good.\n\nNeed final only JSON.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015739,
+      "id": "chatcmpl-6adf3fbb2f76",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1693,
+        "completion_tokens_details": {
+          "reasoning_tokens": 634
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3535
+      },
+      "provider": "min************"
+    }
+  },
+  {
+    "name": "diagnosa#2",
+    "model": "deepseek-v4-flash",
+    "extra": {
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "http": 200,
+    "headersMs": 5394.228499999997,
+    "totalMs": 5395.7435419999965,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1321,
+      "completion_tokens_details": {
+        "reasoning_tokens": 262
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3163
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.92,\"evidence\":\"DHL EXpress\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.92,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer JSON only. Need judge. Site cloudfront.net, title DHL EXpress, fields email password, brands empty, rules asks_password. Page type? It's a login form impersonating DHL on cloudfront.net. DHL is courier. brands empty though title says DHL EXpress. Could classify courier? But site not dhl.com; asks password. Since brands empty ignore brand paragraph, but title indicates DHL. Password on cloudfront.net login page is suspicious. Need page_type likely courier? Or other/unknown. Fields email password. Does requested data fit page type? If page is courier login, email+password reasonable only on courier's own domain. On cloudfront.net not. Since title DHL EXpress, likely phishing. page_type courier? \"reasonable\": false. asks [\"password\"] maybe email not in asks categories except personal_data? Email is personal_data? asks array any of pin otp password card cvv id_number selfie_id personal_data other. Email address likely personal_data. But rule asks_password. Should include \"password\" and maybe \"personal_data\" for email. Evidence exact phrase from title \"DHL EXpress\". Confidence high 0.9. Need ensure JSON exactly keys. Final only JSON.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015746,
+      "id": "chatcmpl-6adf3fc23111",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1321,
+        "completion_tokens_details": {
+          "reasoning_tokens": 262
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3163
+      },
+      "provider": "met**********"
+    }
+  },
+  {
+    "name": "diagnosa#3",
+    "model": "deepseek-v4-flash",
+    "extra": {
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "http": 200,
+    "headersMs": 8684.799083000005,
+    "totalMs": 8686.064000000013,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1456,
+      "completion_tokens_details": {
+        "reasoning_tokens": 397
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3298
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer JSON only. Need judge. Site cloudfront.net, title DHL EXpress, fields email password, brands empty, rule asks_password. Page type? Courier perhaps impersonation? DHL Express would be courier but site cloudfront.net not dhl.com. Brands empty, but title DHL EXpress. It asks password. Is this reasonable? A courier page asking email/password? Legit courier login could ask password, but domain cloudfront.net is CDN not DHL. Title copies DHL Express. Even though brands empty, title indicates DHL. The rules asks_password fired. We need classify. Since site not DHL domain and page presents as DHL Express, asking password likely phishing. But brands empty; instructions say if brands empty ignore brand paragraph. However title says DHL EXpress, enough? We judge data fits page type. Page type courier? The form asks password. A courier page may have login with password. But on cloudfront.net suspicious. Yet if brands empty, can't use brand impersonation rule? We can still infer title. Need answer reasonable false? Confidence maybe 0.8. Evidence exact phrase from title: \"DHL EXpress\". asks: password, email? asks array includes password and maybe personal_data? Email address is personal_data? The allowed values include personal_data. Should include password, personal_data? The form requests email and password. \"asks\" any of pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. Email is personal_data. So asks [\"password\",\"personal_data\"]. page_type courier? It's presented DHL Express, so courier. reasonable false because cloudfront.net is not DHL and login password on a CDN-hosted page impersonating courier. But brands empty might mean no brand checks found. Still title. Confidence 0.85.\n\nNeed only JSON.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015751,
+      "id": "chatcmpl-6adf3fc74aae",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1456,
+        "completion_tokens_details": {
+          "reasoning_tokens": 397
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3298
+      },
+      "provider": "bai**********"
+    }
+  }
+]

@@ -1,0 +1,54 @@
+{
+  "id": "ibank-klikbca-com-probe",
+  "label": "scam",
+  "tags": [],
+  "synthetic": false,
+  "redacted": false,
+  "source": "llm test plan (PLAN-llm-test.md)",
+  "collectedAt": "2026-10-26T08:24:20.889Z",
+  "notes": "",
+  "snapshot": {
+    "url": "https://ibank.klikbca.com/",
+    "domain": "klikbca.com",
+    "title": "klikBCA Individual",
+    "lang": null,
+    "text": "[ HOME ] USER ID dan PIN Internet Banking dapat diperoleh pada saat Anda melakukan Registrasi Internet melalui ATM BCA. Untuk informasi lebih lanjut hubungi Halo BCA 1500888. HOW TO GET STARTED: To start using BCA Internet Banking, You must first register through any BCA ATM. For further information, please contact Halo BCA 1500888. [ PRIVACY POLICY ] Silakan memasukkan USER ID Anda Please enter Your USER ID Silakan memasukkan PIN Internet Banking Anda Please enter Your Internet Banking PIN &#10094; &#10095; BCA berizin dan diawasi oleh Otoritas Jasa Keuangan & Bank Indonesia. BCA merupakan peserta penjaminan LPS. Maksimum nilai simpanan yang dijamin LPS per nasabah per bank adalah Rp2 miliar. Untuk cek Tingkat Bunga Penjaminan LPS, klik disini . BCA is licensed and supervised by Financial Services Authority (Otoritas Jasa Keuangan) & Bank Indonesia. BCA is a member of Indonesia Deposit Insurance Corporation (LPS). The maximum deposit value guaranteed by LPS per customer per bank is IDR 2 billion. To check the LPS Guarantee Interest Rate, click here . Copyright &copy; 2000 All Rights Reserved",
+    "forms": [
+      {
+        "action": "/authentication.do",
+        "fields": []
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": "txt_user_id",
+            "id": "txt_user_id",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off",
+            "accept": null,
+            "capture": null
+          },
+          {
+            "type": "password",
+            "name": "txt_pswd",
+            "id": "txt_pswd",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off",
+            "accept": null,
+            "capture": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-26T08:24:20.886Z"
+  },
+  "meta": {
+    "iframes": [],
+    "bytes": 17744
+  }
+}

@@ -1,0 +1,115 @@
+[
+  {
+    "name": "diagnosa#1",
+    "model": "glm-5.3-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 4496.522916000002,
+    "totalMs": 4497.110875000006,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1295,
+      "completion_tokens_details": {
+        "reasoning_tokens": 230
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3182
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "The page is on blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields include provinsi, phone number, checkbox terms, another phone masked, password \"KATA SANDI\". Rules fired: asks_otp, asks_password. A registration status check page on a blogspot domain asking for a password — not reasonable. Page type: other (or prize?). \"CEK STATUS PENDAFTARAN\" — checking registration status. It's not a bank, not government necessarily... could be government registration, but on blogspot.com. Fields ask password — unreasonable.\n\npage_type: \"other\". asks: [\"password\", \"personal_data\"? ] The phone number is personal data; select provinsi is personal data. I'd say asks includes password, otp (rule fired asks_otp, though no explicit field beyond... the masked tel \"•••••\" might be otp). Let's include password and otp given the rule, plus personal_data.\n\nreasonable: false. confidence: 0.85. evidence: \"CEK STATUS PENDAFTARAN\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012444,
+      "id": "chatcmpl-6adf32dc4193",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1295,
+        "completion_tokens_details": {
+          "reasoning_tokens": 230
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3182
+      },
+      "provider": "nvi**********"
+    }
+  },
+  {
+    "name": "diagnosa#2",
+    "model": "glm-5.3-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 3188.3592080000017,
+    "totalMs": 3190.0297500000015,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1297,
+      "completion_tokens_details": {
+        "reasoning_tokens": 232
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3184
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.78,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.78,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "Let me analyze. Site: blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields: province select, phone number, checkbox terms, phone (masked?), password \"KATA SANDI\". Rules fired: asks_otp, asks_password.\n\nA blogspot page asking for password to \"check registration status\" is not reasonable — a blog doesn't need a password for checking status. This resembles credential phishing.\n\nPage type: other (or prize?). It's a registration status check on a blog — suspicious. Not a bank/ewallet own domain. No brands. I'd say page_type \"other\", asks: password, personal_data (phone number, province), otp maybe (the masked tel could be otp field? rule asks_otp fired). Actually the rule asks_otp fired, so include otp. Reasonable: false. Confidence ~0.8. Evidence: \"CEK STATUS PENDAFTARAN\".\n\nFields: province + phone = personal_data. Password = password. OTP rule fired -> otp.\n\nConfidence maybe 0.75.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012448,
+      "id": "chatcmpl-6adf32e04387",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1297,
+        "completion_tokens_details": {
+          "reasoning_tokens": 232
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3184
+      },
+      "provider": "ope************"
+    }
+  },
+  {
+    "name": "diagnosa#3",
+    "model": "glm-5.3-flash",
+    "extra": {},
+    "error": "TimeoutError: The operation was aborted due to timeout",
+    "totalMs": 90002.153542
+  }
+]

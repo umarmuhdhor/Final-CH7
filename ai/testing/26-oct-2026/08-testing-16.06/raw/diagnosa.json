@@ -1,0 +1,161 @@
+[
+  {
+    "name": "diagnosa#1",
+    "model": "deepseek-v4-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 4504.933040999997,
+    "totalMs": 4505.417000000001,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1362,
+      "completion_tokens_details": {
+        "reasoning_tokens": 297
+      },
+      "prompt_tokens": 1886,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3248
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "We need answer JSON only. Need classify. Site blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields provinsi, phone, checkbox terms, phone hidden, password. Brands empty. Rules asks_otp, asks_password already fired. Page type? Looks like checking registration status, maybe prize? It asks password on blogspot. Not reasonable. Need asks array includes password, maybe otp? Fields show password, tel. Rule asks_otp but fields no explicit OTP? The second tel \"•••••\" maybe OTP? Hmm fields include tel with label [number], checkbox, tel label •••••, password. It asks password. Rules indicate asks_otp. We can include otp? The form fields don't show OTP label but rules fired. Since asks should be what form requests. Could include password, personal_data? Provinsi, phone => personal_data. Password. Maybe otp due rule. But be accurate. Page type: \"other\" or \"prize\"? \"CEK STATUS PENDAFTARAN\" checking registration status; could be government/social? On blogspot, not official. Asking password is not reasonable. page_type maybe \"other\" (or unknown). Since it's a status check page, \"other\". Confidence high. Evidence copy exact title \"CEK STATUS PENDAFTARAN\". Need JSON exact keys.\n\nNeed no markdown.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793002027,
+      "id": "chatcmpl-6adf0a2b64dde",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1362,
+        "completion_tokens_details": {
+          "reasoning_tokens": 297
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3248
+      },
+      "provider": "bai************"
+    }
+  },
+  {
+    "name": "diagnosa#2",
+    "model": "deepseek-v4-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 7252.450958000001,
+    "totalMs": 7253.8137080000015,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1423,
+      "completion_tokens_details": {
+        "reasoning_tokens": 358
+      },
+      "prompt_tokens": 1886,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3309
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "We need answer JSON only. Need judge page. Site blogspot.com title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields: provinsi select, tel number, checkbox terms, tel masked, password. Rules asks_otp, asks_password already fired. Page type? \"prize\" maybe registration status? Could be other. asks include password, personal_data? Fields asks phone, province, password. They ask PIN? masked tel maybe OTP? Rules ask_otp. Need output asks array with pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. We should reflect what form asks. It asks province (personal_data), phone number (personal_data/other?), password. Checkbox terms not data. The masked tel maybe OTP? The rules include asks_otp, asks_password. We can include otp and password. But fields do not explicitly label OTP, but rule says asks_otp fired. Need include pin? no. card no. cvv no. id_number no. selfie_id no. personal_data yes (province, phone). other maybe registration status? We need reasonable false. Page type likely \"other\" or \"prize\"? Title \"CEK STATUS PENDAFTARAN\" check registration status; blogspot.com random site asking password and OTP. Not reasonable. Page type maybe \"other\" because unclear. Could be government? registration status maybe government program but on blogspot, asking password/OTP. But page type one of. I'd choose other. Confidence high .9. Evidence exact phrase from title: \"CEK STATUS PENDAFTARAN\". Need exactly JSON object. Ensure no extra.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793002032,
+      "id": "chatcmpl-6adf0a30664a9",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1423,
+        "completion_tokens_details": {
+          "reasoning_tokens": 358
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3309
+      },
+      "provider": "met********"
+    }
+  },
+  {
+    "name": "diagnosa#3",
+    "model": "deepseek-v4-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 8406.737041,
+    "totalMs": 8410.32125,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1504,
+      "completion_tokens_details": {
+        "reasoning_tokens": 439
+      },
+      "prompt_tokens": 1886,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3390
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "We need answer one JSON only. Need classify. Site blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields: provinsi, tel number, checkbox terms, tel masked, password KATA SANDI. Brands empty. Rules asks_otp, asks_password. It's a blogspot page asking for phone number and password to check registration status. Page type? Could be prize? \"CEK STATUS PENDAFTARAN\" generic registration status check. Asks password and likely OTP (masked tel? rules says asks_otp). Is reasonable? A registration status check on a blogspot asking password is not reasonable. Need page_type maybe other or unknown? It is a form to check registration status, not bank/shop/ewallet/government/courier/social/prize/news. Could be \"other\". asks include otp? Fields include tel and password; rules include asks_otp, asks_password. Since fields don't explicitly have OTP label, but rules fired asks_otp. We should include asks from fields: pin? no. otp? Rule says asks_otp, but asks array should reflect what form requests. The masked tel could be OTP? Hmm JSON fields: {\"type\":\"tel\",\"label\":\"•••••\"} maybe an OTP input disguised? But label bullets. Rule asks_otp indicates check detected OTP. We can include otp and password, personal_data? province and phone number are personal_data. Also checkbox terms not data. \"asks\": [\"otp\",\"password\",\"personal_data\"]? Also other? Phone number maybe personal_data. The instructions: asks array with any of pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. Since it asks phone and province, that's personal_data. Password definitely. OTP by rule. So asks [\"otp\",\"password\",\"personal_data\"]. reasonable false. Confidence high 0.95. Evidence exactly from title: \"CEK STATUS PENDAFTARAN\". Need output only JSON. Ensure valid JSON.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793002039,
+      "id": "chatcmpl-6adf0a37749e8",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1504,
+        "completion_tokens_details": {
+          "reasoning_tokens": 439
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3390
+      },
+      "provider": "ama************"
+    }
+  }
+]

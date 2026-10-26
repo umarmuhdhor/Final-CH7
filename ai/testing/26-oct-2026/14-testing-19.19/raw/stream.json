@@ -1,0 +1,71 @@
+[
+  {
+    "name": "stream#1",
+    "http": 200,
+    "first": 1046.6853340000089,
+    "rStart": 1046.7044590000005,
+    "rEnd": 10168.652209000007,
+    "cStart": null,
+    "last": 10168.675584000011,
+    "rChunks": 386,
+    "cChunks": 0,
+    "content": "",
+    "usage": {
+      "completion_tokens": 1536,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1024
+      },
+      "prompt_tokens": 1330,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2866
+    }
+  },
+  {
+    "name": "stream#2",
+    "http": 200,
+    "first": 1100.7449999999953,
+    "rStart": 1100.7657079999917,
+    "rEnd": 7324.117375000002,
+    "cStart": 7324.124291999993,
+    "last": 7324.158832999994,
+    "rChunks": 271,
+    "cChunks": 8,
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.7,\"evidence\":\"DHL EXpress\"}",
+    "usage": {
+      "completion_tokens": 1268,
+      "completion_tokens_details": {
+        "reasoning_tokens": 721
+      },
+      "prompt_tokens": 1330,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2598
+    }
+  },
+  {
+    "name": "stream#3",
+    "http": 200,
+    "first": 2161.7072500000068,
+    "rStart": 2161.7147079999995,
+    "rEnd": 7787.289667000005,
+    "cStart": 7787.293042000005,
+    "last": 8000.428750000006,
+    "rChunks": 169,
+    "cChunks": 8,
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+    "usage": {
+      "completion_tokens": 973,
+      "completion_tokens_details": {
+        "reasoning_tokens": 426
+      },
+      "prompt_tokens": 1330,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2303
+    }
+  }
+]

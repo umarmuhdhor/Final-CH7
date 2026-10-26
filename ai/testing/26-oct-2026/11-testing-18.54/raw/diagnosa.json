@@ -1,0 +1,161 @@
+[
+  {
+    "name": "diagnosa#1",
+    "model": "glm-5.3-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 5493.308040999997,
+    "totalMs": 5496.596166000003,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1213,
+      "completion_tokens_details": {
+        "reasoning_tokens": 140
+      },
+      "prompt_tokens": 1843,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3056
+    },
+    "content": "{\n  \"page_type\": \"courier\",\n  \"asks\": [\"password\", \"personal_data\"],\n  \"reasonable\": false,\n  \"confidence\": 0.85,\n  \"evidence\": \"DHL EXpress\"\n}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\n  \"page_type\": \"courier\",\n  \"asks\": [\"password\", \"personal_data\"],\n  \"reasonable\": false,\n  \"confidence\": 0.85,\n  \"evidence\": \"DHL EXpress\"\n}",
+            "reasoning_content": "The site is cloudfront.net, title \"DHL EXpress\", form asks email and password. Brand mention: DHL in title but brands list empty. Rules fired: asks_password. Page claims to be DHL Express (courier) but hosted on cloudfront.net — a CDN, not dhl.com. Password request on a non-official domain impersonating a courier. Reasonable: false.\n\nPage type: courier. asks: password, personal_data? email is personal data. Let's include password and personal_data (email address). Actually asks array — password clearly; personal_data for email.\n\nConfidence ~0.85. Evidence: \"DHL EXpress\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012134,
+      "id": "chatcmpl-6adf31a64122",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1213,
+        "completion_tokens_details": {
+          "reasoning_tokens": 140
+        },
+        "prompt_tokens": 1843,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3056
+      },
+      "provider": "mis***********"
+    }
+  },
+  {
+    "name": "diagnosa#2",
+    "model": "glm-5.3-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 2324.8616669999974,
+    "totalMs": 2325.1618329999983,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1273,
+      "completion_tokens_details": {
+        "reasoning_tokens": 217
+      },
+      "prompt_tokens": 1843,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3116
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"DHL EXpress\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "The data: site cloudfront.net, title \"DHL EXpress\", fields email and password, brands empty (though title mentions DHL — but brands list is empty; the rule says if brands is empty, ignore brand paragraph). However, title claims DHL Express. Site is cloudfront.net, a CDN, not dhl.com. The page asks for email and password while impersonating DHL. Hmm, brands empty means ignore brand paragraph... but the title itself shows DHL Express on a cloudfront domain. That's a phishing page — courier type asking for password.\n\nEven without brands, the title \"DHL EXpress\" on cloudfront.net is a strong indicator of impersonation. A courier page shouldn't ask for a password. But rule says ignore brand paragraph if brands empty. Still, I can reason: page type courier (or unknown), asks password, reasonable false with decent confidence.\n\nI'll answer page_type \"courier\", asks [\"password\"], reasonable false, confidence ~0.8, evidence \"DHL EXpress\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012139,
+      "id": "chatcmpl-6adf31ab40c7",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1273,
+        "completion_tokens_details": {
+          "reasoning_tokens": 217
+        },
+        "prompt_tokens": 1843,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3116
+      },
+      "provider": "ama********"
+    }
+  },
+  {
+    "name": "diagnosa#3",
+    "model": "glm-5.3-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 3209.0096660000054,
+    "totalMs": 3209.2370410000003,
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1314,
+      "completion_tokens_details": {
+        "reasoning_tokens": 258
+      },
+      "prompt_tokens": 1843,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3157
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.72,\"evidence\":\"DHL EXpress\"}",
+    "schemaOk": true,
+    "error": null,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.72,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "The page: site cloudfront.net, title \"DHL EXpress\", fields email and password, no brands listed. Rules fired: asks_password.\n\nSite is cloudfront.net — a CDN, not a courier's own domain. Title claims DHL Express. Page type: courier (imitating). Asking for email+password on a non-DHL domain... brands is empty, so the brand paragraph says ignore. But the title itself presents as DHL Express. The rule asks_password fired.\n\nHmm, the instructions say if brands is empty, ignore the brand paragraph. But title clearly impersonates DHL. A courier page asking for a password doesn't fit — couriers don't ask for passwords. Site is a generic CDN domain.\n\nI'd say page_type courier, asks [password], reasonable false, confidence ~0.7.\n\nActually a login page could legitimately ask for email+password... but on a CDN hosting domain for a courier brand — that's phishing. Couriers don't have password logins typically (DHL does have myDHLi login, but on dhl.com). Hosting login on cloudfront.net is suspicious.\n\nAnswer false with moderate confidence 0.7. Evidence \"DHL EXpress\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012141,
+      "id": "chatcmpl-6adf31ad41ff",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1314,
+        "completion_tokens_details": {
+          "reasoning_tokens": 258
+        },
+        "prompt_tokens": 1843,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3157
+      },
+      "provider": "ali***********"
+    }
+  }
+]

@@ -1,0 +1,50 @@
+{
+  "id": "d33wubrfki0l68-cloudfront-net-probe",
+  "label": "scam",
+  "tags": [],
+  "synthetic": false,
+  "redacted": false,
+  "source": "llm test plan (PLAN-llm-test.md)",
+  "collectedAt": "2026-10-26T11:54:44.196Z",
+  "notes": "",
+  "snapshot": {
+    "url": "https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html",
+    "domain": "d33wubrfki0l68.cloudfront.net",
+    "title": "DHL EXpress",
+    "lang": "en",
+    "text": "DHL Express Enter your credentials to proceed email Email address lock Password Sign In",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "email",
+            "name": "email",
+            "id": "email",
+            "label": "Email address",
+            "placeholder": "Email address",
+            "autocomplete": "email",
+            "accept": null,
+            "capture": null
+          },
+          {
+            "type": "password",
+            "name": "password",
+            "id": "password",
+            "label": "Password",
+            "placeholder": "Password",
+            "autocomplete": "current-password",
+            "accept": null,
+            "capture": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-26T11:54:44.193Z"
+  },
+  "meta": {
+    "iframes": [],
+    "bytes": 6984
+  }
+}

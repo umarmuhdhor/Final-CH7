@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepSeek vs GLM · Layer 4</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1c1b19;--mute:#6b6760;--line:#e3e0d8;--head:#efece4;
+--flag:#c0392b;--flagbg:#fbe6e3;--ok:#1f7a4d;--okbg:#def3e8;--to:#8a5a00;--tobg:#fdefc9;--bs:#5b3fa0;--bsbg:#ebe4fa;--ds:#1d5fb8;--glm:#a2410d;--accent:#1d5fb8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15140f;--card:#1e1d18;--ink:#efece4;--mute:#a09b90;--line:#35332b;--head:#27251f;
+--flag:#ff8a7a;--flagbg:#4a2420;--ok:#6fd6a0;--okbg:#1d3b2c;--to:#f0c261;--tobg:#443512;--bs:#bba6f2;--bsbg:#33295a;--ds:#7fb2ff;--glm:#ffa070;--accent:#7fb2ff}}
+:root[data-theme="dark"]{--bg:#15140f;--card:#1e1d18;--ink:#efece4;--mute:#a09b90;--line:#35332b;--head:#27251f;
+--flag:#ff8a7a;--flagbg:#4a2420;--ok:#6fd6a0;--okbg:#1d3b2c;--to:#f0c261;--tobg:#443512;--bs:#bba6f2;--bsbg:#33295a;--ds:#7fb2ff;--glm:#ffa070;--accent:#7fb2ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:28px 16px 64px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:19px;margin:40px 0 6px;padding-top:8px}
+h3{font-size:15px;margin:22px 0 6px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+p{margin:6px 0}
+.sub{color:var(--mute);margin:0 0 18px}
+.warn{background:var(--tobg);color:var(--to);border-radius:8px;padding:9px 12px;font-size:13.5px;margin:12px 0}
+.tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;margin:8px 0 4px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+th,td{padding:8px 11px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
+thead th{background:var(--head);font-weight:600;font-size:12.5px;white-space:nowrap}
+tbody th{font-weight:500;color:var(--mute);width:26%;background:transparent}
+td small,th small{color:var(--mute);font-weight:400}
+code{font:12.5px ui-monospace,Menlo,monospace;background:var(--head);padding:1px 5px;border-radius:4px}
+.b{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:99px;white-space:nowrap}
+.b-flag{background:var(--flagbg);color:var(--flag)}.b-ok{background:var(--okbg);color:var(--ok)}
+.b-to{background:var(--tobg);color:var(--to)}.b-bs{background:var(--bsbg);color:var(--bs)}
+.t{font-variant-numeric:tabular-nums;font-size:12.5px}.c{color:var(--mute);font-size:12px}
+.runs td{white-space:nowrap}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:1px 9px;border-radius:99px;border:1px solid currentColor}
+.ds{color:var(--ds)}.glm{color:var(--glm)}
+.sbs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:720px){.sbs{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+.card ul{margin:6px 0 0;padding-left:18px}.card li{margin:3px 0}
+.verdict{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:12px 0}
+.verdict h3{margin:0 0 6px}
+.verdict ol,.verdict ul{margin:6px 0;padding-left:20px}.verdict li{margin:5px 0}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+button{font:inherit;font-size:12.5px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer}
+nav a{color:var(--accent);margin-right:14px;font-size:13.5px;text-decoration:none}
+nav{margin:8px 0 0}
+.yes{color:var(--ok);font-weight:600}.no{color:var(--flag);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><div>
+<h1>DeepSeek vs GLM di layer 4</h1>
+<p class="sub">Link yang sama, dua model · testing 26 Okt 2026 · penyedia <code>bandelbanget.xyz</code> · prompt <code>reality-check.v3</code> · 10 run kode asli per sesi, batas 6 s</p>
+</div><button id="th" type="button">Tema</button></div>
+<nav><a href="#sumber">Sumber data</a><a href="#dhl">Link 1 · DHL</a><a href="#blog">Link 2 · bansos</a><a href="#bca">Link 3 · klikBCA</a><a href="#beda">Sama &amp; beda</a><a href="#simpul">Kesimpulan</a></nav>
+
+<h2 id="sumber">Sumber data</h2>
+<p>Model: <span class="pill ds">DeepSeek</span> = <code>deepseek-v4-flash</code> (bawaan <code>ai/.env</code>) · <span class="pill glm">GLM</span> = <code>glm-5.3-flash</code> (env override). Link ditulis <em>defanged</em>; jangan dibuka di browser.</p>
+<div class="tw"><table>
+<thead><tr><th>Link (defanged)</th><th>Skor layer 3</th><th>DeepSeek</th><th>GLM</th></tr></thead>
+<tbody>
+<tr><td><b>1.</b> <code>hxxps://d33wubrfki0l68[.]cloudfront[.]net/…/dhl123[.]html</code><br><small>DHL palsu · form email + password</small></td><td>15 <small>(<code>asks_password</code>)</small><br><small>di bawah ambang 30 → tanpa LLM lolos</small></td><td>testing 14 (19.19)<br>testing 15 (19.54, reasoning off)</td><td>testing 11 (18.54)<br>ulangan (19.46)</td></tr>
+<tr><td><b>2.</b> <code>hxxps://bantuannbansos2026[.]blogspot[.]com/</code><br><small>bansos palsu · OTP + password</small></td><td>40 <small>(<code>asks_otp</code> 25 + <code>asks_password</code> 15)</small><br><small>sudah di atas ambang 30</small></td><td>testing 08 (16.06)</td><td>testing 12 (18.59)</td></tr>
+<tr><td><b>3.</b> <code>hxxps://ibank[.]klikbca[.]com/</code><br><small>halaman bank <b>asli</b> (kontrol negatif)</small></td><td>0<br><small>gerbang LLM tertutup</small></td><td>testing 09 (16.24) · LLM tidak dipanggil</td><td>testing 13 (19.06) · LLM tidak dipanggil</td></tr>
+</tbody></table></div>
+<div class="warn"><b>Testing 07 (DeepSeek, link 1, 15.58) tidak dipakai.</b> 8 dari 10 run dijawab proxy dengan teks “AI provider temporarily unavailable” (dihitung <code>bad_schema</code>, tapi itu galat penyedia, bukan model). Pembanding DeepSeek untuk link 1 adalah testing 14.</div>
+
+<h2 id="dhl">Link 1 · DHL palsu (skor layer 3 = 15)</h2>
+<p>Di sini layer 4 menentukan: kalau LLM timeout, skor tetap 15 dan halaman scam <b>lolos</b>.</p>
+<h3>Hasil 10 run</h3>
+<div class="tw"><table class=""><thead><tr><th></th><th>DeepSeek<br><small>testing 14 · 19.19</small></th><th>DeepSeek reasoning off<br><small>testing 15 · 19.54</small></th><th>GLM<br><small>testing 11 · 18.54</small></th><th>GLM ulangan<br><small>rerun · 19.46</small></th></tr></thead><tbody><tr><th scope="row">Flagged (skor 45/70)</th><td><b>4</b></td><td><b>4</b></td><td><b>6</b></td><td><b>6</b></td></tr>
+<tr><th scope="row">Reasonable (lolos)</th><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+<tr><th scope="row">Timeout (batas 6 s)</th><td>6</td><td>6</td><td>3</td><td>3</td></tr>
+<tr><th scope="row">bad_schema</th><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+<tr><th scope="row">Skor akhir min / maks</th><td>15 / 45</td><td>15 / 45</td><td>15 / 45</td><td>15 / 45</td></tr>
+<tr><th scope="row">Run dengan skor ≥ 30</th><td>4 dari 10</td><td>4 dari 10</td><td>6 dari 10</td><td>6 dari 10</td></tr>
+<tr><th scope="row">Run selesai (jawaban valid)</th><td>4 dari 10</td><td>4 dari 10</td><td>7 dari 10</td><td>7 dari 10</td></tr></tbody></table></div>
+<h3>Waktu</h3>
+<div class="tw"><table class=""><thead><tr><th></th><th>DeepSeek<br><small>testing 14 · 19.19</small></th><th>DeepSeek reasoning off<br><small>testing 15 · 19.54</small></th><th>GLM<br><small>testing 11 · 18.54</small></th><th>GLM ulangan<br><small>rerun · 19.46</small></th></tr></thead><tbody><tr><th scope="row">Run selesai: min / median / maks (s)</th><td>3,49 / 4,09 / 5,53</td><td>2,75 / 4,96 / 5,89</td><td>1,74 / 3,60 / 4,95</td><td>2,29 / 3,40 / 5,40</td></tr>
+<tr><th scope="row">Rata-rata run selesai (s)</th><td>4,30</td><td>4,64</td><td>3,29</td><td>3,64</td></tr>
+<tr><th scope="row">Non-stream tanpa batas: min / median / maks (s)</th><td>4,79 / 5,31 / 7,13</td><td>5,40 / 6,78 / 8,69</td><td>2,33 / 3,21 / 5,50</td><td>4,26 / 4,39 / 5,49</td></tr>
+<tr><th scope="row">Stream selesai (s), 3 panggilan</th><td>10,17 · 7,32 · 8,00</td><td>45,73 · 5,72 · 10,84</td><td>2,91 · 6,08 · 9,38</td><td>5,85 · 21,99 · 4,00</td></tr>
+<tr><th scope="row">Porsi waktu di fase reasoning (stream)</th><td>97–99%</td><td>93–99%</td><td>94–99%</td><td>82–96%</td></tr>
+<tr><th scope="row">Token reasoning rata-rata (run selesai)</th><td>309</td><td>330</td><td>246</td><td>336</td></tr>
+<tr><th scope="row">Token completion rata-rata (`max_tokens` 200 diabaikan)</th><td>1367</td><td>1387</td><td>1302</td><td>1393</td></tr></tbody></table></div>
+<h3>Isi jawaban model</h3>
+<div class="tw"><table class=""><thead><tr><th></th><th>DeepSeek<br><small>testing 14 · 19.19</small></th><th>DeepSeek reasoning off<br><small>testing 15 · 19.54</small></th><th>GLM<br><small>testing 11 · 18.54</small></th><th>GLM ulangan<br><small>rerun · 19.46</small></th></tr></thead><tbody><tr><th scope="row"><code>page_type</code></th><td><code>courier</code> ×4</td><td><code>courier</code> ×4</td><td><code>courier</code> ×7</td><td><code>courier</code> ×7</td></tr>
+<tr><th scope="row"><code>reasonable</code></th><td><code>false</code> ×4</td><td><code>false</code> ×4</td><td><code>true</code> ×1, <code>false</code> ×6</td><td><code>false</code> ×7</td></tr>
+<tr><th scope="row">Confidence (yang flagged): rentang</th><td>0,90–0,95</td><td>0,85–0,95</td><td>0,70–0,85</td><td>0,65–0,82</td></tr>
+<tr><th scope="row">Confidence (yang flagged): rata-rata</th><td>0,91</td><td>0,89</td><td>0,76</td><td>0,76</td></tr>
+<tr><th scope="row"><code>evidence</code></th><td>“DHL EXpress”</td><td>“DHL EXpress”</td><td>“DHL EXpress”</td><td>“DHL EXpress”</td></tr>
+<tr><th scope="row"><code>asks</code> (jumlah jawaban yang memuat)</th><td><code>password</code> 4/4, <code>personal_data</code> 3/4</td><td><code>password</code> 4/4, <code>personal_data</code> 1/4</td><td><code>password</code> 7/7, <code>personal_data</code> 1/7</td><td><code>password</code> 7/7, <code>personal_data</code> 1/7, <code>email</code> 1/7</td></tr></tbody></table></div>
+<h3>Per run</h3>
+<div class="tw"><table class="runs"><thead><tr><th>Run</th><th>DeepSeek<br><small>testing 14 · 19.19</small></th><th>DeepSeek reasoning off<br><small>testing 15 · 19.54</small></th><th>GLM<br><small>testing 11 · 18.54</small></th><th>GLM ulangan<br><small>rerun · 19.46</small></th></tr></thead><tbody><tr><th scope="row">1</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-ok">Reasonable</span> <span class="t">3,62 s</span> <span class="c">conf 0,45</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">2</th><td><span class="b b-flag">Flagged</span> <span class="t">4,49 s</span> <span class="c">conf 0,90</span></td><td><span class="b b-flag">Flagged</span> <span class="t">2,75 s</span> <span class="c">conf 0,95</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,60 s</span> <span class="c">conf 0,85</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">3</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,40 s</span> <span class="c">conf 0,65</span></td></tr>
+<tr><th scope="row">4</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">5,89 s</span> <span class="c">conf 0,90</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,29 s</span> <span class="c">conf 0,72</span></td></tr>
+<tr><th scope="row">5</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-bs">bad_schema</span> <span class="t">5,40 s</span> <span class="c">conf 0,65</span></td></tr>
+<tr><th scope="row">6</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">4,90 s</span> <span class="c">conf 0,85</span></td><td><span class="b b-flag">Flagged</span> <span class="t">1,97 s</span> <span class="c">conf 0,80</span></td><td><span class="b b-flag">Flagged</span> <span class="t">4,03 s</span> <span class="c">conf 0,82</span></td></tr>
+<tr><th scope="row">7</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,28 s</span> <span class="c">conf 0,75</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">8</th><td><span class="b b-flag">Flagged</span> <span class="t">5,53 s</span> <span class="c">conf 0,90</span></td><td><span class="b b-flag">Flagged</span> <span class="t">5,03 s</span> <span class="c">conf 0,85</span></td><td><span class="b b-flag">Flagged</span> <span class="t">1,74 s</span> <span class="c">conf 0,70</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,96 s</span> <span class="c">conf 0,80</span></td></tr>
+<tr><th scope="row">9</th><td><span class="b b-flag">Flagged</span> <span class="t">3,69 s</span> <span class="c">conf 0,90</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,84 s</span> <span class="c">conf 0,75</span></td><td><span class="b b-flag">Flagged</span> <span class="t">2,29 s</span> <span class="c">conf 0,80</span></td></tr>
+<tr><th scope="row">10</th><td><span class="b b-flag">Flagged</span> <span class="t">3,49 s</span> <span class="c">conf 0,95</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">4,95 s</span> <span class="c">conf 0,70</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,11 s</span> <span class="c">conf 0,75</span></td></tr></tbody></table></div>
+<p class="c">Yang lolos (skor 15) = Timeout + Reasonable + bad_schema. DeepSeek 6/10, GLM 4/10 (kedua sesi).</p>
+
+<h2 id="blog">Link 2 · bansos blogspot (skor layer 3 = 40)</h2>
+<p>Layer 3 sudah memberi peringatan sendiri (40 ≥ 30). LLM hanya menaikkan ke 70 (<code>unreasonable_request</code> +30). Timeout tidak membuat halaman lolos.</p>
+<h3>Hasil 10 run</h3>
+<div class="tw"><table class=""><thead><tr><th></th><th>DeepSeek<br><small>testing 08 · 16.06</small></th><th>GLM<br><small>testing 12 · 18.59</small></th></tr></thead><tbody><tr><th scope="row">Flagged (skor 45/70)</th><td><b>8</b></td><td><b>6</b></td></tr>
+<tr><th scope="row">Reasonable (lolos)</th><td>0</td><td>0</td></tr>
+<tr><th scope="row">Timeout (batas 6 s)</th><td>2</td><td>4</td></tr>
+<tr><th scope="row">bad_schema</th><td>0</td><td>0</td></tr>
+<tr><th scope="row">Skor akhir min / maks</th><td>40 / 70</td><td>40 / 70</td></tr>
+<tr><th scope="row">Run dengan skor ≥ 30</th><td>10 dari 10</td><td>10 dari 10</td></tr>
+<tr><th scope="row">Run selesai (jawaban valid)</th><td>8 dari 10</td><td>6 dari 10</td></tr></tbody></table></div>
+<h3>Waktu</h3>
+<div class="tw"><table class=""><thead><tr><th></th><th>DeepSeek<br><small>testing 08 · 16.06</small></th><th>GLM<br><small>testing 12 · 18.59</small></th></tr></thead><tbody><tr><th scope="row">Run selesai: min / median / maks (s)</th><td>2,22 / 3,01 / 4,76</td><td>2,75 / 3,77 / 4,59</td></tr>
+<tr><th scope="row">Rata-rata run selesai (s)</th><td>3,29</td><td>3,70</td></tr>
+<tr><th scope="row">Non-stream tanpa batas: min / median / maks (s)</th><td>4,51 / 7,25 / 8,41</td><td>3,19 / 3,84 / 4,50 <small>+ 1 abort 90 s</small></td></tr>
+<tr><th scope="row">Stream selesai (s), 3 panggilan</th><td>10,93 · 4,20 · 6,36</td><td>4,80 · 6,50 · 2,80</td></tr>
+<tr><th scope="row">Porsi waktu di fase reasoning (stream)</th><td>85–96%</td><td>81–99%</td></tr>
+<tr><th scope="row">Token reasoning rata-rata (run selesai)</th><td>232</td><td>222</td></tr>
+<tr><th scope="row">Token completion rata-rata (`max_tokens` 200 diabaikan)</th><td>1296</td><td>1287</td></tr></tbody></table></div>
+<h3>Isi jawaban model</h3>
+<div class="tw"><table class=""><thead><tr><th></th><th>DeepSeek<br><small>testing 08 · 16.06</small></th><th>GLM<br><small>testing 12 · 18.59</small></th></tr></thead><tbody><tr><th scope="row"><code>page_type</code></th><td><code>other</code> ×8</td><td><code>other</code> ×6</td></tr>
+<tr><th scope="row"><code>reasonable</code></th><td><code>false</code> ×8</td><td><code>false</code> ×6</td></tr>
+<tr><th scope="row">Confidence (yang flagged): rentang</th><td>0,82–0,95</td><td>0,72–0,85</td></tr>
+<tr><th scope="row">Confidence (yang flagged): rata-rata</th><td>0,88</td><td>0,82</td></tr>
+<tr><th scope="row"><code>evidence</code></th><td>“CEK STATUS PENDAFTARAN”</td><td>“CEK STATUS PENDAFTARAN”</td></tr>
+<tr><th scope="row"><code>asks</code> (jumlah jawaban yang memuat)</th><td><code>password</code> 8/8, <code>personal_data</code> 7/8, <code>otp</code> 5/8, <code>other</code> 2/8</td><td><code>password</code> 6/6, <code>personal_data</code> 6/6, <code>otp</code> 4/6, <code>other</code> 2/6</td></tr></tbody></table></div>
+<h3>Per run</h3>
+<div class="tw"><table class="runs"><thead><tr><th>Run</th><th>DeepSeek<br><small>testing 08 · 16.06</small></th><th>GLM<br><small>testing 12 · 18.59</small></th></tr></thead><tbody><tr><th scope="row">1</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">2</th><td><span class="b b-flag">Flagged</span> <span class="t">4,74 s</span> <span class="c">conf 0,95</span></td><td><span class="b b-flag">Flagged</span> <span class="t">3,43 s</span> <span class="c">conf 0,85</span></td></tr>
+<tr><th scope="row">3</th><td><span class="b b-flag">Flagged</span> <span class="t">4,76 s</span> <span class="c">conf 0,90</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">4</th><td><span class="b b-flag">Flagged</span> <span class="t">2,22 s</span> <span class="c">conf 0,88</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">5</th><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td><td><span class="b b-flag">Flagged</span> <span class="t">4,49 s</span> <span class="c">conf 0,85</span></td></tr>
+<tr><th scope="row">6</th><td><span class="b b-flag">Flagged</span> <span class="t">3,11 s</span> <span class="c">conf 0,82</span></td><td><span class="b b-flag">Flagged</span> <span class="t">2,85 s</span> <span class="c">conf 0,85</span></td></tr>
+<tr><th scope="row">7</th><td><span class="b b-flag">Flagged</span> <span class="t">2,38 s</span> <span class="c">conf 0,85</span></td><td><span class="b b-flag">Flagged</span> <span class="t">2,75 s</span> <span class="c">conf 0,85</span></td></tr>
+<tr><th scope="row">8</th><td><span class="b b-flag">Flagged</span> <span class="t">3,38 s</span> <span class="c">conf 0,95</span></td><td><span class="b b-to">Timeout</span> <span class="t">6,00 s</span></td></tr>
+<tr><th scope="row">9</th><td><span class="b b-flag">Flagged</span> <span class="t">2,90 s</span> <span class="c">conf 0,85</span></td><td><span class="b b-flag">Flagged</span> <span class="t">4,12 s</span> <span class="c">conf 0,72</span></td></tr>
+<tr><th scope="row">10</th><td><span class="b b-flag">Flagged</span> <span class="t">2,83 s</span> <span class="c">conf 0,82</span></td><td><span class="b b-flag">Flagged</span> <span class="t">4,59 s</span> <span class="c">conf 0,78</span></td></tr></tbody></table></div>
+
+<h2 id="bca">Link 3 · klikBCA (halaman asli)</h2>
+<div class="tw"><table>
+<thead><tr><th></th><th>DeepSeek (testing 09)</th><th>GLM (testing 13)</th></tr></thead>
+<tbody>
+<tr><th scope="row">Skor layer 3</th><td>0</td><td>0</td></tr>
+<tr><th scope="row">Lolos gerbang LLM</th><td class="no">tidak</td><td class="no">tidak</td></tr>
+<tr><th scope="row">Panggilan LLM</th><td>0</td><td>0</td></tr>
+<tr><th scope="row">Flagged / reasonable / timeout / bad_schema</th><td colspan="2">tidak ada data (LLM tidak dipanggil)</td></tr>
+<tr><th scope="row">Hasil</th><td colspan="2" class="yes">true negative: tidak ada false positive; model tidak diuji</td></tr>
+</tbody></table></div>
+<p class="c">Catatan: runner melabeli sampel ini <code>scam</code> secara bawaan; harus diubah ke <code>legit</code> bila dipakai di eval set.</p>
+
+<h2 id="beda">Apa yang sama, apa yang beda</h2>
+<div class="sbs">
+<div class="card"><h3 style="margin-top:0">Sama</h3><ul>
+<li>Hampir semua jawaban yang selesai: <code>reasonable:false</code> (DeepSeek 100%; GLM satu pengecualian, lihat “Beda”).</li>
+<li><code>page_type</code> sama: <code>courier</code> (DHL) dan <code>other</code> (bansos). Tidak ada yang menebak <code>government</code>/<code>prize</code> karena teks halaman tidak dikirim ke LLM.</li>
+<li><code>evidence</code> selalu disalin dari judul halaman.</li>
+<li>Skor akhir identik per jenis hasil: DHL 15 → 45, bansos 40 → 70.</li>
+<li>Reasoning memakan 82–100% waktu; <code>max_tokens: 200</code> diabaikan proxy (completion ±1.200–1.800 token).</li>
+<li>Layer 1–3 identik karena tidak bergantung model.</li>
+</ul></div>
+<div class="card"><h3 style="margin-top:0">Beda</h3><ul>
+<li><b>Timeout:</b> DHL DeepSeek 6/10 vs GLM 3/10 (dua sesi sama). Bansos DeepSeek 2/10 vs GLM 4/10. Arahnya terbalik antar-link.</li>
+<li><b>Confidence:</b> DeepSeek lebih tinggi di DHL (0,85–0,95) dibanding GLM (0,65–0,85).</li>
+<li><b>Kepatuhan format:</b> DeepSeek 0 pelanggaran. GLM 1 <code>reasonable:true</code> (DHL, conf 0,45) dan 1 <code>bad_schema</code> (<code>asks</code> berisi <code>"email"</code>, di luar enum).</li>
+<li><b>Ekor latensi:</b> GLM 1 panggilan 90 s abort (bansos) dan stream 22 s (DHL). DeepSeek stream 45,7 s (testing 15, reasoning off) dan 10–11 s.</li>
+<li><code>asks</code> berubah-ubah antar-run di kedua model; tidak memengaruhi skor.</li>
+<li>DeepSeek <b>reasoning off</b> tidak mempercepat: parameter terkirim tapi proxy mengabaikannya (6 timeout, sama dengan bawaan).</li>
+</ul></div>
+</div>
+
+<h2 id="simpul">Kesimpulan</h2>
+<div class="verdict">
+<h3>Tidak ada pemenang jelas dari data ini</h3>
+<ol>
+<li><b>Akurasi arah sama.</b> Ketika menjawab, kedua model menandai halaman scam sebagai tidak wajar dengan skor akhir sama. Selisihnya ada di jarang-tapi-nyata: GLM pernah meloloskan DHL palsu (<code>reasonable:true</code>) dan pernah melanggar format; DeepSeek tidak pada sampel valid.</li>
+<li><b>Kecepatan sebanding, bukan unggul.</b> Median run selesai 3–4 s di kedua model; keduanya sering menembus batas 6 s karena reasoning. GLM lebih sedikit timeout di DHL (30% vs 60%), DeepSeek lebih sedikit di bansos (20% vs 40%). Jam, beban penyedia, dan n = 10 tidak cukup untuk menyebut satu lebih cepat.</li>
+<li><b>Dampak nyata ada di link DHL.</b> Skor layer 3 hanya 15, jadi tiap timeout = halaman scam lolos: DeepSeek 6/10 (60%), GLM 4/10 (40%: 3 timeout + 1 <code>reasonable</code> atau <code>bad_schema</code>), di kedua sesi GLM. Di bansos, layer 3 menutup celah itu sendiri (10/10 run skor ≥ 30).</li>
+<li><b>DeepSeek lebih yakin dan lebih rapi</b> (confidence tinggi, schema bersih). <b>GLM sedikit lebih sering selesai</b> di DHL tapi kurang konsisten pada format dan ambang “wajar”.</li>
+<li><b>Mematikan reasoning lewat parameter tidak bekerja</b> di proxy ini; bukan solusi kecepatan.</li>
+</ol>
+<h3>Belum terbukti</h3>
+<ul>
+<li>Akurasi pada halaman sah (satu-satunya halaman sah, klikBCA, tidak memanggil LLM): false positive tiap model belum terukur.</li>
+<li>Kecepatan jam lain, link lain, dan dari Cloudflare Worker. Layer 1 dan RDAP tidak ikut.</li>
+</ul>
+<h3>Saran berikutnya (belum dijalankan)</h3>
+<ul>
+<li>Jalankan <code>bandingkan model glm-5.3-flash,deepseek-v4-flash</code> pada satu sesi/jam yang sama, di ≥ 3 link scam + ≥ 3 link sah.</li>
+<li>Tambah DHL ke <code>brands.json</code> supaya layer 3 tidak bergantung pada LLM untuk kasus ini.</li>
+<li>Pisahkan status <code>provider_error</code> dari <code>bad_schema</code> di <code>ai/src</code>; pertimbangkan batas layer 4 lebih longgar atau model non-reasoning.</li>
+</ul>
+</div>
+<p class="c">Sumber: <code>raw/code-path.json</code>, <code>raw/diagnosa.json</code>, <code>raw/stream.json</code>, <code>report.md</code>, <code>11-testing-18.54/compare.md</code> di folder <code>26-oct-2026</code>. Angka tabel dihitung ulang dari data mentah; “run selesai” = run dengan jawaban JSON dari model (flagged, reasonable, atau bad_schema karena enum).</p>
+</main>
+<script>
+(function(){var r=document.documentElement,b=document.getElementById('th');
+try{var s=localStorage.getItem('theme');if(s)r.setAttribute('data-theme',s)}catch(e){}
+b.addEventListener('click',function(){var cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+var n=cur==='dark'?'light':'dark';r.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}});})();
+</script>
+</body>
+</html>

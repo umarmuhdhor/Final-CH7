@@ -1,0 +1,134 @@
+[
+  {
+    "name": "diagnosa#1",
+    "model": "deepseek-v4-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 112.12016700000004,
+    "totalMs": 113.0487090000006,
+    "finish": "stop",
+    "usage": {
+      "prompt_tokens": 1000,
+      "completion_tokens": 1000,
+      "total_tokens": 2000,
+      "prompt_tokens_details": {
+        "cached_tokens": 1000
+      }
+    },
+    "content": "AI provider temporarily unavailable\n----\nRequest ID: req_5371eb6b\nRef: 0.1793001502170\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above.",
+    "schemaOk": false,
+    "error": null,
+    "raw": {
+      "id": "chatcmpl-5xx-guard",
+      "object": "chat.completion",
+      "model": "deepseek-v4-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "AI provider temporarily unavailable\n----\nRequest ID: req_5371eb6b\nRef: 0.1793001502170\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1000,
+        "completion_tokens": 1000,
+        "total_tokens": 2000,
+        "prompt_tokens_details": {
+          "cached_tokens": 1000
+        }
+      },
+      "provider": "bai************"
+    }
+  },
+  {
+    "name": "diagnosa#2",
+    "model": "deepseek-v4-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 44.60620800000015,
+    "totalMs": 45.57024999999976,
+    "finish": "stop",
+    "usage": {
+      "prompt_tokens": 1000,
+      "completion_tokens": 1000,
+      "total_tokens": 2000,
+      "prompt_tokens_details": {
+        "cached_tokens": 1000
+      }
+    },
+    "content": "AI provider temporarily unavailable\n----\nRequest ID: req_89c3ae58\nRef: 0.1793001502266\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above.",
+    "schemaOk": false,
+    "error": null,
+    "raw": {
+      "id": "chatcmpl-5xx-guard",
+      "object": "chat.completion",
+      "model": "deepseek-v4-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "AI provider temporarily unavailable\n----\nRequest ID: req_89c3ae58\nRef: 0.1793001502266\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1000,
+        "completion_tokens": 1000,
+        "total_tokens": 2000,
+        "prompt_tokens_details": {
+          "cached_tokens": 1000
+        }
+      },
+      "provider": "bai***********"
+    }
+  },
+  {
+    "name": "diagnosa#3",
+    "model": "deepseek-v4-flash",
+    "extra": {},
+    "http": 200,
+    "headersMs": 43.06358300000011,
+    "totalMs": 44.01441599999998,
+    "finish": "stop",
+    "usage": {
+      "prompt_tokens": 1000,
+      "completion_tokens": 1000,
+      "total_tokens": 2000,
+      "prompt_tokens_details": {
+        "cached_tokens": 1000
+      }
+    },
+    "content": "AI provider temporarily unavailable\n----\nRequest ID: req_46457daf\nRef: 0.1793001502311\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above.",
+    "schemaOk": false,
+    "error": null,
+    "raw": {
+      "id": "chatcmpl-5xx-guard",
+      "object": "chat.completion",
+      "model": "deepseek-v4-flash",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "AI provider temporarily unavailable\n----\nRequest ID: req_46457daf\nRef: 0.1793001502311\nUpstreamResponseCode: N/A\nModel: deepseek-v4-flash\n----\n- The AI provider failed to process your request (temporary server issue or oversized prompt).\n- This was retried automatically.\nHow to fix:\n- Send \"Continue\" to resume from where it stopped. If that does not work, start a new session/chat.\n- Wait a moment and retry with a shorter or simpler prompt.\n- Do not keep retrying the exact same request.\n**Billing:**\n- This request still counts as a request and is billed based on its input (minimum 1,000 prompt / 1,000 completion / 1,000 cached tokens).\n- Do not resend the same request — it will keep failing and keep consuming your quota.\n**Recommended tools:**\n- These responses are optimized for opencode, Claude Code, and Codex.\n- If you are using a non-standard client and keep hitting errors, switch to one of the supported tools above."
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 1000,
+        "completion_tokens": 1000,
+        "total_tokens": 2000,
+        "prompt_tokens_details": {
+          "cached_tokens": 1000
+        }
+      },
+      "provider": "mis************"
+    }
+  }
+]
