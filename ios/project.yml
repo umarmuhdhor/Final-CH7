@@ -54,6 +54,10 @@ targets:
         # Push Notifications capability (ON-05, GD-06). Sandbox APNs; App Store/TestFlight export
         # signs it as production. Needs a paid team — a free Personal Team can't sign this.
         aps-environment: development
+        # Universal Link for the invite link `/j/<code>` (PR-03, #129). The Worker serves the AASA with
+        # `DWTZNGA7Y8.com.umarmuhdhor.shoo`. Moves to our own domain later (TODO E6).
+        com.apple.developer.associated-domains:
+          - applinks:shoo-api.afindo-mi01.workers.dev
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID)

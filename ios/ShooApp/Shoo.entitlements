@@ -4,6 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:shoo-api.afindo-mi01.workers.dev</string>
+	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>$(SHOO_APP_GROUP)</string>
