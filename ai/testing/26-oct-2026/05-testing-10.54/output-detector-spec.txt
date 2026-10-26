@@ -1,0 +1,46 @@
+✔ exposes the contract shape (0.789792ms)
+✔ every official domain in brands.json returns no signals (3.480333ms)
+✔ popular sites that are not brands give no signals (2.802625ms)
+✔ p0stindonesia.com -> lookalike_domain (digit swap) (0.409209ms)
+✔ g00gle.com, shoppe.co.id, tokopedla.com, gooogle.com -> lookalike_domain (0.560083ms)
+✔ 5-letter tokens are not typo-matched (cloud.com, gogle.com) (0.547375ms)
+✔ lphone-login.com -> lookalike + brand_plus_keyword = 39 (not yet blocked by layer 2 alone) (0.502792ms)
+✔ Cyrillic letters that look Latin are caught (xn-- is decoded) (5.260791ms)
+✔ a normal international domain does not crash or trigger (0.29125ms)
+✔ fixture domains from contracts/fixtures (1.238625ms)
+✔ brand and bait word glued together (bcalogin.com) (0.4725ms)
+✔ brand in a subdomain of an unrelated domain (1.221167ms)
+✔ cheap TLD with a brand scores 15, alone only 5 (1.010458ms)
+✔ two-part suffixes (.co.id) are never treated as a cheap TLD (0.08925ms)
+✔ official name on an unlisted domain is weak (google.id, bri.com) (0.177625ms)
+✔ google.com.evil.site is judged by evil.site, not google.com (0.073875ms)
+✔ a brand name inside a longer word is not enough (notgoogle.com) (0.314583ms)
+✔ common words that are brand names stay silent on their own (1.765833ms)
+✔ a common word plus a bait word still counts (dana-login.com) (0.324583ms)
+✔ short brand names are not fuzzy matched (bcx.com, brx.com, ovx.com) (0.105958ms)
+✔ layer 2 alone never reaches the block threshold (80) (1.665708ms)
+✔ signals follow the contract (1.445041ms)
+✔ never throws and returns [] for odd input (0.329083ms)
+✔ falls back to snapshot.domain when the URL cannot be parsed (0.111375ms)
+✔ is fast (target < 50 ms per scan; we expect well under 5) (694.679417ms)
+✔ brands.json is consistent (0.557417ms)
+✔ layer 1: a Shoo list hit gives db_match (layer 1, weight 100, evidence shoo) and stops (0.2265ms)
+✔ layer 1: a public list hit has evidence public (0.155416ms)
+✔ layer 1: match returns null -> no db_match, layer 2 still runs (0.446125ms)
+✔ layer 1: ShooLists missing -> still works without error (0.38175ms)
+✔ layer 1: match throws or rejects -> caught, layer 2 runs, analyzeLocal does not throw (0.830292ms)
+✔ layer 1: official domains with match null stay silent (no false positives) (0.765875ms)
+✔ layer 1: match gets the hostname only (no scheme, path, query, port or credentials) (2.322917ms)
+✔ layer 1: unparseable URL does not throw and does not call match with junk (0.116916ms)
+✔ layer 1: db_match has bilingual label and labelSimple, labelSimple in plain words (0.290833ms)
+✔ layer 1: match is called with exactly one argument, the hostname (0.391041ms)
+✔ layer 1: a hit on an official domain still wins (the server keeps official domains off the lists) (0.049583ms)
+✔ layer 1: malformed hits are ignored and layer 2 runs (2.706333ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 809.735333

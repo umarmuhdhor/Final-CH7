@@ -1,0 +1,427 @@
+[
+ {
+  "kind": "non-stream",
+  "name": "default#1",
+  "extra": {},
+  "http": 200,
+  "headers_s": 11.07,
+  "total_s": 11.08,
+  "finish": "stop",
+  "prompt": 1747,
+  "completion": 1996,
+  "reasoning": 937,
+  "content_len": 130,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"Sign in to your account\"}",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"Sign in to your account\"}",
+      "reasoning_content": "We need answer only JSON. Need classify. Site helpnets.info title Sign in to your account. Form asks email/phone/skype and password twice. Page type? Looks like generic login maybe phishing impersonating Microsoft. Site helpnets.info not bank/shop etc. Asks password. Reasonable? A login page asking email and password fits a login page, but page type options include other/unknown. Is password reasonable for account sign-in? Generally yes if it's the site's own login. But site domain helpnets.info suspicious, title generic, fields reference Skype/Microsoft-like. Need judge whether data requested fits kind of page. Page type likely other or unknown. It asks password, which fits sign-in. However weird multiple password fields and domain. The task is about mismatch between page type and data. A sign-in page asking password is reasonable. Could be social? Email phone Skype suggests Microsoft account login. But site is helpnets.info, not microsoft. Could be credential phishing. We should perhaps classify page_type other, asks password, reasonable false? Need think.\n\nRules fired: asks_password. The page type \"Sign in to your account\" is generic login, page type other. Asking password on a login page is normally reasonable. But the site is helpnets.info, not the brand it imitates. The fields say \"Enter your email, phone, or Skype.\" This is Microsoft login wording. helpnets.info isn't Microsoft. If it's a login page of helpnets.info, asking email + password is normal. But title \"Sign in to your account\" and Skype field indicates it impersonates Microsoft. The classification should capture phishing: page type other, asks password/personal_data? Is it \"reasonable\": false because a helpnets.info page asking for Microsoft/Skype credentials? The instruction: \"does the data a web page asks for fit the kind of page it is?\" Examples: shop asking delivery address reasonable. \"check your prize\" asking PIN not. \"A real bank page never asks OTP on a page reached from prize/message.\" Here it's a sign-in page, asking password. Sign-in pages ask passwords. From the data alone, page type maybe unknown, but password fits account sign-in. The site helpnets.info could be any service. The \"Skype\" label strongly suggests Microsoft credential harvesting, but not explicitly a prize page.\n\nCould page_type be \"other\" and reasonable true with low confidence? But asks password is aligned with sign-in. Yet if domain doesn't match Microsoft, is that a mismatch? The judge only sees site, title, fields, rules. Should infer phishing due to brand mismatch. helpnets.info is not Microsoft, and asks \"Enter your email, phone, or Skype.\" This is a classic credential phishing page. The requested data (password) fits a fake login page but not a legitimate page type? The instruction says judge if data fits kind of page. A fake login page kind is \"prize\"? no. It's \"other\". Hmm.\n\nNeed output one JSON. Let's decide.\n\nPotential answer:\n{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"Sign in to your account\"}\n\nBut evidence should be short phrase copied exactly from title or null. Title exact \"Sign in to your account\". Although this phrase is generic, not showing mismatch. Maybe evidence null. But evidence key can be title.\n\nIs asks personal_data? Email/phone are personal_data. Password. Maybe email not separate. So asks [\"password\",\"personal_data\"].\n\nReasonable false? Need justify: helpnets.info is not a known identity provider; page mimics Microsoft/Skype login. But if helpnets.info is itself a service, asking email/password is reasonable. Yet the Skype field is incongruous with helpnets.info. The classification likely wants phishing detection. The rules include asks_password already fired. They want judge. A password field on a sign-in page is usually reasonable, but site domain unknown. However \"helpnets.info\" sounds help/support, not identity provider. Asking Microsoft/Skype credentials on helpnets.info is not reasonable. I'll set false, confidence 0.75.\n\nCould page_type be \"social\"? Skype is communication/social, but site not Skype. Better \"other\" or \"unknown\". Page type \"other\" because generic sign-in.\n\nNeed exact JSON only. Use asks array with password and personal_data. Confidence maybe 0.8. Evidence \"Sign in to your account\". Ensure no markdown.\n\nLet's craft.",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981873,
+   "id": "chatcmpl-6adebb714c0aa",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 1996,
+    "completion_tokens_details": {
+     "reasoning_tokens": 937
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3743
+   },
+   "provider": "min*********"
+  }
+ },
+ {
+  "kind": "non-stream",
+  "name": "default#2",
+  "extra": {},
+  "http": 200,
+  "headers_s": 6.02,
+  "total_s": 6.02,
+  "finish": "stop",
+  "prompt": 1747,
+  "completion": 1587,
+  "reasoning": 528,
+  "content_len": 130,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.62,\"evidence\":\"Sign in to your account\"}",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.62,\"evidence\":\"Sign in to your account\"}",
+      "reasoning_content": "We need answer only JSON. Need classify. Site helpnets.info, title Sign in to your account, fields email/phone/skype and password, password. Rules asks_password. Page type? Looks like login page, other/unknown? It asks password. Is reasonable? A generic login page asking email and password is reasonable for account sign-in, but domain helpnets.info not known. The task: does data fit kind of page. Page type could be other (login page). Password fits sign-in. Need consider phishing? Site suspicious but no explicit bank/shop. \"Enter your email, phone, or Skype.\" Microsoft-like login. Domain helpnets.info not Microsoft. Page type maybe other. asks: password, maybe personal_data? Email/phone are identifiers but field type email, label email phone Skype. Asks password only? asks array any of pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. The form requests email/phone and password. Email/phone could be personal_data. But labels \"Enter your email, phone, or Skype\" is login identifier. I'd include password, personal_data? Hmm. Reasonable true for login. However impersonation of Microsoft login on unrelated domain could be phishing. The judge only asks whether data fits page type. Page type \"other\" login. Password is expected. Confidence maybe 0.6. Evidence exact phrase from title \"Sign in to your account\". Need output JSON only.\n\nBut there is subtlety: Site helpnets.info, title generic, fields email/phone/skype and password. If page type is \"other\", reasonable true. If page_type \"social\"? No. \"unknown\"? Maybe. It asks password which is reasonable for sign-in. But rule asks_password already fired. They want maybe detect phishing because helpnets.info mimics Microsoft account. Yet instruction: judge ONE thing: does data a web page asks for fit the kind of page it is. A login page asking password is fitting. So reasonable true. But page_type \"other\". asks [\"password\",\"personal_data\"]? Let's think: \"personal_data\" as category includes email/phone? The data asks for email, phone, or Skype; that's personal data but standard login. asks should list what form requests. I'd include personal_data maybe. But if asks includes personal_data, still reasonable. Could include other for email? They have \"other\" too. Simpler: [\"password\",\"personal_data\"]. Evidence \"Sign in to your account\".\n\nNeed ensure one JSON object and nothing else.",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981881,
+   "id": "chatcmpl-6adebb794bf78",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 1587,
+    "completion_tokens_details": {
+     "reasoning_tokens": 528
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3334
+   },
+   "provider": "goo************"
+  }
+ },
+ {
+  "kind": "non-stream",
+  "name": "default#3",
+  "extra": {},
+  "http": 200,
+  "headers_s": 3.86,
+  "total_s": 3.86,
+  "finish": "stop",
+  "prompt": 1747,
+  "completion": 1391,
+  "reasoning": 335,
+  "content_len": 113,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+      "reasoning_content": "We need answer JSON only. Need judge. Site helpnets.info title Sign in to your account, asks email phone skype, password. This looks like fake Microsoft sign-in page? Page type maybe other or social? It asks password for account sign-in. Reasonableness: A sign-in page asking for email and password is reasonable for an account login page, but site helpnets.info not Microsoft. The classification is about data fits page type. Page type unknown/other? It's a login page. Password fits sign-in. But domain suspicious. Rules already fired asks_password. Need decide reasonable. A login page asking for password is reasonable generally. But if page type is \"other\" maybe password login is reasonable for an account page. Could be phishing but the data requested (password) fits a sign-in page. However instruction says a real bank page never asks OTP on prize page; not relevant. \"does data fit kind of page it is?\" Sign in page asking password fits. So reasonable true. page_type other? Could be social? Title generic. Fields mention Skype, Microsoft style. Domain helpnets.info. Could be \"other\". asks [\"password\"] maybe also personal_data? Email not requested? Fields labels are email/phone/Skype and password. asks: password. Maybe personal_data? Email is personal data, but asks categories include personal_data; but standard sign-in email/password. I'd include password only, maybe personal_data. Need confidence. Evidence exact phrase from title: \"Sign in to your account\". Confidence maybe 0.6 due suspicious domain but data fits sign-in. Need answer one JSON object. Ensure no extra.",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981887,
+   "id": "chatcmpl-6adebb7f4c9c8",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 1391,
+    "completion_tokens_details": {
+     "reasoning_tokens": 335
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3138
+   },
+   "provider": "ant************"
+  }
+ },
+ {
+  "kind": "stream",
+  "name": "stream-default#1",
+  "extra": {},
+  "http": 200,
+  "headers_s": 0.62,
+  "first_chunk_s": 0.62,
+  "first_reasoning_s": 0.62,
+  "last_reasoning_s": 3.4,
+  "first_content_s": 3.43,
+  "last_chunk_s": 3.6,
+  "chunks": 151,
+  "reasoning_chunks": 142,
+  "content_chunks": 7,
+  "reasoning_chars": 1670,
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+  "usage": {
+   "completion_tokens": 908,
+   "completion_tokens_details": {
+    "reasoning_tokens": 361
+   },
+   "prompt_tokens": 1235,
+   "prompt_tokens_details": {
+    "cached_tokens": 131
+   },
+   "total_tokens": 2143
+  }
+ },
+ {
+  "kind": "stream",
+  "name": "stream-default#2",
+  "extra": {},
+  "http": 200,
+  "headers_s": 0.52,
+  "first_chunk_s": 0.87,
+  "first_reasoning_s": 0.87,
+  "last_reasoning_s": 3.99,
+  "first_content_s": 3.99,
+  "last_chunk_s": 4.19,
+  "chunks": 159,
+  "reasoning_chunks": 150,
+  "content_chunks": 7,
+  "reasoning_chars": 1884,
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.8,\"evidence\":\"Sign in to your account\"}",
+  "usage": {
+   "completion_tokens": 979,
+   "completion_tokens_details": {
+    "reasoning_tokens": 432
+   },
+   "prompt_tokens": 1235,
+   "prompt_tokens_details": {
+    "cached_tokens": 131
+   },
+   "total_tokens": 2214
+  }
+ },
+ {
+  "kind": "stream",
+  "name": "stream-default#3",
+  "extra": {},
+  "http": 200,
+  "headers_s": 0.58,
+  "first_chunk_s": 1.64,
+  "first_reasoning_s": 1.64,
+  "last_reasoning_s": 3.72,
+  "first_content_s": 3.74,
+  "last_chunk_s": 3.89,
+  "chunks": 155,
+  "reasoning_chunks": 146,
+  "content_chunks": 7,
+  "reasoning_chars": 1653,
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.7,\"evidence\":\"Sign in to your account\"}",
+  "usage": {
+   "completion_tokens": 918,
+   "completion_tokens_details": {
+    "reasoning_tokens": 371
+   },
+   "prompt_tokens": 1235,
+   "prompt_tokens_details": {
+    "cached_tokens": 131
+   },
+   "total_tokens": 2153
+  }
+ },
+ {
+  "kind": "non-stream",
+  "name": "reasoning:{enabled:false}",
+  "extra": {
+   "reasoning": {
+    "enabled": false
+   }
+  },
+  "http": 200,
+  "headers_s": 5.21,
+  "total_s": 5.21,
+  "finish": "stop",
+  "prompt": 1747,
+  "completion": 1553,
+  "reasoning": 494,
+  "content_len": 129,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+      "reasoning_content": "We need answer only JSON. Need classify. Site helpnets.info title Sign in to account fields email phone Skype password. Looks Microsoft-like phishing on non-Microsoft domain. Page type unknown or other? Asks password, maybe email personal_data? Fields labels email/phone/Skype and password. Reasonable? A sign-in page asking password is normally reasonable for account login, but domain helpnets.info not matching Microsoft. Judging whether data requested fits kind of page. It's a sign-in page, password reasonable. However title generic, no bank etc. Site helpnets.info suspicious. But task: does data a web page asks for fit kind of page it is. Sign in page asking password fits. But perhaps page type \"other\" and reasonable true? They give rules asks_password. Need page_type one. Could be \"other\" since login page not in categories. asks password, maybe personal_data. reasonable true? Maybe false because site mimics account sign-in but domain unrelated? The examples focus on prize/bank OTP. Here a login page asking password is standard. Yet phishing login page. But classification only fit kind of page, not legitimacy. It asks password on a sign-in page = reasonable. Confidence maybe 0.6. evidence \"Sign in to your account\". Need exactly keys. asks array can include password. Maybe personal_data? \"Enter your email, phone, or Skype\" requests personal data but just identifier. asks: [\"password\",\"personal_data\"]? They want what form requests from list. Email is personal_data. Could include other? Keep password, personal_data. Reasonable true. But site helpnets.info suspicious due to title generic. If page type unknown? Hmm.\n\nPage type choices: shop, bank, ewallet, government, courier, social, prize, news, other, unknown. A generic login page could be \"other\". If unknown, reasonable maybe true low confidence. I think \"other\" and reasonable true. But maybe social? Email/Skype login, no. \"other\".\n\nNeed answer ONE JSON only. Ensure valid. Confidence 0.6 maybe. Evidence exact title \"Sign in to your account\".\n\nBut let's examine potential phishing: helpnets.info is not microsoft.com; asks for password. The prompt says \"does the data a web page asks for fit the kind of page it is?\" It doesn't ask assess domain legitimacy. Thus true.\n\nFinal.",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981903,
+   "id": "chatcmpl-6adebb8f5c331",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 1553,
+    "completion_tokens_details": {
+     "reasoning_tokens": 494
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3300
+   },
+   "provider": "ali********"
+  }
+ },
+ {
+  "kind": "non-stream",
+  "name": "reasoning_effort:low",
+  "extra": {
+   "reasoning_effort": "low"
+  },
+  "http": 200,
+  "headers_s": 9.97,
+  "total_s": 9.97,
+  "finish": "length",
+  "prompt": 1747,
+  "completion": 2048,
+  "reasoning": 1024,
+  "content_len": 0,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "length",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "",
+      "reasoning_content": "We need answer one JSON. Need classify page. Site helpnets.info, title Sign in to your account, fields email/phone/Skype, password twice. Page type? likely other/unknown phishing? It's a login page asking password. Is that reasonable for a login page? The task: does data requested fit kind of page. Title generic sign in. Site helpnets.info not known. Fields ask email and password, which fits a login page. But suspicious domain? Need judge page type. Could be \"other\" and reasonable true? Rules already fired asks_password. We need output. Page type maybe \"other\" because generic login. Asks password. Reasonable true? The instructions: a real bank page never asks OTP on prize page. Here login page asking password is normal. But site helpnets.info perhaps not Microsoft. Fields mention Skype, mimicking Microsoft login. A login page asking email/password is reasonable for login page regardless domain? But page_type options no \"login\". \"other\" likely. asks [\"password\"], maybe personal_data for email? The form asks email, phone, Skype and password. \"asks\" array includes password. Email could be personal_data? In phishing detection, asking email and password on an unknown site could be credential harvesting. However reasonableness: does requested data fit page type? If page type \"other\" generic login, password fits. But the page type can be \"unknown\"? Site helpnets.info, title sign in, looks like Microsoft login clone. It asks for \"Enter your email, phone, or Skype.\" and passwd. Could be phishing. The one thing judge: does data fit kind of page. It is a login page, asking credentials is expected. But the site is not Microsoft; no indication of bank/prize. For \"other\", password reasonable? Hmm.\n\nWe need likely expected answer: page_type other, asks password, reasonable true? Confidence maybe 0.5. But maybe should flag false because helpnets.info is not a legitimate Microsoft/Skype login domain; asking for Microsoft credentials on unrelated domain is suspicious. The task emphasizes page type and field fit, not domain legitimacy. \"a shop asking for delivery address is reasonable. A 'check your prize' page asking for PIN or OTP is not. A real bank page never asks for OTP on a page reached from a prize or a message.\" Here it's a sign-in page; login pages ask passwords. So reasonable true. But site helpnets.info maybe \"other\". Asks password. Evidence \"Sign in to your account\". Confidence maybe 0.6. Need strictly JSON only. Include asks array. Could include personal_data? The email field asks email, phone. In taxonomy personal_data maybe broad. But \"asks\" should be what form requests. Email is personal_data? They list personal_data. I think asks [\"password\"] because both password fields; email is not necessarily sensitive? But email is personal data. Yet asks_password rule fired. The fields: email, phone, Skype; password. Could include personal_data and password. Need decide.\n\nThe prompt asks \"asks\": array with any of pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. \"personal_data\" broad. A login form asking email/phone is personal_data. But the key is password. I'd include [\"password\",\"personal_data\"]. Reasonable true? Hmm.\n\nBut maybe the intended classification for phishing detection should say page_type \"other\", asks [\"password\"], reasonable false because a site \"helpnets.info\" asking for Microsoft/Skype credentials is not a legitimate account page? Wait \"page type\" not site identity. If page_type other, password may not fit? The \"other\" page can be login. But if we cannot tell it's a legitimate login, low confidence.\n\nLet's parse wording: \"You judge ONE thing: does the data a web page asks for fit the kind of page it is?\" The data: site, title, fields, rules. \"Examples: a shop asking for a delivery address is reasonable. A 'check your prize' page asking for a PIN or OTP is not. A real bank page never asks for an OTP on a page reached from a prize or a message.\" So for a sign-in page, asking password is reasonable. There is no rule that domain must match. However \"helpnets.info\" title \"Sign in to your account\" with Skype mention is clearly credential phishing. But our one thing is fit between requested data and page type. A generic sign-in page requesting password fits. So answer reasonable true. But maybe page_type should be \"unknown\" because cannot classify; if unknown, reasonable true low confidence. They say if not sure answer reasonable true low confidence. So likely page_type \"other\" or \"unknown\", asks password, reasonable true, confidence maybe 0.3. Evidence \"Sign in to your account\".\n\nNeed decide page_type. Site helpnets.info. Title sign in",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981908,
+   "id": "chatcmpl-6adebb944c7fb",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 2048,
+    "completion_tokens_details": {
+     "reasoning_tokens": 1024
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3795
+   },
+   "provider": "ant***********"
+  }
+ },
+ {
+  "kind": "non-stream",
+  "name": "thinking:{type:disabled}",
+  "extra": {
+   "thinking": {
+    "type": "disabled"
+   }
+  },
+  "http": 200,
+  "headers_s": 4.3,
+  "total_s": 4.3,
+  "finish": "stop",
+  "prompt": 1747,
+  "completion": 1338,
+  "reasoning": 279,
+  "content_len": 129,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+      "reasoning_content": "We need answer only JSON. Need classify. Site helpnets.info, title sign in, fields email/phone/skype and password. Looks like credential phishing impersonating Microsoft maybe, but page type? It asks password. Is a login page for other/unknown? Reasonable for account login? We need judge if data fits page type. Page type \"other\" maybe unknown. For a sign-in page asking email and password is reasonable. But site helpnets.info suspicious, not bank etc. The rules says asks_password fired maybe check. We only classify. page_type social? Microsoft account could be social/other. Fields include Skype. Likely \"other\". asks [\"password\",\"personal_data\"]? Email is personal_data. Password. Is reasonable true? Login page asking password is reasonable. But phishing site domain helpnets.info, title generic. The task: does asked data fit kind of page. A sign-in page asking email and password fits login. So reasonable true. Confidence moderate 0.6? Evidence \"Sign in to your account\". page_type other. asks password, personal_data maybe. Need exact keys. Could include \"password\" only? It asks email phone skype and password. \"personal_data\" for email? Usually asks array any of. Password definitely. personal_data maybe yes. id_number no. other? no. reasonable true.\n\nNeed only JSON.",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981919,
+   "id": "chatcmpl-6adebb9f5baee",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 1338,
+    "completion_tokens_details": {
+     "reasoning_tokens": 279
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3085
+   },
+   "provider": "mis************"
+  }
+ },
+ {
+  "kind": "non-stream",
+  "name": "max_tokens:50",
+  "extra": {
+   "max_tokens": 50
+  },
+  "http": 200,
+  "headers_s": 8.36,
+  "total_s": 8.37,
+  "finish": "stop",
+  "prompt": 1747,
+  "completion": 2001,
+  "reasoning": 945,
+  "content_len": 113,
+  "has_reasoning_field": [
+   "reasoning_content"
+  ],
+  "content": "{\"page_type\":\"other\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+  "raw": {
+   "choices": [
+    {
+     "finish_reason": "stop",
+     "index": 0,
+     "logprobs": null,
+     "message": {
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"Sign in to your account\"}",
+      "reasoning_content": "We need answer JSON only. Need judge page type. Domain helpnets.info, title \"Sign in to your account\", fields email phone Skype and password. Looks like credential phishing impersonating Microsoft. Page type? Could be other or unknown. It asks password. Is it reasonable? A sign-in page asking password is generally reasonable, but domain helpnets.info not known service, title generic, asks email/phone/Skype then password. Rules asks_password fired. The task: judge whether data a web page asks for fits kind of page it is. If site is not recognized, page type unknown/other. Asking password on a generic login page is arguably reasonable if it's a login. But suspicious impersonation? We need classify. Site helpnets.info likely phishing. Fields include \"Enter your email, phone, or Skype.\" Microsoft login, password. Page type could be \"other\" (account login). asks [\"password\"]. reasonable? If page claims to be sign-in, asking password fits a sign-in page. But if not a known provider, maybe false? The classification is about mismatch. A real Microsoft login would be login.microsoftonline.com, not helpnets.info. But the page type is maybe \"other\". The ask password fits login but site impersonates. Hmm.\n\nThe instructions examples: shop asking delivery address reasonable; prize page asking PIN/OTP not. This is a generic login page asking password. Could be reasonable. But phishing pages often harvest passwords. Title \"Sign in to your account\" and fields email/phone/Skype + password strongly mimic Microsoft. Domain helpnets.info not Microsoft. The question: \"does the data a web page asks for fit the kind of page it is?\" It is a login page; password fits. But \"kind of page\" might be \"other\". If unknown, be reasonable true low confidence per instruction if unsure. However rules \"asks_password\" already fired suggests this is a rule-based signal. We need maybe page_type \"other\", asks [\"password\"], reasonable true? Confidence 0.6? Evidence \"Sign in to your account\". Hmm.\n\nBut there is also \"Enter your email, phone, or Skype.\" This is Microsoft-specific. Asking password for email/phone/Skype is normal for Microsoft account login. But domain not Microsoft. The page type could be \"other\" because it's an account sign-in. Reasonable true? The site helpnets.info could be a legitimate service using email/phone/Skype? Very unlikely. Yet our task isn't phishing detection per se, but mismatch. If a login page asks password, it fits. The title explicitly sign in. So reasonable true with moderate confidence. However the domain \"helpnets.info\" and title \"Sign in to your account\" is a generic credential harvesting page. The page type maybe \"other\" and asks password; reasonable? In login forms, password is expected. I'd answer reasonable true. But perhaps the judge expects false because a page from helpnets.info asking Microsoft credentials is credential phishing. Let's parse: \"You judge ONE thing: does the data a web page asks for fit the kind of page it is?\" Not \"is the site trustworthy\". Examples: \"A real bank page never asks for an OTP on a page reached from a prize or a message.\" The page type can be bank, prize, etc. Here title says sign in; asks password. A sign-in page asks password. So fits. Site unknown. If page_type \"other\", reasonable true.\n\nNeed asks array includes \"password\". Could include personal_data? Email/phone is personal data, but fields ask email phone Skype and password. \"asks\" categories: pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. Email/phone could be personal_data. But the primary ask is password. Maybe asks [\"password\",\"personal_data\"]? The form asks email/phone/Skype identifier and password. Email/phone is personal_data. But short labels \"Enter your email, phone, or Skype.\" That's an identifier. I'd include password and personal_data? The examples likely expects asks password. Including personal_data could be fine. But \"personal_data\" broad. The ask is credentials, not sensitive personal data beyond account identifier. I think asks [\"password\"] is sufficient. The rules already asks_password.\n\nPage_type: \"other\" or \"unknown\". Since it's a sign-in page but not fitting categories, \"other\". Confidence 0.7? Evidence exact phrase \"Sign in to your account\".\n\nNeed one JSON object only. Final. Ensure no markdown.",
+      "role": "assistant"
+     }
+    }
+   ],
+   "created": 1792981922,
+   "id": "chatcmpl-6adebba24c839",
+   "model": "deepseek-v4-flash",
+   "object": "chat.completion",
+   "usage": {
+    "completion_tokens": 2001,
+    "completion_tokens_details": {
+     "reasoning_tokens": 945
+    },
+    "prompt_tokens": 1747,
+    "prompt_tokens_details": {
+     "cached_tokens": 33
+    },
+    "total_tokens": 3748
+   },
+   "provider": "goo*********"
+  }
+ }
+]

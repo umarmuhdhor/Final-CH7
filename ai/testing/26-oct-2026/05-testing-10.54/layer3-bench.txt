@@ -1,0 +1,2 @@
+median 43.3 us/call, best 42.8, worst 45.6 (5 x 20000 calls) -> signals: asks_password:15
+median 40.0 us/call, best 39.8, worst 43.7 (5 x 20000 calls) -> signals: brand_logo_offsite:25,asks_password:15

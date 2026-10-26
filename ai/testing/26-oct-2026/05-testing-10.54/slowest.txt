@@ -1,0 +1,12 @@
+2253.1 ms    prebuilt: a phone holding the full list still takes the next build's new domains
+1508.4 ms    size cap: at most MAX_DOMAINS, newest kept
+1112.2 ms    prebuilt: at most MAX_DOMAINS, newest kept
+301.8 ms    RDAP_KV hanging read + hanging RDAP: the whole lookup still ends at the RDAP deadline
+212.8 ms    run.mjs refuses an option that is missing its value
+209.5 ms    match: text 20,000 chars of repeated near-misses stays fast
+206.8 ms    RDAP_KV hanging read: falls back to RDAP inside the same 1.5 s lookup budget
+160.5 ms    perf: worst NFKC blow-up (18x) stays under 100 ms
+156.0 ms    urgent_language: huge hostile text answers fast and never throws
+125.2 ms    p. largest allowed input answers in < 100 ms CPU (no ReDoS)
+122.1 ms    analyze: rules run in parallel with RDAP (total time is about one RDAP delay, not the sum)
+119.5 ms    official domains and their subdomains: every sensitive form stays below 30

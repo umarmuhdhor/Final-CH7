@@ -1,0 +1,4 @@
+layer 3 signals: [{"id":"brand_logo_offsite","w":25,"evidence":"(none)","label":"Microsoft sign-in form copied on an unofficial site"},{"id":"asks_password","w":15,"evidence":"passwd","label":"Form asks for a password on an unofficial site"}]
+layer 3 score: 40 (warning threshold 30)
+passes LLM gate: true
+LLM input: {"site":"helpnets.info","title":"Sign in to your account","fields":[{"type":"email","label":"Enter your email, phone, or Skype."},{"type":"password","label":"passwd"},{"type":"password","label":"Enter the password for"}],"brands":["Microsoft"],"rules":["brand_logo_offsite","asks_password"]}
