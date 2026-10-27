@@ -144,7 +144,9 @@
 
     const SHIELD = '<svg class="shield" viewBox="0 0 16 18" aria-hidden="true"><path d="M8 0 0 3v6c0 4.6 3.4 8.2 8 9 4.6-.8 8-4.4 8-9V3L8 0z"/></svg>';
 
+    const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
     let host = null;
+    let release = () => {}; // stops guarding host
     let refs = null;
     let shown = 0; // the number on screen, counts toward the real score
     let tween = null;
@@ -168,7 +170,7 @@
         .catch(() => {});
 
     function el(tag, className, text) {
-        const node = document.createElement(tag);
+        const node = dom.create(document, tag);
         if (className) node.className = className;
         if (text != null) node.textContent = text;
         return node;
@@ -178,7 +180,7 @@
         const probe = refs?.probe;
         const style = probe ? getComputedStyle(probe) : null;
         return {
-            width: document.documentElement.clientWidth || innerWidth,
+            width: dom.root(document).clientWidth || innerWidth,
             height: innerHeight,
             top: parseFloat(style?.paddingTop) || 0,
             bottom: parseFloat(style?.paddingBottom) || 0,
@@ -187,7 +189,7 @@
 
     function mount() {
         if (host?.isConnected) return;
-        host = document.createElement("shoo-live-score");
+        host = dom.create(document, "shoo-live-score");
         const root = host.attachShadow({ mode: "closed" });
         const style = el("style");
         style.textContent = CSS;
@@ -226,7 +228,7 @@
         root.append(style, probe, live, bubble, card);
 
         refs = { bubble, score: bubble.querySelector(".score"), card, chip, big, list, note, detail, probe, live };
-        document.documentElement.appendChild(host);
+        release = dom.guard(host, dom.root(document)); // appends it, and puts it back if the page hides it
         shown = 0;
         jumpTo(place(pos, area()));
         drag(bubble);
@@ -300,24 +302,25 @@
         refs.bubble.setAttribute("aria-expanded", "true");
         fillCard();
         positionCard();
-        document.addEventListener("pointerdown", outside, true);
-        document.addEventListener("keydown", escape, true);
+        dom.on(document, "pointerdown", outside, true);
+        dom.on(document, "keydown", escape, true);
     }
 
     function closeCard() {
         if (!refs || refs.card.hidden) return;
         refs.card.hidden = true;
         refs.bubble.setAttribute("aria-expanded", "false");
-        document.removeEventListener("pointerdown", outside, true);
-        document.removeEventListener("keydown", escape, true);
+        dom.off(document, "pointerdown", outside, true);
+        dom.off(document, "keydown", escape, true);
     }
 
+    // isTrusted: only the user's own taps and keys close the card, never events the page dispatches.
     function outside(e) {
-        if (!e.composedPath().includes(host)) closeCard();
+        if (e.isTrusted && !e.composedPath().includes(host)) closeCard();
     }
 
     function escape(e) {
-        if (e.key === "Escape") closeCard();
+        if (e.isTrusted && e.key === "Escape") closeCard();
     }
 
     function fillCard() {
@@ -395,6 +398,7 @@
         if (!refs) return;
         closeCard();
         const gone = host;
+        release();
         refs.bubble.classList.add("out");
         host = null;
         refs = null;
@@ -406,14 +410,6 @@
         moveTo(place(pos, area()));
         if (!refs.card.hidden) positionCard();
     });
-
-    // Some pages rebuild <html>'s children (hydration, document.write): put the bubble back.
-    new MutationObserver(() => {
-        if (refs && last && !host.isConnected) {
-            refs = null;
-            show(last.state, last.view);
-        }
-    }).observe(document.documentElement, { childList: true });
 
     let memo = null;
     globalThis.ShooPipeline.subscribe((state) => {

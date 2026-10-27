@@ -156,7 +156,8 @@
 
     /**
      * Blurs every text-like field (iframes too), hides unreadable iframes and our own popup, and shows
-     * the paint marker in the same change; returns an undo.
+     * the paint marker in the same change; returns an undo. The popup hides its own card (popup.js
+     * capture): its host is guarded, so a style set on it from here would be put back at once.
      */
     function prepareForScreenshot() {
         const touched = [];
@@ -165,15 +166,17 @@
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("filter", "blur(8px)", "important");
         }
-        for (const el of [...hide, ...dom.all(document, "shoo-warning")]) {
+        for (const el of hide) {
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("visibility", "hidden", "important");
         }
+        globalThis.ShooPopup?.capture?.(true);
         const marker = dom.create(document, "shoo-capture-marker");
         marker.setAttribute("style", MARKER_STYLE);
         dom.root(document).append(marker);
         return () => {
             marker.remove();
+            globalThis.ShooPopup?.capture?.(false);
             for (const [el, style] of touched) {
                 if (style == null) el.removeAttribute("style");
                 else el.setAttribute("style", style);

@@ -112,6 +112,8 @@
 
     const t = (key) => browser.i18n.getMessage(key) || key;
     const lang = (browser.i18n.getUILanguage?.() || "en").toLowerCase().startsWith("id") ? "id" : "en";
+    const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
+    const make = (tag, props = {}) => Object.assign(dom.create(document, tag), props);
     const HIGHLIGHT = "shoo-suspicious";
     const ACTIVE = "shoo-suspicious-active"; // the phrase whose reason is showing
     const REASON_MS = 6000;
@@ -122,16 +124,16 @@
     function highlightText(phrases) {
         if (!globalThis.CSS?.highlights || typeof Highlight === "undefined") return; // older iOS: skip, fields still struck
         if (!pageStyle) {
-            pageStyle = document.createElement("style");
+            pageStyle = dom.create(document, "style");
             pageStyle.textContent = `::highlight(${HIGHLIGHT}) { background-color: rgba(255, 214, 10, .55);
                 text-decoration: underline 3px rgba(229, 72, 77, .9); text-underline-offset: 3px; }
                 ::highlight(${ACTIVE}) { background-color: rgba(255, 176, 0, .85); }`;
-            document.documentElement.appendChild(pageStyle);
+            dom.root(document).appendChild(pageStyle);
         }
         const ranges = [];
         marked = [];
         const needles = phrases.map((p) => p.toLowerCase());
-        const walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT, {
+        const walker = dom.walker(document, dom.body(document) || dom.root(document), NodeFilter.SHOW_TEXT, {
             acceptNode: (node) =>
                 node.parentElement?.closest("script, style, noscript, textarea, input, select, shoo-warning, shoo-marks")
                     ? NodeFilter.FILTER_REJECT
@@ -192,6 +194,7 @@
     `;
 
     let host = null;
+    let release = () => {}; // stops guarding host
     let layer = null;
     let struck = []; // [{ input, box, label }]
     let marked = []; // highlighted text: [{ range, phrase }]
@@ -211,14 +214,12 @@
 
     function mountLayer() {
         if (host?.isConnected) return;
-        host = document.createElement("shoo-marks");
+        host = dom.create(document, "shoo-marks");
         const root = host.attachShadow({ mode: "closed" });
-        const style = document.createElement("style");
-        style.textContent = CSS_TEXT;
-        layer = document.createElement("div");
-        layer.className = "layer";
+        const style = make("style", { textContent: CSS_TEXT });
+        layer = make("div", { className: "layer" });
         root.append(style, layer);
-        document.documentElement.appendChild(host);
+        release = dom.guard(host, dom.root(document)); // appends it, and puts it back if the page hides it
     }
 
     /** Draws the overlay layer: struck fields (≥50%) and, for Guardian, a Hide button for any mark. */
@@ -229,7 +230,7 @@
         struck = [];
         if (withStrike) strikeFields();
         if (canHide) {
-            const hide = Object.assign(document.createElement("button"), { className: "hide", type: "button", textContent: t("mark_hide") });
+            const hide = make("button", { className: "hide", type: "button", textContent: t("mark_hide") });
             hide.addEventListener("click", () => {
                 dismissedScanId = currentScanId;
                 clearAll();
@@ -240,12 +241,12 @@
     }
 
     function strikeFields() {
-        for (const input of document.querySelectorAll("input, textarea")) {
+        for (const input of dom.all(document, "input, textarea")) {
             if (["hidden", "checkbox", "radio", "submit", "button", "image", "file"].includes(input.type)) continue;
             const kind = classifyField({ type: input.type, hints: fieldHints(input) });
             if (!kind) continue;
-            const box = Object.assign(document.createElement("div"), { className: "strike" });
-            const label = Object.assign(document.createElement("button"), { className: "label", type: "button", textContent: t(`mark_dont_${kind}`) });
+            const box = make("div", { className: "strike" });
+            const label = make("button", { className: "label", type: "button", textContent: t(`mark_dont_${kind}`) });
             label.setAttribute("aria-description", t("mark_why_hint"));
             // EX-08: the label explains itself; the struck box still ignores touches so the field stays typeable.
             // Bubble goes above the label when it fits, so the field itself stays in view.
@@ -289,7 +290,7 @@
     function showReason(text, anchor, { owner, prefer = "below", range = null }) {
         hideReason();
         if (!text || !layer) return;
-        reason = Object.assign(document.createElement("div"), { className: "reason", textContent: text });
+        reason = make("div", { className: "reason", textContent: text });
         reason.setAttribute("role", "status");
         reason.addEventListener("click", hideReason);
         layer.append(reason);
@@ -317,11 +318,14 @@
     // Highlights have no element to listen on, so taps are hit-tested against the ranges. Pointer events, not
     // click: iOS Safari doesn't send `click` to the document for taps on plain text. Passive and never
     // cancelled: a highlighted link still opens. Taps on our own layer (labels, bubble, Hide) are theirs.
+    // isTrusted: events the page dispatches itself can't open or close a reason.
     let down = null;
-    document.addEventListener("pointerdown", (event) => (down = { x: event.clientX, y: event.clientY }), { capture: true, passive: true });
-    document.addEventListener(
+    dom.on(document, "pointerdown", (event) => event.isTrusted && (down = { x: event.clientX, y: event.clientY }), { capture: true, passive: true });
+    dom.on(
+        document,
         "pointerup",
         (event) => {
+            if (!event.isTrusted) return;
             const { clientX: x, clientY: y } = event;
             const tap = down && Math.hypot(x - down.x, y - down.y) < 10; // a drag or a scroll is not a tap
             down = null;
@@ -334,11 +338,12 @@
         },
         { capture: true, passive: true },
     );
-    addEventListener("scroll", () => reason && hideReason(), { passive: true, capture: true });
+    addEventListener("scroll", (event) => event.isTrusted && reason && hideReason(), { passive: true, capture: true });
 
     function clearAll() {
         hideReason();
         clearHighlight();
+        release();
         host?.remove();
         host = layer = null;
         struck = [];
