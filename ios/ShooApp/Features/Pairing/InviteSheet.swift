@@ -1,8 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// GD-04 in onboarding (Figma "Kirim Undangan"): QR, the 4-digit code, "Refresh code", and a row to
-/// copy or send the invite. Same code rules as `FamilyCodeView` (new code every 60 s, copy expires).
+/// GD-04 in onboarding (Figma "Kirim Undangan"): QR, the 6-digit code, "Refresh code", and a row to
+/// copy or send the invite. Same code rules as `FamilyCodeView` (valid 30 min, copy expires with it).
 struct InviteSheet: View {
     /// The check mark: the Guardian is done inviting.
     let onDone: () -> Void
@@ -95,7 +95,7 @@ struct InviteSheet: View {
                         .accessibilityIdentifier("invite.qr")
                 }
             }
-            Text(verbatim: code.code.map(String.init).joined(separator: " "))
+            Text(verbatim: FamilyCodeModel.display(code.code))
                 .onboardingFont(20, weight: .bold, relativeTo: .title3)
                 .tracking(-0.4)
                 .monospacedDigit()
@@ -106,13 +106,14 @@ struct InviteSheet: View {
                 .accessibilityIdentifier("invite.code")
             VStack(spacing: 2) {
                 Button {
-                    Task { await model.refreshCode() }
+                    // A new code: the old one stops working, also in links already sent.
+                    Task { await model.refreshCode(replace: true) }
                 } label: {
                     Label("Refresh code", systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(OnboardingLinkButtonStyle(color: Self.refreshBlue, weight: .semibold))
                 .accessibilityIdentifier("invite.refresh")
-                Text("New code in \(model.secondsLeft) s")
+                Text("Valid for \(model.timeLeft)")
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(OnboardingTheme.secondaryInk)

@@ -73,12 +73,12 @@
         }
       }
     },
-    "4-digit code" : {
+    "6-digit code" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kode 4 angka"
+            "value" : "Kode 6 angka"
           }
         }
       }
@@ -147,12 +147,12 @@
         }
       }
     },
-    "Ask your family member to scan this code, or enter the 4 digits in Shoo." : {
+    "Ask your family member to scan this code, or enter the 6 digits in Shoo." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Minta anggota keluarga memindai kode ini, atau memasukkan 4 angkanya di Shoo."
+            "value" : "Minta anggota keluarga memindai kode ini, atau memasukkan 6 angkanya di Shoo."
           }
         }
       }
@@ -1112,17 +1112,6 @@
         }
       }
     },
-    "New code in %lld s" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kode baru dalam %lld dtk"
-          }
-        }
-      }
-    },
     "Next" : {
       "localizations" : {
         "id" : {
@@ -2008,13 +1997,12 @@
         }
       }
     },
-    "That code doesn't match a family. Check the 4 digits and try again." : {
-      "extractionState" : "stale",
+    "That code doesn't match a family. Check the 6 digits and try again." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kode itu tidak cocok dengan keluarga mana pun. Periksa 4 angkanya lalu coba lagi."
+            "value" : "Kode itu tidak cocok dengan keluarga mana pun. Periksa 6 angkanya lalu coba lagi."
           }
         }
       }
@@ -2179,6 +2167,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pakai paling banyak 20 karakter."
+          }
+        }
+      }
+    },
+    "Valid for %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berlaku %@ lagi"
           }
         }
       }

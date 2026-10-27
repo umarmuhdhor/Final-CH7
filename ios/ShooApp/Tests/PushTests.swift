@@ -72,7 +72,7 @@ struct PushRoutingTests {
             try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
         }
         func me() async throws -> DeviceProfile { try await base.me() }
-        func createFamilyCode() async throws -> FamilyCode { try await base.createFamilyCode() }
+        func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
         func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
         func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
         func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }

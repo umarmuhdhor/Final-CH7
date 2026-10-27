@@ -54,7 +54,7 @@ struct ApiRepositoryTests {
             case ("GET", "/devices/me"):
                 .json(200, #"{"deviceId":"dev_me","name":"Adhella","avatarId":"avatar_01","mode":"guardian","language":"en","guardian":null}"#)
             case ("POST", "/family/code"):
-                .json(200, #"{"code":"4821","expiresAt":"2026-10-22T03:00:00.123Z","inviteUrl":"https://api.shoo.test/join?code=4821"}"#)
+                .json(200, #"{"code":"482193","expiresAt":"2026-10-22T03:00:00.123Z","inviteUrl":"https://api.shoo.test/j/482193"}"#)
             case ("POST", "/family/join"): .json(200, #"{"guardian":\#(Self.guardianJSON)}"#)
             case ("GET", "/family/members"): HostStubProtocol.Reply(status: 200, body: members)
             case ("GET", "/scans/scan_1"): HostStubProtocol.Reply(status: 200, body: scan)
@@ -69,8 +69,8 @@ struct ApiRepositoryTests {
         let repository = server.repository()
         #expect(try await repository.me().deviceId == "dev_me")
         try await repository.updateMe(DeviceUpdate(language: "id"))
-        #expect(try await repository.createFamilyCode().code == "4821")
-        #expect(try await repository.joinFamily(code: "4821").name == "Adhella")
+        #expect(try await repository.createFamilyCode(refresh: false).code == "482193")
+        #expect(try await repository.joinFamily(code: "482193").name == "Adhella")
         #expect(try await !repository.familyMembers().isEmpty)
         try await repository.removeMember(deviceId: "dev_mom")
         try await repository.leaveGuardian()
@@ -79,8 +79,21 @@ struct ApiRepositoryTests {
         try await repository.deleteMe()
         let verdictBody = try #require(server.requests.first { $0.path == "/verdicts" }?.json)
         #expect(verdictBody["scanId"] as? String == "scan_1" && verdictBody["value"] as? String == "safe")
-        #expect(server.requests.first { $0.path == "/family/join" }?.json?["code"] as? String == "4821")
+        #expect(server.requests.first { $0.path == "/family/join" }?.json?["code"] as? String == "482193")
         #expect(server.requests.allSatisfy { $0.headers["Authorization"] == "Bearer shoo_test_token_123" })
+    }
+
+    /// No body asks for the active code; `{"refresh":true}` only from "Refresh code" (contracts/api.md).
+    @Test func familyCodeSendsRefreshOnlyWhenAsked() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(200, #"{"code":"482193","expiresAt":"2026-10-22T03:00:00Z","inviteUrl":"https://api.shoo.test/j/482193"}"#) }
+        let repository = server.repository()
+        _ = try await repository.createFamilyCode(refresh: false)
+        _ = try await repository.createFamilyCode(refresh: true)
+        let bodies = server.requests.filter { $0.path == "/family/code" }.map(\.json)
+        #expect(bodies.count == 2)
+        #expect(bodies[0] == nil)
+        #expect(bodies[1]?["refresh"] as? Bool == true)
     }
 
     // MARK: Session follows the server
@@ -102,7 +115,7 @@ struct ApiRepositoryTests {
     @Test func joinStoresTheGuardianName() async throws {
         let server = StubServer()
         server.reply { _ in .json(200, #"{"guardian":\#(Self.guardianJSON)}"#) }
-        _ = try await server.repository().joinFamily(code: "4821")
+        _ = try await server.repository().joinFamily(code: "482193")
         #expect(server.session.defaults.string(forKey: AppGroup.Key.guardianName) == "Adhella")
         #expect(server.session.guardian?.avatarId == "avatar_01")
     }

@@ -40,7 +40,7 @@ struct DeviceUpdate: Codable, Hashable, Sendable {
     var extensionLastSeenAt: Date?
 }
 
-/// `POST /family/code` response. Valid for 60 s.
+/// `POST /family/code` response. 6 digits, valid 30 min, `inviteUrl` = `https://<api host>/j/<code>`.
 struct FamilyCode: Codable, Hashable, Sendable {
     var code: String
     var expiresAt: Date

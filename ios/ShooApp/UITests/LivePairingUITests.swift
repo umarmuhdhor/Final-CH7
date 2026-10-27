@@ -95,7 +95,7 @@ final class LivePairingUITests: XCTestCase {
         while Date() < end, read("done") == nil {
             if code.exists {
                 let digits = code.label.filter(\.isNumber)
-                if digits.count == 4, digits != written {
+                if digits.count == 6, digits != written {
                     write("code.txt", digits)
                     written = digits
                 }
@@ -140,7 +140,7 @@ final class LivePairingUITests: XCTestCase {
         XCTAssertTrue(open.waitForExistence(timeout: 60), "Host never opened the link")
         open.tap()
         // T11: the code is filled, nothing joins on its own.
-        let filled = NSPredicate(format: "value MATCHES '[0-9]{4}'")
+        let filled = NSPredicate(format: "value MATCHES '[0-9]{6}'")
         wait(for: [expectation(for: filled, evaluatedWith: linkField)], timeout: 60)
         shot(app, "pair-protected-2-link-filled")
         Thread.sleep(forTimeInterval: 2)
