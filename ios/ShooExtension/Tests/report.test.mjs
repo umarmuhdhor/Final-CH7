@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
-import { cropBox, smallestFitting } from "../Resources/capture.js";
+import { cropBox, findMarker, smallestFitting } from "../Resources/capture.js";
 const { shouldReport, scanBody, shareableUrl, evidenceRect, screenshotTargets } = globalThis.ShooReport;
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
@@ -78,6 +78,38 @@ test("screenshot falls back to lower quality, then to none, to stay ≤ 150 KB",
     assert.equal(await smallestFitting(async () => ({ size: 500_000 })), null);
 });
 
+test("crop starts at the viewport's corner in the image, not at the image's (area under the status bar)", () => {
+    // iPhone 17 Pro, Safari 26: viewport y = 0 is 62 pt (186 px) down the capture
+    const box = cropBox({ x: 4, y: 284, width: 382, height: 252, viewportWidth: 402 }, 1206, 2622, 1280, { x: 0, y: 186 });
+    assert.equal(box.sx, 12);
+    assert.equal(box.sy, 186 + 852);
+});
+
+// Capture stand-in: background colour plus report.js's marker (magenta band over cyan band) at (mx, my).
+const MAGENTA = [255, 0, 255];
+const CYAN = [0, 255, 255];
+const captureWith = ({ mx, my, band, extra = () => null }) => (x, y) => {
+    const own = extra(x, y);
+    if (own) return own;
+    if (mx == null || x < mx || x >= mx + 2 * band || y < my || y >= my + 2 * band) return [245, 246, 250];
+    return y < my + band ? MAGENTA : CYAN;
+};
+
+test("paint marker gives the viewport's corner in the capture", () => {
+    const band = 12; // 4 CSS px at 3x
+    assert.deepEqual(findMarker(captureWith({ mx: 0, my: 186, band }), 1206, 2622, band), { x: 0, y: 186 });
+    assert.deepEqual(findMarker(captureWith({ mx: 177, my: 0, band }), 2622, 1206, band), { x: 177, y: 0 }); // landscape inset
+});
+
+test("no paint marker → null, so the capture is retried or dropped instead of sent unblurred", () => {
+    const band = 12;
+    assert.equal(findMarker(captureWith({ band }), 1206, 2622, band), null);
+    // A page's own magenta (logo, ad) above the marker isn't taken for it
+    const logo = (x, y) => (x >= 40 && x < 400 && y >= 20 && y < 60 ? MAGENTA : null);
+    assert.deepEqual(findMarker(captureWith({ mx: 0, my: 186, band, extra: logo }), 1206, 2622, band), { x: 0, y: 186 });
+    assert.equal(findMarker(captureWith({ mx: 0, my: 186, band }), 1206, 2622, undefined), null); // old message shape
+});
+
 test("crop never reads outside the image", () => {
     const box = cropBox({ x: 300, y: 800, width: 200, height: 200, viewportWidth: 390 }, 390, 844);
     assert.equal(box.sx + box.sw, 390);
@@ -108,6 +140,25 @@ test("screenshot hides iframes it can't look into: cross-origin fields can't be 
     const { blur, hide } = screenshotTargets(page);
     assert.deepEqual(names(blur), ["page.text.0"]);
     assert.deepEqual(hide, [empty, throwing]);
+});
+
+test("screenshot hides an iframe still loading a cross-origin src: its blank document has no fields yet", () => {
+    // Before the src loads, contentDocument is the initial about:blank, which is same-origin with the page
+    const blank = { ...fakeDoc("blank"), URL: "about:blank" };
+    const loading = { contentDocument: blank, getAttribute: (a) => (a === "src" ? "https://pay.example/form" : null), hasAttribute: () => false };
+    const page = fakeDoc("page", { fields: ["text"], frames: [loading] });
+    assert.deepEqual(screenshotTargets(page).hide, [loading]);
+});
+
+test("screenshot still looks into iframes that stay blank (no src, about:, srcdoc)", () => {
+    const blankWith = (name) => ({ ...fakeDoc(name, { fields: ["text"] }), URL: "about:blank" });
+    const frame = (doc, attrs) => ({ contentDocument: doc, getAttribute: (a) => attrs[a] ?? null, hasAttribute: (a) => a in attrs });
+    const page = fakeDoc("page", {
+        frames: [frame(blankWith("nosrc"), {}), frame(blankWith("about"), { src: "about:blank" }), frame(blankWith("srcdoc"), { srcdoc: "<p>" })],
+    });
+    const { blur, hide } = screenshotTargets(page);
+    assert.deepEqual(names(blur), ["nosrc.text.0", "about.text.0", "srcdoc.text.0"]);
+    assert.deepEqual(hide, []);
 });
 
 test("screenshot hides same-origin iframes nested deeper than the limit instead of walking forever", () => {
