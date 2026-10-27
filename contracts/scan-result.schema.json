@@ -109,6 +109,7 @@
             "lookalike_domain",
             "brand_plus_keyword",
             "cheap_tld",
+            "suspicious_link",
             "new_domain",
             "asks_pin",
             "asks_otp",

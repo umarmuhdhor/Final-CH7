@@ -83,7 +83,7 @@ Team AI owns the **weights**. The lead owns the **thresholds** (contracts/README
 
 ## `evidence` (EX-05 highlight)
 Optional, but it drives what the extension marks on the page:
-- **Layer 1–2 signals**: `evidence` is free-form and never highlighted (e.g. `db_match` → `"shoo"` or `"public"`, `lookalike_domain` → the brand it imitates).
+- **Layer 1–2 signals**: `evidence` is free-form and never highlighted (e.g. `db_match` → `"shoo"` or `"public"`, `lookalike_domain` → the brand it imitates, `suspicious_link` → comma-separated reason codes such as `"free_host,free_name_bait"`, never pieces of the URL).
 - **Text signals, layer ≥ 3** (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`, `hoax_claim`, …): `evidence` must be text that appears **exactly** on the page (case-insensitive, within one text block), e.g. `"diblokir dalam 24 jam"`. The extension highlights every occurrence at score ≥ 30. Paraphrased or translated evidence highlights nothing.
 - **Field signals** (`asks_*`): `evidence` is the field's `name`/`id` (e.g. `"pin"`). Not highlighted as text — the extension strikes sensitive fields itself at score ≥ 50.
 - Never put typed values in `evidence`.
@@ -95,6 +95,7 @@ Optional, but it drives what the extension marks on the page:
 | `lookalike_domain` | 2 | Spelling close to an official brand (p0stindonesia) |
 | `brand_plus_keyword` | 2 | Brand + extra word (bca-verifikasi) |
 | `cheap_tld` | 2 | .xyz, .site, .click, ... |
+| `suspicious_link` | 2 | Whole URL looks like a scam link (free-hosting subdomain with bait words, redirect param, random file name, ...). Weight ≤ 29, so it never reaches the popup alone (#140) |
 | `new_domain` | 3 | Domain age in days (made by the server via RDAP) |
 | `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 | Form requests sensitive data |
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
