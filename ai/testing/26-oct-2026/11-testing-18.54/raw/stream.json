@@ -1,0 +1,71 @@
+[
+  {
+    "name": "stream#1",
+    "http": 200,
+    "first": 1401.7122919999965,
+    "rStart": 1401.718458999996,
+    "rEnd": 2907.6334999999963,
+    "cStart": 2907.6381669999973,
+    "last": 2907.656167000001,
+    "rChunks": 91,
+    "cChunks": 7,
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"DHL EXpress\"}",
+    "usage": {
+      "completion_tokens": 797,
+      "completion_tokens_details": {
+        "reasoning_tokens": 250
+      },
+      "prompt_tokens": 1331,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2128
+    }
+  },
+  {
+    "name": "stream#2",
+    "http": 200,
+    "first": 1356.1311669999996,
+    "rStart": 1356.1380839999983,
+    "rEnd": 5762.258333999998,
+    "cStart": 5762.2618340000045,
+    "last": 6075.975375000002,
+    "rChunks": 117,
+    "cChunks": 8,
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"DHL EXpress\"}",
+    "usage": {
+      "completion_tokens": 873,
+      "completion_tokens_details": {
+        "reasoning_tokens": 329
+      },
+      "prompt_tokens": 1331,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2204
+    }
+  },
+  {
+    "name": "stream#3",
+    "http": 200,
+    "first": 1605.473582999999,
+    "rStart": 1605.4758329999968,
+    "rEnd": 9183.611957999994,
+    "cStart": 9183.61499999999,
+    "last": 9379.797208000004,
+    "rChunks": 49,
+    "cChunks": 8,
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"DHL EXpress\"}",
+    "usage": {
+      "completion_tokens": 685,
+      "completion_tokens_details": {
+        "reasoning_tokens": 141
+      },
+      "prompt_tokens": 1331,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2016
+    }
+  }
+]

@@ -1,0 +1,312 @@
+[
+  {
+    "run": 1,
+    "totalMs": 6005.054,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_password:15"
+    ],
+    "score": 15,
+    "raw": null
+  },
+  {
+    "run": 2,
+    "totalMs": 2747.341458000001,
+    "httpMs": 2745.861166999999,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1232,
+      "completion_tokens_details": {
+        "reasoning_tokens": 176
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3074
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"DHL EXpress\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_password:15"
+    ],
+    "score": 45,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer JSON only. Need classify. Site cloudfront.net, title DHL EXpress, fields email password, brands empty, rules asks_password. Page impersonates DHL? Title says DHL Express but domain cloudfront.net not dhl. Brands empty though title brand. Need judge data fit page type. It asks password on a page titled DHL Express hosted cloudfront. Likely phishing. page_type courier? asks password. reasonable false. Confidence high. Evidence exact phrase from title \"DHL EXpress\" (note capitalization). Need output one JSON object exactly keys. asks include password. Maybe email not in asks categories. page_type courier? Since title DHL Express, page presents as courier. But site cloudfront.net not DHL. reasonable false. Confidence 0.95. Evidence \"DHL EXpress\". Ensure JSON valid.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015690,
+      "id": "chatcmpl-6adf3f8a3361",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1232,
+        "completion_tokens_details": {
+          "reasoning_tokens": 176
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3074
+      },
+      "provider": "bai***********"
+    }
+  },
+  {
+    "run": 3,
+    "totalMs": 6003.2901249999995,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_password:15"
+    ],
+    "score": 15,
+    "raw": null
+  },
+  {
+    "run": 4,
+    "totalMs": 5885.489667,
+    "httpMs": 5884.540500000001,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1484,
+      "completion_tokens_details": {
+        "reasoning_tokens": 425
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3326
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_password:15"
+    ],
+    "score": 45,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer one JSON. Need classify. Site cloudfront.net, title \"DHL EXpress\". Fields email and password. Brands empty. Rules asks_password. Page claims DHL Express but site is cloudfront.net not dhl.com. However brands empty, so ignore brand paragraph? But title shows DHL Express, which is a brand name shown. The data brands says empty. Instructions: brands are names found by our own checks; can be empty. About brands: a listed brand means page presents itself as that company. If brands empty ignore this paragraph. We cannot treat title DHL as brand? Evidence maybe title. We judge data requested fits page type. Site cloudfront.net is generic CDN, title DHL Express, asks email/password. This is likely phishing credential harvesting impersonating DHL. Page type? courier maybe. asks password. Reasonable false because a courier page reached? Actually DHL courier login could ask email/password, but not on cloudfront.net. However site cloudfront.net is not DHL own domain. Even though brands empty, we can infer from title? The rules likely asks_password fired. We need decide. The page title \"DHL EXpress\" and site cloudfront.net. It asks email and password. Page type courier (claims DHL). reasonable false: credentials on non-DHL domain impersonating courier. Confidence high 0.9. Evidence exact phrase from title: \"DHL EXpress\". Need output JSON only.\n\nCheck asks array: password. Email is not in allowed list? personal_data maybe? Email address is personal_data. Fields include email and password. asks should include password, personal_data? The allowed asks: pin, otp, password, card, cvv, id_number, selfie_id, personal_data, other. Email address is personal data, so include personal_data. But maybe asks only what form requests. Yes include \"password\",\"personal_data\". Reasonable false. page_type courier. Confidence 0.9. Evidence \"DHL EXpress\".\n\nNeed ensure valid JSON.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015699,
+      "id": "chatcmpl-6adf3f934ae4",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1484,
+        "completion_tokens_details": {
+          "reasoning_tokens": 425
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3326
+      },
+      "provider": "mis*********"
+    }
+  },
+  {
+    "run": 5,
+    "totalMs": 6002.578249999999,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_password:15"
+    ],
+    "score": 15,
+    "raw": null
+  },
+  {
+    "run": 6,
+    "totalMs": 4895.108042,
+    "httpMs": 4894.294416000001,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1408,
+      "completion_tokens_details": {
+        "reasoning_tokens": 352
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3250
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_password:15"
+    ],
+    "score": 45,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer JSON only. Need classify. Site cloudfront.net, title DHL EXpress, fields email password, brands empty, rules asks_password. Page appears DHL Express login? Site cloudfront.net not dhl.com. brands empty though title shows DHL Express (brand). Instructions: brands names well-known companies page shows or copies, can be empty. Here brands empty despite title. Need judge data fit page type. Title DHL EXpress, asks email/password. That's courier login. But site cloudfront.net is CDN not DHL domain. However brands empty. Rule asks_password fired. Need decide reasonable? A courier page asking email and password is normal for login. But site cloudfront.net hosting DHL Express could be phishing. Since title says DHL Express and domain is cloudfront.net, not DHL's own domain. brands empty, but title itself indicates brand. The brand paragraph says if brands listed. Empty ignore. But still can infer impersonation? We have title DHL EXpress. The page asks password. On cloudfront.net, a CDN, not DHL domain. Likely phishing. \"reasonable\": false? Need page_type courier maybe. asks password. Confidence high. Evidence \"DHL EXpress\" exact. But the task: does data fit kind of page. A courier login page asking email/password fits. However if it's a page presenting itself as DHL on cloudfront.net, password request is suspicious because not own domain. Since brands empty, but title shows DHL. I think classify page_type courier, asks [\"password\"], reasonable false due to domain mismatch. Confidence 0.8. Need exact JSON with keys. No extra.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015711,
+      "id": "chatcmpl-6adf3f9f2ed9",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1408,
+        "completion_tokens_details": {
+          "reasoning_tokens": 352
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3250
+      },
+      "provider": "nvi***********"
+    }
+  },
+  {
+    "run": 7,
+    "totalMs": 6001.6494999999995,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_password:15"
+    ],
+    "score": 15,
+    "raw": null
+  },
+  {
+    "run": 8,
+    "totalMs": 5032.847958000006,
+    "httpMs": 5032.191791999998,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1424,
+      "completion_tokens_details": {
+        "reasoning_tokens": 368
+      },
+      "prompt_tokens": 1842,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3266
+    },
+    "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_password:15"
+    ],
+    "score": 45,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+            "reasoning_content": "We need answer JSON only. Need judge. Site cloudfront.net, title DHL EXpress, fields email password, brands empty, rules asks_password. Page claims DHL Express but domain cloudfront.net not DHL. Brands empty but title shows DHL. It's a courier page type? Asks password on cloudfront domain impersonating DHL. Is it reasonable? A courier might have login with password, but site isn't official domain. Brands empty means ignore paragraph? But title itself says DHL Express. We can use title as evidence. The question: does data fit kind of page. Page type courier. Asks password. A courier login page can reasonably ask password. But domain cloudfront.net is CDN, not DHL. Is this enough to say unreasonable? Instructions about brands say if form asks password and site not company's own domain, answer false. Brands is empty, ignore that paragraph. But title says DHL Express, known company, though brands list empty. We can infer imitation? The \"brands\" are names found by checks. Empty means no brand checks. Yet title indicates DHL. Hmm.\n\nNeed classify page_type. Could be \"other\" or courier. Title DHL Express suggests courier. Fields email/password typical login. Is asking password fitting courier login? Yes, but on cloudfront.net suspicious. The task focuses on data fit page type, not domain? But brand paragraph helps impersonation. Since brands empty, ignore. The site being cloudfront.net (CDN) and title DHL Express is phishing. Asks password. Reasonable false likely. Need maybe page_type \"courier\", asks [\"password\"], reasonable false, confidence 0.85, evidence \"DHL EXpress\".\n\nLet's ensure exact JSON.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793015722,
+      "id": "chatcmpl-6adf3faa4aa0",
+      "model": "deepseek-v4-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1424,
+        "completion_tokens_details": {
+          "reasoning_tokens": 368
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3266
+      },
+      "provider": "ali********"
+    }
+  },
+  {
+    "run": 9,
+    "totalMs": 6002.099042000002,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_password:15"
+    ],
+    "score": 15,
+    "raw": null
+  },
+  {
+    "run": 10,
+    "totalMs": 6000.955416999997,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_password:15"
+    ],
+    "score": 15,
+    "raw": null
+  }
+]

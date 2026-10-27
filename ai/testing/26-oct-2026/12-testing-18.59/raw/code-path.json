@@ -1,0 +1,402 @@
+[
+  {
+    "run": 1,
+    "totalMs": 6005.339916,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 40,
+    "raw": null
+  },
+  {
+    "run": 2,
+    "totalMs": 3426.76,
+    "httpMs": 3424.322459,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1348,
+      "completion_tokens_details": {
+        "reasoning_tokens": 281
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3235
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 70,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "The page is on blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields include province select, phone, checkbox terms, another phone (masked), and password \"KATA SANDI\". Rules say asks_otp and asks_password already fired.\n\nThis is a blogspot page asking for a password and phone — not fitting a registration status check page. Password on a blogspot page is not reasonable. Answer reasonable: false.\n\nPage type: other (or prize). It's \"check registration status\" — could be a prize-like lure. I'd say \"other\" or \"prize\". The title \"CEK STATUS PENDAFTARAN\" is registration status check — ambiguous. blogspot.com is a blogging platform, so a form asking for a password there is not reasonable. Let me pick page_type \"other\". Confidence high ~0.9.\n\nEvidence: copy exactly \"CEK STATUS PENDAFTARAN\".\n\nasks: password, otp (rules fired asks_otp), personal_data? Fields show phone numbers, province — that's personal_data. And password. I'll include personal_data, password, otp.\n\nHmm, should I include otp? Rules say asks_otp fired; the masked tel field \"•••••\" suggests OTP input. Include otp.\n\nreasonable: false.",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012404,
+      "id": "chatcmpl-6adf32b443ea",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1348,
+        "completion_tokens_details": {
+          "reasoning_tokens": 281
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3235
+      },
+      "provider": "ama************"
+    }
+  },
+  {
+    "run": 3,
+    "totalMs": 6002.669207999999,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 40,
+    "raw": null
+  },
+  {
+    "run": 4,
+    "totalMs": 6002.212916,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 40,
+    "raw": null
+  },
+  {
+    "run": 5,
+    "totalMs": 4488.0925830000015,
+    "httpMs": 4485.831582999999,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1284,
+      "completion_tokens_details": {
+        "reasoning_tokens": 219
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3171
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 70,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "The page is on blogspot.com, titled \"CEK STATUS PENDAFTARAN\" (check registration status). Fields include province, phone, checkbox terms, a masked tel field (likely OTP-ish), and password. Rules already fired: asks_otp, asks_password.\n\nA registration status check page asking for a password is not reasonable — blogspot is a free blogging platform, not a bank/government. Asking for password/OTP on a status-check page is not fitting. So reasonable: false.\n\npage_type: other (or unknown). It's a status check page — \"other\" seems fine.\n\nasks: password, otp, personal_data? fields: select provinsi (personal_data? it's a region field), tel, checkbox, tel masked (otp), password. So asks: [\"otp\",\"password\",\"personal_data\"]? The province select and phone number are personal data. I'll include personal_data.\n\nConfidence: high, ~0.85.\n\nEvidence: copy exactly from title: \"CEK STATUS PENDAFTARAN\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012419,
+      "id": "chatcmpl-6adf32c3436c",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1284,
+        "completion_tokens_details": {
+          "reasoning_tokens": 219
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3171
+      },
+      "provider": "ope********"
+    }
+  },
+  {
+    "run": 6,
+    "totalMs": 2850.618624999999,
+    "httpMs": 2848.8342090000006,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1214,
+      "completion_tokens_details": {
+        "reasoning_tokens": 152
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3101
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 70,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "The page: blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields: province select, phone number, checkbox terms, phone repeated, password. Rules fired: asks_otp, asks_password. No brands.\n\nA blogspot page asking for password to check registration status — not reasonable. Page type: other (or unknown). It's a blogspot blog, not an official government/bank. Asking for password fits \"other\" poorly. Reasonable: false.\n\nConfidence moderate-high. Let's say 0.8.\n\nAsks: password, personal_data (province, phone), other. Let's include password, personal_data.\n\nEvidence: \"CEK STATUS PENDAFTARAN\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012423,
+      "id": "chatcmpl-6adf32c740e6",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1214,
+        "completion_tokens_details": {
+          "reasoning_tokens": 152
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3101
+      },
+      "provider": "mis**********"
+    }
+  },
+  {
+    "run": 7,
+    "totalMs": 2750.824584000002,
+    "httpMs": 2749.027582999999,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1245,
+      "completion_tokens_details": {
+        "reasoning_tokens": 181
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3132
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 70,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "The site is blogspot.com, a free blog platform. Title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields: province, phone, terms checkbox, phone (masked), password. A blogspot page asking for a password to \"check registration status\" is not reasonable — a news/blog page has no reason to ask for a password.\n\nBrands empty. Rules fired: asks_otp, asks_password. Page type: other (or prize? It's a \"check registration status\" page — could be prize-like). Let's say \"other\" given it's a blogspot page. Actually the pattern of \"CEK STATUS PENDAFTARAN\" with password suggests credential harvesting. page_type: other, asks: password, personal_data, reasonable: false, confidence ~0.85.\n\nEvidence: \"CEK STATUS PENDAFTARAN\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012426,
+      "id": "chatcmpl-6adf32ca411f",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1245,
+        "completion_tokens_details": {
+          "reasoning_tokens": 181
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3132
+      },
+      "provider": "ope**********"
+    }
+  },
+  {
+    "run": 8,
+    "totalMs": 6002.447457999995,
+    "httpMs": null,
+    "status": null,
+    "outcome": "timeout",
+    "finish": null,
+    "usage": null,
+    "content": null,
+    "signals": [
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 40,
+    "raw": null
+  },
+  {
+    "run": 9,
+    "totalMs": 4119.626540999998,
+    "httpMs": 4117.399583999999,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1345,
+      "completion_tokens_details": {
+        "reasoning_tokens": 280
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3232
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.72,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 70,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.72,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "Let me analyze. Site is blogspot.com (a blogging platform, user-generated content). Title \"CEK STATUS PENDAFTARAN\" (Check Registration Status). Fields: provinsi select, phone number, checkbox terms, phone (masked?), password \"KATA SANDI\". Rules already fired: asks_otp, asks_password.\n\nA blogspot page asking for a password to \"check registration status\" — that's not a normal page type. It's not a bank's own domain. Page type: probably \"other\" or \"prize\" (cek status pendaftaran could be a registration check, often scams). Asking for password on a blog page to check registration status is not reasonable.\n\npage_type: \"other\" seems best. Or \"prize\"? The title is \"check registration status\" - ambiguous. I'll say \"other\".\n\nasks: password, personal_data (phone number, provinsi). Also otp? Rules say asks_otp fired but fields don't show otp explicitly — the masked tel \"•••••\" might be otp. I'll include otp since rules fired it. Actually fields include a tel with masked value which could be OTP. Let's include otp, password, personal_data.\n\nreasonable: false. confidence: 0.75. evidence: \"CEK STATUS PENDAFTARAN\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012435,
+      "id": "chatcmpl-6adf32d34237",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1345,
+        "completion_tokens_details": {
+          "reasoning_tokens": 280
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3232
+      },
+      "provider": "goo************"
+    }
+  },
+  {
+    "run": 10,
+    "totalMs": 4589.772041999997,
+    "httpMs": 4587.1781249999985,
+    "status": 200,
+    "outcome": "flagged",
+    "finish": "stop",
+    "usage": {
+      "completion_tokens": 1287,
+      "completion_tokens_details": {
+        "reasoning_tokens": 222
+      },
+      "prompt_tokens": 1887,
+      "prompt_tokens_details": {
+        "cached_tokens": 50
+      },
+      "total_tokens": 3174
+    },
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.78,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "signals": [
+      "unreasonable_request:30",
+      "asks_otp:25",
+      "asks_password:15"
+    ],
+    "score": 70,
+    "raw": {
+      "choices": [
+        {
+          "finish_reason": "stop",
+          "index": 0,
+          "logprobs": null,
+          "message": {
+            "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.78,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+            "reasoning_content": "The page is on blogspot.com, title \"CEK STATUS PENDAFTARAN\" (check registration status). Fields include province, phone, checkbox terms, phone (masked), password. Rules fired: asks_otp, asks_password. Brand empty.\n\nA blogspot page asking for a password to check registration status — likely a prize/registration scam. Page type? \"prize\" maybe, or \"other\". It claims to check registration status, asks for password and OTP. That's not reasonable.\n\nLet me answer: page_type \"prize\" or \"other\". Title \"CEK STATUS PENDAFTARAN\" — registration status check, no brand. The asks array: password, otp? The fields show \"•••••\" tel field which might be masked OTP. Rules include asks_otp. So asks: [\"otp\",\"password\",\"personal_data\"] maybe also other (provinsi, phone). personal_data fits province and phone.\n\nreasonable: false. confidence ~0.8. evidence: \"CEK STATUS PENDAFTARAN\".",
+            "role": "assistant"
+          }
+        }
+      ],
+      "created": 1793012439,
+      "id": "chatcmpl-6adf32d741ff",
+      "model": "glm-5.3-flash",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 1287,
+        "completion_tokens_details": {
+          "reasoning_tokens": 222
+        },
+        "prompt_tokens": 1887,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3174
+      },
+      "provider": "met********"
+    }
+  }
+]

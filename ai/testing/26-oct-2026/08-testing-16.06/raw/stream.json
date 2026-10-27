@@ -1,0 +1,71 @@
+[
+  {
+    "name": "stream#1",
+    "http": 200,
+    "first": 831.5109169999996,
+    "rStart": 831.5190000000002,
+    "rEnd": 10423.659083999999,
+    "cStart": 10423.662792000003,
+    "last": 10932.520417000007,
+    "rChunks": 124,
+    "cChunks": 9,
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "usage": {
+      "completion_tokens": 875,
+      "completion_tokens_details": {
+        "reasoning_tokens": 320
+      },
+      "prompt_tokens": 1374,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2249
+    }
+  },
+  {
+    "name": "stream#2",
+    "http": 200,
+    "first": 877.5284580000007,
+    "rStart": 877.5344160000095,
+    "rEnd": 3611.226708000002,
+    "cStart": 3611.326666000008,
+    "last": 4203.794083000001,
+    "rChunks": 99,
+    "cChunks": 11,
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "usage": {
+      "completion_tokens": 832,
+      "completion_tokens_details": {
+        "reasoning_tokens": 277
+      },
+      "prompt_tokens": 1374,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2206
+    }
+  },
+  {
+    "name": "stream#3",
+    "http": 200,
+    "first": 1162.2120419999992,
+    "rStart": 1162.2200000000012,
+    "rEnd": 6143.928249999997,
+    "cStart": 6143.955625000002,
+    "last": 6356.8817500000005,
+    "rChunks": 184,
+    "cChunks": 9,
+    "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "usage": {
+      "completion_tokens": 1085,
+      "completion_tokens_details": {
+        "reasoning_tokens": 532
+      },
+      "prompt_tokens": 1374,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2459
+    }
+  }
+]

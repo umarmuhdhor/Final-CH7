@@ -1,0 +1,3245 @@
+{
+  "meta": {
+    "promptVersion": "reality-check.v3",
+    "models": [
+      "deepseek-v4-flash",
+      "deepseek-v4.1-flash",
+      "deepseek-v4-flash-0731"
+    ],
+    "runs": 10,
+    "diag": 2,
+    "started": "2026-10-26T15:53:53.425Z"
+  },
+  "probe": {
+    "deepseek-v4-flash": {
+      "on": {
+        "http": 200,
+        "totalMs": 5682.226167,
+        "finish": "stop",
+        "usage": {
+          "completion_tokens": 1603,
+          "completion_tokens_details": {
+            "reasoning_tokens": 547
+          },
+          "prompt_tokens": 1842,
+          "prompt_tokens_details": {
+            "cached_tokens": 50
+          },
+          "total_tokens": 3445
+        },
+        "reasoningTokens": 547,
+        "reasoningChars": 2418,
+        "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+        "verdict": {
+          "reasonable": false,
+          "confidence": 0.85
+        },
+        "error": null
+      },
+      "tried": [
+        {
+          "name": "thinking:{type:disabled}",
+          "http": 200,
+          "totalMs": 17051.8725,
+          "reasoningTokens": 338,
+          "reasoningChars": 1500,
+          "valid": true,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "reasoning:{enabled:false}",
+          "http": 200,
+          "totalMs": 9915.871083000002,
+          "reasoningTokens": 938,
+          "reasoningChars": 4266,
+          "valid": true,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "reasoning_effort:none",
+          "http": 200,
+          "totalMs": 16610.210542,
+          "reasoningTokens": 1024,
+          "reasoningChars": 4652,
+          "valid": false,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "chat_template_kwargs:{thinking:false}",
+          "http": 200,
+          "totalMs": 1551.533457999998,
+          "reasoningTokens": 0,
+          "reasoningChars": 0,
+          "valid": true,
+          "error": null,
+          "effective": true
+        }
+      ],
+      "off": {
+        "name": "chat_template_kwargs:{thinking:false}",
+        "extra": {
+          "chat_template_kwargs": {
+            "thinking": false
+          }
+        }
+      },
+      "offEffective": true
+    },
+    "deepseek-v4.1-flash": {
+      "on": {
+        "http": 200,
+        "totalMs": 9437.120209,
+        "finish": "stop",
+        "usage": {
+          "completion_tokens": 1871,
+          "completion_tokens_details": {
+            "reasoning_tokens": 812
+          },
+          "prompt_tokens": 1524,
+          "prompt_tokens_details": {
+            "cached_tokens": 16
+          },
+          "total_tokens": 3395
+        },
+        "reasoningTokens": 812,
+        "reasoningChars": 3621,
+        "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":true,\"confidence\":0.55,\"evidence\":\"DHL EXpress\"}",
+        "verdict": {
+          "reasonable": true,
+          "confidence": 0.55
+        },
+        "error": null
+      },
+      "tried": [
+        {
+          "name": "thinking:{type:disabled}",
+          "http": 200,
+          "totalMs": 11960.498583999994,
+          "reasoningTokens": 569,
+          "reasoningChars": 2683,
+          "valid": true,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "reasoning:{enabled:false}",
+          "http": 200,
+          "totalMs": 47157.356541,
+          "reasoningTokens": 1024,
+          "reasoningChars": 4551,
+          "valid": false,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "reasoning_effort:none",
+          "http": 200,
+          "totalMs": 9736.499291999993,
+          "reasoningTokens": 1024,
+          "reasoningChars": 4578,
+          "valid": false,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "chat_template_kwargs:{thinking:false}",
+          "http": 200,
+          "totalMs": 3787.0607089999976,
+          "reasoningTokens": 0,
+          "reasoningChars": 0,
+          "valid": true,
+          "error": null,
+          "effective": true
+        }
+      ],
+      "off": {
+        "name": "chat_template_kwargs:{thinking:false}",
+        "extra": {
+          "chat_template_kwargs": {
+            "thinking": false
+          }
+        }
+      },
+      "offEffective": true
+    },
+    "deepseek-v4-flash-0731": {
+      "on": {
+        "http": 200,
+        "totalMs": 3471.38949999999,
+        "finish": "stop",
+        "usage": {
+          "completion_tokens": 1190,
+          "completion_tokens_details": {
+            "reasoning_tokens": 134
+          },
+          "prompt_tokens": 1842,
+          "prompt_tokens_details": {
+            "cached_tokens": 50
+          },
+          "total_tokens": 3032
+        },
+        "reasoningTokens": 134,
+        "reasoningChars": 508,
+        "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+        "verdict": {
+          "reasonable": false,
+          "confidence": 0.85
+        },
+        "error": null
+      },
+      "tried": [
+        {
+          "name": "thinking:{type:disabled}",
+          "http": 200,
+          "totalMs": 10264.474708000023,
+          "reasoningTokens": 1024,
+          "reasoningChars": 4607,
+          "valid": false,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "reasoning:{enabled:false}",
+          "http": 200,
+          "totalMs": 10352.885459000012,
+          "reasoningTokens": 122,
+          "reasoningChars": 514,
+          "valid": true,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "reasoning_effort:none",
+          "http": 200,
+          "totalMs": 4348.186917000014,
+          "reasoningTokens": 418,
+          "reasoningChars": 1883,
+          "valid": true,
+          "error": null,
+          "effective": false
+        },
+        {
+          "name": "chat_template_kwargs:{thinking:false}",
+          "http": 200,
+          "totalMs": 7535.773459000018,
+          "reasoningTokens": 0,
+          "reasoningChars": 0,
+          "valid": true,
+          "error": null,
+          "effective": true
+        }
+      ],
+      "off": {
+        "name": "chat_template_kwargs:{thinking:false}",
+        "extra": {
+          "chat_template_kwargs": {
+            "thinking": false
+          }
+        }
+      },
+      "offEffective": true
+    }
+  },
+  "results": [
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6009.805041999993,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "bad_schema",
+      "totalMs": 2619.57925000001,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1057,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2874
+      },
+      "reasoningTokens": 0,
+      "verdict": null,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"email\",\"password\"],\"reasonable\":true,\"confidence\":0.55,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.653916999989,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.120415999991,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.045000000013,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "bad_schema",
+      "totalMs": 1803.4065420000115,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1057,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2874
+      },
+      "reasoningTokens": 0,
+      "verdict": null,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"email\",\"password\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6005.6251660000125,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.6394169999985,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 3661.777000000002,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1434,
+        "completion_tokens_details": {
+          "reasoning_tokens": 369
+        },
+        "prompt_tokens": 1568,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 3002
+      },
+      "reasoningTokens": 369,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.094917000009,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6005.766708999989,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6008.090040999989,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.006583000009,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6002.754957999976,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.833416000009,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6002.757916999981,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6001.568291999982,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "reasonable",
+      "totalMs": 1962.224125000008,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2872
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": true,
+        "confidence": 0.55
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.55,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.035875000001,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 3843.82491700002,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\",\"otp\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.399875000003,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.560457999993,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 4123.617415999994,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1392,
+        "completion_tokens_details": {
+          "reasoning_tokens": 327
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3278
+      },
+      "reasoningTokens": 327,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.95
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 3260.9127920000465,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 3,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.39858300006,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 3,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 3418.609332999913,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2872
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.6
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.6,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 3,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 3033.7254589999793,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1222,
+        "completion_tokens_details": {
+          "reasoning_tokens": 166
+        },
+        "prompt_tokens": 1524,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2746
+      },
+      "reasoningTokens": 166,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.95
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 3,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6002.934499999974,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 3,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.384167000069,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 3,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6001.75245800009,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 3,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.915999999968,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 3,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.39529200003,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 3,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.190999999992,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 3,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1831.3488749999087,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1061,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2604
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.7
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 3,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 4842.04779099999,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1318,
+        "completion_tokens_details": {
+          "reasoning_tokens": 253
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3204
+      },
+      "reasoningTokens": 253,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 3,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1998.5879999999888,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"otp\",\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 4,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 3539.091083999956,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1260,
+        "completion_tokens_details": {
+          "reasoning_tokens": 201
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3102
+      },
+      "reasoningTokens": 201,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.95
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 4,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6001.053749999963,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 4,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.541041000048,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 4,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "reasonable",
+      "totalMs": 2411.6597909999546,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1499,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2554
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": true,
+        "confidence": 0.35
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.35,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 4,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.668125000084,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 4,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.789250000031,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 4,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.629125000094,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 4,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1749.952416999964,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 4,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.115500000073,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 4,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.67645899998,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 4,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6005.145957999979,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 4,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.606750000035,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 5,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.561083999928,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 5,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.477125000092,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 5,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.086416999926,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 5,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1977.09704100003,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1499,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2554
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.7
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 5,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.021874999977,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 5,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "bad_schema",
+      "totalMs": 2868.7634589999216,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1057,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2874
+      },
+      "reasoningTokens": 0,
+      "verdict": null,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"email\",\"password\"],\"reasonable\":false,\"confidence\":0.55,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 5,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.702833999996,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 5,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 4755.950499999919,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 5,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.187666999991,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 5,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 4923.010000000009,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2607
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.7
+      },
+      "content": "{\"page_type\":\"unknown\",\"asks\":[\"personal_data\",\"password\",\"otp\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 5,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.543833000003,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 5,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.866625000024,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 6,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.867458999972,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 6,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6001.786915999954,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 6,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.006540999981,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 6,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.056832999922,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 6,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.189584000036,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 6,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6002.62179200002,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 6,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.742792000063,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 6,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 3696.8652500000317,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1066,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2927
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 6,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.459917000029,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 6,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 4024.028457999928,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1061,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2604
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.7
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 6,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.30154200003,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 6,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1919.5391250000102,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"otp\",\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 7,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.035791000002,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 7,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.633666999987,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 7,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.589500000002,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 7,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6001.653292000061,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 7,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 5327.719583999948,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1341,
+        "completion_tokens_details": {
+          "reasoning_tokens": 282
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3183
+      },
+      "reasoningTokens": 282,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 7,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "reasonable",
+      "totalMs": 3945.886375000002,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2872
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": true,
+        "confidence": 0.4
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.4,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 7,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.246415999951,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 7,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.250207999954,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 7,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.388874999946,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 7,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 2025.8203330000397,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2607
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.8
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 7,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.955833999906,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 7,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1936.99524999992,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.72
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\",\"otp\"],\"reasonable\":false,\"confidence\":0.72,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 8,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 3394.2247499999357,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1250,
+        "completion_tokens_details": {
+          "reasoning_tokens": 191
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3092
+      },
+      "reasoningTokens": 191,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 8,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 2930.16620899993,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2872
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.6
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.6,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 8,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.377042000066,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 8,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 4594.521708999993,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1499,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2554
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.7
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.7,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 8,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.287584000034,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 8,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "bad_schema",
+      "totalMs": 3206.082124999957,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1057,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2874
+      },
+      "reasoningTokens": 0,
+      "verdict": null,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"email\",\"password\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"DHL EXpress\"}",
+      "score": 15
+    },
+    {
+      "run": 8,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 4120.578332999954,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1359,
+        "completion_tokens_details": {
+          "reasoning_tokens": 294
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3245
+      },
+      "reasoningTokens": 294,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.82
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.82,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 8,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1328.970500000054,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.72
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"otp\",\"password\"],\"reasonable\":false,\"confidence\":0.72,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 8,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 4135.463749999995,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1394,
+        "completion_tokens_details": {
+          "reasoning_tokens": 329
+        },
+        "prompt_tokens": 1568,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2962
+      },
+      "reasoningTokens": 329,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 8,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.490792000084,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 8,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.022624999983,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 8,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.10833399999,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 9,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.560999999987,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 9,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.168624999933,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 9,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.9250410000095,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 9,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.16399999999,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 9,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.7186249999795,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 9,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6002.615999999922,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 9,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.897957999958,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 9,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 3035.248125000042,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1065,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2926
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.82
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"pin\",\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.82,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 9,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.988583000028,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 9,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 1858.311417000019,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2607
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.65
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\",\"otp\"],\"reasonable\":false,\"confidence\":0.65,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 9,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6001.682958999998,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 9,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.088958000066,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 10,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6002.814499999979,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 10,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6003.705792000052,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 10,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.47566700005,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 10,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 2086.438458000077,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1499,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2554
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.8
+      },
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"DHL EXpress\"}",
+      "score": 45
+    },
+    {
+      "run": 10,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6003.872625000076,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 10,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6002.863709000056,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 15
+    },
+    {
+      "run": 10,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 5463.998833000078,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1291,
+        "completion_tokens_details": {
+          "reasoning_tokens": 226
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3177
+      },
+      "reasoningTokens": 226,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 10,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "outcome": "timeout",
+      "totalMs": 6004.041332999943,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 10,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "outcome": "timeout",
+      "totalMs": 6004.081833000062,
+      "finish": null,
+      "usage": null,
+      "reasoningTokens": null,
+      "verdict": null,
+      "content": null,
+      "score": 40
+    },
+    {
+      "run": 10,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 3111.2275830002036,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1061,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2604
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.6
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\"],\"reasonable\":false,\"confidence\":0.6,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 10,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "outcome": "flagged",
+      "totalMs": 4329.557792000007,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1316,
+        "completion_tokens_details": {
+          "reasoning_tokens": 254
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3202
+      },
+      "reasoningTokens": 254,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    },
+    {
+      "run": 10,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "outcome": "flagged",
+      "totalMs": 2848.3408749999944,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\",\"otp\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "score": 70
+    }
+  ],
+  "diagRows": [
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 7487.515625,
+      "finish": "length",
+      "usage": {
+        "completion_tokens": 2048,
+        "completion_tokens_details": {
+          "reasoning_tokens": 1024
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3890
+      },
+      "reasoningTokens": 1024,
+      "reasoningChars": 4464,
+      "content": "",
+      "verdict": null,
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 2115.5866249999963,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2872
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.6,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.6
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 4342.233791000006,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1474,
+        "completion_tokens_details": {
+          "reasoning_tokens": 415
+        },
+        "prompt_tokens": 1524,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2998
+      },
+      "reasoningTokens": 415,
+      "reasoningChars": 1772,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 1350.534833999991,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1499,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2554
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.3,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": true,
+        "confidence": 0.3
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 15572.31908300001,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1744,
+        "completion_tokens_details": {
+          "reasoning_tokens": 688
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3586
+      },
+      "reasoningTokens": 688,
+      "reasoningChars": 3099,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 1726.2575829999987,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2872
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.75
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 17769.769457999966,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1391,
+        "completion_tokens_details": {
+          "reasoning_tokens": 326
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3277
+      },
+      "reasoningTokens": 326,
+      "reasoningChars": 1381,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 1691.0897919999552,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"otp\",\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 53366.21083400003,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1770,
+        "completion_tokens_details": {
+          "reasoning_tokens": 708
+        },
+        "prompt_tokens": 1568,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "total_tokens": 3338
+      },
+      "reasoningTokens": 708,
+      "reasoningChars": 2969,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.8
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 2231.387250000029,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1061,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2604
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.75
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 17966.195624999993,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1478,
+        "completion_tokens_details": {
+          "reasoning_tokens": 413
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3364
+      },
+      "reasoningTokens": 413,
+      "reasoningChars": 1691,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "error": null
+    },
+    {
+      "run": 1,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 10757.217333999986,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1061,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2922
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 7152.975291999988,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1771,
+        "completion_tokens_details": {
+          "reasoning_tokens": 715
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3613
+      },
+      "reasoningTokens": 715,
+      "reasoningChars": 3214,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.6,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": true,
+        "confidence": 0.6
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 10447.402124999964,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1057,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "total_tokens": 2874
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"email\",\"password\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+      "verdict": null,
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 7144.99866599997,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1326,
+        "completion_tokens_details": {
+          "reasoning_tokens": 267
+        },
+        "prompt_tokens": 1524,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2850
+      },
+      "reasoningTokens": 267,
+      "reasoningChars": 1161,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.75,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.75
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 5371.0996249999735,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1055,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1499,
+        "prompt_tokens_details": {
+          "cached_tokens": 16
+        },
+        "total_tokens": 2554
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\"],\"reasonable\":true,\"confidence\":0.3,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": true,
+        "confidence": 0.3
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 15039.067959000007,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 2020,
+        "completion_tokens_details": {
+          "reasoning_tokens": 961
+        },
+        "prompt_tokens": 1842,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3862
+      },
+      "reasoningTokens": 961,
+      "reasoningChars": 4183,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"DHL EXpress\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.85
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "d33wubrfki0l68.cloudfront.net",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 8397.894458000024,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1057,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1817,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2874
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"courier\",\"asks\":[\"email\",\"password\"],\"reasonable\":false,\"confidence\":0.55,\"evidence\":\"DHL EXpress\"}",
+      "verdict": null,
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | default",
+      "model": "deepseek-v4-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 18863.739666999958,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1221,
+        "completion_tokens_details": {
+          "reasoning_tokens": 157
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3107
+      },
+      "reasoningTokens": 157,
+      "reasoningChars": 610,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.82,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.82
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash | thinking off",
+      "model": "deepseek-v4-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 15661.005000000005,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | default",
+      "model": "deepseek-v4.1-flash",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 7312.587666999898,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1461,
+        "completion_tokens_details": {
+          "reasoning_tokens": 396
+        },
+        "prompt_tokens": 1568,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 3029
+      },
+      "reasoningTokens": 396,
+      "reasoningChars": 1637,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.95,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.95
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4.1-flash | thinking off",
+      "model": "deepseek-v4.1-flash",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 3851.782125000027,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1061,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1543,
+        "prompt_tokens_details": {
+          "cached_tokens": 33
+        },
+        "total_tokens": 2604
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"personal_data\",\"password\"],\"reasonable\":false,\"confidence\":0.8,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.8
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | default",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "default",
+      "http": 200,
+      "totalMs": 18631.938083000015,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1423,
+        "completion_tokens_details": {
+          "reasoning_tokens": 358
+        },
+        "prompt_tokens": 1886,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 3309
+      },
+      "reasoningTokens": 358,
+      "reasoningChars": 1448,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "error": null
+    },
+    {
+      "run": 2,
+      "sample": "bantuannbansos2026.blogspot.com",
+      "config": "deepseek-v4-flash-0731 | thinking off",
+      "model": "deepseek-v4-flash-0731",
+      "mode": "off",
+      "http": 200,
+      "totalMs": 5851.023250000086,
+      "finish": "stop",
+      "usage": {
+        "completion_tokens": 1064,
+        "completion_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "prompt_tokens": 1861,
+        "prompt_tokens_details": {
+          "cached_tokens": 50
+        },
+        "total_tokens": 2925
+      },
+      "reasoningTokens": 0,
+      "reasoningChars": 0,
+      "content": "{\"page_type\":\"other\",\"asks\":[\"otp\",\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.9,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+      "verdict": {
+        "reasonable": false,
+        "confidence": 0.9
+      },
+      "error": null
+    }
+  ]
+}

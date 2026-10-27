@@ -1,0 +1,82 @@
+{
+  "id": "bantuannbansos2026-blogspot-com-probe",
+  "label": "scam",
+  "tags": [],
+  "synthetic": false,
+  "redacted": false,
+  "source": "llm test plan (PLAN-llm-test.md)",
+  "collectedAt": "2026-10-26T10:59:57.127Z",
+  "notes": "",
+  "snapshot": {
+    "url": "https://bantuannbansos2026.blogspot.com/?m=REDACTED",
+    "domain": "bantuannbansos2026.blogspot.com",
+    "title": "CEK STATUS PENDAFTARAN",
+    "lang": "id",
+    "text": "🛡️ MOHON TUNGGU SEBENTAR Menghubungi server Telegram... MASUKKAN DATA ANDA DENGAN BENAR MASUKKAN DATA ANDA DENGAN BENAR MASUKKAN DATA ANDA DENGAN BENAR Pilih Provinsi -- Pilih Provinsi -- Aceh Sumatera Utara Sumatera Barat Riau Kepulauan Riau Jambi Bengkulu Sumatera Selatan Kepulauan Bangka Belitung Lampung Banten DKI Jakarta Jawa Barat Jawa Tengah DI Yogyakarta Jawa Timur Bali Nusa Tenggara Barat Nusa Tenggara Timur Kalimantan Barat Kalimantan Tengah Kalimantan Selatan Kalimantan Timur Kalimantan Utara Sulawesi Utara Sulawesi Tengah Sulawesi Selatan Sulawesi Tenggara Sulawesi Barat Gorontalo Maluku Maluku Utara Papua Barat Papua Papua Selatan Papua Tengah Papua Pegunungan Papua Barat Daya MOHON PILIH PROVINSI ANDA Nomor Telepon +62 NOMOR TELEPON TIDAK VALID. SAYA SETUJU UNTUK MENERIMA PESAN TELEGRAM DARI ADMIN TERKAIT STATUS PENDAFTARAN. Daftar Sekarang KODE VERIFIKASI Mohon masukkan 5 digit kode yang diterima di Telegram. KODE VERIFIKASI DIPERLUKAN. Verifikasi Kode VERIFIKASI 2 LANGKAH Masukkan kata sandi keamanan tambahan akun Anda. KATA SANDI DIPERLUKAN. Masuk dengan Aman STATUS SEDANG DIPROSES Data Anda telah diterima. Mohon tunggu konfirmasi lebih lanjut melalui Telegram dalam waktu 24 jam.",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "select",
+            "name": null,
+            "id": "provinsi",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null,
+            "accept": null,
+            "capture": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "nomor",
+            "label": null,
+            "placeholder": "123456789",
+            "autocomplete": null,
+            "accept": null,
+            "capture": null
+          },
+          {
+            "type": "checkbox",
+            "name": null,
+            "id": "checkTerms",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null,
+            "accept": null,
+            "capture": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "otp",
+            "label": null,
+            "placeholder": "•••••",
+            "autocomplete": null,
+            "accept": null,
+            "capture": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "pw",
+            "label": null,
+            "placeholder": "KATA SANDI",
+            "autocomplete": null,
+            "accept": null,
+            "capture": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Banner"
+    ],
+    "capturedAt": "2026-10-26T10:59:57.119Z"
+  },
+  "meta": {
+    "iframes": [],
+    "bytes": 19880
+  }
+}

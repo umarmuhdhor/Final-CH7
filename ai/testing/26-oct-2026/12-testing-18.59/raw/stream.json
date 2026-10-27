@@ -1,0 +1,71 @@
+[
+  {
+    "name": "stream#1",
+    "http": 200,
+    "first": 2088.577833999996,
+    "rStart": 2088.5933340000047,
+    "rEnd": 4529.980875000008,
+    "cStart": 4530.003999999986,
+    "last": 4804.497999999992,
+    "rChunks": 71,
+    "cChunks": 10,
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"otp\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.82,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "usage": {
+      "completion_tokens": 754,
+      "completion_tokens_details": {
+        "reasoning_tokens": 199
+      },
+      "prompt_tokens": 1375,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2129
+    }
+  },
+  {
+    "name": "stream#2",
+    "http": 200,
+    "first": 5645.709750000009,
+    "rStart": 5645.72091600002,
+    "rEnd": 6501.251958000008,
+    "cStart": 6501.26237500002,
+    "last": 6501.606790999998,
+    "rChunks": 71,
+    "cChunks": 8,
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "usage": {
+      "completion_tokens": 749,
+      "completion_tokens_details": {
+        "reasoning_tokens": 199
+      },
+      "prompt_tokens": 1375,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2124
+    }
+  },
+  {
+    "name": "stream#3",
+    "http": 200,
+    "first": 1229.4667499999923,
+    "rStart": 1229.4763339999772,
+    "rEnd": 2291.136708999984,
+    "cStart": 2291.1498339999816,
+    "last": 2802.0434999999998,
+    "rChunks": 75,
+    "cChunks": 8,
+    "content": "{\"page_type\":\"other\",\"asks\":[\"password\",\"personal_data\",\"other\"],\"reasonable\":false,\"confidence\":0.85,\"evidence\":\"CEK STATUS PENDAFTARAN\"}",
+    "usage": {
+      "completion_tokens": 751,
+      "completion_tokens_details": {
+        "reasoning_tokens": 199
+      },
+      "prompt_tokens": 1375,
+      "prompt_tokens_details": {
+        "cached_tokens": 196
+      },
+      "total_tokens": 2126
+    }
+  }
+]
