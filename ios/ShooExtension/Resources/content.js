@@ -13,6 +13,7 @@
     const TEXT_STEP = 200; // text growth below this many chars (a clock, a counter) isn't a change
 
     const send = (message) => browser.runtime.sendMessage(message);
+    const dom = globalThis.ShooDom; // the page can shadow document properties (dom.js)
 
     async function registrableDomain(hostname) {
         try {
@@ -24,18 +25,29 @@
         return hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
     }
 
-    /** PageSnapshot — contracts/detector-interface.md. Never includes typed values. */
-    async function takeSnapshot() {
-        const forms = ShooSnapshot.pageForms(document); // page + same-origin iframes (snapshot.js)
+    /** fn(), or fallback if the page made it throw: one unreadable part must not stop the scan. */
+    function read(fn, fallback) {
+        try {
+            return fn();
+        } catch (error) {
+            console.warn("[Shoo] snapshot", error);
+            return fallback;
+        }
+    }
 
+    /**
+     * PageSnapshot — contracts/detector-interface.md. Never includes typed values.
+     * url and domain always come through, so layer 1 (blocklist, verdict) runs whatever the page does.
+     */
+    async function takeSnapshot() {
         return {
             url: location.href,
             domain: await registrableDomain(location.hostname),
-            title: document.title,
-            lang: document.documentElement.lang || null,
-            text: (document.body?.innerText || "").slice(0, MAX_TEXT_CHARS),
-            forms,
-            imageAlts: [...document.images].map((img) => img.alt).filter(Boolean).slice(0, MAX_IMAGE_ALTS),
+            title: read(() => dom.title(document), ""),
+            lang: read(() => dom.root(document).lang || null, null),
+            text: read(() => (dom.body(document)?.innerText || "").slice(0, MAX_TEXT_CHARS), ""),
+            forms: read(() => ShooSnapshot.pageForms(document), []), // page + same-origin iframes (snapshot.js)
+            imageAlts: read(() => [...dom.images(document)].map((img) => img.alt).filter(Boolean).slice(0, MAX_IMAGE_ALTS), []),
             capturedAt: new Date().toISOString(),
         };
     }
@@ -119,7 +131,7 @@
     new MutationObserver((records) => {
         if (records.every((r) => ours(r.target) || [...r.addedNodes, ...r.removedNodes].every(ours))) return;
         scheduleRecheck();
-    }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    }).observe(dom.root(document), { childList: true, subtree: true, characterData: true });
 
     // A fragment-only change is the same page (anchors), except hash routers ("#/login", "#!/login").
     function isNewPage(from, to) {
