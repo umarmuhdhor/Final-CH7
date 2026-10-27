@@ -6,6 +6,7 @@ Exposes `POST /analyze` and `GET /public-blocklist` exactly as in contracts/api.
 - Input `{ snapshot, localSignals }`, output `{ signals: Signal[] }`. Shapes from contracts/ only.
 - `/analyze` is stateless: never store or log the snapshot text.
 - Text signals (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`): `evidence` = text copied **exactly** from the page; the extension highlights it (EX-05).
+- `localSignals` (layer 1–2 from the extension, including `suspicious_link`) are untrusted numbers: they only lift the WORD weights when their sum is ≥ 10 (D-imelda-31), which can move the layer-4 gate score by at most +20 (D-imelda-27); they are never a signal of their own. The raw URL is not sent.
 - The Bearer device token can't be verified here (no device table): don't rely on it, rate-limit per IP, never log it.
 - Respond within 8 s; the extension gives up after that. Layer 3 (rules) should answer even if the LLM is slow/down.
 - LLM keys only in `.env` (gitignored). Commit `.env.example`.

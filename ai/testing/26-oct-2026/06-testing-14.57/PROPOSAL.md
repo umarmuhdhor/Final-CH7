@@ -1,6 +1,6 @@
 # 06 · Usulan flow layer baru + L2 sebagai pembedah link utuh
 
-Tanggal: 26 Okt 2026 · Status: **usulan, belum diputuskan** · Tidak ada perubahan di `detector/`, `ai/src/`, atau `contracts/`.
+Tanggal: 26 Okt 2026 · Status: **diterima Umar di #140 (26 Okt 2026)**, bagian L2 diimplementasikan di `feat/L2-v2-full-link-dissector` (v2 menjadi `suspicious_link` di `detector/`). Yang diputuskan lain dari usulan di bawah: penomoran layer **tidak** diganti, rules L3 dan gate form tetap, satu id `suspicious_link`, skor link saja dibatasi 29. Isi §1–§4 di bawah adalah usulan awal, bukan keadaan sekarang.
 
 ## 1. Flow baru (dari Imelda)
 

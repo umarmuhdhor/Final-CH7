@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { build } from "../scripts/build.mjs";
 
 const brands = JSON.parse(readFileSync(new URL("../data/brands.json", import.meta.url), "utf8"));
-const KNOWN_IDS = ["db_match", "lookalike_domain", "brand_plus_keyword", "cheap_tld"];
+const KNOWN_IDS = ["db_match", "lookalike_domain", "brand_plus_keyword", "cheap_tld", "suspicious_link"];
 
 const ctx = { URL };
 vm.createContext(ctx);
@@ -324,4 +324,106 @@ test("layer 1: malformed hits are ignored and layer 2 runs", async () => {
     const throwing = { get source() { throw new Error("boom"); } };
     const s = await withLists(async () => throwing, () => scan("https://lphone-login.com/"));
     assert.deepEqual(ids(s), ["lookalike_domain", "brand_plus_keyword"]);
+});
+
+// ---------- layer 2B: whole-link dissector (suspicious_link, #140) ----------
+const link = async (url) => find(await scan(url), "suspicious_link");
+const linkIds = async (url) => ((await link(url))?.evidence || "").split(",").filter(Boolean);
+
+test("link: random file name + slash + rare TLD (helpnets) is flagged, but capped below the popup line", async () => {
+    const s = await link("https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/");
+    assert.equal(s.layer, 2);
+    assert.equal(s.weight, 29, "raw score is 34, capped");
+    for (const r of ["rare_tld", "random_name", "slash_after_file"]) assert.ok(s.evidence.split(",").includes(r), r);
+});
+
+test("link: the same host without the odd path is NOT flagged (hostname alone said nothing before either)", async () => {
+    assert.equal(await link("https://helpnets.info/"), undefined);
+});
+
+test("link: free hosting is judged by the first label and the file name, not the platform", async () => {
+    const cases = [
+        ["https://bantuannbansos2026.blogspot.com/", 24],
+        ["https://gratiskuota60gb.blogspot.com/", 24],
+        ["https://simgratisonine.blogspot.com/", 13],
+        ["https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html", 18],
+    ];
+    for (const [url, weight] of cases) assert.equal((await link(url))?.weight, weight, url);
+});
+
+test("link: a free host alone, or a clean blog on it, gives no signal", async () => {
+    for (const url of ["https://resepnusantara.blogspot.com/", "https://user.github.io/portfolio/", "https://myapp.netlify.app/", "https://d111abcdef.cloudfront.net/assets/logo.png"]) {
+        assert.equal(await link(url), undefined, url);
+    }
+});
+
+test("link: known false positive, a legit blog with a bait word in the file name is flagged (weights are guesses, D-imelda-45)", async () => {
+    const s = await link("https://tipskeuanganku.blogspot.com/2026/10/cara-cek-saldo-bca.html");
+    assert.equal(s.weight, 24);
+});
+
+test("link: the link signal alone never reaches 30, even with every part lit", async () => {
+    const s = await link("http://user@12345678-ab-cd-ef-gh.a.b.c.d.example.xyz:8080/0442827f6o7cfb43933ba59e2881cc906b7c.php/?url=https://x.com&e=a@b.c#https://y.com");
+    assert.equal(s.weight, 29);
+});
+
+test("link: evidence and labels carry reason codes and our own words, never pieces of the URL", async () => {
+    const url = "https://bantuannbansos2026.blogspot.com/";
+    const s = await link(url);
+    assert.match(s.evidence, /^[a-z_,]+$/);
+    for (const text of [s.label.en, s.label.id, s.labelSimple.en, s.labelSimple.id]) assert.doesNotMatch(text, /blogspot|bantuannbansos|2026/);
+    assert.notEqual(s.label.en, s.label.id);
+    assert.doesNotMatch(s.labelSimple.en, TECHNICAL);
+    assert.doesNotMatch(s.labelSimple.id, TECHNICAL);
+});
+
+test("link: each part of the URL scores on its own", async () => {
+    assert.ok((await linkIds("http://user@example.xyz/a-b")).includes("userinfo"));
+    assert.deepEqual(await linkIds("https://203.0.113.9/"), ["ip_host"]);
+    assert.deepEqual(await linkIds("https://203.0.113.9:8443/login.php/"), ["ip_host", "odd_port", "file_ext", "slash_after_file", "path_bait"]);
+    assert.ok((await linkIds("https://example.com/r?url=https://evil.example/&e=a@b.co" + "&x=1".repeat(40))).includes("redirect_param"));
+    assert.ok((await linkIds("https://a-b-c-d.example.com.xyz/x.php/")).includes("many_hyphens"));
+    assert.ok((await linkIds("https://example.com/p.php/#https://evil.example/")).includes("url_in_fragment"));
+    assert.equal(await link("https://example.com/p#https://evil.example/"), undefined, "8 points alone is under the emit floor (10)");
+});
+
+test("link: private and loopback addresses are never flagged (router pages, dev servers)", async () => {
+    for (const url of ["http://192.168.0.1/login.php/", "http://10.0.0.5:8080/", "http://172.20.1.1/", "http://127.0.0.1:3000/login/", "http://[::1]/", "http://localhost:8080/login.php/"]) {
+        assert.deepEqual(await run({ url }), [], url);
+    }
+});
+
+test("link: legit international domain and plain sites stay silent", async () => {
+    for (const url of ["https://bücher.de/", "https://id.wikipedia.org/wiki/Bank", "https://www.kompas.com/read/2026/10/26/artikel-panjang.html", "https://github.com/user/repo"]) {
+        assert.equal(await link(url), undefined, url);
+    }
+});
+
+test("link: cheap TLD from brands.json is counted once (cheap_tld signal), not again by the dissector", async () => {
+    const s = await scan("https://bca-verifikasi.xyz/");
+    assert.deepEqual(ids(s), ["brand_plus_keyword", "cheap_tld"]);
+    assert.equal(score(s), 29);
+});
+
+test("link: official domains still return nothing, whatever the path", async () => {
+    assert.deepEqual(await scan("https://www.bca.co.id/0442827f6o7cfb43933ba59e2881cc906b7c.html/"), []);
+});
+
+test("link: a bad URL never throws and gives no link signal", async () => {
+    for (const url of ["not a url", "javascript:alert(1)", "ftp://x.example/", ""]) assert.equal(await link(url).catch(() => undefined), undefined, url);
+});
+
+test("link: speed, 2000 URLs in well under 50 ms each", async () => {
+    const t = Date.now();
+    for (let i = 0; i < 2000; i++) await scan(`https://sub${i}.blogspot.com/${i}abc.html/`);
+    assert.ok((Date.now() - t) / 2000 < 5);
+});
+
+test("link rules data: lowercase words, no duplicates", () => {
+    const rules = JSON.parse(readFileSync(new URL("../data/link-rules.json", import.meta.url), "utf8"));
+    for (const key of ["rareTlds", "freeHosts", "baitWords", "carriers"]) {
+        assert.equal(new Set(rules[key]).size, rules[key].length, `${key} has duplicates`);
+        for (const w of rules[key]) assert.equal(w, w.toLowerCase());
+    }
+    for (const w of [...rules.baitWords, ...rules.carriers]) assert.ok(w.length >= 3, w);
 });

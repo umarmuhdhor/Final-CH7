@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layer 2 v2: apa yang dicek</title>
+<style>
+:root{--bg:#f7f6f2;--card:#fff;--ink:#1c1b18;--mute:#6b675e;--line:#e4e1d8;--v1:#3b6fd4;--v2:#d4623b;--ok:#2f8a57;--warn:#c98a14;--bad:#c23b3b;--gate:#7a4fd0}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--card:#201f1c;--ink:#ecebe5;--mute:#9a968b;--line:#34322d;--v1:#6f9bf0;--v2:#f08a62;--ok:#55c488;--warn:#e3b04a;--bad:#ef6b6b;--gate:#a98af0}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:18px;margin:40px 0 12px}
+p.sub{color:var(--mute);margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+code,.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;color:#fff}
+.pill.v1{background:var(--v1)}.pill.v2{background:var(--v2)}
+.flow{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.step{flex:1 1 140px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.step b{display:block;font-size:13px}.step span{font-size:12px;color:var(--mute)}
+.step.hl{border-color:var(--v2);box-shadow:0 0 0 2px color-mix(in srgb,var(--v2) 25%,transparent)}
+.arrow{align-self:center;color:var(--mute)}
+.urlbar{font-family:ui-monospace,Menlo,monospace;font-size:14px;word-break:break-all;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--line);line-height:2}
+.seg{padding:2px 4px;border-radius:4px}
+.seg.hit{background:color-mix(in srgb,var(--v1) 22%,transparent);outline:2px solid var(--v1)}
+.seg.hit.on2{background:color-mix(in srgb,var(--v2) 22%,transparent);outline:2px solid var(--v2)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+td.w{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.scroll{overflow-x:auto}
+.bar{position:relative;height:22px;background:var(--bg);border-radius:6px;overflow:hidden;margin:3px 0}
+.bar i{position:absolute;left:0;top:0;bottom:0}
+.bar em{position:absolute;right:6px;top:2px;font-size:12px;font-style:normal;font-family:ui-monospace,monospace}
+.row{display:grid;grid-template-columns:minmax(120px,240px) 1fr;gap:12px;align-items:center;margin:10px 0}
+.row .lab{font-size:13px;word-break:break-all}
+.row .lab small{display:block;color:var(--mute)}
+.chart{position:relative;padding-top:20px}
+.th{position:absolute;top:16px;bottom:0;width:0;border-left:2px dashed var(--gate);z-index:2;pointer-events:none}
+.th.p{border-color:var(--bad)}
+.th small{position:absolute;top:-16px;left:3px;font-size:11px;color:var(--gate);white-space:nowrap}
+.th.p small{color:var(--bad)}
+.legend{display:flex;gap:14px;font-size:13px;margin:6px 0}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:currentColor}
+.l1{color:var(--v1)}.l2{color:var(--v2)}
+input[type=text]{width:100%;padding:10px 12px;font:14px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chips button{font:12px system-ui;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.chips button:hover{border-color:var(--v2)}
+.verdict{font-weight:700}
+.note{border-left:3px solid var(--warn);padding:8px 12px;background:color-mix(in srgb,var(--warn) 12%,transparent);border-radius:0 8px 8px 0;font-size:14px;margin:10px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}.row{grid-template-columns:1fr;gap:2px}}
+.tag{display:inline-block;margin:2px;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--bg);border:1px solid var(--line);color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+<h1>Layer 2 v2: apa yang dicek</h1>
+<p class="sub">Prototipe dari <code>ai/testing/26-oct-2026/06-testing-14.57/</code>. Belum ada di <code>main</code>. Input hanya string URL, situs tidak dibuka.</p>
+
+<h2>1. Posisi di flow</h2>
+<div class="flow">
+  <div class="step"><b>L1</b><span>blocklist / allowlist<br>tidak berubah</span></div><div class="arrow">→</div>
+  <div class="step hl"><b>L2 (JS di extension)</b><span>sekarang: hanya hostname + 25 brand<br><b style="color:var(--v2)">v2: seluruh URL + host gratis</b></span></div><div class="arrow">→</div>
+  <div class="step"><b>Gate LLM</b><span>ada form <b>dan</b> skor L2 ≥ 15</span></div><div class="arrow">→</div>
+  <div class="step"><b>LLM (1 panggilan)</b><span>verdict + confidence + <code>reason_code</code> enum</span></div>
+</div>
+<div class="note">Keputusan Umar (#140): skor dari link saja <b>dibatasi di bawah 30</b>. L2 hanya boleh membuka gate LLM, tidak boleh memunculkan popup sendirian. Id signal: satu <code>suspicious_link</code>, alasan per bagian di <code>evidence</code>.</div>
+
+<h2>2. Perubahan: sekarang → v1 → v2</h2>
+<div class="card scroll"><table>
+<tr><th></th><th>Detector sekarang</th><th><span class="pill v1">v1</span> pembedah URL</th><th><span class="pill v2">v2</span> + host gratis</th></tr>
+<tr><td>Yang dibaca</td><td>hostname saja</td><td>seluruh URL</td><td>seluruh URL</td></tr>
+<tr><td>Path / query / fragment</td><td>dibuang</td><td>dinilai</td><td>dinilai</td></tr>
+<tr><td>Blogspot, cloudfront, github.io</td><td>domain host dianggap domain situs</td><td>sama</td><td>domain = milik host; yang dinilai label pertama + nama file</td></tr>
+<tr><td>Kata umpan</td><td>hanya di domain, 25 brand</td><td>di path</td><td>32 kata di label & nama file + 7 nama kurir</td></tr>
+<tr><td>Miss yang ditemukan</td><td colspan="3">helpnets (nama acak), dhl123 (DHL tidak di 25 brand), 3 blog bansos/kuota/sim gratis. Semua skor 0 di detector sekarang.</td></tr>
+</table></div>
+
+<h2>3. Skor per link</h2>
+<p class="sub">Garis ungu = gate LLM (15). Garis merah = batas atas skor-link-saja (30, per Umar).</p>
+<div class="legend"><span class="l1">v1</span><span class="l2">v2</span><span style="color:var(--mute)">detector sekarang = 0 untuk kelima link scam</span></div>
+<div class="card chart" id="chart"></div>
+<div class="note">Bobot adalah tebakan. Daftar kata umpan dan host gratis ditulis <b>setelah</b> melihat 2 dari 4 link tes, jadi angka scam cocok karena jawabannya sudah dilihat. Ini bukan akurasi.</div>
+
+<h2>4. Yang dicek, bagian per bagian</h2>
+<div class="grid2">
+<div>
+<p class="sub"><span class="pill v1">v1</span> seluruh URL (batas 25 poin per bagian)</p>
+<div class="card scroll"><table>
+<tr><th>Bagian</th><th>Pemicu</th><th>+</th></tr>
+<tr><td>scheme</td><td><code>http</code> tanpa TLS</td><td class="w">5</td></tr>
+<tr><td>userinfo</td><td><code>user@</code> sebelum host</td><td class="w">25</td></tr>
+<tr><td rowspan="5">host</td><td>IP sebagai host</td><td class="w">20</td></tr>
+<tr><td>label punycode <code>xn--</code></td><td class="w">10</td></tr>
+<tr><td>≥4 label sebelum suffix</td><td class="w">8</td></tr>
+<tr><td>≥3 tanda hubung di satu label</td><td class="w">8</td></tr>
+<tr><td>label penuh angka (≥8 char, ≥40%)</td><td class="w">8</td></tr>
+<tr><td>tld</td><td>TLD murah/langka (<code>.xyz .click .info</code> …)</td><td class="w">6</td></tr>
+<tr><td>port</td><td>selain 80/443</td><td class="w">10</td></tr>
+<tr><td rowspan="4">path</td><td>nama file acak (≥20 char, entropi ≥3.3, ada angka)</td><td class="w">15</td></tr>
+<tr><td>berakhir <code>.html .php</code> …</td><td class="w">5</td></tr>
+<tr><td>slash setelah nama file</td><td class="w">8</td></tr>
+<tr><td>kata umpan di path</td><td class="w">6</td></tr>
+<tr><td rowspan="3">query</td><td>redirect ke URL lain</td><td class="w">12</td></tr>
+<tr><td>email di query</td><td class="w">5</td></tr>
+<tr><td>query &gt;150 char</td><td class="w">5</td></tr>
+<tr><td>fragment</td><td>URL di dalam fragment</td><td class="w">8</td></tr>
+<tr><td>length</td><td>URL &gt;120 char</td><td class="w">4</td></tr>
+</table></div>
+</div>
+<div>
+<p class="sub"><span class="pill v2">v2</span> tambahan, hanya jika host gratis</p>
+<div class="card scroll"><table>
+<tr><th>Cek</th><th>+</th></tr>
+<tr><td>Host termasuk 20 hosting gratis</td><td class="w">3</td></tr>
+<tr><td>Kata umpan / kurir di label pertama (1 kata / ≥2 kata)</td><td class="w">10 / 16</td></tr>
+<tr><td>Tahun / jumlah di label (<code>2026</code>, <code>60gb</code>)</td><td class="w">5</td></tr>
+<tr><td>Kata umpan / kurir di nama file</td><td class="w">10</td></tr>
+</table></div>
+<p class="sub" style="margin-top:14px">Host gratis (20)</p>
+<div class="card" id="free"></div>
+<p class="sub" style="margin-top:14px">Kata umpan (32) + kurir (7)</p>
+<div class="card" id="bait"></div>
+</div>
+</div>
+
+<h2>5. False positive</h2>
+<div class="card scroll"><table>
+<tr><th>Link legit</th><th>v1</th><th>v2</th><th>Penyebab</th></tr>
+<tr><td class="mono">tipskeuanganku.blogspot.com/…/cara-cek-saldo-bca.html</td><td class="w">11</td><td class="w" style="color:var(--bad)">24</td><td>kata <code>saldo</code></td></tr>
+<tr><td class="mono">andi-dev.github.io/panduan-login/</td><td class="w">6</td><td class="w" style="color:var(--bad)">19</td><td>kata <code>login</code></td></tr>
+<tr><td class="mono">infopaketwisata.blogspot.com</td><td class="w">0</td><td class="w" style="color:var(--warn)">13</td><td>kata <code>paket</code></td></tr>
+<tr><td class="mono">resepnusantara.blogspot.com, user.github.io, myapp.netlify.app</td><td class="w">0</td><td class="w">3</td><td>hanya host gratis</td></tr>
+</table></div>
+<p class="sub" style="margin-top:8px">Corpus 103 URL: 0/53 legit ≥30. Scam di corpus 49/50 sintetis (brand-di-domain), jadi 0/50 ≥15 dan tidak mengukur pola helpnets.</p>
+
+<h2>6. Coba sendiri</h2>
+<p class="sub">Port JS dari <code>dissect-lib.mjs</code> + <code>dissect2.mjs</code>, jalan di browser. Klik contoh atau ketik URL.</p>
+<div class="card">
+  <input type="text" id="u" value="https://bantuannbansos2026.blogspot.com/" spellcheck="false">
+  <div class="chips" id="chips"></div>
+  <div class="urlbar" id="anat"></div>
+  <div class="row" style="margin-top:14px"><div class="lab">v1 <small>pembedah URL</small></div><div class="bar"><i id="b1" style="background:var(--v1)"></i><em id="n1"></em></div></div>
+  <div class="row" style="margin:0"><div class="lab">v2 <small>+ host gratis</small></div><div class="bar"><i id="b2" style="background:var(--v2)"></i><em id="n2"></em></div></div>
+  <p id="gate" class="verdict" style="margin:8px 0"></p>
+  <div class="scroll"><table id="parts"></table></div>
+</div>
+</main>
+
+<script>
+const CHEAP=new Set(["xyz","site","click","top","icu","buzz","cfd","sbs","tk","ml","ga","cf","gq","link","vip","rest","monster","quest","cyou","bond","work","fun","online","info","pw","cc","ws","su"]);
+const BAIT1=new Set(["verifikasi","verify","verification","login","signin","masuk","promo","undian","hadiah","klaim","claim","bansos","bantuan","cek","update","perbarui","secure","security","official","resmi","akun","account","blokir","unlock","reset","otp","kyc","refund","voucher","bonus","gratis","support","cs"]);
+const SUFFIXES=new Set(["co.id","go.id","or.id","ac.id","web.id","sch.id","my.id","biz.id","desa.id","mil.id","net.id","co.uk","org.uk","com.au","co.jp","com.sg","com.my","co.in"]);
+const FILE_EXT=/\.(html?|php\d?|aspx?|jsp)$/i;
+const FREE=["blogspot.com","blogspot.co.id","github.io","netlify.app","pages.dev","vercel.app","web.app","firebaseapp.com","weebly.com","wixsite.com","wordpress.com","herokuapp.com","glitch.me","workers.dev","cloudfront.net","r2.dev","webflow.io","000webhostapp.com","sites.google.com","s3.amazonaws.com"];
+const BAIT2=["gratis","bantuan","bansos","kuota","hadiah","undian","klaim","promo","pulsa","saldo","subsidi","pencairan","verifikasi","resmi","official","bonus","giveaway","reward","voucher","cashback","kurir","paket","tracking","lowongan","pinjaman","pinjol","kripto","prakerja","login","update","claim","free"];
+const CARR=["dhl","fedex","sicepat","anteraja","ninjaxpress","wahana","tiki"];
+const entropy=s=>{const f={};for(const c of s)f[c]=(f[c]||0)+1;return -Object.values(f).reduce((a,n)=>a+n/s.length*Math.log2(n/s.length),0)};
+const hits=(s,l)=>l.filter(w=>s.includes(w));
+
+function dissect(raw){
+  const parts=[];const add=(part,weight,why)=>parts.push({part,weight,why,v:1});
+  let u;try{u=new URL(raw)}catch{return{score:0,parts:[{part:"url",weight:0,why:"tidak bisa di-parse",v:1}]}}
+  if(u.protocol==="http:")add("scheme",5,"http tanpa TLS");
+  if(u.username||u.password)add("userinfo",25,"user@ sebelum host menyembunyikan host asli");
+  const host=u.hostname.toLowerCase().replace(/\.+$/,"");const labels=host.split(".");
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(host)||host.includes(":"))add("host",20,"IP sebagai host");
+  else{
+    const sl=labels.length>2&&SUFFIXES.has(labels.slice(-2).join("."))?2:1;
+    const tld=labels[labels.length-1];const name=labels.slice(0,-sl);
+    if(labels.some(l=>l.startsWith("xn--")))add("host",10,"label punycode");
+    if(name.length>=4)add("host",8,name.length+" label sebelum suffix");
+    if(name.some(l=>(l.match(/-/g)||[]).length>=3))add("host",8,"3+ tanda hubung di satu label");
+    if(name.some(l=>l.length>=8&&(l.match(/\d/g)||[]).length/l.length>=.4))add("host",8,"label penuh angka");
+    if(sl===1&&CHEAP.has(tld))add("tld",6,"."+tld+" TLD murah/langka");
+  }
+  if(u.port&&!["80","443"].includes(u.port))add("port",10,"port "+u.port);
+  const segs=u.pathname.split("/").filter(Boolean);const last=segs[segs.length-1]||"";const stem=last.replace(FILE_EXT,"");
+  if(stem.length>=20&&/^[a-z0-9_-]+$/i.test(stem)&&entropy(stem)>=3.3&&/\d/.test(stem))add("path",15,`nama acak "${stem.slice(0,12)}…" (${stem.length} char, entropi ${entropy(stem).toFixed(1)})`);
+  if(FILE_EXT.test(last))add("path-ext",5,"berakhir "+last.match(FILE_EXT)[0]);
+  if(FILE_EXT.test(last)&&u.pathname.endsWith("/"))add("path-slash",8,"slash setelah nama file");
+  if(segs.some(s=>s.split(/[^a-z]+/i).some(w=>BAIT1.has(w.toLowerCase()))))add("path-bait",6,"kata umpan di path");
+  const q=[...u.searchParams];
+  if(q.some(([k,v])=>/^(url|redirect|redir|next|return|goto|link|u)$/i.test(k)&&/^(https?:)?\/\//i.test(v)))add("query",12,"redirect ke URL lain");
+  if(q.some(([,v])=>/\S+@\S+/.test(v)))add("query",5,"email di query");
+  if(u.search.length>150)add("query",5,"query sangat panjang");
+  if(/https?:/i.test(u.hash))add("fragment",8,"URL di dalam fragment");
+  if(raw.length>120)add("length",4,raw.length+" char");
+  const by={};for(const p of parts)by[p.part]=Math.min(25,(by[p.part]||0)+p.weight);
+  return{score:Math.min(100,Object.values(by).reduce((a,b)=>a+b,0)),parts};
+}
+function dissect2(raw){
+  const base=dissect(raw);const ex=[];const add=(part,weight,why)=>ex.push({part,weight,why,v:2});
+  let u;try{u=new URL(raw)}catch{return base}
+  const host=u.hostname.toLowerCase();const free=FREE.find(h=>host===h||host.endsWith("."+h));
+  if(free){
+    const label=host.slice(0,host.length-free.length-1).split(".").pop()||"";
+    const stem=(u.pathname.split("/").filter(Boolean).pop()||"").toLowerCase();
+    const inL=[...hits(label,BAIT2),...hits(label,CARR)],inP=[...hits(stem,BAIT2),...hits(stem,CARR)];
+    add("freehost",3,"host gratis "+free);
+    if(inL.length)add("free-label",inL.length>=2?16:10,`umpan di subdomain "${label}": ${inL.join("+")}`);
+    if(/20\d\d|\d+(gb|mb|jt|rb)/.test(label))add("free-number",5,"tahun / jumlah di nama");
+    if(inP.length)add("free-path",10,`umpan di nama file "${stem.slice(0,24)}": ${inP.join("+")}`);
+  }
+  return{score:Math.min(100,base.score+ex.reduce((a,p)=>a+p.weight,0)),parts:[...base.parts,...ex]};
+}
+
+const SAMPLES=[
+ ["SCAM","https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/"],
+ ["SCAM","https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html"],
+ ["SCAM","https://simgratisonine.blogspot.com/"],
+ ["SCAM","https://bantuannbansos2026.blogspot.com/"],
+ ["SCAM","https://gratiskuota60gb.blogspot.com/"],
+ ["legit","https://tipskeuanganku.blogspot.com/2026/10/cara-cek-saldo-bca.html"],
+ ["legit","https://andi-dev.github.io/panduan-login/"],
+ ["legit","https://infopaketwisata.blogspot.com/"],
+ ["legit","https://resepnusantara.blogspot.com/"],
+];
+const short=u=>u.replace(/^https?:\/\//,"").replace(/[0-9a-f-]{20,}/,m=>m.slice(0,8)+"…");
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+const MAX=40;
+function drawChart(){
+  const el=document.getElementById("chart");
+  let h="";
+  for(const [k,u] of SAMPLES){
+    const a=dissect(u).score,b=dissect2(u).score;
+    h+=`<div class="row"><div class="lab">${esc(short(u))}<small>${k}</small></div><div class="plot">
+      <div class="bar"><i style="width:${Math.min(a,MAX)/MAX*100}%;background:var(--v1)"></i><em>${a}</em></div>
+      <div class="bar"><i style="width:${Math.min(b,MAX)/MAX*100}%;background:var(--v2)"></i><em>${b}</em></div></div></div>`;
+  }
+  h+=`<div class="th" id="t15"><small>gate 15</small></div><div class="th p" id="t30"><small>batas 30</small></div>`;
+  el.innerHTML=h;placeLines();
+}
+function placeLines(){
+  const el=document.getElementById("chart"),p=el.querySelector(".plot");if(!p)return;
+  const c=el.getBoundingClientRect(),r=p.getBoundingClientRect();
+  document.getElementById("t15").style.left=(r.left-c.left+r.width*15/MAX)+"px";
+  document.getElementById("t30").style.left=(r.left-c.left+r.width*30/MAX)+"px";
+}
+drawChart();addEventListener("resize",placeLines);
+
+document.getElementById("free").innerHTML=FREE.map(x=>`<span class="tag">${x}</span>`).join("");
+document.getElementById("bait").innerHTML=[...BAIT2,...CARR].map(x=>`<span class="tag">${x}</span>`).join("");
+
+const inp=document.getElementById("u");
+document.getElementById("chips").innerHTML=SAMPLES.map(([k,u],i)=>`<button data-i="${i}">${k==="SCAM"?"⚠":"✓"} ${esc(short(u).slice(0,34))}</button>`).join("");
+document.getElementById("chips").onclick=e=>{const b=e.target.closest("button");if(b){inp.value=SAMPLES[b.dataset.i][1];run()}};
+
+function anatomy(raw,r){
+  let u;try{u=new URL(raw)}catch{return esc(raw)}
+  const cls=(...ps)=>{const m=r.parts.filter(x=>ps.includes(x.part)&&x.weight>0);return "seg"+(m.length?" hit":"")+(m.some(x=>x.v===2)?" on2":"")};
+  let out=`<span class="${cls("scheme")}">${u.protocol}//</span>`;
+  if(u.username)out+=`<span class="${cls("userinfo")}">${esc(u.username)}@</span>`;
+  out+=`<span class="${cls("host","tld","freehost","free-label","free-number")}">${esc(u.hostname)}</span>`;
+  if(u.port)out+=`<span class="${cls("port")}">:${u.port}</span>`;
+  out+=`<span class="${cls("path","path-ext","path-slash","path-bait","free-path")}">${esc(u.pathname)}</span>`;
+  if(u.search)out+=`<span class="${cls("query")}">${esc(u.search.slice(0,60))}</span>`;
+  if(u.hash)out+=`<span class="${cls("fragment")}">${esc(u.hash)}</span>`;
+  return out;
+}
+function run(){
+  const raw=inp.value.trim();const a=dissect(raw),b=dissect2(raw);
+  document.getElementById("anat").innerHTML=anatomy(raw,b);
+  document.getElementById("b1").style.width=Math.min(a.score,MAX)/MAX*100+"%";document.getElementById("n1").textContent=a.score;
+  document.getElementById("b2").style.width=Math.min(b.score,MAX)/MAX*100+"%";document.getElementById("n2").textContent=b.score;
+  document.getElementById("gate").innerHTML=b.score>=30?'<span style="color:var(--bad)">≥30: di produksi dipotong ke 29 (link saja tidak boleh jadi popup). Gate LLM terbuka jika ada form.</span>'
+    :b.score>=15?'<span style="color:var(--gate)">≥15: gate LLM terbuka jika halaman punya form.</span>'
+    :'<span style="color:var(--mute)">&lt;15: tidak memicu LLM.</span>';
+  const rows=b.parts.map(p=>`<tr><td><span class="pill v${p.v}">v${p.v}</span></td><td>${p.part}</td><td>${esc(p.why)}</td><td class="w">+${p.weight}</td></tr>`).join("");
+  document.getElementById("parts").innerHTML=`<tr><th></th><th>Bagian</th><th>Alasan</th><th>+</th></tr>`+(rows||`<tr><td colspan="4" style="color:var(--mute)">tidak ada bagian yang menyala</td></tr>`);
+}
+inp.addEventListener("input",run);run();
+</script>
+</body>
+</html>
