@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PSL_RULES } from "../Resources/psl.js";
-import { parseRules, registrableDomain, naiveDomain } from "../Resources/domain.js";
+import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "../Resources/domain.js";
 
 const rules = parseRules(PSL_RULES);
 const cases = {
@@ -41,4 +41,11 @@ test("unknown TLD falls back to the default * rule", () => {
 
 test("naive fallback strips www only", () => {
     assert.equal(naiveDomain("WWW.a.b.co.id"), "a.b.co.id");
+});
+
+test("shareableUrl keeps scheme, host and path only: no query, fragment or credentials leave the phone (/analyze)", () => {
+    assert.equal(shareableUrl("https://bca-verify.top/login?token=abc&otp=123#code=xyz"), "https://bca-verify.top/login");
+    assert.equal(shareableUrl("https://user:pass@scam.example:8443/a/b"), "https://scam.example:8443/a/b");
+    assert.equal(shareableUrl("http://scam.example"), "http://scam.example/");
+    assert.equal(shareableUrl("not a url?x=1"), "not a url");
 });

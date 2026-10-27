@@ -2,7 +2,7 @@
 // network call: content scripts run under the page's origin, so cross-origin fetches belong here.
 
 import { PSL_RULES } from "./psl.js";
-import { parseRules, registrableDomain, naiveDomain } from "./domain.js";
+import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "./domain.js";
 import { captureEvidence } from "./capture.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
@@ -76,7 +76,7 @@ async function analyze(snapshot, localSignals) {
             method: "POST",
             token: session.token,
             timeoutMs: ANALYZE_TIMEOUT_MS,
-            body: JSON.stringify({ snapshot, localSignals }),
+            body: JSON.stringify({ snapshot: { ...snapshot, url: shareableUrl(snapshot.url) }, localSignals }),
         });
         return { ok: true, signals: Array.isArray(body?.signals) ? body.signals : [] };
     } catch (error) {
