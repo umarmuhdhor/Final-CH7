@@ -3,6 +3,7 @@ import type { AppEnv } from "./env";
 import { createSql } from "./db/client";
 import { ApiError, errorResponse, errors } from "./http/errors";
 import { useRateKeySecret } from "./http/keyHash";
+import { appSiteAssociation } from "./routes/app-site-association";
 import { blocklist } from "./routes/blocklist";
 import { devices } from "./routes/devices";
 import { family } from "./routes/family";
@@ -45,7 +46,7 @@ const MAX_REQUEST_BYTES = 256 * 1024;
 
 /**
  * Fase 12 hardening, on every response after the route ran (also errors and raw Responses).
- * Only fills what a route did not set: /join and /screenshots keep their own CSP.
+ * Only fills what a route did not set: /j/<code> and /screenshots keep their own CSP.
  * No CORS headers anywhere: the clients are native (app, Safari extension), and OPTIONS → 404.
  */
 function setSecurityHeaders(h: Headers): void {
@@ -60,6 +61,7 @@ function setSecurityHeaders(h: Headers): void {
 }
 
 app.route("/", health);
+app.route("/", appSiteAssociation);
 app.route("/", devices);
 app.route("/", blocklist);
 app.route("/", family);

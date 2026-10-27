@@ -1,27 +1,45 @@
 import type { Sql, TransactionSql } from "postgres";
-import { claimCode, deleteGuardianCodes, findCode, type FamilyCode } from "../db/repo/codes";
+import { activeGuardianCode, claimCode, deleteGuardianCodes, findCode, type FamilyCode } from "../db/repo/codes";
 import { FAMILY_MAX, guardianOf, insertLink, lockGuardian, memberCount, type DeviceSummary } from "../db/repo/families";
 import { attemptsRetryAfter, lockAttempts, recordAttempt } from "../db/repo/joinAttempts";
 import { errors } from "../http/errors";
 import { randomBytes } from "../http/crypto";
 
 const CODE_TRIES = 20;
+const CODE_SPACE = 1_000_000;
+/** A code with less time left than this is replaced, so a shared link isn't dead before it is opened (issue #128). */
+export const REUSE_MIN_SECONDS = 5 * 60;
 
-/** Uniform 0000–9999: reject values ≥ 2^32 - (2^32 mod 10000). */
+/** Uniform 000000–999999: reject values ≥ 2^32 - (2^32 mod 10^6). */
 export function randomCode(): string {
-  const limit = 2 ** 32 - (2 ** 32 % 10000);
+  const limit = 2 ** 32 - (2 ** 32 % CODE_SPACE);
   for (;;) {
     const v = new DataView(randomBytes(4).buffer).getUint32(0);
-    if (v < limit) return String(v % 10000).padStart(4, "0");
+    if (v < limit) return String(v % CODE_SPACE).padStart(6, "0");
   }
 }
 
-/** R4 §1: replace the guardian's code with a free random one. */
-export async function issueCode(sql: Sql, guardianId: string): Promise<FamilyCode> {
+/**
+ * R4 §1, issue #128: the guardian's active code while it has more than 5 min left, else a new free
+ * random one. `refresh` always makes a new one; the old code stops working at once.
+ * `nextCode` is swapped only in tests, to reach the 503 path without filling all 10^6 codes.
+ */
+export async function issueCode(
+  sql: Sql,
+  guardianId: string,
+  refresh = false,
+  nextCode: () => string = randomCode,
+): Promise<FamilyCode> {
   const code = await sql.begin(async (tx) => {
+    // Parallel requests (sheet opened twice, share tap) must agree on one code: serialize per guardian.
+    await lockGuardian(tx, guardianId);
+    if (!refresh) {
+      const active = await activeGuardianCode(tx, guardianId, REUSE_MIN_SECONDS);
+      if (active) return active;
+    }
     await deleteGuardianCodes(tx, guardianId);
     for (let i = 0; i < CODE_TRIES; i++) {
-      const claimed = await claimCode(tx, guardianId, randomCode());
+      const claimed = await claimCode(tx, guardianId, nextCode());
       if (claimed) return claimed;
     }
     return null;

@@ -17,7 +17,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
-- [Web pages](#web-pages): `GET /join`, `GET /privacy`
+- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`
 - [Push notification](#push-notification) sent by `POST /scans`
 
 ## General rules
@@ -198,25 +198,35 @@ A Guardian can have at most 3 Protected devices; a Protected device has at most 
 
 ### `POST /family/code`
 
-**For:** "Family code" on the Guardian (GD-04). Shows a 4-digit code and a QR the Protected device
-scans or types.
+**For:** "Family code" on the Guardian (GD-04, PR-03). Shows a 6-digit code and a QR the Protected
+device scans or types, and the same code in the invite link shared on WhatsApp / AirDrop.
 
 - **Auth:** Bearer, **guardian** only
 - **Rate limit:** 6 per minute per device
-- **Request body:** none
+- **Request body:** none, `{}`, or `{ "refresh": true }`
+
+| Field | Type | Rules |
+|---|---|---|
+| `refresh` | boolean, optional | `true` always makes a new code. Any other field → `422 invalid_body` |
 
 **Response 200**
 
 ```json
-{ "code": "4821", "expiresAt": "2026-10-22T03:06:00.000Z", "inviteUrl": "https://shoo-api.afindo-mi01.workers.dev/join?code=4821" }
+{ "code": "482193", "expiresAt": "2026-10-22T03:35:00.000Z", "inviteUrl": "https://shoo-api.afindo-mi01.workers.dev/j/482193" }
 ```
 
-- The code is valid for 60 seconds. A new request replaces the Guardian's previous code.
-- `inviteUrl` is an https link for WhatsApp (it opens `shoo://join?code=4821`, see [`GET /join`](#get-joincode)).
+- The code is valid for 30 minutes and can be used by several Protected devices until the family is full.
+- Without `refresh`, the Guardian's active code comes back while it has more than 5 minutes left, so the
+  screen and a link shared earlier show the same code. With 5 minutes or less left, a new code replaces it.
+- `refresh: true` ("Create new code") replaces the code; the old code and every link with it stop working
+  at once (`404 code_invalid`).
+- `inviteUrl` is an https link (see [`GET /j/{code}`](#get-jcode)). With the app installed it is a
+  Universal Link and opens the app; otherwise a small page opens.
 
 | Error | When |
 |---|---|
-| `503 code_unavailable` | No free 4-digit code was found. Show "Try again" |
+| `422 invalid_body` | `refresh` is not a boolean, or the body has other fields |
+| `503 code_unavailable` | No free 6-digit code was found. Show "Try again" |
 
 ### `POST /family/join`
 
@@ -229,10 +239,10 @@ invite link.
 
 | Field | Type | Rules |
 |---|---|---|
-| `code` | string | Exactly 4 digits |
+| `code` | string | Exactly 6 digits |
 
 ```json
-{ "code": "4821" }
+{ "code": "482193" }
 ```
 
 **Response 200**
@@ -244,7 +254,7 @@ invite link.
 | Error | When |
 |---|---|
 | `404 code_invalid` | No such code (also when the Guardian replaced it) |
-| `410 code_expired` | The code is older than 60 seconds |
+| `410 code_expired` | The code is older than 30 minutes |
 | `409 family_full` | The Guardian already has 3 Protected devices |
 | `409 already_connected` | This device already has a Guardian |
 | `429 too_many_attempts` | Too many wrong codes: 5 per 10 min per device or 20 per 10 min per IP. Has `Retry-After` |
@@ -557,13 +567,36 @@ Incremental refresh every hour, full refresh daily (`docs/design/blocklist.md`).
 
 These return HTML for people, not JSON for the app.
 
-### `GET /join?code=`
+### `GET /j/{code}`
 
-**For:** the `inviteUrl` a Guardian shares on WhatsApp (PR-03). WhatsApp does not make `shoo://` links
-tappable, so this small page links to `shoo://join?code=4821`, which opens the app with the code filled in.
+**For:** the `inviteUrl` a Guardian shares on WhatsApp / AirDrop (PR-03). With Shoo installed the link is
+a Universal Link and this page never shows. Otherwise it shows the code, an "Open Shoo" button
+(`shoo://join?code=482193`) and an "Install" link to `APP_STORE_URL`. Tapping "Install" first copies the
+invite link to the clipboard, so the app can offer "Paste invite" on first launch.
 
-- **Auth:** none. No database lookup: the page never says whether a code is valid.
-- Language: Bahasa Indonesia when `Accept-Language` starts with `id`, else English. Strict CSP.
+- **Auth:** none. No database lookup: the page never says whether a code is valid. Anything other than
+  6 digits shows "no valid code" and is never echoed.
+- Language: Bahasa Indonesia when `Accept-Language` starts with `id`, else English.
+- Strict CSP: the one inline script (copy, then go to the store) runs under a per-request `nonce`.
+  No cookies, no analytics, nothing sent.
+- Link preview: Open Graph tags (`og:title`, `og:description`, `og:image` = `INVITE_BASE_URL/og/invite.jpg`,
+  `twitter:card`), so WhatsApp / Messages show the Shoo picture above the invite text. The same tags for
+  every invite: no code, no name.
+- The old `GET /join?code=` page and 4-digit codes are gone (`404`).
+
+### `GET /og/invite.jpg`
+
+**For:** link preview crawlers (WhatsApp, Messages, Telegram) reading `og:image` on `/j/{code}`.
+1200×628 JPEG under 300 KB (WhatsApp skips larger images), bundled into the Worker (`src/assets/`).
+
+- **Auth:** none. `Cache-Control: public, max-age=86400` (no user data).
+
+### `GET /.well-known/apple-app-site-association`
+
+**For:** iOS, to open `/j/*` links in the app (Universal Link, issue #129). Lists the app ids from
+`APPLINKS_APP_IDS`; empty → `{ "applinks": { "details": [] } }` and the link stays a web page.
+
+- **Auth:** none. JSON, no redirect, `Cache-Control: public, max-age=3600` (no user data).
 
 ### `GET /privacy?lang=en|id`
 

@@ -34,8 +34,8 @@ describe("security headers on every response (fase 12 hardening)", () => {
     }
   });
 
-  it("pages with their own CSP keep it (/join)", async () => {
-    const res = await call("/join?code=1234");
+  it("pages with their own CSP keep it (/j/<code>)", async () => {
+    const res = await call("/j/123456");
     expect(res.status).toBe(200);
     expectSecurityHeaders(res);
     expect(res.headers.get("content-security-policy")).not.toBe("default-src 'none'; frame-ancestors 'none'");

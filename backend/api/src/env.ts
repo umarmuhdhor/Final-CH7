@@ -3,6 +3,10 @@ import type { Sql } from "postgres";
 export interface Env {
   DB: Hyperdrive;
   INVITE_BASE_URL: string;
+  /** TestFlight or App Store link on the invite page (PR-03). Unset → apps.apple.com. */
+  APP_STORE_URL?: string;
+  /** Comma-separated `<Team ID>.<bundle ID>` for the Universal Link (issue #129). Unset → no app. */
+  APPLINKS_APP_IDS?: string;
   /** Secret: APNs .p8 key (PEM) as one line of base64 (fase 11, D-alief-B01). */
   APNS_KEY_P8_B64?: string;
   /** Secret: APNs key id (10 chars). */

@@ -5,6 +5,8 @@ declare namespace Cloudflare {
     /** Tests only: role postgres, for what a person does in the SQL editor (approve blocklist domains). */
     DB_ADMIN: Hyperdrive;
     INVITE_BASE_URL: string;
+    APP_STORE_URL?: string;
+    APPLINKS_APP_IDS?: string;
     APNS_KEY_P8_B64?: string;
     APNS_KEY_ID?: string;
     APNS_TEAM_ID?: string;
@@ -15,6 +17,8 @@ declare namespace Cloudflare {
     SCREENSHOT_MAX_BYTES?: string;
     SCREENSHOT_URL_SECRET?: string;
     RATE_KEY_SECRET?: string;
+    /** Tests only: "1" runs the slow opt-in cases (vitest.config.ts). */
+    SHOO_SLOW_TESTS?: string;
   }
   interface GlobalProps {
     mainModule: typeof import("../src/index");

@@ -21,6 +21,7 @@ Needs Node 24, pnpm, Docker, Supabase CLI. Run from the repo root.
 (cd backend/db && supabase db reset && supabase test db)   # migrations + seed + pgTAP
 pnpm -C backend/api install
 pnpm -C backend/api typecheck && pnpm -C backend/api test  # vitest inside workerd, against local Postgres
+SHOO_SLOW_TESTS=1 pnpm -C backend/api test                 # plus slow opt-in cases (all 10^6 family codes taken)
 cp backend/api/.dev.vars.example backend/api/.dev.vars     # once
 pnpm -C backend/api dev                                    # http://localhost:8787
 ```
@@ -42,7 +43,7 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/devices/me`](API.md#get-devicesme) | app | My profile, and my Guardian if I am Protected |
 | PATCH | [`/devices/me`](API.md#patch-devicesme) | app, extension | Rename, APNs token, language, extension heartbeat |
 | DELETE | [`/devices/me`](API.md#delete-devicesme) | app, Profile | Delete my data now |
-| POST | [`/family/code`](API.md#post-familycode) | Guardian app | 4-digit code + QR + invite link, valid 60 s |
+| POST | [`/family/code`](API.md#post-familycode) | Guardian app | 6-digit code + QR + invite link, valid 30 min; `refresh` makes a new one |
 | POST | [`/family/join`](API.md#post-familyjoin) | Protected app | Connect to a Guardian with the code |
 | GET | [`/family/members`](API.md#get-familymembers) | Guardian app | Family cards: members, extension status, last scan |
 | DELETE | [`/family/members/{deviceId}`](API.md#delete-familymembersdeviceid) | Guardian app | Remove a member |
@@ -54,7 +55,9 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
 | GET | [`/verdicts?domain=`](API.md#get-verdictsdomain) | extension | Poll for the Guardian's decision on a block screen |
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
-| GET | [`/join?code=`](API.md#get-joincode) | browser (WhatsApp link) | Invite page that opens `shoo://join?code=` |
+| GET | [`/j/{code}`](API.md#get-jcode) | browser (WhatsApp / AirDrop link) | Invite page when the app is not installed: open Shoo, or copy + install |
+| GET | [`/og/invite.jpg`](API.md#get-oginvitejpg) | WhatsApp / Messages crawler | Link preview image for `/j/{code}` |
+| GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
 | GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
 
 All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`. Every response is
@@ -68,7 +71,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 |---|---|
 | `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt` |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
-| `family_codes`, `join_attempts` | 4-digit codes (60 s) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
+| `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path |
 | `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
@@ -98,6 +101,8 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 |---|---|---|
 | `DB` | Hyperdrive binding | `shoo-db` (id filled in at first deploy) |
 | `INVITE_BASE_URL` | var | Worker URL (used from fase 08) |
+| `APP_STORE_URL` | var | "Install" link on the invite page: TestFlight public link now, App Store later. Only `https://testflight.apple.com` / `https://apps.apple.com`; `""` or anything else → `https://apps.apple.com/` |
+| `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129): `DWTZNGA7Y8.com.umarmuhdhor.shoo` (dev builds and TestFlight share that team and bundle ID); `""` → no app listed |
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |

@@ -98,7 +98,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     await device("dev_p");
     await scan("s_old", "dev_p", 15, "dev_p/old.jpg");
     await scan("s_noshot", "dev_p", 15);
-    await sql`insert into family_codes (code, guardian_id, expires_at) values ('1234', 'dev_p', now() - interval '2 hours')`;
+    await sql`insert into family_codes (code, guardian_id, expires_at) values ('123456', 'dev_p', now() - interval '2 hours')`;
     const errorsLogged: string[] = [];
     vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errorsLogged.push(a.map(String).join(" ")));
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -143,7 +143,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
   it("prunes codes, join attempts, push log and rate-limit hits at their own ages", async () => {
     await device("dev_g", "guardian");
     await sql`insert into family_codes (code, guardian_id, expires_at) values
-      ('1111', 'dev_g', now() - interval '2 hours'), ('2222', 'dev_g', now() - interval '30 minutes')`;
+      ('111111', 'dev_g', now() - interval '2 hours'), ('222222', 'dev_g', now() - interval '30 minutes')`;
     await sql`insert into join_attempts (device_id, ip_hash, success, attempted_at) values
       ('dev_g', '\\x01', false, now() - interval '25 hours'), ('dev_g', '\\x02', false, now() - interval '23 hours')`;
     await sql`insert into push_log (to_device_id, result, created_at) values
@@ -152,7 +152,7 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
       ('x', '\\x01', now() - interval '25 hours'), ('x', '\\x02', now() - interval '59 minutes')`;
 
     expect(await runRetention(sql, env)).toMatchObject({ familyCodes: 1, joinAttempts: 1, pushLog: 1, rateLimitHits: 1 });
-    expect((await sql<{ code: string }[]>`select code from family_codes`).map((r) => r.code)).toEqual(["2222"]);
+    expect((await sql<{ code: string }[]>`select code from family_codes`).map((r) => r.code)).toEqual(["222222"]);
     expect((await sql`select 1 from join_attempts`).length).toBe(1);
     expect((await sql`select 1 from push_log`).length).toBe(1);
     expect((await sql`select 1 from rate_limit_hits`).length).toBe(1);
