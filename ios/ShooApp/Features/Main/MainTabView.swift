@@ -11,8 +11,8 @@ struct MainTabView: View {
                 shieldRoot
                     .id(screenIdentity)
                     .toolbar {
-                        FamilyModeToggle()
-                        ProfileButton()
+                        // Guardian Shield has its own family pill; Guardian Home also its own profile button.
+                        if !isGuardianHome { ProfileButton() }
                     }
                     .navigationDestination(for: Route.self, destination: destination)
             }
@@ -48,6 +48,11 @@ struct MainTabView: View {
         } else {
             GuardianShieldView()
         }
+    }
+
+    /// Guardian with Family mode off: Home draws its own top bar over the hero (GD-01).
+    private var isGuardianHome: Bool {
+        env.settings.mode == .guardian && !env.settings.familyModeOn
     }
 
     /// Own scans (PR-05, guardian with Family mode off); Family mode → the family's, owner shown (GD-05).

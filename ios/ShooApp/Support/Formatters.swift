@@ -23,4 +23,30 @@ enum Formatters {
         style.timeZone = timeZone
         return date.formatted(style)
     }
+
+    /// "Today · 10.42 WIB" / "Hari ini · 10.42 WIB" (Guardian Home recent rows).
+    static func dayAndTime(_ date: Date, now: Date = Date(), language: AppLanguage, timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
+        let day: String
+        if calendar.isDate(date, inSameDayAs: now) || calendar.isDate(date, inSameDayAs: yesterday) {
+            // "today" / "hari ini", "yesterday" / "kemarin", capitalised as the first word.
+            let formatter = RelativeDateTimeFormatter()
+            formatter.locale = language.locale
+            formatter.dateTimeStyle = .named
+            formatter.calendar = calendar
+            let offset = calendar.isDate(date, inSameDayAs: now) ? 0 : -1
+            let word = formatter.localizedString(from: DateComponents(day: offset))
+            day = word.prefix(1).uppercased(with: language.locale) + word.dropFirst()
+        } else {
+            var style = Date.FormatStyle(date: .abbreviated, time: .omitted, locale: language.locale)
+            style.timeZone = timeZone
+            day = date.formatted(style)
+        }
+        var time = Date.FormatStyle(date: .omitted, time: .shortened, locale: language.locale)
+        time.timeZone = timeZone
+        let zone = timeZone.localizedName(for: .shortStandard, locale: language.locale) ?? ""
+        return [day, [date.formatted(time), zone].filter { !$0.isEmpty }.joined(separator: " ")].joined(separator: " · ")
+    }
 }

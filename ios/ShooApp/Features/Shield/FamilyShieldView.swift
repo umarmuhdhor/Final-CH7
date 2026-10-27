@@ -1,37 +1,51 @@
 import SwiftUI
 
-/// Guardian Shield (GD-01/GD-02): Family mode off → own Shield, on → the family (GD-03).
+/// Guardian Shield (GD-01/GD-02): Family mode off → Guardian Home, on → the family (GD-03).
 /// The toggle only changes this view; the guardian's Safari stays protected either way.
 struct GuardianShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @State private var notificationStatus = NotificationAuthorization.authorized
+    @State private var isReminderPresented = false
 
     var body: some View {
         Group {
             if env.settings.familyModeOn {
-                FamilyShieldView(repository: env.repository, reminder: reminder)
+                FamilyShieldView(repository: env.repository)
             } else {
-                ProtectedShieldView(
-                    repository: env.repository, extensionStatus: env.extensionStatus, perspective: .guardian, reminder: reminder
-                )
+                GuardianHomeView(repository: env.repository, settings: env.settings, extensionStatus: env.extensionStatus)
             }
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             notificationStatus = await env.notifications.status()
+            isReminderPresented = NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode)
+                && !env.router.notificationReminderShown
+        }
+        // Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
+        // A popup once per launch, so it never takes room on Home (QA-A P2-7).
+        .alert(Text("Notifications are off"), isPresented: $isReminderPresented) {
+            Button("Turn on") { turnOnNotifications() }
+                .accessibilityIdentifier("reminder.turnOn")
+            Button("Not now", role: .cancel) {}
+                .accessibilityIdentifier("reminder.notNow")
+        } message: {
+            Text("You won't hear when your family is at risk.")
+        }
+        .onChange(of: isReminderPresented) { _, isPresented in
+            if isPresented { env.router.notificationReminderShown = true }
         }
     }
 
-    /// Push alerts are how the guardian hears about the family: remind while they are off (D-alief-A08).
-    /// It scrolls with the screen: pinned, it filled most of a small iPhone at large text sizes (QA-A P2-7).
-    private var reminder: NotificationReminderBanner? {
-        guard NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode) else { return nil }
-        return NotificationReminderBanner(status: notificationStatus) {
+    /// Never asked yet: the system prompt. Denied: only Settings can change it.
+    private func turnOnNotifications() {
+        if notificationStatus == .notDetermined {
             Task {
                 notificationStatus = await env.notifications.request()
                 await env.registerForPushIfAllowed()
             }
+        } else if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+            UIApplication.shared.open(url)
         }
     }
 }
@@ -44,11 +58,9 @@ struct FamilyShieldView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var model: FamilyShieldModel
     @State private var isInvitePresented = false
-    private let reminder: NotificationReminderBanner?
 
-    init(repository: any ShooRepository, reminder: NotificationReminderBanner? = nil) {
+    init(repository: any ShooRepository) {
         _model = State(initialValue: FamilyShieldModel(repository: repository))
-        self.reminder = reminder
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -56,7 +68,6 @@ struct FamilyShieldView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                if let reminder { reminder }
                 content
             }
             .padding(16)
@@ -64,6 +75,10 @@ struct FamilyShieldView: View {
         .background(Color(.systemGroupedBackground))
         // Its own title, so it is clear which view Family mode shows.
         .navigationTitle(localized: "Family")
+        // The same pill as on Home brings the guardian back (GD-02).
+        .toolbar {
+            FamilySwitchToolbarItem(members: model.members, action: switchToHome, isFamilyShown: true, onDarkBackground: false)
+        }
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         // Pinned above the tab bar so the only action of an empty family is in view without scrolling (QA-A P2-4).
@@ -81,6 +96,13 @@ struct FamilyShieldView: View {
             FamilyCodeView(repository: env.repository)
                 .environment(\.locale, locale)
         }
+    }
+
+    private func switchToHome() {
+        env.settings.familyModeOn = false
+        AccessibilityNotification.Announcement(
+            L10n.string("Family mode off. Showing your Shield.", language: env.settings.language)
+        ).post()
     }
 
     private var inviteButton: some View {
