@@ -96,6 +96,7 @@
         .ring { position: relative; flex: none; width: var(--size); height: var(--size); border-radius: 50%;
                 box-sizing: border-box; border: 1px solid #e4e6ea;
                 background: linear-gradient(#fff, #f3f4f6); box-shadow: 0 4px 12px rgba(31,42,55,.08); }
+        /* insets are inside the 1px border: track 4px and centre 24.5px from the outer edge at 124px (Figma) */
         .ring::before { content: ""; position: absolute; inset: var(--bezel); border-radius: 50%;
                 box-shadow: inset 0 1px 2px rgba(31,42,55,.08);
                 background: conic-gradient(transparent 0 calc(var(--p) * 1%), #ecedef 0),
@@ -122,7 +123,7 @@
         .shoo img { width: 30px; height: 30px; border-radius: 50%; }
         .hero { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px 0 22px;
                 border-bottom: 1px solid #e1e3e7; }
-        .hero .ring { --size: 124px; --bezel: 4px; --hole: 24.5px; }
+        .hero .ring { --size: 124px; --bezel: 3px; --hole: 23.5px; }
         .caption { font-size: 17px; font-weight: 600; letter-spacing: .06em; color: #f69001; text-transform: uppercase; }
         .body { display: flex; flex-direction: column; gap: 32px; padding: 24px 22px; }
         .copy { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
@@ -148,7 +149,7 @@
                   border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.92);
                   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
                   box-shadow: 0 12px 28px rgba(31,42,55,.14), 0 1px 3px rgba(31,42,55,.05); }
-        .banner .ring { --size: 72px; --bezel: 2.3px; --hole: 14.3px; box-shadow: 0 2px 7px rgba(31,42,55,.08); }
+        .banner .ring { --size: 72px; --bezel: 1.3px; --hole: 13.3px; box-shadow: 0 2px 7px rgba(31,42,55,.08); }
         .lines { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 8px; }
         .title { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600;
                  line-height: 1.4; letter-spacing: -.01em; }
