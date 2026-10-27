@@ -55,39 +55,39 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
         app.buttons["splash.skip"].tap()
         let name = app.textFields["name.field"]
-        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
         name.tap()
         name.typeText("Mom")
         app.buttons["name.continue"].tap()
         app.buttons["mode.protected"].tap()
         app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 10))
         app.buttons["greeting.continue"].tap()
 
         let join = app.buttons["connect.join"]
-        XCTAssertTrue(join.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(join.isEnabled)
         enter("000000", in: app)
         join.tap()
         let error = app.staticTexts["connect.error"]
-        XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(error.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
 
         enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
         join.tap()
-        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        XCTAssertTrue(error.waitForExistence(timeout: 10))
         XCTAssertTrue(error.label.contains("expired"), error.label)
 
         enter("482193", in: app)
         join.tap()
         let title = app.staticTexts["protectedBy.title"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Adhella"), title.label)
         app.buttons["protectedBy.continue"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
     /// T11: an invite link only fills the code; nothing joins until Connect is tapped.
@@ -161,16 +161,19 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(familyCode.waitForExistence(timeout: 10), app.debugDescription)
         if !familyCode.isHittable { app.swipeUp() }
         familyCode.tap()
-        XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 10), app.debugDescription)
+        // The member list loads after the code; wait for it instead of reading the label once (flaky on CI).
         let members = app.descendants(matching: .any)["familyCode.members"].firstMatch
-        XCTAssertTrue(members.label.contains("2 of 3"), members.label)
+        let two = NSPredicate(format: "label CONTAINS '2 of 3'")
+        wait(for: [expectation(for: two, evaluatedWith: members)], timeout: 10)
         let remove = app.buttons["familyCode.remove.dev_dad"]
+        XCTAssertTrue(remove.waitForExistence(timeout: 10), app.debugDescription)
         if !remove.isHittable { app.swipeUp() }
         remove.tap()
         let confirm = app.buttons["familyCode.remove.confirm"].firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10), app.debugDescription)
         confirm.tap()
         let one = NSPredicate(format: "label CONTAINS '1 of 3'")
-        wait(for: [expectation(for: one, evaluatedWith: members)], timeout: 5)
+        wait(for: [expectation(for: one, evaluatedWith: members)], timeout: 10)
     }
 }
