@@ -79,3 +79,18 @@ test("at most 5 iframe documents are read; iframes without forms don't count", (
 test("page without iframes → only its own forms", () => {
     assert.deepEqual(pageForms(makeDoc()), []);
 });
+
+test("page text leaves out what the user typed into editable areas, nested ones once", () => {
+    const editable = (text, parent = null) => ({ innerText: text, parentElement: { closest: () => parent } });
+    const composer = editable("my PIN is 123456");
+    const doc = {
+        body: { innerText: "Chat with CS\nmy PIN is 123456\nSend" },
+        querySelectorAll: (sel) => (sel.startsWith("[contenteditable]") ? [composer, editable("PIN", composer), editable("")] : []),
+    };
+    assert.equal(ShooSnapshot.pageText(doc, 20000), "Chat with CS\n\nSend");
+    assert.equal(ShooSnapshot.pageText(doc, 4), "Chat");
+});
+
+test("page text without a body is empty", () => {
+    assert.equal(ShooSnapshot.pageText({ body: null, querySelectorAll: () => [] }, 100), "");
+});

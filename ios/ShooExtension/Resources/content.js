@@ -45,7 +45,7 @@
             domain: await registrableDomain(location.hostname),
             title: read(() => dom.title(document), ""),
             lang: read(() => dom.root(document).lang || null, null),
-            text: read(() => (dom.body(document)?.innerText || "").slice(0, MAX_TEXT_CHARS), ""),
+            text: read(() => ShooSnapshot.pageText(document, MAX_TEXT_CHARS), ""), // minus editable areas (snapshot.js)
             forms: read(() => ShooSnapshot.pageForms(document), []), // page + same-origin iframes (snapshot.js)
             imageAlts: read(() => [...dom.images(document)].map((img) => img.alt).filter(Boolean).slice(0, MAX_IMAGE_ALTS), []),
             capturedAt: new Date().toISOString(),

@@ -54,3 +54,17 @@ export function registrableDomain(hostname, rules) {
 export function naiveDomain(hostname) {
     return String(hostname || "").toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
 }
+
+/**
+ * `https://host/path` only, for URLs that leave the phone (/analyze): a reset token, session id or OAuth
+ * code in the query or fragment, or credentials before the host, must never be sent. The full URL stays
+ * on the device (layer 2 reads it).
+ */
+export function shareableUrl(url) {
+    try {
+        const parsed = new URL(url);
+        return parsed.origin + parsed.pathname;
+    } catch {
+        return String(url).split(/[?#]/)[0];
+    }
+}

@@ -38,11 +38,11 @@ globalThis.ShooLists.match(hostname);
 ## PageSnapshot (extension → detector / ai)
 ```ts
 type PageSnapshot = {
-  url: string;            // full URL
+  url: string;            // full URL on the device; /analyze gets https://host/path only (no query, fragment or credentials)
   domain: string;         // registrable domain, lowercase, no www
   title: string;
   lang: string | null;    // <html lang>
-  text: string;           // visible text, max 20,000 chars
+  text: string;           // visible text minus editable areas (contenteditable = typed input), max 20,000 chars
   forms: {
     action: string | null;
     fields: {

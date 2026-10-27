@@ -6,6 +6,7 @@
 
 (() => {
     const MAX_FRAMES = 5;
+    const EDITABLE = '[contenteditable]:not([contenteditable="false" i])';
     const { all, one, forms, attr } = globalThis.ShooDom;
 
     function labelFor(input) {
@@ -49,10 +50,24 @@
         return docs;
     }
 
+    /**
+     * Visible text of the page without what the user typed into editable areas (chat and mail composers,
+     * contenteditable): innerText includes those, and typed input never leaves the phone.
+     */
+    function pageText(doc, max) {
+        let text = globalThis.ShooDom.body(doc)?.innerText || "";
+        for (const el of all(doc, EDITABLE)) {
+            if (el.parentElement?.closest(EDITABLE)) continue; // nested: the outer one is taken out already
+            const typed = el.innerText;
+            if (typed) text = text.replace(typed, "");
+        }
+        return text.slice(0, max);
+    }
+
     /** Forms of the page, then of its same-origin iframes. */
     function pageForms(doc) {
         return [doc, ...frameDocuments(doc)].flatMap(formsOf);
     }
 
-    globalThis.ShooSnapshot = { formsOf, frameDocuments, pageForms };
+    globalThis.ShooSnapshot = { formsOf, frameDocuments, pageForms, pageText };
 })();
