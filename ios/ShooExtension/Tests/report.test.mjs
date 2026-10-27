@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+await import("../Resources/dom.js");
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
 import { cropBox, findMarker, smallestFitting } from "../Resources/capture.js";
 const { shouldReport, scanBody, shareableUrl, evidenceRect, screenshotTargets } = globalThis.ShooReport;

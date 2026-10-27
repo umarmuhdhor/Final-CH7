@@ -11,6 +11,7 @@
     const BLUR_SKIP = new Set(["hidden", "checkbox", "radio", "submit", "button", "reset", "image", "range", "color", "file"]);
     const FIELD_SELECTOR = "input, textarea, select, [contenteditable='true']";
     const MAX_FRAME_DEPTH = 3;
+    const dom = globalThis.ShooDom; // the page can shadow document/form properties (dom.js)
     // Paint marker (capture.js): magenta band over cyan band at the viewport's top-left corner, set in the
     // same change as the blur. Found in the capture → that frame has the blur, and it shows where the
     // viewport starts in the image (Safari captures the area under the status bar too).
@@ -91,7 +92,7 @@
             return null; // cross-origin
         }
         if (!inner) return null;
-        if (inner.URL === "about:blank" && !staysBlank(frame)) return null; // still loading its src
+        if (dom.url(inner) === "about:blank" && !staysBlank(frame)) return null; // still loading its src
         return inner;
     }
 
@@ -102,9 +103,9 @@
      * their fields can't be blurred, so the whole frame is hidden.
      */
     function screenshotTargets(doc, depth = 0) {
-        const blur = [...doc.querySelectorAll(FIELD_SELECTOR)].filter((el) => !BLUR_SKIP.has(el.type));
+        const blur = dom.all(doc, FIELD_SELECTOR).filter((el) => !BLUR_SKIP.has(el.type));
         const hide = [];
-        for (const frame of doc.querySelectorAll("iframe, frame")) {
+        for (const frame of dom.all(doc, "iframe, frame")) {
             const inner = readableDocument(frame);
             if (!inner || depth >= MAX_FRAME_DEPTH) {
                 hide.push(frame);
@@ -130,7 +131,7 @@
     const keys = new Map(); // scanId → report key (background maps it to the backend's scan id)
 
     function faviconUrl() {
-        const link = document.querySelector('link[rel~="icon"][href]');
+        const link = dom.one(document, 'link[rel~="icon"][href]');
         try {
             return new URL(link ? link.getAttribute("href") : "/favicon.ico", location.href).href;
         } catch {
@@ -139,8 +140,8 @@
     }
 
     function sensitiveFormRect() {
-        for (const form of document.forms) {
-            const fields = [...form.querySelectorAll("input, textarea")];
+        for (const form of dom.forms(document)) {
+            const fields = dom.all(form, "input, textarea");
             const sensitive = fields.some((el) => {
                 if (el.type === "password") return true;
                 const hint = [el.name, el.id, el.placeholder, el.getAttribute("autocomplete"), el.labels?.[0]?.innerText]
@@ -148,7 +149,7 @@
                     .join(" ");
                 return SENSITIVE.test(hint);
             });
-            if (sensitive) return form.getBoundingClientRect();
+            if (sensitive) return dom.rect(form);
         }
         return null;
     }
@@ -164,13 +165,13 @@
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("filter", "blur(8px)", "important");
         }
-        for (const el of [...hide, ...document.querySelectorAll("shoo-warning")]) {
+        for (const el of [...hide, ...dom.all(document, "shoo-warning")]) {
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("visibility", "hidden", "important");
         }
-        const marker = document.createElement("shoo-capture-marker");
+        const marker = dom.create(document, "shoo-capture-marker");
         marker.setAttribute("style", MARKER_STYLE);
-        document.documentElement.append(marker);
+        dom.root(document).append(marker);
         return () => {
             marker.remove();
             for (const [el, style] of touched) {
@@ -181,8 +182,9 @@
     }
 
     async function report(state, key) {
-        const restore = prepareForScreenshot();
+        let restore = () => {};
         try {
+            restore = prepareForScreenshot();
             const rect = evidenceRect(sensitiveFormRect(), { width: innerWidth, height: innerHeight });
             // Two frames so the blur is likely painted; capture.js still checks for the marker and retries.
             await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -190,7 +192,7 @@
             return await send({
                 type: "report",
                 key,
-                scan: scanBody(state, { title: document.title, faviconUrl: faviconUrl(), now: new Date().toISOString() }),
+                scan: scanBody(state, { title: dom.title(document), faviconUrl: faviconUrl(), now: new Date().toISOString() }),
                 evidence: { ...rect, viewportWidth: innerWidth, markerBand: MARKER_BAND },
             });
         } catch {

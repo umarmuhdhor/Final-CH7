@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 globalThis.CSS ??= { escape: (s) => s };
+await import("../Resources/dom.js");
 await import("../Resources/snapshot.js");
 const { formsOf, frameDocuments, pageForms } = globalThis.ShooSnapshot;
 
