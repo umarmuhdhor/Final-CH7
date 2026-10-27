@@ -21,3 +21,4 @@ Safari Web Extension (EX-01 … EX-08). Swift handler + web files in `Resources/
 - Every network call goes through `background.js` (content scripts run under the page's origin).
 - `Resources/psl.js` is GENERATED — refresh with `scripts/update-psl.sh`, never edit by hand.
 - Tests (Node, no device needed): `node --test ios/ShooExtension/Tests/*.test.mjs`. `Tests/` and `scripts/` are excluded from the bundle in `project.yml`.
+- The device token stays in `background.js`: no `runtime.onMessage` reply carries the token or the base URLs (`profile` gives blocked.html only onboarded/mode/guardianName).
