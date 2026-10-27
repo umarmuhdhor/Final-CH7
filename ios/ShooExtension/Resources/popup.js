@@ -96,11 +96,13 @@
         .card[data-tier="1"] .detail { color: #1c1c1e; }
     `;
 
+    const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
     let host = null;
+    let release = () => {}; // stops guarding host
     let refs = null;
 
     function el(tag, className, text) {
-        const node = document.createElement(tag);
+        const node = dom.create(document, tag);
         if (className) node.className = className;
         if (text != null) node.textContent = text;
         return node;
@@ -108,7 +110,7 @@
 
     function mount() {
         if (host?.isConnected) return;
-        host = document.createElement("shoo-warning");
+        host = dom.create(document, "shoo-warning");
         const root = host.attachShadow({ mode: "closed" });
         const style = el("style");
         style.textContent = CSS;
@@ -136,7 +138,7 @@
         root.append(style, card);
 
         refs = { card, score, title, body, link, detail };
-        document.documentElement.appendChild(host);
+        release = dom.guard(host, dom.root(document)); // appends it, and puts it back if the page hides it
     }
 
     function render(state, tier) {
@@ -155,7 +157,13 @@
         refs.detail.href = detailUrl(state);
     }
 
+    /** EX-07: the screenshot leaves our card out. Hidden inside the shadow root, so guard() doesn't undo it. */
+    globalThis.ShooPopup.capture = (hidden) => {
+        if (refs) refs.card.style.visibility = hidden ? "hidden" : "";
+    };
+
     function hide() {
+        release();
         host?.remove();
         host = null;
         refs = null;

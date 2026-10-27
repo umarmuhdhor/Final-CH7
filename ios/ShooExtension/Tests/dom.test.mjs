@@ -63,7 +63,21 @@ class Document extends Node {
         return Document.prototype.querySelectorAll.call(this, selector)[0] ?? null;
     }
 }
-Object.assign(globalThis, { Node, Element, Document, CSS: { escape: (s) => s } });
+// MutationObserver stand-in: mutate() runs every live observer's callback, like the browser would.
+const observers = [];
+class MutationObserver {
+    constructor(callback) {
+        this.callback = callback;
+        this.live = true;
+        observers.push(this);
+    }
+    observe() {}
+    disconnect() {
+        this.live = false;
+    }
+}
+const mutate = () => observers.filter((o) => o.live).forEach((o) => o.callback([]));
+Object.assign(globalThis, { Node, Element, Document, MutationObserver, CSS: { escape: (s) => s } });
 
 await import("../Resources/dom.js");
 await import("../Resources/snapshot.js");
@@ -111,4 +125,62 @@ test("the snapshot still reads the page's real forms from a clobbered page", () 
 test("the screenshot still finds the fields to blur on a clobbered page", () => {
     const { doc, pin } = clobberedPage();
     assert.deepEqual(globalThis.ShooReport.screenshotTargets(doc), { blur: [pin], hide: [] });
+});
+
+/** One of our UI hosts (shoo-live-score …) and <html>, enough for guard(). */
+function uiHost() {
+    const attrs = new Map();
+    const host = {
+        isConnected: false,
+        get attributes() {
+            return [...attrs.keys()].map((name) => ({ name }));
+        },
+        getAttribute: (name) => attrs.get(name) ?? null,
+        setAttribute: (name, value) => attrs.set(name, String(value)),
+        removeAttribute: (name) => attrs.delete(name),
+        remove: () => (host.isConnected = false),
+    };
+    const parent = { append: (node) => (node.isConnected = true) };
+    return { host, parent, attrs };
+}
+
+test("guard puts the host on screen with a style no page stylesheet can override", () => {
+    const { host, parent } = uiHost();
+    dom.guard(host, parent);
+    assert.equal(host.isConnected, true);
+    assert.equal(host.getAttribute("style"), "all: initial !important");
+});
+
+test("guard undoes what the page does to the host: style, hidden, inert, remove()", () => {
+    const { host, parent, attrs } = uiHost();
+    dom.guard(host, parent);
+    host.setAttribute("style", "display: none !important");
+    host.setAttribute("hidden", "");
+    host.setAttribute("inert", "");
+    mutate();
+    assert.deepEqual([...attrs], [["style", "all: initial !important"]]);
+    host.remove();
+    mutate();
+    assert.equal(host.isConnected, true);
+});
+
+test("guard gives up after MAX_REPAIRS, so a page that keeps fighting can't keep us busy", () => {
+    const { host, parent } = uiHost();
+    dom.guard(host, parent);
+    for (let i = 0; i < dom.MAX_REPAIRS; i++) {
+        host.remove();
+        mutate();
+    }
+    host.remove();
+    mutate();
+    assert.equal(host.isConnected, false);
+});
+
+test("release() stops guarding, so our own hide() can remove the host", () => {
+    const { host, parent } = uiHost();
+    const release = dom.guard(host, parent);
+    release();
+    host.remove();
+    mutate();
+    assert.equal(host.isConnected, false);
 });
