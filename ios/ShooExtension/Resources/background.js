@@ -160,13 +160,12 @@ async function startReport(message, sender) {
     return { ok: true, screenshot: Boolean(screenshotBase64) };
 }
 
+// Content scripts run in the page's process: no message ever answers with the token or the base URLs.
 browser.runtime.onMessage.addListener((message, sender) => {
     switch (message?.type) {
         case "heartbeat":
             lastSeen.report();
             return heartbeat.beat();
-        case "getSession":
-            return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
         case "profile":
             // What blocked.html needs to pick its wording. Never the token.
             return getSession().then((s) => ({
