@@ -1,7 +1,12 @@
-// Owner: Team AI. Layer 2 (link name) = M1. Layer 1 (database) = M5-B, via ShooLists.match. Contract: contracts/detector-interface.md
-// Pure rules, no network (layer 1 data comes from the extension's globalThis.ShooLists). detector/data/brands.json is inlined at build time (scripts/build.mjs) into the placeholder below.
+// Owner: Lead (taken over from Team AI). Layer 2 (link) = M1 + whole-link dissector (#140). Layer 1 (database) = M5-B, via ShooLists.match. Contract: contracts/detector-interface.md
+// Pure rules, no network (layer 1 data comes from the extension's globalThis.ShooLists). detector/data/brands.json and link-rules.json are inlined at build time (scripts/build.mjs) into the placeholders below.
 //
-// Suspicion levels (how sure we are that the name imitates a brand). Weights are starting values, calibrated in M6.
+// Layer 2 has two parts that add up (score = sum of signal weights, computed by the extension):
+//   A. Brand check (this block): does the NAME imitate one of the 25 brands in brands.json?
+//   B. Link dissector (dissectLink below): the WHOLE URL, one `suspicious_link` signal. Each part of the URL scores on its
+//      own, hosting-platform subdomains are judged by their first label and file name. Its weight is the raw score (max 100), no cap.
+//
+// Brand suspicion levels (how sure we are that the name imitates a brand). Weights are starting values, calibrated in M6.
 //   Level 0  official domain (listed in brands.json)        -> no signals at all
 //   Level 1  weak:   official name on an unlisted domain, or a cheap TLD alone      (+10 / +5)  never reaches 30 alone
 //   Level 2  medium: brand + bait word (bca-verifikasi), cheap TLD next to a brand  (+14 / +15)
@@ -11,8 +16,14 @@
     "use strict";
 
     const DATA = /*__BRANDS_JSON__*/ null;
+    const LINK = /*__LINK_RULES_JSON__*/ null;
 
     const WEIGHT = { lookalike: 25, nameOnly: 10, brandKeyword: 14, cheapTldWithBrand: 15, cheapTldAlone: 5 };
+
+    // Link dissector. Weights are starting values, not calibrated on real scams yet (D-imelda-45).
+    const LINK_PART_CAP = 25; // one URL part cannot dominate
+    const LINK_MIN_EMIT = 10; // below this the link says too little to show (a free host alone is 3)
+    const FILE_EXT = /\.(html?|php\d?|aspx?|jsp)$/i;
 
     // Cyrillic / Greek / Armenian letters that look like Latin ones.
     const CONFUSABLES = {
@@ -36,6 +47,10 @@
             suffixes: new Set(DATA.suffixes),
             cheap: new Set(DATA.cheapTlds),
             keywords: new Set(DATA.keywords),
+            rareTlds: new Set(LINK.rareTlds),
+            freeHosts: LINK.freeHosts,
+            linkBait: LINK.baitWords,
+            carriers: LINK.carriers,
         };
     }
 
@@ -205,6 +220,10 @@
             label: { en: `Cheap domain ending .${tld}`, id: `Akhiran domain murah .${tld}` },
             labelSimple: { en: "This site uses a cheap address ending that scammers often use", id: "Situs ini memakai akhiran alamat murah yang sering dipakai penipu" },
         }),
+        suspiciousLink: (reasons) => ({
+            label: { en: `The link looks suspicious (${reasons.map((r) => REASON_TEXT[r].en).join(", ")})`, id: `Tautan terlihat mencurigakan (${reasons.map((r) => REASON_TEXT[r].id).join(", ")})` },
+            labelSimple: { en: "The address of this page looks like the ones scammers use", id: "Alamat halaman ini mirip alamat yang biasa dipakai penipu" },
+        }),
         dbMatch: (source) => ({
             label: {
                 en: source === "shoo" ? "Reported and confirmed as a scam by Shoo" : "Found on a public list of phishing sites",
@@ -214,8 +233,138 @@
         }),
     };
 
+    // Reason codes -> short phrases for the label. Only OUR words appear in a label, never text taken from the URL.
+    const REASON_TEXT = {
+        userinfo: { en: "hidden host before @", id: "host disembunyikan sebelum @" },
+        ip_host: { en: "raw IP address", id: "alamat IP mentah" },
+        punycode: { en: "disguised letters", id: "huruf menyamar" },
+        many_labels: { en: "too many dots", id: "terlalu banyak titik" },
+        many_hyphens: { en: "too many hyphens", id: "terlalu banyak tanda hubung" },
+        digit_label: { en: "name made of digits", id: "nama penuh angka" },
+        rare_tld: { en: "rare ending", id: "akhiran jarang" },
+        odd_port: { en: "unusual port", id: "port tak lazim" },
+        random_name: { en: "random file name", id: "nama file acak" },
+        file_ext: { en: "page file ending", id: "akhiran file halaman" },
+        slash_after_file: { en: "slash after file name", id: "garis miring setelah nama file" },
+        path_bait: { en: "bait word in path", id: "kata umpan di path" },
+        redirect_param: { en: "redirects elsewhere", id: "mengalihkan ke tempat lain" },
+        email_param: { en: "email in link", id: "email di tautan" },
+        long_query: { en: "very long link", id: "tautan sangat panjang" },
+        url_in_fragment: { en: "link inside link", id: "tautan di dalam tautan" },
+        long_url: { en: "very long link", id: "tautan sangat panjang" },
+        http_no_tls: { en: "not encrypted", id: "tidak terenkripsi" },
+        free_host: { en: "free hosting page", id: "halaman hosting gratis" },
+        free_name_bait: { en: "bait word in the name", id: "kata umpan di nama" },
+        free_name_number: { en: "year or amount in the name", id: "tahun atau jumlah di nama" },
+        free_file_bait: { en: "bait word in the file name", id: "kata umpan di nama file" },
+    };
+
     function signal(id, weight, texts, evidence, layer = 2) {
         return { id, layer, weight, label: texts.label, labelSimple: texts.labelSimple, evidence };
+    }
+
+
+    // ---------- layer 2B: whole-link dissector ----------
+    function entropy(str) {
+        const freq = {};
+        for (const ch of str) freq[ch] = (freq[ch] || 0) + 1;
+        let h = 0;
+        for (const n of Object.values(freq)) h -= (n / str.length) * Math.log2(n / str.length);
+        return h;
+    }
+
+    /** Loopback / private-range addresses: never a scam site, and they sit in front of people's own routers. */
+    function isLocalAddress(host) {
+        if (host === "localhost" || host.endsWith(".localhost") || host === "[::1]") return true;
+        const m = host.match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+        if (!m) return false;
+        const a = +m[1], b = +m[2];
+        return a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    }
+
+    const wordsIn = (text, list) => list.filter((w) => text.includes(w));
+
+    /**
+     * Scores the whole URL. Pure string work on `rawUrl`, the page is never opened.
+     * Parts: scheme, userinfo, host, TLD, port, path, query, fragment, length (each capped at 25), then the free-hosting
+     * checks, which are added on top: on blogspot / github.io / cloudfront ... the domain belongs to the platform, so
+     * what says something is the first label and the file name.
+     * @returns {{ score: number, reasons: string[] }} reasons are codes (see REASON_TEXT), never pieces of the URL: they are sent to the server as evidence.
+     */
+    function dissectLink(rawUrl) {
+        const parts = []; // { part, weight, reason }
+        const free = []; // added outside the per-part cap
+        const add = (part, weight, reason) => parts.push({ part, weight, reason });
+        let u;
+        try {
+            u = new URL(rawUrl);
+        } catch (error) {
+            return { score: 0, reasons: [] };
+        }
+        if (u.protocol !== "http:" && u.protocol !== "https:") return { score: 0, reasons: [] };
+        if (isLocalAddress(u.hostname.toLowerCase())) return { score: 0, reasons: [] }; // router pages, dev servers
+
+        if (u.protocol === "http:") add("scheme", 5, "http_no_tls");
+        if (u.username || u.password) add("userinfo", 25, "userinfo");
+
+        const host = u.hostname.toLowerCase().replace(/\.+$/, "");
+        const labels = host.split(".");
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(":")) add("host", 20, "ip_host");
+        else {
+            const suffixLen = labels.length > 2 && index.suffixes.has(labels.slice(-2).join(".")) ? 2 : 1;
+            const tld = labels[labels.length - 1];
+            const name = labels.slice(0, -suffixLen).map(toUnicodeLabel); // "xn--bcher-kva" has hyphens of its own: judge the letters people see
+            if (labels.some((l) => l.startsWith("xn--"))) add("host", 5, "punycode");
+            if (name.length >= 4) add("host", 8, "many_labels");
+            if (name.some((l) => (l.match(/-/g) || []).length >= 3)) add("host", 8, "many_hyphens");
+            if (name.some((l) => l.length >= 8 && (l.match(/\d/g) || []).length / l.length >= 0.4)) add("host", 8, "digit_label");
+            // brands.json cheapTlds are already scored by the `cheap_tld` signal (part A); only the extra rare ones count here.
+            if (suffixLen === 1 && index.rareTlds.has(tld) && !index.cheap.has(tld)) add("tld", 6, "rare_tld");
+        }
+        if (u.port && u.port !== "80" && u.port !== "443") add("port", 10, "odd_port");
+
+        const segs = u.pathname.split("/").filter(Boolean);
+        const last = segs[segs.length - 1] || "";
+        const stem = last.replace(FILE_EXT, "");
+        if (stem.length >= 20 && /^[a-z0-9_-]+$/i.test(stem) && entropy(stem) >= 3.3 && /\d/.test(stem)) add("path", 15, "random_name");
+        if (FILE_EXT.test(last)) add("path-ext", 5, "file_ext");
+        if (FILE_EXT.test(last) && u.pathname.endsWith("/")) add("path-slash", 8, "slash_after_file");
+        if (segs.some((s) => s.split(/[^a-z]+/i).some((w) => index.keywords.has(w.toLowerCase())))) add("path-bait", 6, "path_bait");
+
+        const q = [...u.searchParams];
+        if (q.some(([k, v]) => /^(url|redirect|redir|next|return|goto|link|u)$/i.test(k) && /^(https?:)?\/\//i.test(v))) add("query", 12, "redirect_param");
+        if (q.some(([, v]) => /\S+@\S+/.test(v))) add("query", 5, "email_param");
+        if (u.search.length > 150) add("query", 5, "long_query");
+        if (/https?:/i.test(u.hash)) add("fragment", 8, "url_in_fragment");
+        if (rawUrl.length > 120) add("length", 4, "long_url");
+
+        const platform = index.freeHosts.find((h) => host === h || host.endsWith("." + h));
+        if (platform) {
+            const label = host.slice(0, host.length - platform.length - 1).split(".").pop() || "";
+            const file = (segs[segs.length - 1] || "").toLowerCase();
+            const inLabel = [...wordsIn(label, index.linkBait), ...wordsIn(label, index.carriers)];
+            const inFile = [...wordsIn(file, index.linkBait), ...wordsIn(file, index.carriers)];
+            free.push({ weight: 3, reason: "free_host" });
+            if (inLabel.length) free.push({ weight: inLabel.length >= 2 ? 16 : 10, reason: "free_name_bait" });
+            if (/20\d\d|\d+(gb|mb|jt|rb)/.test(label)) free.push({ weight: 5, reason: "free_name_number" });
+            if (inFile.length) free.push({ weight: 10, reason: "free_file_bait" });
+        }
+
+        const byPart = {};
+        for (const p of parts) byPart[p.part] = Math.min(LINK_PART_CAP, (byPart[p.part] || 0) + p.weight);
+        const score = Math.min(100, Object.values(byPart).reduce((a, b) => a + b, 0) + free.reduce((a, p) => a + p.weight, 0));
+        const reasons = [...new Set([...parts, ...free].map((p) => p.reason))];
+        return { score, reasons };
+    }
+
+    /** One `suspicious_link` signal, or null when the link says too little. Weight is the raw dissector score (max 100), no cap. */
+    function linkSignal(snapshot) {
+        if (!snapshot.url) return null;
+        const { score, reasons } = dissectLink(String(snapshot.url));
+        if (score < LINK_MIN_EMIT) return null;
+        const shown = reasons.filter((r) => r !== "free_host" && r !== "file_ext" && r !== "http_no_tls" && r !== "long_url");
+        const top = (shown.length ? shown : reasons).slice(0, 3);
+        return signal("suspicious_link", score, T.suspiciousLink(top), reasons.join(","));
     }
 
     // ---------- layer 1: database (hostname only; the lists live in the extension) ----------
@@ -237,8 +386,15 @@
     function analyze(snapshot) {
         if (!index) index = buildIndex();
         const host = hostOf(snapshot);
+        if (host && isOfficial(host)) return [];
+        if (snapshot.domain && isOfficial(String(snapshot.domain).toLowerCase())) return [];
+        const link = linkSignal(snapshot);
+        return [...analyzeBrand(snapshot, host), ...(link ? [link] : [])];
+    }
+
+    /** Layer 2A: does the host NAME imitate a brand? Skips raw IP hosts (no name to read). */
+    function analyzeBrand(snapshot, host) {
         if (!host || host.includes(":") || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return [];
-        if (isOfficial(host) || (snapshot.domain && isOfficial(String(snapshot.domain).toLowerCase()))) return [];
 
         const labels = host.split(".");
         const suffixLen = labels.length > 2 && index.suffixes.has(labels.slice(-2).join(".")) ? 2 : 1;
@@ -297,7 +453,7 @@
     }
 
     globalThis.ShooDetector = {
-        version: "0.1.0",
+        version: "0.2.0",
 
         /**
          * @param {object} snapshot PageSnapshot

@@ -144,3 +144,11 @@ test("impersonation boundary: layer 1-2 sum >= 10 turns on full word weights, a 
     assert.equal(await logo([sig("cheap_tld", 5)]), 12, "cheap TLD alone (5) -> quiet");
     assert.equal(await logo([sig("cheap_tld", 9)]), 12, "9 is under the boundary");
 });
+
+test("a suspicious_link signal from the extension (layer 2, #140) turns on full word weights from 10 up, like the brand signals", async () => {
+    const snap = { imageAlts: ["Logo OVO"], text: "Undian berhadiah. Klaim sekarang!", title: "Undian OVO" };
+    const link = (weight) => [{ id: "suspicious_link", layer: 2, weight, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } }];
+    const logo = async (localSignals) => (await analyze(page("https://undian-ovo.example.com/", [], snap), { localSignals })).find((x) => x.id === "brand_logo_offsite").weight;
+    assert.equal(await logo(link(13)), 25);
+    assert.equal(await logo(link(9)), 12);
+});

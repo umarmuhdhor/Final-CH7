@@ -20,7 +20,7 @@ Detail lengkap + checkbox progres: [umar.md](umar.md) · [imelda.md](imelda.md) 
 
 | # | Tugas | Isi singkat | Selesai kalau | Bergantung pada |
 |---|---|---|---|---|
-| M1 | Layer 2: cek nama link | Daftar brand resmi, deteksi TLD murah, brand + kata tambahan, ejaan mirip | Test lolos, domain resmi tanpa sinyal | — |
+| M1 | Layer 2: cek link | Daftar brand resmi, TLD murah, brand + kata tambahan, ejaan mirip; M1b: pembedah seluruh URL + hosting gratis (`suspicious_link`) | Test lolos, domain resmi tanpa sinyal | — |
 | M2 | Eval set | ≥ 50 halaman scam + ≥ 50 halaman resmi, skrip eval | Satu perintah, hasilnya ditempel di PR | — |
 | M3 | Layer 3: isi & form | `POST /analyze`, form PIN/OTP/kartu/KTP, kalimat mendesak, logo palsu, umur domain | Fixture `blocked-92` & `warning-63` bisa direproduksi (skor ±10) | M2 |
 | M4 | Layer 4: reality check (LLM) | Prompt "wajar atau tidak", output JSON, batas 8 detik | Salah blokir turun, deteksi scam tidak turun | M2, M3 |
