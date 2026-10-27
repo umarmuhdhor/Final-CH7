@@ -9,7 +9,9 @@
     const PADDING = 16;
     const SENSITIVE = /pin|otp|cvv|cvc|card|kartu|ktp|nik|password|sandi|kata ?kunci|rekening/i;
     const BLUR_SKIP = new Set(["hidden", "checkbox", "radio", "submit", "button", "reset", "image", "range", "color", "file"]);
-    const FIELD_SELECTOR = "input, textarea, select, [contenteditable='true']";
+    // Any editable area: contenteditable="", "plaintext-only" and bare contenteditable are editable too.
+    const FIELD_SELECTOR = 'input, textarea, select, [contenteditable]:not([contenteditable="false" i]), [role="textbox"]';
+    const FRAME_SELECTOR = "iframe, frame, object, embed"; // object/embed can hold a document too
     const MAX_FRAME_DEPTH = 3;
     const dom = globalThis.ShooDom; // the page can shadow document/form properties (dom.js)
     // Paint marker (capture.js): magenta band over cyan band at the viewport's top-left corner, set in the
@@ -75,7 +77,7 @@
     /** A src that never leaves about:blank (none, about:…, srcdoc), so a blank document is the real one. */
     function staysBlank(frame) {
         if (frame.hasAttribute?.("srcdoc")) return true;
-        const src = (frame.getAttribute?.("src") ?? "").trim();
+        const src = (frame.getAttribute?.("src") ?? frame.getAttribute?.("data") ?? "").trim(); // <object data>
         return !src || /^about:/i.test(src);
     }
 
@@ -98,20 +100,29 @@
 
     /**
      * What to change before the screenshot, so no typed value is readable in it (PRD §10, #75).
-     * blur: text-like fields of the page and of every same-origin iframe, nested too.
-     * hide: iframes we can't look into (cross-origin, still loading, or nested deeper than MAX_FRAME_DEPTH):
-     * their fields can't be blurred, so the whole frame is hidden.
+     * blur: text-like fields and editable areas of the page, of every same-origin frame (nested too) and
+     * of open shadow roots (web components), which querySelectorAll doesn't reach.
+     * hide: frames we can't look into (cross-origin, still loading, embeds, or nested deeper than
+     * MAX_FRAME_DEPTH): their fields can't be blurred, so the whole frame is hidden.
+     * Closed shadow roots can't be reached from an extension in Safari.
+     * @param root  a document or a shadow root
      */
-    function screenshotTargets(doc, depth = 0) {
-        const blur = dom.all(doc, FIELD_SELECTOR).filter((el) => !BLUR_SKIP.has(el.type));
+    function screenshotTargets(root, depth = 0) {
+        const blur = dom.all(root, FIELD_SELECTOR).filter((el) => !BLUR_SKIP.has(el.type));
         const hide = [];
-        for (const frame of dom.all(doc, "iframe, frame")) {
+        for (const frame of dom.all(root, FRAME_SELECTOR)) {
             const inner = readableDocument(frame);
             if (!inner || depth >= MAX_FRAME_DEPTH) {
                 hide.push(frame);
                 continue;
             }
             const nested = screenshotTargets(inner, depth + 1);
+            blur.push(...nested.blur);
+            hide.push(...nested.hide);
+        }
+        for (const el of dom.all(root, "*")) {
+            if (!el.shadowRoot) continue; // closed or none
+            const nested = screenshotTargets(el.shadowRoot, depth);
             blur.push(...nested.blur);
             hide.push(...nested.hide);
         }
