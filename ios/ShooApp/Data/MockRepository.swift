@@ -36,6 +36,8 @@ actor MockRepository: ShooRepository {
     private var profile: DeviceProfile
     private var allScans: [ScanResult]
     private var members: [FamilyMember]
+    /// The guardian's active code, handed out again while more than 5 min is left.
+    private var familyCode: FamilyCode?
     nonisolated let scenario: Scenario
     nonisolated let latency: Duration
     nonisolated let pageSize: Int
@@ -109,30 +111,34 @@ actor MockRepository: ShooRepository {
 
     // MARK: Family
 
-    func createFamilyCode() async throws -> FamilyCode {
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
         try await pause()
         try require(.guardian)
-        let code = String(format: "%04d", Int.random(in: 1000...5999))
-        return FamilyCode(
+        // Same code while more than 5 min is left, like the server (contracts/api.md).
+        if !refresh, let familyCode, familyCode.expiresAt.timeIntervalSince(now()) > 5 * 60 { return familyCode }
+        let code = String(format: "%06d", Int.random(in: 100_000...599_999))
+        let fresh = FamilyCode(
             code: code,
-            expiresAt: now().addingTimeInterval(60),
-            inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/join?code=\(code)")!
+            expiresAt: now().addingTimeInterval(30 * 60),
+            inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/j/\(code)")!
         )
+        familyCode = fresh
+        return fresh
     }
 
     func joinFamily(code: String) async throws -> GuardianInfo {
         try await pause()
         try require(.protected)
         switch code {
-        case "0000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
-        case "9999": throw RepositoryError.api(.codeExpired, message: "Code expired")
-        case "8888": throw RepositoryError.api(.familyFull, message: "Guardian already has 3 members")
-        case "7777": throw RepositoryError.api(.tooManyAttempts, message: "Too many attempts")
-        case "6666": throw RepositoryError.api(.alreadyConnected, message: "Already connected")
+        case "000000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
+        case "999999": throw RepositoryError.api(.codeExpired, message: "Code expired")
+        case "888888": throw RepositoryError.api(.familyFull, message: "Guardian already has 3 members")
+        case "777777": throw RepositoryError.api(.tooManyAttempts, message: "Too many attempts")
+        case "666666": throw RepositoryError.api(.alreadyConnected, message: "Already connected")
         default: break
         }
-        guard code.count == 4, code.allSatisfy(\.isASCII), code.allSatisfy(\.isNumber) else {
-            throw RepositoryError.api(.codeInvalid, message: "Code must be 4 digits")
+        guard DeepLink.isCode(code) else {
+            throw RepositoryError.api(.codeInvalid, message: "Code must be 6 digits")
         }
         guard profile.guardian == nil else {
             throw RepositoryError.api(.alreadyConnected, message: "Already connected")

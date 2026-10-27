@@ -1,7 +1,7 @@
 import XCTest
 
 /// Fase 14: Connect (PR-01/02/03) and Family code (GD-04) against the mock.
-/// Mock codes: `0000` code_invalid · `9999` code_expired · `8888` family_full; any other 4 digits join "Adhella".
+/// Mock codes: `000000` code_invalid · `999999` code_expired · `888888` family_full; any other 6 digits join "Adhella".
 final class PairingUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
@@ -35,7 +35,7 @@ final class PairingUITests: XCTestCase {
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: 5), app.debugDescription)
         field.tap()
-        if let current = field.value as? String, !current.isEmpty, current != "4-digit code" {
+        if let current = field.value as? String, !current.isEmpty, current != "6-digit code" {
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
         }
         field.typeText(code)
@@ -67,19 +67,19 @@ final class PairingUITests: XCTestCase {
         let join = app.buttons["connect.join"]
         XCTAssertTrue(join.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(join.isEnabled)
-        enter("0000", in: app)
+        enter("000000", in: app)
         join.tap()
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
 
-        enter("9999", in: app)
+        enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
         join.tap()
         XCTAssertTrue(error.waitForExistence(timeout: 5))
         XCTAssertTrue(error.label.contains("expired"), error.label)
 
-        enter("4821", in: app)
+        enter("482193", in: app)
         join.tap()
         let title = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(title.waitForExistence(timeout: 5), app.debugDescription)
@@ -95,10 +95,10 @@ final class PairingUITests: XCTestCase {
     func testInviteLinkOpensConnectWithTheCodeFilled() {
         let app = launch(mode: "protected")
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10), app.debugDescription)
-        openLink("shoo://join?code=4821", in: app)
+        openLink("shoo://join?code=482193", in: app)
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(field.value as? String, "4821")
+        XCTAssertEqual(field.value as? String, "482193")
         XCTAssertFalse(app.staticTexts["protectedBy.title"].exists)
         // The mock Protected already has a guardian: the server answers already_connected.
         app.buttons["connect.join"].tap()
@@ -111,7 +111,7 @@ final class PairingUITests: XCTestCase {
     func testScanTabExplainsWhenTheCameraCannotScan() {
         let app = launch(mode: "protected")
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
-        openLink("shoo://join?code=4821", in: app)
+        openLink("shoo://join?code=482193", in: app)
         XCTAssertTrue(app.textFields["connect.code"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["connect.tab.scan"].tap()
         // The simulator has no camera: a note and the Code tab stay, never a blank screen.

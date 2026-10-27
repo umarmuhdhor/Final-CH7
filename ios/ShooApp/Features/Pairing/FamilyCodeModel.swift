@@ -3,7 +3,7 @@ import Observation
 import UIKit
 import UniformTypeIdentifiers
 
-/// GD-04: the guardian's family code. A new code every 60 s while the screen is open (R4 §1),
+/// GD-04: the guardian's family code (6 digits, valid 30 min, the same one while more than 5 min is left),
 /// the people connected (x/3), and removing one.
 @MainActor
 @Observable
@@ -19,7 +19,7 @@ final class FamilyCodeModel {
 
     /// Longest a code lives (contracts/api.md). A device clock far from the server's never makes
     /// the countdown longer than this or stuck at zero.
-    static let codeLifetime: TimeInterval = 60
+    static let codeLifetime: TimeInterval = 30 * 60
     /// Members are re-read this often, so someone joining shows up while the code is on screen.
     static let membersInterval = 5
 
@@ -101,15 +101,16 @@ final class FamilyCodeModel {
         }
     }
 
-    /// Asks for a new code (the old one stops working on the server).
-    func refreshCode() async {
+    /// Asks for the guardian's code. `replace` ("Refresh code") always gets a new one, and the old one
+    /// stops working on the server; otherwise the server hands back the active code.
+    func refreshCode(replace: Bool = false) async {
         guard !isFull else {
             codeState = .full
             return
         }
         if code == nil { codeState = .loading }
         do {
-            let fresh = try await repository.createFamilyCode()
+            let fresh = try await repository.createFamilyCode(refresh: replace)
             // Screen closed meanwhile: the code is never shown.
             guard !Task.isCancelled else { return }
             let start = now()
@@ -130,6 +131,11 @@ final class FamilyCodeModel {
             codeState = isFull ? .full : .unavailable
             secondsLeft = 0
         }
+    }
+
+    /// "29:59": what is left of the code on screen.
+    var timeLeft: String {
+        Duration.seconds(secondsLeft).formatted(.time(pattern: .minuteSecond))
     }
 
     /// Updates the countdown; `true` when the code just ran out.
@@ -169,6 +175,11 @@ final class FamilyCodeModel {
         Self.copy(Self.inviteText(for: code, language: language), until: code.expiresAt, to: pasteboard, now: now())
         copied = true
         return true
+    }
+
+    /// "482 193": two groups of three, easier to read out and type than six loose digits.
+    static func display(_ code: String) -> String {
+        code.count == DeepLink.codeLength ? "\(code.prefix(3)) \(code.suffix(3))" : code
     }
 
     static func inviteText(for code: FamilyCode, language: AppLanguage) -> String {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// GD-04: QR + big 4-digit code with a 60 s countdown, "Copy invite link", and the people connected (x/3).
+/// GD-04: QR + big 6-digit code with its 30-min countdown, "Copy invite link", and the people connected (x/3).
 /// Opened from Profile and "Invite your family" (Family Shield).
 struct FamilyCodeView: View {
     @Environment(\.dismiss) private var dismiss
@@ -61,7 +61,7 @@ struct FamilyCodeView: View {
                 .accessibilityLabel(Text("Getting a code"))
         case .ready(let code):
             VStack(spacing: 16) {
-                Text("Ask your family member to scan this code, or enter the 4 digits in Shoo.")
+                Text("Ask your family member to scan this code, or enter the 6 digits in Shoo.")
                     .font(.subheadline)
                     .foregroundStyle(.readableSecondary)
                     .multilineTextAlignment(.center)
@@ -76,12 +76,12 @@ struct FamilyCodeView: View {
                         .accessibilityLabel(Text("QR code to join your family"))
                         .accessibilityIdentifier("familyCode.qr")
                 }
-                Text(verbatim: code.code.map(String.init).joined(separator: " "))
+                Text(verbatim: FamilyCodeModel.display(code.code))
                     .font(.system(size: min(codeSize, 72), weight: .bold, design: .monospaced))
                     .minimumScaleFactor(0.5)
                     .accessibilityLabel(Text("Code \(code.code.map(String.init).joined(separator: " "))"))
                     .accessibilityIdentifier("familyCode.code")
-                Text("New code in \(model.secondsLeft) s")
+                Text("Valid for \(model.timeLeft)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.readableSecondary)
                     .accessibilityIdentifier("familyCode.countdown")

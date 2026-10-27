@@ -204,15 +204,15 @@ private struct CornerMarks: Shape {
     }
 }
 
-/// Four digit boxes over one number-pad field: one VoiceOver element, paste and autofill still work.
+/// Six digit boxes over one number-pad field: one VoiceOver element, paste and autofill still work.
 private struct CodeField: View {
     @Binding var code: String
     let onFocusChange: (Bool) -> Void
     @FocusState private var focused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// Grows with Dynamic Type, capped so four boxes fit an iPhone SE width.
-    @ScaledMetric(relativeTo: .title2) private var digitSize: CGFloat = 26
-    private var boxWidth: CGFloat { min(max(62, digitSize * 2.4), 76) }
+    /// Grows with Dynamic Type; the boxes share the row, so six always fit an iPhone SE width.
+    @ScaledMetric(relativeTo: .title2) private var digitSize: CGFloat = 24
+    private var boxWidth: CGFloat { min(max(46, digitSize * 2), 56) }
 
     var body: some View {
         ZStack {
@@ -222,22 +222,24 @@ private struct CodeField: View {
                 .focused($focused)
                 .foregroundStyle(.clear)
                 .tint(.clear)
-                .accessibilityLabel(Text("4-digit code"))
+                .accessibilityLabel(Text("6-digit code"))
                 .accessibilityIdentifier("connect.code")
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 let digits = Array(code)
                 ForEach(0..<ConnectModel.codeLength, id: \.self) { index in
                     let isActive = focused && index == min(digits.count, ConnectModel.codeLength - 1)
                     ZStack {
                         if index < digits.count {
                             Text(verbatim: String(digits[index]))
-                                .font(.system(size: min(digitSize, 40), weight: .semibold, design: .rounded))
+                                .font(.system(size: min(digitSize, 32), weight: .semibold, design: .rounded))
                                 .foregroundStyle(OnboardingTheme.ink)
                         } else if isActive {
                             Caret(reduceMotion: reduceMotion)
                         }
                     }
-                    .frame(width: boxWidth, height: boxWidth * 72 / 62)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .aspectRatio(62 / 72, contentMode: .fit)
+                    .frame(maxWidth: boxWidth)
                     .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)

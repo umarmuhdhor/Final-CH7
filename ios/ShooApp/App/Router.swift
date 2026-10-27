@@ -22,7 +22,7 @@ final class Router {
     var isProfilePresented = false
     /// Protected after onboarding: Connect (PR-01) as a sheet, from Shield or an invite link.
     var isConnectPresented = false
-    /// From `shoo://join?code=` (PR-03): fills the Connect field, never joins by itself (T11).
+    /// From `shoo://join?code=` or `https://<api host>/j/<code>` (PR-03): fills the Connect field, never joins by itself (T11).
     /// Memory only, dropped when the app goes to the background.
     var pendingJoinCode: String?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.

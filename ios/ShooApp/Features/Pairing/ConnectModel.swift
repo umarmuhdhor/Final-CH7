@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// PR-01 / PR-02 / PR-03: a protected device joins its guardian's family with the 4-digit code.
+/// PR-01 / PR-02 / PR-03: a protected device joins its guardian's family with the 6-digit code.
 /// A code from a link or a QR only fills the field; joining always needs the Connect tap (T11).
 @MainActor
 @Observable
@@ -37,7 +37,7 @@ final class ConnectModel {
 
         var message: String.LocalizationValue {
             switch self {
-            case .invalid: "That code doesn't match a family. Check the 4 digits and try again."
+            case .invalid: "That code doesn't match a family. Check the 6 digits and try again."
             case .expired: "That code has expired. Ask your guardian for the new code."
             case .full: "This family already has 3 people. Ask your guardian to remove someone first."
             case .tooManyAttempts: "Too many tries. Wait a few minutes, then try again."
@@ -48,11 +48,11 @@ final class ConnectModel {
         }
     }
 
-    static let codeLength = 4
+    static let codeLength = DeepLink.codeLength
 
     private(set) var state: State = .entering
     private(set) var problem: Problem?
-    /// Digits only, at most 4; editing clears the last problem.
+    /// Digits only, at most 6; editing clears the last problem.
     var code = "" {
         didSet {
             let digits = String(code.unicodeScalars.filter { ("0"..."9").contains($0) }.map(Character.init).prefix(Self.codeLength))

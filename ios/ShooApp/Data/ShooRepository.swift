@@ -10,8 +10,9 @@ protocol ShooRepository: AnyObject, Sendable {
     /// `PATCH /devices/me` (ON-05, PF-01, GD-03).
     func updateMe(_ update: DeviceUpdate) async throws
 
-    /// `POST /family/code` — guardian (GD-04).
-    func createFamilyCode() async throws -> FamilyCode
+    /// `POST /family/code` — guardian (GD-04). The active code while it has more than 5 min left;
+    /// `refresh` always makes a new one and the old one stops working.
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode
     /// `POST /family/join` — protected (PR-01, PR-03).
     func joinFamily(code: String) async throws -> GuardianInfo
     /// `GET /family/members` — guardian (GD-03).

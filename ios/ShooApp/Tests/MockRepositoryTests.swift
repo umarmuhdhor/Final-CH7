@@ -117,15 +117,16 @@ struct MockRepositoryTests {
     }
 
     @Test(arguments: [
-        ("0000", APIErrorCode.codeInvalid),
-        ("9999", .codeExpired),
-        ("8888", .familyFull),
-        ("7777", .tooManyAttempts),
-        ("6666", .alreadyConnected),
-        ("12a4", .codeInvalid),
-        ("123", .codeInvalid),
+        ("000000", APIErrorCode.codeInvalid),
+        ("999999", .codeExpired),
+        ("888888", .familyFull),
+        ("777777", .tooManyAttempts),
+        ("666666", .alreadyConnected),
+        ("12a456", .codeInvalid),
+        ("4821", .codeInvalid),
         ("12345", .codeInvalid),
-        ("\u{0661}\u{0662}\u{0663}\u{0664}", .codeInvalid),
+        ("1234567", .codeInvalid),
+        ("\u{0661}\u{0662}\u{0663}\u{0664}\u{0665}\u{0666}", .codeInvalid),
     ])
     func joinErrorCodes(code: String, expected: APIErrorCode) async {
         await #expect {
@@ -134,7 +135,7 @@ struct MockRepositoryTests {
     }
 
     @Test func joinWhileConnectedIsAlreadyConnected() async {
-        await #expect { try await protected().joinFamily(code: "4821") } throws: {
+        await #expect { try await protected().joinFamily(code: "482193") } throws: {
             ($0 as? RepositoryError)?.apiCode == .alreadyConnected
         }
     }
@@ -146,7 +147,7 @@ struct MockRepositoryTests {
     }
 
     @Test func wrongModeIsForbidden() async {
-        await #expect { try await guardian().joinFamily(code: "4821") } throws: { ($0 as? RepositoryError)?.apiCode == .forbidden }
+        await #expect { try await guardian().joinFamily(code: "482193") } throws: { ($0 as? RepositoryError)?.apiCode == .forbidden }
         await #expect { try await protected().removeMember(deviceId: "dev_dad") } throws: {
             ($0 as? RepositoryError)?.apiCode == .forbidden
         }
@@ -157,25 +158,37 @@ struct MockRepositoryTests {
         try await repo.leaveGuardian()
         let before = try await repo.me()
         #expect(before.guardian == nil)
-        let guardian = try await repo.joinFamily(code: "4821")
+        let guardian = try await repo.joinFamily(code: "482193")
         #expect(guardian.name == "Adhella")
         let after = try await repo.me()
         #expect(after.guardian == guardian)
     }
 
-    @Test func familyCodeIsFourDigitsValidFor60Seconds() async throws {
+    @Test func familyCodeIsSixDigitsValidFor30Minutes() async throws {
         let now = Date(timeIntervalSince1970: 1_000_000)
         let repo = MockRepository(mode: .guardian, latency: .zero, now: { now })
-        let code = try await repo.createFamilyCode()
-        #expect(code.code.count == 4)
-        let digitsOnly = code.code.allSatisfy(\.isNumber)
-        #expect(digitsOnly)
-        #expect(code.expiresAt == now.addingTimeInterval(60))
-        #expect(code.inviteUrl.scheme == "https")
+        let code = try await repo.createFamilyCode(refresh: false)
+        #expect(DeepLink.isCode(code.code))
+        #expect(code.expiresAt == now.addingTimeInterval(30 * 60))
+        #expect(code.inviteUrl.absoluteString == "https://shoo-api.afindo-mi01.workers.dev/j/\(code.code)")
+    }
+
+    /// Like the server: the same code while more than 5 min is left, a new one on refresh.
+    @Test func familyCodeIsReusedUntilRefreshed() async throws {
+        let clock = FamilyCodeModelTests.Clock()
+        let repo = MockRepository(mode: .guardian, latency: .zero, now: { clock.now })
+        let first = try await repo.createFamilyCode(refresh: false)
+        clock.now += 24 * 60
+        #expect(try await repo.createFamilyCode(refresh: false) == first)
+        clock.now += 60
+        let second = try await repo.createFamilyCode(refresh: false)
+        #expect(second.expiresAt == clock.now.addingTimeInterval(30 * 60))
+        let third = try await repo.createFamilyCode(refresh: true)
+        #expect(third.expiresAt == clock.now.addingTimeInterval(30 * 60))
     }
 
     @Test func protectedCannotCreateFamilyCode() async {
-        await #expect { try await protected().createFamilyCode() } throws: { ($0 as? RepositoryError)?.apiCode == .forbidden }
+        await #expect { try await protected().createFamilyCode(refresh: false) } throws: { ($0 as? RepositoryError)?.apiCode == .forbidden }
     }
 
     @Test func membersAndRemove() async throws {

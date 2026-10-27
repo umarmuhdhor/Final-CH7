@@ -54,8 +54,10 @@ final class ApiRepository: ShooRepository {
 
     // MARK: Family
 
-    func createFamilyCode() async throws -> FamilyCode {
-        try await client.send(.init(method: .post, path: ["family", "code"]))
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
+        struct Body: Encodable, Sendable { var refresh: Bool }
+        // No body for the usual case (allowed by the contract): the server hands out the active code.
+        return try await client.send(.init(method: .post, path: ["family", "code"], body: refresh ? Body(refresh: true) : nil))
     }
 
     func joinFamily(code: String) async throws -> GuardianInfo {

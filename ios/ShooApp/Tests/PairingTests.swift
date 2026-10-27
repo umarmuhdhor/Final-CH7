@@ -8,24 +8,31 @@ struct DeepLinkTests {
     private static let hosts: Set<String> = ["shoo-api.afindo-mi01.workers.dev", "localhost"]
 
     @Test(arguments: [
-        "shoo://join?code=4821",
-        "https://shoo-api.afindo-mi01.workers.dev/join?code=4821",
-        "SHOO://JOIN?code=4821",
+        "shoo://join?code=482193",
+        "https://shoo-api.afindo-mi01.workers.dev/j/482193",
+        "https://SHOO-API.afindo-mi01.workers.dev/j/482193",
+        "SHOO://JOIN?code=482193",
     ])
     func joinLinksGiveTheCode(link: String) {
-        #expect(DeepLink(url: URL(string: link)!, inviteHosts: Self.hosts) == .join(code: "4821"))
+        #expect(DeepLink(url: URL(string: link)!, inviteHosts: Self.hosts) == .join(code: "482193"))
     }
 
     @Test(arguments: [
-        "shoo://join?code=482",
-        "shoo://join?code=48210",
-        "shoo://join?code=48a1",
-        "shoo://join?code=%D9%A4%D9%A8%D9%A2%D9%A1",
+        "shoo://join?code=48219",
+        "shoo://join?code=4821930",
+        "shoo://join?code=4821",
+        "shoo://join?code=48a193",
+        "shoo://join?code=%D9%A4%D9%A8%D9%A2%D9%A1%D9%A9%D9%A3",
         "shoo://join",
-        "shoo://join?code=4821&code=1111",
-        "https://evil.example/join?code=4821",
-        "https://shoo-api.afindo-mi01.workers.dev/joinx?code=4821",
-        "http://shoo-api.afindo-mi01.workers.dev/join?code=4821",
+        "shoo://join?code=482193&code=111111",
+        "https://evil.example/j/482193",
+        "https://shoo-api.afindo-mi01.workers.dev/join?code=482193",
+        "https://shoo-api.afindo-mi01.workers.dev/j/4821",
+        "https://shoo-api.afindo-mi01.workers.dev/j/482193/x",
+        "https://shoo-api.afindo-mi01.workers.dev/x/j/482193",
+        "https://shoo-api.afindo-mi01.workers.dev/jj/482193",
+        "https://shoo-api.afindo-mi01.workers.dev/j/%34%38%32%31%39%33",
+        "http://shoo-api.afindo-mi01.workers.dev/j/482193",
         "shoo://settings",
         "mailto:a@b.c",
     ])
@@ -36,11 +43,11 @@ struct DeepLinkTests {
     /// http only for the Worker this build talks to over http, same host and port (never in Release).
     @Test func httpOnlyForTheLocalWorker() {
         let local = URL(string: "http://localhost:8787")!
-        #expect(DeepLink.isLocalWorker(URL(string: "http://localhost:8787/join?code=4821")!, api: local))
-        #expect(!DeepLink.isLocalWorker(URL(string: "http://localhost:9999/join?code=4821")!, api: local))
-        #expect(!DeepLink.isLocalWorker(URL(string: "http://evil.example:8787/join?code=4821")!, api: local))
+        #expect(DeepLink.isLocalWorker(URL(string: "http://localhost:8787/j/482193")!, api: local))
+        #expect(!DeepLink.isLocalWorker(URL(string: "http://localhost:9999/j/482193")!, api: local))
+        #expect(!DeepLink.isLocalWorker(URL(string: "http://evil.example:8787/j/482193")!, api: local))
         let release = URL(string: "https://shoo-api.afindo-mi01.workers.dev")!
-        #expect(!DeepLink.isLocalWorker(URL(string: "http://shoo-api.afindo-mi01.workers.dev/join?code=4821")!, api: release))
+        #expect(!DeepLink.isLocalWorker(URL(string: "http://shoo-api.afindo-mi01.workers.dev/j/482193")!, api: release))
     }
 
     @Test func scanAndActivityLinks() {
@@ -52,10 +59,13 @@ struct DeepLinkTests {
 
 @MainActor
 struct ConnectModelTests {
-    @Test func codeKeepsFourDigitsOnly() {
+    @Test func codeKeepsSixDigitsOnly() {
         let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
         model.code = "4a8 2-1 9"
-        #expect(model.code == "4821")
+        #expect(model.code == "48219")
+        #expect(!model.canJoin)
+        model.code = "482 193 7"
+        #expect(model.code == "482193")
         #expect(model.canJoin)
     }
 
@@ -63,8 +73,8 @@ struct ConnectModelTests {
     @Test func prefillNeverJoins() async throws {
         let repository = MockRepository(mode: .protected, latency: .zero)
         _ = try await repository.leaveGuardian()
-        let model = ConnectModel(repository: repository, code: "4821")
-        #expect(model.code == "4821")
+        let model = ConnectModel(repository: repository, code: "482193")
+        #expect(model.code == "482193")
         #expect(model.state == .entering)
         #expect(try await repository.me().guardian == nil)
     }
@@ -72,17 +82,17 @@ struct ConnectModelTests {
     @Test func joinShowsWhoProtectsMe() async throws {
         let repository = MockRepository(mode: .protected, latency: .zero)
         try await repository.leaveGuardian()
-        let model = ConnectModel(repository: repository, code: "4821")
+        let model = ConnectModel(repository: repository, code: "482193")
         await model.join()
         #expect(model.state == .joined(MockRepository.fixtureGuardian))
     }
 
     @Test(arguments: [
-        ("0000", ConnectModel.Problem.invalid),
-        ("9999", .expired),
-        ("8888", .full),
-        ("7777", .tooManyAttempts),
-        ("6666", .alreadyConnected),
+        ("000000", ConnectModel.Problem.invalid),
+        ("999999", .expired),
+        ("888888", .full),
+        ("777777", .tooManyAttempts),
+        ("666666", .alreadyConnected),
     ])
     func everyJoinErrorHasItsMessage(code: String, problem: ConnectModel.Problem) async {
         let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: code)
@@ -95,7 +105,7 @@ struct ConnectModelTests {
     }
 
     @Test func offlineIsItsOwnProblem() async {
-        let model = ConnectModel(repository: FailingRepository(), code: "4821")
+        let model = ConnectModel(repository: FailingRepository(), code: "482193")
         await model.join()
         #expect(model.problem == .offline)
     }
@@ -109,12 +119,13 @@ struct ConnectModelTests {
 
     @Test func scannedInviteFillsTheCode() {
         let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
-        #expect(model.scanned("https://shoo-api.afindo-mi01.workers.dev/join?code=4821"))
-        #expect(model.code == "4821")
-        #expect(!model.scanned("https://evil.example/join?code=1111"))
+        #expect(model.scanned("https://shoo-api.afindo-mi01.workers.dev/j/482193"))
+        #expect(model.code == "482193")
+        #expect(!model.scanned("https://evil.example/j/111111"))
+        #expect(!model.scanned("https://shoo-api.afindo-mi01.workers.dev/join?code=111111"))
         #expect(!model.scanned("hello"))
-        #expect(!model.scanned("https://shoo-api.afindo-mi01.workers.dev/join?code=1111&x=" + String(repeating: "a", count: 600)))
-        #expect(model.code == "4821")
+        #expect(!model.scanned("https://shoo-api.afindo-mi01.workers.dev/j/111111?x=" + String(repeating: "a", count: 600)))
+        #expect(model.code == "482193")
     }
 }
 
@@ -136,9 +147,10 @@ struct FamilyCodeModelTests {
         private let clock: Clock
         private let validFor: TimeInterval
         private(set) var codeCalls = 0
+        private(set) var refreshes: [Bool] = []
         var codeFailure: RepositoryError?
 
-        init(members: MockRepository.Scenario = .standard, clock: Clock, validFor: TimeInterval = 60) {
+        init(members: MockRepository.Scenario = .standard, clock: Clock, validFor: TimeInterval = 30 * 60) {
             base = MockRepository(mode: .guardian, scenario: members, latency: .zero)
             self.clock = clock
             self.validFor = validFor
@@ -146,13 +158,14 @@ struct FamilyCodeModelTests {
 
         func failCodes(with error: RepositoryError?) { codeFailure = error }
 
-        func createFamilyCode() async throws -> FamilyCode {
+        func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
             codeCalls += 1
+            refreshes.append(refresh)
             if let codeFailure { throw codeFailure }
-            let code = String(format: "%04d", 1000 + codeCalls)
+            let code = String(format: "%06d", 100_000 + codeCalls)
             return FamilyCode(
                 code: code, expiresAt: clock.now.addingTimeInterval(validFor),
-                inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/join?code=\(code)")!
+                inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/j/\(code)")!
             )
         }
 
@@ -181,30 +194,46 @@ struct FamilyCodeModelTests {
         let model = FamilyCodeModel(repository: repository, now: { clock.now })
         await model.loadMembers()
         await model.refreshCode()
-        #expect(model.code?.code == "1001")
-        #expect(model.secondsLeft == 60)
-        clock.now += 59.2
+        #expect(model.code?.code == "100001")
+        #expect(model.secondsLeft == 1800)
+        #expect(model.timeLeft == "30:00")
+        clock.now += 1799.2
         #expect(!model.tick())
         #expect(model.secondsLeft == 1)
+        #expect(model.timeLeft == "0:01")
         clock.now += 1
         #expect(model.tick())
         await model.refreshCode()
-        #expect(model.code?.code == "1002")
-        #expect(model.secondsLeft == 60)
+        #expect(model.code?.code == "100002")
+        #expect(model.secondsLeft == 1800)
+        // Running out asks for the active code, never replaces one.
+        #expect(await repository.refreshes == [false, false])
+    }
+
+    /// "Refresh code" replaces the code; the old one stops working on the server.
+    @Test func refreshReplacesTheCode() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now })
+        await model.refreshCode()
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100002")
+        #expect(await repository.refreshes == [false, true])
     }
 
     /// A phone clock far off from the server's never stalls at 0 or asks for codes in a loop.
-    @Test(arguments: [-300.0, 3600.0])
-    func clockSkewFallsBackToSixtySeconds(validFor: TimeInterval) async {
+    @Test(arguments: [-300.0, 7200.0])
+    func clockSkewFallsBackToThirtyMinutes(validFor: TimeInterval) async {
         let clock = Clock()
         let model = FamilyCodeModel(repository: CodeRepository(clock: clock, validFor: validFor), now: { clock.now })
         await model.refreshCode()
-        #expect(model.secondsLeft == 60)
+        #expect(model.secondsLeft == 1800)
     }
 
-    @Test func runLoopRefreshesEverySixtySeconds() async {
+    /// A code the server says ends sooner (it was handed out again) counts down from what is left.
+    @Test func runLoopAsksAgainWhenTheCodeRunsOut() async {
         let clock = Clock()
-        let repository = CodeRepository(clock: clock)
+        let repository = CodeRepository(clock: clock, validFor: 60)
         let model = FamilyCodeModel(repository: repository, now: { clock.now })
         var slept = 0
         await model.run { _ in
@@ -252,24 +281,25 @@ struct FamilyCodeModelTests {
         #expect(model.copyInvite(language: .english, to: pasteboard))
         #expect(pasteboard.options[.localOnly] as? Bool == true)
         let expiry = try #require(pasteboard.options[.expirationDate] as? Date)
-        #expect(abs(expiry.timeIntervalSince(clock.now) - 40) < 0.01)
+        #expect(abs(expiry.timeIntervalSince(clock.now) - 1780) < 0.01)
         let text = try #require(pasteboard.items.first?["public.plain-text"] as? String)
-        #expect(text.contains("https://shoo-api.afindo-mi01.workers.dev/join?code=1001"))
-        #expect(text.contains("1001"))
+        #expect(text.contains("https://shoo-api.afindo-mi01.workers.dev/j/100001"))
+        #expect(text.contains("100001"))
         #expect(model.copied)
         // A new code means nothing copied for it yet.
-        await model.refreshCode()
+        await model.refreshCode(replace: true)
         #expect(!model.copied)
     }
 
     /// The QR and the copied text only ever carry our own link for this very code.
     @Test(arguments: [
-        ("https://evil.example/join?code=4821", false),
-        ("https://shoo-api.afindo-mi01.workers.dev/join?code=1111", false),
-        ("https://shoo-api.afindo-mi01.workers.dev/join?code=4821", true),
+        ("https://evil.example/j/482193", false),
+        ("https://shoo-api.afindo-mi01.workers.dev/j/111111", false),
+        ("https://shoo-api.afindo-mi01.workers.dev/join?code=482193", false),
+        ("https://shoo-api.afindo-mi01.workers.dev/j/482193", true),
     ])
     func inviteURLMustBeOursForThisCode(link: String, accepted: Bool) {
-        let code = FamilyCode(code: "4821", expiresAt: Date(), inviteUrl: URL(string: link)!)
+        let code = FamilyCode(code: "482193", expiresAt: Date(), inviteUrl: URL(string: link)!)
         #expect((FamilyCodeModel.checkedInviteURL(for: code) != nil) == accepted)
     }
 
@@ -301,14 +331,18 @@ struct FamilyCodeModelTests {
     }
 
     @Test func inviteTextInBothLanguages() {
-        let code = FamilyCode(code: "4821", expiresAt: Date(), inviteUrl: URL(string: "https://x.test/join?code=4821")!)
+        let code = FamilyCode(code: "482193", expiresAt: Date(), inviteUrl: URL(string: "https://x.test/j/482193")!)
         let english = FamilyCodeModel.inviteText(for: code, language: .english)
         let indonesian = FamilyCodeModel.inviteText(for: code, language: .indonesian)
-        #expect(english.contains("4821") && indonesian.contains("4821") && english != indonesian)
+        #expect(english.contains("482193") && indonesian.contains("482193") && english != indonesian)
+    }
+
+    @Test func codeIsShownInTwoGroups() {
+        #expect(FamilyCodeModel.display("482193") == "482 193")
     }
 
     @Test func qrCodeRenders() {
-        #expect(QRCode.image(for: "https://shoo-api.afindo-mi01.workers.dev/join?code=4821") != nil)
+        #expect(QRCode.image(for: "https://shoo-api.afindo-mi01.workers.dev/j/482193") != nil)
     }
 }
 
@@ -324,24 +358,24 @@ struct DeepLinkRoutingTests {
     @Test func protectedAfterOnboardingOpensConnectWithTheCode() {
         let env = environment(mode: .protected, onboarded: true)
         env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=4821")!)
+        env.open(URL(string: "shoo://join?code=482193")!)
         #expect(env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == "4821")
+        #expect(env.router.pendingJoinCode == "482193")
         #expect(env.router.selectedTab == .shield)
     }
 
     @Test func beforeRegistrationTheCodeWaitsForConnect() {
         let env = environment(mode: nil, onboarded: false)
-        env.open(URL(string: "shoo://join?code=4821")!)
+        env.open(URL(string: "shoo://join?code=482193")!)
         #expect(!env.router.isConnectPresented)
-        #expect(env.router.takePendingJoinCode() == "4821")
+        #expect(env.router.takePendingJoinCode() == "482193")
         #expect(env.router.pendingJoinCode == nil)
     }
 
     @Test func guardianLandsOnShield() {
         let env = environment(mode: .guardian, onboarded: true)
         env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=4821")!)
+        env.open(URL(string: "shoo://join?code=482193")!)
         #expect(!env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == nil)
         #expect(env.router.selectedTab == .shield)
@@ -351,26 +385,26 @@ struct DeepLinkRoutingTests {
     @Test func linkWhileProfileIsOpenShowsConnectAfterIt() {
         let env = environment(mode: .protected, onboarded: true)
         env.router.isProfilePresented = true
-        env.open(URL(string: "shoo://join?code=4821")!)
+        env.open(URL(string: "shoo://join?code=482193")!)
         #expect(!env.router.isProfilePresented)
         #expect(!env.router.isConnectPresented)
         env.router.sheetDismissed()
         #expect(env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == "4821")
+        #expect(env.router.pendingJoinCode == "482193")
     }
 
     @Test func secondLinkWhileConnectIsOpenOnlyRefillsTheCode() {
         let env = environment(mode: .protected, onboarded: true)
-        env.open(URL(string: "shoo://join?code=4821")!)
+        env.open(URL(string: "shoo://join?code=482193")!)
         _ = env.router.takePendingJoinCode()
-        env.open(URL(string: "shoo://join?code=1234")!)
+        env.open(URL(string: "shoo://join?code=123456")!)
         #expect(env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == "1234")
+        #expect(env.router.pendingJoinCode == "123456")
     }
 
     @Test func guardianRegistrationDropsAWaitingCode() async throws {
         let env = environment(mode: nil, onboarded: false)
-        env.open(URL(string: "shoo://join?code=4821")!)
+        env.open(URL(string: "shoo://join?code=482193")!)
         _ = try await env.register(name: "Rina", mode: .guardian)
         #expect(env.router.pendingJoinCode == nil)
     }
@@ -387,8 +421,8 @@ struct DeepLinkRoutingTests {
 /// Answers every code with a link to someone else's site.
 private actor ForeignLinkRepository: ShooRepository {
     private let base = MockRepository(mode: .guardian, latency: .zero)
-    func createFamilyCode() async throws -> FamilyCode {
-        FamilyCode(code: "4821", expiresAt: Date().addingTimeInterval(60), inviteUrl: URL(string: "https://evil.example/join?code=4821")!)
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
+        FamilyCode(code: "482193", expiresAt: Date().addingTimeInterval(30 * 60), inviteUrl: URL(string: "https://evil.example/j/482193")!)
     }
     func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
         try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
@@ -440,7 +474,7 @@ private actor SlowMembersRepository: ShooRepository {
         return answer
     }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
-    func createFamilyCode() async throws -> FamilyCode { try await base.createFamilyCode() }
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
     func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
         try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
     }
@@ -460,7 +494,7 @@ private actor SlowMembersRepository: ShooRepository {
 
 struct InviteShareTests {
     @Test func whatsAppGetsTheWholeInviteAsOneParameter() throws {
-        let text = "Join me: https://x.dev/join?code=1234&a=b + more"
+        let text = "Join me: https://x.dev/j/123456?a=b&c=d + more"
         let url = try #require(InviteShare.whatsAppURL(text: text))
         #expect(url.scheme == "whatsapp")
         let items = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)

@@ -63,7 +63,7 @@ final class PairingGateUITests: XCTestCase {
                 let field = app.textFields["connect.code"]
                 XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
                 field.tap()
-                field.typeText("0000")
+                field.typeText("000000")
                 shot(app, "connect-\(tag)")
                 let join = app.buttons["connect.join"]
                 if !join.isHittable { app.swipeUp() }
@@ -71,7 +71,7 @@ final class PairingGateUITests: XCTestCase {
                 XCTAssertTrue(app.staticTexts["connect.error"].waitForExistence(timeout: 5), app.debugDescription)
                 shot(app, "connect-error-\(tag)")
                 field.tap()
-                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "4821")
+                field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 6) + "482193")
                 if !join.isHittable { app.swipeUp() }
                 join.tap()
                 XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 5), app.debugDescription)
