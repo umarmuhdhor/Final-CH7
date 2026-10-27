@@ -17,7 +17,7 @@ Layer 2 has two parts, run on every page that is not an official domain. Their w
 | Part | Reads | Signals |
 |---|---|---|
 | A. Brand check | the host name only | `lookalike_domain` (25 / 10), `brand_plus_keyword` (14), `cheap_tld` (5 / 15) |
-| B. Link dissector (#140) | the **whole URL** | `suspicious_link` (10 to 29) |
+| B. Link dissector (#140) | the **whole URL** | `suspicious_link` (10 to 100) |
 
 B scores each part of the URL on its own (max 25 per part):
 
@@ -34,6 +34,6 @@ B scores each part of the URL on its own (max 25 per part):
 | length | over 120 chars | 4 |
 | free hosting | host is on the list 3 · bait/carrier word in the first label 10 (16 for 2+) · year/amount in the label 5 · bait/carrier word in the file name 10 | added on top |
 
-Rules of the signal: one per page, weight is the score **capped at 29**, nothing is emitted below 10, private and loopback addresses are skipped. `evidence` holds reason codes only. Weights are guesses (D-imelda-45); known false positives are pinned in the tests.
+Rules of the signal: one per page, weight is the raw score (**no cap**, max 100), nothing is emitted below 10, private and loopback addresses are skipped. `evidence` holds reason codes only. Weights are guesses (D-imelda-45); known false positives are pinned in the tests.
 
 Try it: `ai/testing/26-oct-2026/06-testing-14.57/l2-v2-visual.html`.

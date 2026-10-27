@@ -5,7 +5,7 @@
 // Layer 2 has two parts that add up (score = sum of signal weights, computed by the extension):
 //   A. Brand check (this block): does the NAME imitate one of the 25 brands in brands.json?
 //   B. Link dissector (dissectLink below): the WHOLE URL, one `suspicious_link` signal. Each part of the URL scores on its
-//      own, hosting-platform subdomains are judged by their first label and file name, and the signal alone never reaches 30.
+//      own, hosting-platform subdomains are judged by their first label and file name. Its weight is the raw score (max 100), no cap.
 //
 // Brand suspicion levels (how sure we are that the name imitates a brand). Weights are starting values, calibrated in M6.
 //   Level 0  official domain (listed in brands.json)        -> no signals at all
@@ -24,7 +24,6 @@
     // Link dissector. Weights are starting values, not calibrated on real scams yet (D-imelda-45).
     const LINK_PART_CAP = 25; // one URL part cannot dominate
     const LINK_MIN_EMIT = 10; // below this the link says too little to show (a free host alone is 3)
-    const LINK_MAX_WEIGHT = 29; // lead decision (#140): the link alone can open the LLM gate but never the popup (30)
     const FILE_EXT = /\.(html?|php\d?|aspx?|jsp)$/i;
 
     // Cyrillic / Greek / Armenian letters that look like Latin ones.
@@ -359,14 +358,14 @@
         return { score, reasons };
     }
 
-    /** One `suspicious_link` signal, or null when the link says too little. Weight is capped below the popup line. */
+    /** One `suspicious_link` signal, or null when the link says too little. Weight is the raw dissector score (max 100), no cap. */
     function linkSignal(snapshot) {
         if (!snapshot.url) return null;
         const { score, reasons } = dissectLink(String(snapshot.url));
         if (score < LINK_MIN_EMIT) return null;
         const shown = reasons.filter((r) => r !== "free_host" && r !== "file_ext" && r !== "http_no_tls" && r !== "long_url");
         const top = (shown.length ? shown : reasons).slice(0, 3);
-        return signal("suspicious_link", Math.min(score, LINK_MAX_WEIGHT), T.suspiciousLink(top), reasons.join(","));
+        return signal("suspicious_link", score, T.suspiciousLink(top), reasons.join(","));
     }
 
     // ---------- layer 1: database (hostname only; the lists live in the extension) ----------

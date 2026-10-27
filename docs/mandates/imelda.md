@@ -34,7 +34,7 @@ Target awal ini bisa diubah oleh lead:
 - [x] Siapkan test runner (`node --test` sudah cukup). Satu test per aturan, plus test "domain resmi → tanpa sinyal".
 - [x] Jalankan `detector/scripts/sync-to-extension.sh`, lalu commit `src/` dan `detector.js` bersamaan.
 - **Selesai kalau:** semua test lolos, dan domain di fixture `contracts/fixtures/` menghasilkan sinyal layer 2 yang sesuai.
-- [x] M1b · Pembedah link utuh (#140, diterima Umar): `suspicious_link` di `detector/` (seluruh URL, hosting gratis, bobot dibatasi 29). Data di `detector/data/link-rules.json`. Branch: `feat/L2-v2-full-link-dissector`.
+- [x] M1b · Pembedah link utuh (#140, diterima Umar): `suspicious_link` di `detector/` (seluruh URL, hosting gratis, bobot = skor mentah tanpa batas (maks 100)). Data di `detector/data/link-rules.json`. Branch: `feat/L2-v2-full-link-dissector`.
 - Branch: `feat/AI-M1-link-name`
 
 ### M2 · Eval set — `ai/eval/`

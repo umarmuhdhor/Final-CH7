@@ -330,10 +330,10 @@ test("layer 1: malformed hits are ignored and layer 2 runs", async () => {
 const link = async (url) => find(await scan(url), "suspicious_link");
 const linkIds = async (url) => ((await link(url))?.evidence || "").split(",").filter(Boolean);
 
-test("link: random file name + slash + rare TLD (helpnets) is flagged, but capped below the popup line", async () => {
+test("link: random file name + slash + rare TLD (helpnets) is flagged and can pass the popup line (30)", async () => {
     const s = await link("https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/");
     assert.equal(s.layer, 2);
-    assert.equal(s.weight, 29, "raw score is 34, capped");
+    assert.equal(s.weight, 34, "raw score, no cap");
     for (const r of ["rare_tld", "random_name", "slash_after_file"]) assert.ok(s.evidence.split(",").includes(r), r);
 });
 
@@ -362,9 +362,9 @@ test("link: known false positive, a legit blog with a bait word in the file name
     assert.equal(s.weight, 24);
 });
 
-test("link: the link signal alone never reaches 30, even with every part lit", async () => {
+test("link: with every part lit the weight is the raw score, max 100 (no cap)", async () => {
     const s = await link("http://user@12345678-ab-cd-ef-gh.a.b.c.d.example.xyz:8080/0442827f6o7cfb43933ba59e2881cc906b7c.php/?url=https://x.com&e=a@b.c#https://y.com");
-    assert.equal(s.weight, 29);
+    assert.equal(s.weight, 100);
 });
 
 test("link: evidence and labels carry reason codes and our own words, never pieces of the URL", async () => {
