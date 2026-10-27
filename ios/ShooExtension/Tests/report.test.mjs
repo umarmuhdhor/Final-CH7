@@ -118,9 +118,13 @@ test("crop never reads outside the image", () => {
     assert.equal(cropBox({ x: 400, y: 0, width: 10, height: 10, viewportWidth: 390 }, 390, 844), null);
 });
 
-// Minimal DOM stand-ins for screenshotTargets: fields and iframes per document.
-const fakeDoc = (name, { fields = [], frames = [] } = {}) => ({
-    querySelectorAll: (sel) => (sel === "iframe, frame" ? frames : fields.map((type, i) => ({ type, name: `${name}.${type}.${i}` }))),
+// Minimal DOM stand-ins for screenshotTargets: fields, frames and shadow hosts per document.
+const fakeDoc = (name, { fields = [], frames = [], hosts = [] } = {}) => ({
+    querySelectorAll: (sel) => {
+        if (sel.startsWith("iframe")) return frames;
+        if (sel === "*") return hosts;
+        return fields.map((type, i) => ({ type, name: `${name}.${type}.${i}` }));
+    },
 });
 const frameOf = (doc) => ({ contentDocument: doc });
 const names = (els) => els.map((el) => el.name);
@@ -173,4 +177,32 @@ test("screenshot hides same-origin iframes nested deeper than the limit instead 
     const { blur, hide } = screenshotTargets(doc); // d0 → d1 → d2 → d3 | d4 hidden
     assert.deepEqual(names(blur), ["d0.text.0", "d1.text.0", "d2.text.0", "d3.text.0"]);
     assert.deepEqual(hide, [frames[3]]);
+});
+
+test("screenshot blurs any editable area: bare, empty and plaintext-only contenteditable, role=textbox", () => {
+    const selector = [];
+    screenshotTargets({ querySelectorAll: (sel) => (selector.push(sel), []) });
+    const fields = selector[0];
+    for (const part of ["input", "textarea", "select", "[contenteditable]", ':not([contenteditable="false" i])', '[role="textbox"]']) {
+        assert.ok(fields.includes(part), part);
+    }
+});
+
+test("screenshot walks into open shadow roots (web components), frames inside them too", () => {
+    const framed = fakeDoc("framed", { fields: ["text"] });
+    const shadow = fakeDoc("shadow", { fields: ["password"], frames: [frameOf(framed)] });
+    const page = fakeDoc("page", { fields: ["email"], hosts: [{ shadowRoot: shadow }, { shadowRoot: null }] });
+    const { blur, hide } = screenshotTargets(page);
+    assert.deepEqual(names(blur), ["page.email.0", "shadow.password.0", "framed.text.0"]);
+    assert.deepEqual(hide, []);
+});
+
+test("screenshot hides embeds and objects it can't read, and reads a same-origin <object data> document", () => {
+    const embed = { contentDocument: undefined };
+    const image = { contentDocument: null, getAttribute: (a) => (a === "data" ? "logo.png" : null), hasAttribute: () => false };
+    const html = { contentDocument: fakeDoc("object", { fields: ["text"] }), getAttribute: (a) => (a === "data" ? "form.html" : null), hasAttribute: () => false };
+    const page = fakeDoc("page", { frames: [embed, image, html] });
+    const { blur, hide } = screenshotTargets(page);
+    assert.deepEqual(names(blur), ["object.text.0"]);
+    assert.deepEqual(hide, [embed, image]);
 });
