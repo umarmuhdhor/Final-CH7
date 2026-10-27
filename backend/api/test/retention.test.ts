@@ -75,23 +75,58 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     await store.remove([shared]);
   });
 
-  it("at most maxBatches × batch per run; the rest goes on the next run (backlog logged)", async () => {
+  it("rows with a screenshot all go on day 14; Storage DELETEs are capped, the rest drains through the tombstone step", async () => {
     await device("dev_p");
-    // With a screenshot: these go through the Storage-bound loop (plain scans have their own, larger one).
     await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at, screenshot_path)
       select 'bulk_' || lpad(g::text, 4, '0'), 'dev_p', 'https://x.example/', 'x.example', 92, 'blocked', now(),
              now() - interval '20 days' + make_interval(secs => g), 'dev_p/bulk_' || lpad(g::text, 4, '0') || '.jpg'
       from generate_series(1, 25) g`;
+    const removed: string[][] = [];
+    const spy = vi.fn(async (paths: string[]) => void removed.push(paths));
+
+    const r = await runRetention(sql, env, { batch: 10, maxBatches: 2, store: { ...store, remove: spy } });
+    expect(r).toMatchObject({ scans: 25, objects: 20, tombstones: 5, backlog: false });
+    expect(await scanIds()).toEqual([]);
+    // Oldest first within the budget; the tombstone step takes the 5 left in the same run.
+    expect(removed.slice(0, 2).flat()).toEqual(Array.from({ length: 20 }, (_, i) => `dev_p/bulk_${String(i + 1).padStart(4, "0")}.jpg`));
+    expect(removed[2]!.sort()).toEqual(["dev_p/bulk_0021.jpg", "dev_p/bulk_0022.jpg", "dev_p/bulk_0023.jpg", "dev_p/bulk_0024.jpg", "dev_p/bulk_0025.jpg"]);
+    // Retention's own tombstones are settled: dropped right after the remove, not kept for tomorrow (LOW 6).
+    expect((await sql`select 1 from storage_tombstones`).length).toBe(0);
+  });
+
+  it("a flood of dedupe reuses cannot hold other users' rows past day 14 (PR #20 review, HIGH)", async () => {
+    await device("dev_flood");
+    await device("dev_other");
+    // One device re-posting the same blocked domain: 3000 old rows share one object, older than everyone else's.
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at, screenshot_path)
+      select 'flood_' || lpad(g::text, 5, '0'), 'dev_flood', 'https://x.example/', 'x.example', 92, 'blocked', now(),
+             now() - interval '20 days' + make_interval(secs => g), 'dev_flood/flood_00001.jpg'
+      from generate_series(1, 3000) g`;
+    await scan("s_other", "dev_other", 15, "dev_other/s_other.jpg");
+    const removed: string[][] = [];
+    const spy = vi.fn(async (paths: string[]) => void removed.push(paths));
+
+    const r = await runRetention(sql, env, { store: { ...store, remove: spy } });
+    expect(r).toMatchObject({ scans: 3001, backlog: false });
+    expect(await scanIds()).toEqual([]);
+    expect(removed.flat().sort()).toEqual(["dev_flood/flood_00001.jpg", "dev_other/s_other.jpg"]);
+  });
+
+  it("more old rows than chunks × chunk size: the rest goes on the next run (backlog logged)", async () => {
+    await device("dev_p");
+    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at, screenshot_path)
+      select 'many_' || lpad(g::text, 4, '0'), 'dev_p', 'https://x.example/', 'x.example', 92, 'blocked', now(),
+             now() - interval '20 days' + make_interval(secs => g), 'dev_p/shared.jpg'
+      from generate_series(1, 60) g`;
     const lines: string[] = [];
     vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
+    const quiet = { ...store, remove: async () => undefined };
 
-    const first = await runRetention(sql, env, { batch: 10, maxBatches: 2 });
-    expect(first).toMatchObject({ scans: 20, backlog: true });
+    expect(await runRetention(sql, env, { shotChunk: 2, store: quiet })).toMatchObject({ scans: 50, backlog: true });
     // Oldest first.
-    expect(await scanIds()).toEqual(["bulk_0021", "bulk_0022", "bulk_0023", "bulk_0024", "bulk_0025"]);
+    expect((await scanIds())[0]).toBe("many_0051");
     expect(lines.some((l) => l.includes('"backlog":true'))).toBe(true);
-    expect(await runRetention(sql, env, { batch: 10, maxBatches: 2 })).toMatchObject({ scans: 5, backlog: false });
-    expect(await runRetention(sql, env, { batch: 10, maxBatches: 2 })).toMatchObject({ scans: 0, backlog: false });
+    expect(await runRetention(sql, env, { shotChunk: 2, store: quiet })).toMatchObject({ scans: 10, backlog: false });
   });
 
   it("Storage failure still deletes the rows on day 14; the paths stay tombstoned; logs carry no path", async () => {

@@ -15,7 +15,7 @@ type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; sections: Section[] }> = {
   en: {
     title: "Shoo privacy policy",
-    updated: "Last updated: 25 October 2026",
+    updated: "Last updated: 27 October 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
       { h: "What we store", items: [
@@ -35,7 +35,8 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
       { h: "How long we keep it", items: [
         "Flagged pages are deleted automatically after 14 days. A screenshot reused for repeat visits to the same site within a day goes with the last of them, at most 15 days after it was taken.",
         "A note that a notification was sent (time and result, never its text) is deleted after 14 days.",
-        "Family codes stop working after 60 seconds and are deleted within a day.",
+        "Family codes stop working after 30 minutes, or as soon as a new one is made, and are deleted within a day.",
+        "Your device's name, avatar and push token stay until you delete your data in the app. Devices that stop using Shoo are not deleted automatically yet.",
         "A Guardian's decisions stay until you disconnect or delete your data.",
         "A domain that a person on our team reviewed and confirmed as a scam joins a shared blocklist for every user. Only the domain is kept, with no link to you.",
         "Security counters (a keyed hash of your IP address or device, never the address itself) are deleted after 1 day.",
@@ -62,7 +63,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
   },
   id: {
     title: "Kebijakan privasi Shoo",
-    updated: "Terakhir diperbarui: 25 Oktober 2026",
+    updated: "Terakhir diperbarui: 27 Oktober 2026",
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
       { h: "Yang kami simpan", items: [
@@ -82,7 +83,8 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
       { h: "Berapa lama disimpan", items: [
         "Halaman yang ditandai dihapus otomatis setelah 14 hari. Screenshot yang dipakai ulang untuk kunjungan berulang ke situs yang sama dalam sehari ikut terhapus bersama yang terakhir, paling lambat 15 hari setelah diambil.",
         "Catatan bahwa notifikasi terkirim (waktu dan hasil, tidak pernah isinya) dihapus setelah 14 hari.",
-        "Kode keluarga berhenti berlaku setelah 60 detik dan dihapus dalam sehari.",
+        "Kode keluarga berhenti berlaku setelah 30 menit, atau begitu kode baru dibuat, dan dihapus dalam sehari.",
+        "Nama, avatar, dan token push device-mu disimpan sampai kamu menghapus datamu di app. Device yang berhenti memakai Shoo belum dihapus otomatis.",
         "Keputusan Guardian disimpan sampai kamu memutus hubungan atau menghapus datamu.",
         "Domain yang sudah diperiksa tim kami dan dipastikan penipuan masuk ke daftar blokir bersama untuk semua pengguna. Hanya domainnya yang disimpan, tanpa kaitan denganmu.",
         "Penghitung keamanan (hash berkunci dari alamat IP atau device, tidak pernah alamatnya sendiri) dihapus setelah 1 hari.",
