@@ -11,6 +11,15 @@
     const BLUR_SKIP = new Set(["hidden", "checkbox", "radio", "submit", "button", "reset", "image", "range", "color", "file"]);
     const FIELD_SELECTOR = "input, textarea, select, [contenteditable='true']";
     const MAX_FRAME_DEPTH = 3;
+    // Paint marker (capture.js): magenta band over cyan band at the viewport's top-left corner, set in the
+    // same change as the blur. Found in the capture → that frame has the blur, and it shows where the
+    // viewport starts in the image (Safari captures the area under the status bar too).
+    const MARKER_BAND = 4; // CSS px per band
+    const MARKER_STYLE = [
+        "position: fixed", "left: 0", "top: 0", `width: ${2 * MARKER_BAND}px`, `height: ${2 * MARKER_BAND}px`,
+        `background: linear-gradient(#ff00ff ${MARKER_BAND}px, #00ffff ${MARKER_BAND}px)`,
+        "z-index: 2147483647", "pointer-events: none", "margin: 0", "padding: 0", "border: 0",
+    ].map((rule) => `${rule} !important`).join("; ");
 
     /** Report now? Once per page: on blocked, or on a finished warning. */
     function shouldReport(state, reportedScanIds) {
@@ -62,22 +71,41 @@
         return { x: left, y: top, width: right - left, height: bottom - top };
     }
 
+    /** A src that never leaves about:blank (none, about:…, srcdoc), so a blank document is the real one. */
+    function staysBlank(frame) {
+        if (frame.hasAttribute?.("srcdoc")) return true;
+        const src = (frame.getAttribute?.("src") ?? "").trim();
+        return !src || /^about:/i.test(src);
+    }
+
+    /**
+     * The frame's document if we can see everything it will show, else null (→ hide the frame).
+     * While a cross-origin src is still loading, contentDocument is the initial about:blank, which is
+     * same-origin with us: it has no fields, and the cross-origin form appears a moment later.
+     */
+    function readableDocument(frame) {
+        let inner = null;
+        try {
+            inner = frame.contentDocument;
+        } catch {
+            return null; // cross-origin
+        }
+        if (!inner) return null;
+        if (inner.URL === "about:blank" && !staysBlank(frame)) return null; // still loading its src
+        return inner;
+    }
+
     /**
      * What to change before the screenshot, so no typed value is readable in it (PRD §10, #75).
      * blur: text-like fields of the page and of every same-origin iframe, nested too.
-     * hide: iframes we can't look into (cross-origin, or nested deeper than MAX_FRAME_DEPTH): their fields
-     * can't be blurred, so the whole frame is hidden.
+     * hide: iframes we can't look into (cross-origin, still loading, or nested deeper than MAX_FRAME_DEPTH):
+     * their fields can't be blurred, so the whole frame is hidden.
      */
     function screenshotTargets(doc, depth = 0) {
         const blur = [...doc.querySelectorAll(FIELD_SELECTOR)].filter((el) => !BLUR_SKIP.has(el.type));
         const hide = [];
         for (const frame of doc.querySelectorAll("iframe, frame")) {
-            let inner = null;
-            try {
-                inner = frame.contentDocument;
-            } catch {
-                // cross-origin → hide
-            }
+            const inner = readableDocument(frame);
             if (!inner || depth >= MAX_FRAME_DEPTH) {
                 hide.push(frame);
                 continue;
@@ -89,7 +117,7 @@
         return { blur, hide };
     }
 
-    globalThis.ShooReport = { shouldReport, scanBody, shareableUrl, evidenceRect, screenshotTargets, ready: () => Promise.resolve(), keyFor: () => null };
+    globalThis.ShooReport = { shouldReport, scanBody, shareableUrl, evidenceRect, screenshotTargets, MARKER_BAND, ready: () => Promise.resolve(), keyFor: () => null };
 
     // ---- Content script part -------------------------------------------------------------
 
@@ -125,7 +153,10 @@
         return null;
     }
 
-    /** Blurs every text-like field (iframes too), hides unreadable iframes and our own popup; returns an undo. */
+    /**
+     * Blurs every text-like field (iframes too), hides unreadable iframes and our own popup, and shows
+     * the paint marker in the same change; returns an undo.
+     */
     function prepareForScreenshot() {
         const touched = [];
         const { blur, hide } = screenshotTargets(document);
@@ -137,7 +168,11 @@
             touched.push([el, el.getAttribute("style")]);
             el.style.setProperty("visibility", "hidden", "important");
         }
+        const marker = document.createElement("shoo-capture-marker");
+        marker.setAttribute("style", MARKER_STYLE);
+        document.documentElement.append(marker);
         return () => {
+            marker.remove();
             for (const [el, style] of touched) {
                 if (style == null) el.removeAttribute("style");
                 else el.setAttribute("style", style);
@@ -149,14 +184,14 @@
         const restore = prepareForScreenshot();
         try {
             const rect = evidenceRect(sensitiveFormRect(), { width: innerWidth, height: innerHeight });
-            // Two frames so the blur is actually painted before the capture.
+            // Two frames so the blur is likely painted; capture.js still checks for the marker and retries.
             await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             // Background replies once the screenshot is taken; the POST carries on there.
             return await send({
                 type: "report",
                 key,
                 scan: scanBody(state, { title: document.title, faviconUrl: faviconUrl(), now: new Date().toISOString() }),
-                evidence: { ...rect, viewportWidth: innerWidth },
+                evidence: { ...rect, viewportWidth: innerWidth, markerBand: MARKER_BAND },
             });
         } catch {
             return null;
