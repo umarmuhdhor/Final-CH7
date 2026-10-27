@@ -74,3 +74,38 @@ Yang menangkap kasus ini adalah layer 3 (`analyze-forms`) dan layer 1: form pass
 - Siapa yang memutuskan ambang `LINK_MIN_EMIT` kalau gabungan rule A masih di bawahnya? (Umar, lewat issue sesuai CLAUDE.md rule 7.)
 - Umur domain di layer 3 server: `PageSnapshot.domain` (registrable domain, tanpa `www`) sudah ada di kontrak (`contracts/detector-interface.md`) dan ikut terkirim ke `/analyze`, jadi mungkin **tidak perlu ubah kontrak**. `ai/CLAUDE.md` bilang URL mentah tidak dikirim, jadi path/query tetap aman. Yang perlu dikonfirmasi ke Umar: boleh tidak server memanggil RDAP dengan domain itu (domain keluar ke pihak ketiga), dan siapa yang cache hasilnya. Belum ada issue di GitHub, nanti dibuat.
 - Koreksi: sebelumnya dikira hostname perlu masuk kontrak. Setelah dicek, `domain` sudah ada di snapshot.
+
+## Celah yang ditemukan di run baseline (27 Okt 2026, `dataset.md`, 25 scam)
+
+Baseline sebelum perubahan: 16/25 ada signal L2, 1/25 popup. Legit: 0/23 false positive. Penyebab tiap link yang lolos (dicek dengan menjalankan `dissectLink` dan membaca `analyzeBrand`):
+
+| Link | Skor L2 | Penyebab | Status |
+|---|---|---|---|
+| `qlolla-bybri.com` (03) | 4 | Cek brand hanya mencocokkan potongan utuh. `bybri` ≠ `bri`. Fuzzy butuh panjang ≥ 6 dan nama brand ≥ 6 huruf, `bri` cuma 3. | **Diperbaiki**: pola connector + brand |
+| `kodepembatalanbybni.pages.dev` (05) | 3 | `bybni` sama. `kode` dan `pembatalan` tidak ada di daftar umpan. | **Sebagian**: `bybni` kena (+14). Kosakata umpan belum |
+| `cusbsi.com` (04) | 0 | `cus` + `bsi` menempel. `matchGlued` hanya mengenali brand + kata di `keywords`. | Terbuka. Brand 3 huruf di tepi label, risiko false positive, perlu uji korpus |
+| `sites.google.com/view/pengembalian-request/…` (06) | 3 | `analyze()` langsung `return []` kalau `isOfficial(host)`. `isOfficial` mencocokkan semua akhiran host, jadi subdomain apa pun dari `google.com` dianggap resmi, termasuk Google Sites dan Forms yang isinya buatan pengguna. Path tidak pernah dibaca. Selain itu `pengembalian` tidak ada di daftar umpan. | Terbuka. Butuh daftar host konten-pengguna yang dikecualikan dari `isOfficial` (`sites.google.com`, `docs.google.com`, `forms.gle`, `drive.google.com`, `script.google.com`, `forms.office.com`) |
+| `yaigsjv.1238bll.my.id/ca/bin/2c.html` (07) | 5 | `digit_label` butuh label ≥ 8 karakter, `1238bll` hanya 7 (57% angka). Tidak ada rule label acak atau `.my.id`. | Terbuka |
+| `storee-dp9hsk1cxr2y.edgeone.dev` (09, 10) | 0 | `edgeone.dev` tidak ada di `freeHosts`. `digit_label` menghitung seluruh label: 3 angka dari 19 karakter = 16%. | Terbuka. Tambah `edgeone.dev`, cek `digit_label` per potongan di antara `-` |
+| `m-pajak.top` (08) | 4 + `cheap_tld` 5 | `pajak` bukan kata umpan atau brand. Skor dissector 4 dibuang karena di bawah `LINK_MIN_EMIT`, jadi tidak dijumlahkan dengan `cheap_tld`. | Terbuka. Pertimbangkan menjumlahkan skor sub-ambang dengan sinyal L2 lain |
+| `viinwkwk-dot.github.io/instagram./` (20) | 3 | Cek brand hanya membaca host. `instagram` di path tidak diperiksa. | Terbuka. Rule brand di path pada host yang bukan resmi |
+| `apply.wozspace.site/info` (15) | 0 + `cheap_tld` 5 | `apply` dan `info` bukan kata umpan. | Terbuka (kosakata umpan) |
+| `deddydanchika.blogspot.com` (11) | 3 | Nama pribadi di blogspot, tidak ada kata umpan. Tidak bisa dibedakan dari blog sah lewat string URL. | Di luar L2, ditangani layer 3 |
+
+### Perubahan yang sudah dibuat (27 Okt 2026)
+
+Pola **connector + brand** di `detector/src/detector.js` (`matchByBrand`): potongan nama host yang berakhir `by|via|from` + nama brand (bukan brand yang juga kata biasa: dana, apple, mandiri) dihitung sebagai `brand_plus_keyword` (+14), connector jadi kata kuncinya. Hyphen di nama (`qlolla-bybri`) tidak dihitung dua kali. Tiga test baru di `detector/test/detector.test.mjs`, termasuk false positive yang dikunci (`hobbydana`, `baby-shop`, `ruby-store`, `viabus`, `standbyapple`, `toko-by-sari`). 59/59 test lulus. Hasil build sudah disinkronkan ke `ios/ShooExtension/Resources/detector.js`.
+
+Hasil tes ulang: scam **18/25 ada signal** (dari 16), popup tetap 1/25; legit tetap **0/23 false positive**.
+
+Bobot (+14) memakai nilai `brand_plus_keyword` yang sudah ada, bukan angka baru. Bobot lain di `hasil-analisis.md` belum disentuh dan belum diuji korpus.
+
+### Perubahan ke-2 (27 Okt 2026)
+
+- `digit_label` dinilai per potongan di antara `-`: potongan ≥ 6 karakter berisi huruf, ≥ 3 digit, dan digit ≥ 25%. Sebelumnya seluruh label harus ≥ 8 karakter dan digit ≥ 40%. Dilewati untuk `*.cloudfront.net` (id distribusi CloudFront selalu berbentuk begitu di situs asli). Bobot tetap +8.
+- `edgeone.dev` masuk `freeHosts`.
+- `pengembalian`, `pembatalan`, `kode` masuk `baitWords` (label dan nama file di free host) dan `pathBait` (path).
+- 62/62 test lulus, termasuk false positive yang dikunci (`smpn1-jakarta.sch.id`, `covid19info.com`, `k24klik.com`, `mp3juices.com`, `d111abcdef.cloudfront.net`, `web3-dev.com`).
+- Tes ulang: scam **20/25 ada signal, 2 popup** (`kodepembatalanbybni.pages.dev` = 33), legit tetap **0/23**.
+
+Masih lolos setelah perubahan ke-2: `cusbsi.com` (04), `sites.google.com/...pengembalian...` (06, dilewati `isOfficial`), `m-pajak.top` (08), `storee-dp8iiud7biuu.edgeone.dev` (10, hanya 2 digit, di bawah syarat 3 digit), `apply.wozspace.site/info` (15), `deddydanchika.blogspot.com` (11), `viinwkwk-dot.github.io/instagram./` (20, brand hanya di path).

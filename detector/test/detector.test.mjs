@@ -101,6 +101,27 @@ test("brand and bait word glued together (bcalogin.com)", async () => {
     assert.ok(ids(await scan("https://bcalogin.com/")).includes("brand_plus_keyword"));
 });
 
+test("brand after a connector (by/via/from) counts as brand + keyword", async () => {
+    for (const url of ["https://qlolla-bybri.com/", "https://kodepembatalanbybni.pages.dev/", "https://kodeviabni.com/", "https://cashfrombsi.com/"]) {
+        const s = await scan(url);
+        const hit = find(s, "brand_plus_keyword");
+        assert.ok(hit, url);
+        assert.equal(hit.weight, 14, url);
+    }
+    assert.match(find(await scan("https://qlolla-bybri.com/"), "brand_plus_keyword").evidence, /^bri · level 2 · by$/);
+});
+
+test("connector + brand: the hyphen in the name is not counted twice", async () => {
+    assert.deepEqual(ids(await scan("https://qlolla-bybri.com/")), ["brand_plus_keyword"]);
+});
+
+test("connector + brand: ordinary words stay clean (pinned false-positive checks)", async () => {
+    // dana / apple / mandiri are common words, so "hobbydana" must not match; "baby-shop" has no brand after "by".
+    for (const host of ["hobbydana.com", "baby-shop.com", "ruby-store.co.id", "viabus.com", "standbyapple.com", "toko-by-sari.com"]) {
+        assert.ok(!ids(await scan(`https://${host}/`)).includes("brand_plus_keyword"), host);
+    }
+});
+
 test("brand in a subdomain of an unrelated domain", async () => {
     assert.ok(ids(await scan("https://bca-login.evil-hosting.com/")).includes("brand_plus_keyword"));
 });
@@ -351,6 +372,29 @@ test("link: free hosting is judged by the first label and the file name, not the
     for (const [url, weight] of cases) assert.equal((await link(url))?.weight, weight, url);
 });
 
+test("link: digit_label looks at each hyphen piece (1238bll, dp9hsk1cxr2y) and edgeone.dev is a free host", async () => {
+    const a = await link("https://yaigsjv.1238bll.my.id/ca/bin/2c.html");
+    assert.deepEqual((a?.evidence || "").split(","), ["digit_label", "file_ext"]);
+    const b = await link("https://storee-dp9hsk1cxr2y.edgeone.dev/");
+    assert.deepEqual((b?.evidence || "").split(","), ["digit_label", "free_host"]);
+});
+
+test("link: digit_label stays silent on ordinary digit names (pinned false-positive checks)", async () => {
+    for (const host of ["smpn1-jakarta.sch.id", "covid19info.com", "k24klik.com", "mp3juices.com", "d111abcdef.cloudfront.net", "web3-dev.com"]) {
+        assert.equal(await link(`https://${host}/`), undefined, host);
+    }
+});
+
+test("link: pengembalian / pembatalan / kode are bait words (name, file, path)", async () => {
+    assert.ok((await link("https://kodepembatalanbybni.pages.dev/")), "label bait on a free host");
+    assert.ok((await link("https://kodepembatalanbybni.pages.dev/")).evidence.includes("free_name_bait"));
+    assert.ok((await linkIds("https://tokomaju.co.id/kode.php")).includes("path_bait"));
+    assert.ok((await linkIds("https://tokomaju.co.id/pengembalian-dana.php")).includes("path_bait"));
+    assert.ok((await linkIds("https://tokomaju.co.id/pembatalan.php")).includes("path_bait"));
+    // a bait word in the path alone (6) is under the emit floor
+    assert.equal(await link("https://tokomaju.co.id/pembatalan/"), undefined);
+});
+
 test("link: a free host alone, or a clean blog on it, gives no signal", async () => {
     for (const url of ["https://resepnusantara.blogspot.com/", "https://user.github.io/portfolio/", "https://myapp.netlify.app/", "https://d111abcdef.cloudfront.net/assets/logo.png"]) {
         assert.equal(await link(url), undefined, url);
@@ -387,6 +431,24 @@ test("link: each part of the URL scores on its own", async () => {
     assert.equal(await link("https://example.com/p#https://evil.example/"), undefined, "8 points alone is under the emit floor (10)");
 });
 
+test("link: word-digit subdomain on a hyphenated name (regs-apps14 shape) is flagged, with its file and path", async () => {
+    const ids = await linkIds("https://regs-apps14.regnows-dfg.com/code.php");
+    for (const id of ["word_digit_subdomain", "hyphen_registrable", "path_bait", "file_ext"]) assert.ok(ids.includes(id), id);
+    assert.ok((await link("https://regs-apps14.regnows-dfg.com/code.php")).weight >= 10);
+    assert.deepEqual(await linkIds("https://secure-login3.example.com/x.php"), ["word_digit_subdomain", "file_ext"]);
+    assert.ok(!(await linkIds("https://bca-verifikasi.site/login")).includes("hyphen_registrable"), "brand + bait hyphen is scored by brand_plus_keyword, not twice");
+});
+
+test("link: each new pattern alone stays under the emit floor, and plain digit/hyphen names stay silent", async () => {
+    for (const url of ["https://portal2.sekolah-harapan.sch.id/", "https://app3.toko-maju.co.id/index.php", "https://web1.kampus.ac.id/code/", "https://toko-maju.co.id/", "https://web2.example.com/", "https://my-site.example.com/"]) {
+        assert.equal(await link(url), undefined, url);
+    }
+});
+
+test("link: known false positive, a hyphenated shop with a word-digit subdomain is flagged (weights are guesses, D-imelda-45)", async () => {
+    assert.ok(await link("https://web-app2.toko-maju.co.id/"));
+});
+
 test("link: private and loopback addresses are never flagged (router pages, dev servers)", async () => {
     for (const url of ["http://192.168.0.1/login.php/", "http://10.0.0.5:8080/", "http://172.20.1.1/", "http://127.0.0.1:3000/login/", "http://[::1]/", "http://localhost:8080/login.php/"]) {
         assert.deepEqual(await run({ url }), [], url);
@@ -421,9 +483,9 @@ test("link: speed, 2000 URLs in well under 50 ms each", async () => {
 
 test("link rules data: lowercase words, no duplicates", () => {
     const rules = JSON.parse(readFileSync(new URL("../data/link-rules.json", import.meta.url), "utf8"));
-    for (const key of ["rareTlds", "freeHosts", "baitWords", "carriers"]) {
+    for (const key of ["rareTlds", "freeHosts", "baitWords", "carriers", "pathBait"]) {
         assert.equal(new Set(rules[key]).size, rules[key].length, `${key} has duplicates`);
         for (const w of rules[key]) assert.equal(w, w.toLowerCase());
     }
-    for (const w of [...rules.baitWords, ...rules.carriers]) assert.ok(w.length >= 3, w);
+    for (const w of [...rules.baitWords, ...rules.carriers, ...rules.pathBait]) assert.ok(w.length >= 3, w);
 });

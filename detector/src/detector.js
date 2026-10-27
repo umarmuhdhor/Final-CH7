@@ -50,6 +50,7 @@
             rareTlds: new Set(LINK.rareTlds),
             freeHosts: LINK.freeHosts,
             linkBait: LINK.baitWords,
+            pathBait: new Set(LINK.pathBait),
             carriers: LINK.carriers,
         };
     }
@@ -184,6 +185,21 @@
         return null;
     }
 
+    /**
+     * "bybri" / "kodepembatalanbybni": a brand named after "by", "via" or "from" ("code from BNI"). The connector is the keyword.
+     * Brands that are also ordinary words (dana, apple, mandiri) are skipped: "hobbydana" is a real word.
+     */
+    const CONNECTORS = ["by", "via", "from"];
+    function matchByBrand(token) {
+        for (const [name, entry] of index.names) {
+            if (entry.common) continue;
+            for (const c of CONNECTORS) {
+                if (token.endsWith(c + name)) return { brand: entry.brand, name, common: false, kind: "exact", how: "connector", keyword: c };
+            }
+        }
+        return null;
+    }
+
     // ---------- host handling ----------
     function hostOf(snapshot) {
         try {
@@ -240,6 +256,8 @@
         punycode: { en: "disguised letters", id: "huruf menyamar" },
         many_labels: { en: "too many dots", id: "terlalu banyak titik" },
         many_hyphens: { en: "too many hyphens", id: "terlalu banyak tanda hubung" },
+        word_digit_subdomain: { en: "app-style name with a number", id: "nama bergaya aplikasi dengan angka" },
+        hyphen_registrable: { en: "hyphen in the site name", id: "tanda hubung di nama situs" },
         digit_label: { en: "name made of digits", id: "nama penuh angka" },
         rare_tld: { en: "rare ending", id: "akhiran jarang" },
         odd_port: { en: "unusual port", id: "port tak lazim" },
@@ -317,9 +335,16 @@
             if (labels.some((l) => l.startsWith("xn--"))) add("host", 5, "punycode");
             if (name.length >= 4) add("host", 8, "many_labels");
             if (name.some((l) => (l.match(/-/g) || []).length >= 3)) add("host", 8, "many_hyphens");
-            if (name.some((l) => l.length >= 8 && (l.match(/\d/g) || []).length / l.length >= 0.4)) add("host", 8, "digit_label");
+            // Judged per hyphen piece, so "storee-dp9hsk1cxr2y" and "1238bll" count: 3+ digits mixed into a 6+ letter-and-digit piece.
+            // CloudFront distribution ids (d111abcdef.cloudfront.net) look like that on every real site: skipped there.
+            if (!host.endsWith(".cloudfront.net") && name.some((l) => l.split("-").some((p) => p.length >= 6 && /[a-z]/.test(p) && (p.match(/\d/g) || []).length >= 3 && (p.match(/\d/g) || []).length / p.length >= 0.25))) add("host", 8, "digit_label");
             // brands.json cheapTlds are already scored by the `cheap_tld` signal (part A); only the extra rare ones count here.
             if (suffixLen === 1 && index.rareTlds.has(tld) && !index.cheap.has(tld)) add("tld", 6, "rare_tld");
+            // "regs-apps14.regnows-dfg.com": a word-and-number subdomain over a hyphenated name. Each is weak alone (under the emit floor).
+            if (name.slice(0, -1).some((l) => /^[a-z]+(-[a-z]+)+\d{1,3}$/.test(l))) add("host", 6, "word_digit_subdomain");
+            // A hyphen next to a brand or bait word (bca-verifikasi) is already scored by brand_plus_keyword: not counted twice.
+            const regLabel = name[name.length - 1];
+            if (regLabel.includes("-") && !regLabel.split("-").some((p) => index.keywords.has(p) || index.names.has(p) || matchByBrand(p))) add("host", 4, "hyphen_registrable");
         }
         if (u.port && u.port !== "80" && u.port !== "443") add("port", 10, "odd_port");
 
@@ -329,7 +354,7 @@
         if (stem.length >= 20 && /^[a-z0-9_-]+$/i.test(stem) && entropy(stem) >= 3.3 && /\d/.test(stem)) add("path", 15, "random_name");
         if (FILE_EXT.test(last)) add("path-ext", 5, "file_ext");
         if (FILE_EXT.test(last) && u.pathname.endsWith("/")) add("path-slash", 8, "slash_after_file");
-        if (segs.some((s) => s.split(/[^a-z]+/i).some((w) => index.keywords.has(w.toLowerCase())))) add("path-bait", 6, "path_bait");
+        if (segs.some((s) => s.split(/[^a-z]+/i).some((w) => { const lw = w.toLowerCase(); return index.keywords.has(lw) || index.pathBait.has(lw); }))) add("path-bait", 6, "path_bait");
 
         const q = [...u.searchParams];
         if (q.some(([k, v]) => /^(url|redirect|redir|next|return|goto|link|u)$/i.test(k) && /^(https?:)?\/\//i.test(v))) add("query", 12, "redirect_param");
@@ -423,7 +448,7 @@
         let keyword = parts.find((p) => index.keywords.has(p)) || null;
         if (!keyword) {
             for (const p of parts) {
-                const glued = matchGlued(p);
+                const glued = matchByBrand(p) || matchGlued(p);
                 if (glued) {
                     add(glued);
                     keyword = glued.keyword;
