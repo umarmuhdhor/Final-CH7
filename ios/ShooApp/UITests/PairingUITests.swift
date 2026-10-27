@@ -90,6 +90,26 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
+    /// A new install opened from an invite link (WhatsApp): no mode choice, Connect has the code, one tap joins.
+    @MainActor
+    func testInviteLinkOnNewInstallSkipsModeChoice() {
+        let app = launch(mode: "protected", onboarded: false)
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
+        openLink("shoo://join?code=482193", in: app)
+        app.buttons["splash.skip"].tap()
+        let name = app.textFields["name.field"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        name.typeText("Mom")
+        app.buttons["name.continue"].tap()
+        let field = app.textFields["connect.code"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.buttons["mode.protected"].exists)
+        XCTAssertEqual(field.value as? String, "482193")
+        app.buttons["connect.join"].tap()
+        XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 10), app.debugDescription)
+    }
+
     /// T11: an invite link only fills the code; nothing joins until Connect is tapped.
     @MainActor
     func testInviteLinkOpensConnectWithTheCodeFilled() {
