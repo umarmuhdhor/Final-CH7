@@ -14,15 +14,16 @@ final class ApiRepository: ShooRepository {
 
     // MARK: Devices
 
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
         struct Body: Encodable, Sendable {
             var name: String
             var mode: UserMode
+            var avatarId: String?
             var apnsToken: String?
         }
         // The caller saves the session (`AppEnvironment.register`): it knows the name and mode chosen.
         return try await client.send(.init(
-            method: .post, path: ["devices"], body: Body(name: name, mode: mode, apnsToken: apnsToken), authorized: false
+            method: .post, path: ["devices"], body: Body(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken), authorized: false
         ))
     }
 

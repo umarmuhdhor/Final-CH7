@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The 12 placeholder avatars `avatar_01…avatar_12` (D-alief-13). The server picks one at random.
-/// Re-skin when the final design arrives.
+/// The 12 avatars `avatar_01…avatar_12` (D-alief-13). `avatar_01…04` are the ON-02 memoji the user can
+/// pick (#120); the rest are placeholders for the server's random pick. Re-skin when the final design arrives.
 enum AvatarCatalog {
     struct Avatar: Equatable {
         let symbol: String
@@ -33,23 +33,35 @@ enum AvatarCatalog {
     }
 }
 
-/// A coloured circle with the avatar's symbol. Decorative unless a name is given.
+/// The picked memoji, or a coloured circle with the avatar's symbol. Decorative unless a name is given.
 struct AvatarView: View {
     let id: String
     var size: CGFloat = 44
     var name: String?
 
     var body: some View {
-        let avatar = AvatarCatalog.avatar(for: id)
-        Image(systemName: avatar.symbol)
-            .resizable()
-            .scaledToFit()
-            .padding(size * 0.24)
-            .foregroundStyle(.white)
+        image
             .frame(width: size, height: size)
-            .background(avatar.color.gradient, in: Circle())
             .accessibilityHidden(name == nil)
             .accessibilityLabel(Text(verbatim: name ?? ""))
+    }
+
+    @ViewBuilder private var image: some View {
+        if let memoji = OnboardingAvatar.memoji(for: id) {
+            Image(memoji)
+                .resizable()
+                .scaledToFill()
+                .clipShape(Circle())
+        } else {
+            let avatar = AvatarCatalog.avatar(for: id)
+            Image(systemName: avatar.symbol)
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.24)
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(avatar.color.gradient, in: Circle())
+        }
     }
 }
 

@@ -3,7 +3,7 @@ import Foundation
 
 /// Every call fails like an offline device.
 final class FailingRepository: ShooRepository {
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration { throw RepositoryError.network }
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration { throw RepositoryError.network }
     func me() async throws -> DeviceProfile { throw RepositoryError.network }
     func updateMe(_ update: DeviceUpdate) async throws { throw RepositoryError.network }
     func createFamilyCode(refresh: Bool) async throws -> FamilyCode { throw RepositoryError.network }
@@ -44,8 +44,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
         return try await base.scans(owner: owner, status: status, cursor: cursor)
     }
 
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
-        try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
     }
     func me() async throws -> DeviceProfile {
         if let failure { throw failure }
