@@ -180,6 +180,7 @@ struct FamilyCodeModelTests {
         func leaveGuardian() async throws { try await base.leaveGuardian() }
         func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
         func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+        func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
         func deleteMe() async throws { try await base.deleteMe() }
         func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
             try await base.scans(owner: owner, status: status, cursor: cursor)
@@ -437,6 +438,7 @@ private actor ForeignLinkRepository: ShooRepository {
     func leaveGuardian() async throws {}
     func setMemberNotify(deviceId: String, notify: Bool) async throws {}
     func remindMember(deviceId: String) async throws {}
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { throw RepositoryError.network }
     func deleteMe() async throws {}
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await base.scans(owner: owner, status: status, cursor: cursor)
@@ -488,6 +490,7 @@ private actor SlowMembersRepository: ShooRepository {
     func leaveGuardian() async throws { try await base.leaveGuardian() }
     func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
     func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
     func deleteMe() async throws { try await base.deleteMe() }
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await base.scans(owner: owner, status: status, cursor: cursor)

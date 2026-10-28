@@ -14,7 +14,21 @@ final class AppSettings {
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let familyModeOn = "settings.familyModeOn"
         static let onboardingConnectPassed = "settings.onboardingConnectPassed"
+        /// Before the text size slider: "Teks besar" on/off. Read once to pick the slider's start.
         static let largeText = "settings.largeText"
+        static let theme = "settings.theme"
+        static let textSize = "settings.textSize"
+        static let boldText = "settings.boldText"
+        static let highContrast = "settings.highContrast"
+        static let reduceMotion = "settings.reduceMotion"
+        static let reduceGlass = "settings.reduceGlass"
+        static let haptics = "settings.haptics"
+        static let readAloud = "settings.readAloud"
+
+        static let all = [
+            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, largeText,
+            theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
+        ]
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -42,9 +56,42 @@ final class AppSettings {
         didSet { defaults.set(familyModeOn, forKey: Keys.familyModeOn) }
     }
 
-    /// PF-01 Aksesibilitas "Teks besar": text at least `.xLarge` in the app; a larger system size still wins.
-    var largeText: Bool {
-        didSet { defaults.set(largeText, forKey: Keys.largeText) }
+    // PF-01 Tema and Aksesibilitas. Applied to the window scene by `AppearanceOverrides` (RootView).
+
+    var theme: AppTheme {
+        didSet { defaults.set(theme.rawValue, forKey: Keys.theme) }
+    }
+
+    var textSize: TextSizeLevel {
+        didSet { defaults.set(textSize.rawValue, forKey: Keys.textSize) }
+    }
+
+    var boldText: Bool {
+        didSet { defaults.set(boldText, forKey: Keys.boldText) }
+    }
+
+    var highContrast: Bool {
+        didSet { defaults.set(highContrast, forKey: Keys.highContrast) }
+    }
+
+    /// "Kurangi gerakan": no animated transitions in Shoo (the iPhone's Reduce Motion also counts).
+    var reduceMotion: Bool {
+        didSet { defaults.set(reduceMotion, forKey: Keys.reduceMotion) }
+    }
+
+    /// "Kurangi efek kaca": solid backgrounds instead of glass.
+    var reduceGlass: Bool {
+        didSet { defaults.set(reduceGlass, forKey: Keys.reduceGlass) }
+    }
+
+    /// "Getar": a warning haptic when a warning reaches you in the app.
+    var haptics: Bool {
+        didSet { defaults.set(haptics, forKey: Keys.haptics) }
+    }
+
+    /// "Bacakan peringatan": VoiceOver reads the score and reasons when a warning opens.
+    var readAloud: Bool {
+        didSet { defaults.set(readAloud, forKey: Keys.readAloud) }
     }
 
     init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
@@ -55,7 +102,19 @@ final class AppSettings {
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
         onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
-        largeText = defaults.bool(forKey: Keys.largeText)
+        theme = defaults.string(forKey: Keys.theme).flatMap(AppTheme.init(rawValue:)) ?? .system
+        if defaults.object(forKey: Keys.textSize) != nil {
+            textSize = TextSizeLevel(rawValue: defaults.integer(forKey: Keys.textSize)) ?? .standard
+        } else {
+            // The old "Teks besar" switch meant at least xLarge.
+            textSize = defaults.bool(forKey: Keys.largeText) ? .large : .standard
+        }
+        boldText = defaults.bool(forKey: Keys.boldText)
+        highContrast = defaults.bool(forKey: Keys.highContrast)
+        reduceMotion = defaults.bool(forKey: Keys.reduceMotion)
+        reduceGlass = defaults.bool(forKey: Keys.reduceGlass)
+        haptics = defaults.object(forKey: Keys.haptics) as? Bool ?? true
+        readAloud = defaults.bool(forKey: Keys.readAloud)
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.
@@ -66,9 +125,17 @@ final class AppSettings {
         return true
     }
 
+    /// PF-01 "Punya kode undangan?": this iPhone now protected by another guardian (a new device on
+    /// the server; the mode itself never changes on a device). Family mode belongs to guardians.
+    func becameProtected() {
+        mode = .protected
+        familyModeOn = false
+        onboardingConnectPassed = true
+    }
+
     /// Removes every stored preference (fresh install), e.g. `-UITestReset YES` before launch.
     static func clear(defaults: UserDefaults) {
-        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn, Keys.onboardingConnectPassed, Keys.largeText] {
+        for key in Keys.all {
             defaults.removeObject(forKey: key)
         }
     }
@@ -81,6 +148,13 @@ final class AppSettings {
         onboardingCompleted = false
         familyModeOn = false
         onboardingConnectPassed = false
-        largeText = false
+        theme = .system
+        textSize = .standard
+        boldText = false
+        highContrast = false
+        reduceMotion = false
+        reduceGlass = false
+        haptics = true
+        readAloud = false
     }
 }

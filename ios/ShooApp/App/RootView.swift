@@ -4,7 +4,8 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.dynamicTypeSize) private var systemTextSize
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
 
     var body: some View {
         Group {
@@ -21,10 +22,13 @@ struct RootView: View {
             }
         }
         .environment(\.locale, env.settings.language.locale)
-        // PF-01 "Teks besar": at least xLarge; a larger iPhone setting still wins.
-        .environment(\.dynamicTypeSize, env.settings.largeText ? max(systemTextSize, .xLarge) : systemTextSize)
-        // Light only for now: dark mode is a backlog issue (PF-01 Tema).
-        .preferredColorScheme(.light)
+        .environment(\.shooReduceMotion, env.settings.reduceMotion || systemReduceMotion)
+        .environment(\.shooReduceGlass, env.settings.reduceGlass || systemReduceTransparency)
+        // PF-01 Tema and Aksesibilitas: theme, text size, bold text and contrast for every window.
+        .background(AppearanceOverrides(
+            theme: env.settings.theme, textSize: env.settings.textSize,
+            boldText: env.settings.boldText, highContrast: env.settings.highContrast
+        ))
         .onOpenURL { env.open($0) }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // An invite code waits only while the app is in use.

@@ -45,7 +45,7 @@ extension OnboardingFlow {
 
 private struct OnboardingStepView: View {
     let model: OnboardingModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {

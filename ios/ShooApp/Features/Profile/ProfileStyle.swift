@@ -4,24 +4,34 @@ import UIKit
 /// Figma "Profile/Pribadi", "Profile/Guardian", "Guardian/Detail Orang Dilindungi" (PF-01): colours,
 /// type and the building blocks every Profile screen shares. Values are the Figma ones.
 enum ProfileStyle {
-    static let background = Color(hex: 0xF5F8FC)
-    static let topWash = Color(hex: 0xDCECFB)
-    static let ink = Color(hex: 0x191D2F)
-    static let nameInk = Color(hex: 0x151617)
-    static let secondary = Color(hex: 0x6A717E)
-    static let chevron = Color(hex: 0xC7C7CE)
-    static let iconFill = Color(hex: 0xF1F4F8)
-    static let divider = Color(hex: 0xEEF1F5)
-    static let statsDivider = Color(hex: 0xE3E8EF)
-    static let pillStroke = Color(hex: 0xDCDFE4)
-    static let link = Color(hex: 0x186FB9)
-    static let red = Color(hex: 0xE5483B)
-    static let redIconFill = Color(hex: 0xFDECEA)
-    static let green = Color(hex: 0x34C759)
-    static let greenText = Color(hex: 0x1B7F3A)
-    static let greenPill = Color(hex: 0xE8F8EE)
+    // Light values are Figma's; dark and Increase Contrast values are ours (Figma has light only).
+    static let background = Color.dynamic(0xF5F8FC, dark: 0x0E1116)
+    static let topWash = Color.dynamic(0xDCECFB, dark: 0x132639)
+    /// Cards, the back button, pills.
+    static let card = Color.dynamic(0xFFFFFF, dark: 0x1B1F26)
+    static let ink = Color.dynamic(0x191D2F, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
+    static let nameInk = Color.dynamic(0x151617, dark: 0xF7F8FA, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
+    static let secondary = Color.dynamic(0x6A717E, dark: 0x9EA6B4, contrastLight: 0x474D58, contrastDark: 0xC9CED8)
+    static let chevron = Color.dynamic(0xC7C7CE, dark: 0x5B616C, contrastLight: 0x80858F, contrastDark: 0x9EA6B4)
+    static let iconFill = Color.dynamic(0xF1F4F8, dark: 0x2A303A, contrastLight: 0xE2E7EE, contrastDark: 0x3A414D)
+    static let divider = Color.dynamic(0xEEF1F5, dark: 0x2A303A, contrastLight: 0xC6CDD7, contrastDark: 0x4B5361)
+    static let statsDivider = Color.dynamic(0xE3E8EF, dark: 0x343B46, contrastLight: 0xB8C0CC, contrastDark: 0x56606E)
+    static let pillStroke = Color.dynamic(0xDCDFE4, dark: 0x3A414D, contrastLight: 0x9AA1AC, contrastDark: 0x6B7380)
+    static let link = Color.dynamic(0x186FB9, dark: 0x5EAAF0, contrastLight: 0x0E5592, contrastDark: 0x8CC4F6)
+    static let red = Color.dynamic(0xE5483B, dark: 0xFF6B5E, contrastLight: 0xB3261E, contrastDark: 0xFF8F85)
+    static let redIconFill = Color.dynamic(0xFDECEA, dark: 0x3A1F1D)
+    static let green = Color.dynamic(0x34C759, dark: 0x30D158)
+    static let greenText = Color.dynamic(0x1B7F3A, dark: 0x4CD97B, contrastLight: 0x0F5F27, contrastDark: 0x7BE8A0)
+    static let greenPill = Color.dynamic(0xE8F8EE, dark: 0x153322)
     static let offDot = Color(hex: 0x8E8E93)
-    static let grabber = Color(hex: 0xD6DAE1)
+    static let grabber = Color.dynamic(0xD6DAE1, dark: 0x4A515C)
+    /// The radio's ring and the Mode akun card's selected border.
+    static let radioOff = Color.dynamic(0xC4C9D1, dark: 0x5B616C, contrastLight: 0x80858F, contrastDark: 0x9EA6B4)
+    /// Disabled button fill (Kelola profil "Simpan nama").
+    static let disabledFill = Color.dynamic(0xB8C0CC, dark: 0x3A414D)
+    /// Primary dark capsule ("Ganti ke Guardian"): ink on light, a light capsule on dark.
+    static let primaryFill = Color.dynamic(0x191D2F, dark: 0xF2F4F8)
+    static let primaryText = Color.dynamic(0xFFFFFF, dark: 0x0E1116)
 
     /// Screen side margin for section titles and cards; the profile card sits closer (16).
     static let margin: CGFloat = 24
@@ -153,7 +163,7 @@ struct ProfileScreen<Content: View>: View {
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(ProfileStyle.ink)
                         .frame(width: 44, height: 44)
-                        .background(.white, in: Circle())
+                        .background(ProfileStyle.card, in: Circle())
                 }
                 .accessibilityLabel(Text("Back"))
                 .accessibilityIdentifier("profile.back")
@@ -218,8 +228,8 @@ struct ProfileCard<Content: View>: View {
         VStack(spacing: 0) { content }
             .padding(.vertical, 5)
             .frame(maxWidth: .infinity)
-            .background(.white, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(.white.opacity(0.9)))
+            .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
     }
 }
 
@@ -265,9 +275,9 @@ enum ProfileRowAccessory {
     case value(String, color: Color = ProfileStyle.secondary, chevron: Bool = true)
 }
 
-/// One 58 pt row: icon, title (+ optional grey subtitle), value / chevron.
+/// One 58 pt row: icon, title (+ optional grey subtitle), value / chevron. No icon when `symbol` is nil.
 struct ProfileRow: View {
-    let symbol: String
+    let symbol: String?
     let title: Text
     var subtitle: Text?
     var accessory: ProfileRowAccessory = .chevron
@@ -278,7 +288,7 @@ struct ProfileRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ProfileIcon(symbol: symbol, tint: iconTint, fill: iconFill)
+            if let symbol { ProfileIcon(symbol: symbol, tint: iconTint, fill: iconFill) }
             VStack(alignment: .leading, spacing: 1) {
                 title
                     .profileFont(17, titleWeight, tracking: -0.17)
@@ -323,9 +333,9 @@ struct ProfileRow: View {
     }
 }
 
-/// A row with a switch (Figma "Toggle", green #34C759).
+/// A row with a switch (Figma "Toggle", green #34C759). No icon when `symbol` is nil.
 struct ProfileToggleRow: View {
-    let symbol: String
+    let symbol: String?
     let title: Text
     var subtitle: Text?
     @Binding var isOn: Bool
@@ -333,7 +343,7 @@ struct ProfileToggleRow: View {
     var body: some View {
         Toggle(isOn: $isOn) {
             HStack(spacing: 12) {
-                ProfileIcon(symbol: symbol)
+                if let symbol { ProfileIcon(symbol: symbol) }
                 VStack(alignment: .leading, spacing: 1) {
                     title
                         .profileFont(17, tracking: -0.17)
@@ -413,7 +423,7 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
                 avatar
                     .frame(width: 88, height: 88)
                     .padding(4)
-                    .background(.white, in: Circle())
+                    .background(ProfileStyle.card, in: Circle())
                     .accessibilityHidden(true)
                 Spacer(minLength: 8)
                 badge
@@ -438,8 +448,8 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
             }
         }
         .padding(12)
-        .background(.white, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(.white.opacity(0.9)))
+        .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
         .padding(.horizontal, 16)
     }
 }
@@ -454,7 +464,7 @@ struct ProfilePillButtonStyle: ButtonStyle {
             .foregroundStyle(tint)
             .padding(.horizontal, 13)
             .padding(.vertical, 10)
-            .background(.white, in: Capsule())
+            .background(ProfileStyle.card, in: Capsule())
             .overlay(Capsule().stroke(ProfileStyle.pillStroke))
             .opacity(configuration.isPressed ? 0.6 : 1)
             .frame(minHeight: 44)
@@ -501,19 +511,26 @@ struct InitialsAvatar: View {
 struct ProfileScanChip: View {
     let status: ScanStatus
 
+    private static let blockedInk = Color.dynamic(0xBB1616, dark: 0xFF7A7A)
+    private static let cautionInk = Color.dynamic(0x9A5A00, dark: 0xF5B04A)
+    private static let blockedFill = Color.dynamic(0xFFF4F4, dark: 0x3A1D1D)
+    private static let cautionFill = Color.dynamic(0xFFF8EF, dark: 0x382A14)
+    private static let blockedStroke = Color.dynamic(0xFFCDCD, dark: 0x5C2A2A)
+    private static let cautionStroke = Color.dynamic(0xFFE1B6, dark: 0x5A4220)
+
     var body: some View {
         let blocked = status == .blocked
         HStack(spacing: 4) {
-            Circle().fill(blocked ? Color(hex: 0xBB1616) : Color(hex: 0xD67D00)).frame(width: 6, height: 6)
+            Circle().fill(blocked ? Self.blockedInk : Color(hex: 0xD67D00)).frame(width: 6, height: 6)
             Text(blocked ? "Blocked" : "Caution")
                 .profileFont(13, tracking: -0.16)
                 // Figma's #D67D00 is about 3:1 on its tint; this darker orange keeps the text readable (4.5:1).
-                .foregroundStyle(blocked ? Color(hex: 0xBB1616) : Color(hex: 0x9A5A00))
+                .foregroundStyle(blocked ? Self.blockedInk : Self.cautionInk)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(blocked ? Color(hex: 0xFFF4F4) : Color(hex: 0xFFF8EF), in: Capsule())
-        .overlay(Capsule().stroke(blocked ? Color(hex: 0xFFCDCD) : Color(hex: 0xFFE1B6)))
+        .background(blocked ? Self.blockedFill : Self.cautionFill, in: Capsule())
+        .overlay(Capsule().stroke(blocked ? Self.blockedStroke : Self.cautionStroke))
     }
 }
 
@@ -544,7 +561,7 @@ struct ProfileConfirmSheet<Avatar: View>: View {
                     .foregroundStyle(.white)
                     .frame(width: 24, height: 24)
                     .background(ProfileStyle.red, in: Circle())
-                    .overlay(Circle().stroke(.white, lineWidth: 2))
+                    .overlay(Circle().stroke(ProfileStyle.card, lineWidth: 2))
                     .offset(x: 4, y: 4)
             }
             .accessibilityHidden(true)
@@ -600,7 +617,7 @@ struct ProfileConfirmSheet<Avatar: View>: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         .presentationDetents([.height(height)])
         .presentationDragIndicator(.hidden)
-        .presentationBackground(.white)
+        .presentationBackground(ProfileStyle.card)
         .interactiveDismissDisabled(isWorking)
     }
 }

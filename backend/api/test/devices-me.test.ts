@@ -8,6 +8,15 @@ import { call, createDevice, type Created } from "./helpers/seed";
 const sql = testSql();
 beforeEach(() => resetDb(sql));
 
+// PF-01 settings defaults (migration 20261028130000).
+const SETTINGS = {
+  timeZone: "Asia/Jakarta",
+  notifications: {
+    warning: true, blocked: true, family: true, protectionOff: true, weeklySummary: false,
+    quietHours: true, quietStart: "22:00", quietEnd: "06:00",
+  },
+};
+
 const me = async (d: Created) => {
   const res = await call("/devices/me", { token: d.token });
   expect(res.status).toBe(200);
@@ -24,7 +33,7 @@ describe("GET /devices/me", () => {
     await call("/devices/me", { method: "PATCH", token: g.token, json: { language: "id" } });
     expect(await me(g)).toEqual({
       deviceId: g.deviceId, name: "Adhella", avatarId: g.avatarId, mode: "guardian", language: "id", guardian: null,
-      stats: { blocked: 0, warnings: 0, since: expect.any(String) },
+      stats: { blocked: 0, warnings: 0, since: expect.any(String) }, ...SETTINGS,
     });
   });
 
@@ -37,7 +46,7 @@ describe("GET /devices/me", () => {
     expect(await me(p)).toEqual({
       deviceId: p.deviceId, name: "Mom", avatarId: p.avatarId, mode: "protected", language: "en",
       guardian: { deviceId: g.deviceId, name: "Adhella", avatarId: g.avatarId },
-      stats: { blocked: 0, warnings: 0, since: expect.any(String) },
+      stats: { blocked: 0, warnings: 0, since: expect.any(String) }, ...SETTINGS,
     });
 
     expect((await call(`/family/members/${p.deviceId}`, { method: "DELETE", token: g.token })).status).toBe(200);

@@ -12,6 +12,7 @@ import { joinPage } from "./routes/join-page";
 import { privacy } from "./routes/privacy";
 import { scans } from "./routes/scans";
 import { screenshots } from "./routes/screenshots";
+import { terms } from "./routes/terms";
 import { verdicts } from "./routes/verdicts";
 import { errorInfo } from "./http/logError";
 
@@ -69,6 +70,7 @@ app.route("/", joinPage);
 app.route("/", privacy);
 app.route("/", scans);
 app.route("/", screenshots);
+app.route("/", terms);
 app.route("/", verdicts);
 
 app.notFound((c) => errorResponse(c, errors.notFound()));

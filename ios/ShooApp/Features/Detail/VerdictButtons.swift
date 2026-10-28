@@ -63,7 +63,7 @@ private struct VerdictButtonStyle: ButtonStyle {
     let tint: Color
     let selected: Bool
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)

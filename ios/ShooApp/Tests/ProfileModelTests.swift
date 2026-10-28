@@ -311,4 +311,69 @@ struct ProfileModelTests {
         #expect(await model.remind(dad).map { L10n.string($0, language: .english) } == "Dad hasn't turned on notifications")
         #expect(model.members.first { $0.deviceId == "dev_dad" }?.remindedAt == nil)
     }
+
+    // MARK: PF-01 Notifikasi, Ubah foto, Punya kode undangan
+
+    @Test func notificationSwitchChangesAtOnceAndReachesTheServer() async throws {
+        let (model, repository, _) = model(mode: .guardian)
+        await model.load()
+        #expect(model.notificationSettings == .defaults)
+        await model.updateNotifications(NotificationSettingsUpdate(weeklySummary: true, quietStart: "23:30"))
+        #expect(model.notificationSettings.weeklySummary)
+        #expect(model.notificationSettings.quietStart == "23:30")
+        let saved = try #require(try await repository.me().notifications)
+        #expect(saved.weeklySummary)
+        #expect(saved.quietStart == "23:30")
+        #expect(saved.blocked)
+    }
+
+    @Test func failedNotificationSaveGoesBackAndSaysSo() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian))
+        await model.load()
+        repository.updateFailure = RepositoryError.network
+        await model.updateNotifications(NotificationSettingsUpdate(warning: false))
+        #expect(model.notificationSettings.warning)
+        #expect(model.actionError != nil)
+    }
+
+    @Test func choosingAnAvatarSavesIt() async throws {
+        let (model, repository, _) = model(mode: .guardian)
+        await model.load()
+        let other = try #require(OnboardingAvatar.ids.first { $0 != model.profile?.avatarId })
+        #expect(await model.chooseAvatar(other))
+        #expect(model.profile?.avatarId == other)
+        #expect(try await repository.me().avatarId == other)
+    }
+
+    @Test func failedAvatarSaveKeepsTheOldOne() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian))
+        await model.load()
+        let before = model.profile?.avatarId
+        repository.updateFailure = RepositoryError.network
+        #expect(await model.chooseAvatar(OnboardingAvatar.ids.first { $0 != before } ?? "avatar_01") == false)
+        #expect(model.profile?.avatarId == before)
+        #expect(model.actionError != nil)
+    }
+
+    @Test func onlyAGuardianWithoutMembersCanJoinAnotherFamily() async {
+        let (withMembers, _, _) = model(mode: .guardian)
+        await withMembers.load()
+        #expect(!withMembers.canJoinAnotherFamily)
+
+        let empty = ProfileModel(repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero), settings: settings(mode: .guardian))
+        await empty.load()
+        #expect(empty.canJoinAnotherFamily)
+
+        let (protected, _, _) = model(mode: .protected)
+        await protected.load()
+        #expect(!protected.canJoinAnotherFamily)
+    }
+
+    @Test func usernameIsTheNameWithoutSpaces() async {
+        let (model, _, _) = model(mode: .guardian)
+        await model.load()
+        #expect(model.username == "@adhella")
+    }
 }

@@ -37,7 +37,7 @@ struct TurnOnExtensionView: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .accessibilityIdentifier("extension.offHint")
                 }
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
@@ -105,9 +105,9 @@ private struct StepRow: View {
             Text(verbatim: String(format: "%02d", number))
                 .onboardingFont(15, weight: .semibold, relativeTo: .subheadline)
                 .tracking(-0.19)
-                .foregroundStyle(Color(red: 0x13 / 255, green: 0x6C / 255, blue: 0xB7 / 255))
+                .foregroundStyle(Color.dynamic(0x136CB7, dark: 0x5EAAF0))
                 .frame(width: badgeSize, height: badgeSize)
-                .background(.white, in: Circle())
+                .background(OnboardingTheme.card, in: Circle())
                 .accessibilityLabel(Text("Step \(number)"))
             Text(text)
                 .onboardingFont(17, design: .rounded, relativeTo: .body)

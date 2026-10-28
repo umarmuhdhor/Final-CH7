@@ -23,4 +23,15 @@ struct DeviceInfoTests {
     @Test func osVersionIsMajorOnly() {
         #expect(DeviceInfo.osMajorVersion.allSatisfy { $0.isNumber })
     }
+
+    /// The backend accepts `^[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}$`, at most 40 characters.
+    @Test(arguments: ["Asia/Jakarta", "America/Argentina/Buenos_Aires", "Etc/GMT+7", "UTC"])
+    func timeZoneKeepsValidZones(identifier: String) {
+        #expect(DeviceInfo.timeZone(identifier: identifier) == identifier)
+    }
+
+    @Test(arguments: ["Asia/Jakarta; drop", "", "GMT+07:00", String(repeating: "A", count: 41)])
+    func timeZoneDropsAnythingElse(identifier: String) {
+        #expect(DeviceInfo.timeZone(identifier: identifier) == nil)
+    }
 }

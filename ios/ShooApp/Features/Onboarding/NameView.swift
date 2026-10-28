@@ -107,7 +107,7 @@ struct NameView: View {
             .padding(.leading, 18)
             .padding(.trailing, 6)
             .frame(minHeight: 56)
-            .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(visibleProblem == nil ? OnboardingTheme.ink.opacity(0.25) : Color.red, lineWidth: 1)
@@ -123,7 +123,7 @@ struct NameView: View {
             } else if !model.name.isEmpty {
                 Text("*Your name can be up to 20 characters")
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(OnboardingTheme.ink)
             }
         }
     }

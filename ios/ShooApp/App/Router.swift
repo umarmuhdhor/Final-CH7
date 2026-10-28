@@ -13,15 +13,22 @@ enum Route: Hashable {
     case memberActivity(deviceId: String)
 }
 
-/// Profile's sub-screens (PF-01).
+/// Profile's sub-screens (PF-01, Figma "Pengaturan/*").
 enum ProfilePage: Hashable {
     case mode
+    /// "Kelola profil": avatar, name, @handle, Hapus akun.
     case editProfile
+    /// "Nama tampilan" from Kelola profil.
+    case editName
     /// Protected: "Terhubung", the guardian and Disconnect.
     case connection
+    case notifications
     case language
+    case theme
     case accessibility
     case about
+    /// "Lisensi pihak ketiga" from Tentang Shoo.
+    case licenses
 }
 
 /// Tabs of the main screen.

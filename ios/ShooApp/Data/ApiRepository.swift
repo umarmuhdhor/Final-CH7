@@ -40,6 +40,12 @@ final class ApiRepository: ShooRepository {
         if let name = update.name { session.updateName(name) }
     }
 
+    func becomeProtected(code: String) async throws -> ProtectedSwitch {
+        struct Body: Encodable, Sendable { var code: String }
+        // The caller saves the new session (`AppEnvironment.becomeProtected`), then the guardian.
+        return try await client.send(.init(method: .post, path: ["devices", "me", "protected"], body: Body(code: code)))
+    }
+
     func deleteMe() async throws {
         do {
             let _: OkResponse = try await client.send(.init(

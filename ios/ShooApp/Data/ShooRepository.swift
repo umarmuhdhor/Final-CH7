@@ -26,6 +26,10 @@ protocol ShooRepository: AnyObject, Sendable {
     func remindMember(deviceId: String) async throws
     /// `DELETE /family/guardian` — protected (PF-01).
     func leaveGuardian() async throws
+    /// `POST /devices/me/protected` (PF-01 proposed, "Punya kode undangan?"): a guardian without members
+    /// joins a family as protected. The server makes a new protected device, joins it and deletes this one;
+    /// the caller saves the new session. Join errors as `joinFamily`, plus `has_members`.
+    func becomeProtected(code: String) async throws -> ProtectedSwitch
     /// `DELETE /devices/me` (PF-01, SECURITY §3 P3, App Store 5.1.1(v)): removes the device and
     /// everything about it (family links, codes, scans + screenshots, verdicts). The token stops working.
     func deleteMe() async throws

@@ -223,4 +223,35 @@ struct AppEnvironmentSessionTests {
         #expect(AppConfig.aiBaseURL.map(SessionStore.isAllowed) == true)
         #endif
     }
+
+    /// PF-01 "Punya kode undangan?": the server makes a new protected device; the app swaps to its session.
+    @Test func joiningAnotherFamilySwapsToTheNewProtectedSession() async throws {
+        let server = StubServer()
+        server.reply {
+            $0.path == "/devices/me/protected"
+                ? .json(201, #"{"deviceId":"dev_p","token":"shoo_protected_token","avatarId":"avatar_05","guardian":{"deviceId":"dev_g","name":"Budi","avatarId":"avatar_04"}}"#)
+                : Self.ok
+        }
+        let env = environment(server: server, mode: .guardian)
+        env.settings.familyModeOn = true
+        let guardian = try await env.becomeProtected(code: "123456", name: "Rina")
+        #expect(guardian.name == "Budi")
+        #expect(server.session.token == "shoo_protected_token")
+        #expect(server.session.guardian?.deviceId == "dev_g")
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceId) == "dev_p")
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceMode) == "protected")
+        #expect(env.settings.mode == .protected)
+        #expect(!env.settings.familyModeOn)
+        let request = try #require(server.requests.first { $0.path == "/devices/me/protected" })
+        #expect(request.method == "POST")
+    }
+
+    @Test func joiningWhileProtectingSomeoneKeepsTheGuardianSession() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(409, #"{"error":{"code":"has_members","message":"Disconnect the people you protect first"}}"#) }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
+        #expect(server.session.token == "shoo_test_token_123")
+        #expect(env.settings.mode == .guardian)
+    }
 }

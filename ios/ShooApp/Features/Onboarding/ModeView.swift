@@ -56,7 +56,7 @@ struct ModeView: View {
             } label: {
                 ZStack {
                     Text("Next").opacity(model.isWorking ? 0 : 1)
-                    if model.isWorking { ProgressView().tint(.white) }
+                    if model.isWorking { ProgressView().tint(OnboardingTheme.onButton) }
                 }
             }
             .buttonStyle(OnboardingCapsuleButtonStyle())
@@ -108,7 +108,7 @@ private struct ModeCard: View {
             .background {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(LinearGradient(
-                        colors: [Color(red: 0xF5 / 255, green: 0xFA / 255, blue: 1).opacity(0.86), .white.opacity(0.7)],
+                        colors: [Color.dynamic(0xF5FAFF, dark: 0x1B2230).opacity(0.86), OnboardingTheme.card.opacity(0.7)],
                         startPoint: .top,
                         endPoint: .bottom
                     ))

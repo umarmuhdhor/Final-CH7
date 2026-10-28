@@ -13,6 +13,7 @@ final class FailingRepository: ShooRepository {
     func leaveGuardian() async throws { throw RepositoryError.network }
     func setMemberNotify(deviceId: String, notify: Bool) async throws { throw RepositoryError.network }
     func remindMember(deviceId: String) async throws { throw RepositoryError.network }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { throw RepositoryError.network }
     func deleteMe() async throws { throw RepositoryError.network }
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage { throw RepositoryError.network }
     func scan(id: String) async throws -> ScanResult { throw RepositoryError.network }
@@ -77,6 +78,7 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
         if let remindFailure { throw remindFailure }
         try await base.remindMember(deviceId: deviceId)
     }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
     func deleteMe() async throws { try await base.deleteMe() }
     func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }

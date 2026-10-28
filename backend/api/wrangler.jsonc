@@ -36,8 +36,9 @@
     // contracts/api.md: screenshots over 150 KB are dropped.
     "SCREENSHOT_MAX_BYTES": "153600"
   },
-  // Daily retention at 19:00 UTC = 03:00 WITA (src/cron/retention.ts, R4 §5).
-  "triggers": { "crons": ["0 19 * * *"] },
+  // Daily retention at 19:00 UTC = 03:00 WITA (src/cron/retention.ts, R4 §5), and hourly at :05
+  // the PF-01 notifications (src/cron/notifications.ts). Kept in sync with CRONS in src/index.ts.
+  "triggers": { "crons": ["0 19 * * *", "5 * * * *"] },
   // Run the Worker near the database it talks to (D-alief-B10 g: several DB round trips per
   // request). Reversible; measured in fase 12 LANGKAH MANUAL.
   "placement": { "mode": "smart" }

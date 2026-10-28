@@ -15,6 +15,14 @@ enum DeviceInfo {
         String(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
     }
 
+    /// The phone's IANA zone ("Asia/Makassar") for quiet hours and the weekly summary, or nil when
+    /// it does not fit the backend rule (it then keeps its last zone, WIB by default).
+    static var timeZone: String? { timeZone(identifier: TimeZone.current.identifier) }
+
+    static func timeZone(identifier: String) -> String? {
+        identifier.count <= 40 && identifier.wholeMatch(of: #/[A-Za-z_]+(\/[A-Za-z0-9_+\-]+){0,2}/#) != nil ? identifier : nil
+    }
+
     /// Pure, so tests cover the table. `fallback` is `UIDevice.model` ("iPhone", "iPad").
     static func modelName(identifier: String, fallback: String) -> String {
         if let name = names[identifier] { return name }

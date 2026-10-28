@@ -28,7 +28,7 @@ struct InviteSheet: View {
                         .onboardingFont(27, weight: .medium, relativeTo: .title)
                         .tracking(-0.27)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.black)
+                        .foregroundStyle(OnboardingTheme.ink)
                         .accessibilityAddTraits(.isHeader)
                         .padding(.bottom, 9)
                     codeContent
@@ -101,7 +101,7 @@ struct InviteSheet: View {
                 .monospacedDigit()
                 .foregroundStyle(OnboardingTheme.ink)
                 .frame(maxWidth: .infinity, minHeight: 56)
-                .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .accessibilityLabel(Text("Code \(code.code.map(String.init).joined(separator: " "))"))
                 .accessibilityIdentifier("invite.code")
             VStack(spacing: 2) {
@@ -144,6 +144,8 @@ struct InviteSheet: View {
             .frame(maxWidth: .infinity)
             .aspectRatio(311 / 303, contentMode: .fit)
             .background(.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            // The QR stays black on white in dark mode too (scanners need the contrast).
+            .environment(\.colorScheme, .light)
     }
 
     private static let refreshBlue = Color(red: 0x03 / 255, green: 0x67 / 255, blue: 0xB6 / 255)
@@ -251,7 +253,7 @@ private struct ShareTile: View {
             symbol
                 .foregroundStyle(OnboardingTheme.ink)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(red: 0xED / 255, green: 0xED / 255, blue: 0xED / 255), in: Circle())
+                .background(Color.dynamic(0xEDEDED, dark: 0x2A303A), in: Circle())
         case .filled(let color):
             symbol
                 .foregroundStyle(.white)

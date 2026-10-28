@@ -17,7 +17,10 @@ struct DetailView: View {
         content
             .navigationTitle(localized: "Detail")
             .navigationBarTitleDisplayMode(.inline)
-            .task(id: model.scanId) { await model.load() }
+            .task(id: model.scanId) {
+                await model.load()
+                readAloud()
+            }
             .privacyCover()
     }
 
@@ -120,6 +123,13 @@ struct DetailView: View {
         if let badge = model.badge { parts.append(L10n.string(badge.titleKey, language: language)) }
         if let note = model.verdictNote(language: language) { parts.append(note) }
         return parts.joined(separator: ", ")
+    }
+
+    /// "Bacakan peringatan" (Pengaturan/Aksesibilitas): score and reasons of a warning, once loaded.
+    private func readAloud() {
+        guard let scan = model.scan else { return }
+        let reasons = model.evidence(language: language).map { $0.spokenLine(language: language) }
+        WarningFeedback.readAloud(settings: env.settings, text: ([headerValue(scan)] + reasons).joined(separator: ". "))
     }
 
     private var loader: any ScreenshotLoading {

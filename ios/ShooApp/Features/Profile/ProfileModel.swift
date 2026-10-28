@@ -128,13 +128,17 @@ final class ProfileModel {
         }
     }
 
-    /// "@adhella · Pribadi" (Figma "Handle"): the name in lower case without spaces, then the mode.
+    /// "@adhella": the name in lower case without spaces (Kelola profil "Username").
+    var username: String {
+        "@" + (profile?.name ?? "").lowercased().filter { !$0.isWhitespace }
+    }
+
+    /// "@adhella · Pribadi" (Figma "Handle"): the username, then the mode.
     func handle(language: AppLanguage) -> String {
-        let name = (profile?.name ?? "").lowercased().filter { !$0.isWhitespace }
         switch variant {
-        case .protected: return "@\(name)"
-        case .personal: return "@\(name) · " + L10n.string("Personal", language: language)
-        case .guardian: return "@\(name) · " + L10n.string("Guardian", language: language)
+        case .protected: return username
+        case .personal: return username + " · " + L10n.string("Personal", language: language)
+        case .guardian: return username + " · " + L10n.string("Guardian", language: language)
         }
     }
 
@@ -243,6 +247,48 @@ final class ProfileModel {
         }
         return result ?? "Reminder sent to \(member.name)"
     }
+
+    // MARK: Pengaturan/Notifikasi
+
+    /// What the notification page shows: the server's settings, or its defaults before the first load.
+    var notificationSettings: NotificationSettings { profile?.notifications ?? .defaults }
+
+    /// Changes at once; the server decides which pushes go out, so a failed save goes back and says so.
+    func updateNotifications(_ update: NotificationSettingsUpdate) async {
+        guard profile != nil else { return }
+        let before = profile?.notifications
+        let after = notificationSettings.applying(update)
+        profile?.notifications = after
+        do {
+            try await repository.updateMe(DeviceUpdate(notifications: update))
+        } catch {
+            guard !error.isCancellation else { return }
+            Log.ui.error("Notification settings save failed", error)
+            profile?.notifications = before
+            actionError = "Couldn't save. Check your connection and try again."
+        }
+    }
+
+    // MARK: Kelola profil
+
+    /// "Ubah foto": one of the onboarding avatars. `false` (old avatar stays) when the server says no.
+    func chooseAvatar(_ avatarId: String) async -> Bool {
+        guard avatarId != profile?.avatarId, !isWorking else { return avatarId == profile?.avatarId }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await repository.updateMe(DeviceUpdate(avatarId: avatarId))
+            profile?.avatarId = avatarId
+            return true
+        } catch {
+            Log.ui.error("Avatar save failed", error)
+            actionError = "Couldn't save. Check your connection and try again."
+            return false
+        }
+    }
+
+    /// "Punya kode undangan?": only a guardian who protects nobody can join another family.
+    var canJoinAnotherFamily: Bool { settings.mode == .guardian && members.isEmpty && !membersFailed }
 
     /// Protected leaves their guardian (`DELETE /family/guardian`) and goes back to Connect.
     func disconnect() async -> Bool {

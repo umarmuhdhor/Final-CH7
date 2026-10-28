@@ -113,6 +113,16 @@
         }
       }
     },
+    "A warning on risky sites" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peringatan di situs berisiko"
+          }
+        }
+      }
+    },
     "About Shoo" : {
       "localizations" : {
         "id" : {
@@ -175,6 +185,16 @@
         }
       }
     },
+    "Activity of people you protect" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitas orang dilindungi"
+          }
+        }
+      }
+    },
     "All" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -182,6 +202,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua"
+          }
+        }
+      }
+    },
+    "All your data and history are deleted for good" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua data dan riwayatmu dihapus permanen"
+          }
+        }
+      }
+    },
+    "Allow Shoo to send you alerts" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan Shoo mengirim peringatan"
           }
         }
       }
@@ -203,6 +243,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sedikit lagi. Buka situs apa saja di Safari agar Shoo bisa memeriksa. Tidak berubah? Di pengaturan Safari, atur Semua Situs Web ke Izinkan."
+          }
+        }
+      }
+    },
+    "App language" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahasa aplikasi"
+          }
+        }
+      }
+    },
+    "Appearance" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilan"
           }
         }
       }
@@ -237,6 +297,26 @@
         }
       }
     },
+    "Automatic" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatis"
+          }
+        }
+      }
+    },
+    "Automatic follows light or dark mode on your iPhone." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatis mengikuti pengaturan terang/gelap di iPhone."
+          }
+        }
+      }
+    },
     "Avatar %lld" : {
       "localizations" : {
         "id" : {
@@ -253,16 +333,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kembali"
-          }
-        }
-      }
-    },
-    "Bigger text in Shoo" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Teks lebih besar di Shoo"
           }
         }
       }
@@ -289,12 +359,42 @@
         }
       }
     },
+    "Blocked sites" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs diblokir"
+          }
+        }
+      }
+    },
     "Blocked!" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Diblokir!"
+          }
+        }
+      }
+    },
+    "Blocked-site alerts still come during quiet hours." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peringatan situs diblokir tetap dikirim saat jam tenang."
+          }
+        }
+      }
+    },
+    "Bold text" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks tebal"
           }
         }
       }
@@ -339,6 +439,16 @@
         }
       }
     },
+    "Change photo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah foto"
+          }
+        }
+      }
+    },
     "Check your connection and try again." : {
       "localizations" : {
         "id" : {
@@ -355,6 +465,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pilih avatar dan masukkan namamu!"
+          }
+        }
+      }
+    },
+    "Choose how you use Shoo. You can switch at any time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih cara kamu memakai Shoo. Kamu bisa menggantinya kapan saja."
           }
         }
       }
@@ -409,6 +529,16 @@
         }
       }
     },
+    "Confirm warnings for them" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konfirmasi peringatan untuk mereka"
+          }
+        }
+      }
+    },
     "Connect" : {
       "localizations" : {
         "id" : {
@@ -435,6 +565,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hubungkan Akun"
+          }
+        }
+      }
+    },
+    "Connect your account to a family guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan akunmu ke guardian keluarga"
           }
         }
       }
@@ -487,6 +627,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terhubung, %lld dari %lld orang"
+          }
+        }
+      }
+    },
+    "Contact us" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungi kami"
           }
         }
       }
@@ -710,6 +860,36 @@
         }
       }
     },
+    "Current" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat ini"
+          }
+        }
+      }
+    },
+    "Dangerous sites" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs berbahaya"
+          }
+        }
+      }
+    },
+    "Dark" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelap"
+          }
+        }
+      }
+    },
     "Days as guardian" : {
       "localizations" : {
         "id" : {
@@ -831,12 +1011,78 @@
         }
       }
     },
+    "Disconnect the people you protect first. Then you can join another family." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Putuskan dulu orang yang kamu lindungi. Setelah itu kamu bisa bergabung ke keluarga lain."
+          }
+        }
+      }
+    },
+    "Display" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tampilan"
+          }
+        }
+      }
+    },
+    "Display name" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama tampilan"
+          }
+        }
+      }
+    },
     "Done" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Selesai"
+          }
+        }
+      }
+    },
+    "Effects" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efek"
+          }
+        }
+      }
+    },
+    "Ends" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selesai"
+          }
+        }
+      }
+    },
+    "English (language)" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inggris"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English"
           }
         }
       }
@@ -871,12 +1117,42 @@
         }
       }
     },
+    "Every Monday, %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap Senin, %@"
+          }
+        }
+      }
+    },
+    "Every time Shoo blocks a site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setiap kali Shoo memblokir situs"
+          }
+        }
+      }
+    },
     "Everyone" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua orang"
+          }
+        }
+      }
+    },
+    "Everything in Personal" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua fitur Pribadi"
           }
         }
       }
@@ -975,6 +1251,16 @@
         }
       }
     },
+    "Family · Guardian mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga · mode Guardian"
+          }
+        }
+      }
+    },
     "Family, %lld of %lld people" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1068,6 +1354,16 @@
         }
       }
     },
+    "Have an invite code?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punya kode undangan?"
+          }
+        }
+      }
+    },
     "Having trouble? Watch the tutorial" : {
       "localizations" : {
         "id" : {
@@ -1084,6 +1380,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hai, %@!"
+          }
+        }
+      }
+    },
+    "High contrast" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontras tinggi"
           }
         }
       }
@@ -1120,12 +1426,12 @@
         }
       }
     },
-    "If your iPhone already uses a bigger text size, Shoo keeps it." : {
+    "Indonesian" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kalau iPhone-mu sudah memakai ukuran teks yang lebih besar, Shoo tetap memakainya."
+            "value" : "Indonesia"
           }
         }
       }
@@ -1226,12 +1532,32 @@
         }
       }
     },
+    "Large" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besar"
+          }
+        }
+      }
+    },
     "Large text" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Teks besar"
+          }
+        }
+      }
+    },
+    "Largest" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terbesar"
           }
         }
       }
@@ -1286,6 +1612,16 @@
         }
       }
     },
+    "Look after up to 3 people" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pantau hingga 3 orang"
+          }
+        }
+      }
+    },
     "Manage profile" : {
       "localizations" : {
         "id" : {
@@ -1335,16 +1671,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pesan"
-          }
-        }
-      }
-    },
-    "Mode" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mode"
           }
         }
       }
@@ -1767,6 +2093,16 @@
         }
       }
     },
+    "Personal info" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info pribadi"
+          }
+        }
+      }
+    },
     "Pick one mode to use Shoo" : {
       "localizations" : {
         "id" : {
@@ -1813,6 +2149,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Proteksi saya dan orang terdekat"
+          }
+        }
+      }
+    },
+    "Protect the people close to you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi orang terdekatmu"
+          }
+        }
+      }
+    },
+    "Protect yourself" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi dirimu sendiri"
+          }
+        }
+      }
+    },
+    "Protect yourself and your family from scam sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi dirimu dan keluarga dari situs penipuan."
           }
         }
       }
@@ -1919,12 +2285,62 @@
         }
       }
     },
+    "Quiet hours" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jam tenang"
+          }
+        }
+      }
+    },
+    "Rate on the App Store" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beri nilai di App Store"
+          }
+        }
+      }
+    },
+    "Read warnings aloud" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bacakan peringatan"
+          }
+        }
+      }
+    },
     "Recent activity" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aktivitas terbaru"
+          }
+        }
+      }
+    },
+    "Reduce glass effects" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurangi efek kaca"
+          }
+        }
+      }
+    },
+    "Reduce motion" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurangi gerakan"
           }
         }
       }
@@ -2041,12 +2457,32 @@
         }
       }
     },
+    "Save" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simpan"
+          }
+        }
+      }
+    },
     "Save name" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpan nama"
+          }
+        }
+      }
+    },
+    "Scam sites blocked automatically" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs penipuan diblokir otomatis"
           }
         }
       }
@@ -2216,6 +2652,16 @@
         }
       }
     },
+    "Share Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan Shoo"
+          }
+        }
+      }
+    },
     "Share an invite with a QR code or an invite link." : {
       "localizations" : {
         "id" : {
@@ -2247,22 +2693,22 @@
         }
       }
     },
-    "Shoo" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shoo"
-          }
-        }
-      }
-    },
     "Shoo and its alerts use this language." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo dan notifikasinya memakai bahasa ini."
+          }
+        }
+      }
+    },
+    "Shoo blocks scam sites in Safari. Try it:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo memblokir situs penipuan di Safari. Coba di sini:"
           }
         }
       }
@@ -2308,16 +2754,6 @@
         }
       }
     },
-    "Shoo checks the sites you open in Safari and blocks scams. Flagged sites and their screenshots are deleted automatically after 14 days. No ads, no tracking." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shoo memeriksa situs yang kamu buka di Safari dan memblokir penipuan. Situs yang ditandai beserta screenshot-nya dihapus otomatis setelah 14 hari. Tanpa iklan, tanpa pelacakan."
-          }
-        }
-      }
-    },
     "Shoo checks the sites you open in Safari." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2359,12 +2795,12 @@
         }
       }
     },
-    "Shoo protects only you" : {
+    "Shoo uses no third-party libraries or SDKs. It is built only with Apple's frameworks, under the Apple Developer Program License Agreement." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shoo hanya melindungi kamu"
+            "value" : "Shoo tidak memakai pustaka atau SDK pihak ketiga. Shoo dibuat hanya dengan framework Apple, di bawah Apple Developer Program License Agreement."
           }
         }
       }
@@ -2420,6 +2856,26 @@
         }
       }
     },
+    "Small" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kecil"
+          }
+        }
+      }
+    },
+    "Solid backgrounds that also save battery" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latar polos yang juga menghemat baterai"
+          }
+        }
+      }
+    },
     "Something went wrong. Try again." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2452,6 +2908,16 @@
         }
       }
     },
+    "Starts" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai"
+          }
+        }
+      }
+    },
     "Step %@" : {
       "comment" : "A label for a step number in the turn-on guide. The argument is the step number.",
       "isCommentAutoGenerated" : true,
@@ -2475,6 +2941,16 @@
         }
       }
     },
+    "Summary" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringkasan"
+          }
+        }
+      }
+    },
     "Switch on Shoo in Safari to stay safe." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2486,22 +2962,52 @@
         }
       }
     },
+    "Switch to Guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganti ke Guardian"
+          }
+        }
+      }
+    },
+    "Switch to Personal" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganti ke Pribadi"
+          }
+        }
+      }
+    },
+    "Switched to Guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah ganti ke Guardian"
+          }
+        }
+      }
+    },
+    "Switched to Personal" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah ganti ke Pribadi"
+          }
+        }
+      }
+    },
     "Switches between your own Shield and your family's" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beralih antara Perisaimu dan Perisai keluargamu"
-          }
-        }
-      }
-    },
-    "Switching to Personal keeps your family connected. You can switch back at any time." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pindah ke Pribadi tidak memutus keluargamu. Kamu bisa kembali kapan saja."
           }
         }
       }
@@ -2537,12 +3043,22 @@
         }
       }
     },
-    "Text" : {
+    "Terms of use" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Teks"
+            "value" : "Syarat & ketentuan"
+          }
+        }
+      }
+    },
+    "Text size" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ukuran teks"
           }
         }
       }
@@ -2607,6 +3123,16 @@
         }
       }
     },
+    "Third-party licenses" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lisensi pihak ketiga"
+          }
+        }
+      }
+    },
     "This family already has 3 people. Ask your guardian to remove someone first." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2660,12 +3186,32 @@
         }
       }
     },
+    "Time" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktu"
+          }
+        }
+      }
+    },
     "Today" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hari ini"
+          }
+        }
+      }
+    },
+    "Today · %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ini · %@"
           }
         }
       }
@@ -2751,12 +3297,42 @@
         }
       }
     },
+    "Turn them on in iPhone Settings" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan di Pengaturan iPhone"
+          }
+        }
+      }
+    },
+    "Turns off animations in Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matikan animasi di Shoo"
+          }
+        }
+      }
+    },
     "Use 20 characters or fewer." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pakai paling banyak 20 karakter."
+          }
+        }
+      }
+    },
+    "Username" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama pengguna"
           }
         }
       }
@@ -2804,12 +3380,32 @@
         }
       }
     },
-    "Version" : {
+    "Version %@" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Versi"
+            "value" : "Versi %@"
+          }
+        }
+      }
+    },
+    "Vibrate" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Getar"
+          }
+        }
+      }
+    },
+    "VoiceOver reads the score and reasons" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VoiceOver membacakan skor dan alasannya"
           }
         }
       }
@@ -2835,6 +3431,16 @@
         }
       }
     },
+    "Warnings in Safari and notifications use this language too." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peringatan di Safari dan notifikasi ikut memakai bahasa ini."
+          }
+        }
+      }
+    },
     "We'll tell you when a family member opens a risky site." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2842,6 +3448,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kami kabari saat anggota keluarga membuka situs berisiko."
+          }
+        }
+      }
+    },
+    "Weekly summary" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringkasan mingguan"
           }
         }
       }
@@ -2867,12 +3483,42 @@
         }
       }
     },
+    "When their extension is off" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat ekstensi mereka mati"
+          }
+        }
+      }
+    },
+    "When there is a warning" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat ada peringatan"
+          }
+        }
+      }
+    },
     "When they open a dangerous site" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Saat membuka situs berbahaya"
+          }
+        }
+      }
+    },
+    "When you open a high-risk site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat kamu membuka situs berisiko tinggi"
           }
         }
       }
@@ -2927,16 +3573,6 @@
         }
       }
     },
-    "You also look after your family" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu juga menjaga keluargamu"
-          }
-        }
-      }
-    },
     "You can turn them on now or later in Settings." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2965,6 +3601,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu menjaga %@"
+          }
+        }
+      }
+    },
+    "You still protect someone" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu masih melindungi seseorang"
+          }
+        }
+      }
+    },
+    "You still protect someone. Disconnect them in Profile first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu masih melindungi seseorang. Putuskan dulu di Profil."
           }
         }
       }
@@ -3105,6 +3761,26 @@
         }
       }
     },
+    "Your own activity history" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riwayat aktivitasmu sendiri"
+          }
+        }
+      }
+    },
+    "Your protection stays on. You can switch back to Personal at any time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlindunganmu tetap aktif. Kamu bisa kembali ke Pribadi kapan saja."
+          }
+        }
+      }
+    },
     "Zoom in" : {
       "localizations" : {
         "id" : {
@@ -3131,6 +3807,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "aktif %@"
+          }
+        }
+      }
+    },
+    "© 2026 Shoo · Made in Indonesia" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "© 2026 Shoo · Dibuat di Indonesia"
           }
         }
       }

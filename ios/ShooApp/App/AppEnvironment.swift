@@ -168,14 +168,16 @@ final class AppEnvironment {
         defer { isSyncingForeground = false }
         let lastSeen = await extensionStatus().lastSeen
         // PF-01: the guardian's member detail shows the model and iOS version; sent once per launch.
-        let device = sentDeviceInfo ? nil : (model: DeviceInfo.modelName, os: DeviceInfo.osMajorVersion)
+        // The time zone goes with it: quiet hours and the weekly summary use the phone's local time.
+        let device = sentDeviceInfo ? nil : (model: DeviceInfo.modelName, os: DeviceInfo.osMajorVersion, zone: DeviceInfo.timeZone)
         if lastSeen != nil || device != nil {
             do {
                 try await repository.updateMe(DeviceUpdate(
                     // The server refuses times in the future (clock changes).
                     extensionLastSeenAt: lastSeen.map { min($0, now) },
                     deviceModel: device?.model,
-                    osVersion: device?.os
+                    osVersion: device?.os,
+                    timeZone: device?.zone
                 ))
                 if device != nil { sentDeviceInfo = true }
             } catch {
@@ -239,6 +241,32 @@ final class AppEnvironment {
         settings.reset()
         sessionExpired = false
         DeliveredPushes.clear()
+    }
+
+    /// PF-01 "Punya kode undangan?": a guardian without members joins another family. The server
+    /// replaces this device with a protected one; its session and the mode take over here at once
+    /// (the old token is dead). The caller closes its screens afterwards (`router.reset()`).
+    /// Throws the join errors (code, full family) and `has_members`.
+    @MainActor
+    func becomeProtected(code: String, name: String) async throws -> GuardianInfo {
+        let result = try await repository.becomeProtected(code: code)
+        do {
+            try session?.save(result.registration, name: name, mode: .protected)
+        } catch {
+            // The old device is already gone on the server: without the new token the app cannot go on.
+            Log.app.error("Session save failed", error)
+            markSessionExpired()
+            throw RepositoryError.network
+        }
+        session?.setGuardian(result.guardian)
+        settings.becameProtected()
+        // A new device on the server: send the push token and device info again.
+        sentPushToken = nil
+        sentDeviceInfo = false
+        pushTokenEpoch += 1
+        DeliveredPushes.clear()
+        await registerForPushIfAllowed()
+        return result.guardian
     }
 
     /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: Connect still asks

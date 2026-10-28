@@ -6,7 +6,6 @@ struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
-    @Environment(\.openURL) private var openURL
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
@@ -58,22 +57,7 @@ struct ProfileView: View {
             InviteSheet(repository: env.repository) { isInvitePresented = false }
                 .environment(\.locale, locale)
         }
-        .sheet(isPresented: $isDeleteConfirming) {
-            ProfileConfirmSheet(
-                title: L10n.string("Delete account?", language: language),
-                message: model.deleteMessage(language: language),
-                confirmTitle: L10n.string("Delete account", language: language),
-                confirmIdentifier: "profile.delete.confirm",
-                isWorking: model.isWorking
-            ) {
-                AvatarView(id: model.profile?.avatarId ?? "", size: 64)
-            } onConfirm: {
-                Task {
-                    if await model.deleteMyData() { isDeleteConfirming = false }
-                }
-            }
-            .environment(\.locale, locale)
-        }
+        .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
         .alert(
             Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
             isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
@@ -238,11 +222,7 @@ struct ProfileView: View {
             ProfileDivider()
             navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
             ProfileDivider()
-            Button { Task { await notificationsTapped() } } label: {
-                ProfileRow(symbol: "bell.fill", title: Text("Notifications"), accessory: notificationAccessory)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("profile.notifications")
+            navRow(symbol: "bell.fill", title: Text("Notifications"), page: .notifications, id: "profile.notifications")
             ProfileDivider()
             navRow(symbol: "globe", title: Text("Language"), value: language.shortName, page: .language, id: "profile.language")
         }
@@ -250,17 +230,15 @@ struct ProfileView: View {
 
     private var preferencesSection: some View {
         ProfileSection(title: "Preferences") {
-            // Light only for now (dark mode is a backlog issue): shown, not changeable.
-            ProfileRow(
+            navRow(
                 symbol: "circle.lefthalf.filled", title: Text("Theme"),
-                accessory: .value(L10n.string("Light", language: language), chevron: false)
+                value: L10n.string(themeTitle, language: language),
+                page: .theme, id: "profile.theme"
             )
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("profile.theme")
             ProfileDivider()
             navRow(
                 symbol: "Aa", title: Text("Accessibility"),
-                value: L10n.string(env.settings.largeText ? "Large text" : "Standard", language: language),
+                value: L10n.string(env.settings.textSize.title, language: language),
                 page: .accessibility, id: "profile.accessibility"
             )
             ProfileDivider()
@@ -268,11 +246,11 @@ struct ProfileView: View {
         }
     }
 
-    private var notificationAccessory: ProfileRowAccessory {
-        switch model.notificationStatus {
-        case .authorized: .value(L10n.string("On", language: language))
-        case .denied, .notDetermined: .value(L10n.string("Off", language: language))
-        case nil: .chevron
+    private var themeTitle: String.LocalizationValue {
+        switch env.settings.theme {
+        case .light: "Light"
+        case .dark: "Dark"
+        case .system: "Automatic"
         }
     }
 
@@ -285,15 +263,6 @@ struct ProfileView: View {
     }
 
     // MARK: Actions
-
-    /// First time: the system prompt right here. After a yes or a no only Settings can change it.
-    private func notificationsTapped() async {
-        if await model.notificationsTapped() {
-            if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
-        } else {
-            await env.registerForPushIfAllowed()
-        }
-    }
 
     private func announce(_ message: String.LocalizationValue) {
         AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
