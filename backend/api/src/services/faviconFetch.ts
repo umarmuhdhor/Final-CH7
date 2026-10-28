@@ -1,9 +1,12 @@
+import { sniffImage } from "./images";
+
 /**
  * PR-05: the Worker downloads a scam site's favicon once, so the app never contacts the scam host
  * (SECURITY P9: no IP leak, no cached copy of the site's image on the phone). The URL comes from a
  * web page, so every step is guarded: http(s) on the default port only, no credentials, only public
  * addresses (literal IPs checked, names resolved over DoH first), at most 2 redirects re-checked hop
- * by hop, 3 s for everything, 64 KB, raster images only (Content-Type and magic bytes, never SVG).
+ * by hop, 3 s for everything, 64 KB, raster images only (Content-Type and magic bytes, never SVG),
+ * at most 512 px per side (the app shows nothing larger; also no decompression bombs on the phone).
  * Workers' fetch keeps no cookies and we send no Referer; the User-Agent names no user or device.
  * The DoH check cannot stop a host that answers differently a moment later (DNS rebinding); a
  * Worker's own subrequests do not reach private networks, so this is defence in depth.
@@ -25,6 +28,7 @@ export type FetchFail =
   | "bad_type"
   | "too_large"
   | "bad_magic"
+  | "bad_size"
   | "timeout"
   | "network";
 
@@ -44,6 +48,7 @@ const ACCEPTED_TYPES = new Set([
   "image/png", "image/x-icon", "image/vnd.microsoft.icon", "image/jpeg", "image/gif", "image/webp",
 ]);
 export const MAX_FAVICON_BYTES = 64 * 1024;
+export const MAX_FAVICON_SIDE = 512;
 const TIMEOUT_MS = 3000;
 const MAX_REDIRECTS = 2;
 const USER_AGENT = "Mozilla/5.0 (compatible; ShooFavicon/1.0)";
@@ -104,6 +109,8 @@ export async function downloadFavicon(raw: string, opts: DownloadOptions = {}): 
       if (!bytes) return fail("too_large");
       const kind = sniffFavicon(bytes);
       if (!kind) return fail("bad_magic");
+      const size = faviconSize(bytes, kind);
+      if (!size || size.width < 1 || size.height < 1 || Math.max(size.width, size.height) > MAX_FAVICON_SIDE) return fail("bad_size");
       return { ok: true, favicon: { type: kind, bytes } };
     }
   } catch {
@@ -191,6 +198,50 @@ export function sniffFavicon(b: Uint8Array): FaviconType | undefined {
   if (starts([0x47, 0x49, 0x46, 0x38]) && (b[4] === 0x37 || b[4] === 0x39) && b[5] === 0x61) return "gif";
   if (starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8)) return "webp";
   return undefined;
+}
+
+/**
+ * Pixel size from the headers: PNG IHDR, GIF logical screen, JPEG SOFn, WebP VP8/VP8L/VP8X, ICO the
+ * largest directory entry (0 means 256). Undefined when the header is cut short.
+ */
+export function faviconSize(b: Uint8Array, type: FaviconType): { width: number; height: number } | undefined {
+  const u16le = (o: number) => b[o]! | (b[o + 1]! << 8);
+  const u24le = (o: number) => b[o]! | (b[o + 1]! << 8) | (b[o + 2]! << 16);
+  switch (type) {
+    case "png": {
+      const image = sniffImage(b);
+      return image?.type === "png" ? image : undefined;
+    }
+    case "jpeg": {
+      const image = sniffImage(b);
+      return image?.type === "jpeg" ? image : undefined;
+    }
+    case "gif":
+      return b.length >= 10 ? { width: u16le(6), height: u16le(8) } : undefined;
+    case "ico": {
+      const count = u16le(4);
+      if (b.length < 6 + count * 16) return undefined;
+      let width = 0;
+      let height = 0;
+      for (let i = 0; i < count; i++) {
+        width = Math.max(width, b[6 + i * 16] || 256);
+        height = Math.max(height, b[7 + i * 16] || 256);
+      }
+      return { width, height };
+    }
+    case "webp": {
+      const chunk = String.fromCharCode(...b.subarray(12, 16));
+      if (chunk === "VP8 " && b.length >= 30 && b[23] === 0x9d && b[24] === 0x01 && b[25] === 0x2a) {
+        return { width: u16le(26) & 0x3fff, height: u16le(28) & 0x3fff };
+      }
+      if (chunk === "VP8L" && b.length >= 25 && b[20] === 0x2f) {
+        const bits = (b[21]! | (b[22]! << 8) | (b[23]! << 16) | (b[24]! << 24)) >>> 0;
+        return { width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+      }
+      if (chunk === "VP8X" && b.length >= 30) return { width: u24le(24) + 1, height: u24le(27) + 1 };
+      return undefined;
+    }
+  }
 }
 
 const isIpv4 = (s: string) => /^\d{1,3}(\.\d{1,3}){3}$/.test(s);

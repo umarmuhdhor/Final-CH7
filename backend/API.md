@@ -381,8 +381,8 @@ domain within 24 h reuses the earlier screenshot.
 stores it like the screenshot; the app never contacts the scam site (SECURITY P9). A favicon problem
 never fails or delays the scan. The download only goes to public addresses (the name is resolved first;
 no private, loopback or link-local hosts), http(s) on the default port, at most 2 redirects (each hop
-checked again), 3 s in total, at most 64 KB. Only PNG, ICO, JPEG, GIF and WebP are kept, checked by
-`Content-Type` and by the file's first bytes; SVG and anything else is dropped. No cookies and no
+checked again), 3 s in total, at most 64 KB and 512 px per side. Only PNG, ICO, JPEG, GIF and WebP are
+kept, checked by `Content-Type` and by the file's first bytes; SVG and anything else is dropped. No cookies and no
 `Referer` are sent. A scan of the same domain within 24 h reuses the earlier favicon without a new
 download. At most 30 downloads per device and 200 for everyone per 24 h (failed downloads count);
 past that the scan is stored without a favicon.
@@ -486,7 +486,8 @@ exactly like a screenshot link.
 
 - **Auth:** the signature in the link. The link names the viewer and expires after 1 hour.
 - **Rate limit:** 600 per minute per viewer (a list page can show 50 icons)
-- **Response 200:** the image (`image/png`, `image/x-icon`, `image/jpeg`, `image/gif` or `image/webp`),
+- **Response 200:** the image (`image/png`, `image/x-icon`, `image/jpeg`, `image/gif` or `image/webp`;
+  at most 64 KB and 512 px per side; never a redirect),
   `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`,
   `Content-Security-Policy: default-src 'none'; sandbox`, `Referrer-Policy: no-referrer`.
 - Access is re-checked in the database on every request: the owner, or the owner's current Guardian.

@@ -17,9 +17,19 @@ beforeEach(() => resetDb(sql));
 afterEach(() => vi.restoreAllMocks());
 
 // Sample favicons with real magic bytes.
-const ico = () => Uint8Array.from([0, 0, 1, 0, 1, 0, 16, 16, 0, 0, 1, 0, 32, 0, 8, 0, 0, 0, 22, 0, 0, 0, ...new Array<number>(8).fill(7)]);
-const gif = () => Uint8Array.from([..."GIF89a"].map((ch) => ch.charCodeAt(0)).concat([1, 0, 1, 0, 0, 0, 0]));
-const webp = () => Uint8Array.from([..."RIFF"].map((c) => c.charCodeAt(0)).concat([20, 0, 0, 0], [..."WEBPVP8 "].map((c) => c.charCodeAt(0)), [0, 0, 0, 0]));
+const ascii = (t: string) => [...t].map((ch) => ch.charCodeAt(0));
+const ico = (side = 16) => Uint8Array.from([0, 0, 1, 0, 1, 0, side & 0xff, side & 0xff, 0, 0, 1, 0, 32, 0, 8, 0, 0, 0, 22, 0, 0, 0, ...new Array<number>(8).fill(7)]);
+const gif = (w = 1, h = 1) => Uint8Array.from([...ascii("GIF89a"), w & 0xff, w >> 8, h & 0xff, h >> 8, 0, 0, 0]);
+/** Extended WebP (VP8X): canvas size minus one, 24-bit little endian. */
+const webp = (w = 16, h = 16) =>
+  Uint8Array.from([...ascii("RIFF"), 22, 0, 0, 0, ...ascii("WEBPVP8X"), 10, 0, 0, 0, 0, 0, 0, 0,
+    (w - 1) & 0xff, ((w - 1) >> 8) & 0xff, 0, (h - 1) & 0xff, ((h - 1) >> 8) & 0xff, 0]);
+/** Lossless WebP (VP8L): 14-bit width-1 and height-1 after the 0x2f signature. */
+const webpLossless = (w: number, h: number) => {
+  const bits = ((w - 1) | ((h - 1) << 14)) >>> 0;
+  return Uint8Array.from([...ascii("RIFF"), 18, 0, 0, 0, ...ascii("WEBPVP8L"), 5, 0, 0, 0, 0x2f,
+    bits & 0xff, (bits >> 8) & 0xff, (bits >> 16) & 0xff, (bits >>> 24) & 0xff]);
+};
 const svg = () => new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
 
 const PUBLIC_IP = "93.184.216.34";
@@ -214,6 +224,27 @@ describe("downloadFavicon guards (PR-05, SECURITY P9)", () => {
   ])("served as %j → rejected", async (contentType, bytes, reason) => {
     const web = fakeWeb({ "https://scam.example/f": () => image(bytes, contentType) });
     expect(await downloadFavicon("https://scam.example/f", { fetch: web.fetch })).toEqual({ ok: false, reason });
+  });
+
+  it.each([
+    ["png 513 px", png(513, 16), "image/png"],
+    ["png 0 px", png(0, 16), "image/png"],
+    ["jpeg 600 px", jpeg(16, 600), "image/jpeg"],
+    ["gif 1000 px", gif(1000, 1), "image/gif"],
+    ["webp VP8X 4096 px", webp(4096, 16), "image/webp"],
+    ["webp VP8L 513 px", webpLossless(513, 513), "image/webp"],
+    ["webp without a frame header", Uint8Array.from([...ascii("RIFF"), 4, 0, 0, 0, ...ascii("WEBP")]), "image/webp"],
+    ["png cut before IHDR ends", png(16, 16).subarray(0, 20), "image/png"],
+  ])("over 512 px per side or no readable size → bad_size: %s", async (_name, bytes, contentType) => {
+    const web = fakeWeb({ "https://scam.example/f": () => image(bytes, contentType) });
+    expect(await downloadFavicon("https://scam.example/f", { fetch: web.fetch })).toEqual({ ok: false, reason: "bad_size" });
+  });
+
+  it("512 px per side is still accepted; ICO entries are at most 256", async () => {
+    for (const [bytes, type] of [[png(512, 512), "image/png"], [webpLossless(512, 512), "image/webp"], [ico(0), "image/x-icon"]] as const) {
+      const web = fakeWeb({ "https://scam.example/f": () => image(bytes, type) });
+      expect((await downloadFavicon("https://scam.example/f", { fetch: web.fetch })).ok).toBe(true);
+    }
   });
 
   it("a non-200 answer → bad_status", async () => {
