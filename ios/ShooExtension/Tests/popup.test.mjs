@@ -57,3 +57,21 @@ test("See detail links to the scan once EX-07 has an id, else Activity", () => {
     assert.equal(detailUrl({ recordId: "6f1c2a4e" }), "shoo://scan/6f1c2a4e");
     assert.equal(detailUrl({}), "shoo://activity");
 });
+
+test("50–79 opens as the sheet until minimized; 30–49 is always the mini card", () => {
+    const { layoutFor } = globalThis.ShooPopup;
+    assert.equal(layoutFor(2, false), "sheet");
+    assert.equal(layoutFor(2, true), "mini");
+    assert.equal(layoutFor(1, false), "mini");
+});
+
+test("card text: heaviest reason first, plain wording for Protected, advice last", () => {
+    const { describe } = globalThis.ShooPopup;
+    const signals = [
+        { weight: 10, label: { en: "Young domain" }, labelSimple: { en: "This site is new" } },
+        { weight: 30, label: { en: "Asks for PIN" }, labelSimple: { en: "This page asks for your PIN!" } },
+    ];
+    assert.equal(describe(signals, { simple: false, lang: "en", advice: "Don't type it." }), "Asks for PIN. Don't type it.");
+    assert.equal(describe(signals, { simple: true, lang: "en", advice: "Don't type it." }), "This page asks for your PIN! Don't type it.");
+    assert.equal(describe([], { simple: false, lang: "en", advice: "Be careful." }), "Be careful.");
+});

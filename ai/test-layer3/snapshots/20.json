@@ -1,0 +1,49 @@
+{
+  "id": "20",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://viinwkwk-dot.github.io/instagram./",
+  "finalUrl": "https://viinwkwk-dot.github.io/instagram./",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": null,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://viinwkwk-dot.github.io/instagram./admin.html"
+  ],
+  "snapshot": {
+    "url": "https://viinwkwk-dot.github.io/instagram./",
+    "domain": "github.io",
+    "title": "Instagram",
+    "lang": "id",
+    "text": "Instagram\nInstagram\nNomor telepon, nama pengguna, atau email\nKata sandi\nTampilkan\nMasuk\nKata sandi yang kamu masukkan salah. Periksa kata sandi dan coba lagi.\nATAU\nMasuk dengan Facebook\n Lupa kata sandi?\nBelum punya akun? Daftar\nDapatkan aplikasinya.\n\n Meta Tentang Blog\n Pekerjaan Bantuan API\n Privasi Ketentuan Lokasi\n Bahasa Indonesia\n© 2025 Instagram from Meta",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "uname",
+            "label": "Nomor telepon, nama pengguna, atau email",
+            "placeholder": null,
+            "autocomplete": "username"
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "passwd",
+            "label": "Nomor telepon, nama pengguna, atau email",
+            "placeholder": null,
+            "autocomplete": "current-password"
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "App Store",
+      "Google Play"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

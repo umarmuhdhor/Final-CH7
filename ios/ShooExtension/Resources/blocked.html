@@ -1,5 +1,6 @@
 <!doctype html>
-<!-- Owner: lead. Block screen (EX-06). Extension page: websites can't script it, so there's no bypass. -->
+<!-- Owner: lead. Block screen (EX-06). Extension page: websites can't script it, so there's no bypass.
+     Look: Figma "Safari / Blocked / Protected" and "Safari / Blocked / Guardian or pribadi". -->
 <html>
 <head>
     <meta charset="utf-8">
@@ -9,24 +10,32 @@
 </head>
 <body>
     <main class="screen" hidden>
-        <img class="logo" src="images/icon-96.png" alt="" width="64" height="64">
-        <h1 data-text="title"></h1>
-        <div class="score"><span class="score-value"></span><span class="score-label" data-text="score"></span></div>
-        <p class="link"></p>
+        <div class="top">
+            <div class="brand">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path class="shield" d="M8 1.7 3 3.6v4.2c0 3 2.1 5.6 5 6.5 2.9-.9 5-3.5 5-6.5V3.6L8 1.7z"/><path class="mark" d="M8 5.3v5.3"/></svg>
+                <span>Shoo!</span>
+            </div>
+            <div class="ring" aria-hidden="true"><span class="score-value"></span></div>
 
-        <section class="reasons-box">
-            <h2 data-text="why"></h2>
-            <ul class="reasons"></ul>
-        </section>
+            <div class="copy">
+                <span class="chip link"></span>
+                <h1 data-text="title"></h1>
+                <p class="reasons"></p>
+            </div>
 
-        <section class="waiting" hidden>
-            <div class="spinner" aria-hidden="true"></div>
-            <p class="waiting-text"></p>
-            <p class="hint" data-text="autoOpen"></p>
-        </section>
+            <section class="waiting" hidden>
+                <div class="spinner" aria-hidden="true"></div>
+                <p class="waiting-text"></p>
+                <p class="hint" data-text="autoOpen"></p>
+            </section>
 
-        <p class="verified" hidden></p>
-        <a class="button" hidden></a>
+            <p class="verified" hidden></p>
+        </div>
+
+        <div class="actions">
+            <a class="button" hidden></a>
+            <button class="back" type="button" data-text="back"></button>
+        </div>
     </main>
     <script src="block.js"></script>
     <script src="blocked-page.js"></script>

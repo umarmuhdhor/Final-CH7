@@ -10,6 +10,7 @@ import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "
 import { deliverPush } from "../services/push/deliver";
 import { guardianPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
+import { attachFavicon, faviconUrl } from "../services/favicons";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
 import { errorInfo } from "../http/logError";
 
@@ -111,12 +112,13 @@ scans.post("/scans", async (c) => {
   // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
   await hitLight(sql, limits.createScanAll, "all");
 
+  const iconUrl = favicon(body.faviconUrl);
   const id = await insertScan(sql, {
     ownerId: principal.deviceId,
     url: body.url,
     domain: body.domain,
     pageTitle: title(body.pageTitle),
-    faviconUrl: favicon(body.faviconUrl),
+    faviconUrl: iconUrl,
     score: body.score,
     status: body.status,
     signals: body.signals,
@@ -129,6 +131,15 @@ scans.post("/scans", async (c) => {
       // The scan is stored; a screenshot problem must not turn into a 500 that the extension retries.
       console.error(JSON.stringify({ event: "screenshot_dropped", reason: "error", error: errorInfo(err) }));
     }
+  }
+  // PR-05: the Worker downloads the favicon once, after the response (a slow scam host never delays
+  // or fails the scan), so the app never contacts the scam host (SECURITY P9).
+  if (iconUrl) {
+    c.executionCtx.waitUntil(
+      attachFavicon(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, iconUrl).catch((err) =>
+        console.error(JSON.stringify({ event: "favicon_dropped", reason: "error", error: errorInfo(err) })),
+      ),
+    );
   }
   // Guardian lookup now; the send, the token clear and the push_log row run in waitUntil after the
   // response. The Hyperdrive connection lives for the whole invocation, waitUntil included (checked
@@ -182,19 +193,19 @@ scans.get("/scans", async (c) => {
   const page = rows.slice(0, q.limit);
   const last = page.at(-1);
   return c.json({
-    // Lists never carry a screenshot URL (D-alief-04).
-    items: page.map((r) => toScanResult(r, null)),
+    // Lists never carry a screenshot URL (D-alief-04); favicons are signed per viewer (PR-05).
+    items: await Promise.all(page.map(async (r) => toScanResult(r, null, await faviconUrl(c.env, r, deviceId)))),
     nextCursor: rows.length > q.limit && last ? encodeCursor(last.cursorAt, last.id) : null,
   });
 });
 
-/** DT-*: one scan with a 1-hour signed screenshot URL. 404 for anything the caller may not see. */
+/** DT-*: one scan with 1-hour signed screenshot and favicon URLs. 404 for anything the caller may not see. */
 scans.get("/scans/:id", async (c) => {
   const id = c.req.param("id");
   if (!UUID.test(id)) throw errors.notFound();
   const viewerId = c.get("principal").deviceId;
   const row = await findVisibleScan(c.get("sql"), id, viewerId);
   if (!row) throw errors.notFound();
-  return c.json(toScanResult(row, await screenshotUrl(c.env, row, viewerId)));
+  return c.json(toScanResult(row, await screenshotUrl(c.env, row, viewerId), await faviconUrl(c.env, row, viewerId)));
 });
 

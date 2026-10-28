@@ -1,0 +1,66 @@
+[
+  {
+    "id": "syn-sekolah-portal2",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap",
+      "holdout"
+    ],
+    "synthetic": true,
+    "redacted": true,
+    "source": "invented: legit URL shaped like the link-pattern rules (word + digit subdomain, hyphenated name)",
+    "collectedAt": "2026-10-27T00:00:00.000Z",
+    "notes": "Pins false positives for kata_angka_subdomain and hyphen_registrable.",
+    "snapshot": {
+      "url": "https://portal2.sekolah-harapan.sch.id/",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-27T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-toko-app3-index-php",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap"
+    ],
+    "synthetic": true,
+    "redacted": true,
+    "source": "invented: legit shop on a hyphenated domain with a .php page",
+    "collectedAt": "2026-10-27T00:00:00.000Z",
+    "notes": "Pins false positives for hyphen_registrable + file_ext.",
+    "snapshot": {
+      "url": "https://app3.toko-maju.co.id/index.php",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-27T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "syn-kampus-code-path",
+    "label": "legit",
+    "tags": [
+      "lookalike-trap"
+    ],
+    "synthetic": true,
+    "redacted": true,
+    "source": "invented: legit university URL with a 'code' path segment",
+    "collectedAt": "2026-10-27T00:00:00.000Z",
+    "notes": "Pins false positives for the path_bait word 'code'.",
+    "snapshot": {
+      "url": "https://web1.kampus.ac.id/code/",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-27T00:00:00.000Z"
+    }
+  }
+]

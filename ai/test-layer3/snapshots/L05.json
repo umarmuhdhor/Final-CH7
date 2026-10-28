@@ -1,0 +1,68 @@
+{
+  "id": "L05",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:08:00.000Z",
+  "originalUrl": "https://cottonink.co.id/account/register",
+  "finalUrl": "https://cottonink.co.id/account/register",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 4604,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://cottonink.co.id/account/register",
+    "domain": "cottonink.co.id",
+    "title": "Create Account – COTTONINK",
+    "lang": "en",
+    "text": "Create Account – COTTONINK\nFirst name\nLast name\nEmail\nPassword",
+    "forms": [
+      {
+        "action": "/account",
+        "fields": [
+          {
+            "type": "hidden",
+            "name": "form_type",
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": "customer[first_name]",
+            "id": null,
+            "label": "First name",
+            "placeholder": "First name",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": "customer[last_name]",
+            "id": null,
+            "label": "Last name",
+            "placeholder": "Last name",
+            "autocomplete": null
+          },
+          {
+            "type": "email",
+            "name": "customer[email]",
+            "id": null,
+            "label": "Email",
+            "placeholder": "Email",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": "customer[password]",
+            "id": null,
+            "label": "Password",
+            "placeholder": "Password",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T04:08:00.000Z"
+  }
+}

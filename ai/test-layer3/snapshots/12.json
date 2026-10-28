@@ -1,0 +1,60 @@
+{
+  "id": "12",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://registers-app15.fkregs-on.com/code.php",
+  "finalUrl": "https://registers-app15.fkregs-on.com/code.php",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 68,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://registers-app15.fkregs-on.com/pass.php"
+  ],
+  "snapshot": {
+    "url": "https://registers-app15.fkregs-on.com/code.php",
+    "domain": "fkregs-on.com",
+    "title": "PENDAFTARAN VIA TELEGRAM",
+    "lang": "en",
+    "text": "PENDAFTARAN VIA TELEGRAM\nPENDAFTARAN VIA TELEGRAM\nSilakan Masuk Dengan Akun Telegram Anda.\nKami telah mengirimkan kode verifikasi ke aplikasi Telegram Anda.\nBERIKUTNYA\nSari Puspitasari\nPENDAFTARAN BERHASIL ✔️\nTeddy Pramono\nPENDAFTARAN BERHASIL ✔️\nCitra Adinda\nPENDAFTARAN BERHASIL ✔️\nHaris Nugroho\nPENDAFTARAN BERHASIL ✔️\nMelinda Anggraini\nPENDAFTARAN BERHASIL ✔️\nRizky Pratama\nPENDAFTARAN BERHASIL ✔️\nAyu Wulandari\nPENDAFTARAN BERHASIL ✔️\nBudi Santoso\nPENDAFTARAN BERHASIL ✔️\nIntan Permatasari\nPENDAFTARAN BERHASIL ✔️\nFebriana\nPENDAFTARAN BERHASIL ✔️\nRahmawati Sari\nPENDAFTARAN BERHASIL ✔️\nKurniawan\nPENDAFTARAN BERHASIL ✔️\nFiona Alvia\nPENDAFTARAN BERHASIL ✔️\nAlif Syaeful\nPENDAFTARAN BERHASIL ✔️\nYuni Arisandi\nPENDAFTARAN BERHASIL ✔️\nWahyu Candra\nPENDAFTARAN BERHASIL ✔️\nIndra Putra\nPENDAFTARAN BERHASIL ✔️\nYulia Sari\nPENDAFTARAN BERHASIL ✔️\nPutri Amelia\nPENDAFTARAN BERHASIL ✔️\nRaka Indra\nPENDAFTARAN BERHASIL ✔️",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": "otp",
+            "id": "otp",
+            "label": "Kami telah mengirimkan kode verifikasi ke aplikasi Telegram Anda.",
+            "placeholder": "Masukkan kode verifikasi",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Slide 1",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile",
+      "profile"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

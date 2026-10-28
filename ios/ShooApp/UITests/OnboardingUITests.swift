@@ -113,7 +113,12 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["notifications.skip"].exists)
         app.buttons["notifications.allow"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["notificationReminder"].firstMatch.waitForExistence(timeout: 5))
+        // ON-05 reminder as a popup on Home.
+        let reminder = app.alerts["Notifications are off"]
+        XCTAssertTrue(reminder.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(reminder.buttons["Turn on"].firstMatch.exists)
+        reminder.buttons["Not now"].firstMatch.tap()
+        XCTAssertFalse(reminder.waitForExistence(timeout: 2))
     }
 
     @MainActor
@@ -128,7 +133,7 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5))
         app.buttons["notifications.skip"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any)["notificationReminder"].firstMatch.exists)
+        XCTAssertFalse(app.alerts["Notifications are off"].exists)
     }
 
     @MainActor

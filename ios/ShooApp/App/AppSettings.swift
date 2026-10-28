@@ -14,6 +14,7 @@ final class AppSettings {
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let familyModeOn = "settings.familyModeOn"
         static let onboardingConnectPassed = "settings.onboardingConnectPassed"
+        static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -41,6 +42,11 @@ final class AppSettings {
         didSet { defaults.set(familyModeOn, forKey: Keys.familyModeOn) }
     }
 
+    /// GD-01: scans whose Home card the guardian closed with X. Ids only, newest last, at most 50.
+    private(set) var dismissedHomeScanIds: [String] {
+        didSet { defaults.set(dismissedHomeScanIds, forKey: Keys.dismissedHomeScanIds) }
+    }
+
     init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
         self.defaults = defaults
         language = defaults.string(forKey: Keys.language).flatMap(AppLanguage.init(rawValue:))
@@ -49,6 +55,13 @@ final class AppSettings {
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
         onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
+        dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
+    }
+
+    /// Hides a scan's Home card for good. Old ids drop off; a scan older than 24 h has no card anyway.
+    func dismissHomeScan(_ scanId: String) {
+        guard !dismissedHomeScanIds.contains(scanId) else { return }
+        dismissedHomeScanIds = Array((dismissedHomeScanIds + [scanId]).suffix(50))
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.
@@ -61,7 +74,8 @@ final class AppSettings {
 
     /// Removes every stored preference (fresh install), e.g. `-UITestReset YES` before launch.
     static func clear(defaults: UserDefaults) {
-        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn, Keys.onboardingConnectPassed] {
+        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn, Keys.onboardingConnectPassed,
+                    Keys.dismissedHomeScanIds] {
             defaults.removeObject(forKey: key)
         }
     }
@@ -74,5 +88,6 @@ final class AppSettings {
         onboardingCompleted = false
         familyModeOn = false
         onboardingConnectPassed = false
+        dismissedHomeScanIds = []
     }
 }

@@ -1,6 +1,6 @@
 import XCTest
 
-/// Fase 05: Guardian Shield (GD-01), Family mode toggle (GD-02), family cards (GD-03), Family Activity (GD-05).
+/// Fase 05: Guardian Home (GD-01), Family mode pill (GD-02), family cards (GD-03), Family Activity (GD-05).
 final class GuardianUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
@@ -26,8 +26,9 @@ final class GuardianUITests: XCTestCase {
     @MainActor
     func testFamilyModeIsRememberedAfterRelaunch() {
         var app = launch(familyMode: false)
-        XCTAssertTrue(app.descendants(matching: .any)["shield.status.active"].waitForExistence(timeout: 10), app.debugDescription)
-        // Guardian's own Shield has no "Protected by" row.
+        // Guardian Home (GD-01): hero status, security strip, no "Protected by" row.
+        XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["home.securityStatus"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["shield.guardian"].exists)
         app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["family.header"].waitForExistence(timeout: 5), app.debugDescription)
@@ -37,7 +38,7 @@ final class GuardianUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["family.header"].waitForExistence(timeout: 10), app.debugDescription)
         // Leave it off for the next run.
         app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["shield.status.active"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -94,6 +95,33 @@ final class GuardianUITests: XCTestCase {
         picker.tap()
         app.buttons["person.everyone"].tap()
         XCTAssertEqual(picker.value as? String, "Everyone")
+    }
+
+    @MainActor
+    func testHomeDisconnectShowsTheSwitchOffGuide() {
+        let app = launch(familyMode: false)
+        let disconnect = app.buttons["home.disconnect"]
+        XCTAssertTrue(disconnect.waitForExistence(timeout: 10), app.debugDescription)
+        disconnect.tap()
+        XCTAssertTrue(app.buttons["turnOff.openSettings"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["turnOff.close"].tap()
+        XCTAssertTrue(disconnect.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testHomeOffersTurnOnWhenTheExtensionIsOff() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-UITestMock", "YES",
+            "-settings.onboardingCompleted", "YES",
+            "-settings.mode", "guardian",
+            "-settings.language", "en",
+            "-settings.familyModeOn", "NO",
+            "-UITestExtensionStatus", "switchedOff",
+        ]
+        app.launch()
+        XCTAssertTrue(app.descendants(matching: .any)["home.status.off"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["home.turnOn"].exists)
     }
 
     @MainActor

@@ -1,0 +1,50 @@
+{
+  "id": "L01",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:00:18.000Z",
+  "originalUrl": "https://sso.undip.ac.id/",
+  "finalUrl": "https://sso.undip.ac.id/auth/user/login",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 10715,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://sso.undip.ac.id/user/reset_password",
+    "https://sso.undip.ac.id/user/registration"
+  ],
+  "snapshot": {
+    "url": "https://sso.undip.ac.id/auth/user/login",
+    "domain": "undip.ac.id",
+    "title": "LOGIN SSO UNDIP",
+    "lang": "id",
+    "text": "LOGIN SSO UNDIP\nSingle Sign On (SSO)\nUniversitas Diponegoro\nSilahkan Masuk\nReset Password\n© 2026 DSTI Universitas Diponegoro, All rights reserved.",
+    "forms": [
+      {
+        "action": "https://sso.undip.ac.id/sso/auth_v2",
+        "fields": [
+          {
+            "type": "hidden",
+            "name": "csrf_sso",
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": "identity",
+            "id": "identity",
+            "label": null,
+            "placeholder": "NIM/NIP/username/e-mail official Undip",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Dies Natalis ke-69 Universitas Diponegoro"
+    ],
+    "capturedAt": "2026-10-28T04:00:18.000Z"
+  },
+  "failReason": null
+}

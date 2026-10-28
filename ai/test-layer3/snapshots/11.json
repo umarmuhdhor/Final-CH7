@@ -1,0 +1,22 @@
+{
+  "id": "11",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://deddydanchika.blogspot.com/",
+  "finalUrl": "https://deddydanchika.blogspot.com/?m=1",
+  "status": "terbuka",
+  "cloaking": true,
+  "rdapAgeDays": 9584,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://deddydanchika.blogspot.com/?m=1",
+    "domain": "blogspot.com",
+    "title": "Video Mesum Deddy Dan Chika",
+    "lang": "id",
+    "text": "Video Mesum Deddy Dan Chika\nVideo Mesum Deddy Dan Chika\nTidak ada postingan.\nTidak ada postingan.\n Beranda\n Lihat versi web\nMengenai Saya\n\nAdmin\n Lihat profil lengkapku\nDiberdayakan oleh Blogger.",
+    "forms": [],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}
