@@ -1,0 +1,140 @@
+{
+  "id": "07",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://yaigsjv.1238bll.my.id/ca/bin/2c.html",
+  "finalUrl": "https://yaigsjv.1238bll.my.id/ca/bin/2c.html",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 18,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://yaigsjv.1238bll.my.id/ca/bin/2c.html",
+    "domain": "1238bll.my.id",
+    "title": "Gojek Super App: Ojek Online, Taksi Online, Pesan Makan, Kirim Barang, Pembayaran",
+    "lang": "en",
+    "text": "Gojek Super App: Ojek Online, Taksi Online, Pesan Makan, Kirim Barang, Pembayaran\nCek WhatsApp, ya",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "hidden",
+            "name": "tarif",
+            "id": "tarif",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "nohp",
+            "id": "nohp",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "inp1",
+            "id": "inp1",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "inp2",
+            "id": "inp2",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "inp3",
+            "id": "inp3",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "inp4",
+            "id": "inp4",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "inp5",
+            "id": "inp5",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "inp6",
+            "id": "inp6",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": "pin1",
+            "id": "pin1",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off"
+          },
+          {
+            "type": "tel",
+            "name": "pin2",
+            "id": "pin2",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off"
+          },
+          {
+            "type": "tel",
+            "name": "pin3",
+            "id": "pin3",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off"
+          },
+          {
+            "type": "tel",
+            "name": "pin4",
+            "id": "pin4",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off"
+          },
+          {
+            "type": "tel",
+            "name": "pin5",
+            "id": "pin5",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off"
+          },
+          {
+            "type": "tel",
+            "name": "pin6",
+            "id": "pin6",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "off"
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

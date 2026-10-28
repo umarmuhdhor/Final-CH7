@@ -1,0 +1,41 @@
+{
+  "id": "L07",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:00:18.000Z",
+  "originalUrl": "https://www.kredivo.com/",
+  "finalUrl": "https://kredivo.id/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 3878,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://kredivo.id/",
+    "domain": "kredivo.id",
+    "title": "Kredivo Paylater - Cicilan 0% hingga 24 Bulan - Kredivo",
+    "lang": "id",
+    "text": "Kredivo Paylater - Cicilan 0% hingga 24 Bulan - Kredivo\nBelanja Sekarang, Bayar Nanti #Sefleksibelitu\nPayLater 1 Bulan 0% Bunga & Admin untuk belanja di 10.000+ merchant online & offline, atau cicil hingga 24 bulan TANPA DP.\nDaftar",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "checkbox",
+            "name": null,
+            "id": "footer-flag-toggle",
+            "label": "Indonesia",
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Kredivo",
+      "kredivo-phone",
+      "merchant kredivo"
+    ],
+    "capturedAt": "2026-10-28T04:00:18.000Z"
+  },
+  "failReason": null
+}

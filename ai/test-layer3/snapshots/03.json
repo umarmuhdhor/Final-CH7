@@ -1,0 +1,92 @@
+{
+  "id": "03",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://qlolla-bybri.com/",
+  "finalUrl": "https://qlolla-bybri.com/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 6,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://qlolla-bybri.com/",
+    "domain": "qlolla-bybri.com",
+    "title": "QLola Cash Management",
+    "lang": "id",
+    "text": "QLola Cash Management\nMasuk\nMasuk\n Lupa kata sandi?\nBelum punya akun? Daftar di sini\nDemi meningkatkan Keamanan dan Kenyamanan Pengguna untuk bertransaksi Qlola BRI (WAJIB) PERUBAHAN Password.\nKata Sandi Baru\nUlangi Sandi Baru\nNomor Telepon Genggam\n+62\nLanjutkan\nPerubahan Kata Sandi\nMasukkan Soft Token Anda untuk mengonfirmasi perubahan kata sandi.\nToken Lunak *\nTerlalu banyak percobaan, mohon tunggu.\nSisa waktu: 00:30\nBatalkan\nKonfirmasi",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "kodePerusahaan",
+            "label": null,
+            "placeholder": "Kode Perusahaan",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "namaBelakang",
+            "label": null,
+            "placeholder": "Nama belakang",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "kataSandi",
+            "label": null,
+            "placeholder": "Kata sandi",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "newPassword",
+            "label": "Kata Sandi Baru",
+            "placeholder": "Masukkan kata sandi baru",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "confirmPassword",
+            "label": "Ulangi Sandi Baru",
+            "placeholder": "Ulangi kata sandi baru",
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "phoneNumber",
+            "label": "Nomor Telepon Genggam",
+            "placeholder": "8xx-xxxx-xxxx",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "mobileToken",
+            "label": "Token Lunak *",
+            "placeholder": "Masukkan Token Lunak",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Qlola Loading Screen",
+      "Logo QLola Cash Management BRI"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

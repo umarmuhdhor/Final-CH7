@@ -1,0 +1,36 @@
+{
+  "id": "10",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://storee-dp8iiud7biuu.edgeone.dev/",
+  "finalUrl": "https://storee-dp8iiud7biuu.edgeone.dev/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 505,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://storee-dp8iiud7biuu.edgeone.dev/",
+    "domain": "edgeone.dev",
+    "title": "Verifikasi Kode — Agoda",
+    "lang": "id-ID",
+    "text": "Verifikasi Kode — Agoda\n ←\nagoda\nMasukkan Kode OTP\nKode dikirim keNomor HP atau Email terdaftar Anda\nBelum menerima kode? Kirim ulang\nVerifikasi",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "inputOtpAsli",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

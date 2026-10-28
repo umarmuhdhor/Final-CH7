@@ -1,0 +1,90 @@
+{
+  "id": "25",
+  "label": "scam",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://gratiskuota60gb.blogspot.com/",
+  "finalUrl": "https://gratiskuota60gb.blogspot.com/?m=1",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 9584,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://gratiskuota60gb.blogspot.com/?m=1",
+    "domain": "blogspot.com",
+    "title": "Info Jawatan",
+    "lang": "id",
+    "text": "Info Jawatan\n🛡️\nSILA TUNGGU SEBENTAR\nMenghubungi CALL CENTER Telegram...\nSILAHKAN MASUKAN NONOR TELEGRAM UNTUK KLAIM KUOTA GRATIS 60GB\nSILAHKAN MASUKAN NONOR TELEGRAM UNTUK KLAIM KUOTA GRATIS 60GB\nSILAHKAN MASUKAN NONOR TELEGRAM UNTUK KLAIM KUOTA GRATIS 60GB\nNama lengkap\nSILA MASUKKAN NAMA LENGKAP\nNombor Telegram\n+62\nNOMBOR TELEFON TIDAK SAH.\nSAYA SETUJU UNTUK MENERIMAH KUOTA GRATIS 60GB DARI TELEGRAM.\nKLAIM SEKARANG",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "nama",
+            "label": null,
+            "placeholder": "Nama lengkap anda Sesuai untuk klaim kuota gratis.",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "nomor",
+            "label": null,
+            "placeholder": "123456789",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "checkbox",
+            "name": null,
+            "id": "checkTerms",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "otp",
+            "label": "SAYA SETUJU UNTUK MENERIMAH KUOTA GRATIS 60GB DARI TELEGRAM.",
+            "placeholder": "•••••",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "pw",
+            "label": null,
+            "placeholder": "KATA LALUAN",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Banner"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

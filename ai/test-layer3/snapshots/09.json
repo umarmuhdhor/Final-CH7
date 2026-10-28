@@ -1,0 +1,36 @@
+{
+  "id": "09",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://storee-dp9hsk1cxr2y.edgeone.dev/",
+  "finalUrl": "https://storee-dp9hsk1cxr2y.edgeone.dev/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 505,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://storee-dp9hsk1cxr2y.edgeone.dev/",
+    "domain": "edgeone.dev",
+    "title": "Masukkan PIN — Agoda",
+    "lang": "id-ID",
+    "text": "Masukkan PIN — Agoda\n ←\nagoda\nMasukkan PIN\nMasukkan 6 digit PIN akun Anda\n Lupa PIN?\nVerifikasi & Lanjutkan",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "inputPinAsli",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

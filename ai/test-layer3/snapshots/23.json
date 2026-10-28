@@ -1,0 +1,103 @@
+{
+  "id": "23",
+  "label": "scam",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://simgratisonine.blogspot.com/",
+  "finalUrl": "https://simgratisonine.blogspot.com/?m=1",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 9584,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://simgratisonine.blogspot.com/?m=1",
+    "domain": "blogspot.com",
+    "title": "CEK STATUS PENDAFTARAN SIM",
+    "lang": "id",
+    "text": "CEK STATUS PENDAFTARAN SIM\n📋\nMOHON TUNGGU SEBENTAR\nSedang memproses data...\nMASUKKAN DATA ANDA DENGAN BENAR UNTUK PENDAFTARAN SIM A, B, C, D\nMASUKKAN DATA ANDA DENGAN BENAR UNTUK PENDAFTARAN SIM A, B, C, D\n⚠️ PASTIKAN DATA BENAR UNTUK PENGECEKAN KELAYAKAN UNTUK DAPTAR SIM GRATIS .\nJenis SIM Yang Didaftar\n-- Pilih Jenis SIM --\nSIM A (Mobil Pribadi)\nSIM B (Kendaraan Berat)\nSIM C (Sepeda Motor)\nSIM D (Penyandang Disabilitas)\nMOHON PILIH JENIS SIM\nProvinsi Domisili\n-- Pilih Provinsi --\nAceh\nSumatera Utara\nSumatera Barat\nRiau\nKepulauan Riau\nJambi\nBengkulu\nSumatera Selatan\nKepulauan Bangka Belitung\nLampung\nBanten\nDKI Jakarta\nJawa Barat\nJawa Tengah\nDI Yogyakarta\nJawa Timur\nBali\nNusa Tenggara Barat\nNusa Tenggara Timur\nKalimantan Barat\nKalimantan Tengah\nKalimantan Selatan\nKalimantan Timur\nKalimantan Utara\nSulawesi Utara\nSulawesi Tengah\nSulawesi Selatan\nSulawesi Tenggara\nSulawesi Barat\nGorontalo\nMaluku\nMaluku Utara\nPapua\nPapua Barat\nPapua Tengah\nPapua Pegunungan\nPapua Selatan\nPapua Barat Daya\nMOHON PILIH PROVINSI ANDA\nNomor Telepon Telegram\n+62\nNOMOR TELEPON TIDAK VALID.\nSAYA MENYATAKAN DATA YANG DIMASUKKAN ADALAH BENAR DAN SIAP MENERIMA KONFIRMASI.\nLanjut Pendaftaran",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "select",
+            "name": null,
+            "id": "jenisSim",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "select",
+            "name": null,
+            "id": "provinsi",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "nomor",
+            "label": null,
+            "placeholder": "812345678",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "checkbox",
+            "name": null,
+            "id": "checkTerms",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "otp",
+            "label": "SAYA MENYATAKAN DATA YANG DIMASUKKAN ADALAH BENAR DAN SIAP MENERIMA KONFIRMASI.",
+            "placeholder": "00000",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "pw",
+            "label": null,
+            "placeholder": "MASUKKAN KATA SANDI",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Banner HD Pendaftaran"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

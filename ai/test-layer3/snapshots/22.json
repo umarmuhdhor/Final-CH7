@@ -1,0 +1,44 @@
+{
+  "id": "22",
+  "label": "scam",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html",
+  "finalUrl": "https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 6759,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html",
+    "domain": "cloudfront.net",
+    "title": "DHL EXpress",
+    "lang": "en",
+    "text": "DHL EXpress\nDHL Express\nEnter your credentials to proceed\nSign In",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "email",
+            "name": "email",
+            "id": "email",
+            "label": null,
+            "placeholder": "Email address",
+            "autocomplete": "email"
+          },
+          {
+            "type": "password",
+            "name": "password",
+            "id": "password",
+            "label": null,
+            "placeholder": "Password",
+            "autocomplete": "current-password"
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

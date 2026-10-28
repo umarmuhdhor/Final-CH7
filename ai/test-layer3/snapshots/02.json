@@ -1,0 +1,100 @@
+{
+  "id": "02",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://bni-directbni.com/",
+  "finalUrl": "https://bni-directbni.com/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 7,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://bni-directbni.com/",
+    "domain": "bni-directbni.com",
+    "title": "BNI Direct Cash",
+    "lang": "id",
+    "text": "BNI Direct Cash\nBahasa Indonesia\nBahasa Indonesia\nEnglish\n🛡 Panduan Keamanan\nJangan bagikan User ID, kata sandi, dan OTP Anda ke siapapun, termasuk pihak BNI.\nBNI tidak pernah meminta data rahasia Anda melalui media apapun. Abaikan atau laporkan ketika terjadi.\nHindari pemakaian komputer atau Wi-Fi publik, dan log out setelah selesai.\nAda aktivitas tidak wajar atau butuh bantuan? Hubungi (021) 29946046 atau tbs_sat@bni.co.id\nPastikan URL Anda\nhttps://bnidirect.bni.co.id\nMasuk\nHapus\nⓘ Disarankan untuk tidak menyimpan Kata Sandi anda\n Lupa Kata Sandi?\nDengan klik tombol Masuk, Anda setuju dengan Syarat & Ketentuan\nSecurity Certified by\ndigicert\n⚠ Peringatan Keamanan: Anda diwajibkan untuk mengganti kata sandi Anda secara berkala. Pastikan kata sandi baru terdiri dari kombinasi huruf besar, huruf kecil, angka, dan karakter khusus (minimal 8 karakter).\nKata Sandi Baru\nKonfirmasi Kata Sandi Baru\nNomor Telepon Genggam\n+62\nLanjutkan\nHapus\nℹ Masukkan Mobile Token Anda untuk mengonfirmasi perubahan kata sandi. Untuk mendapatkan Mobile Token atau Token Respon, buka aplikasi Mobile Token.\nMobile Token *\n⚠ Terlalu banyak percobaan, mohon tunggu dalam 30 detik.\n⏱ Sisa waktu: 00:30\nVerifikasi\nHapus\nⓘ Pastikan Mobile Token yang Anda masukkan benar\nDengan klik tombol Verifikasi, Anda setuju dengan Syarat & Ketentuan\nSecurity Certified by\ndigicert\nBantuan & Dukungan\n Panduan Singkat\n Formulir BNIdirect\nSERVICEACTIONTEAM\n📞 (021) 29946046\n✉ tbs_sat@bni.co.id\n💬 0858 5000 1946\n‹\n›\nKantor BNI\nGedung Graha BNI\nJl. Jenderal Sudirman Kav. 1\nJakarta Pusat 10220\nIndonesia\nHubungi Service Action Team\n📞 (021) 29946046\n✉ tbs_sat@bni.co.id\n💬 0858 5000 1946\nBantuan & Dukungan\n Syarat dan Ketentuan\nPT Bank Negara Indonesia (Persero) Tbk berizin dan diawasi oleh Otoritas Jasa Keuangan (OJK) & Bank Indonesia (BI) serta merupakan peserta penjamin Lembaga Pinjaman Simpanan (LPS). Maksimum nilai simpanan yang dijamin LPS per nasabah Rp. 2 Milyar, info lebih lanjut pada https://apps.lps.go.id/BankPesertaLPSRate\n© Hak Cipta 2023 PT. Bank Negara Indonesia (Persero), Tbk.\nNasabah BNI yang kami hormati. Dengan ini diinformasikan bahwa layanan SAT (Service Action Team) sebagai berikut, contact email : tbs_sat@bni.co.id • Hubungi kami di (021) 29946046 atau WhatsApp 0858 5000 1946",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "companyId",
+            "label": null,
+            "placeholder": "Masukkan ID Perusahaan Anda",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "userId",
+            "label": null,
+            "placeholder": "Masukkan ID Pengguna Anda",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "password",
+            "label": null,
+            "placeholder": "Masukkan Kata Sandi Anda",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "newPassword",
+            "label": "Kata Sandi Baru",
+            "placeholder": "Masukkan kata sandi baru",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "confirmPassword",
+            "label": "Konfirmasi Kata Sandi Baru",
+            "placeholder": "Konfirmasi kata sandi baru",
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "phoneNumber",
+            "label": "Nomor Telepon Genggam",
+            "placeholder": "8xx-xxxx-xxxx",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "mobileToken",
+            "label": "Mobile Token *",
+            "placeholder": "Masukkan Mobile Token",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "BNI Logo",
+      "Banner 1",
+      "Banner 2",
+      "Banner 3",
+      "BNI Logo"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}
