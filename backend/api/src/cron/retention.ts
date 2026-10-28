@@ -55,7 +55,7 @@ export interface RetentionOptions {
 }
 
 /**
- * Daily retention (R4 §5, R2 §6): scans + screenshots after 14 days, then the small tables.
+ * Daily retention (R4 §5, R2 §6): scans + screenshots + favicons after 14 days, then the small tables.
  * Verdicts stay (D-alief-14). The heartbeat is written first, so the anti-pause signal never
  * depends on retention succeeding. Each step runs on its own; the first error is rethrown at the
  * end so the Cron event shows the failure. Logs carry counts only.
@@ -126,21 +126,30 @@ async function deleteOldScans(
   let storageError: unknown;
   for (let i = 0; i < SHOT_CHUNKS; i++) {
     // No transaction is open across the Storage call. Oldest first (index scans_shot_created).
+    // Screenshot and/or favicon (PR-05): both are objects in Storage.
     const ids = (await sql<{ id: string }[]>`
-      select id from scans where created_at < now() - interval '14 days' and screenshot_path is not null
+      select id from scans where created_at < now() - interval '14 days'
+        and (screenshot_path is not null or favicon_path is not null)
       order by created_at, id limit ${chunk}`).map((r) => r.id);
     if (ids.length === 0) break;
 
     // Dedupe shares one object between scans of the same owner. Only paths no scan outside this
     // chunk points at are removed. No new scan can start sharing them: recentScreenshot reuses
     // only an original upload younger than 24 h, so an object lives 15 days at most.
+    // Favicons are reused the same way (recentFavicon), so the same rule applies to them.
     const paths = (
       await sql<{ path: string }[]>`
-        select distinct s.screenshot_path as path from scans s
+        select s.screenshot_path as path from scans s
         where s.id in ${sql(ids)} and s.screenshot_path is not null
           and not exists (
             select 1 from scans o
-            where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in ${sql(ids)})`
+            where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in ${sql(ids)})
+        union
+        select s.favicon_path from scans s
+        where s.id in ${sql(ids)} and s.favicon_path is not null
+          and not exists (
+            select 1 from scans o
+            where o.owner_id = s.owner_id and o.favicon_path = s.favicon_path and o.id not in ${sql(ids)})`
     ).map((r) => r.path);
 
     // Rows go on day 14 even while Storage is down or over budget (the privacy page promises it):
@@ -161,16 +170,16 @@ async function deleteOldScans(
   if (storageError) throw storageError;
 }
 
-/** Scans without a screenshot: no Storage call, so in large chunks (D-alief-B12). */
+/** Scans without a screenshot or favicon: no Storage call, so in large chunks (D-alief-B12). */
 async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: RetentionResult): Promise<void> {
   const chunk = opts.plainChunk ?? PLAIN_CHUNK;
   const lockTimeout = `${opts.lockTimeoutMs ?? 3000}ms`;
   for (let i = 0; i < PLAIN_CHUNKS; i++) {
     const ids = (await sql<{ id: string }[]>`
-      select id from scans where created_at < now() - interval '14 days' and screenshot_path is null
+      select id from scans where created_at < now() - interval '14 days' and screenshot_path is null and favicon_path is null
       order by created_at, id limit ${chunk}`).map((r) => r.id);
     if (ids.length === 0) return;
-    result.plainScans += await deleteScans(sql, ids, lockTimeout, sql`and screenshot_path is null`);
+    result.plainScans += await deleteScans(sql, ids, lockTimeout, sql`and screenshot_path is null and favicon_path is null`);
     if (ids.length < chunk) return;
   }
   result.backlog = true;

@@ -1,0 +1,90 @@
+{
+  "id": "24",
+  "label": "scam",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://bantuannbansos2026.blogspot.com/",
+  "finalUrl": "https://bantuannbansos2026.blogspot.com/?m=1",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 9584,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://bantuannbansos2026.blogspot.com/?m=1",
+    "domain": "blogspot.com",
+    "title": "CEK STATUS PENDAFTARAN",
+    "lang": "id",
+    "text": "CEK STATUS PENDAFTARAN\n🛡️\nMOHON TUNGGU SEBENTAR\nMenghubungi server Telegram...\nMASUKKAN DATA ANDA DENGAN BENAR\nMASUKKAN DATA ANDA DENGAN BENAR\nMASUKKAN DATA ANDA DENGAN BENAR\nPilih Provinsi\n-- Pilih Provinsi --\nAceh\nSumatera Utara\nSumatera Barat\nRiau\nKepulauan Riau\nJambi\nBengkulu\nSumatera Selatan\nKepulauan Bangka Belitung\nLampung\nBanten\nDKI Jakarta\nJawa Barat\nJawa Tengah\nDI Yogyakarta\nJawa Timur\nBali\nNusa Tenggara Barat\nNusa Tenggara Timur\nKalimantan Barat\nKalimantan Tengah\nKalimantan Selatan\nKalimantan Timur\nKalimantan Utara\nSulawesi Utara\nSulawesi Tengah\nSulawesi Selatan\nSulawesi Tenggara\nSulawesi Barat\nGorontalo\nMaluku\nMaluku Utara\nPapua Barat\nPapua\nPapua Selatan\nPapua Tengah\nPapua Pegunungan\nPapua Barat Daya\nMOHON PILIH PROVINSI ANDA\nNomor Telepon\n+62\nNOMOR TELEPON TIDAK VALID.\nSAYA SETUJU UNTUK MENERIMA PESAN TELEGRAM DARI ADMIN TERKAIT STATUS PENDAFTARAN.\nDaftar Sekarang",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "select",
+            "name": null,
+            "id": "provinsi",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "nomor",
+            "label": null,
+            "placeholder": "123456789",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "checkbox",
+            "name": null,
+            "id": "checkTerms",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "otp",
+            "label": "SAYA SETUJU UNTUK MENERIMA PESAN TELEGRAM DARI ADMIN TERKAIT STATUS PENDAFTARAN.",
+            "placeholder": "•••••",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "pw",
+            "label": null,
+            "placeholder": "KATA SANDI",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Banner"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

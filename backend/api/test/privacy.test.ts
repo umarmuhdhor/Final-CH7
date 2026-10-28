@@ -36,6 +36,19 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     expect(en).not.toContain("not stored by us. We keep no other browsing history");
   });
 
+  it("discloses the stored site icon: downloaded by our server, deleted with the page (PR-05)", async () => {
+    const en = await (await call("/privacy")).text();
+    for (const s of ["Site icons", "our server downloads it once", "never sees your IP address", "with their screenshot and site icon",
+      "screenshots, site icons, decisions", "Screenshot and icon links stop working"]) {
+      expect(en).toContain(s);
+    }
+    const id = await (await call("/privacy?lang=id")).text();
+    for (const s of ["Ikon situs", "server kami mengunduhnya sekali", "tidak pernah melihat alamat IP-mu", "bersama screenshot dan ikon situsnya",
+      "screenshot, ikon situs, keputusan", "Link screenshot dan ikon langsung berhenti bekerja"]) {
+      expect(id).toContain(s);
+    }
+  });
+
   it("Indonesian by ?lang=id or Accept-Language", async () => {
     for (const res of [await call("/privacy?lang=id"), await call("/privacy", { headers: { "accept-language": "id-ID,id;q=0.9" } })]) {
       const html = await res.text();

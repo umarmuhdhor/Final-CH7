@@ -1,0 +1,13 @@
+# Files copied unchanged from ios/ShooExtension/Resources/ by chrome/scripts/sync.sh.
+# Edit them in the Safari extension, then run the script. test/sync.test.mjs fails when a copy drifts.
+dom.js
+lists-client.js
+pipeline.js
+marks.js
+block.js
+snapshot.js
+content.js
+domain.js
+psl.js
+lists.js
+verdicts.js

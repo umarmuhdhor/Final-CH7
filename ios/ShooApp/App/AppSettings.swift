@@ -25,9 +25,12 @@ final class AppSettings {
         static let haptics = "settings.haptics"
         static let readAloud = "settings.readAloud"
 
+        static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
+
         static let all = [
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
+            dismissedHomeScanIds,
         ]
     }
 
@@ -94,6 +97,11 @@ final class AppSettings {
         didSet { defaults.set(readAloud, forKey: Keys.readAloud) }
     }
 
+    /// GD-01: scans whose Home card the guardian closed with X. Ids only, newest last, at most 50.
+    private(set) var dismissedHomeScanIds: [String] {
+        didSet { defaults.set(dismissedHomeScanIds, forKey: Keys.dismissedHomeScanIds) }
+    }
+
     init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
         self.defaults = defaults
         language = defaults.string(forKey: Keys.language).flatMap(AppLanguage.init(rawValue:))
@@ -115,6 +123,13 @@ final class AppSettings {
         reduceGlass = defaults.bool(forKey: Keys.reduceGlass)
         haptics = defaults.object(forKey: Keys.haptics) as? Bool ?? true
         readAloud = defaults.bool(forKey: Keys.readAloud)
+        dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
+    }
+
+    /// Hides a scan's Home card for good. Old ids drop off; a scan older than 24 h has no card anyway.
+    func dismissHomeScan(_ scanId: String) {
+        guard !dismissedHomeScanIds.contains(scanId) else { return }
+        dismissedHomeScanIds = Array((dismissedHomeScanIds + [scanId]).suffix(50))
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.
@@ -156,5 +171,6 @@ final class AppSettings {
         reduceGlass = false
         haptics = true
         readAloud = false
+        dismissedHomeScanIds = []
     }
 }

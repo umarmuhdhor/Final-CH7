@@ -1,0 +1,32 @@
+{
+  "id": "L08",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:00:18.000Z",
+  "originalUrl": "https://www.adakami.id/",
+  "finalUrl": "https://www.adakami.id/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 2876,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://www.adakami.id/",
+    "domain": "adakami.id",
+    "title": "Pinjaman Uang Daring Cepat, Aman & Berizin OJK | AdaKami",
+    "lang": "id",
+    "text": "Pinjaman Uang Daring Cepat, Aman & Berizin OJK | AdaKami\nDISCLAIMER\nHATI-HATI, TRANSAKSI INI BERISIKO TINGGI.\nANDA DAPAT SAJA MENGALAMI KERUGIAN ATAU KEHILANGAN UANG.\nWaspada Penipuan: Hati-hati pada website yang mengatasnamakan AdaKami!\nAdaKami tidak pernah meminta kamu mentransfer balik dana pinjaman tunai via email atau SMS dengan alasan apa pun.",
+    "forms": [
+      {
+        "action": null,
+        "fields": []
+      }
+    ],
+    "imageAlts": [
+      "disclaimer",
+      "AdaKami",
+      "TKB alert"
+    ],
+    "capturedAt": "2026-10-28T04:00:18.000Z"
+  },
+  "failReason": null
+}

@@ -1,0 +1,47 @@
+{
+  "id": "L03",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:08:00.000Z",
+  "originalUrl": "https://pendaftaran.undip.ac.id/",
+  "finalUrl": "https://pendaftaran.undip.ac.id/",
+  "status": "terbuka-kosong",
+  "cloaking": false,
+  "rdapAgeDays": 10715,
+  "fieldsFromJs": [
+    "email",
+    "password"
+  ],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://pendaftaran.undip.ac.id/",
+    "domain": "undip.ac.id",
+    "title": "",
+    "lang": "id",
+    "text": "Monggo ditenggo sekedap...\nukp. Jw. Bahasa jawa untuk \"silakan tunggu sebentar\".",
+    "forms": [
+      {
+        "action": "/login",
+        "fields": [
+          {
+            "type": "email",
+            "name": "email",
+            "id": null,
+            "label": "Email",
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": "password",
+            "id": null,
+            "label": "Password",
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T04:08:00.000Z"
+  }
+}

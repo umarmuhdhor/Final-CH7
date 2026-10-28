@@ -1,0 +1,47 @@
+{
+  "id": "06",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://sites.google.com/view/pengembalian-request/halaman-muka",
+  "finalUrl": "https://sites.google.com/view/pengembalian-request/halaman-muka",
+  "status": "terbuka-kosong",
+  "cloaking": false,
+  "rdapAgeDays": 10634,
+  "fieldsFromJs": [
+    "user_id",
+    "pin"
+  ],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://sites.google.com/view/pengembalian-request/halaman-muka",
+    "domain": "google.com",
+    "title": "Halaman Muka",
+    "lang": "en-US",
+    "text": "Halaman Muka\npengembalian-request\nSilakan masukkan USER ID Anda\nPlease enter your USER ID\nMasukkan USER ID\nSilakan masukkan PIN Internet Banking Anda\nPlease enter your Internet Banking PIN\nMasukkan PIN\nLOGIN\nFull Site",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": "user_id",
+            "id": "userId",
+            "label": "Silakan masukkan USER ID Anda",
+            "placeholder": "Masukkan USER ID",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": "pin",
+            "id": "pin",
+            "label": "Silakan masukkan PIN Internet Banking Anda",
+            "placeholder": "Masukkan PIN",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

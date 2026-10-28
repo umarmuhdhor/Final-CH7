@@ -71,6 +71,7 @@ describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; 
       scans_create: "scans.test.ts", screenshots_view: "screenshots.test.ts", verdicts_create: "verdicts.test.ts",
       verdicts_get: "verdicts.test.ts", auth_fail: "security-headers.test.ts", auth_fail_all: "security-headers.test.ts",
       devices_create_all: "security-review.test.ts", scans_create_all: "security-review.test.ts",
+      favicons_view: "favicons.test.ts", favicons_fetch: "favicons.test.ts", favicons_fetch_all: "favicons.test.ts",
     };
     expect(Object.values(limits).map((l) => l.bucket).sort()).toEqual(Object.keys(tested).sort());
     // Not in `limits`: join attempts (family.test.ts "too_many_attempts") and the push cap (push-notify.test.ts).

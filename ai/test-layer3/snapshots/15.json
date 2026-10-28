@@ -1,0 +1,82 @@
+{
+  "id": "15",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://apply.wozspace.site/info",
+  "finalUrl": "https://apply.wozspace.site/info",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 259,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://apply.wozspace.site/auth",
+    "https://apply.wozspace.site/completed"
+  ],
+  "snapshot": {
+    "url": "https://apply.wozspace.site/info",
+    "domain": "wozspace.site",
+    "title": "DAFTAR SEKARANG",
+    "lang": "en",
+    "text": "DAFTAR SEKARANG\nPendaftaran Dibuka!\nSegera daftarkan diri Anda sebelum kuota pendaftaran terpenuhi.\nDaftar Sekarang\nVerifikasi Akun\nKode verifikasi 5-digit telah dikirim ke Telegram:\nNomor Anda\nKode yang Anda masukkan tidak valid.\nTidak menerima kode? Kirim ulang\nCARA PENDAFTARAN:\nLengkapi data diri sesuai kartu identitas (KTP).\nPastikan Nama Lengkap dan Alamat sudah diisi dengan benar.\nWajib menggunakan nomor Telegram yang aktif untuk verifikasi.\nHAK CIPTA © 2026 SEMUA HAK DILINDUNGI.\n Syarat & Ketentuan\n•\n Kebijakan Privasi",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code1",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code2",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code3",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code4",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code5",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "hidden",
+            "name": "code",
+            "id": "fullcode",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Banner",
+      "Promo"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

@@ -2320,7 +2320,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktivitas terbaru"
+            "value" : "Aktivitas Terakhir"
           }
         }
       }
@@ -2596,7 +2596,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lihat semua"
+            "value" : "Lihat Semua"
           }
         }
       }
@@ -3817,6 +3817,246 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "© 2026 Shoo · Dibuat di Indonesia"
+          }
+        }
+      }
+    },
+    "You're protected!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda Terlindungi!"
+          }
+        }
+      }
+    },
+    "You're not protected yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda Belum Terlindungi"
+          }
+        }
+      }
+    },
+    "Disconnect?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnect?"
+          }
+        }
+      }
+    },
+    "Turn on now" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan sekarang"
+          }
+        }
+      }
+    },
+    "Shows how to switch Shoo off in Safari" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan cara mematikan Shoo di Safari"
+          }
+        }
+      }
+    },
+    "Good!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagus!"
+          }
+        }
+      }
+    },
+    "Under watch!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dalam Pengawasan!"
+          }
+        }
+      }
+    },
+    "Danger!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahaya!"
+          }
+        }
+      }
+    },
+    "Security status:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status Keamanan :"
+          }
+        }
+      }
+    },
+    "Threats blocked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ancaman diblokir"
+          }
+        }
+      }
+    },
+    "Security risks" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risiko keamanan"
+          }
+        }
+      }
+    },
+    "Suspicious hosts" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Host mencurigakan"
+          }
+        }
+      }
+    },
+    "Scans today" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan hari ini"
+          }
+        }
+      }
+    },
+    "Very high risk" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risiko sangat tinggi"
+          }
+        }
+      }
+    },
+    "High risk" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risiko tinggi"
+          }
+        }
+      }
+    },
+    "Hides this site from Home" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyembunyikan situs ini dari Beranda"
+          }
+        }
+      }
+    },
+    "Danger" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahaya"
+          }
+        }
+      }
+    },
+    "Safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aman"
+          }
+        }
+      }
+    },
+    "When Shoo warns about or blocks a site, you'll see it here." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat Shoo memperingatkan atau memblokir situs, situsnya muncul di sini."
+          }
+        }
+      }
+    },
+    "While Shoo is off, it can't warn you about scam sites, and your family won't hear about yours." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selama Shoo mati, Shoo tidak bisa memperingatkanmu soal situs penipuan, dan keluargamu tidak akan tahu situs berbahaya yang kamu buka."
+          }
+        }
+      }
+    },
+    "Tap Shoo and switch it off." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk Shoo lalu matikan."
+          }
+        }
+      }
+    },
+    "Switch Shoo off." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matikan Shoo."
+          }
+        }
+      }
+    },
+    "Switch off Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matikan Shoo"
+          }
+        }
+      }
+    },
+    "This site can't be marked yet. Open the details to see more." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs ini belum bisa ditandai. Buka detail untuk melihat lebih lanjut."
           }
         }
       }

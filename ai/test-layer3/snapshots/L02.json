@@ -1,0 +1,68 @@
+{
+  "id": "L02",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:08:00.000Z",
+  "originalUrl": "https://www.sekolah.mu/",
+  "finalUrl": "https://www.sekolah.mu/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 2626,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://www.sekolah.mu/",
+    "domain": "sekolah.mu",
+    "title": "Ekosistem Pembelajaran Berbasis Kompetensi | Sekolah.mu",
+    "lang": "id",
+    "text": "Ekosistem Pembelajaran Berbasis Kompetensi | Sekolah.mu\nTumbuh Bersama dalam Ekosistem Pembelajaran Berbasis Kompetensi\nNama Lengkap\nNama Institusi\nEmail Institusi\nNomor Whatsapp/Telepon\nPosisi/title Anda saat ini",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "namaLengkap",
+            "label": "Nama Lengkap",
+            "placeholder": "Masukkan nama lengkap",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "namaInstitusi",
+            "label": "Nama Institusi",
+            "placeholder": "Masukkan nama institusi",
+            "autocomplete": null
+          },
+          {
+            "type": "email",
+            "name": null,
+            "id": "emailInstitusi",
+            "label": "Email Institusi",
+            "placeholder": "Masukkan email institusi",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "noWhatsapp",
+            "label": "Nomor Whatsapp/Telepon",
+            "placeholder": "Masukkan nomor whatsapp/telepon",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "posisi",
+            "label": "Posisi/title Anda saat ini",
+            "placeholder": "Masukkan posisi/title Anda saat ini",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T04:08:00.000Z"
+  }
+}

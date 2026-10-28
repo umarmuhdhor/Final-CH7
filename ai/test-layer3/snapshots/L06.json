@@ -1,0 +1,23 @@
+{
+  "id": "L06",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:00:18.000Z",
+  "originalUrl": "https://www.loket.com/",
+  "finalUrl": "https://www.loket.com/",
+  "status": "terbuka-kosong",
+  "cloaking": false,
+  "rdapAgeDays": 8554,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://www.loket.com/",
+    "domain": "loket.com",
+    "title": "LOKET: Beli Tiket Event & Tiket Konser Mudah dan Terpercaya",
+    "lang": "id",
+    "text": "LOKET: Beli Tiket Event & Tiket Konser Mudah dan Terpercaya",
+    "forms": [],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T04:00:18.000Z"
+  },
+  "failReason": null
+}

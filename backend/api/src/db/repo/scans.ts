@@ -113,6 +113,55 @@ export async function allScreenshotsToday(sql: Q): Promise<number> {
   return row!.n;
 }
 
+export type FaviconSlot = { reuse: string } | { upload: string } | { gone: true } | { none: true };
+
+// Original favicon uploads only: the path names the scan's own id (like ORIGINAL for screenshots).
+const ORIGINAL_FAVICON = "starts_with(favicon_path, owner_id || '/' || id || '-favicon.')";
+
+/**
+ * PR-05, like reserveScreenshot: in one transaction locked per owner, point the scan at the owner's
+ * favicon of this domain from the last 24 h (reuse), else, when `path` is given, reserve it. The path
+ * is written and tombstoned before the upload (D-alief-B12); clearFaviconPath undoes it on failure.
+ * `path` null only looks for a reuse ({ none } when there is nothing to reuse).
+ */
+export async function reserveFavicon(
+  sql: Sql,
+  scan: { id: string; ownerId: string; domain: string },
+  path: string | null,
+): Promise<FaviconSlot> {
+  return sql.begin(async (tx): Promise<FaviconSlot> => {
+    await tx`select pg_advisory_xact_lock(4, hashtext(${scan.ownerId}))`;
+    const reuse = await recentFavicon(tx, scan.ownerId, scan.domain);
+    const chosen = reuse ?? path;
+    if (!chosen) return { none: true };
+    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
+    const updated = await tx`update scans set favicon_path = ${chosen} where id = ${scan.id} returning id`;
+    if (updated.length === 0) return { gone: true };
+    if (reuse) return { reuse };
+    await addTombstones(tx, [chosen]);
+    return { upload: chosen };
+  });
+}
+
+/** Clears the path on every scan of the owner that points at it: a reuse may have picked it up meanwhile. */
+export async function clearFaviconPath(sql: Sql, ownerId: string, path: string): Promise<void> {
+  await sql`update scans set favicon_path = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+}
+
+/**
+ * Reuse: a favicon of the same owner + domain from the last 24 h. Only the scan that uploaded it
+ * counts, so an object is gone at most 15 days after upload, as for screenshots.
+ */
+export async function recentFavicon(sql: Q, ownerId: string, domain: string): Promise<string | undefined> {
+  const [row] = await sql<{ path: string }[]>`
+    select favicon_path as path from scans
+    where owner_id = ${ownerId} and domain = ${domain} and favicon_path is not null
+      and ${sql.unsafe(ORIGINAL_FAVICON)}
+      and created_at > now() - interval '24 hours'
+    order by created_at desc limit 1`;
+  return row?.path;
+}
+
 export interface ScanRow {
   id: string;
   ownerId: string;
@@ -120,11 +169,12 @@ export interface ScanRow {
   url: string;
   domain: string;
   pageTitle: string | null;
-  faviconUrl: string | null;
   score: number;
   status: "warning" | "blocked";
   signals: unknown[];
   screenshotPath: string | null;
+  /** The stored favicon (PR-05). The scam site's own favicon_url is never read back. */
+  faviconPath: string | null;
   detectedAt: string;
   /** detected_at with microseconds, for the cursor. */
   cursorAt: string;
@@ -138,8 +188,8 @@ export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 function selectScans(sql: Sql) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
-           s.page_title as "pageTitle", s.favicon_url as "faviconUrl", s.score, s.status, s.signals,
-           s.screenshot_path as "screenshotPath",
+           s.page_title as "pageTitle", s.score, s.status, s.signals,
+           s.screenshot_path as "screenshotPath", s.favicon_path as "faviconPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
            case when s.status = 'blocked' and v.owner_id is not null then json_build_object(
@@ -189,6 +239,16 @@ export async function screenshotPathForViewer(sql: Sql, id: string, viewerId: st
   const [row] = await sql<{ path: string }[]>`
     select s.screenshot_path as path from scans s
     where s.id = ${id} and s.screenshot_path is not null
+      and (s.owner_id = ${viewerId}
+           or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
+  return row?.path;
+}
+
+/** The favicon path while the viewer owns the scan or is the owner's current guardian (as screenshots). */
+export async function faviconPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
+  const [row] = await sql<{ path: string }[]>`
+    select s.favicon_path as path from scans s
+    where s.id = ${id} and s.favicon_path is not null
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
   return row?.path;

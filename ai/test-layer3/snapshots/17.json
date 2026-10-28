@@ -1,0 +1,127 @@
+{
+  "id": "17",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://login-mybca-bisnis.ibcbank-aceh.com/",
+  "finalUrl": "https://login-mybca-bisnis.ibcbank-aceh.com/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 53,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://login-mybca-bisnis.ibcbank-aceh.com/",
+    "domain": "ibcbank-aceh.com",
+    "title": "myBCA Bisnis",
+    "lang": "id",
+    "text": "myBCA Bisnis\nm\ny\nB\nC\nA\nB\ni\ns\nn\ni\ns\nmyBCA Bisnis\nID\nOtorisasilebih praktisdengan\nAplikasi\nmyBCABisnis\nBukti Transfer\nEffective28 Feb 2024\nIDR1,000,000,000.00\nBukti Transfer BCA - H2H\nEffective28 Feb 2024\nIDR1,000,000,000.00\nBukti Transfer\nIDR1,000,000,000.00\n2 transaksi dipilih\nIDR 210,219,570.00\nReject\nApprove\n✦ BCA\nLakukan otorisasi di mana saja dan kapan saja\nGoogle Play\nApp Store\nHalo,\nSelamat Datang!\nBCA ID Bisnis\n?\nCorporate ID\nUser ID\nRespon KeyBCA\ni\nMasuk\n Buka Blokir User\nSMS OTP\n1 2 3\nMasukkan Kode OTP\nVia email/SMS atau Aplikasi\nPastikan nomor Anda yang terdaftar aktif dan memiliki pulsa yang cukup untuk menerima SMS OTP.\nKirim ulang kode OTP 00:58\nUbah Sandi\nBuat Sandi Baru\nSandi baru Anda harus terdiri dari minimal 8 karakter dan kombinasikan huruf serta angka.\nPass baru\nPass baru\nNomor Hp\nSimpan\nRespons KeyBCA\nMasukkan Respons KeyBCA\nMasukkan 6 atau 8 digit angka dari aplikasi KeyBCA Anda.\nSisa waktu:\n03:00\nPercobaan tersisa:\n3 / 3\nRespons KeyBCA\nKirim\nAkses Diblokir\nAnda telah salah memasukkan Respons KeyBCA sebanyak 3 kali. Silakan hubungi WhatsApp myBCA Bisnis untuk membuka akses.\n\nHubungi WhatsApp Mybisnis BCA\nMengalihkan ke halaman depan dalam 12 detik...",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "corpId",
+            "label": "Corporate ID",
+            "placeholder": "Masukkan Corporate ID",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "userId",
+            "label": "User ID",
+            "placeholder": "Masukkan User ID",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "keyBca",
+            "label": "Respon KeyBCA i",
+            "placeholder": "Masukkan Respon KeyBCA",
+            "autocomplete": "off"
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "otpInput",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": "one-time-code"
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "passBaru",
+            "label": "Pass baru",
+            "placeholder": "Masukkan pass baru",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "passBaru2",
+            "label": "Pass baru",
+            "placeholder": "Ulangi pass baru",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": null,
+            "id": "nomorHp",
+            "label": "Nomor Hp",
+            "placeholder": "Masukkan nomor HP",
+            "autocomplete": "off"
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "inputRespons",
+            "label": "Respons KeyBCA",
+            "placeholder": "Masukkan Respons KeyBCA",
+            "autocomplete": "off"
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

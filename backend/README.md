@@ -52,6 +52,7 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/scans`](API.md#get-scans) | app, Activity | My or my family's scans, newest first, paged |
 | GET | [`/scans/{id}`](API.md#get-scansid) | app, Detail | One scan with a 1-hour screenshot link |
 | GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link |
+| GET | [`/favicons/{scanId}`](API.md#get-faviconsscanidvexpsig) | app, Activity + Detail | The stored site icon behind a `faviconUrl` link (PR-05) |
 | POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
 | GET | [`/verdicts?domain=`](API.md#get-verdictsdomain) | extension | Poll for the Guardian's decision on a block screen |
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
@@ -72,7 +73,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt` |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
-| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path |
+| `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
 | `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
@@ -118,9 +119,9 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 
 `triggers.crons: ["0 19 * * *"]` (03:00 WITA) runs `src/cron/retention.ts`:
 - writes `ops_heartbeat('cron')` first (anti-pause signal, also written by `/healthz/db`);
-- scans older than 14 days without a screenshot in chunks of 2000, max 25 per run (no Storage call);
-- scans older than 14 days with a screenshot in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects, at most 10 Storage DELETEs of 100 paths per run (`backlog: true` in the log when rows are left). Paths over that budget, or left by a Storage failure, stay tombstoned; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
-- `storage_tombstones` (intent log of every screenshot object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run;
+- scans older than 14 days without a screenshot or favicon in chunks of 2000, max 25 per run (no Storage call);
+- scans older than 14 days with a screenshot and/or favicon in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects, at most 10 Storage DELETEs of 100 paths per run (`backlog: true` in the log when rows are left). Paths over that budget, or left by a Storage failure, stay tombstoned; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
+- `storage_tombstones` (intent log of every screenshot and favicon object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run;
 - `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
 
 `scheduled()` awaits the run, so a failed step fails the Cron event.
@@ -137,7 +138,7 @@ Check for a backlog (SQL editor): `select count(*) from scans where created_at <
 
 `db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); one block screen polling `GET /verdicts` all day ≈ 17k `rate_limit_hits` rows ≈ 4 MB (kept 1 day).
 - DB 500 MB: ≈ 300k scans alive (14 days) ≈ 20k scans/day.
-- Storage 1 GB: screenshots ≤ 150 KB, ≤ 50 per device per day, kept 14 days. Move to R2 (`ScreenshotStore`) when Storage > 700 MB.
+- Storage 1 GB: screenshots ≤ 150 KB, ≤ 50 per device per day, kept 14 days; favicons ≤ 64 KB, ≤ 30 downloads per device and 200 in total per day (≈ 190 MB worst case). Move to R2 (`ScreenshotStore`) when Storage > 700 MB.
 - Egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB. Move to R2 when egress > 3.5 GB.
 - Check (SQL editor): `select pg_size_pretty(pg_database_size(current_database()));` and Storage usage in the Supabase dashboard (Settings → Usage).
 

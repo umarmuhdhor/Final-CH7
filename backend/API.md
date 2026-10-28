@@ -15,6 +15,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}`
+- [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /terms`, `GET /get`
@@ -30,7 +31,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 ### Auth
 
 There are no accounts or passwords. `POST /devices` creates a device and returns a **device token**
-once. Every other call (except health, web pages and screenshot links) sends it:
+once. Every other call (except health, web pages, screenshot and favicon links) sends it:
 
 ```http
 Authorization: Bearer shoo_<43 characters>
@@ -250,10 +251,10 @@ saves it in the Keychain and the App Group, then sends its APNs token again.
 everything about it right away.
 
 - **Auth:** Bearer, either mode
-- **Deletes:** family links on either side, family codes, join attempts, all scans and screenshots,
+- **Deletes:** family links on either side, family codes, join attempts, all scans, screenshots and favicons,
   verdicts on its scans or made by it, push log.
 - **Response 200:** `{ "ok": true }`
-- After this the token returns `401` and every screenshot link returns `404`. Screenshot files are
+- After this the token returns `401` and every screenshot and favicon link returns `404`. The files are
   removed from storage just after the response; if storage cannot be reached, the daily cron retries.
 - The app then clears the Keychain token and the App Group keys and starts onboarding again.
 
@@ -431,7 +432,7 @@ page. One page is one scan, one Activity item and (for a Protected device) one p
 | `url` | string | yes | http(s) URL, ≤ 2048 characters |
 | `domain` | string | yes | Registrable domain; the URL's host must be this domain or a subdomain of it |
 | `pageTitle` | string \| null | no | Trimmed and cut to 300 characters |
-| `faviconUrl` | string \| null | no | Kept only if it is an http(s) URL ≤ 2048 characters |
+| `faviconUrl` | string \| null | no | The site's icon. Kept only if it is an http(s) URL ≤ 2048 characters; the server downloads it (see Favicon rules) |
 | `score` | integer | yes | 30–100 |
 | `status` | `"warning"` \| `"blocked"` | yes | Must be `blocked` when score ≥ 80, else `warning` |
 | `signals` | array | yes | At most 20 items, see below |
@@ -478,6 +479,16 @@ is still stored and the answer is still 201. It is dropped when it is not JPEG/P
 1280 px on its longest side, or the device already sent 50 in the last 24 h. A second scan of the same
 domain within 24 h reuses the earlier screenshot.
 
+**Favicon rules.** When `faviconUrl` is set, the server downloads the icon once, after the response, and
+stores it like the screenshot; the app never contacts the scam site (SECURITY P9). A favicon problem
+never fails or delays the scan. The download only goes to public addresses (the name is resolved first;
+no private, loopback or link-local hosts), http(s) on the default port, at most 2 redirects (each hop
+checked again), 3 s in total, at most 64 KB and 512 px per side. Only PNG, ICO, JPEG, GIF and WebP are
+kept, checked by `Content-Type` and by the file's first bytes; SVG and anything else is dropped. No cookies and no
+`Referer` are sent. A scan of the same domain within 24 h reuses the earlier favicon without a new
+download. At most 30 downloads per device and 200 for everyone per 24 h (failed downloads count);
+past that the scan is stored without a favicon.
+
 **Push.** When a Protected device sends a scan, its Guardian gets a push right after the response
 (see [Push notification](#push-notification)). A push failure never fails the scan.
 
@@ -510,6 +521,8 @@ GET /scans?owner=family&status=blocked&limit=20
 
 - Newest first. `nextCursor` is `null` on the last page.
 - Items are full `ScanResult`s, but `screenshotUrl` is always `null` in lists; open the scan to get it.
+- `faviconUrl` is a link made for you to the stored icon (see [Favicons](#favicons)), valid for 1 hour,
+  or `null` when no icon was stored. It is never the site's own favicon URL.
 - `verdict` is the Guardian's decision for that owner and domain, or `null`.
 
 | Error | When |
@@ -532,7 +545,7 @@ GET /scans?owner=family&status=blocked&limit=20
   "url": "https://bca-verifikasi.site/login?ref=wa",
   "domain": "bca-verifikasi.site",
   "pageTitle": "KlikBCA - Verifikasi Akun",
-  "faviconUrl": null,
+  "faviconUrl": "https://shoo-api.afindo-mi01.workers.dev/favicons/6f1c…?v=…&exp=…&sig=…",
   "score": 92,
   "status": "blocked",
   "signals": [ { "id": "new_domain", "layer": 2, "weight": 30, "label": { "en": "…", "id": "…" }, "labelSimple": { "en": "…", "id": "…" } } ],
@@ -546,6 +559,8 @@ GET /scans?owner=family&status=blocked&limit=20
 
 - `pageTitle` is left out when there is none.
 - `screenshotUrl` is a link made for you, valid for 1 hour, or `null` when there is no screenshot.
+- `faviconUrl` is the same kind of link to the stored icon, or `null` when there is none. The site's
+  own favicon URL is never returned (PR-05).
 - **Errors:** `404 not_found` when the scan does not exist, was deleted, or is not yours to see.
 
 ## Screenshots
@@ -562,6 +577,27 @@ GET /scans?owner=family&status=blocked&limit=20
   disconnects or is removed, or the 14-day retention runs, the same link returns `404` at once.
 - **Errors:** `404 not_found` for an expired, altered or no-longer-allowed link. An expired link also
   gives 404, so re-fetch `GET /scans/{id}` once for a fresh link before showing "deleted".
+
+## Favicons
+
+### `GET /favicons/{scanId}?v=&exp=&sig=`
+
+**For:** the site icon in Activity rows and on Detail. This is the `faviconUrl` from `GET /scans` or
+`GET /scans/{id}`; load it as is (e.g. `AsyncImage`), **without** an `Authorization` header. Works
+exactly like a screenshot link.
+
+- **Auth:** the signature in the link. The link names the viewer and expires after 1 hour.
+- **Rate limit:** 600 per minute per viewer (a list page can show 50 icons)
+- **Response 200:** the image (`image/png`, `image/x-icon`, `image/jpeg`, `image/gif` or `image/webp`;
+  at most 64 KB and 512 px per side; never a redirect),
+  `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`,
+  `Content-Security-Policy: default-src 'none'; sandbox`, `Referrer-Policy: no-referrer`.
+- Access is re-checked in the database on every request: the owner, or the owner's current Guardian.
+  After the scan is deleted, the member disconnects or is removed, or the 14-day retention runs, the
+  same link returns `404` at once. Disconnect only hides the icon from the Guardian; the owner keeps it.
+- Stored icons are deleted with their scan: after 14 days, or right away on `DELETE /devices/me`.
+- **Errors:** `404 not_found` for an expired, altered or no-longer-allowed link. On 404 show a
+  placeholder icon; re-fetch the list or scan for a fresh link.
 
 ## Verdicts
 

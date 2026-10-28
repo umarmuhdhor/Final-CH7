@@ -17,7 +17,7 @@
     "use strict";
 
     const DATA = {"version":1,"suffixes":["co.id","go.id","or.id","ac.id","web.id","sch.id","my.id","biz.id","desa.id","mil.id","net.id","co.uk","org.uk","com.au","co.jp","com.sg","com.my","co.in"],"cheapTlds":["xyz","site","click","top","icu","buzz","cfd","sbs","tk","ml","ga","cf","gq","link","vip","rest","monster","quest","cyou","bond","work","fun","online"],"keywords":["verifikasi","verify","verification","login","signin","masuk","promo","undian","hadiah","klaim","claim","bansos","bantuan","cek","update","perbarui","secure","security","official","resmi","akun","account","blokir","unlock","reset","otp","kyc","refund","voucher","bonus","gratis","support","cs"],"brands":[{"id":"bca","name":"BCA","names":["bca","klikbca","mybca"],"commonNames":[],"domains":["bca.co.id","klikbca.com"]},{"id":"bri","name":"BRI","names":["bri","brimo"],"commonNames":[],"domains":["bri.co.id"]},{"id":"mandiri","name":"Bank Mandiri","names":["mandiri","bankmandiri","livinmandiri"],"commonNames":["mandiri"],"domains":["bankmandiri.co.id"]},{"id":"bni","name":"BNI","names":["bni"],"commonNames":[],"domains":["bni.co.id"]},{"id":"bsi","name":"BSI","names":["bsi","bankbsi"],"commonNames":[],"domains":["bankbsi.co.id"]},{"id":"dana","name":"DANA","names":["dana"],"commonNames":["dana"],"domains":["dana.id"]},{"id":"ovo","name":"OVO","names":["ovo"],"commonNames":[],"domains":["ovo.id"]},{"id":"gopay","name":"GoPay","names":["gopay","gojek"],"commonNames":[],"domains":["gopay.co.id","gojek.com"]},{"id":"shopee","name":"Shopee","names":["shopee","shopeepay","shopeefood"],"commonNames":[],"domains":["shopee.co.id","shopee.com"]},{"id":"tokopedia","name":"Tokopedia","names":["tokopedia","tokped"],"commonNames":[],"domains":["tokopedia.com"]},{"id":"lazada","name":"Lazada","names":["lazada"],"commonNames":[],"domains":["lazada.co.id","lazada.com"]},{"id":"bukalapak","name":"Bukalapak","names":["bukalapak"],"commonNames":[],"domains":["bukalapak.com"]},{"id":"posindonesia","name":"Pos Indonesia","names":["posindonesia","postindonesia"],"commonNames":[],"domains":["posindonesia.co.id"]},{"id":"jne","name":"JNE","names":["jne"],"commonNames":[],"domains":["jne.co.id"]},{"id":"jnt","name":"J&T Express","names":["jnt","jntexpress","jtexpress"],"commonNames":[],"domains":["jet.co.id"]},{"id":"kemensos","name":"Kemensos","names":["kemensos"],"commonNames":[],"domains":["kemensos.go.id"]},{"id":"djp","name":"DJP (Pajak)","names":["djp"],"commonNames":[],"domains":["pajak.go.id"]},{"id":"bpjs","name":"BPJS","names":["bpjs","bpjskesehatan","bpjsketenagakerjaan"],"commonNames":[],"domains":["bpjs-kesehatan.go.id","bpjsketenagakerjaan.go.id"]},{"id":"apple","name":"Apple","names":["apple","iphone","icloud","appleid","itunes"],"commonNames":["apple"],"domains":["apple.com","icloud.com"]},{"id":"google","name":"Google","names":["google","gmail"],"commonNames":[],"domains":["google.com","google.co.id","gmail.com","youtube.com"]},{"id":"microsoft","name":"Microsoft","names":["microsoft","outlook","office365"],"commonNames":[],"domains":["microsoft.com","live.com","office.com","outlook.com","microsoftonline.com"]},{"id":"meta","name":"Meta","names":["facebook","instagram","whatsapp","meta"],"commonNames":["meta"],"domains":["facebook.com","instagram.com","whatsapp.com","fb.com","meta.com"]},{"id":"netflix","name":"Netflix","names":["netflix"],"commonNames":[],"domains":["netflix.com"]},{"id":"paypal","name":"PayPal","names":["paypal"],"commonNames":[],"domains":["paypal.com"]},{"id":"amazon","name":"Amazon","names":["amazon"],"commonNames":[],"domains":["amazon.com"]}]};
-    const LINK = {"version":1,"rareTlds":["info","pw","cc","ws","su"],"freeHosts":["blogspot.com","blogspot.co.id","github.io","netlify.app","pages.dev","vercel.app","web.app","firebaseapp.com","weebly.com","wixsite.com","wordpress.com","herokuapp.com","glitch.me","workers.dev","cloudfront.net","r2.dev","webflow.io","000webhostapp.com","sites.google.com","s3.amazonaws.com"],"baitWords":["gratis","bantuan","bansos","kuota","hadiah","undian","klaim","promo","pulsa","saldo","subsidi","pencairan","verifikasi","resmi","official","bonus","giveaway","reward","voucher","cashback","kurir","paket","tracking","lowongan","pinjaman","pinjol","kripto","prakerja","login","update","claim","free"],"carriers":["dhl","fedex","sicepat","anteraja","ninjaxpress","wahana","tiki"]};
+    const LINK = {"version":1,"rareTlds":["info","pw","cc","ws","su"],"freeHosts":["blogspot.com","blogspot.co.id","github.io","netlify.app","pages.dev","vercel.app","web.app","firebaseapp.com","weebly.com","wixsite.com","wordpress.com","herokuapp.com","glitch.me","workers.dev","cloudfront.net","r2.dev","webflow.io","000webhostapp.com","sites.google.com","s3.amazonaws.com","edgeone.dev"],"baitWords":["gratis","bantuan","bansos","kuota","hadiah","undian","klaim","promo","pulsa","saldo","subsidi","pencairan","verifikasi","resmi","official","bonus","giveaway","reward","voucher","cashback","kurir","paket","tracking","lowongan","pinjaman","pinjol","kripto","prakerja","login","update","claim","free","pengembalian","pembatalan","kode"],"pathBait":["code","activate","kode","pengembalian","pembatalan"],"carriers":["dhl","fedex","sicepat","anteraja","ninjaxpress","wahana","tiki"]};
 
     const WEIGHT = { lookalike: 25, nameOnly: 10, brandKeyword: 14, cheapTldWithBrand: 15, cheapTldAlone: 5 };
 
@@ -51,6 +51,7 @@
             rareTlds: new Set(LINK.rareTlds),
             freeHosts: LINK.freeHosts,
             linkBait: LINK.baitWords,
+            pathBait: new Set(LINK.pathBait),
             carriers: LINK.carriers,
         };
     }
@@ -185,6 +186,21 @@
         return null;
     }
 
+    /**
+     * "bybri" / "kodepembatalanbybni": a brand named after "by", "via" or "from" ("code from BNI"). The connector is the keyword.
+     * Brands that are also ordinary words (dana, apple, mandiri) are skipped: "hobbydana" is a real word.
+     */
+    const CONNECTORS = ["by", "via", "from"];
+    function matchByBrand(token) {
+        for (const [name, entry] of index.names) {
+            if (entry.common) continue;
+            for (const c of CONNECTORS) {
+                if (token.endsWith(c + name)) return { brand: entry.brand, name, common: false, kind: "exact", how: "connector", keyword: c };
+            }
+        }
+        return null;
+    }
+
     // ---------- host handling ----------
     function hostOf(snapshot) {
         try {
@@ -241,6 +257,8 @@
         punycode: { en: "disguised letters", id: "huruf menyamar" },
         many_labels: { en: "too many dots", id: "terlalu banyak titik" },
         many_hyphens: { en: "too many hyphens", id: "terlalu banyak tanda hubung" },
+        word_digit_subdomain: { en: "app-style name with a number", id: "nama bergaya aplikasi dengan angka" },
+        hyphen_registrable: { en: "hyphen in the site name", id: "tanda hubung di nama situs" },
         digit_label: { en: "name made of digits", id: "nama penuh angka" },
         rare_tld: { en: "rare ending", id: "akhiran jarang" },
         odd_port: { en: "unusual port", id: "port tak lazim" },
@@ -318,9 +336,16 @@
             if (labels.some((l) => l.startsWith("xn--"))) add("host", 5, "punycode");
             if (name.length >= 4) add("host", 8, "many_labels");
             if (name.some((l) => (l.match(/-/g) || []).length >= 3)) add("host", 8, "many_hyphens");
-            if (name.some((l) => l.length >= 8 && (l.match(/\d/g) || []).length / l.length >= 0.4)) add("host", 8, "digit_label");
+            // Judged per hyphen piece, so "storee-dp9hsk1cxr2y" and "1238bll" count: 3+ digits mixed into a 6+ letter-and-digit piece.
+            // CloudFront distribution ids (d111abcdef.cloudfront.net) look like that on every real site: skipped there.
+            if (!host.endsWith(".cloudfront.net") && name.some((l) => l.split("-").some((p) => p.length >= 6 && /[a-z]/.test(p) && (p.match(/\d/g) || []).length >= 3 && (p.match(/\d/g) || []).length / p.length >= 0.25))) add("host", 8, "digit_label");
             // brands.json cheapTlds are already scored by the `cheap_tld` signal (part A); only the extra rare ones count here.
             if (suffixLen === 1 && index.rareTlds.has(tld) && !index.cheap.has(tld)) add("tld", 6, "rare_tld");
+            // "regs-apps14.regnows-dfg.com": a word-and-number subdomain over a hyphenated name. Each is weak alone (under the emit floor).
+            if (name.slice(0, -1).some((l) => /^[a-z]+(-[a-z]+)+\d{1,3}$/.test(l))) add("host", 6, "word_digit_subdomain");
+            // A hyphen next to a brand or bait word (bca-verifikasi) is already scored by brand_plus_keyword: not counted twice.
+            const regLabel = name[name.length - 1];
+            if (regLabel.includes("-") && !regLabel.split("-").some((p) => index.keywords.has(p) || index.names.has(p) || matchByBrand(p))) add("host", 4, "hyphen_registrable");
         }
         if (u.port && u.port !== "80" && u.port !== "443") add("port", 10, "odd_port");
 
@@ -330,7 +355,7 @@
         if (stem.length >= 20 && /^[a-z0-9_-]+$/i.test(stem) && entropy(stem) >= 3.3 && /\d/.test(stem)) add("path", 15, "random_name");
         if (FILE_EXT.test(last)) add("path-ext", 5, "file_ext");
         if (FILE_EXT.test(last) && u.pathname.endsWith("/")) add("path-slash", 8, "slash_after_file");
-        if (segs.some((s) => s.split(/[^a-z]+/i).some((w) => index.keywords.has(w.toLowerCase())))) add("path-bait", 6, "path_bait");
+        if (segs.some((s) => s.split(/[^a-z]+/i).some((w) => { const lw = w.toLowerCase(); return index.keywords.has(lw) || index.pathBait.has(lw); }))) add("path-bait", 6, "path_bait");
 
         const q = [...u.searchParams];
         if (q.some(([k, v]) => /^(url|redirect|redir|next|return|goto|link|u)$/i.test(k) && /^(https?:)?\/\//i.test(v))) add("query", 12, "redirect_param");
@@ -424,7 +449,7 @@
         let keyword = parts.find((p) => index.keywords.has(p)) || null;
         if (!keyword) {
             for (const p of parts) {
-                const glued = matchGlued(p);
+                const glued = matchByBrand(p) || matchGlued(p);
                 if (glued) {
                     add(glued);
                     keyword = glued.keyword;

@@ -51,20 +51,27 @@
     const send = (message) => browser.runtime.sendMessage(message);
 
     document.documentElement.lang = lang;
-    const keys = { title: "block_title", score: "block_score", why: "block_why", autoOpen: "block_auto_open" };
+    const keys = { title: "block_title", autoOpen: "block_auto_open", back: "block_back" };
     for (const node of document.querySelectorAll("[data-text]")) node.textContent = t(keys[node.dataset.text]);
     document.title = t("block_title");
+
+    // Back to the page before this one (block.js replaced the scam page, so Back skips it).
+    $(".back").addEventListener("click", () => {
+        if (history.length > 1) history.back();
+        else location.replace("about:blank");
+    });
 
     const payload = globalThis.ShooBlock.decode(location.hash);
     $(".screen").hidden = false;
     if (!payload) {
         // Fragment missing or edited: still blocked, just without details. Never reopen anything.
-        for (const selector of [".score", ".link", ".reasons-box"]) $(selector).hidden = true;
+        for (const selector of [".ring", ".link", ".reasons"]) $(selector).hidden = true;
         return;
     }
 
+    $(".ring").style.setProperty("--p", String(payload.score));
     $(".score-value").textContent = `${payload.score}%`;
-    $(".link").textContent = payload.url;
+    $(".link").textContent = payload.domain || payload.url;
 
     let mode = null;
     async function start() {
@@ -77,9 +84,9 @@
         const view = viewFor(profile, payload, lang);
         mode = profile?.onboarded ? profile.mode : null;
 
-        const list = $(".reasons");
-        list.replaceChildren(...view.reasons.map((text) => Object.assign(document.createElement("li"), { textContent: text })));
-        $(".reasons-box").hidden = view.reasons.length === 0;
+        const reasons = $(".reasons");
+        reasons.replaceChildren(...view.reasons.map((text) => Object.assign(document.createElement("span"), { textContent: text })));
+        reasons.hidden = view.reasons.length === 0;
 
         if (view.showWaiting) {
             $(".waiting").hidden = false;
