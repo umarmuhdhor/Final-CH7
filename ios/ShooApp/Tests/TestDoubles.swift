@@ -83,3 +83,32 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
 }
+
+/// Wraps a repository and counts `scans` calls (auto-loaded next pages).
+final class CountingScansRepository: ShooRepository, @unchecked Sendable {
+    private let base: any ShooRepository
+    private(set) var scanCalls = 0
+
+    init(base: any ShooRepository) {
+        self.base = base
+    }
+
+    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
+        scanCalls += 1
+        return try await base.scans(owner: owner, status: status, cursor: cursor)
+    }
+
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
+    }
+    func me() async throws -> DeviceProfile { try await base.me() }
+    func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
+    func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
+    func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
+    func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
+    func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func deleteMe() async throws { try await base.deleteMe() }
+    func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
+    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
+}

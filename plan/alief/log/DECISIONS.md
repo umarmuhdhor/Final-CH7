@@ -284,7 +284,7 @@ Format:
 - Alasan: fase 01 langkah 5 (BELUM DIVERIFIKASI → sekarang terbukti oleh `LocalizationTests` + `SmokeUITests`). Bahasa app terpisah dari bahasa iPhone (PF-01); extension tetap mengikuti bahasa iPhone.
 - File: `Support/L10n.swift`, `Support/AppLanguage.swift`, `App/RootView.swift`, `Tests/LocalizationTests.swift`, `UITests/SmokeUITests.swift`.
 
-## D-alief-A03 · 22 Okt 2026 · app (fase 01) · `SiteIcon` = monogram, favicon tidak diunduh
+## D-alief-A03 · 22 Okt 2026 · app (fase 01) · `SiteIcon` = monogram, favicon tidak diunduh — **diganti D-alief-A41 (28 Okt 2026)**
 
 - Keputusan: `SiteIcon` menampilkan huruf pertama domain; `faviconUrl` dari kontrak tidak dimuat.
 - Alasan: memuat favicon berarti app menghubungi host yang dicurigai penipuan (bocor IP + "pernah dibuka" ke pelaku) dan menyimpan gambarnya di cache disk. Opsi paling privat (SECURITY §3, sejalan P9). Fase 01 langkah 7 mengizinkan "favicon atau huruf awal domain".
@@ -685,3 +685,16 @@ Format:
 - Alasan: push yang sudah tampil memuat nama anggota + skor (P10); setelah datanya dihapus, lock screen / Notification Center tidak boleh tetap menampilkannya (P13). iOS tidak bisa memilih notifikasi per orang tanpa menyimpan pemetaan id → orang, jadi semuanya dihapus (paling menjaga privasi, kerugian kecil: notifikasi anggota lain ikut hilang, riwayatnya tetap di Activity).
 - Alternatif yang ditolak: menyimpan peta `scanId` → anggota untuk menghapus selektif (penyimpanan tambahan); membiarkan notifikasi lama (melanggar P13).
 - File: `Support/NotificationRouter.swift` (`DeliveredPushes`), `Features/Profile/ProfileView.swift`, `Features/Pairing/FamilyCodeModel.swift`, `App/AppEnvironment.swift`.
+
+## D-alief-A41 · 28 Okt 2026 · app (PR-05) · Favicon hanya lewat link Worker kita (mengganti D-alief-A03)
+
+- Keputusan: `SiteIcon` memuat `faviconUrl` hanya bila link itu link bertanda tangan ke Worker kita sendiri: HTTPS, host = host API, path `/favicons/` (HTTP hanya `localhost` di Debug). Backend mengunduh favicon **sekali** saat scan masuk, menyimpannya bersama scan, dan menghapusnya bersama scan (retensi 14 hari, `DELETE /devices/me`, putus Guardian); `GET /scans` mengirim link bertanda tangan berlaku 1 jam, `Cache-Control: no-store` (branch backend `feat/PR-05-favicon-proxy`). App memakai sesi `URLSession` ephemeral yang sama dengan screenshot: tanpa `URLCache`, tanpa cookie, tanpa header `Authorization`, redirect ditolak, maks 64 KB dan 512 px per sisi, gambar hanya di memori selama baris tampil. Link `null`, gagal, atau masih memuat → lingkaran abu-abu kosong persis Figma (tanpa monogram).
+- Alasan: Figma Activity menampilkan favicon. Alasan D-alief-A03 (app menghubungi host penipu → bocor IP + "pernah dibuka", cache gambar di disk) tidak berlaku lagi: app tidak pernah menghubungi situs yang dipindai, hanya Worker kita, dan tidak ada yang ditulis ke disk (SECURITY §3 P9, P13).
+- Alternatif yang ditolak: memuat `faviconUrl` asli dari situs (bocor ke pelaku); cache favicon di memori lintas baris (tetap ada setelah data dihapus sampai app ditutup; favicon kecil, unduh ulang murah).
+- File: `Components/SiteIcon.swift`, `Features/Detail/ScreenshotView.swift` (`RedirectRefuser` dipakai bersama), `Tests/FaviconLoaderTests.swift`.
+
+## D-alief-A42 · 28 Okt 2026 · app (PR-05, GD-05) · Activity sesuai Figma
+
+- Keputusan: Activity digambar ulang dari Figma (section `413:1778`): judul "Aktivitas" + segmen "Semua / Waspada / Diblokir" (Family mode: "… / Bahaya", tetap `status=blocked`), baris dikelompokkan per hari ("Hari ini" / "Hari Ini" di Family mode, "25 Oktober", tahun ditambahkan untuk tahun lalu), kartu putih r 20 dengan favicon, domain, jam + singkatan zona waktu ("10.42 WIB"), badge Figma kanan atas (Waspada oranye, Diblokir merah; "Verified scam" merah, "Marked safe" hijau dengan gaya yang sama). Family mode: `owner=family`, baris dari device Guardian sendiri disaring di app (id dari sesi, atau `me()` sekali di mock), halaman yang kosong setelah disaring langsung disambung ke halaman berikutnya; pemilih orang di kanan atas = "Semua" (avatar bertumpuk) + tiap anggota, pilihan tunggal, tanpa centang. Chip "You", catatan "Only your own history?" dan baris link dihapus. Bar navigasi disembunyikan di layar ini (judul sendiri, sesuai Figma), jadi tombol Family dan Profile tidak tampil di tab Activity; keduanya tetap di tab Shield. App terang saja seperti PF-01 (`RootView .preferredColorScheme(.light)`), mode gelap = backlog.
+- Persis Figma (permintaan Alief di PR #168): domain satu baris, hanya host (tanpa path), dipotong "…" di ujung bila panjang; semua badge (termasuk "Verified scam" / "Marked safe") di kanan atas; teks Waspada #D67D00; baris menu pemilih 40 pt; avatar anggota = inisial di atas gradasi Figma (3 gradasi, dipilih dari nomor avatar id) di baris, tombol, dan menu; "Nama | jam" satu baris, nama dipotong lebih dulu, jam hanya bila badge sangat panjang.
+- File: `Features/Activity/{ActivityModel,ActivityView,ActivityStyle}.swift`, `Support/Formatters.swift`, `Features/Main/MainTabView.swift`, `App/RootView.swift`, `Tests/{ActivityModelTests,FormatterTests}.swift`, `UITests/GuardianUITests.swift`.

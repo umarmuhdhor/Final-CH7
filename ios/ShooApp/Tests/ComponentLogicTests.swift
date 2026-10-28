@@ -40,9 +40,4 @@ struct ComponentLogicTests {
     func scoreRingGrowsUpToItsCap(textScale: CGFloat, maxScale: CGFloat, expected: CGFloat) {
         #expect(abs(ScoreRing.side(size: 160, textScale: textScale, maxScale: maxScale) - expected) < 0.001)
     }
-
-    @Test(arguments: [("bca-verifikasi.site", "B"), ("www.p0stindonesia.com", "P"), ("123.example", "E"), ("", "?")])
-    func siteMonogram(domain: String, expected: String) {
-        #expect(SiteIcon.monogram(for: domain) == expected)
-    }
 }

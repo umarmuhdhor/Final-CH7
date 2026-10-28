@@ -70,16 +70,31 @@ final class GuardianUITests: XCTestCase {
     @MainActor
     func testFamilyActivityFiltersByPerson() {
         let app = launch(familyMode: true, extra: ["-debug.tab", "activity"])
-        let mom = app.buttons["person.dev_mom"]
-        XCTAssertTrue(mom.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.buttons["person.everyone"].isSelected)
-        mom.tap()
-        XCTAssertTrue(mom.isSelected)
+        let picker = app.buttons["activity.personPicker"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 10), app.debugDescription)
+        // Everyone: members only, the guardian's own rows are left out (GD-05).
         let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'activity.row.'"))
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        for index in 0..<rows.count {
+            let label = rows.element(boundBy: index).label
+            XCTAssertTrue(label.contains("Mom") || label.contains("Dad"), label)
+        }
+        XCTAssertTrue(app.buttons["filter.blocked"].label.contains("Danger"))
+
+        picker.tap()
+        XCTAssertTrue(app.buttons["person.everyone"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["person.everyone"].isSelected)
+        app.buttons["person.dev_mom"].tap()
+        XCTAssertEqual(picker.value as? String, "Mom")
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
         for index in 0..<rows.count {
             XCTAssertTrue(rows.element(boundBy: index).label.contains("Mom"), rows.element(boundBy: index).debugDescription)
         }
+
+        // Back to everyone from the menu.
+        picker.tap()
+        app.buttons["person.everyone"].tap()
+        XCTAssertEqual(picker.value as? String, "Everyone")
     }
 
     @MainActor
@@ -113,7 +128,8 @@ final class GuardianUITests: XCTestCase {
     func testFamilyModeOffShowsOwnActivityOnly() {
         let app = launch(familyMode: false, extra: ["-debug.tab", "activity"])
         XCTAssertTrue(app.buttons["filter.all"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertFalse(app.buttons["person.everyone"].exists)
+        XCTAssertFalse(app.buttons["activity.personPicker"].exists)
+        XCTAssertTrue(app.buttons["filter.blocked"].label.contains("Blocked"))
         let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'activity.row.'"))
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertEqual(rows.count, 1)

@@ -26,4 +26,23 @@ struct FormatterTests {
         #expect(indonesian.contains("Okt"))
         #expect(english.contains("2026") && indonesian.contains("2026"))
     }
+
+    @Test func activityTimeHasTheTimeZoneAbbreviation() throws {
+        let jakarta = try #require(TimeZone(identifier: "Asia/Jakarta"))
+        let date = try #require(ISO8601DateFormatter().date(from: "2026-10-25T03:42:00Z"))
+        #expect(Formatters.time(date, language: .indonesian, timeZone: jakarta) == "10.42 WIB")
+        #expect(Formatters.time(date, language: .english, timeZone: jakarta).hasPrefix("10:42\u{202F}AM")
+            || Formatters.time(date, language: .english, timeZone: jakarta).hasPrefix("10:42 AM"))
+    }
+
+    @Test func activityDayAddsTheYearOnlyForPastYears() throws {
+        let jakarta = try #require(TimeZone(identifier: "Asia/Jakarta"))
+        let now = try #require(ISO8601DateFormatter().date(from: "2026-10-28T03:00:00Z"))
+        let thisYear = try #require(ISO8601DateFormatter().date(from: "2026-10-25T03:42:00Z"))
+        let lastYear = try #require(ISO8601DateFormatter().date(from: "2025-09-08T03:42:00Z"))
+        #expect(Formatters.day(thisYear, now: now, language: .indonesian, timeZone: jakarta) == "25 Oktober")
+        #expect(Formatters.day(thisYear, now: now, language: .english, timeZone: jakarta) == "October 25")
+        #expect(Formatters.day(lastYear, now: now, language: .indonesian, timeZone: jakarta) == "8 September 2025")
+        #expect(Formatters.day(lastYear, now: now, language: .english, timeZone: jakarta) == "September 8, 2025")
+    }
 }
