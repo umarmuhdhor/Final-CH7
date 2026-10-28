@@ -23,4 +23,26 @@ enum Formatters {
         style.timeZone = timeZone
         return date.formatted(style)
     }
+
+    /// "10.42 WIB" / "10:42 AM GMT+7": the hour in the language's style plus the time-zone
+    /// abbreviation (Activity rows, PR-05/GD-05).
+    static func time(_ date: Date, language: AppLanguage, timeZone: TimeZone = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.timeZone = timeZone
+        formatter.setLocalizedDateFormatFromTemplate("jmz")
+        return formatter.string(from: date)
+    }
+
+    /// Activity day header: "25 Oktober" / "October 25", with the year when it isn't this year's.
+    /// "Today" is the caller's (its wording differs per screen).
+    static func day(_ date: Date, now: Date = Date(), language: AppLanguage, timeZone: TimeZone = .current) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var style = Date.FormatStyle(locale: language.locale, calendar: calendar, timeZone: timeZone).day().month(.wide)
+        if calendar.component(.year, from: date) != calendar.component(.year, from: now) {
+            style = style.year()
+        }
+        return date.formatted(style)
+    }
 }

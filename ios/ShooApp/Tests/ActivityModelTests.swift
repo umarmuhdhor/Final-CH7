@@ -38,15 +38,16 @@ struct ActivityModelTests {
     }
 
     @Test func loadMoreFollowsTheCursorWithoutDuplicates() async {
+        // Fixture pages of 2: [mom, guardian], [mom, dad], [mom]; the guardian's own row is left out.
         let model = model(mode: .guardian, owner: .family, pageSize: 2)
         await model.load()
-        #expect(model.items.count == 2)
+        #expect(model.items.count == 1)
         #expect(model.hasMore)
         await model.loadMore()
         await model.loadMore()
         await model.loadMore()
-        #expect(model.items.count == 5)
-        #expect(Set(model.items.map(\.id)).count == 5)
+        #expect(model.items.count == 4)
+        #expect(Set(model.items.map(\.id)).count == 4)
         #expect(!model.hasMore)
         #expect(model.items.map(\.detectedAt) == model.items.map(\.detectedAt).sorted(by: >))
     }
@@ -56,7 +57,7 @@ struct ActivityModelTests {
         await model.load()
         await model.loadMore()
         await model.refresh()
-        #expect(model.items.count == 2)
+        #expect(model.items.count == 1)
         #expect(model.hasMore)
     }
 
@@ -119,7 +120,7 @@ struct ActivityModelTests {
         try? await Task.sleep(for: .milliseconds(20))
         async let more: Void = model.loadMore()
         _ = await (refresh, more)
-        #expect(model.items.count == 2)
+        #expect(model.items.count == 1)
         #expect(!model.isLoadingMore)
     }
 
@@ -130,11 +131,11 @@ struct ActivityModelTests {
         repository.failure = RepositoryError.network
         await model.loadMore()
         #expect(model.loadMoreFailed)
-        #expect(model.items.count == 2)
+        #expect(model.items.count == 1)
         repository.failure = nil
         await model.loadMore()
         #expect(!model.loadMoreFailed)
-        #expect(model.items.count == 4)
+        #expect(model.items.count == 3)
     }
 
     @Test func cancelledURLRequestIsNotAFailure() async {
@@ -165,7 +166,66 @@ struct ActivityModelTests {
         let model = model(mode: .guardian, owner: .family)
         await model.load()
         #expect(model.people.map(\.name) == ["Mom", "Dad"])
-        #expect(Set(model.items.map(\.ownerDeviceId)).isSuperset(of: ["dev_me", "dev_mom"]))
+        #expect(Set(model.items.map(\.ownerDeviceId)) == ["dev_mom", "dev_dad"])
+    }
+
+    @Test func familyActivityLeavesOutTheGuardiansOwnRows() async {
+        let model = model(mode: .guardian, owner: .family)
+        await model.load()
+        #expect(!model.items.isEmpty)
+        #expect(!model.items.contains { $0.ownerDeviceId == "dev_me" })
+    }
+
+    @Test func ownDeviceFromTheSessionWinsOverTheProfileRequest() async {
+        // The session's id is used as-is: here it names Mom, so her rows go and the mock's `dev_me` stays.
+        let model = ActivityModel(
+            repository: MockRepository(mode: .guardian, latency: .zero), owner: .family, ownDeviceId: "dev_mom"
+        )
+        await model.load()
+        #expect(!model.items.isEmpty)
+        #expect(!model.items.contains { $0.ownerDeviceId == "dev_mom" })
+        #expect(model.items.contains { $0.ownerDeviceId == "dev_me" })
+    }
+
+    @Test func firstPageEmptyAfterFilteringLoadsTheNextPage() async {
+        // Warnings, 1 per page: [guardian], [mom]. The first page is all the guardian's own.
+        let repository = CountingScansRepository(base: MockRepository(mode: .guardian, latency: .zero, pageSize: 1))
+        let model = ActivityModel(repository: repository, owner: .family, filter: .warning)
+        await model.load()
+        #expect(model.state == .loaded)
+        #expect(model.items.map(\.ownerDeviceId) == ["dev_mom"])
+        #expect(repository.scanCalls == 2)
+        #expect(!model.hasMore)
+    }
+
+    @Test func nextPageEmptyAfterFilteringLoadsTheOneAfter() async {
+        // 1 per page: [mom], [guardian], [mom], [dad], [mom].
+        let model = model(mode: .guardian, owner: .family, pageSize: 1)
+        await model.load()
+        #expect(model.items.count == 1)
+        await model.loadMore()
+        #expect(model.items.count == 2)
+        #expect(model.items.allSatisfy { $0.ownerDeviceId != "dev_me" })
+        #expect(model.hasMore)
+    }
+
+    @Test func ownListKeepsTheGuardiansRows() async {
+        let model = model(mode: .guardian, owner: .me)
+        await model.load()
+        #expect(model.items.map(\.ownerDeviceId) == ["dev_me"])
+    }
+
+    @Test func rowsGroupByDayNewestFirst() async throws {
+        let model = model(mode: .guardian, owner: .family)
+        await model.load()
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let days = ActivityDay.group(model.items, calendar: utc)
+        #expect(days.map(\.items.count) == [2, 1, 1])
+        #expect(days.map(\.id) == days.map(\.id).sorted(by: >))
+        #expect(days.flatMap(\.items) == model.items)
+        let formatter = ISO8601DateFormatter()
+        #expect(days.first?.id == formatter.date(from: "2026-10-21T00:00:00Z"))
     }
 
     @Test func ownActivityHasNoPeopleFilter() async {
@@ -175,7 +235,7 @@ struct ActivityModelTests {
         #expect(model.items.allSatisfy { $0.ownerDeviceId == "dev_me" })
     }
 
-    @Test(arguments: [(ActivityPerson.me, "dev_me"), (.device("dev_mom"), "dev_mom")])
+    @Test(arguments: [(ActivityPerson.device("dev_mom"), "dev_mom"), (.device("dev_dad"), "dev_dad")])
     func personFilterShowsOnlyThatPerson(person: ActivityPerson, deviceId: String) async {
         let model = model(mode: .guardian, owner: .family)
         await model.load()

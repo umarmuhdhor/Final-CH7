@@ -105,6 +105,40 @@
         }
       }
     },
+    "activity.todayFamily" : {
+      "comment" : "Activity (Figma): day header for today in Family mode",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari Ini"
+          }
+        }
+      }
+    },
+    "activity.warning" : {
+      "comment" : "Activity (Figma): segment and badge for warning scans",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warning"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waspada"
+          }
+        }
+      }
+    },
     "All" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -566,6 +600,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gagal menyimpan. Periksa koneksi lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Danger" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahaya"
           }
         }
       }
@@ -1291,16 +1335,6 @@
         }
       }
     },
-    "Only your own history? Set Family to Off." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hanya riwayatmu sendiri? Ubah Keluarga ke Mati."
-          }
-        }
-      }
-    },
     "Open Safari" : {
       "localizations" : {
         "id" : {
@@ -1869,6 +1903,16 @@
         }
       }
     },
+    "Shows whose activity to see" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan aktivitas siapa yang dilihat"
+          }
+        }
+      }
+    },
     "Sites that look risky will show up here." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2076,6 +2120,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Item ini sudah tidak ada"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ini"
           }
         }
       }
