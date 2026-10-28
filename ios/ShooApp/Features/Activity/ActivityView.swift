@@ -303,14 +303,14 @@ struct ActivityPersonButton: View {
             HStack(spacing: 8) {
                 if let selected {
                     HStack(spacing: 4) {
-                        ActivityAvatar(id: selected.avatarId, size: 24)
+                        ActivityAvatar(name: selected.name, avatarId: selected.avatarId, size: 24)
                         Text(verbatim: selected.name)
                             .activityFont(15, tracking: -0.15)
                             .foregroundStyle(ActivityStyle.ink)
                             .lineLimit(1)
                     }
                 } else {
-                    ActivityAvatarStack(ids: people.map(\.avatarId))
+                    ActivityAvatarStack(people: people)
                 }
                 Image(systemName: "chevron.down")
                     .activityFont(17)
@@ -331,7 +331,7 @@ struct ActivityPersonButton: View {
 }
 
 /// Figma "Picker": glass menu with "Semua" (stacked avatars) and one row per member, single choice,
-/// no checkmark. Rows are 44 pt (Figma 40) so they stay easy to hit.
+/// no checkmark. Rows are 40 pt as in Figma.
 struct ActivityPersonMenu: View {
     static let width: CGFloat = 250
 
@@ -343,11 +343,11 @@ struct ActivityPersonMenu: View {
     var body: some View {
         VStack(spacing: 0) {
             item(.everyone, title: Text("All"), identifier: "person.everyone") {
-                ActivityAvatarStack(ids: people.map(\.avatarId))
+                ActivityAvatarStack(people: people)
             }
             ForEach(people) { member in
                 item(.device(member.deviceId), title: Text(verbatim: member.name), identifier: "person.\(member.deviceId)") {
-                    ActivityAvatar(id: member.avatarId, size: 24)
+                    ActivityAvatar(name: member.name, avatarId: member.avatarId, size: 24)
                 }
             }
         }
@@ -375,7 +375,7 @@ struct ActivityPersonMenu: View {
             }
             .padding(.leading, 22)
             .padding(.trailing, 24)
-            .frame(minHeight: 44)
+            .frame(minHeight: 40)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -415,15 +415,11 @@ struct ActivityRow: View {
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 12) {
                     ActivityBadge(badge: badge)
-                    site(badgeBelow: nil)
+                    site
                 }
-            } else if badge == .verifiedScam || badge == .markedSafe {
-                // The guardian's verdict badges are too long for the top-right corner: they would
-                // squeeze the domain and the name, so they sit under the time instead.
-                site(badgeBelow: badge)
             } else {
                 HStack(alignment: .top, spacing: 16) {
-                    site(badgeBelow: nil)
+                    site
                     ActivityBadge(badge: badge)
                 }
             }
@@ -443,38 +439,21 @@ struct ActivityRow: View {
 
     private var time: String { Formatters.time(scan.detectedAt, language: language) }
 
-    private func ownerLabel(_ owner: Owner) -> some View {
-        HStack(spacing: 4) {
-            ActivityAvatar(id: owner.avatarId ?? "", size: 16)
-            Text(verbatim: owner.name)
-                .activityFont(13, .medium, rounded: true)
-                .lineLimit(1)
-        }
-    }
 
-    private var timeLabel: some View {
-        Text(verbatim: time).activityFont(13, rounded: true)
-    }
-
-    /// Icon + domain + subline. The domain wraps to a second line rather than losing its middle:
-    /// it is what the user has to recognise.
-    private func site(badgeBelow: ScanBadge?) -> some View {
-        HStack(alignment: badgeBelow == nil ? .center : .top, spacing: 12) {
+    /// Icon + domain (host only, never the path) + subline. One line as in Figma: a long domain
+    /// ends in "…" to leave room for the badge; Detail shows the whole link.
+    private var site: some View {
+        HStack(spacing: 12) {
             SiteIcon(url: scan.faviconUrl)
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: scan.domain)
                     .activityFont(17, tracking: -0.17)
                     .foregroundStyle(ActivityStyle.ink)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
-                    .truncationMode(.middle)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
+                    .truncationMode(.tail)
                     .frame(minHeight: 24)
                 subline
                     .frame(minHeight: 20)
-                if let badgeBelow {
-                    ActivityBadge(badge: badgeBelow)
-                        .padding(.top, 6)
-                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -483,26 +462,28 @@ struct ActivityRow: View {
     @ViewBuilder
     private var subline: some View {
         if let owner {
-            // "Name | time" on one line when it fits; else the time goes under the name, so neither is cut.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 4) {
-                    ownerLabel(owner).fixedSize()
-                    Text(verbatim: "|")
-                        .activityFont(13, rounded: true)
-                        .foregroundStyle(ActivityStyle.separator)
-                    timeLabel.fixedSize()
-                }
-                VStack(alignment: .leading, spacing: 0) {
-                    ownerLabel(owner)
-                    timeLabel
-                }
+            // "Name | time" on one line as in Figma; the name is cut first, the time only when even
+            // that is not enough (a long verdict badge), so the row never runs past the card.
+            HStack(spacing: 4) {
+                ActivityAvatar(name: owner.name, avatarId: owner.avatarId ?? "", size: 16)
+                Text(verbatim: owner.name)
+                    .activityFont(13, .medium, rounded: true)
+                    .lineLimit(1)
+                Text(verbatim: "|")
+                    .activityFont(13, rounded: true)
+                    .foregroundStyle(ActivityStyle.separator)
+                    .fixedSize()
+                Text(verbatim: time)
+                    .activityFont(13, rounded: true)
+                    .lineLimit(1)
+                    .layoutPriority(1)
             }
             .foregroundStyle(ActivityStyle.secondary)
         } else {
             Text(verbatim: time)
                 .activityFont(13, rounded: true)
                 .foregroundStyle(ActivityStyle.time)
-                .fixedSize()
+                .lineLimit(1)
         }
     }
 }

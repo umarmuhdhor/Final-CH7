@@ -155,6 +155,16 @@ struct ActivityModelTests {
         #expect(model.state == .loaded)
     }
 
+    @Test(arguments: [("avatar_01", 0), ("avatar_02", 1), ("avatar_03", 2), ("avatar_04", 0), ("", 0), ("x", 0)])
+    func memberAvatarUsesAFigmaGradientPerAvatarId(avatarId: String, index: Int) {
+        #expect(ActivityAvatar.gradient(avatarId: avatarId) == ActivityAvatar.gradients[index])
+    }
+
+    @Test(arguments: [("Syahnaz", "S"), (" bayu", "B"), ("", "")])
+    func memberAvatarShowsTheFirstLetter(name: String, initial: String) {
+        #expect(ActivityAvatar.initial(of: name) == initial)
+    }
+
     @Test func rowLinkHidesQueryAndFragment() throws {
         let url = try #require(URL(string: "https://bca-verify.top/login?user=ibu%40mail.com&otp=123456#step2"))
         #expect(ActivityRow.displayLink(url) == "bca-verify.top/login")

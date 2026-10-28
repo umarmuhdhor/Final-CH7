@@ -129,12 +129,11 @@ struct ActivityBadge: View {
         }
     }
 
-    /// (icon, text, fill, stroke). Figma's orange text #D67D00 is about 3:1 on its tint; the text uses a
-    /// darker orange that keeps 4.5:1 (as Profile's chip does), the icon keeps the Figma colour.
+    /// (icon, text, fill, stroke), the Figma values.
     private var colors: (icon: Color, text: Color, fill: Color, stroke: Color) {
         switch badge {
         case .warning:
-            (ActivityStyle.hex(0xD67D00), ActivityStyle.hex(0x9A5A00), ActivityStyle.hex(0xFFF8EF), ActivityStyle.hex(0xFFE1B6))
+            (ActivityStyle.hex(0xD67D00), ActivityStyle.hex(0xD67D00), ActivityStyle.hex(0xFFF8EF), ActivityStyle.hex(0xFFE1B6))
         case .blocked, .verifiedScam:
             (ActivityStyle.hex(0xBB1616), ActivityStyle.hex(0xBB1616), ActivityStyle.hex(0xFFF4F4), ActivityStyle.hex(0xFFCDCD))
         case .markedSafe:
@@ -165,13 +164,39 @@ struct ActivityBadge: View {
 
 // MARK: Avatars
 
-/// A member's avatar with Figma's thin white rim.
+/// A member's initial on a gradient with a thin white rim (Figma "Avatar/S", "Avatar/B", "Avatar/R").
+/// The gradient is picked by avatar id, so a member keeps the same colour everywhere.
 struct ActivityAvatar: View {
-    let id: String
+    let name: String
+    let avatarId: String
     let size: CGFloat
 
+    /// Figma's three avatar gradients, top-left → bottom-right.
+    static let gradients: [[Color]] = [
+        [ActivityStyle.hex(0x7DE49C), ActivityStyle.hex(0x54CAE8)],
+        [ActivityStyle.hex(0xFFBE8C), ActivityStyle.hex(0xFF7896)],
+        [ActivityStyle.hex(0xAFA5FF), ActivityStyle.hex(0x6E8CFA)],
+    ]
+
+    static func gradient(avatarId: String) -> [Color] {
+        let number = Int(avatarId.filter(\.isNumber)) ?? 1
+        return gradients[(max(number, 1) - 1) % gradients.count]
+    }
+
+    static func initial(of name: String) -> String {
+        String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
+    }
+
     var body: some View {
-        AvatarView(id: id, size: size)
+        Text(verbatim: Self.initial(of: name))
+            // Figma: 9.5 pt on 24, 6.33 pt on 16.
+            .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(
+                LinearGradient(colors: Self.gradient(avatarId: avatarId), startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: Circle()
+            )
             .overlay(Circle().stroke(.white.opacity(0.5)))
             .accessibilityHidden(true)
     }
@@ -179,13 +204,13 @@ struct ActivityAvatar: View {
 
 /// Up to three overlapping avatars, each 12 pt to the right of the previous (Figma "Avatar Stack").
 struct ActivityAvatarStack: View {
-    let ids: [String]
+    let people: [FamilyMember]
     var size: CGFloat = 24
 
     var body: some View {
         HStack(spacing: -size / 2) {
-            ForEach(Array(ids.prefix(3).enumerated()), id: \.offset) { index, id in
-                ActivityAvatar(id: id, size: size)
+            ForEach(Array(people.prefix(3).enumerated()), id: \.offset) { index, member in
+                ActivityAvatar(name: member.name, avatarId: member.avatarId, size: size)
                     .zIndex(Double(-index))
             }
         }
