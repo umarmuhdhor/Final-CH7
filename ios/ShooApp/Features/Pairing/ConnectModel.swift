@@ -20,6 +20,8 @@ final class ConnectModel {
         case full
         case tooManyAttempts
         case alreadyConnected
+        /// "Punya kode undangan?" while still protecting someone (PF-01).
+        case hasMembers
         case offline
         case other
 
@@ -30,6 +32,7 @@ final class ConnectModel {
             case .familyFull?: self = .full
             case .tooManyAttempts?, .rateLimited?: self = .tooManyAttempts
             case .alreadyConnected?: self = .alreadyConnected
+            case .hasMembers?: self = .hasMembers
             case nil where (error as? RepositoryError) == .network: self = .offline
             default: self = .other
             }
@@ -42,6 +45,7 @@ final class ConnectModel {
             case .full: "This family already has 3 people. Ask your guardian to remove someone first."
             case .tooManyAttempts: "Too many tries. Wait a few minutes, then try again."
             case .alreadyConnected: "You're already connected to a guardian. Disconnect in Profile first."
+            case .hasMembers: "You still protect someone. Disconnect them in Profile first."
             case .offline: "No connection. Check your internet and try again."
             case .other: "Something went wrong. Try again."
             }
@@ -61,10 +65,11 @@ final class ConnectModel {
         }
     }
 
-    @ObservationIgnored private let repository: any ShooRepository
+    @ObservationIgnored private let joinWithCode: (String) async throws -> GuardianInfo
 
-    init(repository: any ShooRepository, code: String? = nil) {
-        self.repository = repository
+    /// `join` replaces `POST /family/join`, e.g. a guardian joining as protected (PF-01).
+    init(repository: any ShooRepository, code: String? = nil, join: ((String) async throws -> GuardianInfo)? = nil) {
+        joinWithCode = join ?? { try await repository.joinFamily(code: $0) }
         if let code { prefill(code) }
     }
 
@@ -92,7 +97,7 @@ final class ConnectModel {
         problem = nil
         do {
             // `ApiRepository` keeps `guardian.name` in the App Group for the extension (EX-06).
-            let guardian = try await repository.joinFamily(code: code)
+            let guardian = try await joinWithCode(code)
             state = .joined(guardian)
         } catch {
             state = .entering

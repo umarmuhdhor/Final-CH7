@@ -1,19 +1,23 @@
 import SwiftUI
 
 /// Colours and type from the onboarding Figma ("ONBOARDING" section, node 141:5987).
-/// Light only: the design has no dark variant yet, so these screens pin `.light`.
+/// Light values are Figma's; dark ones are ours (PF-01 Tema), the design has light only.
 enum OnboardingTheme {
-    static let background = Color(red: 0xF5 / 255, green: 0xF8 / 255, blue: 0xFC / 255)
-    static let ink = Color(red: 0x16 / 255, green: 0x16 / 255, blue: 0x18 / 255)
-    static let secondaryInk = Color(red: 0x67 / 255, green: 0x69 / 255, blue: 0x6C / 255)
-    static let cardStroke = Color(red: 0xD8 / 255, green: 0xDF / 255, blue: 0xE2 / 255)
-    static let selectedStroke = Color(red: 0x0E / 255, green: 0xA1 / 255, blue: 0xDE / 255)
-    static let disabledFill = Color(red: 0xDB / 255, green: 0xE2 / 255, blue: 0xE7 / 255)
-    static let placeholder = Color(red: 0x93 / 255, green: 0x93 / 255, blue: 0x93 / 255)
-    static let error = Color(red: 0xC8 / 255, green: 0x14 / 255, blue: 0x14 / 255)
-    static let link = Color(red: 0x0A / 255, green: 0x6C / 255, blue: 0xB4 / 255)
+    static let background = Color.dynamic(0xF5F8FC, dark: 0x0E1116)
+    /// Cards and fields.
+    static let card = Color.dynamic(0xFFFFFF, dark: 0x1B1F26)
+    static let ink = Color.dynamic(0x161618, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
+    static let secondaryInk = Color.dynamic(0x67696C, dark: 0xA3A9B3, contrastLight: 0x45474A, contrastDark: 0xCDD1D8)
+    static let cardStroke = Color.dynamic(0xD8DFE2, dark: 0x343B46, contrastLight: 0x9AA1AC, contrastDark: 0x6B7380)
+    static let selectedStroke = Color.dynamic(0x0EA1DE, dark: 0x3DB8EE)
+    static let disabledFill = Color.dynamic(0xDBE2E7, dark: 0x2A303A)
+    static let placeholder = Color.dynamic(0x939393, dark: 0x7C828C)
+    static let error = Color.dynamic(0xC81414, dark: 0xFF6B6B)
+    static let link = Color.dynamic(0x0A6CB4, dark: 0x5EAAF0)
+    /// Text on the dark capsule; the capsule turns light in dark mode.
+    static let onButton = Color.dynamic(0xFFFFFF, dark: 0x0E1116)
     static let buttonGradient = LinearGradient(
-        colors: [Color(red: 0x19 / 255, green: 0x1C / 255, blue: 0x25 / 255), Color(red: 0x3C / 255, green: 0x43 / 255, blue: 0x5A / 255)],
+        colors: [Color.dynamic(0x191C25, dark: 0xF2F4F8), Color.dynamic(0x3C435A, dark: 0xC9D0DB)],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -51,7 +55,7 @@ extension View {
         onboardingFont(30, weight: .medium, relativeTo: .title)
             .tracking(-0.3)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.black)
+            .foregroundStyle(OnboardingTheme.ink)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -59,7 +63,7 @@ extension View {
         onboardingFont(15, design: .rounded, relativeTo: .subheadline)
             .lineSpacing(3)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.black)
+            .foregroundStyle(OnboardingTheme.ink)
     }
 }
 
@@ -70,7 +74,7 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .onboardingFont(17, weight: .medium, relativeTo: .body)
-            .foregroundStyle(isEnabled ? Color.white : Color.black.opacity(0.25))
+            .foregroundStyle(isEnabled ? OnboardingTheme.onButton : OnboardingTheme.ink.opacity(0.3))
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.horizontal, 16)
             .background {
@@ -91,7 +95,7 @@ struct OnboardingBackButton: View {
         Button(action: action) {
             Image(systemName: "arrow.left")
                 .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255))
+                .foregroundStyle(OnboardingTheme.ink)
                 .frame(width: 50, height: 50)
                 .modifier(GlassCircle())
         }
@@ -102,8 +106,13 @@ struct OnboardingBackButton: View {
 }
 
 private struct GlassCircle: ViewModifier {
+    @Environment(\.shooReduceGlass) private var reduceGlass
+
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if reduceGlass {
+            // "Kurangi efek kaca": a solid circle.
+            content.background(OnboardingTheme.card, in: Circle())
+        } else if #available(iOS 26.0, *) {
             content.glassEffect(.regular.interactive(), in: .circle)
         } else {
             content.background(.ultraThinMaterial, in: Circle())

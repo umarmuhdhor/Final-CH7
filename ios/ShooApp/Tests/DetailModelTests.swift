@@ -45,6 +45,9 @@ actor StubRepository: ShooRepository {
     func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
     func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
     func deleteMe() async throws { try await base.deleteMe() }
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await base.scans(owner: owner, status: status, cursor: cursor)

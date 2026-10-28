@@ -62,4 +62,58 @@ struct AppSettingsTests {
         #expect(!settings.chooseMode(.protected))
         #expect(settings.mode == .guardian)
     }
+
+    // MARK: PF-01 Tema and Aksesibilitas
+
+    @Test func appearanceDefaultsFollowTheIPhone() throws {
+        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        #expect(settings.theme == .system)
+        #expect(settings.textSize == .standard)
+        #expect(settings.textSize.category == nil)
+        #expect(!settings.boldText && !settings.highContrast && !settings.reduceMotion && !settings.reduceGlass)
+        #expect(settings.haptics)
+        #expect(!settings.readAloud)
+    }
+
+    @Test func appearanceChoicesPersist() throws {
+        let defaults = try freshDefaults()
+        let first = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        first.theme = .dark
+        first.textSize = .largest
+        first.highContrast = true
+        first.haptics = false
+        let second = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        #expect(second.theme == .dark)
+        #expect(second.textSize == .largest)
+        #expect(second.highContrast)
+        #expect(!second.haptics)
+    }
+
+    /// The old "Teks besar" switch (before the slider) becomes the "Large" stop.
+    @Test func oldLargeTextSwitchBecomesLarge() throws {
+        let defaults = try freshDefaults()
+        defaults.set(true, forKey: "settings.largeText")
+        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).textSize == .large)
+    }
+
+    @Test func becomingProtectedLeavesFamilyModeAndSkipsConnect() throws {
+        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        settings.chooseMode(.guardian)
+        settings.familyModeOn = true
+        settings.becameProtected()
+        #expect(settings.mode == .protected)
+        #expect(!settings.familyModeOn)
+        #expect(settings.onboardingConnectPassed)
+    }
+
+    @Test func clearRemovesAppearanceToo() throws {
+        let defaults = try freshDefaults()
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.theme = .dark
+        settings.readAloud = true
+        AppSettings.clear(defaults: defaults)
+        let fresh = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        #expect(fresh.theme == .system)
+        #expect(!fresh.readAloud)
+    }
 }

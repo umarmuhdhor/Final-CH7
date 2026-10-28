@@ -128,6 +128,10 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 
 Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler dev --test-scheduled` runs: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+19+*+*+*"`.
 
+## Notifications (hourly cron, PF-01 proposed)
+
+`"5 * * * *"` runs `src/cron/notifications.ts` (`scheduled()` picks the job by `controller.cron`, see `CRONS` in `src/index.ts`): "Perlindungan mati" for members whose extension has been silent 24 h, and the Monday "Ringkasan mingguan", at most 40 pushes per run. Quiet hours (`devices.quiet_*` in `devices.time_zone`) are worked out in TypeScript with `Intl`. Migration `20261028130000_notification_settings.sql` adds the switches to `devices` and `family_links.off_notified_at`. Logs: one `{"event":"notifications","protectionOff":n,"summaries":n}` line. Local trigger: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=5+*+*+*+*"`.
+
 Check for a backlog (SQL editor): `select count(*) from scans where created_at < now() - interval '15 days';` should be 0.
 
 ## Quota (Supabase Free)

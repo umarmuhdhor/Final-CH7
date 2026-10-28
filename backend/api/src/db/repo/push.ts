@@ -6,8 +6,15 @@ import type { Sql } from "postgres";
  * late send never brings a reference back. FOR KEY SHARE makes a concurrent delete wait for this
  * insert (its cascade then removes the row); a delete that commits first leaves nothing to select.
  */
-export async function recordPush(sql: Sql, toDeviceId: string, scanId: string, result: string): Promise<void> {
+export async function recordPush(sql: Sql, toDeviceId: string, scanId: string | undefined, result: string): Promise<void> {
   try {
+    if (scanId === undefined) {
+      // Family push (reminder, disconnect): no scan to reference.
+      await sql`
+        insert into push_log (to_device_id, result)
+        select d.id, ${result} from devices d where d.id = ${toDeviceId} for key share of d`;
+      return;
+    }
     await sql`
       insert into push_log (to_device_id, scan_id, result)
       select d.id, s.id, ${result} from devices d, scans s

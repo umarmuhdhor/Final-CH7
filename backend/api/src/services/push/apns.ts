@@ -115,7 +115,7 @@ export class ApnsSender implements PushSender {
           "apns-expiration": String(Math.floor(this.now() / 1000) + 3600),
           "content-type": "application/json",
         },
-        body: JSON.stringify({ aps: { alert: { body: message.body }, sound: "default" }, scanId: message.scanId }),
+        body: JSON.stringify({ aps: { alert: { body: message.body }, sound: "default" }, ...(message.scanId ? { scanId: message.scanId } : {}) }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {

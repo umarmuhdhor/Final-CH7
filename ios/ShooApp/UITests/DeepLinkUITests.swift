@@ -39,8 +39,8 @@ final class DeepLinkUITests: XCTestCase {
     func testScanLinkOpensDetailWithVerdictButtonsForTheGuardian() {
         let app = launch(mode: "guardian")
         app.buttons["profileButton"].tap()
-        XCTAssertTrue(app.buttons["profile.done"].waitForExistence(timeout: 5))
-        // A sheet is open: the link still lands on Detail.
+        XCTAssertTrue(app.buttons["profile.back"].firstMatch.waitForExistence(timeout: 5))
+        // Profile is pushed on Shield: the link still lands on Detail.
         openLink("shoo://scan/\(Self.blocked)", in: app)
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.tabBars.buttons["Activity"].isSelected)

@@ -11,15 +11,20 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 
 - [General rules](#general-rules): auth, request format, errors, rate limits, caching
 - [Health](#health): `GET /healthz`, `GET /healthz/db`
-- [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `DELETE /devices/me`
-- [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
+- [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `POST /devices/me/protected`, `DELETE /devices/me`
+- [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}`
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
-- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`
+- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /terms`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
+- [Scheduled pushes](#scheduled-pushes): protection off, weekly summary (hourly cron)
+
+> **PF-01 profile redesign (proposed, not yet in `contracts/api.md`).** Fields and endpoints marked
+> *PF-01 proposed* below were added for the Figma profile screens. They only add to the contract (no
+> existing field changed). The lead copies them into `contracts/api.md` or asks for changes in the PR.
 
 ## General rules
 
@@ -66,6 +71,7 @@ Every error has the same shape:
 | 404 | `not_found` | The thing does not exist, or you may not see it (both look the same on purpose) |
 | 413 | `too_large` | Body over the size limit |
 | 422 | `invalid_body` | Body or query fails validation; `message` names the field |
+| 409 | `has_members` | *PF-01 proposed.* `POST /devices/me/protected` while the Guardian still protects someone |
 | 429 | `rate_limited` | Too many requests; wait `Retry-After` seconds and retry |
 | 500 | `internal` | Unexpected server error |
 
@@ -152,11 +158,34 @@ to its Guardian.
   "avatarId": "avatar_07",
   "mode": "protected",
   "language": "en",
-  "guardian": { "deviceId": "7d1f…", "name": "Adhella", "avatarId": "avatar_02" }
+  "guardian": { "deviceId": "7d1f…", "name": "Adhella", "avatarId": "avatar_02" },
+  "stats": { "blocked": 3, "warnings": 1, "since": "2026-09-14T02:10:00.000Z" },
+  "timeZone": "Asia/Jakarta",
+  "notifications": {
+    "warning": true, "blocked": true, "family": true, "protectionOff": true,
+    "weeklySummary": false, "quietHours": true, "quietStart": "22:00", "quietEnd": "06:00"
+  }
 }
 ```
 
 `guardian` is `null` when a Protected device is not connected, and always `null` for a Guardian.
+
+`stats` (*PF-01 proposed*): the profile numbers. `blocked` and `warnings` count every scan this device
+ever posted, by status; they do not drop when the 14-day retention deletes scans (numbers only, no
+addresses). `since` is when the device registered ("Hari terlindungi").
+
+`timeZone` and `notifications` (*PF-01 proposed*, "Pengaturan/Notifikasi"): the switches the server
+uses to decide which pushes go out (see [Push notification](#push-notification) and
+[Scheduled pushes](#scheduled-pushes)). The values above are the defaults for every device:
+
+| Key | Figma row | Effect |
+|---|---|---|
+| `warning` | Situs berbahaya | Push to this device for its own `warning` scans |
+| `blocked` | Situs diblokir | Push to this device for its own `blocked` scans |
+| `family` | Aktivitas orang dilindungi | Guardian: push for members' scans (together with the per-member "Kabari saya") |
+| `protectionOff` | Perlindungan mati | Guardian: one push when a member's extension has not reported for 24 h |
+| `weeklySummary` | Ringkasan mingguan | Monday from 08:00 local: counts of the last 7 days |
+| `quietHours`, `quietStart`, `quietEnd` | Jam tenang | Local 24-hour `HH:MM` in `timeZone`. Warnings and scheduled pushes wait; `blocked` pushes still go out. `quietStart == quietEnd` means all day |
 
 ### `PATCH /devices/me`
 
@@ -173,6 +202,11 @@ push language, and the extension's hourly heartbeat that drives "Not connected" 
 | `apnsToken` | string \| `null` | Hex APNs token; `null` clears it (push turned off) |
 | `language` | `"en"` \| `"id"` | Language of push texts sent to this device |
 | `extensionLastSeenAt` | ISO time | At most 5 minutes in the future. Sent by the extension at most once per hour and by the app when it comes to the foreground |
+| `deviceModel` | string | *PF-01 proposed.* Marketing name, e.g. `"iPhone 15"`: 1–40 letters, digits, spaces, parentheses. Shown to the Guardian only |
+| `osVersion` | string | *PF-01 proposed.* Major iOS version, e.g. `"26"`: 1–3 digits |
+| `avatarId` | string | *PF-01 proposed* ("Ubah foto"). `avatar_01` … `avatar_12` |
+| `timeZone` | string | *PF-01 proposed.* IANA zone of the phone, e.g. `"Asia/Makassar"`: at most 40 characters, `^[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}$`, and known to the runtime. Sent by the app once per launch with the device info |
+| `notifications` | object | *PF-01 proposed.* Any of the keys in [`GET /devices/me`](#get-devicesme) `notifications`; only sent keys change. Booleans, and `quietStart` / `quietEnd` as `HH:MM` (00:00–23:59). Unknown keys → `422` |
 
 ```json
 { "language": "id" }
@@ -180,9 +214,40 @@ push language, and the extension's hourly heartbeat that drives "Not connected" 
 
 **Response 200:** `{ "ok": true }`
 
+### `POST /devices/me/protected`
+
+**For:** *PF-01 proposed.* "Punya kode undangan?" on "Mode akun": a Guardian who protects nobody joins
+another family and is a Protected device from then on.
+
+- **Auth:** Bearer, `guardian` only (`403` otherwise)
+- **Request body:** `{ "code": "482193" }` (6 digits)
+- A device's mode never changes, so the server makes a new Protected device with the same name, avatar,
+  language, APNs token, device info, time zone and settings, joins it with the code (same checks and
+  attempt limits as [`POST /family/join`](#post-familyjoin)), and only then deletes the old Guardian
+  device and everything about it, as in [`DELETE /devices/me`](#delete-devicesme). A failed join
+  deletes the new device again: nothing changes for the Guardian.
+- Rate limit: the `POST /devices` limit per IP, plus the join attempt limits.
+
+**Response 200**
+
+```json
+{
+  "deviceId": "3c9a…",
+  "token": "shoo_…",
+  "avatarId": "avatar_07",
+  "guardian": { "deviceId": "7d1f…", "name": "Budi", "avatarId": "avatar_04" }
+}
+```
+
+The new token is shown only in this response; the old token returns `401` from now on. The app
+saves it in the Keychain and the App Group, then sends its APNs token again.
+
+**Errors:** `409 has_members` (disconnect the members first), and the `POST /family/join` errors
+`code_invalid`, `code_expired`, `family_full`, `rate_limited`.
+
 ### `DELETE /devices/me`
 
-**For:** "Delete my data" in Profile (PF-01, App Store Guideline 5.1.1(v)). Deletes this device and
+**For:** "Delete account" in Profile (PF-01, App Store Guideline 5.1.1(v)). Deletes this device and
 everything about it right away.
 
 - **Auth:** Bearer, either mode
@@ -278,7 +343,14 @@ Only wrong or expired codes count as failed attempts.
       "name": "Mom",
       "avatarId": "avatar_07",
       "extensionActive": true,
-      "lastScan": { "status": "blocked", "score": 92, "url": "https://bca-verifikasi.site/login?ref=wa", "detectedAt": "2026-10-21T04:05:00.000Z" }
+      "lastScan": { "status": "blocked", "score": 92, "url": "https://bca-verifikasi.site/login?ref=wa", "detectedAt": "2026-10-21T04:05:00.000Z" },
+      "connectedAt": "2026-09-14T02:10:00.000Z",
+      "lastSeenAt": "2026-10-28T03:58:00.000Z",
+      "deviceModel": "iPhone 15",
+      "osVersion": "26",
+      "notify": true,
+      "remindedAt": null,
+      "stats": { "blocked": 3, "warnings": 5 }
     }
   ]
 }
@@ -288,6 +360,34 @@ Only wrong or expired codes count as failed attempts.
 - `extensionActive` is `false` only when the extension's last heartbeat is older than 24 hours. With
   no heartbeat yet it is `true` (never "Not connected" without evidence).
 - `lastScan` is `null` when the member has no scans.
+- *PF-01 proposed* (member detail, "Guardian/Detail Orang Dilindungi"): `connectedAt` = when the link
+  was made ("Terhubung sejak"); `lastSeenAt` = last extension heartbeat, `null` before the first
+  ("aktif 2 mnt lalu"); `deviceModel` / `osVersion` as sent by the member, `null` until then;
+  `notify` = "Kabari saya"; `remindedAt` = last "Ingatkan" push or `null`; `stats` = the member's
+  lifetime counters, as in `GET /devices/me`.
+
+### `PATCH /family/members/{deviceId}`
+
+**For:** *PF-01 proposed.* "Kabari saya" on the member detail.
+
+- **Auth:** Bearer, **guardian** only
+- **Request body:** `{ "notify": false }` (only `notify`, a boolean)
+- **Response 200:** `{ "ok": true }`
+- **Errors:** `404 not_found` when `deviceId` is not one of your members; `422 invalid_body`.
+- `notify: false` skips the Guardian's push for this member's scans. The scans are still stored and
+  still show in Activity.
+
+### `POST /family/members/{deviceId}/remind`
+
+**For:** *PF-01 proposed.* "Ingatkan" next to a member whose extension is off.
+
+- **Auth:** Bearer, **guardian** only. No body.
+- **Response 200:** `{ "ok": true }`. One push to the member, in the member's language:
+  "Adhella reminds you: turn on Shoo in Safari" / "Adhella mengingatkan: nyalakan Shoo di Safari".
+  No `scanId` in the payload, so a tap just opens the app.
+- **Errors:** `404 not_found` (not your member); `409 push_unavailable` (the member has notifications
+  off, nothing sent, the slot is not used); `429 remind_too_soon` with `Retry-After` (seconds) when the
+  member was reminded in the last 6 hours.
 
 ### `DELETE /family/members/{deviceId}`
 
@@ -298,6 +398,8 @@ Only wrong or expired codes count as failed attempts.
 - **Errors:** `404 not_found` when `deviceId` is not one of your members.
 - The Guardian loses access to that member's scans and screenshots at once, and the verdicts it made for
   that member are deleted.
+- *PF-01 proposed:* the removed member gets one push when it has notifications on: "Adhella stopped
+  protecting you" / "Adhella berhenti melindungimu" (no `scanId`).
 
 ### `DELETE /family/guardian`
 
@@ -641,6 +743,21 @@ stored, who can see it, the 14-day deletion, and how "Delete my data" works.
 
 - **Auth:** none. No database.
 - Language: `lang` first, then `Accept-Language`, else English.
+- *PF-01 proposed:* also says which notification choices, quiet hours and time zone are stored.
+
+### `GET /terms?lang=en|id`
+
+**For:** *PF-01 proposed.* "Syarat & ketentuan" in "Tentang Shoo". Draft text for the team to review
+before public release.
+
+- **Auth:** none. No database. Language as for `/privacy`.
+
+### `GET /get`
+
+**For:** *PF-01 proposed.* The link "Bagikan Shoo" shares. `302` to `APP_STORE_URL` (the same store
+link the invite page uses).
+
+- **Auth:** none. No database, nothing logged about the visitor.
 
 ## Push notification
 
@@ -658,7 +775,43 @@ from the Worker over HTTP/2 (GD-06):
   | `blocked` | `Mom hit a blocked site · 92%` | `Mom membuka situs yang diblokir · 92%` |
   | `warning` | `Mom opened a suspicious site · 41%` | `Mom membuka situs mencurigakan · 41%` |
 
-- No push for a Guardian's own scans, or when the Guardian has no APNs token.
+- No push for a Guardian's own scans, when the Guardian has no APNs token, or (*PF-01 proposed*) when
+  the Guardian turned "Kabari saya" off for that member or `notifications.family` off.
+- *PF-01 proposed:* the scanning device itself also gets a push for its own scan when its
+  `notifications.blocked` / `notifications.warning` is on (default on). It carries the `scanId`;
+  the body never names the site.
+
+  | Status | `en` | `id` |
+  |---|---|---|
+  | `blocked` | `Shoo blocked a dangerous site · 92%` | `Shoo memblokir situs berbahaya · 92%` |
+  | `warning` | `Shoo warned you about a risky site · 41%` | `Shoo memperingatkanmu soal situs berisiko · 41%` |
+
+- *PF-01 proposed:* quiet hours of the receiving device hold `warning` pushes (they are not sent
+  later); `blocked` pushes always go out.
 - Tapping it opens Detail for `scanId`.
+- *PF-01 proposed:* family pushes to a **Protected** device (reminder, disconnect, see
+  [`POST /family/members/{deviceId}/remind`](#post-familymembersdeviceidremind) and
+  [`DELETE /family/members/{deviceId}`](#delete-familymembersdeviceid)) carry no `scanId`. The
+  Protected app now sends its APNs token too.
 - At most 10 pushes per Guardian per 10 minutes. A `410 Unregistered`/`ExpiredToken` from Apple clears
   the Guardian's `apnsToken`.
+
+## Scheduled pushes
+
+*PF-01 proposed.* An hourly Cron (`5 * * * *`, next to the daily retention `0 19 * * *`) sends at most
+40 pushes per run (Workers subrequest limit); the rest go out on the next run. Rows are claimed before
+sending, so two runs never push twice.
+
+- **Protection off** (`notifications.protectionOff`, Guardian): a member whose extension has not
+  reported for 24 hours (the same rule as "Ekstensi mati" in `GET /family/members`). Once per off
+  period: the mark clears when the member reports again. A member that never reported is not "off".
+  During the Guardian's quiet hours it waits for a later run.
+  - `en`: `Mom's protection is off: Shoo has not run in Safari for a day`
+  - `id`: `Perlindungan Mom mati: Shoo tidak berjalan di Safari sejak sehari`
+- **Weekly summary** (`notifications.weeklySummary`, off by default): Monday from 08:00 in the
+  device's `timeZone`, outside quiet hours, once per local Monday. Counts of `blocked` and `warning`
+  scans in the last 7 days, the Guardian's members included. Counts only, no sites.
+  - `en`: `Your week for you and your family: 2 sites blocked, 1 warning.`
+  - `id`: `Ringkasan minggu ini untuk kamu dan keluargamu: 2 situs diblokir, 1 peringatan.`
+
+These pushes carry no `scanId`; tapping one opens the app.

@@ -35,8 +35,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        let isScan = NotificationRouter.scanId(userInfo: notification.request.content.userInfo) != nil
         Task { @MainActor in
-            completionHandler(environment.showsPushBanner ? [.banner, .list, .sound] : [])
+            let shows = environment.showsPushBanner
+            // "Getar" (Pengaturan/Aksesibilitas): a warning that arrives while Shoo is open.
+            if shows, isScan { WarningFeedback.warn(settings: environment.settings) }
+            completionHandler(shows ? [.banner, .list, .sound] : [])
         }
     }
 

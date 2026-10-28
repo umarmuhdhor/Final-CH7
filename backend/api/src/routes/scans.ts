@@ -8,7 +8,7 @@ import { errors } from "../http/errors";
 import { hit, hitLight, limits } from "../http/rateLimit";
 import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
-import { guardianPush } from "../services/push/notify";
+import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachFavicon, faviconUrl } from "../services/favicons";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
@@ -146,9 +146,12 @@ scans.post("/scans", async (c) => {
   // locally with wrangler dev; cloud check in fase 11 LANGKAH MANUAL step 6).
   // Like the screenshot, a push problem never fails a stored scan (a retry would duplicate it).
   try {
-    const push = await guardianPush(sql, principal, { id, status: body.status, score: body.score });
-    if (push) {
-      const sender = pushSender(c.env);
+    const scan = { id, status: body.status, score: body.score };
+    // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
+    const pushes = [await guardianPush(sql, principal, scan), await ownPush(sql, principal, scan)];
+    const sender = pushSender(c.env);
+    for (const push of pushes) {
+      if (!push) continue;
       c.executionCtx.waitUntil(
         deliverPush(sql, sender, push).catch((err) =>
           // Name only: a DB error can quote values (D-alief-40).

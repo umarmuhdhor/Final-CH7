@@ -178,6 +178,9 @@ struct FamilyCodeModelTests {
         func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
         func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
         func leaveGuardian() async throws { try await base.leaveGuardian() }
+        func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+        func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+        func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
         func deleteMe() async throws { try await base.deleteMe() }
         func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
             try await base.scans(owner: owner, status: status, cursor: cursor)
@@ -381,14 +384,14 @@ struct DeepLinkRoutingTests {
         #expect(env.router.selectedTab == .shield)
     }
 
-    /// One sheet at a time: Profile closes first, Connect follows from its `onDismiss`.
-    @Test func linkWhileProfileIsOpenShowsConnectAfterIt() {
+    /// Profile is a pushed screen (PF-01): the link pops it and Connect opens at once.
+    @Test func linkWhileProfileIsOpenClosesItAndShowsConnect() {
         let env = environment(mode: .protected, onboarded: true)
-        env.router.isProfilePresented = true
+        env.router.selectedTab = .activity
+        env.router.activityPath = [.profile, .profilePage(.connection)]
         env.open(URL(string: "shoo://join?code=482193")!)
-        #expect(!env.router.isProfilePresented)
-        #expect(!env.router.isConnectPresented)
-        env.router.sheetDismissed()
+        #expect(env.router.activityPath.isEmpty)
+        #expect(env.router.selectedTab == .shield)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "482193")
     }
@@ -433,6 +436,9 @@ private actor ForeignLinkRepository: ShooRepository {
     func familyMembers() async throws -> [FamilyMember] { [] }
     func removeMember(deviceId: String) async throws {}
     func leaveGuardian() async throws {}
+    func setMemberNotify(deviceId: String, notify: Bool) async throws {}
+    func remindMember(deviceId: String) async throws {}
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { throw RepositoryError.network }
     func deleteMe() async throws {}
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await base.scans(owner: owner, status: status, cursor: cursor)
@@ -482,6 +488,9 @@ private actor SlowMembersRepository: ShooRepository {
     func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
     func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
     func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
     func deleteMe() async throws { try await base.deleteMe() }
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await base.scans(owner: owner, status: status, cursor: cursor)

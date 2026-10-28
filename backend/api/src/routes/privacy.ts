@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { AppEnv } from "../env";
 
 // Privacy policy (SECURITY §3 P12): what Shoo stores, for how long, and how to delete it.
@@ -12,17 +12,20 @@ import type { AppEnv } from "../env";
 const CONTACT = "the Shoo team (contact address coming before public release)";
 
 type Section = { h: string; items: string[] };
-const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; sections: Section[] }> = {
+const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo privacy policy",
     updated: "Last updated: 28 October 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
       { h: "What we store", items: [
-        "The first name you choose and a random avatar. No email, phone number or account password.",
+        "The first name you choose and your avatar. No email, phone number or account password.",
         "A random device ID, and an Apple push token if you allow notifications.",
         "When your device last used Shoo, so your Guardian can see whether protection is on.",
-        "Pages the extension flagged as risky (score 30 or more): address, domain, page title, the site's icon, score, the reasons, the time, and an optional screenshot of the page.",
+        "Your iPhone or iPad model and main iOS version (for example \"iPhone 15 · iOS 26\"), shown only to your Guardian.",
+        "How many sites Shoo has blocked or warned you about in total: numbers only, no addresses.",
+        "Your notification choices, quiet hours and your phone's time zone (for example \"Asia/Jakarta\"), so pushes respect them.",
+        "Pages the extension flagged as risky (score 30 or more): address, domain, page title, site icon, score, the reasons, the time, and an optional screenshot of the page.",
         "Who is connected to whom in a family, and the Guardian's decisions about a site (Safe or Not safe), with the Guardian's name.",
       ] },
       { h: "What we do not do", items: [
@@ -42,7 +45,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
         "Security counters (a keyed hash of your IP address or device, never the address itself) are deleted after 1 day.",
       ] },
       { h: "Delete your data", items: [
-        "In the app: Profile → Delete my data. Your device, flagged pages, screenshots, site icons, decisions and family links are deleted immediately. Screenshot and icon links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable).",
+        "In the app: Profile → Delete account. Your device, flagged pages, screenshots, site icons, decisions and family links are deleted immediately. Screenshot and icon links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable).",
       ] },
       { h: "Site icons", items: [
         "To show a flagged site's icon, our server downloads it once from that site and stores a copy with the flagged page. Your phone only ever loads the copy from our server, so the site never sees your IP address. The site sees a request from our server, with no cookies and nothing about you.",
@@ -70,9 +73,12 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
       { h: "Yang kami simpan", items: [
-        "Nama depan pilihanmu dan avatar acak. Tanpa email, nomor HP, atau kata sandi akun.",
+        "Nama depan pilihanmu dan avatarmu. Tanpa email, nomor HP, atau kata sandi akun.",
         "ID device acak, dan token push Apple kalau kamu mengizinkan notifikasi.",
         "Kapan device-mu terakhir memakai Shoo, supaya Guardian bisa melihat apakah perlindungan aktif.",
+        "Model iPhone atau iPad dan versi utama iOS-mu (misalnya \"iPhone 15 · iOS 26\"), hanya terlihat oleh Guardian-mu.",
+        "Berapa banyak situs yang pernah diblokir atau diberi peringatan oleh Shoo: hanya angka, tanpa alamat.",
+        "Pilihan notifikasimu, jam tenang, dan zona waktu ponselmu (misalnya \"Asia/Jakarta\"), supaya push mengikutinya.",
         "Halaman yang ditandai berisiko oleh extension (skor 30 atau lebih): alamat, domain, judul halaman, ikon situs, skor, alasannya, waktu, dan screenshot halaman (opsional).",
         "Siapa terhubung dengan siapa dalam keluarga, dan keputusan Guardian tentang suatu situs (Aman atau Tidak aman) beserta nama Guardian.",
       ] },
@@ -93,7 +99,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
         "Penghitung keamanan (hash berkunci dari alamat IP atau device, tidak pernah alamatnya sendiri) dihapus setelah 1 hari.",
       ] },
       { h: "Hapus datamu", items: [
-        "Di app: Profil → Hapus dataku. Device, halaman yang ditandai, screenshot, ikon situs, keputusan, dan hubungan keluarga dihapus seketika. Link screenshot dan ikon langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi).",
+        "Di app: Profil → Hapus akun. Device, halaman yang ditandai, screenshot, ikon situs, keputusan, dan hubungan keluarga dihapus seketika. Link screenshot dan ikon langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi).",
       ] },
       { h: "Ikon situs", items: [
         "Untuk menampilkan ikon situs yang ditandai, server kami mengunduhnya sekali dari situs itu dan menyimpan salinannya bersama halaman yang ditandai. HP-mu hanya memuat salinan itu dari server kami, jadi situs itu tidak pernah melihat alamat IP-mu. Situs itu hanya melihat permintaan dari server kami, tanpa cookie dan tanpa apa pun tentang kamu.",
@@ -122,12 +128,16 @@ const STYLE = `body{font:17px/1.5 -apple-system,system-ui,sans-serif;margin:0;pa
 main{max-width:640px;margin:0 auto}h2{font-size:20px;margin-top:28px}li{margin:6px 0}.muted{color:#666}
 @media (prefers-color-scheme:dark){body{color:#f2f2f2;background:#000}.muted{color:#aaa}}`;
 
-export const privacy = new Hono<AppEnv>();
+export type LegalText = { title: string; updated: string; lead: string; sections: Section[] };
 
-privacy.get("/privacy", (c) => {
+/** ?lang=en|id, else Accept-Language, else English. */
+export const pageLanguage = (c: Context<AppEnv>): "en" | "id" => {
   const q = c.req.query("lang");
-  const lang = q === "id" || q === "en" ? q : /^id\b/i.test(c.req.header("accept-language") ?? "") ? "id" : "en";
-  const t = TEXT[lang];
+  return q === "id" || q === "en" ? q : /^id\b/i.test(c.req.header("accept-language") ?? "") ? "id" : "en";
+};
+
+/** Static legal page (privacy, terms): no script, no outside resources. */
+export function legalPage(c: Context<AppEnv>, lang: "en" | "id", t: LegalText) {
   const sections = t.sections
     .map((s) => `<h2>${s.h}</h2><ul>${s.items.map((i) => `<li>${i}</li>`).join("")}</ul>`)
     .join("\n");
@@ -138,4 +148,11 @@ privacy.get("/privacy", (c) => {
 <p class="muted"><a href="?lang=${lang === "en" ? "id" : "en"}">${lang === "en" ? "Bahasa Indonesia" : "English"}</a></p></main></body></html>`;
   c.header("Content-Security-Policy", CSP);
   return c.html(html);
+}
+
+export const privacy = new Hono<AppEnv>();
+
+privacy.get("/privacy", (c) => {
+  const lang = pageLanguage(c);
+  return legalPage(c, lang, TEXT[lang]);
 });

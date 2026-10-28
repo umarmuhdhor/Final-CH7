@@ -84,7 +84,7 @@ struct ConnectView: View {
                 } label: {
                     ZStack {
                         Text("Connect").opacity(model.state == .joining ? 0 : 1)
-                        if model.state == .joining { ProgressView().tint(.white) }
+                        if model.state == .joining { ProgressView().tint(OnboardingTheme.onButton) }
                     }
                 }
                 .buttonStyle(OnboardingCapsuleButtonStyle())
@@ -147,12 +147,12 @@ private struct ConnectTabs: View {
             Text(title)
                 .onboardingFont(13.33, weight: isSelected ? .semibold : .medium, relativeTo: .footnote)
                 .tracking(-0.08)
-                .foregroundStyle(.black)
+                .foregroundStyle(OnboardingTheme.ink)
                 .frame(maxWidth: .infinity, minHeight: 46)
                 .background {
                     if isSelected {
                         Capsule()
-                            .fill(.white)
+                            .fill(OnboardingTheme.card)
                             .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
                             .matchedGeometryEffect(id: "thumb", in: thumb)
                     }
@@ -209,7 +209,7 @@ private struct CodeField: View {
     @Binding var code: String
     let onFocusChange: (Bool) -> Void
     @FocusState private var focused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shooReduceMotion) private var reduceMotion
     /// Grows with Dynamic Type; the boxes share the row, so six always fit an iPhone SE width.
     @ScaledMetric(relativeTo: .title2) private var digitSize: CGFloat = 24
     private var boxWidth: CGFloat { min(max(46, digitSize * 2), 56) }
@@ -240,7 +240,7 @@ private struct CodeField: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .aspectRatio(62 / 72, contentMode: .fit)
                     .frame(maxWidth: boxWidth)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .strokeBorder(OnboardingTheme.ink.opacity(isActive ? 1 : 0.1), lineWidth: 1)

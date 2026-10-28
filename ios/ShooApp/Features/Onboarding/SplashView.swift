@@ -5,7 +5,7 @@ struct SplashView: View {
     let model: OnboardingModel
     @State private var showsBrand: Bool
     @State private var page = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private struct Slide: Identifiable {
         let id: Int
@@ -72,7 +72,7 @@ struct SplashView: View {
             .ignoresSafeArea(edges: .top)
             .safeAreaInset(edge: .bottom) { controls }
         }
-        .background(Color.white.ignoresSafeArea())
+        .background(OnboardingTheme.card.ignoresSafeArea())
     }
 
     private var controls: some View {
@@ -81,7 +81,7 @@ struct SplashView: View {
                 Text("Skip")
                     .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
                     .tracking(-0.14)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(OnboardingTheme.ink)
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
@@ -99,7 +99,7 @@ struct SplashView: View {
             } label: {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(OnboardingTheme.onButton)
                     .frame(width: 62, height: 62)
                     .background(OnboardingTheme.buttonGradient, in: Circle())
                     .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
@@ -146,7 +146,7 @@ private struct SlidePage: View {
                     .clipped()
                     .overlay(alignment: .bottom) {
                         // Figma "Rectangle 953": the picture fades into the white page.
-                        LinearGradient(colors: [.white.opacity(0), .white], startPoint: .top, endPoint: .bottom)
+                        LinearGradient(colors: [OnboardingTheme.card.opacity(0), OnboardingTheme.card], startPoint: .top, endPoint: .bottom)
                             .frame(height: headerHeight * 153 / 463)
                     }
                     .accessibilityHidden(true)

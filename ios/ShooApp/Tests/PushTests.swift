@@ -77,6 +77,9 @@ struct PushRoutingTests {
         func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
         func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
         func leaveGuardian() async throws { try await base.leaveGuardian() }
+        func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+        func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+        func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
         func deleteMe() async throws { try await base.deleteMe() }
         func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
             try await base.scans(owner: owner, status: status, cursor: cursor)
@@ -125,18 +128,18 @@ struct PushRoutingTests {
 
     @Test func pushTapOpensDetailOnActivityOverAnything() {
         let env = environment(mode: .guardian)
-        env.router.isProfilePresented = true
-        env.router.shieldPath = [.detail(scanId: "other")]
+        env.router.shieldPath = [.profile, .detail(scanId: "other")]
         env.openPush(scanId: Self.scanId)
         #expect(env.router.selectedTab == .activity)
         #expect(env.router.activityPath == [.detail(scanId: Self.scanId)])
         #expect(env.router.shieldPath.isEmpty)
-        #expect(!env.router.isProfilePresented)
     }
 
-    /// Only the Guardian gets pushes: anything else that looks like one is ignored.
-    @Test func protectedIgnoresAPushTap() {
+    /// The Protected device only gets family pushes (PF-01: "Ingatkan", disconnect): a tap opens Shield.
+    @Test func protectedPushTapOpensShield() {
         let env = environment(mode: .protected)
+        env.router.selectedTab = .activity
+        env.router.activityPath = [.profile]
         env.openPush(scanId: Self.scanId)
         #expect(env.router.activityPath.isEmpty)
         #expect(env.router.selectedTab == .shield)
@@ -145,7 +148,8 @@ struct PushRoutingTests {
     @Test(arguments: [
         (UserMode.guardian, true, true),
         (.guardian, false, false),
-        (.protected, true, false),
+        (.protected, true, true),
+        (.protected, false, false),
     ])
     func bannerOnlyWhereATapCanOpenIt(mode: UserMode, onboarded: Bool, expected: Bool) {
         #expect(environment(mode: mode, onboarded: onboarded).showsPushBanner == expected)
@@ -208,10 +212,17 @@ struct PushRoutingTests {
         #expect(await repository.updates.last == DeviceUpdate(apnsToken: "01"))
     }
 
-    /// Only the Guardian gets pushes (contracts/api.md): a Protected token never leaves the iPhone.
-    @Test func protectedNeverSendsAToken() async {
+    /// PF-01 (proposed in backend/API.md): the Protected device sends its token for family pushes.
+    @Test func protectedSendsItsTokenToo() async {
         let repository = RecordingRepository(mode: .protected)
         let env = environment(mode: .protected, repository: repository)
+        await env.pushTokenReceived(Data([0xab]))
+        #expect(await repository.updates == [DeviceUpdate(apnsToken: "ab")])
+    }
+
+    @Test func noTokenBeforeAModeIsChosen() async {
+        let repository = RecordingRepository(mode: .guardian)
+        let env = environment(mode: nil, onboarded: false, repository: repository)
         await env.pushTokenReceived(Data([0xab]))
         #expect(await repository.updates.isEmpty)
     }
@@ -278,9 +289,10 @@ struct PushRoutingTests {
         (UserMode.guardian, NotificationAuthorization.authorized, 1),
         (.guardian, .denied, 0),
         (.guardian, .notDetermined, 0),
-        (.protected, .authorized, 0),
+        (.protected, .authorized, 1),
+        (.protected, .denied, 0),
     ])
-    func registersForPushOnlyForAnAllowedGuardian(mode: UserMode, status: NotificationAuthorization, expected: Int) async {
+    func registersForPushOnlyWhenAllowed(mode: UserMode, status: NotificationAuthorization, expected: Int) async {
         let calls = Calls()
         let env = environment(mode: mode, notifications: status, calls: calls)
         await env.registerForPushIfAllowed()

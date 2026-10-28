@@ -1,346 +1,349 @@
 import SwiftUI
 
-/// Profile (PF-01), opened from the top-right button in every mode.
+/// Profile (PF-01), pushed from the avatar button on either tab. Figma "Profile/Pribadi" (Guardian,
+/// Family mode off), "Profile/Guardian" (Family mode on) and the Protected profile ("Bu Maria").
 struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
-    @State private var isDisconnectConfirming = false
+    @State private var isInvitePresented = false
     @State private var isDeleteConfirming = false
-    @State private var isFamilyCodePresented = false
-    @FocusState private var isNameFocused: Bool
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .title3) private var avatarSize: CGFloat = 56
+    @State private var remindingId: String?
 
-    init(repository: any ShooRepository, settings: AppSettings) {
-        _model = State(initialValue: ProfileModel(repository: repository, settings: settings))
+    init(repository: any ShooRepository, settings: AppSettings, notifications: (any NotificationPermission)? = nil) {
+        _model = State(initialValue: ProfileModel(repository: repository, settings: settings, notifications: notifications))
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                switch model.state {
-                case .loading:
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel(Text("Loading"))
-                case .failed:
-                    Section {
-                        Text("Couldn't load your profile").font(.headline)
-                        Button { Task { await model.retry() } } label: { Text("Try again") }
-                    }
-                case .loaded:
-                    nameSection
-                    languageSection
-                    extensionSection
-                    if model.showsDisconnect { guardianSection }
-                    if model.showsFamilyCode { familySection }
-                    dataSection
+        ProfileScreen(title: "Profile") {
+            switch model.state {
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity, minHeight: 300)
+                    .accessibilityLabel(Text("Loading"))
+            case .failed:
+                VStack(spacing: 12) {
+                    Text("Couldn't load your profile").profileFont(17, .semibold)
+                    Button { Task { await model.retry() } } label: { Text("Try again") }
+                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
                 }
+                .frame(maxWidth: .infinity, minHeight: 300)
+            case .loaded:
+                loaded
             }
-            .navigationTitle(localized: "Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button { dismiss() } label: { Text("Done") }
-                        .accessibilityIdentifier("profile.done")
-                }
+        }
+        .task {
+            // Disconnect / delete hand the app back to onboarding: clear navigation first.
+            model.onSessionEnd = { [router = env.router] in
+                router.reset()
+                DeliveredPushes.clear()
             }
-            .task {
-                // Disconnect / delete hand the app back to onboarding: clear navigation first.
-                model.onSessionEnd = { [router = env.router] in
-                    router.reset()
-                    DeliveredPushes.clear()
-                }
-                await model.load()
-            }
-            .task(id: scenePhase) {
-                if scenePhase == .active { extensionStatus = await env.extensionStatus() }
-            }
-            .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
-                TurnOnExtensionSheet()
-            }
-            .sheet(isPresented: $isFamilyCodePresented, onDismiss: { Task { await model.load() } }) {
-                FamilyCodeView(repository: env.repository)
-                    .environment(\.locale, locale)
-            }
-            .onChange(of: model.nameError) { _, message in
-                guard let message else { return }
-                announce(message)
-            }
-            .onChange(of: model.nameProblem) { _, problem in
-                switch problem {
-                case .empty: announce("Enter a name.")
-                case .tooLong: announce("Use 20 characters or fewer.")
-                case nil: break
-                }
-            }
-            .onChange(of: model.membersFailed) { _, failed in
-                if failed { announce("Couldn't load your family") }
-            }
-            .alert(
-                Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
-                isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
-            ) {
-                Button("OK", role: .cancel) {}
-            }
+            await model.load()
+        }
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            extensionStatus = await env.extensionStatus()
+            await model.refreshNotifications()
+        }
+        .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
+            TurnOnExtensionSheet()
+        }
+        .sheet(isPresented: $isInvitePresented, onDismiss: { Task { await model.load() } }) {
+            InviteSheet(repository: env.repository) { isInvitePresented = false }
+                .environment(\.locale, locale)
+        }
+        .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
+        .alert(
+            Text(verbatim: model.actionError.map { L10n.string($0, language: language) } ?? ""),
+            isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.actionError = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
         }
         // Names and the family list stay out of the app switcher snapshot (D-alief-A36).
         .privacyCover()
     }
 
+    @ViewBuilder private var loaded: some View {
+        ProfileHeaderCard(
+            banner: "ProfileBanner",
+            name: model.profile?.name ?? "",
+            handle: model.handle(language: language),
+            stats: model.stats(language: language)
+        ) {
+            AvatarView(id: model.profile?.avatarId ?? "", size: 88)
+        } badge: {
+            if model.variant != .protected {
+                Button { isInvitePresented = true } label: {
+                    HStack(spacing: 8) {
+                        QRGlyph()
+                        Text("Share invite")
+                    }
+                }
+                .buttonStyle(ProfilePillButtonStyle())
+                .accessibilityIdentifier("profile.invite")
+            }
+        }
+
+        if model.variant == .guardian { familySection }
+        protectionSection
+        accountSection
+        preferencesSection
+
+        Button { isDeleteConfirming = true } label: {
+            Text("Delete account")
+                .profileFont(17, .medium, tracking: -0.17)
+                .foregroundStyle(ProfileStyle.red)
+                .frame(minWidth: 44, minHeight: 44)
+        }
+        .disabled(model.isWorking)
+        .padding(.top, 20)
+        .accessibilityIdentifier("profile.delete")
+    }
+
     // MARK: Sections
 
-    private var nameSection: some View {
-        Section {
-            // Avatar above the field at accessibility sizes, so a 20-character name still fits.
-            stackedAtLargeSizes(spacing: 16) {
-                AvatarView(id: model.profile?.avatarId ?? "", size: min(avatarSize, 96))
-                    .accessibilityHidden(true)
-                // Same word as the section header, so Voice Control "Tap Name" works (WCAG 2.5.3).
-                TextField(text: $model.nameDraft, axis: .vertical) { Text("Name") }
-                    .lineLimit(1...3)
-                    .font(.title3.weight(.semibold))
-                    .textContentType(.givenName)
-                    .submitLabel(.done)
-                    .focused($isNameFocused)
-                    .onSubmit { Task { await saveName() } }
-                    .accessibilityHint(Text("1 to 20 characters"))
-                    .accessibilityIdentifier("profile.name")
-            }
-            // Always present (only disabled), so VoiceOver focus never lands on a vanished button.
-            Button { Task { await saveName() } } label: {
-                Text("Save name").frame(minHeight: 44)
-            }
-            .disabled(model.nameDraft == model.profile?.name || model.nameProblem != nil || model.isWorking)
-            .accessibilityIdentifier("profile.saveName")
-        } header: {
-            Text("Name")
-        } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                switch model.nameProblem {
-                case .empty: Text("Enter a name.")
-                case .tooLong: Text("Use 20 characters or fewer.")
-                case nil: Text("1–20 characters. Your family sees this name.")
-                }
-                if let message = model.nameError {
-                    Label {
-                        Text(verbatim: L10n.string(message, language: language))
-                    } icon: {
-                        Image(systemName: "exclamationmark.triangle.fill").accessibilityHidden(true)
-                    }
-                    .foregroundStyle(Color.readableRed)
-                    .accessibilityIdentifier("profile.error")
-                }
-            }
-            .foregroundStyle(.readableSecondary)
-        }
-    }
-
-    private var languageSection: some View {
-        Section {
-            Picker(selection: Binding(
-                get: { env.settings.language },
-                set: { model.chooseLanguage($0) }
-            )) {
-                ForEach(AppLanguage.allCases) { language in
-                    Text(Self.spokenName(language)).tag(language)
-                }
-            } label: {
-                Text("Language")
-            }
-            // Both choices always visible: no menu to find, no truncated name at large text sizes.
-            .pickerStyle(.inline)
-            .labelsHidden()
-            .accessibilityIdentifier("languagePicker")
-        } header: {
-            Text("Language")
-        } footer: {
-            Text("Shoo and its alerts use this language.")
-                .foregroundStyle(.readableSecondary)
-        }
-    }
-
-    private var extensionSection: some View {
-        Section {
-            ViewThatFits(in: .horizontal) {
-                HStack { extensionTitle; Spacer(); extensionValue }
-                VStack(alignment: .leading, spacing: 6) { extensionTitle; extensionValue }
-            }
-            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
-            if !extensionStatus.isActive {
-                Button { isTurnOnPresented = true } label: { Text("Turn on").frame(minHeight: 44) }
-                    .accessibilityLabel(Text("Turn on Shoo in Safari"))
-                    .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
-                    .accessibilityIdentifier("profile.turnOn")
+    /// Pribadi and Protected: "Perlindungan" with the extension status (the switch lives in Safari).
+    @ViewBuilder private var protectionSection: some View {
+        if model.variant != .guardian {
+            ProfileSection(title: "Protection") {
+                extensionRow
             }
         }
     }
 
-    private var extensionTitle: some View {
-        Text("Safari extension")
-    }
-
-    private var extensionValue: some View {
-        Label {
-            Text(extensionStatus.isActive ? "Active" : "Off")
-        } icon: {
-            Image(systemName: extensionStatus.isActive ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundStyle(extensionStatus.isActive ? Color.green : Color.red)
-                .accessibilityHidden(true)
+    private var extensionRow: some View {
+        Button { if !extensionStatus.isActive { isTurnOnPresented = true } } label: {
+            ProfileRow(
+                symbol: ProfileStyle.extensionSymbol,
+                title: Text("Safari extension"),
+                accessory: extensionStatus.isActive
+                    ? .value(L10n.string("Active", language: language), color: ProfileStyle.greenText, chevron: false)
+                    : .value(L10n.string("Off", language: language), color: ProfileStyle.red)
+            )
         }
-        .foregroundStyle(.primary)
-    }
-
-    private var guardianSection: some View {
-        Section {
-            if let guardian = model.profile?.guardian {
-                HStack(spacing: 12) {
-                    AvatarView(id: guardian.avatarId, size: 44)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Protected by").font(.subheadline).foregroundStyle(.readableSecondary)
-                        Text(verbatim: guardian.name).font(.headline)
-                    }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("profile.guardian")
-                Button(role: .destructive) { isDisconnectConfirming = true } label: {
-                    Text("Disconnect").frame(minHeight: 44).foregroundStyle(Color.readableRed)
-                }
-                .disabled(model.isWorking)
-                .accessibilityIdentifier("profile.disconnect")
-                .confirmationDialog(
-                    Text("Disconnect from \(guardian.name)?"),
-                    isPresented: $isDisconnectConfirming,
-                    titleVisibility: .visible
-                ) {
-                    Button(role: .destructive) { Task { await disconnect() } } label: { Text("Disconnect from \(guardian.name)") }
-                        .accessibilityIdentifier("profile.disconnect.confirm")
-                } message: {
-                    Text("\(guardian.name) will no longer see the sites Shoo warns you about.")
-                }
-            } else {
-                Text("Not connected to a guardian yet")
-                    .accessibilityIdentifier("profile.guardian.none")
-            }
-        } header: {
-            Text("Guardian")
-        }
+        .buttonStyle(.plain)
+        .accessibilityHint(extensionStatus.isActive ? Text(verbatim: "") : Text("Shows how to switch Shoo on in Safari"))
+        .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
     }
 
     private var familySection: some View {
-        Section {
-            ForEach(model.members) { member in
-                HStack(spacing: 12) {
-                    AvatarView(id: member.avatarId, size: 40)
-                        .accessibilityHidden(true)
-                    stackedAtLargeSizes(spacing: 2) {
-                        Text(verbatim: member.name).font(.body)
-                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
-                        if !member.isConnected {
-                            Text("Not connected").font(.subheadline).foregroundStyle(.readableSecondary)
-                        }
-                    }
-                }
-                .accessibilityElement(children: .combine)
-            }
+        ProfileSection(title: "People you protect") {
             if model.membersFailed {
-                Text("Couldn't load your family")
-                Button { Task { await model.load() } } label: {
-                    Text("Try again").frame(minHeight: 44)
+                VStack(spacing: 8) {
+                    Text("Couldn't load your family").profileFont(15).foregroundStyle(ProfileStyle.secondary)
+                    Button { Task { await model.load() } } label: { Text("Try again") }
+                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
+                        .accessibilityIdentifier("profile.members.retry")
                 }
-                .accessibilityIdentifier("profile.members.retry")
-            }
-            Button { isFamilyCodePresented = true } label: {
-                Label { Text("Family code") } icon: { Image(systemName: "qrcode") }
-                    .frame(minHeight: 44)
-            }
-            .disabled(model.membersFailed || model.members.count >= FamilyShieldModel.maxMembers)
-            .accessibilityHint(model.members.count >= FamilyShieldModel.maxMembers ? Text("Your family is full (3 people).") : Text(verbatim: ""))
-            .accessibilityIdentifier("profile.familyCode")
-        } header: {
-            Group {
-                if model.membersFailed {
-                    Text("Family")
-                } else {
-                    Text(verbatim: L10n.string("Family \(model.members.count)/\(FamilyShieldModel.maxMembers)", language: language))
-                        .accessibilityLabel(Text(verbatim: L10n.string(
-                            "Family, \(model.members.count) of \(FamilyShieldModel.maxMembers) people", language: language
-                        )))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+            } else if model.members.isEmpty {
+                HStack(spacing: 12) {
+                    Text("No one protected yet")
+                        .profileFont(15)
+                        .foregroundStyle(ProfileStyle.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button { isInvitePresented = true } label: { Text("Invite") }
+                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
+                        .accessibilityIdentifier("profile.members.invite")
                 }
-            }
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityIdentifier("profile.members")
-        } footer: {
-            if model.members.count >= FamilyShieldModel.maxMembers {
-                Text("Your family is full (3 people).").foregroundStyle(.readableSecondary)
+                .padding(.horizontal, 17)
+                .frame(minHeight: 62)
+                .accessibilityIdentifier("profile.members.empty")
+            } else {
+                ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
+                    if index > 0 { ProfileDivider(leading: 73) }
+                    memberRow(member)
+                }
             }
         }
     }
 
-    private var dataSection: some View {
-        Section {
-            Button(role: .destructive) { isDeleteConfirming = true } label: {
-                Text("Delete my data").frame(minHeight: 44).foregroundStyle(Color.readableRed)
+    private func memberRow(_ member: FamilyMember) -> some View {
+        HStack(spacing: 12) {
+            Button { env.router.show(.member(deviceId: member.deviceId)) } label: {
+                HStack(spacing: 12) {
+                    InitialsAvatar(name: member.name, avatarId: member.avatarId)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: member.name)
+                            .profileFont(17, .medium, tracking: -0.17)
+                            .foregroundStyle(ProfileStyle.nameInk)
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(member.extensionActive ? ProfileStyle.green : ProfileStyle.offDot)
+                                .frame(width: 7, height: 7)
+                                .accessibilityHidden(true)
+                            Text(verbatim: MemberText.status(member, now: Date(), language: language))
+                                .profileFont(13, rounded: true)
+                                .foregroundStyle(ProfileStyle.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if member.extensionActive, let seen = member.lastSeenAt {
+                        Text(verbatim: MemberText.ago(seen, language: language))
+                            .profileFont(13, rounded: true)
+                            .foregroundStyle(ProfileStyle.secondary)
+                    }
+                }
+                .contentShape(Rectangle())
             }
-            .disabled(model.isWorking)
-            .accessibilityIdentifier("profile.delete")
-            .confirmationDialog(Text("Delete your data?"), isPresented: $isDeleteConfirming, titleVisibility: .visible) {
-                Button(role: .destructive) { Task { await deleteMyData() } } label: { Text("Delete my data") }
-                    .accessibilityIdentifier("profile.delete.confirm")
-            } message: {
-                Text("Your name, family link and history are deleted right away. This can't be undone.")
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint(Text("Shows this person's protection"))
+            .accessibilityIdentifier("profile.member.\(member.deviceId)")
+            if !member.extensionActive {
+                RemindButton(member: member, isWorking: remindingId == member.deviceId) {
+                    remindingId = member.deviceId
+                    if let message = await model.remind(member) { announce(message) }
+                    remindingId = nil
+                }
             }
         }
+        .padding(.horizontal, 17)
+        .frame(minHeight: 72)
+    }
+
+    private var accountSection: some View {
+        ProfileSection(title: "Account") {
+            if model.variant == .protected {
+                navRow(symbol: ProfileStyle.switchSymbol, title: Text("Connected"), page: .connection, id: "profile.connection")
+            } else {
+                navRow(
+                    symbol: ProfileStyle.switchSymbol, title: Text("Account mode"),
+                    value: L10n.string(model.variant == .guardian ? "Guardian" : "Personal", language: language),
+                    page: .mode, id: "profile.mode"
+                )
+            }
+            ProfileDivider()
+            navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
+            ProfileDivider()
+            navRow(symbol: "bell.fill", title: Text("Notifications"), page: .notifications, id: "profile.notifications")
+            ProfileDivider()
+            navRow(symbol: "globe", title: Text("Language"), value: language.shortName, page: .language, id: "profile.language")
+        }
+    }
+
+    private var preferencesSection: some View {
+        ProfileSection(title: "Preferences") {
+            navRow(
+                symbol: "circle.lefthalf.filled", title: Text("Theme"),
+                value: L10n.string(themeTitle, language: language),
+                page: .theme, id: "profile.theme"
+            )
+            ProfileDivider()
+            navRow(
+                symbol: "Aa", title: Text("Accessibility"),
+                value: L10n.string(env.settings.textSize.title, language: language),
+                page: .accessibility, id: "profile.accessibility"
+            )
+            ProfileDivider()
+            navRow(symbol: "text.magnifyingglass", title: Text("About Shoo"), page: .about, id: "profile.about")
+        }
+    }
+
+    private var themeTitle: String.LocalizationValue {
+        switch env.settings.theme {
+        case .light: "Light"
+        case .dark: "Dark"
+        case .system: "Automatic"
+        }
+    }
+
+    private func navRow(symbol: String, title: Text, value: String? = nil, page: ProfilePage, id: String) -> some View {
+        Button { env.router.show(.profilePage(page)) } label: {
+            ProfileRow(symbol: symbol, title: title, accessory: value.map { .value($0) } ?? .chevron)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
     }
 
     // MARK: Actions
 
-    private func saveName() async {
-        if await model.saveName() {
-            isNameFocused = false
-            announce("Name saved")
-        }
-    }
-
     private func announce(_ message: String.LocalizationValue) {
         AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
     }
+}
 
-    /// Side by side normally, stacked at accessibility text sizes.
-    private func stackedAtLargeSizes<Content: View>(spacing: CGFloat, @ViewBuilder content: () -> Content) -> some View {
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: spacing))
-            : AnyLayout(HStackLayout(spacing: spacing))
-        return layout(content)
-    }
+/// "Ingatkan" pill; "Sent" (disabled) for 6 hours after a reminder.
+struct RemindButton: View {
+    let member: FamilyMember
+    let isWorking: Bool
+    let action: () async -> Void
 
-    private func disconnect() async {
-        _ = await model.disconnect()
-    }
-
-    private func deleteMyData() async {
-        _ = await model.deleteMyData()
-    }
-
-    /// The language's own name, read by VoiceOver in that language.
-    private static func spokenName(_ language: AppLanguage) -> AttributedString {
-        var name = AttributedString(language.nativeName)
-        name.languageIdentifier = language.code
-        return name
+    var body: some View {
+        let sent = MemberText.recentlyReminded(member)
+        Button { Task { await action() } } label: {
+            if isWorking {
+                ProgressView().frame(width: 52)
+            } else {
+                Text(sent ? "Sent" : "Remind")
+            }
+        }
+        .buttonStyle(ProfilePillButtonStyle(tint: sent ? ProfileStyle.secondary : ProfileStyle.link))
+        .disabled(sent || isWorking)
+        .accessibilityLabel(sent ? Text("Reminder sent to \(member.name)") : Text("Remind \(member.name)"))
+        .accessibilityHint(sent ? Text(verbatim: "") : Text("Sends a notification to turn on Shoo in Safari"))
+        .accessibilityIdentifier("profile.remind.\(member.deviceId)")
     }
 }
 
-#Preview {
+/// Text built from a member (rows and the member detail).
+enum MemberText {
+    /// "Active · iPhone · Safari" / "Extension off for 2 days".
+    static func status(_ member: FamilyMember, now: Date, language: AppLanguage) -> String {
+        if member.extensionActive {
+            let device = member.deviceModel.map { $0.hasPrefix("iPad") ? "iPad" : "iPhone" }
+            return [L10n.string("Active", language: language), device, "Safari"].compactMap { $0 }.joined(separator: " · ")
+        }
+        guard let seen = member.lastSeenAt else { return L10n.string("Extension off", language: language) }
+        return L10n.string("Extension off for \(duration(from: seen, to: now, language: language))", language: language)
+    }
+
+    /// "2 mnt lalu".
+    static func ago(_ date: Date, now: Date = Date(), language: AppLanguage) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = language.locale
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: min(date, now), relativeTo: now)
+    }
+
+    /// "2 days" / "2 hari".
+    static func duration(from start: Date, to end: Date, language: AppLanguage) -> String {
+        var calendar = Calendar.current
+        calendar.locale = language.locale
+        let formatter = DateComponentsFormatter()
+        formatter.calendar = calendar
+        formatter.unitsStyle = .full
+        formatter.maximumUnitCount = 1
+        formatter.allowedUnits = [.day, .hour, .minute]
+        return formatter.string(from: start, to: max(start, end)) ?? ""
+    }
+
+    static func recentlyReminded(_ member: FamilyMember, now: Date = Date()) -> Bool {
+        guard let last = member.remindedAt else { return false }
+        return now.timeIntervalSince(last) < 6 * 3600
+    }
+}
+
+extension AppLanguage {
+    /// "Indonesia" / "English" on the Language row (Figma).
+    var shortName: String {
+        switch self {
+        case .english: "English"
+        case .indonesian: "Indonesia"
+        }
+    }
+}
+
+#Preview("Pribadi") {
     let env = AppEnvironment.preview()
-    return ProfileView(repository: env.repository, settings: env.settings).environment(env)
+    return NavigationStack {
+        ProfileView(repository: env.repository, settings: env.settings, notifications: env.notifications)
+    }
+    .environment(env)
 }

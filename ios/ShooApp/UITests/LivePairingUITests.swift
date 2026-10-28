@@ -82,11 +82,10 @@ final class LivePairingUITests: XCTestCase {
         if app.buttons["notifications.allow"].waitForExistence(timeout: 5) { app.buttons["notifications.allow"].tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["profileButton"].tap()
-        let open = app.buttons["profile.familyCode"]
+        let open = app.buttons["profile.invite"]
         XCTAssertTrue(open.waitForExistence(timeout: 10), app.debugDescription)
-        if !open.isHittable { app.swipeUp() }
         open.tap()
-        let code = app.staticTexts["familyCode.code"]
+        let code = app.descendants(matching: .any)["invite.code"].firstMatch
         XCTAssertTrue(code.waitForExistence(timeout: 15), app.debugDescription)
         shot(app, "pair-guardian-1-code")
 
