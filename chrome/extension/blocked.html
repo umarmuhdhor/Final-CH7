@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- Owner: lead. Block screen (EX-06). Extension page: websites can't script it, so there's no bypass.
+     Look: Figma "Safari / Blocked / Protected" and "Safari / Blocked / Guardian or pribadi" (Safari PR #161).
+     Chrome copy: no "Review in Shoo" / "Open Shoo" button, there is no Shoo app on Chrome. -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Shoo</title>
+    <link rel="stylesheet" href="blocked.css">
+</head>
+<body>
+    <main class="screen" hidden>
+        <div class="top">
+            <div class="brand">
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path class="shield" d="M8 1.7 3 3.6v4.2c0 3 2.1 5.6 5 6.5 2.9-.9 5-3.5 5-6.5V3.6L8 1.7z"/><path class="mark" d="M8 5.3v5.3"/></svg>
+                <span>Shoo!</span>
+            </div>
+            <div class="ring" aria-hidden="true"><span class="score-value"></span></div>
+
+            <div class="copy">
+                <span class="chip link"></span>
+                <h1 data-text="title"></h1>
+                <p class="reasons"></p>
+            </div>
+
+            <section class="waiting" hidden>
+                <div class="spinner" aria-hidden="true"></div>
+                <p class="waiting-text"></p>
+                <p class="hint" data-text="autoOpen"></p>
+            </section>
+
+            <p class="verified" hidden></p>
+        </div>
+
+        <div class="actions">
+            <button class="back" type="button" data-text="back"></button>
+        </div>
+    </main>
+    <script src="browser-shim.js"></script>
+    <script src="block.js"></script>
+    <script src="blocked-page.js"></script>
+</body>
+</html>
