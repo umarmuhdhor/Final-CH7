@@ -1,38 +1,63 @@
-/* Owner: lead. Block screen (EX-06). */
+/* Owner: lead. Block screen (EX-06). Sizes and colours from Figma "Safari / Blocked / …". */
 :root {
-    color-scheme: light dark;
-    --bg: #fff5f5; --card: #ffffff; --text: #1c1c1e; --muted: #636366;
-    --danger: #d92d20; --danger-soft: #fee4e2; --line: #f2d4d1;
-}
-@media (prefers-color-scheme: dark) {
-    :root { --bg: #1f1111; --card: #2c1a1a; --text: #f5f5f7; --muted: #aeaeb2;
-            --danger: #ff6b5e; --danger-soft: #4a1f1c; --line: #4a2a27; }
+    color-scheme: light;
+    --ink: #151617; --muted: #6a717e; --danger: #e5483b;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
-             font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
-.screen { max-width: 520px; margin: 0 auto; text-align: center;
-          padding: calc(32px + env(safe-area-inset-top)) 20px calc(32px + env(safe-area-inset-bottom)); }
-.logo { border-radius: 16px; }
-h1 { margin: 16px 0 12px; font-size: 26px; line-height: 1.2; color: var(--danger); }
-.score { display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-         width: 120px; height: 120px; border-radius: 50%; border: 8px solid var(--danger); margin-bottom: 12px; }
-.score-value { font-size: 34px; font-weight: 800; color: var(--danger); line-height: 1; }
-.score-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.link { margin: 0 0 20px; color: var(--muted); font-size: 15px; word-break: break-all; }
-.reasons-box, .waiting { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-                         padding: 16px; margin-bottom: 16px; text-align: left; }
-h2 { margin: 0 0 8px; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-.reasons { margin: 0; padding-left: 20px; }
-.reasons li { margin: 6px 0; }
-.waiting { text-align: center; }
-.waiting-text { margin: 8px 0 4px; font-weight: 700; font-size: 18px; }
-.hint { margin: 0; color: var(--muted); font-size: 15px; }
-.spinner { width: 28px; height: 28px; margin: 0 auto; border-radius: 50%;
-           border: 3px solid var(--danger-soft); border-top-color: var(--danger); animation: spin 1s linear infinite; }
+html { min-height: 100%; background: #f5f6f8; }
+body { margin: 0; min-height: 100vh; color: var(--ink);
+       background: linear-gradient(#fce9e7 0%, #f5f6f8 42%, #f5f6f8 100%) no-repeat;
+       font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+       -webkit-font-smoothing: antialiased; }
+.screen { display: flex; flex-direction: column; justify-content: space-between; gap: 32px;
+          min-height: 100vh; max-width: 440px; margin: 0 auto; text-align: center;
+          padding: calc(56px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); }
+.top { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+.brand { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px 6px 9px; border-radius: 999px;
+         border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.7);
+         -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+         box-shadow: 0 6px 18px rgba(31,42,55,.12); font-size: 15px; font-weight: 700; }
+.brand svg { width: 16px; height: 16px; }
+.brand .shield { fill: var(--danger); }
+.brand .mark { stroke: #fff; stroke-width: 1.5; stroke-linecap: round; }
+
+/* Score ring: bezel → track (148 → 138) with the red "tube" up to the score → centre disc (89.84). */
+.ring { position: relative; width: 148px; height: 148px; border-radius: 50%; border: 1px solid #e4e6ea;
+        background: linear-gradient(#fff, #f3f4f6); box-shadow: 0 4px 12px rgba(31,42,55,.08); }
+.ring::before { content: ""; position: absolute; inset: 4px; border-radius: 50%;
+        box-shadow: inset 0 1px 2px rgba(31,42,55,.08);
+        background: conic-gradient(transparent 0 calc(var(--p, 100) * 1%), #ecedef 0),
+                    radial-gradient(closest-side, #d34236 68%, #e5483b 76%, #ed837a 86%, #e5483b 95%, #ce4135 100%); }
+.score-value { position: absolute; inset: 28px; border-radius: 50%; border: 1px solid #e3e4e7;
+        background: linear-gradient(#fafafb, #f0f1f3); box-shadow: inset 0 2px 4px rgba(31,42,55,.06);
+        display: flex; align-items: center; justify-content: center; font-size: 27px; letter-spacing: -.02em; }
+
+.copy { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.chip { max-width: 100%; padding: 7px 13px; border-radius: 999px; background: #e8eaed;
+        box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 13px; font-weight: 500;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+h1 { margin: 0; font-size: 26px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; }
+.reasons, .hint { font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, sans-serif; }
+.reasons { max-width: 299px; margin: -4px 0 0; font-size: 15px; line-height: 1.5; color: var(--muted); }
+.reasons span { display: block; }
+
+.waiting { width: 100%; padding: 16px; border-radius: 24px; border: 1px solid rgba(255,255,255,.9);
+           background: rgba(255,255,255,.7); box-shadow: 0 6px 18px rgba(31,42,55,.08); }
+.waiting-text { margin: 8px 0 2px; font-size: 17px; font-weight: 600; }
+.hint { margin: 0; color: var(--muted); font-size: 13px; }
+.spinner { width: 24px; height: 24px; margin: 0 auto; border-radius: 50%;
+           border: 3px solid #f6d3cf; border-top-color: var(--danger); animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
-.verified { font-weight: 700; color: var(--danger); }
-.button { display: block; padding: 16px; border-radius: 14px; background: var(--danger); color: #fff;
-          font-weight: 700; text-decoration: none; }
+.verified { margin: 0; font-weight: 600; color: var(--danger); }
+
+.actions { display: flex; flex-direction: column; gap: 10px; }
+.button, .back { display: flex; align-items: center; justify-content: center; width: 100%; border-radius: 999px;
+                 font: 500 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; text-decoration: none;
+                 cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.button { height: 52px; border: 1px solid rgba(28,29,32,.6); color: #fff; background: linear-gradient(#191c25, #3c435a);
+          box-shadow: inset 0 1.5px 1px rgba(255,255,255,.22), inset 0 -2px 4px rgba(0,0,0,.25); }
+.back { height: 54px; border: 0; color: #191c25; background: #fff; letter-spacing: -.0125em;
+        box-shadow: 0 0 0 1px #e3e3e3, 0 3px 5px -3px rgba(0,0,0,.2); }
