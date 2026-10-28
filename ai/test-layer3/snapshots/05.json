@@ -1,0 +1,76 @@
+{
+  "id": "05",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://kodepembatalanbybni.pages.dev/",
+  "finalUrl": "https://kodepembatalanbybni.pages.dev/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 2247,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://kodepembatalanbybni.pages.dev/",
+    "domain": "pages.dev",
+    "title": "BNI - Verifikasi",
+    "lang": "id",
+    "text": "BNI - Verifikasi\nBNI\nVerifikasi OTP\nDemi keamanan, masukkan 6 digit kode OTP untuk pembatalan transaksi ke rekening SALSA MERRYANI\nKonfirmasi Pembatalan\nMohon tunggu...\nKode OTP salah atau sudah kadaluarsa.",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "id": "14",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://pendaftaran-umum04.thems.blog/code",
+  "finalUrl": "https://pendaftaran-umum04.thems.blog/code",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 140,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://pendaftaran-umum04.thems.blog/auth",
+    "https://pendaftaran-umum04.thems.blog/completed"
+  ],
+  "snapshot": {
+    "url": "https://pendaftaran-umum04.thems.blog/code",
+    "domain": "thems.blog",
+    "title": "Verifikasi OTP",
+    "lang": "id",
+    "text": "Verifikasi OTP\nPendaftaran UmumRepublik Indonesia\nVerifikasi Kode\nKode Pendaftaran, kami kirim ke Telegram Anda.\nCek Status\n📲 Langkah Verifikasi Kode via Telegram\n📥 Buka Telegram & buat akun jika belum ada\n✉️ Terima kode 4–6 digit dari sistem\n👀 Cek kode di chat resmi Telegram\n✅ Masukkan kode & tekan Verifikasi\n⚠️ Tips Aman: jangan bagikan kode & gunakan segera\nMemeriksa kode, mohon tunggu...",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "hidden",
+            "name": "phone_number",
+            "id": "validatePhoneNumber",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code1",
+            "label": "Kode Pendaftaran, kami kirim ke Telegram Anda.",
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code2",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code3",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code4",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "code5",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Logo Pertanian"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

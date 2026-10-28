@@ -1,0 +1,118 @@
+{
+  "id": "04",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://cusbsi.com/",
+  "finalUrl": "https://cusbsi.com/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 21,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://cusbsi.com/",
+    "domain": "cusbsi.com",
+    "title": "BSI Cash Management",
+    "lang": "id",
+    "text": "BSI Cash Management\n⚠️\nTerlalu Banyak Percobaan\nMohon tunggu selama 2 menit sebelum mencoba kembali\n02:00\nTutup\nID\nEN\nLogin to BSI\n☰\nZ836\nRefresh Captcha\nLOGIN\n Forgot Password?\n Unlock Account\n📞 BSI - Call 1500789   www.bankbsi.co.id   OJK   CUZ by BSI   LPS\nID\nEN\nKonfirmasi Perubahan Kata Sandi\n☰\nDemi meningkatkan keamanan dan kenyamanan pengguna untuk bertransaksi di CUZ by BSI, wajib perubahan kata sandi.\n+62\nKONFIRMASI\n📞 BSI - Call 1500789   www.bankbsi.co.id   OJK   CUZ by BSI   LPS\nID\nEN\nKonfirmasi Mobile Token\n☰\nMasukkan OTP yang dikirim ke nomor telepon Anda.Silakan masukkan 6 digit kode Mobile Token yang telah dikirim ke nomor Anda.\nKONFIRMASI\n Kirim ulang kode OTP\n📞 BSI - Call 1500789   www.bankbsi.co.id   OJK   CUZ by BSI   LPS",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "companyId",
+            "label": null,
+            "placeholder": "Enter Company ID",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "userId",
+            "label": null,
+            "placeholder": "Enter User ID",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "passwordField",
+            "label": null,
+            "placeholder": "Enter Password",
+            "autocomplete": null
+          },
+          {
+            "type": "text",
+            "name": null,
+            "id": "captchaInput",
+            "label": null,
+            "placeholder": "Masukkan kode di atas",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "password",
+            "name": null,
+            "id": "currentPassword",
+            "label": null,
+            "placeholder": "Kata Sandi Saat Ini",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": "newPassword",
+            "label": null,
+            "placeholder": "Kata Sandi Baru",
+            "autocomplete": null
+          },
+          {
+            "type": "tel",
+            "name": null,
+            "id": "phoneNumber",
+            "label": null,
+            "placeholder": "8xxxxxxxxx",
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otpCode",
+            "label": null,
+            "placeholder": "••• •••",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "BSI Logo",
+      "Banner 1",
+      "Banner 2",
+      "Banner 3",
+      "Norton by Symantec",
+      "BSI Logo",
+      "Banner 1",
+      "Banner 2",
+      "Banner 3",
+      "Norton by Symantec",
+      "BSI Logo",
+      "Banner 1",
+      "Banner 2",
+      "Banner 3",
+      "Norton by Symantec"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

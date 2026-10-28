@@ -1,0 +1,44 @@
+{
+  "id": "L10",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:08:00.000Z",
+  "originalUrl": "https://wargaklampid-dispendukcapil.surabaya.go.id/app/login",
+  "finalUrl": "https://wargaklampid-dispendukcapil.surabaya.go.id/app/login",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 9666,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://wargaklampid-dispendukcapil.surabaya.go.id/app/login",
+    "domain": "surabaya.go.id",
+    "title": "Login | Klampid New Generation",
+    "lang": "id",
+    "text": "Login | Klampid New Generation\nLogin Menggunakan Akun Anda\nUsername\nPassword\nAplikasi KNG dapat diakses pada jam-jam berikut:\nSenin - Jum'at : 07.30 - 18.00 WIB",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": null,
+            "label": "Username",
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": null,
+            "id": null,
+            "label": "Password",
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T04:08:00.000Z"
+  }
+}

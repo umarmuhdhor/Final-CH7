@@ -1,0 +1,78 @@
+{
+  "id": "21",
+  "label": "scam",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/",
+  "finalUrl": "https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 3179,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/",
+    "domain": "helpnets.info",
+    "title": "Sign in to your account",
+    "lang": "en",
+    "text": "Sign in to your account\nSign in\nNo account? Create one!\n Can’t access your account?\nyour@email.com\nEnter password\n Forgot my password\n\nSign-in options\n Terms of use\n Privacy & cookies\n ...",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "email",
+            "name": "loginfmt",
+            "id": "i0116",
+            "label": null,
+            "placeholder": "Email, phone, or Skype",
+            "autocomplete": "username"
+          },
+          {
+            "type": "password",
+            "name": "passwd",
+            "id": "i0118",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "button",
+            "name": null,
+            "id": "idBtn_Back",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "button",
+            "name": null,
+            "id": "idSIButton9",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": "passwd",
+            "id": "i0118",
+            "label": null,
+            "placeholder": "Password",
+            "autocomplete": "current-password"
+          },
+          {
+            "type": "button",
+            "name": null,
+            "id": "idSIButton9",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [
+      "Microsoft"
+    ],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

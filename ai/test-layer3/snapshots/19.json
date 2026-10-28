@@ -1,0 +1,103 @@
+{
+  "id": "19",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://shopeeofficial-refund.vercel.app/otp.html",
+  "finalUrl": "https://shopeeofficial-refund.vercel.app/otp.html",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 2465,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://shopeeofficial-refund.vercel.app/login.html"
+  ],
+  "snapshot": {
+    "url": "https://shopeeofficial-refund.vercel.app/otp.html",
+    "domain": "vercel.app",
+    "title": "OTP - Shopee",
+    "lang": "id",
+    "text": "OTP - Shopee\n←\nVerifikasi OTP\nKode OTP telah dikirim ke\nlanjut\nMohon tungguu 60 detik untuk kirim ulang\ntidak menerima otp?\nkirim ulang\natau coba\nMetode lainnya\nKonfirmasi Pemulihan\nSilakan konfirmasi pemulihan dana di aplikasi shopeepay di sebelah kanan atas tanda lonceng klik konfirmasi\nMengerti\n!\nMohon di tunggu\npermintaan sedang di\nproses, Masukkan kode\notp yang baru",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otp1",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otp2",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otp3",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otp4",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otp5",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      },
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "text",
+            "name": null,
+            "id": "otp6",
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

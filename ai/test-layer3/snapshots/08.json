@@ -1,0 +1,46 @@
+{
+  "id": "08",
+  "label": "phishing",
+  "fetchedAt": "2026-10-28T03:49:00.000Z",
+  "originalUrl": "https://m-pajak.top/",
+  "finalUrl": "https://m-pajak.top/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 22,
+  "fieldsFromJs": [],
+  "nextStepUrls": [
+    "https://m-pajak.top/confirm.html"
+  ],
+  "snapshot": {
+    "url": "https://m-pajak.top/",
+    "domain": "m-pajak.top",
+    "title": "M-Pajak • djp",
+    "lang": "id",
+    "text": "M-Pajak • djp\ndjp\nSelamat Datang di M-Pajak\nApabila Anda sudah memiliki akun, Login menggunakan akun DJP Online yang sudah di Aktivasi\nGabung\nGabung\nBelum punya akun? Daftarkan sekarang",
+    "forms": [
+      {
+        "action": null,
+        "fields": [
+          {
+            "type": "tel",
+            "name": "phone",
+            "id": "phone",
+            "label": null,
+            "placeholder": "Silakan masukkan nomor telepon",
+            "autocomplete": null
+          },
+          {
+            "type": "password",
+            "name": "password",
+            "id": "password",
+            "label": null,
+            "placeholder": "Silakan masukkan kata sandi",
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T03:49:00.000Z"
+  }
+}

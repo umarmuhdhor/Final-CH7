@@ -1,0 +1,44 @@
+{
+  "id": "L04",
+  "label": "legit",
+  "fetchedAt": "2026-10-28T04:08:00.000Z",
+  "originalUrl": "https://admissions.ugm.ac.id/v26/",
+  "finalUrl": "https://admissions.ugm.ac.id/v26/",
+  "status": "terbuka",
+  "cloaking": false,
+  "rdapAgeDays": 11430,
+  "fieldsFromJs": [],
+  "nextStepUrls": [],
+  "snapshot": {
+    "url": "https://admissions.ugm.ac.id/v26/",
+    "domain": "ugm.ac.id",
+    "title": "Admisi",
+    "lang": "id",
+    "text": "Admisi\nUniversitas Gadjah Mada Admissions\nWarga Negara Indonesia\nPendaftaran Mahasiswa Baru\nSarjana – Sarjana Terapan",
+    "forms": [
+      {
+        "action": "https://admissions.ugm.ac.id/v26/",
+        "fields": [
+          {
+            "type": "search",
+            "name": "s",
+            "id": null,
+            "label": "Search",
+            "placeholder": "Search",
+            "autocomplete": "off"
+          },
+          {
+            "type": "hidden",
+            "name": "post_type",
+            "id": null,
+            "label": null,
+            "placeholder": null,
+            "autocomplete": null
+          }
+        ]
+      }
+    ],
+    "imageAlts": [],
+    "capturedAt": "2026-10-28T04:08:00.000Z"
+  }
+}
