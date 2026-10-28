@@ -71,6 +71,10 @@ final class LiveBackendUITests: XCTestCase {
         shot(app, "guardian-3-activity-empty")
 
         app.buttons["profileButton"].tap()
+        let manage = app.buttons["profile.manage"]
+        XCTAssertTrue(manage.waitForExistence(timeout: 10), app.debugDescription)
+        for _ in 0..<6 where !manage.isHittable { app.swipeUp() }
+        manage.tap()
         let field = app.textFields["profile.name"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         XCTAssertEqual(field.value as? String, "Rina")
@@ -79,10 +83,16 @@ final class LiveBackendUITests: XCTestCase {
         field.typeText(" B")
         app.buttons["profile.saveName"].tap()
         XCTAssertFalse(app.descendants(matching: .any)["profile.error"].waitForExistence(timeout: 3), app.debugDescription)
-        app.buttons["Bahasa Indonesia"].tap()
-        XCTAssertTrue(app.navigationBars["Profil"].waitForExistence(timeout: 5))
+        app.buttons["profile.back"].firstMatch.tap()
+        let language = app.buttons["profile.language"]
+        for _ in 0..<6 where !language.isHittable { app.swipeUp() }
+        language.tap()
+        app.buttons["language.id"].tap()
+        XCTAssertTrue(app.staticTexts["Bahasa"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["profile.back"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Profil"].firstMatch.waitForExistence(timeout: 5))
         shot(app, "guardian-4-profile-renamed-id")
-        app.buttons["profile.done"].tap()
+        app.buttons["profile.back"].firstMatch.tap()
     }
 
     @MainActor

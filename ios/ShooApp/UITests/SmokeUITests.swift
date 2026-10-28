@@ -39,14 +39,16 @@ final class SmokeUITests: XCTestCase {
     func testLanguageSwitchesLiveFromProfile() {
         let app = launch(language: "en")
         app.buttons["profileButton"].tap()
-        let picker = app.descendants(matching: .any)["languagePicker"].firstMatch
+        let picker = app.buttons["profile.language"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5), app.debugDescription)
+        for _ in 0..<6 where !picker.isHittable { app.swipeUp() }
         picker.tap()
-        let option = app.buttons["Bahasa Indonesia"].firstMatch
+        let option = app.buttons["language.id"]
         XCTAssertTrue(option.waitForExistence(timeout: 5), app.debugDescription)
         option.tap()
-        XCTAssertTrue(app.navigationBars["Profil"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["Selesai"].tap()
+        XCTAssertTrue(app.staticTexts["Bahasa"].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["profile.back"].firstMatch.tap()
+        app.buttons["profile.back"].firstMatch.tap()
         XCTAssertTrue(app.tabBars.buttons["Aktivitas"].waitForExistence(timeout: 5))
     }
 }

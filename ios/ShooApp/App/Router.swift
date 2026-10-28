@@ -4,6 +4,24 @@ import Observation
 /// Screens that are pushed on a tab's navigation stack.
 enum Route: Hashable {
     case detail(scanId: String)
+    /// PF-01 Profile, from the avatar button on either tab.
+    case profile
+    case profilePage(ProfilePage)
+    /// "Guardian/Detail Orang Dilindungi": one protected member, from Profile's family list.
+    case member(deviceId: String)
+    /// "Lihat semua" on the member detail: that member's Activity.
+    case memberActivity(deviceId: String)
+}
+
+/// Profile's sub-screens (PF-01).
+enum ProfilePage: Hashable {
+    case mode
+    case editProfile
+    /// Protected: "Terhubung", the guardian and Disconnect.
+    case connection
+    case language
+    case accessibility
+    case about
 }
 
 /// Tabs of the main screen.
@@ -19,7 +37,6 @@ final class Router {
     var selectedTab: AppTab = .shield
     var shieldPath: [Route] = []
     var activityPath: [Route] = []
-    var isProfilePresented = false
     /// Protected after onboarding: Connect (PR-01) as a sheet, from Shield or an invite link.
     var isConnectPresented = false
     /// From `shoo://join?code=` or `https://<api host>/j/<code>` (PR-03): fills the Connect field, never joins by itself (T11).
@@ -46,7 +63,6 @@ final class Router {
     }
 
     private func closeSheets() {
-        isProfilePresented = false
         isTurnOnPresented = false
         isConnectPresented = false
         wantsConnect = false
@@ -57,9 +73,8 @@ final class Router {
         guard !isConnectPresented else { return }
         popToRoot()
         selectedTab = .shield
-        if isProfilePresented || isTurnOnPresented {
+        if isTurnOnPresented {
             wantsConnect = true
-            isProfilePresented = false
             isTurnOnPresented = false
         } else {
             isConnectPresented = true
@@ -75,6 +90,28 @@ final class Router {
 
     func showDetail(scanId: String) {
         append(.detail(scanId: scanId))
+    }
+
+    /// The avatar button: Profile on top of the current tab.
+    func openProfile() {
+        guard currentPath.last != .profile else { return }
+        append(.profile)
+    }
+
+    func show(_ route: Route) {
+        append(route)
+    }
+
+    /// Profile's back button and the end of a member or connection flow.
+    func pop() {
+        switch selectedTab {
+        case .shield: if !shieldPath.isEmpty { shieldPath.removeLast() }
+        case .activity: if !activityPath.isEmpty { activityPath.removeLast() }
+        }
+    }
+
+    private var currentPath: [Route] {
+        selectedTab == .shield ? shieldPath : activityPath
     }
 
     func popToRoot() {

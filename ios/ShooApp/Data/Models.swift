@@ -22,6 +22,14 @@ struct JoinResponse: Codable, Hashable, Sendable {
     var guardian: GuardianInfo
 }
 
+/// `stats` in `GET /devices/me` (PF-01, proposed in backend/API.md): lifetime counters, kept past the
+/// 14-day retention, and when the device registered.
+struct ProfileStats: Codable, Hashable, Sendable {
+    var blocked: Int
+    var warnings: Int
+    var since: Date
+}
+
 /// `GET /devices/me` response.
 struct DeviceProfile: Codable, Hashable, Sendable {
     var deviceId: String
@@ -30,6 +38,8 @@ struct DeviceProfile: Codable, Hashable, Sendable {
     var mode: UserMode
     var language: String?
     var guardian: GuardianInfo?
+    /// PF-01 proposed; `nil` from a server without it (the stats row is hidden).
+    var stats: ProfileStats?
 }
 
 /// `PATCH /devices/me` body. `nil` fields are left out of the request.
@@ -38,6 +48,9 @@ struct DeviceUpdate: Codable, Hashable, Sendable {
     var apnsToken: String?
     var language: String?
     var extensionLastSeenAt: Date?
+    /// PF-01 proposed: "iPhone 15" and "26" on the guardian's member detail.
+    var deviceModel: String?
+    var osVersion: String?
 }
 
 /// `POST /family/code` response. 6 digits, valid 30 min, `inviteUrl` = `https://<api host>/j/<code>`.
@@ -56,11 +69,29 @@ struct FamilyMember: Codable, Hashable, Identifiable, Sendable {
         var detectedAt: Date
     }
 
+    /// `stats` of a member (PF-01 proposed).
+    struct Stats: Codable, Hashable, Sendable {
+        var blocked: Int
+        var warnings: Int
+    }
+
     var deviceId: String
     var name: String
     var avatarId: String
     var extensionActive: Bool
     var lastScan: LastScan?
+    // PF-01 proposed (backend/API.md): `nil` from a server without them, and the row is hidden.
+    /// "Terhubung sejak".
+    var connectedAt: Date?
+    /// Last extension heartbeat ("aktif 2 mnt lalu").
+    var lastSeenAt: Date?
+    var deviceModel: String?
+    var osVersion: String?
+    /// "Kabari saya".
+    var notify: Bool?
+    /// Last "Ingatkan" push.
+    var remindedAt: Date?
+    var stats: Stats?
 
     var id: String { deviceId }
 }
@@ -122,6 +153,9 @@ struct APIErrorCode: RawRepresentable, Hashable, Sendable, ExpressibleByStringLi
     static let alreadyConnected: APIErrorCode = "already_connected"
     // Verdicts (GD-07)
     static let verdictNotAllowed: APIErrorCode = "verdict_not_allowed"
+    // Member reminder (PF-01 proposed)
+    static let pushUnavailable: APIErrorCode = "push_unavailable"
+    static let remindTooSoon: APIErrorCode = "remind_too_soon"
 }
 
 /// `{ "error": { "code", "message" } }` body (contracts/api.md).

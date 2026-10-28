@@ -22,6 +22,8 @@ final class AppEnvironment {
     @ObservationIgnored private let registerForPush: @MainActor () -> Void
     /// The token the server has (or is getting) from this launch: the same one is not sent twice.
     @ObservationIgnored private var sentPushToken: String?
+    /// PF-01: model and iOS version go to the server once per launch.
+    @ObservationIgnored private var sentDeviceInfo = false
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
 
@@ -114,7 +116,7 @@ final class AppEnvironment {
         if let tab = Self.value(after: "-debug.tab", in: arguments).flatMap(AppTab.init(rawValue:)) {
             environment.router.selectedTab = tab
         }
-        environment.router.isProfilePresented = Self.value(after: "-debug.profile", in: arguments) == "YES"
+        if Self.value(after: "-debug.profile", in: arguments) == "YES" { environment.router.openProfile() }
         // Detail (fase 03): `-debug.detail <scanId>` opens it on the selected tab.
         if let scanId = Self.value(after: "-debug.detail", in: arguments) {
             environment.router.showDetail(scanId: scanId)
@@ -164,10 +166,18 @@ final class AppEnvironment {
         guard settings.mode != nil, !sessionExpired, !isSyncingForeground else { return }
         isSyncingForeground = true
         defer { isSyncingForeground = false }
-        if let lastSeen = await extensionStatus().lastSeen {
+        let lastSeen = await extensionStatus().lastSeen
+        // PF-01: the guardian's member detail shows the model and iOS version; sent once per launch.
+        let device = sentDeviceInfo ? nil : (model: DeviceInfo.modelName, os: DeviceInfo.osMajorVersion)
+        if lastSeen != nil || device != nil {
             do {
-                // The server refuses times in the future (clock changes).
-                try await repository.updateMe(DeviceUpdate(extensionLastSeenAt: min(lastSeen, now)))
+                try await repository.updateMe(DeviceUpdate(
+                    // The server refuses times in the future (clock changes).
+                    extensionLastSeenAt: lastSeen.map { min($0, now) },
+                    deviceModel: device?.model,
+                    osVersion: device?.os
+                ))
+                if device != nil { sentDeviceInfo = true }
             } catch {
                 guard !error.isCancellation else { return }
                 Log.app.error("Extension heartbeat sync failed", error)
@@ -262,15 +272,12 @@ final class AppEnvironment {
         settings.onboardingCompleted && settings.mode != nil && !sessionExpired
     }
 
-    /// Only the Guardian gets pushes, so only the Guardian's tabs open or show one.
-    @MainActor
-    private var isGuardianInMainScreen: Bool { isInMainScreen && settings.mode == .guardian }
-
-    /// GD-06: a tapped push. A push without a usable `scanId` opens Shield.
+    /// GD-06: a tapped push. A push without a usable `scanId` opens Shield. The Protected device only
+    /// gets family pushes (reminder, disconnect, PF-01), which never carry a `scanId`.
     @MainActor
     func openPush(scanId: String?) {
-        guard isGuardianInMainScreen else { return }
-        if let scanId {
+        guard isInMainScreen else { return }
+        if let scanId, settings.mode == .guardian {
             router.openDetail(scanId: scanId)
         } else {
             router.reset()
@@ -279,12 +286,13 @@ final class AppEnvironment {
 
     /// A push that arrives while Shoo is open: a banner only where a tap can open it (C15).
     @MainActor
-    var showsPushBanner: Bool { isGuardianInMainScreen }
+    var showsPushBanner: Bool { isInMainScreen }
 
-    /// ON-05: only the Guardian gets pushes (contracts/api.md), so only the Guardian's token is sent.
+    /// ON-05: both modes send their token. The Guardian gets scan pushes; the Protected device gets
+    /// family pushes ("Ingatkan", disconnect, PF-01 proposed in backend/API.md).
     @MainActor
     func pushTokenReceived(_ token: Data) async {
-        guard settings.mode == .guardian, !sessionExpired else { return }
+        guard settings.mode != nil, !sessionExpired else { return }
         let hex = NotificationRouter.hex(token: token)
         guard hex != sentPushToken else { return }
         // Marked before the request: a second callback with the same token while it is in flight sends nothing.
@@ -303,7 +311,7 @@ final class AppEnvironment {
     /// Apple asks apps to register at every launch: the token can change (restore, reinstall).
     @MainActor
     func registerForPushIfAllowed() async {
-        guard settings.mode == .guardian, !sessionExpired, await notifications.status() == .authorized else { return }
+        guard settings.mode != nil, !sessionExpired, await notifications.status() == .authorized else { return }
         Log.app.info("APNs registration requested")
         registerForPush()
     }

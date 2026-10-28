@@ -93,12 +93,19 @@ struct AppEnvironmentSessionTests {
         #expect(ISO8601DateFormatter().date(from: text) == now)
     }
 
+    /// PF-01: the first activation also sends the model and iOS version; after that, no heartbeat only refreshes.
     @Test func noHeartbeatOnlyRefreshesTheProfile() async {
         let server = StubServer()
-        server.reply { _ in Self.profile }
+        server.reply { $0.method == "PATCH" ? Self.ok : Self.profile }
         let env = environment(server: server, mode: .guardian)
         await env.sceneBecameActive()
-        #expect(server.requests.map(\.method) == ["GET"])
+        #expect(server.requests.map(\.method) == ["PATCH", "GET"])
+        let first = server.requests.first?.json
+        #expect(first?["deviceModel"] is String)
+        #expect(first?["osVersion"] is String)
+        #expect(first?["extensionLastSeenAt"] == nil)
+        await env.sceneBecameActive()
+        #expect(server.requests.map(\.method) == ["PATCH", "GET", "GET"])
     }
 
     @Test func foregroundBeforeRegistrationCallsNothing() async {

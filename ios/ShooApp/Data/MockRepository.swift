@@ -24,13 +24,37 @@ actor MockRepository: ShooRepository {
 
     /// Fixture identities. `dev_me` is the guardian in contracts/fixtures (verdicts "by Adhella").
     static let guardianProfile = DeviceProfile(
-        deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01", mode: .guardian, language: "en", guardian: nil
+        deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01", mode: .guardian, language: "en", guardian: nil,
+        stats: ProfileStats(blocked: 3, warnings: 5, since: Date(timeIntervalSince1970: 1_789_351_800))
     )
     static let fixtureGuardian = GuardianInfo(deviceId: "dev_me", name: "Adhella", avatarId: "avatar_01")
     static let protectedProfile = DeviceProfile(
         deviceId: "dev_mom", name: "Mom", avatarId: "avatar_03", mode: .protected, language: "en",
-        guardian: fixtureGuardian
+        guardian: fixtureGuardian,
+        stats: ProfileStats(blocked: 3, warnings: 1, since: Date(timeIntervalSince1970: 1_789_351_800))
     )
+
+    /// PF-01 member detail fields (proposed, not in contracts/fixtures): added to the fixture members by id.
+    static func withDetails(_ member: FamilyMember) -> FamilyMember {
+        var m = member
+        m.connectedAt = Date(timeIntervalSince1970: 1_789_351_800) // 14 Sep 2026
+        m.notify = true
+        switch m.deviceId {
+        case "dev_mom":
+            m.lastSeenAt = Date(timeIntervalSince1970: 1_793_073_480)
+            m.deviceModel = "iPhone 15"
+            m.osVersion = "26"
+            m.stats = .init(blocked: 3, warnings: 5)
+        case "dev_dad":
+            m.lastSeenAt = Date(timeIntervalSince1970: 1_792_900_000)
+            m.deviceModel = "iPad"
+            m.osVersion = "26"
+            m.stats = .init(blocked: 1, warnings: 0)
+        default:
+            m.stats = .init(blocked: 0, warnings: 0)
+        }
+        return m
+    }
     static let pageSize = 20
 
     private var profile: DeviceProfile
@@ -63,9 +87,9 @@ actor MockRepository: ShooRepository {
             allScans = Self.load(ScanPage.self, "activity-family", bundle: bundle)?.items ?? []
             let fixture = Self.load(FamilyMembersResponse.self, "family-members", bundle: bundle)?.members ?? []
             switch scenario {
-            case .oneMember: members = Array(fixture.prefix(1))
-            case .threeMembers: members = fixture + [Self.extraMember]
-            default: members = fixture
+            case .oneMember: members = Array(fixture.prefix(1)).map(Self.withDetails)
+            case .threeMembers: members = (fixture + [Self.extraMember]).map(Self.withDetails)
+            default: members = fixture.map(Self.withDetails)
             }
         case .empty:
             allScans = []
@@ -169,6 +193,27 @@ actor MockRepository: ShooRepository {
         allScans.removeAll { $0.ownerDeviceId == me }
         members = []
         profile.guardian = nil
+    }
+
+    func setMemberNotify(deviceId: String, notify: Bool) async throws {
+        try await pause()
+        try require(.guardian)
+        guard let index = members.firstIndex(where: { $0.deviceId == deviceId }) else {
+            throw RepositoryError.api(.notFound, message: "Not your member")
+        }
+        members[index].notify = notify
+    }
+
+    func remindMember(deviceId: String) async throws {
+        try await pause()
+        try require(.guardian)
+        guard let index = members.firstIndex(where: { $0.deviceId == deviceId }) else {
+            throw RepositoryError.api(.notFound, message: "Not your member")
+        }
+        if let last = members[index].remindedAt, now().timeIntervalSince(last) < 6 * 3600 {
+            throw RepositoryError.api(.remindTooSoon, message: "Already reminded recently")
+        }
+        members[index].remindedAt = now()
     }
 
     func leaveGuardian() async throws {

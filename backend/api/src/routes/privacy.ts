@@ -15,13 +15,15 @@ type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; sections: Section[] }> = {
   en: {
     title: "Shoo privacy policy",
-    updated: "Last updated: 25 October 2026",
+    updated: "Last updated: 28 October 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
       { h: "What we store", items: [
         "The first name you choose and a random avatar. No email, phone number or account password.",
         "A random device ID, and an Apple push token if you allow notifications.",
         "When your device last used Shoo, so your Guardian can see whether protection is on.",
+        "Your iPhone or iPad model and main iOS version (for example \"iPhone 15 · iOS 26\"), shown only to your Guardian.",
+        "How many sites Shoo has blocked or warned you about in total: numbers only, no addresses.",
         "Pages the extension flagged as risky (score 30 or more): address, domain, page title, site icon, score, the reasons, the time, and an optional screenshot of the page.",
         "Who is connected to whom in a family, and the Guardian's decisions about a site (Safe or Not safe), with the Guardian's name.",
       ] },
@@ -41,7 +43,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
         "Security counters (a keyed hash of your IP address or device, never the address itself) are deleted after 1 day.",
       ] },
       { h: "Delete your data", items: [
-        "In the app: Profile → Delete my data. Your device, flagged pages, screenshots, decisions and family links are deleted immediately. Screenshot links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable).",
+        "In the app: Profile → Delete account. Your device, flagged pages, screenshots, decisions and family links are deleted immediately. Screenshot links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable).",
       ] },
       { h: "Site age check", items: [
         "To check how old a site is, our server asks the public domain registry (RDAP) about the site's domain. We keep only the domain name and its registration date, for up to 7 days, not linked to you or your device.",
@@ -62,13 +64,15 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
   },
   id: {
     title: "Kebijakan privasi Shoo",
-    updated: "Terakhir diperbarui: 25 Oktober 2026",
+    updated: "Terakhir diperbarui: 28 Oktober 2026",
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
       { h: "Yang kami simpan", items: [
         "Nama depan pilihanmu dan avatar acak. Tanpa email, nomor HP, atau kata sandi akun.",
         "ID device acak, dan token push Apple kalau kamu mengizinkan notifikasi.",
         "Kapan device-mu terakhir memakai Shoo, supaya Guardian bisa melihat apakah perlindungan aktif.",
+        "Model iPhone atau iPad dan versi utama iOS-mu (misalnya \"iPhone 15 · iOS 26\"), hanya terlihat oleh Guardian-mu.",
+        "Berapa banyak situs yang pernah diblokir atau diberi peringatan oleh Shoo: hanya angka, tanpa alamat.",
         "Halaman yang ditandai berisiko oleh extension (skor 30 atau lebih): alamat, domain, judul halaman, ikon situs, skor, alasannya, waktu, dan screenshot halaman (opsional).",
         "Siapa terhubung dengan siapa dalam keluarga, dan keputusan Guardian tentang suatu situs (Aman atau Tidak aman) beserta nama Guardian.",
       ] },
@@ -88,7 +92,7 @@ const TEXT: Record<"en" | "id", { title: string; updated: string; lead: string; 
         "Penghitung keamanan (hash berkunci dari alamat IP atau device, tidak pernah alamatnya sendiri) dihapus setelah 1 hari.",
       ] },
       { h: "Hapus datamu", items: [
-        "Di app: Profil → Hapus dataku. Device, halaman yang ditandai, screenshot, keputusan, dan hubungan keluarga dihapus seketika. Link screenshot langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi).",
+        "Di app: Profil → Hapus akun. Device, halaman yang ditandai, screenshot, keputusan, dan hubungan keluarga dihapus seketika. Link screenshot langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi).",
       ] },
       { h: "Pemeriksaan umur situs", items: [
         "Untuk memeriksa umur sebuah situs, server kami bertanya ke registry domain publik (RDAP) tentang domain situs itu. Kami hanya menyimpan nama domain dan tanggal registrasinya, maksimal 7 hari, tidak terhubung ke kamu atau device-mu.",

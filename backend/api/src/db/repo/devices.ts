@@ -45,6 +45,8 @@ export interface DevicePatch {
   apnsToken?: string | null;
   language?: Language;
   extensionLastSeenAt?: Date;
+  deviceModel?: string;
+  osVersion?: string;
 }
 
 /** Only columns present in the patch change. ext_last_seen_at never moves backwards. */
@@ -55,6 +57,8 @@ export async function updateDevice(sql: Sql, id: string, p: DevicePatch): Promis
       name             = case when ${has("name")} then ${p.name ?? null}::text else name end,
       apns_token       = case when ${has("apnsToken")} then ${p.apnsToken ?? null}::text else apns_token end,
       language         = case when ${has("language")} then ${p.language ?? null}::text else language end,
+      device_model     = case when ${has("deviceModel")} then ${p.deviceModel ?? null}::text else device_model end,
+      os_version       = case when ${has("osVersion")} then ${p.osVersion ?? null}::text else os_version end,
       ext_last_seen_at = case when ${has("extensionLastSeenAt")}
                               then greatest(ext_last_seen_at, ${p.extensionLastSeenAt ?? null}::timestamptz)
                               else ext_last_seen_at end
@@ -67,11 +71,18 @@ export interface DeviceProfile {
   avatarId: string;
   mode: DeviceMode;
   language: Language;
+  /** PF-01 profile stats: lifetime counters and the registration time ("Hari terlindungi"). */
+  stats: { blocked: number; warnings: number; since: string };
 }
 
 export async function findProfile(sql: Sql, id: string): Promise<DeviceProfile | undefined> {
   const [row] = await sql<DeviceProfile[]>`
-    select id as "deviceId", name, avatar_id as "avatarId", mode, language from devices where id = ${id}`;
+    select id as "deviceId", name, avatar_id as "avatarId", mode, language,
+           json_build_object(
+             'blocked', blocked_total, 'warnings', warning_total,
+             'since', to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+           ) as stats
+    from devices where id = ${id}`;
   return row;
 }
 

@@ -26,6 +26,9 @@ const patchBody = z.object({
   apnsToken: apnsToken.nullable().optional(),
   language: z.enum(["en", "id"]).optional(),
   extensionLastSeenAt: isoTime.optional(),
+  // PF-01 member detail ("iPhone 15 · iOS 26"): marketing name and major iOS version only.
+  deviceModel: z.string().regex(/^[A-Za-z0-9 ()]{1,40}$/, "must be a device name").optional(),
+  osVersion: z.string().regex(/^[0-9]{1,3}$/, "must be a major version").optional(),
 });
 
 /** 1–12 without modulo bias (256 % 12 != 0): reject bytes ≥ 252. */
@@ -74,6 +77,8 @@ devices.patch("/devices/me", requireDevice, async (c) => {
     apnsToken: body.apnsToken,
     language: body.language,
     extensionLastSeenAt: seen,
+    deviceModel: body.deviceModel,
+    osVersion: body.osVersion,
   });
   return c.json({ ok: true });
 });

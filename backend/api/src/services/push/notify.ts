@@ -8,7 +8,8 @@ export const PUSH_CAP = { max: 10, minutes: 10 };
 
 /**
  * R4 §3: the push for a protected device's scan, addressed to its guardian, or undefined
- * (guardian's own scan, no guardian, no APNs token, or PUSH_CAP reached). Guardians' own scans never push.
+ * (guardian's own scan, no guardian, "Kabari saya" off, no APNs token, or PUSH_CAP reached).
+ * Guardians' own scans never push.
  */
 export async function guardianPush(
   sql: Sql,
@@ -21,7 +22,7 @@ export async function guardianPush(
            (select count(*)::int from push_log p
              where p.to_device_id = d.id and p.created_at > now() - make_interval(mins => ${PUSH_CAP.minutes})) as recent
     from family_links l join devices d on d.id = l.guardian_id
-    where l.protected_id = ${owner.deviceId}`;
+    where l.protected_id = ${owner.deviceId} and l.notify`;
   if (!g?.apnsToken) return undefined;
   if (g.recent >= PUSH_CAP.max) {
     console.log(JSON.stringify({ event: "push_capped" }));

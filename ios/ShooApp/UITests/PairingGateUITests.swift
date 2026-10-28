@@ -86,13 +86,13 @@ final class PairingGateUITests: XCTestCase {
                 let profile = app.buttons["profileButton"]
                 XCTAssertTrue(profile.waitForExistence(timeout: 10), app.debugDescription)
                 profile.tap()
-                XCTAssertTrue(app.textFields["profile.name"].waitForExistence(timeout: 10), app.debugDescription)
-                // A List only builds rows near the screen: scroll until the button is there.
-                let familyCode = app.buttons["profile.familyCode"]
-                for _ in 0..<8 where !familyCode.exists || !familyCode.isHittable { app.swipeUp() }
-                XCTAssertTrue(familyCode.isHittable, app.debugDescription)
-                familyCode.tap()
-                XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 5), app.debugDescription)
+                // PF-01: "Bagikan undangan" on the profile card opens the onboarding invite sheet.
+                let invite = app.buttons["profile.invite"]
+                XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
+                for _ in 0..<8 where !invite.isHittable { app.swipeUp() }
+                XCTAssertTrue(invite.isHittable, app.debugDescription)
+                invite.tap()
+                XCTAssertTrue(app.descendants(matching: .any)["invite.code"].waitForExistence(timeout: 5), app.debugDescription)
                 shot(app, "family-code-\(tag)")
                 app.terminate()
             }

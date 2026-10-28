@@ -5,7 +5,8 @@ export interface PushMessage {
   toDeviceId: string;
   apnsToken: string;
   body: string;
-  scanId: string;
+  /** The scan a tap opens (GD-06); absent for family pushes (reminder, disconnect), which just open the app. */
+  scanId?: string;
 }
 
 /** result is a push_log code: sent | logged | failed:<status>[ <reason>] | failed:timeout|network|config. */

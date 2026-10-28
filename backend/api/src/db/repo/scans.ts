@@ -13,12 +13,21 @@ export interface NewScan {
   detectedAt: string;
 }
 
+/** Also counts the scan in the owner's lifetime totals (profile stats, PF-01), in the same statement. */
 export async function insertScan(sql: Sql, s: NewScan): Promise<string> {
   const [row] = await sql<{ id: string }[]>`
-    insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at)
-    values (${s.ownerId}, ${s.url}, ${s.domain}, ${s.pageTitle}, ${s.faviconUrl}, ${s.score}, ${s.status},
-            ${sql.json(s.signals as never)}, ${s.detectedAt}::text::timestamptz)
-    returning id`;
+    with ins as (
+      insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at)
+      values (${s.ownerId}, ${s.url}, ${s.domain}, ${s.pageTitle}, ${s.faviconUrl}, ${s.score}, ${s.status},
+              ${sql.json(s.signals as never)}, ${s.detectedAt}::text::timestamptz)
+      returning id, owner_id, status
+    ), counted as (
+      update devices d set
+        blocked_total = d.blocked_total + (ins.status = 'blocked')::int,
+        warning_total = d.warning_total + (ins.status = 'warning')::int
+      from ins where d.id = ins.owner_id
+    )
+    select id from ins`;
   return row!.id;
 }
 

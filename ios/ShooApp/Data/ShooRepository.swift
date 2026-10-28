@@ -19,6 +19,11 @@ protocol ShooRepository: AnyObject, Sendable {
     func familyMembers() async throws -> [FamilyMember]
     /// `DELETE /family/members/{deviceId}` — guardian (GD-04).
     func removeMember(deviceId: String) async throws
+    /// `PATCH /family/members/{deviceId} { notify }` — guardian, "Kabari saya" (PF-01 proposed).
+    func setMemberNotify(deviceId: String, notify: Bool) async throws
+    /// `POST /family/members/{deviceId}/remind` — guardian, "Ingatkan" (PF-01 proposed).
+    /// Throws `push_unavailable` (member has notifications off) or `remind_too_soon` (within 6 h).
+    func remindMember(deviceId: String) async throws
     /// `DELETE /family/guardian` — protected (PF-01).
     func leaveGuardian() async throws
     /// `DELETE /devices/me` (PF-01, SECURITY §3 P3, App Store 5.1.1(v)): removes the device and

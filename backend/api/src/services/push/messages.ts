@@ -12,5 +12,20 @@ const TEXT: Record<Language, Record<"blocked" | "warning", (name: string, score:
   },
 };
 
+// Family pushes to the protected device, in its own language (PF-01, proposed contract addition).
+const FAMILY: Record<Language, Record<"remind" | "disconnected", (guardian: string) => string>> = {
+  en: {
+    remind: (g) => `${g} reminds you: turn on Shoo in Safari`,
+    disconnected: (g) => `${g} stopped protecting you`,
+  },
+  id: {
+    remind: (g) => `${g} mengingatkan: nyalakan Shoo di Safari`,
+    disconnected: (g) => `${g} berhenti melindungimu`,
+  },
+};
+
+export const familyPushText = (language: Language, kind: "remind" | "disconnected", guardianName: string) =>
+  FAMILY[language][kind](guardianName);
+
 export const pushText = (language: Language, status: "blocked" | "warning", ownerName: string, score: number) =>
   TEXT[language][status](ownerName, score);

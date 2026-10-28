@@ -78,6 +78,17 @@ final class ApiRepository: ShooRepository {
         let _: OkResponse = try await client.send(.init(method: .delete, path: ["family", "members", deviceId]))
     }
 
+    func setMemberNotify(deviceId: String, notify: Bool) async throws {
+        struct Body: Encodable, Sendable { var notify: Bool }
+        let _: OkResponse = try await client.send(.init(
+            method: .patch, path: ["family", "members", deviceId], body: Body(notify: notify)
+        ))
+    }
+
+    func remindMember(deviceId: String) async throws {
+        let _: OkResponse = try await client.send(.init(method: .post, path: ["family", "members", deviceId, "remind"]))
+    }
+
     func leaveGuardian() async throws {
         do {
             let _: OkResponse = try await client.send(.init(method: .delete, path: ["family", "guardian"]))

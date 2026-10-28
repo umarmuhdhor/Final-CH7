@@ -24,6 +24,7 @@ describe("GET /devices/me", () => {
     await call("/devices/me", { method: "PATCH", token: g.token, json: { language: "id" } });
     expect(await me(g)).toEqual({
       deviceId: g.deviceId, name: "Adhella", avatarId: g.avatarId, mode: "guardian", language: "id", guardian: null,
+      stats: { blocked: 0, warnings: 0, since: expect.any(String) },
     });
   });
 
@@ -36,6 +37,7 @@ describe("GET /devices/me", () => {
     expect(await me(p)).toEqual({
       deviceId: p.deviceId, name: "Mom", avatarId: p.avatarId, mode: "protected", language: "en",
       guardian: { deviceId: g.deviceId, name: "Adhella", avatarId: g.avatarId },
+      stats: { blocked: 0, warnings: 0, since: expect.any(String) },
     });
 
     expect((await call(`/family/members/${p.deviceId}`, { method: "DELETE", token: g.token })).status).toBe(200);

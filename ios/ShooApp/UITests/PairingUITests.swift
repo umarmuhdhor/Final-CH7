@@ -146,31 +146,14 @@ final class PairingUITests: XCTestCase {
         let profile = app.buttons["profileButton"]
         XCTAssertTrue(profile.waitForExistence(timeout: 10), app.debugDescription)
         profile.tap()
-        let familyCode = app.buttons["profile.familyCode"]
-        XCTAssertTrue(familyCode.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertFalse(familyCode.isEnabled, "Family full: no code to hand out")
+        let invite = app.buttons["profile.invite"]
+        XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
+        invite.tap()
+        // Family full: the invite sheet hands out no code.
+        let full = app.staticTexts["Your family is full (3 people). Remove someone to invite another person."]
+        XCTAssertTrue(full.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["invite.code"].exists)
     }
 
-    @MainActor
-    func testRemovingSomeoneFromTheFamilyCodeScreen() {
-        let app = launch(mode: "guardian")
-        let profile = app.buttons["profileButton"]
-        XCTAssertTrue(profile.waitForExistence(timeout: 10), app.debugDescription)
-        profile.tap()
-        let familyCode = app.buttons["profile.familyCode"]
-        XCTAssertTrue(familyCode.waitForExistence(timeout: 10), app.debugDescription)
-        if !familyCode.isHittable { app.swipeUp() }
-        familyCode.tap()
-        XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 5), app.debugDescription)
-        let members = app.descendants(matching: .any)["familyCode.members"].firstMatch
-        XCTAssertTrue(members.label.contains("2 of 3"), members.label)
-        let remove = app.buttons["familyCode.remove.dev_dad"]
-        if !remove.isHittable { app.swipeUp() }
-        remove.tap()
-        let confirm = app.buttons["familyCode.remove.confirm"].firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
-        confirm.tap()
-        let one = NSPredicate(format: "label CONTAINS '1 of 3'")
-        wait(for: [expectation(for: one, evaluatedWith: members)], timeout: 5)
-    }
+    // Removing a member: Profile's member detail since PF-01 (ProfileUITests.testGuardianDisconnectsAMemberFromTheDetail).
 }

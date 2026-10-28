@@ -31,10 +31,6 @@ struct MainTabView: View {
             .tabItem { Label("Activity", systemImage: "list.bullet.rectangle") }
             .tag(AppTab.activity)
         }
-        .sheet(isPresented: $router.isProfilePresented, onDismiss: router.sheetDismissed) {
-            ProfileView(repository: env.repository, settings: env.settings)
-                .environment(\.locale, env.settings.language.locale)
-        }
         .sheet(isPresented: $router.isConnectPresented) {
             ConnectSheet()
                 .environment(\.locale, env.settings.language.locale)
@@ -73,6 +69,16 @@ struct MainTabView: View {
         case .detail(let scanId):
             DetailView(scanId: scanId, repository: env.repository)
                 .id(scanId)
+        case .profile:
+            ProfileView(repository: env.repository, settings: env.settings, notifications: env.notifications)
+        case .profilePage(let page):
+            ProfilePageView(page: page)
+        case .member(let deviceId):
+            MemberDetailView(deviceId: deviceId, repository: env.repository)
+                .id(deviceId)
+        case .memberActivity(let deviceId):
+            ActivityView(repository: env.repository, owner: .device(deviceId))
+                .id(deviceId)
         }
     }
 }
@@ -116,7 +122,7 @@ private struct ProfileButton: ToolbarContent {
     var body: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
-                env.router.isProfilePresented = true
+                env.router.openProfile()
             } label: {
                 Image(systemName: "person.crop.circle")
                     .font(.title2)

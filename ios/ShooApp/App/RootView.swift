@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var systemTextSize
 
     var body: some View {
         Group {
@@ -20,6 +21,10 @@ struct RootView: View {
             }
         }
         .environment(\.locale, env.settings.language.locale)
+        // PF-01 "Teks besar": at least xLarge; a larger iPhone setting still wins.
+        .environment(\.dynamicTypeSize, env.settings.largeText ? max(systemTextSize, .xLarge) : systemTextSize)
+        // Light only for now: dark mode is a backlog issue (PF-01 Tema).
+        .preferredColorScheme(.light)
         .onOpenURL { env.open($0) }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // An invite code waits only while the app is in use.

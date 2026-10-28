@@ -97,16 +97,15 @@ final class LivePushUITests: XCTestCase {
     @MainActor
     private func pairWithTheHost(_ app: XCUIApplication) throws {
         app.buttons["profileButton"].tap()
-        let open = app.buttons["profile.familyCode"]
+        let open = app.buttons["profile.invite"]
         XCTAssertTrue(open.waitForExistence(timeout: 10), app.debugDescription)
-        if !open.isHittable { app.swipeUp() }
         open.tap()
-        let code = app.staticTexts["familyCode.code"]
+        let code = app.descendants(matching: .any)["invite.code"].firstMatch
         XCTAssertTrue(code.waitForExistence(timeout: 15), app.debugDescription)
         try write("code.txt", code.label.filter(\.isNumber))
         XCTAssertNotNil(waitFor("joined", timeout: 60), "Host never joined")
-        app.buttons["familyCode.done"].firstMatch.tap()
-        app.buttons["profile.done"].tap()
+        app.buttons["invite.done"].firstMatch.tap()
+        app.buttons["profile.back"].firstMatch.tap()
     }
 
     @MainActor

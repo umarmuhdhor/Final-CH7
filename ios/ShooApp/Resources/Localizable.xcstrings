@@ -1,6 +1,26 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ hasn't turned on notifications" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ belum menyalakan notifikasi"
+          }
+        }
+      }
+    },
+    "%@ will no longer get your warnings." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tidak akan menerima peringatanmu lagi."
+          }
+        }
+      }
+    },
     "%@ will no longer see the sites Shoo warns you about." : {
       "localizations" : {
         "id" : {
@@ -43,6 +63,16 @@
         }
       }
     },
+    "%lld people you protect will be disconnected." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld orang yang kamu lindungi akan terputus."
+          }
+        }
+      }
+    },
     "*Your name can be up to 20 characters" : {
       "localizations" : {
         "id" : {
@@ -79,6 +109,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode 6 angka"
+          }
+        }
+      }
+    },
+    "About Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentang Shoo"
+          }
+        }
+      }
+    },
+    "Accessibility" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aksesibilitas"
+          }
+        }
+      }
+    },
+    "Account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun"
+          }
+        }
+      }
+    },
+    "Account mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode akun"
           }
         }
       }
@@ -147,6 +217,16 @@
         }
       }
     },
+    "Ask %@ to turn Shoo on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minta %@ menyalakan Shoo"
+          }
+        }
+      }
+    },
     "Ask your family member to scan this code, or enter the 6 digits in Shoo." : {
       "localizations" : {
         "id" : {
@@ -173,6 +253,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kembali"
+          }
+        }
+      }
+    },
+    "Bigger text in Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks lebih besar di Shoo"
           }
         }
       }
@@ -225,6 +315,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamera. Arahkan ke kode QR di HP Guardian-mu."
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batal"
+          }
+        }
+      }
+    },
+    "Caution" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waspada"
           }
         }
       }
@@ -329,6 +439,16 @@
         }
       }
     },
+    "Connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung"
+          }
+        }
+      }
+    },
     "Connected %lld/%lld" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -336,6 +456,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terhubung %lld/%lld"
+          }
+        }
+      }
+    },
+    "Connected since" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung sejak"
           }
         }
       }
@@ -570,6 +700,66 @@
         }
       }
     },
+    "Couldn't send. Check your connection and try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal mengirim. Periksa koneksi lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Days as guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari jadi guardian"
+          }
+        }
+      }
+    },
+    "Days protected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari terlindungi"
+          }
+        }
+      }
+    },
+    "Days under protection" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari dilindungi"
+          }
+        }
+      }
+    },
+    "Delete account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus akun"
+          }
+        }
+      }
+    },
+    "Delete account?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus akun?"
+          }
+        }
+      }
+    },
     "Delete my data" : {
       "localizations" : {
         "id" : {
@@ -601,12 +791,22 @@
         }
       }
     },
+    "Device" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perangkat"
+          }
+        }
+      }
+    },
     "Disconnect" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Putuskan"
+            "value" : "Putuskan koneksi"
           }
         }
       }
@@ -626,7 +826,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Putuskan dari %@?"
+            "value" : "Putuskan koneksi dengan %@?"
           }
         }
       }
@@ -677,6 +877,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Semua orang"
+          }
+        }
+      }
+    },
+    "Extension off" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi mati"
+          }
+        }
+      }
+    },
+    "Extension off for %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi mati sejak %@"
           }
         }
       }
@@ -818,6 +1038,16 @@
         }
       }
     },
+    "Gets your warnings" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menerima peringatanmu"
+          }
+        }
+      }
+    },
     "Getting a code" : {
       "localizations" : {
         "id" : {
@@ -886,6 +1116,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Saya dilindungi oleh orang lain"
+          }
+        }
+      }
+    },
+    "If your iPhone already uses a bigger text size, Shoo keeps it." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalau iPhone-mu sudah memakai ukuran teks yang lebih besar, Shoo tetap memakainya."
           }
         }
       }
@@ -986,12 +1226,32 @@
         }
       }
     },
+    "Large text" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks besar"
+          }
+        }
+      }
+    },
     "Last blocked" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Terakhir diblokir"
+          }
+        }
+      }
+    },
+    "Light" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terang"
           }
         }
       }
@@ -1022,6 +1282,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Memuat tangkapan layar"
+          }
+        }
+      }
+    },
+    "Manage profile" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kelola profil"
           }
         }
       }
@@ -1065,6 +1335,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pesan"
+          }
+        }
+      }
+    },
+    "Mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
           }
         }
       }
@@ -1164,6 +1444,16 @@
         }
       }
     },
+    "No one protected yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada yang kamu lindungi"
+          }
+        }
+      }
+    },
     "No one to look after yet" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1248,12 +1538,32 @@
         }
       }
     },
+    "Notifications" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifikasi"
+          }
+        }
+      }
+    },
     "Notifications are off" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Notifikasi mati"
+          }
+        }
+      }
+    },
+    "Notify me" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kabari saya"
           }
         }
       }
@@ -1417,6 +1727,26 @@
         }
       }
     },
+    "People protected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang dilindungi"
+          }
+        }
+      }
+    },
+    "People you protect" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang yang dilindungi"
+          }
+        }
+      }
+    },
     "Person" : {
       "localizations" : {
         "id" : {
@@ -1427,12 +1757,42 @@
         }
       }
     },
+    "Personal" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pribadi"
+          }
+        }
+      }
+    },
     "Pick one mode to use Shoo" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pilih salah satu mode untuk menggunakan Shoo"
+          }
+        }
+      }
+    },
+    "Preferences" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preferensi"
+          }
+        }
+      }
+    },
+    "Privacy policy" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kebijakan privasi"
           }
         }
       }
@@ -1487,6 +1847,26 @@
         }
       }
     },
+    "Protected person" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang dilindungi"
+          }
+        }
+      }
+    },
+    "Protection" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlindungan"
+          }
+        }
+      }
+    },
     "Protection is off" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1509,6 +1889,26 @@
         }
       }
     },
+    "Protection off" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlindungan mati"
+          }
+        }
+      }
+    },
+    "Protection on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perlindungan aktif"
+          }
+        }
+      }
+    },
     "QR code to join your family" : {
       "localizations" : {
         "id" : {
@@ -1519,12 +1919,52 @@
         }
       }
     },
+    "Recent activity" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktivitas terbaru"
+          }
+        }
+      }
+    },
     "Refresh code" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Refresh Kode"
+          }
+        }
+      }
+    },
+    "Remind" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingatkan"
+          }
+        }
+      }
+    },
+    "Remind %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingatkan %@"
+          }
+        }
+      }
+    },
+    "Reminder sent to %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengingat terkirim ke %@"
           }
         }
       }
@@ -1715,12 +2155,42 @@
         }
       }
     },
+    "See all" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat semua"
+          }
+        }
+      }
+    },
     "Send invite" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kirim Undangan"
+          }
+        }
+      }
+    },
+    "Sends a notification to turn on Shoo in Safari" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim notifikasi untuk menyalakan Shoo di Safari"
+          }
+        }
+      }
+    },
+    "Sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terkirim"
           }
         }
       }
@@ -1756,6 +2226,16 @@
         }
       }
     },
+    "Share invite" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan undangan"
+          }
+        }
+      }
+    },
     "Shield" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1763,6 +2243,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Perisai"
+          }
+        }
+      }
+    },
+    "Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo"
           }
         }
       }
@@ -1818,6 +2308,16 @@
         }
       }
     },
+    "Shoo checks the sites you open in Safari and blocks scams. Flagged sites and their screenshots are deleted automatically after 14 days. No ads, no tracking." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo memeriksa situs yang kamu buka di Safari dan memblokir penipuan. Situs yang ditandai beserta screenshot-nya dihapus otomatis setelah 14 hari. Tanpa iklan, tanpa pelacakan."
+          }
+        }
+      }
+    },
     "Shoo checks the sites you open in Safari." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1859,12 +2359,42 @@
         }
       }
     },
+    "Shoo protects only you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo hanya melindungi kamu"
+          }
+        }
+      }
+    },
     "Shows how to switch Shoo on in Safari" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menunjukkan cara menyalakan Shoo di Safari"
+          }
+        }
+      }
+    },
+    "Shows this person's protection" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan perlindungan orang ini"
+          }
+        }
+      }
+    },
+    "Sites blocked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs diblokir"
           }
         }
       }
@@ -1897,6 +2427,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ada yang salah. Coba lagi."
+          }
+        }
+      }
+    },
+    "Standard" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standar"
           }
         }
       }
@@ -1956,6 +2496,16 @@
         }
       }
     },
+    "Switching to Personal keeps your family connected. You can switch back at any time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindah ke Pribadi tidak memutus keluargamu. Kamu bisa kembali kapan saja."
+          }
+        }
+      }
+    },
     "Tap All Websites and choose Allow, not Ask." : {
       "localizations" : {
         "id" : {
@@ -1983,6 +2533,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tekan tombol di bawah untuk membuka pengaturan Safari."
+          }
+        }
+      }
+    },
+    "Text" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks"
           }
         }
       }
@@ -2037,6 +2597,16 @@
         }
       }
     },
+    "Theme" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tema"
+          }
+        }
+      }
+    },
     "This family already has 3 people. Ask your guardian to remove someone first." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2076,6 +2646,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Item ini sudah tidak ada"
+          }
+        }
+      }
+    },
+    "This person is no longer connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang ini sudah tidak terhubung"
+          }
+        }
+      }
+    },
+    "Today" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari ini"
           }
         }
       }
@@ -2214,8 +2804,28 @@
         }
       }
     },
+    "Version" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versi"
+          }
+        }
+      }
+    },
     "Warning" : {
       "extractionState" : "stale",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peringatan"
+          }
+        }
+      }
+    },
+    "Warnings" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -2253,6 +2863,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Saat Shoo memblokir situs penipuan, kamu akan melihatnya di sini."
+          }
+        }
+      }
+    },
+    "When they open a dangerous site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat membuka situs berbahaya"
           }
         }
       }
@@ -2297,6 +2917,26 @@
         }
       }
     },
+    "You already reminded %@ recently" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah mengingatkan %@ belum lama ini"
+          }
+        }
+      }
+    },
+    "You also look after your family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu juga menjaga keluargamu"
+          }
+        }
+      }
+    },
     "You can turn them on now or later in Settings." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2325,6 +2965,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu menjaga %@"
+          }
+        }
+      }
+    },
+    "You stop getting warnings from %@'s activity. %@ will be told." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You stop getting warnings from %1$@'s activity. %2$@ will be told."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu berhenti menerima peringatan dari aktivitas %1$@. %2$@ akan diberi tahu."
+          }
+        }
+      }
+    },
+    "You will no longer get warnings from %@'s activity. To connect again, %@ needs to enter a new invite code." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You will no longer get warnings from %1$@'s activity. To connect again, %2$@ needs to enter a new invite code."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu tidak akan menerima peringatan dari aktivitas %1$@ lagi. Untuk terhubung kembali, %2$@ perlu memasukkan kode undangan baru."
           }
         }
       }
@@ -2413,6 +3085,16 @@
         }
       }
     },
+    "Your guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardian-mu"
+          }
+        }
+      }
+    },
     "Your name, family link and history are deleted right away. This can't be undone." : {
       "localizations" : {
         "id" : {
@@ -2439,6 +3121,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Perkecil"
+          }
+        }
+      }
+    },
+    "active %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aktif %@"
           }
         }
       }

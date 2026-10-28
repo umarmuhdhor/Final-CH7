@@ -14,6 +14,7 @@ final class AppSettings {
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let familyModeOn = "settings.familyModeOn"
         static let onboardingConnectPassed = "settings.onboardingConnectPassed"
+        static let largeText = "settings.largeText"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -41,6 +42,11 @@ final class AppSettings {
         didSet { defaults.set(familyModeOn, forKey: Keys.familyModeOn) }
     }
 
+    /// PF-01 Aksesibilitas "Teks besar": text at least `.xLarge` in the app; a larger system size still wins.
+    var largeText: Bool {
+        didSet { defaults.set(largeText, forKey: Keys.largeText) }
+    }
+
     init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
         self.defaults = defaults
         language = defaults.string(forKey: Keys.language).flatMap(AppLanguage.init(rawValue:))
@@ -49,6 +55,7 @@ final class AppSettings {
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
         onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
+        largeText = defaults.bool(forKey: Keys.largeText)
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.
@@ -61,7 +68,7 @@ final class AppSettings {
 
     /// Removes every stored preference (fresh install), e.g. `-UITestReset YES` before launch.
     static func clear(defaults: UserDefaults) {
-        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn, Keys.onboardingConnectPassed] {
+        for key in [Keys.language, Keys.mode, Keys.onboardingCompleted, Keys.familyModeOn, Keys.onboardingConnectPassed, Keys.largeText] {
             defaults.removeObject(forKey: key)
         }
     }
@@ -74,5 +81,6 @@ final class AppSettings {
         onboardingCompleted = false
         familyModeOn = false
         onboardingConnectPassed = false
+        largeText = false
     }
 }
