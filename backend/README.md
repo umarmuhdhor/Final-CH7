@@ -81,6 +81,8 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 
 Access: role `shoo_api` (no password in migrations) has CRUD on these tables only. `anon`/`authenticated` have no grants; RLS is on everywhere with a single `shoo_api` policy. No RPCs: the Worker uses plain SQL through postgres.js tagged templates.
 
+Create tables **only through migrations**, never in the dashboard Table Editor or as `supabase_admin`. Migrations revoke `service_role`'s default grants for the migrating role, but the project's `postgres` role is not a member of `supabase_admin` and cannot change that role's defaults, so a table made from the dashboard would get `service_role` (Data API) access again (PR #20 security review, LOW 5). The Worker never uses the Data API for tables: keep `public` out of Settings → API → Exposed schemas on the cloud project.
+
 Approving a blocklist domain (Supabase SQL editor). A trigger stamps `approved_at`/`removed_at` with `clock_timestamp()` on every UPDATE, so bulk approvals and re-approvals after a removal page correctly:
 
 ```sql
@@ -108,7 +110,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
 | `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot links (`openssl rand -base64 32`, ≥ 32 characters); unset or shorter → `screenshotUrl` null; changing it invalidates every link |
 | `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | APNs token auth (`.p8` as one line of base64, B7). Any APNs value unset → pushes only logged (`push_log` `logged`) |
-| `RATE_KEY_SECRET` | secret | HMAC key for rate-limit keys and join attempt IPs (`openssl rand -base64 32`, ≥ 32 characters). **Required**: unset or shorter → every rate-limited request is a 500 (fail closed). Set it before deploying. Changing it resets all counters once |
+| `RATE_KEY_SECRET` | secret | HMAC key for rate-limit keys and join attempt IPs (`openssl rand -base64 32`, ≥ 32 characters). **Required**: unset or shorter → every rate-limited request is a 500 (fail closed). Set it before deploying. Changing it resets all counters once, including the join-failure budget, so rotate it while no family code is shared and expect one deploy window where old and new isolates count apart |
 | `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
 | `APNS_ENV` | var | `sandbox` (Debug builds) → `production` (TestFlight, fase 16) |
 
@@ -117,8 +119,8 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 `triggers.crons: ["0 19 * * *"]` (03:00 WITA) runs `src/cron/retention.ts`:
 - writes `ops_heartbeat('cron')` first (anti-pause signal, also written by `/healthz/db`);
 - scans older than 14 days without a screenshot in chunks of 2000, max 25 per run (no Storage call);
-- scans older than 14 days with a screenshot in batches of 100, max 10 per run (`backlog: true` in the log when more are left). Each batch tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects; if Storage fails the rows are still gone on day 14 and the tombstones are retried. Verdicts stay with `scan_id` null (D-alief-14);
-- `storage_tombstones` (intent log of every screenshot object, D-alief-B12): paths no scan points at, older than 10 min, max 500 per run;
+- scans older than 14 days with a screenshot in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects, at most 10 Storage DELETEs of 100 paths per run (`backlog: true` in the log when rows are left). Paths over that budget, or left by a Storage failure, stay tombstoned; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
+- `storage_tombstones` (intent log of every screenshot object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run;
 - `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
 
 `scheduled()` awaits the run, so a failed step fails the Cron event.

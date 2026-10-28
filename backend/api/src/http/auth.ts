@@ -3,7 +3,8 @@ import type { AppEnv, DeviceMode } from "../env";
 import { findByTokenHash, touchLastSeen } from "../db/repo/devices";
 import { sha256 } from "./crypto";
 import { ApiError, errors } from "./errors";
-import { clientIp, hit, limits } from "./rateLimit";
+import { errorInfo } from "./logError";
+import { clientIp, hit, hitLight, limits } from "./rateLimit";
 
 const BEARER = /^Bearer (shoo_[A-Za-z0-9_-]{8,128})$/;
 
@@ -20,10 +21,14 @@ export const requireDevice: MiddlewareHandler<AppEnv> = async (c, next) => {
     // answer stays 401 (plus Retry-After): a client with a deleted token must learn it is dead,
     // not see a 429 it would just retry (review fase 12).
     try {
+      await hitLight(sql, limits.authFailAll, "all");
       await hit(sql, limits.authFail, clientIp((n) => c.req.header(n)));
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) throw errors.unauthorized(err.retryAfter);
-      throw err;
+      // An unknown token is a 401 whatever the counter does (e.g. RATE_KEY_SECRET unset), never a
+      // 500 (fase 12 LOW 1). Name + SQLSTATE only.
+      console.error(JSON.stringify({ event: "auth_fail_count_failed", error: errorInfo(err) }));
+      throw errors.unauthorized();
     }
     throw errors.unauthorized();
   }

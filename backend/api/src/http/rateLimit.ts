@@ -25,6 +25,9 @@ export const limits = {
   getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },
   // Unknown bearer tokens per IP (D-alief-B05): guessing a 256-bit token is hopeless, this caps the DB cost.
   authFail: { bucket: "auth_fail", max: 60, windowSeconds: 600 },
+  // All callers together, key "all", checked with hitLight before authFail (fase 12 LOW 3): many
+  // IPv6 /64s cannot each write 60 rows per 10 min. The answer is 401 either way.
+  authFailAll: { bucket: "auth_fail_all", max: 1000, windowSeconds: 600 },
 } satisfies Record<string, Limit>;
 
 /**

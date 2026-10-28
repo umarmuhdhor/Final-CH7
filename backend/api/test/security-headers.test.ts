@@ -84,6 +84,20 @@ describe("repeated unknown tokens per IP (D-alief-B05)", () => {
     expect((await call("/devices/me", { token: "shoo_unknown_other_ip", ip: freshIp() })).status).toBe(401);
   });
 
+  it(`after ${limits.authFailAll.max} unknown tokens from all IPs → 401 + Retry-After, no more rows written`, async () => {
+    const { keyHash, useRateKeySecret } = await import("../src/http/keyHash");
+    const { env } = await import("cloudflare:workers");
+    useRateKeySecret(env.RATE_KEY_SECRET);
+    const all = await keyHash("auth_fail_all:all");
+    await sql`insert into rate_limit_hits (bucket, key_hash) select 'auth_fail_all', ${all} from generate_series(1, ${limits.authFailAll.max})`;
+
+    const res = await call("/devices/me", { token: "shoo_unknown_global_cap", ip: freshIp() });
+    expect(res.status).toBe(401);
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect((await sql`select 1 from rate_limit_hits where bucket = 'auth_fail'`).length).toBe(0);
+    expect((await sql`select 1 from rate_limit_hits where bucket = 'auth_fail_all'`).length).toBe(limits.authFailAll.max);
+  });
+
   it("a missing or malformed header is 401 with no DB work", async () => {
     await call("/devices/me", { ip: "203.0.113.9" });
     await call("/devices/me", { headers: { authorization: "Bearer nope" }, ip: "203.0.113.9" });

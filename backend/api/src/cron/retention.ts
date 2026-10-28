@@ -5,15 +5,22 @@ import { addTombstones, dueTombstones } from "../db/repo/tombstones";
 import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../services/screenshots";
 
 /**
- * 100 scans per batch = one Storage DELETE (REMOVE_BATCH) per batch; 10 batches keep a run far
- * under the 50 subrequests a Cron may make on Workers Free (D-alief-B12).
+ * 100 paths per Storage DELETE (REMOVE_BATCH); 10 DELETEs keep a run far under the 50 subrequests
+ * a Cron may make on Workers Free (D-alief-B12). 1000 objects/run is well above the global quota
+ * of 300 new screenshots/day. Paths over the budget stay tombstoned for the tombstone step.
  */
 const BATCH = 100;
 const MAX_BATCHES = 10;
 /**
+ * Scans with a screenshot are deleted in the same large chunks as plain scans: dedupe reuses
+ * (no quota, up to 120/h per device) must not queue behind a Storage-bound loop and push other
+ * users' rows past day 14 (security review fase 12, HIGH).
+ */
+const SHOT_CHUNKS = 25;
+/**
  * Scans without a screenshot need no Storage call: 2000 per transaction, up to 25 per run
  * (50 000/day, above the global POST /scans cap of 2000/h), so retention keeps up with the
- * busiest possible day instead of only the 1000 scans the Storage-bound loop allows.
+ * busiest possible day. The screenshot loop uses the same chunk size.
  */
 const PLAIN_CHUNK = 2000;
 const PLAIN_CHUNKS = 25;
@@ -36,11 +43,14 @@ export interface RetentionResult {
 }
 
 export interface RetentionOptions {
+  /** Paths per Storage DELETE. */
   batch?: number;
+  /** Storage DELETEs for the scans step. */
   maxBatches?: number;
   /** Overrides screenshotStore(env); tests only. */
   store?: ScreenshotStore;
   plainChunk?: number;
+  shotChunk?: number;
   lockTimeoutMs?: number;
 }
 
@@ -109,20 +119,20 @@ async function deleteOldScans(
   result: RetentionResult,
 ): Promise<void> {
   const batch = opts.batch ?? BATCH;
-  const maxBatches = opts.maxBatches ?? MAX_BATCHES;
+  let storageCalls = opts.maxBatches ?? MAX_BATCHES;
+  const chunk = opts.shotChunk ?? PLAIN_CHUNK;
   const lockTimeout = `${opts.lockTimeoutMs ?? 3000}ms`;
 
   let storageError: unknown;
-  for (let b = 0; b < maxBatches; b++) {
-    // No transaction is open across the Storage call. Oldest first (index scans_created).
-    const rows = await sql<{ id: string }[]>`
-      select id from scans where created_at < now() - interval '14 days'
-      order by created_at, id limit ${batch}`;
-    if (rows.length === 0) break;
-    const ids = rows.map((r) => r.id);
+  for (let i = 0; i < SHOT_CHUNKS; i++) {
+    // No transaction is open across the Storage call. Oldest first (index scans_shot_created).
+    const ids = (await sql<{ id: string }[]>`
+      select id from scans where created_at < now() - interval '14 days' and screenshot_path is not null
+      order by created_at, id limit ${chunk}`).map((r) => r.id);
+    if (ids.length === 0) break;
 
     // Dedupe shares one object between scans of the same owner. Only paths no scan outside this
-    // batch points at are removed. No new scan can start sharing them: recentScreenshot reuses
+    // chunk points at are removed. No new scan can start sharing them: recentScreenshot reuses
     // only an original upload younger than 24 h, so an object lives 15 days at most.
     const paths = (
       await sql<{ path: string }[]>`
@@ -133,20 +143,20 @@ async function deleteOldScans(
             where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in ${sql(ids)})`
     ).map((r) => r.path);
 
-    // Rows go on day 14 even while Storage is down (the privacy page promises it): the paths are
-    // tombstoned in the same transaction, so a failed remove is retried by the tombstone step and
-    // later runs (D-alief-B12, review fase 12). Lock order verdict → scan, as in decideVerdict and
-    // deleteDevice. A lock timeout or deadlock rolls the batch back and stops the loop until tomorrow.
-    const deleted = await deleteScans(sql, ids, lockTimeout, sql``, paths);
-    if (paths.length && !storageError) {
-      const removed = await removeTombstoned(sql, store, paths);
+    // Rows go on day 14 even while Storage is down or over budget (the privacy page promises it):
+    // the paths are tombstoned in the same transaction, so the tombstone step and later runs remove
+    // what this loop does not (D-alief-B12, review fase 12). Lock order verdict → scan, as in
+    // decideVerdict and deleteDevice. A lock timeout or deadlock rolls the chunk back and stops the
+    // loop until tomorrow.
+    result.scans += await deleteScans(sql, ids, lockTimeout, sql``, paths);
+    for (let p = 0; p < paths.length && storageCalls > 0 && !storageError; p += batch, storageCalls--) {
+      const removed = await removeTombstoned(sql, store, paths.slice(p, p + batch));
       result.objects += removed.removed;
       // One failure is enough: no more Storage calls this run, the tombstones keep the rest.
       storageError = removed.error;
     }
-    result.scans += deleted;
-    if (rows.length < batch) break;
-    if (b === maxBatches - 1) result.backlog = true;
+    if (ids.length < chunk) break;
+    if (i === SHOT_CHUNKS - 1) result.backlog = true;
   }
   if (storageError) throw storageError;
 }
@@ -173,7 +183,9 @@ async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: Ret
  */
 async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra = sql``, paths: string[] = []): Promise<number> {
   return sql.begin(async (tx) => {
-    await addTombstones(tx, paths);
+    // Settled: these rows are 14 days old, so no upload for them can still be landing. The tombstone
+    // step may remove the paths this run, and a remove here drops the tombstone at once (fase 12 LOW 6).
+    await addTombstones(tx, paths, { settled: true });
     await tx`select set_config('lock_timeout', ${lockTimeout}, true), set_config('statement_timeout', '20s', true)`;
     await tx`select 1 from verdicts where scan_id in ${tx(ids)} order by owner_id, domain for update`;
     await tx`update verdicts set scan_id = null where scan_id in ${tx(ids)}`;

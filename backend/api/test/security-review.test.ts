@@ -66,6 +66,20 @@ describe("RATE_KEY_SECRET is required (M2, L14)", () => {
     expect(error.mock.calls.flat().join(" ")).toContain("RateKeySecretMissing");
   });
 
+  it("an unknown token stays a 401 (not a 500) when the secret is too short; logs name only (fase 12 LOW 1)", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const res = await app.request(
+      "/devices/me",
+      { headers: { authorization: "Bearer shoo_unknown_no_secret", "cf-connecting-ip": "203.0.113.5" } },
+      { ...env, RATE_KEY_SECRET: "too-short" },
+    );
+    expect(res.status).toBe(401);
+    expect((await sql`select 1 from rate_limit_hits`).length).toBe(0);
+    const logged = error.mock.calls.flat().join(" ");
+    expect(logged).toContain("auth_fail_count_failed");
+    expect(logged).not.toContain("shoo_unknown");
+  });
+
   it("a SCREENSHOT_URL_SECRET shorter than 32 characters gives no screenshot link", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const short = { ...env, SCREENSHOT_URL_SECRET: "short" } as typeof env;
