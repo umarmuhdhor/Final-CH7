@@ -77,7 +77,7 @@ struct GuardianHomeView: View {
         // Pill and profile live in the (see-through) navigation bar, so the status bar turns white on the hero.
         .toolbar {
             FamilySwitchToolbarItem(members: model.members, action: switchToFamily)
-            HomeProfileToolbarItem(name: model.profile?.name) { env.router.isProfilePresented = true }
+            HomeProfileToolbarItem(name: model.profile?.name) { env.router.openProfile() }
         }
         // Once the hero is gone, a navy scrim keeps the white status bar and pill readable over light content.
         .overlay(alignment: .top) {
