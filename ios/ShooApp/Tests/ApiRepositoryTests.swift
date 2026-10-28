@@ -17,7 +17,7 @@ struct ApiRepositoryTests {
     @Test func registerPostsNameAndModeWithoutToken() async throws {
         let server = StubServer(token: nil)
         server.reply { _ in .json(201, #"{"deviceId":"d1","token":"shoo_x","avatarId":"avatar_07"}"#) }
-        let registration = try await server.repository().registerDevice(name: "Rina", mode: .protected, apnsToken: nil)
+        let registration = try await server.repository().registerDevice(name: "Rina", mode: .protected, avatarId: nil, apnsToken: nil)
         #expect(registration == DeviceRegistration(deviceId: "d1", token: "shoo_x", avatarId: "avatar_07"))
         let request = try #require(server.requests.last)
         #expect(request.method == "POST" && request.path == "/devices")
@@ -25,6 +25,15 @@ struct ApiRepositoryTests {
         #expect(request.json?["name"] as? String == "Rina")
         #expect(request.json?["mode"] as? String == "protected")
         #expect(request.json?.keys.contains("apnsToken") == false)
+        #expect(request.json?.keys.contains("avatarId") == false)
+    }
+
+    @Test func registerSendsPickedAvatar() async throws {
+        let server = StubServer(token: nil)
+        server.reply { _ in .json(201, #"{"deviceId":"d1","token":"shoo_x","avatarId":"avatar_03"}"#) }
+        let registration = try await server.repository().registerDevice(name: "Rina", mode: .guardian, avatarId: "avatar_03", apnsToken: nil)
+        #expect(server.requests.last?.json?["avatarId"] as? String == "avatar_03")
+        #expect(registration.avatarId == "avatar_03")
     }
 
     @Test func scansSendsOwnerStatusAndCursor() async throws {

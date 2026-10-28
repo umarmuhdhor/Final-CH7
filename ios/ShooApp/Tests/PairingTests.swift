@@ -169,8 +169,8 @@ struct FamilyCodeModelTests {
             )
         }
 
-        func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
-            try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
+        func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+            try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
         }
         func me() async throws -> DeviceProfile { try await base.me() }
         func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
@@ -426,8 +426,8 @@ private actor ForeignLinkRepository: ShooRepository {
     func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
         FamilyCode(code: "482193", expiresAt: Date().addingTimeInterval(30 * 60), inviteUrl: URL(string: "https://evil.example/j/482193")!)
     }
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
-        try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
     }
     func me() async throws -> DeviceProfile { try await base.me() }
     func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
@@ -479,8 +479,8 @@ private actor SlowMembersRepository: ShooRepository {
     }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
     func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
-        try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
     }
     func me() async throws -> DeviceProfile { try await base.me() }
     func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }

@@ -201,15 +201,23 @@ struct MockRepositoryTests {
 
     @Test func registerValidatesNameLength() async throws {
         let repo = guardian()
-        await #expect { try await repo.registerDevice(name: "  ", mode: .guardian, apnsToken: nil) } throws: {
+        await #expect { try await repo.registerDevice(name: "  ", mode: .guardian, avatarId: nil, apnsToken: nil) } throws: {
             ($0 as? RepositoryError)?.apiCode == .invalidBody
         }
-        await #expect { try await repo.registerDevice(name: String(repeating: "a", count: 21), mode: .guardian, apnsToken: nil) } throws: {
+        await #expect { try await repo.registerDevice(name: String(repeating: "a", count: 21), mode: .guardian, avatarId: nil, apnsToken: nil) } throws: {
             ($0 as? RepositoryError)?.apiCode == .invalidBody
         }
-        let registration = try await repo.registerDevice(name: " Rina ", mode: .guardian, apnsToken: nil)
+        let registration = try await repo.registerDevice(name: " Rina ", mode: .guardian, avatarId: nil, apnsToken: nil)
         #expect(AvatarCatalog.ids.contains(registration.avatarId))
         #expect(try await repo.me().name == "Rina")
+    }
+
+    @Test func registerKeepsKnownAvatarOnly() async throws {
+        let repo = guardian()
+        #expect(try await repo.registerDevice(name: "Rina", mode: .guardian, avatarId: "avatar_02", apnsToken: nil).avatarId == "avatar_02")
+        #expect(try await repo.me().avatarId == "avatar_02")
+        let unknown = try await repo.registerDevice(name: "Rina", mode: .guardian, avatarId: "avatar_99", apnsToken: nil)
+        #expect(AvatarCatalog.ids.contains(unknown.avatarId))
     }
 
     @Test func updateMeChangesNameAndLanguage() async throws {

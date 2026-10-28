@@ -1,13 +1,18 @@
 import SwiftUI
 
-/// The four memoji of the ON-02 picker (Figma "Atur Profilmu"). Ids follow the avatar catalog;
-/// whether the server accepts them is issue #120.
+/// The four memoji of the ON-02 picker (Figma "Atur Profilmu"). Ids follow the avatar catalog and are
+/// sent as `avatarId` in `POST /devices` (#120).
 enum OnboardingAvatar {
     static let ids = ["avatar_01", "avatar_02", "avatar_03", "avatar_04"]
 
     static func imageName(for id: String) -> String {
         let index = ids.firstIndex(of: id) ?? 0
         return String(format: "Memoji%02d", index + 1)
+    }
+
+    /// The memoji asset for a picker id, nil for the rest of the catalog.
+    static func memoji(for id: String) -> String? {
+        ids.contains(id) ? imageName(for: id) : nil
     }
 }
 

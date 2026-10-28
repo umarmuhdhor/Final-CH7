@@ -37,12 +37,18 @@ jobs:
       # Unit tests also compare Data/Fixtures with contracts/fixtures, so the whole repo must be checked out.
       # Ad-hoc signing ("-", no team, no profile): the simulator still gets the entitlements, so the
       # Keychain tests work. CODE_SIGNING_ALLOWED=NO strips them and Keychain calls fail with -34018.
+      # The full log is too long to read; keep its tail plus every assertion line, so a failing
+      # test shows why it failed and not only its name.
       - name: Test
         run: |
-          xcodebuild test \
+          if xcodebuild test \
             -project ios/Shoo.xcodeproj \
             -scheme Shoo \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-            | tail -40
-          exit ${PIPESTATUS[0]}
+            > xcodebuild.log 2>&1; then status=0; else status=$?; fi
+          tail -40 xcodebuild.log
+          echo "::group::Assertion failures"
+          grep -E ": error: |\] failed \(|recorded an issue|Expectation failed" xcodebuild.log | cut -c1-600 | head -60 || true
+          echo "::endgroup::"
+          exit $status

@@ -9,9 +9,15 @@ type Q = Sql | TransactionSql;
  * only once it is older than 10 minutes (an upload, 5 s timeout, may still be landing). So a
  * failed remove or a late-landing upload is retried by the daily cron instead of left behind.
  */
-export async function addTombstones(sql: Q, paths: string[]): Promise<void> {
+export async function addTombstones(sql: Q, paths: string[], opts: { settled?: boolean } = {}): Promise<void> {
   if (paths.length === 0) return;
-  await sql`insert into storage_tombstones ${sql(paths.map((path) => ({ path })))} on conflict (path) do nothing`;
+  // `settled`: no upload can still be landing (retention of 14-day-old rows), so the 10-minute
+  // grace is skipped. An existing tombstone keeps its own age.
+  const age = opts.settled ? sql`interval '1 hour'` : sql`interval '0'`;
+  await sql`
+    insert into storage_tombstones (path, created_at)
+    select p, now() - ${age} from jsonb_array_elements_text(${sql.json(paths)}) as p
+    on conflict (path) do nothing`;
 }
 
 /** After a confirmed remove. Young tombstones stay: their upload may land after the remove. */

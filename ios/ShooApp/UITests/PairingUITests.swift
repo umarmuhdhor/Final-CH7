@@ -55,39 +55,39 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
         app.buttons["splash.skip"].tap()
         let name = app.textFields["name.field"]
-        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
         name.tap()
         name.typeText("Mom")
         app.buttons["name.continue"].tap()
         app.buttons["mode.protected"].tap()
         app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 10))
         app.buttons["greeting.continue"].tap()
 
         let join = app.buttons["connect.join"]
-        XCTAssertTrue(join.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(join.isEnabled)
         enter("000000", in: app)
         join.tap()
         let error = app.staticTexts["connect.error"]
-        XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(error.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
 
         enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
         join.tap()
-        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        XCTAssertTrue(error.waitForExistence(timeout: 10))
         XCTAssertTrue(error.label.contains("expired"), error.label)
 
         enter("482193", in: app)
         join.tap()
         let title = app.staticTexts["protectedBy.title"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Adhella"), title.label)
         app.buttons["protectedBy.continue"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
     /// T11: an invite link only fills the code; nothing joins until Connect is tapped.

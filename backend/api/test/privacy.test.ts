@@ -11,7 +11,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     const html = await res.text();
     expect(html).toContain('<html lang="en">');
     for (const s of ["14 days", "Delete account", "iPhone 15 · iOS 26", "numbers only, no addresses", "decisions", "No ads, no analytics, no tracking", "Cloudflare", "Supabase", "Apple", "1 day",
-      "15 days", "never its text", "last used Shoo", "60 seconds", "retried daily"]) {
+      "15 days", "never its text", "last used Shoo", "30 minutes", "not deleted automatically", "retried daily"]) {
       expect(html).toContain(s);
     }
     expect(html).not.toContain("<script");
