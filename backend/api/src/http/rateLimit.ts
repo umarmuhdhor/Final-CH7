@@ -20,6 +20,14 @@ export const limits = {
   // must delete per day (50 000 plain scans/day) far above what a demo produces.
   createScanAll: { bucket: "scans_create_all", max: 2000, windowSeconds: 3600 },
   viewScreenshot: { bucket: "screenshots_view", max: 120, windowSeconds: 60 },
+  // A list page shows up to 50 favicons and the app may reload them while scrolling.
+  viewFavicon: { bucket: "favicons_view", max: 600, windowSeconds: 60 },
+  // PR-05: favicon downloads (subrequests to a URL a web page chose). Attempts count, not stored
+  // files, so failing URLs cannot make the Worker fetch without limit. Reuses do not count.
+  fetchFavicon: { bucket: "favicons_fetch", max: 30, windowSeconds: 86400 },
+  // All devices together, key "all", hitLight: 200 × 64 KB × 15 days ≈ 190 MB of Storage at most,
+  // which with the screenshots' 675 MB stays under the 1 GB of Supabase Free (D-alief-B12).
+  fetchFaviconAll: { bucket: "favicons_fetch_all", max: 200, windowSeconds: 86400 },
   createVerdict: { bucket: "verdicts_create", max: 60, windowSeconds: 60 },
   // EX-06 polls every 5 s per open block screen (several tabs), plus one lookup per page (SECURITY T10).
   getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },

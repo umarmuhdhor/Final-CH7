@@ -16,14 +16,17 @@ const DAILY_QUOTA = 50;
 const GLOBAL_DAILY_QUOTA = 300;
 const DEFAULT_MAX_BYTES = 150 * 1024;
 
-/** ScanResult (contracts/scan-result.schema.json). pageTitle is omitted when unknown. */
-export function toScanResult(row: ScanRow, screenshotUrl: string | null) {
+/**
+ * ScanResult (contracts/scan-result.schema.json). pageTitle is omitted when unknown. faviconUrl is
+ * our signed link to the stored copy (PR-05), never the scam site's URL.
+ */
+export function toScanResult(row: ScanRow, screenshotUrl: string | null, faviconUrl: string | null) {
   return {
     id: row.id,
     url: row.url,
     domain: row.domain,
     ...(row.pageTitle !== null ? { pageTitle: row.pageTitle } : {}),
-    faviconUrl: row.faviconUrl,
+    faviconUrl,
     score: row.score,
     status: row.status,
     signals: row.signals,

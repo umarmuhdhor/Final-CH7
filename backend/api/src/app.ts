@@ -7,6 +7,7 @@ import { appSiteAssociation } from "./routes/app-site-association";
 import { blocklist } from "./routes/blocklist";
 import { devices } from "./routes/devices";
 import { family } from "./routes/family";
+import { favicons } from "./routes/favicons";
 import { health } from "./routes/health";
 import { joinPage } from "./routes/join-page";
 import { privacy } from "./routes/privacy";
@@ -46,7 +47,7 @@ const MAX_REQUEST_BYTES = 256 * 1024;
 
 /**
  * Fase 12 hardening, on every response after the route ran (also errors and raw Responses).
- * Only fills what a route did not set: /j/<code> and /screenshots keep their own CSP.
+ * Only fills what a route did not set: /j/<code>, /screenshots and /favicons keep their own CSP.
  * No CORS headers anywhere: the clients are native (app, Safari extension), and OPTIONS → 404.
  */
 function setSecurityHeaders(h: Headers): void {
@@ -65,6 +66,7 @@ app.route("/", appSiteAssociation);
 app.route("/", devices);
 app.route("/", blocklist);
 app.route("/", family);
+app.route("/", favicons);
 app.route("/", joinPage);
 app.route("/", privacy);
 app.route("/", scans);
