@@ -1,0 +1,90 @@
+[
+  {
+    "id": "regs-apps14-code-php",
+    "label": "scam",
+    "tags": [
+      "other"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "reported 2026-10-27 (Imelda); URL only, page never opened. Live scam URL: do not open it.",
+    "collectedAt": "2026-10-27T00:00:00.000Z",
+    "notes": "Shape <word>-<word><digits>.<random-hyphenated-domain>/<file>.php. The domain is .com and about 87 days old (RDAP 2026-10-27), so cheap_tld does not help. Layer 2 v2 scored 5 (file_ext only) before the link-pattern rules.",
+    "snapshot": {
+      "url": "https://regs-apps14.regnows-dfg.com/code.php",
+      "title": "",
+      "lang": null,
+      "text": "",
+      "forms": [],
+      "imageAlts": [],
+      "capturedAt": "2026-10-27T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "cusbsi-bsi-cash-management",
+    "label": "scam",
+    "tags": [
+      "bank",
+      "clean-domain-scam",
+      "holdout"
+    ],
+    "synthetic": false,
+    "redacted": true,
+    "source": "found by Imelda 2026-10-27; static HTML read, never opened in a browser. Live phishing URL: do not open it.",
+    "collectedAt": "2026-10-27T00:00:00.000Z",
+    "notes": "Clone of BSI Cash Management on a clean-looking domain (cusbsi.com, 21 days old, Netlify). Three steps: login (company id, user id, password, captcha), change password, 6-digit OTP; the script posts each step to a Telegram bot. Layer 1-2 cannot see it from the URL: the brand 'bsi' is glued to 'cus' and is only 3 letters long. Meant for layer 3 (forms + brand_logo_offsite).",
+    "snapshot": {
+      "url": "https://cusbsi.com/",
+      "title": "BSI Cash Management",
+      "lang": "id",
+      "text": "BSI Cash Management. Login. BSI - Call 1500789 www.bankbsi.co.id OJK LPS",
+      "forms": [
+        {
+          "action": null,
+          "fields": [
+            {
+              "type": "text",
+              "name": null,
+              "id": "companyId",
+              "label": null,
+              "placeholder": "Enter Company ID",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": null,
+              "id": "userId",
+              "label": null,
+              "placeholder": "Enter User ID",
+              "autocomplete": null
+            },
+            {
+              "type": "password",
+              "name": null,
+              "id": "passwordField",
+              "label": null,
+              "placeholder": "Enter Password",
+              "autocomplete": null
+            },
+            {
+              "type": "text",
+              "name": null,
+              "id": "captchaInput",
+              "label": null,
+              "placeholder": "Masukkan kode di atas",
+              "autocomplete": null
+            }
+          ]
+        }
+      ],
+      "imageAlts": [
+        "BSI Logo",
+        "Banner 1",
+        "Banner 2",
+        "Banner 3",
+        "Norton by Symantec"
+      ],
+      "capturedAt": "2026-10-27T00:00:00.000Z"
+    }
+  }
+]
