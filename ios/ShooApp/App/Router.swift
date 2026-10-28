@@ -27,6 +27,8 @@ final class Router {
     var pendingJoinCode: String?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
     var isTurnOnPresented = false
+    /// GD-01: the "Notifications are off" popup was shown this launch. Memory only, so the next launch reminds again.
+    var notificationReminderShown = false
     /// An invite link asked for Connect while another sheet was up: shown once that one is gone.
     private(set) var wantsConnect = false
 
