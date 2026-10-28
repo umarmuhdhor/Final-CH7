@@ -19,6 +19,7 @@ Lead: @umarmuhdhor (Umar) · Team AI: @imeldamayanti (Imelda) · Team App: @alie
 | `ios/ShooShared/` | Lead | Swift models used by app + extension |
 | `ios/ShooExtension/` | Lead | Safari extension (except `Resources/detector.js`) |
 | `ios/ShooLiveActivity/` | Lead | Dynamic Island (EX-03) |
+| `chrome/` | Lead | Chrome extension (same pipeline and UI as Safari, layers 1–2 only) |
 | `ios/ShooApp/` | Team App | All app screens (ON, PR, GD, DT, PF) |
 | `backend/` | Team App | Pairing, Activity, verdicts, push, 14-day retention |
 | `detector/` | Lead (diambil alih dari Team AI, 23 Okt 2026) | On-device detection (layer 1–2) |

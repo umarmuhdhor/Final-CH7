@@ -1,0 +1,7 @@
+{
+    "_comment": "Scam-looking demo URLs that layer 2 alone puts in each band (chrome/README.md). Hosts are fake: the e2e run maps them to a local server. demo-urls.test.mjs pins the bands; if a detector change moves one, pick a new URL.",
+    "safe": "http://tokopedia.com/",
+    "mini": "http://klikbca-verifikasi.top/login",
+    "sheet": "http://p0stindonesia.xyz/login/verifikasi.php",
+    "block": "http://paypa1-login.top/secure/login/verify.php/?token=8f7a9b2c3d4e5f6a7b8c9d0e1f2a3b4c8f7a9b2c3d4e5f6a7b8c9d0e1f2a3b4c#login"
+}
