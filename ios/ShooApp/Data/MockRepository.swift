@@ -75,13 +75,15 @@ actor MockRepository: ShooRepository {
 
     // MARK: Devices
 
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
         try await pause()
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (1...20).contains(trimmed.count) else {
             throw RepositoryError.api(.invalidBody, message: "name must be 1–20 characters")
         }
-        let avatarId = String(format: "avatar_%02d", Int.random(in: 1...12))
+        // Same rule as the server (contracts/api.md, #120): a known id is kept, anything else is random.
+        let avatarId = avatarId.flatMap { AvatarCatalog.ids.contains($0) ? $0 : nil }
+            ?? String(format: "avatar_%02d", Int.random(in: 1...12))
         profile = DeviceProfile(
             deviceId: mode == .guardian ? Self.guardianProfile.deviceId : Self.protectedProfile.deviceId,
             name: trimmed, avatarId: avatarId, mode: mode, language: profile.language,

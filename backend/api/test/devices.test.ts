@@ -35,6 +35,26 @@ describe("POST /devices", () => {
     expect(row!.apns_token).toBe(apns);
   });
 
+  it("keeps the picked avatarId (ON-02)", async () => {
+    for (const avatarId of ["avatar_01", "avatar_04", "avatar_12"]) {
+      const res = await call("/devices", { method: "POST", json: { name: "Mom", mode: "protected", avatarId } });
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as { deviceId: string; avatarId: string };
+      expect(body.avatarId).toBe(avatarId);
+      const [row] = await sql`select avatar_id from devices where id = ${body.deviceId}`;
+      expect(row!.avatar_id).toBe(avatarId);
+    }
+  });
+
+  it.each([["avatar_00"], ["avatar_13"], ["avatar_1"], ["AVATAR_01"], [""], [5], [null], [{}]])(
+    "unknown avatarId %j falls back to random, no error",
+    async (avatarId) => {
+      const res = await call("/devices", { method: "POST", json: { name: "Mom", mode: "guardian", avatarId } });
+      expect(res.status).toBe(201);
+      expect(((await res.json()) as { avatarId: string }).avatarId).toMatch(/^avatar_(0[1-9]|1[0-2])$/);
+    },
+  );
+
   it("accepts 20 emoji (code points, not UTF-16 units)", async () => {
     const res = await call("/devices", { method: "POST", json: { name: "😀".repeat(20), mode: "protected" } });
     expect(res.status).toBe(201);

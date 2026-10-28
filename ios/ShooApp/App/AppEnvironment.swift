@@ -126,8 +126,8 @@ final class AppEnvironment {
     /// ON-03: registers the device and saves the mode for good. The repository then answers as this
     /// device (the mock adopts the name, avatar and mode; the API knows them from the token).
     @MainActor
-    func register(name: String, mode: UserMode) async throws -> DeviceRegistration {
-        let registration = try await repository.registerDevice(name: name, mode: mode, apnsToken: nil)
+    func register(name: String, mode: UserMode, avatarId: String? = nil) async throws -> DeviceRegistration {
+        let registration = try await repository.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: nil)
         // Keychain + App Group before the mode is saved: a relaunch never finds a mode without a session.
         do {
             try session?.save(registration, name: name, mode: mode)

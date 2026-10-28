@@ -3,8 +3,8 @@ import Foundation
 /// Every backend operation the app uses, shaped by contracts/api.md.
 /// Fase A: `MockRepository` (fixtures). Fase C: `ApiRepository` — views never change.
 protocol ShooRepository: AnyObject, Sendable {
-    /// `POST /devices` (ON-02, ON-03).
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration
+    /// `POST /devices` (ON-02, ON-03). `avatarId` is the ON-02 pick; nil or unknown → the server picks (#120).
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration
     /// `GET /devices/me` (PR-04, PF-01).
     func me() async throws -> DeviceProfile
     /// `PATCH /devices/me` (ON-05, PF-01, GD-03).

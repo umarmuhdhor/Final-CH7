@@ -35,8 +35,8 @@ actor StubRepository: ShooRepository {
         self.onVerdict = onVerdict
     }
 
-    func registerDevice(name: String, mode: UserMode, apnsToken: String?) async throws -> DeviceRegistration {
-        try await base.registerDevice(name: name, mode: mode, apnsToken: apnsToken)
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
     }
     func me() async throws -> DeviceProfile { try await base.me() }
     func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }

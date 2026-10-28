@@ -19,7 +19,11 @@ const createBody = z.object({
   name,
   mode: z.enum(["guardian", "protected"]),
   apnsToken: apnsToken.optional(),
+  // ON-02 (#120): never a 422. Anything that is not avatar_01…avatar_12 falls back to random.
+  avatarId: z.unknown().optional(),
 });
+
+const AVATAR_ID = /^avatar_(0[1-9]|1[0-2])$/;
 
 const patchBody = z.object({
   name: name.optional(),
@@ -48,7 +52,10 @@ devices.post("/devices", async (c) => {
   await hit(sql, limits.createDeviceAll, "all");
 
   const token = `shoo_${base64url(randomBytes(32))}`;
-  const avatarId = `avatar_${String(randomAvatar()).padStart(2, "0")}`;
+  const avatarId =
+    typeof body.avatarId === "string" && AVATAR_ID.test(body.avatarId)
+      ? body.avatarId
+      : `avatar_${String(randomAvatar()).padStart(2, "0")}`;
   const deviceId = await insertDevice(sql, {
     name: body.name,
     mode: body.mode,
