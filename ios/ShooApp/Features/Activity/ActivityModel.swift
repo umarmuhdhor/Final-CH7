@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Filter chips of Activity (PR-05, GD-05).
+/// Segments of Activity (PR-05, GD-05).
 enum ActivityFilter: String, CaseIterable, Hashable, Sendable {
     case all
     case warning
@@ -16,24 +16,45 @@ enum ActivityFilter: String, CaseIterable, Hashable, Sendable {
         }
     }
 
-    var title: LocalizedStringKey {
+    /// Figma: "Semua / Waspada / Diblokir" on the own list, "Semua / Waspada / Bahaya" in Family mode.
+    func title(family: Bool) -> LocalizedStringKey {
         switch self {
         case .all: "All"
-        case .warning: "Warning"
-        case .blocked: "Blocked"
+        case .warning: "activity.warning"
+        case .blocked: family ? "Danger" : "Blocked"
         }
     }
 }
 
-/// Whose scans Family Activity shows (GD-05): everyone, the guardian, or one member.
+/// Whose scans Family Activity shows (GD-05): every member, or one of them.
 enum ActivityPerson: Hashable, Sendable {
     case everyone
-    case me
     case device(String)
 }
 
-/// Activity list (PR-05; reused by the Guardian's GD-05 with another `owner`): newest first,
-/// filter by status, endless scroll on `nextCursor`, pull to refresh.
+/// One day of the list with its rows, newest first (Figma "Hari ini", "25 Oktober").
+struct ActivityDay: Identifiable, Equatable {
+    /// Start of the day in the given calendar's time zone.
+    let id: Date
+    let items: [ScanResult]
+
+    /// Groups a newest-first list by calendar day, keeping the order.
+    static func group(_ items: [ScanResult], calendar: Calendar = .current) -> [ActivityDay] {
+        var days: [ActivityDay] = []
+        for scan in items {
+            let day = calendar.startOfDay(for: scan.detectedAt)
+            if let last = days.last, last.id == day {
+                days[days.count - 1] = ActivityDay(id: day, items: last.items + [scan])
+            } else {
+                days.append(ActivityDay(id: day, items: [scan]))
+            }
+        }
+        return days
+    }
+}
+
+/// Activity list (PR-05; reused by the Guardian's GD-05 with `owner: .family`): newest first,
+/// grouped by day, filter by status, endless scroll on `nextCursor`, pull to refresh.
 @MainActor
 @Observable
 final class ActivityModel {
@@ -43,10 +64,10 @@ final class ActivityModel {
         case failed
     }
 
-    /// `.family` turns on the person filter (GD-05); `.me` is the user's own history.
+    /// `.family` turns on the person picker (GD-05); `.me` is the user's own history.
     let baseOwner: ScanOwnerFilter
     private(set) var person: ActivityPerson = .everyone
-    /// Family members for the person chips; empty outside Family Activity.
+    /// Family members for the picker; empty outside Family Activity.
     private(set) var people: [FamilyMember] = []
     private(set) var state: State = .loading
     private(set) var filter: ActivityFilter = .all
@@ -57,23 +78,32 @@ final class ActivityModel {
     /// The last next-page request failed; the list shows a Retry row.
     private(set) var loadMoreFailed = false
     private var nextCursor: String?
+    /// The guardian's own device: Family Activity shows members only, so its rows are left out.
+    private var ownDeviceId: String?
 
     @ObservationIgnored private let repository: any ShooRepository
     /// Bumped when a first-page request starts and again when one is applied, so neither an older
     /// first page nor a next page meant for the previous list can overwrite the newer one.
     @ObservationIgnored private var generation = 0
 
-    init(repository: any ShooRepository, owner: ScanOwnerFilter, filter: ActivityFilter = .all) {
+    /// `ownDeviceId` comes from the session; without one (mock, tests) Family Activity asks `me()` once.
+    init(
+        repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil,
+        filter: ActivityFilter = .all, person: ActivityPerson = .everyone
+    ) {
         self.repository = repository
         baseOwner = owner
+        self.ownDeviceId = ownDeviceId
         self.filter = filter
+        self.person = owner == .family ? person : .everyone
     }
 
-    /// The `owner=` actually requested: the person filter narrows Family Activity.
+    var isFamily: Bool { baseOwner == .family }
+
+    /// The `owner=` actually requested: the person picker narrows Family Activity.
     var owner: ScanOwnerFilter {
         switch person {
         case .everyone: baseOwner
-        case .me: .me
         case .device(let id): .device(id)
         }
     }
@@ -81,6 +111,18 @@ final class ActivityModel {
     var hasMore: Bool { nextCursor != nil }
     /// Loaded fine and nothing matches the filter (each filter has its own empty text).
     var isEmpty: Bool { state == .loaded && items.isEmpty }
+    var days: [ActivityDay] { ActivityDay.group(items) }
+
+    /// The member picked in Family Activity, nil for everyone.
+    var selectedMember: FamilyMember? {
+        guard case .device(let id) = person else { return nil }
+        return people.first { $0.deviceId == id }
+    }
+
+    /// Avatar id for a row's owner (Family Activity subline).
+    func avatarId(for deviceId: String) -> String? {
+        people.first { $0.deviceId == deviceId }?.avatarId
+    }
 
     func load() async {
         await refreshPeople()
@@ -107,7 +149,7 @@ final class ActivityModel {
     }
 
     func select(person: ActivityPerson) async {
-        guard baseOwner == .family, person != self.person || state == .failed else { return }
+        guard isFamily, person != self.person || state == .failed else { return }
         self.person = person
         await startOver()
     }
@@ -129,8 +171,7 @@ final class ActivityModel {
         isLoadingMore = true
         loadMoreFailed = false
         do {
-            let page = try await repository.scans(owner: owner, status: filter.status, cursor: cursor)
-            guard request == generation else { return }
+            guard let page = try await visiblePage(after: cursor, request: request) else { return }
             let known = Set(items.map(\.id))
             items += page.items.filter { !known.contains($0.id) }
             nextCursor = page.nextCursor
@@ -145,10 +186,34 @@ final class ActivityModel {
         }
     }
 
-    /// Person chips for Family Activity, re-read on every load (members come and go in Profile).
-    /// A failure keeps the chips already shown; the list still loads.
+    /// Rows the list shows: in Family Activity (everyone) the guardian's own rows are left out (GD-05).
+    private func isShown(_ scan: ScanResult) -> Bool {
+        guard isFamily, person == .everyone, let ownDeviceId else { return true }
+        return scan.ownerDeviceId != ownDeviceId
+    }
+
+    /// One page with its hidden rows removed. A page left empty by that is skipped while a next one
+    /// exists, so the list never stalls on an empty page. Nil when a newer list replaced this one.
+    private func visiblePage(after cursor: String?, request: Int) async throws -> ScanPage? {
+        var cursor = cursor
+        while true {
+            let page = try await repository.scans(owner: owner, status: filter.status, cursor: cursor)
+            guard request == generation else { return nil }
+            let shown = page.items.filter(isShown)
+            if !shown.isEmpty || page.nextCursor == nil {
+                return ScanPage(items: shown, nextCursor: page.nextCursor)
+            }
+            cursor = page.nextCursor
+        }
+    }
+
+    /// Members for the picker, re-read on every load (members come and go in Profile).
+    /// A failure keeps the members already shown; the list still loads.
     private func refreshPeople() async {
-        guard baseOwner == .family else { return }
+        guard isFamily else { return }
+        if ownDeviceId == nil {
+            ownDeviceId = try? await repository.me().deviceId
+        }
         do {
             let members = try await repository.familyMembers()
             people = members
@@ -164,8 +229,7 @@ final class ActivityModel {
         generation += 1
         let request = generation
         do {
-            let page = try await repository.scans(owner: owner, status: filter.status, cursor: nil)
-            guard request == generation else { return }
+            guard let page = try await visiblePage(after: nil, request: request) else { return }
             generation += 1
             items = page.items
             nextCursor = page.nextCursor

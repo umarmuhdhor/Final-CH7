@@ -26,9 +26,9 @@ struct ComponentGalleryView: View {
                         ForEach(AvatarCatalog.ids, id: \.self) { AvatarView(id: $0, size: 40) }
                     }
                     HStack {
-                        SiteIcon(domain: "bca-verifikasi.site")
-                        SiteIcon(domain: "p0stindonesia.com")
-                        SiteIcon(domain: "tokokecil-batik.xyz")
+                        SiteIcon(url: nil)
+                        ActivityBadge(badge: .warning)
+                        ActivityBadge(badge: .blocked)
                     }
                 }
                 Section {

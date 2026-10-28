@@ -32,7 +32,11 @@ final class SmokeUITests: XCTestCase {
         let app = launch(language: "id", mode: "protected")
         XCTAssertTrue(app.tabBars.buttons["Perisai"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Aktivitas"].tap()
-        XCTAssertTrue(app.navigationBars["Aktivitas"].waitForExistence(timeout: 5))
+        // Activity draws its own title (Figma), no navigation bar.
+        let warning = app.buttons["filter.warning"]
+        XCTAssertTrue(warning.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(warning.label, "Waspada")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label == 'Aktivitas'")).count >= 1)
     }
 
     @MainActor

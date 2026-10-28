@@ -20,6 +20,8 @@ struct RootView: View {
             }
         }
         .environment(\.locale, env.settings.language.locale)
+        // Light only for now: dark mode is a backlog issue (PF-01 Tema).
+        .preferredColorScheme(.light)
         .onOpenURL { env.open($0) }
         .onChange(of: scenePhase, initial: true) { _, phase in
             // An invite code waits only while the app is in use.

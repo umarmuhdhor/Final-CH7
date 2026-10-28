@@ -82,8 +82,8 @@ struct URLSessionScreenshotLoader: ScreenshotLoading {
     }
 }
 
-/// The Worker never redirects screenshots; a redirect would leave our origin, so it is not followed.
-private final class RedirectRefuser: NSObject, URLSessionTaskDelegate {
+/// The Worker never redirects screenshots or favicons; a redirect would leave our origin, so it is not followed.
+final class RedirectRefuser: NSObject, URLSessionTaskDelegate {
     func urlSession(
         _ session: URLSession,
         task: URLSessionTask,

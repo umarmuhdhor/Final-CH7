@@ -55,11 +55,11 @@ struct MainTabView: View {
         env.settings.mode == .guardian && !env.settings.familyModeOn
     }
 
-    /// Own scans (PR-05, guardian with Family mode off); Family mode → the family's, owner shown (GD-05).
+    /// Own scans (PR-05, guardian with Family mode off); Family mode → the members' scans, owner shown (GD-05).
     @ViewBuilder
     private var activityRoot: some View {
         if env.settings.mode == .guardian && env.settings.familyModeOn {
-            ActivityView(repository: env.repository, owner: .family, showsOwner: true)
+            ActivityView(repository: env.repository, owner: .family, ownDeviceId: env.session?.deviceId)
         } else {
             ActivityView(repository: env.repository, owner: .me)
         }
