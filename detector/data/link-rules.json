@@ -4,12 +4,14 @@
   "freeHosts": [
     "blogspot.com", "blogspot.co.id", "github.io", "netlify.app", "pages.dev", "vercel.app", "web.app", "firebaseapp.com",
     "weebly.com", "wixsite.com", "wordpress.com", "herokuapp.com", "glitch.me", "workers.dev", "cloudfront.net",
-    "r2.dev", "webflow.io", "000webhostapp.com", "sites.google.com", "s3.amazonaws.com"
+    "r2.dev", "webflow.io", "000webhostapp.com", "sites.google.com", "s3.amazonaws.com", "edgeone.dev"
   ],
   "baitWords": [
     "gratis", "bantuan", "bansos", "kuota", "hadiah", "undian", "klaim", "promo", "pulsa", "saldo", "subsidi", "pencairan",
     "verifikasi", "resmi", "official", "bonus", "giveaway", "reward", "voucher", "cashback", "kurir", "paket", "tracking",
-    "lowongan", "pinjaman", "pinjol", "kripto", "prakerja", "login", "update", "claim", "free"
+    "lowongan", "pinjaman", "pinjol", "kripto", "prakerja", "login", "update", "claim", "free",
+    "pengembalian", "pembatalan", "kode"
   ],
+  "pathBait": ["code", "activate", "kode", "pengembalian", "pembatalan"],
   "carriers": ["dhl", "fedex", "sicepat", "anteraja", "ninjaxpress", "wahana", "tiki"]
 }

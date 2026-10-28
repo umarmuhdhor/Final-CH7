@@ -17,6 +17,8 @@ Layer 2 has two parts, run on every page that is not an official domain. Their w
 | Part | Reads | Signals |
 |---|---|---|
 | A. Brand check | the host name only | `lookalike_domain` (25 / 10), `brand_plus_keyword` (14), `cheap_tld` (5 / 15) |
+
+`brand_plus_keyword` fires for a brand next to a bait keyword (`bca-verifikasi`, `bcalogin`) and for a brand after a connector `by` / `via` / `from` (`qlolla-bybri`, `kodepembatalanbybni`); the connector is the keyword. Brands that are also ordinary words (dana, apple, mandiri) are skipped for the connector form, so `hobbydana.com` stays clean.
 | B. Link dissector (#140) | the **whole URL** | `suspicious_link` (10 to 100) |
 
 B scores each part of the URL on its own (max 25 per part):
@@ -25,7 +27,7 @@ B scores each part of the URL on its own (max 25 per part):
 |---|---|---|
 | scheme | `http` without TLS | 5 |
 | userinfo | `user@` before the host | 25 |
-| host | IP address 20 · 4+ labels 8 · 3+ hyphens in a label 8 · digit-heavy label 8 · punycode 5 | |
+| host | IP address 20 · 4+ labels 8 · 3+ hyphens in a label 8 · digit-heavy hyphen piece 8 (6+ chars, 3+ digits, 25%+ digits; skipped on `*.cloudfront.net`) · word-digit subdomain 6 · hyphen in the site name 4 · punycode 5 | |
 | TLD | `.info .pw .cc .ws .su` (the TLDs in `brands.json` are `cheap_tld`, not counted twice) | 6 |
 | port | not 80 / 443 | 10 |
 | path | random file name (20+ chars, high entropy, has digits) 15 · ends in `.html .php …` 5 · slash after a file name 8 · bait word 6 | |
@@ -33,6 +35,8 @@ B scores each part of the URL on its own (max 25 per part):
 | fragment | URL inside the fragment | 8 |
 | length | over 120 chars | 4 |
 | free hosting | host is on the list 3 · bait/carrier word in the first label 10 (16 for 2+) · year/amount in the label 5 · bait/carrier word in the file name 10 | added on top |
+
+Bait words live in `data/link-rules.json` (`baitWords` for names and file names on a free host, `pathBait` for the path). They include `pengembalian`, `pembatalan` and `kode`. `edgeone.dev` is on the free-host list.
 
 Rules of the signal: one per page, weight is the raw score (**no cap**, max 100), nothing is emitted below 10, private and loopback addresses are skipped. `evidence` holds reason codes only. Weights are guesses (D-imelda-45); known false positives are pinned in the tests.
 
