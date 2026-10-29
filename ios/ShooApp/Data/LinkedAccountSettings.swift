@@ -4,8 +4,8 @@ import Observation
 /// PF-01 Protected "Akun Tertaut" switches, "Link terblokir" and the "Situs diperiksa" counter.
 ///
 /// Kept in the App Group so the extension can read the switches and write the counter. The keys are
-/// *proposed* (not yet in `ShooShared/AppGroup.swift` or contracts/app-group-keys.md, see the PF-01
-/// issue for the lead): until the extension uses them the switches change nothing outside the app,
+/// *proposed* (not yet in `ShooShared/AppGroup.swift` or contracts/app-group-keys.md, issue #183
+/// for the lead): until the extension uses them the switches change nothing outside the app,
 /// and "Situs diperiksa" shows "—". Swap `Key` for `AppGroup.Key` once the lead adds them there.
 @MainActor
 @Observable
