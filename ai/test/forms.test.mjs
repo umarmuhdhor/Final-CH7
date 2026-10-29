@@ -302,3 +302,18 @@ test("security: user-content hosts of official domains are not exempt", () => {
     }
     assert.deepEqual(analyzeSnapshot(page("https://accounts.google.com/signin", SENSITIVE())), [], "first-party google still exempt");
 });
+
+// ---- bank token fields count as one-time codes --------------------------------
+test("asks_otp: bank token fields (mobile token, token lunak, KeyBCA)", () => {
+    expectSignal("asks_otp", [field({ type: "password", name: "mobileToken" })], "camelCase mobileToken");
+    expectSignal("asks_otp", [field({ label: "Masukkan Token Lunak" })], "token lunak");
+    expectSignal("asks_otp", [field({ name: "inputRespons", label: "Respon KeyBCA" })], "KeyBCA");
+});
+test("asks_otp: a CSRF or API token is not a one-time code", () => {
+    expectNone([field({ name: "csrf_token" })], "csrf_token");
+    expectNone([field({ name: "_token" })], "_token");
+    expectNone([field({ label: "API token" })], "api token");
+});
+test("asks_otp: autocomplete=one-time-code", () => {
+    expectSignal("asks_otp", [field({ autocomplete: "one-time-code" })], "iPhone OTP autofill");
+});
