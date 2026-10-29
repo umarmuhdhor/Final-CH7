@@ -184,7 +184,7 @@ export interface ScanRow {
 export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
 // Columns shared by list and detail. ownerName is the owner's current name; the verdict
-// (per owner + domain) is joined only for blocked scans (schema: warnings keep null).
+// (per owner + domain) is joined for warning and blocked scans alike (GD-07).
 function selectScans(sql: Sql) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
@@ -192,7 +192,7 @@ function selectScans(sql: Sql) {
            s.screenshot_path as "screenshotPath", s.favicon_path as "faviconPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
-           case when s.status = 'blocked' and v.owner_id is not null then json_build_object(
+           case when v.owner_id is not null then json_build_object(
              'value', v.value, 'byDeviceId', v.by_device_id, 'byName', v.by_name,
              'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)})
            ) end as verdict
