@@ -15,6 +15,8 @@ declare namespace Cloudflare {
     SUPABASE_URL?: string;
     SUPABASE_SERVICE_ROLE_KEY?: string;
     SCREENSHOT_MAX_BYTES?: string;
+    REPLICAS: R2Bucket;
+    REPLICAS_ENABLED?: string;
     SCREENSHOT_URL_SECRET?: string;
     RATE_KEY_SECRET?: string;
     /** Tests only: "1" runs the slow opt-in cases (vitest.config.ts). */

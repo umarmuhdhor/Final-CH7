@@ -2,6 +2,7 @@ import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { addTombstones, dropTombstones, markTombstonesTried } from "../db/repo/tombstones";
 import { errorInfo } from "../http/logError";
+import { R2ReplicaStore } from "./replicaStore";
 
 const BUCKET = "screenshots";
 const TIMEOUT_MS = 5000;
@@ -88,6 +89,38 @@ export function screenshotStore(env: Env): ScreenshotStore | undefined {
   return new SupabaseStorageStore(env.SUPABASE_URL.replace(/\/+$/, ""), env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+export type StoreKind = "supabase" | "r2";
+
+/**
+ * Where an object lives, from its path alone (K6, K23): page replicas (`-replica.html.gz`) and new
+ * favicons (`-icon.<ext>`) in R2; screenshots and old favicons (`-favicon.<ext>`) in Supabase Storage
+ * until they expire (18c).
+ */
+export function storeKind(path: string): StoreKind {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  return name.endsWith("-replica.html.gz") || /-icon\.[a-z]+$/.test(name) ? "r2" : "supabase";
+}
+
+/** Only the binding: deletes must still run while REPLICAS_ENABLED is off (K21). */
+export function r2Store(env: Env): ScreenshotStore | undefined {
+  return env.REPLICAS ? new R2ReplicaStore(env.REPLICAS) : undefined;
+}
+
+export function storeFor(env: Env, path: string): ScreenshotStore | undefined {
+  return storeKind(path) === "r2" ? r2Store(env) : screenshotStore(env);
+}
+
+export type Stores = Partial<Record<StoreKind, ScreenshotStore>>;
+
+export const stores = (env: Env): Stores => ({ supabase: screenshotStore(env), r2: r2Store(env) });
+
+/** Paths grouped per store, order kept. */
+export function byStore(paths: string[]): Record<StoreKind, string[]> {
+  const groups: Record<StoreKind, string[]> = { supabase: [], r2: [] };
+  for (const p of paths) groups[storeKind(p)].push(p);
+  return groups;
+}
+
 export interface RemoveResult {
   removed: number;
   failed: number;
@@ -119,9 +152,28 @@ export async function removeTombstoned(sql: Sql, store: ScreenshotStore | undefi
   return result;
 }
 
-/** After DELETE /devices/me committed (its transaction tombstoned the paths). Never throws. */
+/**
+ * removeTombstoned per store: a store that is missing or failing only fails its own paths (their
+ * tombstones stay), the other store still runs.
+ */
+export async function removeTombstonedAll(sql: Sql, all: Stores, paths: string[]): Promise<RemoveResult> {
+  const result: RemoveResult = { removed: 0, failed: 0 };
+  const groups = byStore(paths);
+  for (const kind of ["supabase", "r2"] as const) {
+    const r = await removeTombstoned(sql, all[kind], groups[kind]);
+    result.removed += r.removed;
+    result.failed += r.failed;
+    result.error ??= r.error;
+  }
+  return result;
+}
+
+/**
+ * After DELETE /devices/me committed (its transaction tombstoned the paths): screenshots, favicons and
+ * replicas, each from its own store. Never throws.
+ */
 export async function deleteScreenshots(sql: Sql, env: Env, paths: string[]): Promise<void> {
-  const { failed, error } = await removeTombstoned(sql, screenshotStore(env), paths);
+  const { failed, error } = await removeTombstonedAll(sql, stores(env), paths);
   // Count only: paths contain device ids. The tombstones stay for the cron.
   if (failed) console.error(JSON.stringify({ event: "screenshots_delete_failed", count: failed, error: errorInfo(error) }));
 }
