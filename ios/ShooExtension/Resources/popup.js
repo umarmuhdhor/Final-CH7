@@ -172,7 +172,7 @@
     const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
     let host = null;
     let release = () => {}; // stops guarding host
-    let ui = null; // the shadow root's wrapper; EX-07 hides it
+    let ui = null; // the shadow root's wrapper
     let refs = null; // the visible layout's nodes
     let simple = false; // Protected → plain reason wording
     let last = null; // newest { state, tier, minimized }
@@ -312,11 +312,6 @@
         if (history.length > 1) history.back();
         else location.replace("about:blank");
     }
-
-    /** EX-07: the screenshot leaves our UI out. Hidden inside the shadow root, so guard() doesn't undo it. */
-    globalThis.ShooPopup.capture = (hidden) => {
-        if (ui) ui.style.visibility = hidden ? "hidden" : "";
-    };
 
     function hide() {
         release();

@@ -29,7 +29,7 @@ Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CL
 | U2 | EX-04 | Popup warning 30 / 50 | Sekali per halaman, tidak muncul kalau langsung ≥80 | U1 |
 | U3 | EX-05 | Highlight + coret form | Stabilo teks, form sensitif dicoret, Guardian bisa tutup | U1, `session.mode` |
 | U4 | EX-06 | Layar blokir | Tidak bisa di-bypass, auto-buka kalau verdict `safe` | U1, Alief B4 (mock dulu) |
-| U5 | EX-07 | Kirim hasil | Skor ≥30 → `POST /scans` + screenshot area bukti, input di-blur | U1, Alief B3 (mock dulu) |
+| U5 | EX-07 | Kirim hasil | Skor ≥30 → `POST /scans` + replika DOM halaman (tanpa script, tanpa isi input) | U1, Alief B3 (mock dulu) |
 | U6 | EX-03 | Indikator live | Pill in-page (hasil S3: extension tidak bisa memakai Dynamic Island) | S3 ✅ |
 | U7 | EX-01 | Izin semua situs | Izin dicabut → app tampil Off | S1 (Alief) |
 | L1 | — | Tugas lead | Review PR, ubah kontrak, sinkron `detector.js`, jawab PM | — |
@@ -66,6 +66,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [x] **U5 · EX-07** Kirim hasil. Branch: `feat/EX-07-send-scan`
   - Skor ≥30 → `POST /scans` (ScanResult sesuai schema), sekali per halaman per status.
   - Screenshot area bukti saja, isi field di-blur. Cek dulu apakah `tabs.captureVisibleTab` jalan di Safari iOS; kalau tidak, kirim tanpa screenshot dan catat di PR.
+  - [ ] Ganti screenshot dengan replika DOM (29 Okt 2026): screenshot sering tidak sempat diambil sebelum halaman diblokir / situsnya mati. `replica.js` + `replica-build.js` → `pageReplicaBase64`. Backend + Detail app: Alief (issue).
 - [x] **U6 · EX-03** Indikator live sesuai hasil S3. Branch: `feat/EX-03-live-score`. Pill in-page, merged sebagai #43.
 - [ ] **U7 · EX-01** Verifikasi "Allow on every website" + pencabutan izin → app Off (dari hasil S1). Branch: `feat/EX-01-all-sites-permission`
   - [x] Heartbeat membawa `allSites` (`browser.permissions.contains(<all_urls>)`) → App Group `extension.allSites`. Dikirim juga saat izin berubah dan tiap alarm 1 jam.
