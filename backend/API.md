@@ -14,7 +14,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `POST /devices/me/protected`, `DELETE /devices/me`
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
-- [Screenshots](#screenshots): `GET /screenshots/{scanId}`
+- [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 18c)
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
@@ -437,7 +437,7 @@ page. One page is one scan, one Activity item and (for a Protected device) one p
 | `status` | `"warning"` \| `"blocked"` | yes | Must be `blocked` when score ≥ 80, else `warning` |
 | `signals` | array | yes | At most 20 items, see below |
 | `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
-| `screenshotBase64` | string \| null | no | JPEG or PNG, base64 without a `data:` prefix |
+| `screenshotBase64` | string \| null | no | **Deprecated** (see Screenshot rules). JPEG or PNG, base64 without a `data:` prefix |
 
 Each signal:
 
@@ -473,6 +473,8 @@ all text.
 ```
 
 **Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03" }`
+
+> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. `screenshotBase64` and `GET /screenshots/{scanId}` stay only for older builds and for scans already stored, and are removed in fase 18c (plan/alief, D-alief-C24/C27).
 
 **Screenshot rules.** The screenshot is optional, and a bad screenshot never fails the scan: the scan
 is still stored and the answer is still 201. It is dropped when it is not JPEG/PNG, is over 150 KB or
@@ -564,6 +566,8 @@ GET /scans?owner=family&status=blocked&limit=20
 - **Errors:** `404 not_found` when the scan does not exist, was deleted, or is not yours to see.
 
 ## Screenshots
+
+> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. `screenshotBase64` and `GET /screenshots/{scanId}` stay only for older builds and for scans already stored, and are removed in fase 18c (plan/alief, D-alief-C24/C27).
 
 ### `GET /screenshots/{scanId}?v=&exp=&sig=`
 
