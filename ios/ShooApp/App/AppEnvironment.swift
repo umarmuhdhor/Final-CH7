@@ -97,7 +97,15 @@ final class AppEnvironment {
         case "someSitesOnly": extensionStatus = { .off(lastSeen: Date(), reason: .someSitesOnly) }
         case "notSeen": extensionStatus = { .off(lastSeen: nil, reason: .notSeen) }
         case "unchecked": extensionStatus = { .active(lastSeen: nil) }
+        // Activity "Perlindungan mati" (PR-05): switched off, last heartbeat two days ago.
+        case "offTwoDays": extensionStatus = { .off(lastSeen: Date().addingTimeInterval(-2 * 86_400), reason: .switchedOff) }
         default: break
+        }
+        // Activity empty states (PR-05): the extension's counters as in Figma (#183, not written yet).
+        if Self.value(after: "-UITestCheckStats", in: arguments) == "YES" {
+            let lastChecked = Calendar.current.date(bySettingHour: 10, minute: 42, second: 0, of: Date()) ?? Date()
+            AppGroup.defaults.set(1284, forKey: CheckStats.Key.checked)
+            AppGroup.defaults.set(lastChecked, forKey: CheckStats.Key.lastCheckedAt)
         }
         #endif
         let environment = AppEnvironment(

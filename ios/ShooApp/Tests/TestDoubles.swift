@@ -107,7 +107,10 @@ final class CountingScansRepository: ShooRepository, @unchecked Sendable {
     func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
     func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
     func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
     func deleteMe() async throws { try await base.deleteMe() }
     func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }

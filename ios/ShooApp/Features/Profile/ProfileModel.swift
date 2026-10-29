@@ -327,6 +327,7 @@ final class ProfileModel {
         // `ApiRepository.deleteMe` has already cleared the Keychain token and App Group session keys.
         onSessionEnd()
         settings.reset()
+        CheckStats.clear()
         return true
     }
 }

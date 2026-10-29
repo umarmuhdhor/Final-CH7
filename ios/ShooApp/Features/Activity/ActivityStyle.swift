@@ -16,6 +16,13 @@ enum ActivityStyle {
     static let iconFill = hex(0xF3F6F8)
     static let iconStroke = hex(0xE2E8F0)
     static let menuText = hex(0x1A1A1A)
+    // Empty states (Figma 480:5490 …).
+    static let emptyTitle = hex(0x151617)
+    static let activeDot = hex(0x34C759)
+    static let pillShadow = hex(0x1A1C2E)
+    static let blueButtonTop = hex(0x68CDFA)
+    static let blueButtonBottom = hex(0x136CB7)
+    static let blueButtonStroke = hex(0x0098D7)
 
     /// Screen side margin; cards are 354 wide on the 402 pt Figma frame.
     static let margin: CGFloat = 24
