@@ -201,8 +201,11 @@ export async function precheckReplica(
  * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
  * class 6; 3–5 are taken), reuse the owner's replica of this domain from the last 24 h, else reserve
  * `upload.path` when the owner uploaded fewer than `quota.owner` and everyone fewer than `quota.global`
- * objects and `quota.globalBytes` bytes in 24 h (original rows only, index scans_original_replica; not
- * locked across owners, so parallel scans may overshoot the global counts by a few). replica_bytes is
+ * objects and `quota.globalBytes` bytes in 24 h (original rows only, index scans_original_replica).
+ * A new upload also takes the global key (6, 0) around the counts, so parallel owners cannot overshoot
+ * them; held for milliseconds, the R2 put runs after commit. The counts are rows: deleting a device
+ * frees its share at once while the objects wait for the tombstone cron (bounded by POST /devices
+ * 10/hour and replicaIp 300/day per IP, and the bucket's 17-day lifecycle). replica_bytes is
  * written on the uploading row only. The path is tombstoned before the upload (D-alief-B12).
  * `upload` null only looks for a reuse ({ none } when there is nothing to reuse).
  */
@@ -222,6 +225,7 @@ export async function reserveReplica(
         select count(*)::int as n from scans
         where replica_bytes is not null and created_at > now() - interval '24 hours' and owner_id = ${scan.ownerId}`;
       if (mine!.n >= quota.owner) return { quota: "owner" };
+      await tx`select pg_advisory_xact_lock(6, 0)`;
       const [all] = await tx<{ n: number; bytes: number }[]>`
         select count(*)::int as n, coalesce(sum(replica_bytes), 0)::bigint::float8 as bytes from scans
         where replica_bytes is not null and created_at > now() - interval '24 hours'`;
@@ -251,9 +255,15 @@ function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
     order by created_at desc limit 1`;
 }
 
-/** Clears path and bytes on every scan of the owner that points at it (reuses too). */
-export async function clearReplicaPath(sql: Q, ownerId: string, path: string): Promise<void> {
-  await sql`update scans set replica_path = null, replica_bytes = null where owner_id = ${ownerId} and replica_path = ${path}`;
+/**
+ * Clears path and bytes on every scan of the owner that points at it (reuses too). Under the owner's
+ * replica lock, so a reserveReplica that just picked this path as its reuse cannot commit after it.
+ */
+export async function clearReplicaPath(sql: Sql, ownerId: string, path: string): Promise<void> {
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(6, hashtext(${ownerId}))`;
+    await tx`update scans set replica_path = null, replica_bytes = null where owner_id = ${ownerId} and replica_path = ${path}`;
+  });
 }
 
 export interface ScanRow {

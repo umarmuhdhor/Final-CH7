@@ -3,6 +3,8 @@
 -- as screenshots: retention on day 14, DELETE /devices/me, storage_tombstones (D-alief-B12).
 
 -- `set local`: only this migration's transaction, never the session the push or the Worker reuses.
+-- The Supabase CLI (`supabase db push` in CI) runs each file as one transaction; applied by hand,
+-- use `psql -1 -f`, or these settings and the atomic rename below do not hold.
 set local lock_timeout = '5s';
 set local statement_timeout = '60s';
 
@@ -22,9 +24,11 @@ create index scans_replica_path on scans(owner_id, replica_path) where replica_p
 create index scans_original_replica on scans(created_at) include (owner_id, replica_bytes) where replica_bytes is not null;
 
 -- Retention walks: a scan with only a replica still needs an R2 call, so it moves from the plain walk
--- to the stored-files walk. The new indexes are built before the old ones go: `drop index` takes an
--- ACCESS EXCLUSIVE lock on scans until commit, and CONCURRENTLY cannot run in a migration transaction.
--- scans is small (14-day retention), so the builds take seconds.
+-- to the stored-files walk. The `alter table` above already holds ACCESS EXCLUSIVE on scans until
+-- commit, so the whole file blocks readers and writers of scans while it runs (CONCURRENTLY cannot
+-- run in a migration transaction). New indexes first, then drop + rename: if a build fails, the old
+-- indexes are untouched. scans is small (14-day retention; row count checked before merge), so this
+-- takes seconds. Rollback = forward fix: dropping the columns would also drop these indexes.
 create index scans_plain_created_v2 on scans(created_at, id)
   where screenshot_path is null and favicon_path is null and replica_path is null;
 create index scans_shot_created_v2 on scans(created_at, id)

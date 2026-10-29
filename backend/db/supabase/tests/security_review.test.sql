@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(18);
+select plan(19);
 
 select is(
   (select count(*)::int from information_schema.role_table_grants
@@ -23,6 +23,7 @@ insert into devices (id, name, mode, avatar_id, token_hash) values ('t_rp', 'Mom
 insert into scans (id, owner_id, url, domain, score, status, detected_at)
   values ('t_rs', 't_rp', 'https://a.example/', 'a.example', 92, 'blocked', now());
 select throws_ok($$update scans set replica_path = repeat('a', 301) where id = 't_rs'$$, '23514', null, 'replica_path length is checked');
+select throws_ok($$update scans set replica_path = 'ab' where id = 't_rs'$$, '23514', null, 'replica_path at least 3 characters');
 select throws_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', replica_bytes = 0 where id = 't_rs'$$, '23514', null, 'replica_bytes at least 1');
 select throws_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', replica_bytes = 307201 where id = 't_rs'$$, '23514', null, 'replica_bytes at most 307 200');
 select throws_ok($$update scans set replica_bytes = 10 where id = 't_rs'$$, '23514', null, 'replica_bytes needs replica_path');

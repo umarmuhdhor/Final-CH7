@@ -432,6 +432,17 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
   });
 
+  it("parallel scans of different owners cannot overrun the global quota (global key 6, 0)", async () => {
+    const owners = await Promise.all([1, 2, 3, 4].map(() => family()));
+    const someone = await createDevice("Else");
+    await fakeUploads(someone.deviceId, REPLICA_QUOTA.global - 1);
+    const replica = await gzipBase64(SAMPLE_HTML);
+    const ids = await Promise.all(owners.map(({ p }) => postScan(p, { pageReplicaBase64: replica })));
+    await until(async () => logs.filter((l) => l.includes(`"reason":"global_quota"`)).length === 3);
+    const rows = await Promise.all(ids.map(row));
+    expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
+  });
+
   it("the scan deleted while the replica is processed → nothing left in R2", async () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
