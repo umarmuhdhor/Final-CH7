@@ -116,7 +116,9 @@ export async function allScreenshotsToday(sql: Q): Promise<number> {
 export type FaviconSlot = { reuse: string } | { upload: string } | { gone: true } | { none: true };
 
 // Original favicon uploads only: the path names the scan's own id (like ORIGINAL for screenshots).
-const ORIGINAL_FAVICON = "starts_with(favicon_path, owner_id || '/' || id || '-favicon.')";
+// `-favicon.` = Supabase (before 18a), `-icon.` = R2 (D-alief-C27); both until the old ones expire.
+const ORIGINAL_FAVICON =
+  "(starts_with(favicon_path, owner_id || '/' || id || '-favicon.') or starts_with(favicon_path, owner_id || '/' || id || '-icon.'))";
 
 /**
  * PR-05, like reserveScreenshot: in one transaction locked per owner, point the scan at the owner's

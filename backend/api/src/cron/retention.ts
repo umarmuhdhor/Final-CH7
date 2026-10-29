@@ -168,25 +168,30 @@ async function deleteOldScans(
     // chunk points at are removed. No new scan can start sharing them: recentScreenshot reuses
     // only an original upload younger than 24 h, so an object lives 15 days at most.
     // Favicons and replicas are reused the same way, so the same rule applies to them.
+    // Oldest first, so the budget goes to the objects closest to their promised deletion.
     const paths = (
       await sql<{ path: string }[]>`
-        select s.screenshot_path as path from scans s
-        where s.id in ${sql(ids)} and s.screenshot_path is not null
-          and not exists (
-            select 1 from scans o
-            where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in ${sql(ids)})
-        union
-        select s.favicon_path from scans s
-        where s.id in ${sql(ids)} and s.favicon_path is not null
-          and not exists (
-            select 1 from scans o
-            where o.owner_id = s.owner_id and o.favicon_path = s.favicon_path and o.id not in ${sql(ids)})
-        union
-        select s.replica_path from scans s
-        where s.id in ${sql(ids)} and s.replica_path is not null
-          and not exists (
-            select 1 from scans o
-            where o.owner_id = s.owner_id and o.replica_path = s.replica_path and o.id not in ${sql(ids)})`
+        select path from (
+          select s.screenshot_path as path, s.created_at from scans s
+          where s.id in ${sql(ids)} and s.screenshot_path is not null
+            and not exists (
+              select 1 from scans o
+              where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in ${sql(ids)})
+          union all
+          select s.favicon_path, s.created_at from scans s
+          where s.id in ${sql(ids)} and s.favicon_path is not null
+            and not exists (
+              select 1 from scans o
+              where o.owner_id = s.owner_id and o.favicon_path = s.favicon_path and o.id not in ${sql(ids)})
+          union all
+          select s.replica_path, s.created_at from scans s
+          where s.id in ${sql(ids)} and s.replica_path is not null
+            and not exists (
+              select 1 from scans o
+              where o.owner_id = s.owner_id and o.replica_path = s.replica_path and o.id not in ${sql(ids)})
+        ) p
+        group by path
+        order by min(created_at), path`
     ).map((r) => r.path);
 
     // Rows go on day 14 even while Storage is down or over budget (the privacy page promises it):
