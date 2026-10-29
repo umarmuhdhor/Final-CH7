@@ -761,3 +761,11 @@ Format:
 - Alternatif yang ditolak: hanya menaikkan jumlah upload tanpa batas byte (10 000 × 300 KB × 16 hari = 48 GB); anggaran hapus R2 10 000/run (CPU 10 ms per Cron Trigger belum terukur).
 - Menggantikan: angka kuota/tampilan di D-alief-C23 dan C25(a)–(b).
 - Status: rencana; ukuran rata-rata nyata + CPU cron diukur di uji asap 18a (LANGKAH MANUAL 3) dan D11.
+
+## D-alief-C27 · 29 Okt 2026 · plan (fase 18, audit R2) · Sisa Supabase Storage dan kode usang setelah sistem baru
+
+- Keputusan: (a) Favicon pindah ke R2 dengan pola path baru (favicon lama tetap di Supabase sampai habis 15 hari), `fetchFaviconAll` ±1000/hari; **kapan** (18a atau 18c) menunggu Alief. (b) 18c mencabut `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` dari Worker setelah tidak ada objek di Supabase Storage, beserta `SupabaseStorageStore`, bucket `screenshots`, `storage.test.sql`, cabang Supabase di tombstone/retensi, dan anggaran 50-fetch retensi. (c) 18a langkah 10 juga memperbarui komentar anggaran Supabase (`services/scans.ts:13-15`, `rateLimit.ts:28-29`), menandai `screenshotBase64` deprecated di `backend/API.md`, judul `backend/ci/README.md`. (d) `ref/sim.sh` memilih simulator lewat UDID (`SIM_ID`) di runtime iOS terbaru yang tidak lebih baru dari SDK. (e) `.foregroundColor` di `GuardianHomeView.swift:379` diganti saat file itu disentuh; worktree lokal yang sudah merge dibersihkan Alief (TODO D12).
+- Alasan: kunci service_role melewati RLS seluruh proyek dan hanya dipakai Storage, jadi Worker yang terbuka ke internet tidak perlu memegangnya setelah Storage kosong. Favicon adalah objek dengan tampilan terbanyak; di R2 egress gratis dan binding tidak memakai jatah fetch eksternal. Pola path favicon lama sama dengan pola yang akan dipakai, sehingga pemilihan store per path akan salah tanpa pola baru. Build lokal menunjukkan target app tanpa warning (tidak ada API usang yang ditandai), target test gagal hanya karena `TestDoubles.swift:88` (diperbaiki PR #175); `name=$SIM` gagal karena SDK 27.1 tanpa runtime 27.1.
+- Alternatif yang ditolak: memindah screenshot ke R2 sekarang (dihapus di 18c); menghapus ekspor yang hanya dipakai di file sendiri (kosmetik, churn tanpa manfaat).
+- Menggantikan: TODO E1 (pindah screenshot ke R2 kalau > 700 MB).
+- Status: (b)–(d) rencana/diterapkan di plan; (a) menunggu keputusan Alief. Detail: `log/verify/fase-18-audit-r2.md`.
