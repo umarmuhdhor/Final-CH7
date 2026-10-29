@@ -101,15 +101,18 @@ final class OnboardingModel {
     /// the greeting are skipped and Connect opens with the code filled in.
     var opensWithInvite: Bool { environment.router.pendingJoinCode != nil }
 
-    func submitName() async {
-        guard step == .name, canSubmitName, !isWorking else { return }
+    /// ON-02 Next. Without an invite link ON-03 shows right away, in the same tap, so the slide starts at
+    /// once. With one, registration runs in the returned task.
+    @discardableResult
+    func submitName() -> Task<Void, Never>? {
+        guard step == .name, canSubmitName, !isWorking else { return nil }
         movedBack = false
         guard opensWithInvite else {
             step = .mode
-            return
+            return nil
         }
         selectedMode = .protected
-        await registerDevice(skipGreeting: true)
+        return Task { await registerDevice(skipGreeting: true) }
     }
 
     /// Back from ON-02 or ON-03 (only before registration: after that the mode is saved for good),

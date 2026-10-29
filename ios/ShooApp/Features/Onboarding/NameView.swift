@@ -46,7 +46,7 @@ struct NameView: View {
             }
         } footer: {
             Button {
-                Task { await model.submitName() }
+                model.submitName()
             } label: {
                 // An invite link registers right here (Protected), so Next can be busy for a moment.
                 ZStack {
@@ -96,7 +96,7 @@ struct NameView: View {
                 .autocorrectionDisabled()
                 .submitLabel(.continue)
                 .focused($focused)
-                .onSubmit { Task { await model.submitName() } }
+                .onSubmit { model.submitName() }
                 .accessibilityIdentifier("name.field")
 
                 if !model.name.isEmpty {

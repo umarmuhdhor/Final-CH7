@@ -132,6 +132,6 @@ private struct ModeCard: View {
     let model = OnboardingModel(environment: env)
     model.skipSplash()
     model.name = "Rina"
-    Task { await model.submitName() }
+    model.submitName()
     return ModeView(model: model).environment(env)
 }

@@ -84,7 +84,7 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()
+        await model.submitName()?.value
         model.selectedMode = mode
         await model.register()
         return model
@@ -105,11 +105,11 @@ struct OnboardingModelTests {
         model.skipSplash()
         model.name = "   "
         #expect(!model.canSubmitName)
-        await model.submitName()
+        await model.submitName()?.value
         #expect(model.step == .name)
         model.name = "Rina"
         #expect(model.canSubmitName)
-        await model.submitName()
+        await model.submitName()?.value
         #expect(model.step == .mode)
     }
 
@@ -144,7 +144,7 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()
+        await model.submitName()?.value
         await model.register()
         #expect(model.step == .mode)
         #expect(settings.mode == nil)
@@ -159,7 +159,7 @@ struct OnboardingModelTests {
         let model = OnboardingModel(environment: env)
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()
+        await model.submitName()?.value
         model.selectedMode = .guardian
         await model.register()
         #expect(model.step == .mode)
@@ -172,7 +172,7 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()
+        await model.submitName()?.value
         #expect(model.step == .connect)
         #expect(settings.mode == .protected)
         // Connect still gets the code: nothing joins until the user taps Connect (T11).
@@ -189,7 +189,7 @@ struct OnboardingModelTests {
         let model = OnboardingModel(environment: env)
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()
+        await model.submitName()?.value
         #expect(model.step == .mode)
         #expect(model.selectedMode == .protected)
         #expect(model.registrationFailed)
