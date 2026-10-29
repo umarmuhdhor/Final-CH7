@@ -54,3 +54,5 @@ Review berurutan: security (ecc:security-reviewer) → wiring (general-purpose).
 11. pgTAP: `retention_indexes` `plan(4+)` lewat `indexdef`, `security_review` 23514 untuk path/bytes.
 
 Semua diterapkan ke `fase-18-page-replica.md` (K5, K6, K21, Output, langkah 2/4/7/8, LANGKAH MANUAL 1, DoD), `log/fase-18-plan.md`, DECISIONS C25 (i). Belum terverifikasi: transaksi `supabase db push`, biaya `ADD COLUMN … CHECK`, biaya `hitLight`, perilaku R2 `delete(keys)` saat satu key gagal.
+
+Catatan 29 Okt (setelah ronde 6): batas replica dihitung ulang untuk R2 (D-alief-C26): global 3000 upload + 500 MB, per IP 300, tampilan 500/hari per viewer, batas global tampilan dihapus (temuan database 8 tidak berlaku lagi), anggaran hapus R2 4000/run.

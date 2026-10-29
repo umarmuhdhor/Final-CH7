@@ -753,3 +753,11 @@ Format:
 - Alternatif yang ditolak: "risiko diterima" untuk kuota global (C23); sanitasi HTML di app (rumit, gerbang leksikal cukup karena keluaran extension diketahui).
 - Menggantikan: D-alief-C19/C23 bagian "kuota global screenshot 60/hari"; K5 versi lama ("upload global bisa dihabiskan 20 device × 50: risiko diterima").
 - Status: rencana, diterapkan di 18a/18b.
+
+## D-alief-C26 · 29 Okt 2026 · plan (fase 18, permintaan Alief) · Batas replica dihitung ulang untuk R2
+
+- Keputusan: upload global **3000 upload dan 500 MB** (`sum(replica_bytes)` baris asli) per 24 jam (dulu 1000 upload); `replicaIp` **300**/24 jam (dulu 100); per device tetap 50/24 jam; tampilan per viewer 10/menit + **500**/hari (dulu 100/hari); **batas global tampilan dihapus** (dulu 20 000/hari lewat `hitLight`); retensi punya anggaran hapus R2 sendiri, 40 batch × 100 = 4000 objek per run. Index kuota `scans_original_replica` meng-`include (owner_id, replica_bytes)`. Kuota global screenshot (Supabase) tetap 300.
+- Alasan: angka lama masih mengikuti cara pikir Supabase (egress, jumlah objek). Di R2 yang membatasi hanya Storage 10 GB-bulan (500 MB × 16 hari hidup objek = 8 GB), Class A 1 juta/bulan (3000 × 30 = 90 000 put), kapasitas hapus cron, dan 100 000 request/hari Workers Free. Egress gratis dan Class B 10 juta/bulan tidak bisa terlampaui lewat Workers Free. Batas global tampilan tidak melindungi apa pun karena request yang ditolak 429 tetap dihitung Workers, dan biayanya di DB besar (review database M5). Batas byte membiarkan halaman kecil lewat tanpa dibatasi kasus terburuk 300 KB. Per IP dinaikkan karena CGNAT operator seluler; storage tetap dijaga batas byte. Per device tetap karena alasannya anti-penyalahgunaan, bukan storage.
+- Alternatif yang ditolak: hanya menaikkan jumlah upload tanpa batas byte (10 000 × 300 KB × 16 hari = 48 GB); anggaran hapus R2 10 000/run (CPU 10 ms per Cron Trigger belum terukur).
+- Menggantikan: angka kuota/tampilan di D-alief-C23 dan C25(a)–(b).
+- Status: rencana; ukuran rata-rata nyata + CPU cron diukur di uji asap 18a (LANGKAH MANUAL 3) dan D11.
