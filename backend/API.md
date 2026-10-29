@@ -14,6 +14,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `POST /devices/me/protected`, `DELETE /devices/me`
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
+- [Page replicas](#page-replicas): `GET /replicas/{scanId}`
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 18c)
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
@@ -86,6 +87,8 @@ after the wait.
 ### Caching and privacy headers
 
 - Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`).
+- Request bodies over 256 KB get `413 too_large` before anything else runs; only `POST /scans` (exactly
+  that path) takes up to 512 KB, for the page replica.
   Deleted or disconnected data must disappear at once (Apple privacy rule, `plan/alief/SECURITY.md` §3 P13).
 - Every response also carries `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`,
   `X-Frame-Options: DENY`, HSTS and a strict CSP. There are no CORS headers: only the native app and
@@ -251,11 +254,12 @@ saves it in the Keychain and the App Group, then sends its APNs token again.
 everything about it right away.
 
 - **Auth:** Bearer, either mode
-- **Deletes:** family links on either side, family codes, join attempts, all scans, screenshots and favicons,
-  verdicts on its scans or made by it, push log.
+- **Deletes:** family links on either side, family codes, join attempts, all scans, screenshots, favicons
+  and page replicas, verdicts on its scans or made by it, push log.
 - **Response 200:** `{ "ok": true }`
-- After this the token returns `401` and every screenshot and favicon link returns `404`. The files are
-  removed from storage just after the response; if storage cannot be reached, the daily cron retries.
+- After this the token returns `401` and every screenshot, favicon and replica link returns `404`. The
+  files are removed from storage just after the response; if storage cannot be reached, the daily cron
+  retries. `POST /devices/me/protected` deletes the old guardian device the same way.
 - The app then clears the Keychain token and the App Group keys and starts onboarding again.
 
 ## Family
@@ -414,7 +418,7 @@ Only wrong or expired codes count as failed attempts.
 
 A **scan** is one page the extension warned about or blocked (shape: `ScanResult` in
 [`contracts/scan-result.schema.json`](../contracts/scan-result.schema.json)). Only score 30 or more is
-ever sent. Scans and screenshots are deleted automatically after 14 days.
+ever sent. Scans, screenshots, favicons and page replicas are deleted automatically after 14 days.
 
 ### `POST /scans`
 
@@ -423,9 +427,10 @@ page. One page is one scan, one Activity item and (for a Protected device) one p
 
 - **Auth:** Bearer, either mode. The owner is always the token's device.
 - **Rate limit:** 120 per hour per device
-- **Body limit:** 256 KB
+- **Body limit:** 512 KB (this path only; everything else 256 KB or less)
 
-**Request body:** a `ScanResult` without `id`, `verdict` and `screenshotUrl`, plus an optional screenshot.
+**Request body:** a `ScanResult` without `id`, `verdict`, `screenshotUrl` and `pageReplicaUrl`, plus an
+optional page replica (and, from older builds, a screenshot).
 
 | Field | Type | Required | Rules |
 |---|---|---|---|
@@ -437,6 +442,7 @@ page. One page is one scan, one Activity item and (for a Protected device) one p
 | `status` | `"warning"` \| `"blocked"` | yes | Must be `blocked` when score ≥ 80, else `warning` |
 | `signals` | array | yes | At most 20 items, see below |
 | `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
+| `pageReplicaBase64` | string \| null | no | The page as static HTML, gzip, then base64 without a `data:` prefix (see Page replica rules) |
 | `screenshotBase64` | string \| null | no | **Deprecated** (see Screenshot rules). JPEG or PNG, base64 without a `data:` prefix |
 
 Each signal:
@@ -468,13 +474,23 @@ all text.
     }
   ],
   "detectedAt": "2026-10-21T04:05:00Z",
-  "screenshotBase64": "/9j/4AAQSkZJRg…"
+  "pageReplicaBase64": "H4sIAAAAAAAAA…"
 }
 ```
 
 **Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03" }`
 
 > **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. `screenshotBase64` and `GET /screenshots/{scanId}` stay only for older builds and for scans already stored, and are removed in fase 18c (plan/alief, D-alief-C24/C27).
+
+**Page replica rules (EX-07).** The replica is optional, and a bad replica never fails the scan: the
+scan is stored, the answer is 201 and the push goes out first; the replica is handled after the
+response. It is dropped when it is not strict base64, is over 400 KB as base64 (409 600 characters),
+is not gzip, is cut short or has data after the gzip stream, or is over 3 MB once decompressed
+(3 145 728 bytes, counted while decompressing). It is also dropped when the device has no family
+link (no Guardian, or a Guardian without members: nobody else could ever see it), when the device
+already stored 50 in the last 24 h, when everyone together stored 3000 or 500 MB in the last 24 h, or
+when the sending IP already sent 300 in the last 24 h. A second scan of the same domain within 24 h
+reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
 
 **Screenshot rules.** The screenshot is optional, and a bad screenshot never fails the scan: the scan
 is still stored and the answer is still 201. It is dropped when it is not JPEG/PNG, is over 150 KB or
@@ -488,8 +504,9 @@ no private, loopback or link-local hosts), http(s) on the default port, at most 
 checked again), 3 s in total, at most 64 KB and 512 px per side. Only PNG, ICO, JPEG, GIF and WebP are
 kept, checked by `Content-Type` and by the file's first bytes; SVG and anything else is dropped. No cookies and no
 `Referer` are sent. A scan of the same domain within 24 h reuses the earlier favicon without a new
-download. At most 30 downloads per device and 200 for everyone per 24 h (failed downloads count);
-past that the scan is stored without a favicon.
+download. At most 30 downloads per device and 1000 for everyone per 24 h (failed downloads count);
+past that the scan is stored without a favicon. New icons are stored in the private R2 bucket; icons
+stored before fase 18a stay in Supabase Storage until they expire.
 
 **Push.** When a Protected device sends a scan, its Guardian gets a push right after the response
 (see [Push notification](#push-notification)). A push failure never fails the scan.
@@ -522,7 +539,8 @@ GET /scans?owner=family&status=blocked&limit=20
 ```
 
 - Newest first. `nextCursor` is `null` on the last page.
-- Items are full `ScanResult`s, but `screenshotUrl` is always `null` in lists; open the scan to get it.
+- Items are full `ScanResult`s, but `screenshotUrl` and `pageReplicaUrl` are always `null` in lists;
+  open the scan to get them.
 - `faviconUrl` is a link made for you to the stored icon (see [Favicons](#favicons)), valid for 1 hour,
   or `null` when no icon was stored. It is never the site's own favicon URL.
 - `verdict` is the Guardian's decision for that owner and domain, or `null`.
@@ -551,7 +569,8 @@ GET /scans?owner=family&status=blocked&limit=20
   "score": 92,
   "status": "blocked",
   "signals": [ { "id": "new_domain", "layer": 2, "weight": 30, "label": { "en": "…", "id": "…" }, "labelSimple": { "en": "…", "id": "…" } } ],
-  "screenshotUrl": "https://shoo-api.afindo-mi01.workers.dev/screenshots/6f1c…?v=…&exp=…&sig=…",
+  "screenshotUrl": null,
+  "pageReplicaUrl": "https://shoo-api.afindo-mi01.workers.dev/replicas/6f1c…?v=…&exp=…&sig=…",
   "ownerDeviceId": "0b6e0c1e-…",
   "ownerName": "Mom",
   "detectedAt": "2026-10-21T04:05:00.000Z",
@@ -560,10 +579,37 @@ GET /scans?owner=family&status=blocked&limit=20
 ```
 
 - `pageTitle` is left out when there is none.
-- `screenshotUrl` is a link made for you, valid for 1 hour, or `null` when there is no screenshot.
+- `pageReplicaUrl` is a link made for you to the page replica, valid for 1 hour, or `null` when there
+  is none (or replicas are switched off). Right after a push the replica may still be saving: it can
+  appear a few seconds later.
+- `screenshotUrl` is a link made for you, valid for 1 hour, or `null` when there is no screenshot
+  (only older scans have one).
 - `faviconUrl` is the same kind of link to the stored icon, or `null` when there is none. The site's
   own favicon URL is never returned (PR-05).
 - **Errors:** `404 not_found` when the scan does not exist, was deleted, or is not yours to see.
+
+## Page replicas
+
+### `GET /replicas/{scanId}?v=&exp=&sig=`
+
+**For:** the copy of the page on the Detail screen (DT-04). This is the `pageReplicaUrl` from
+`GET /scans/{id}`; fetch it with `URLSession` **without** an `Authorization` header and render it
+yourself (JavaScript off, no network, see `contracts/api.md` "Page replica").
+
+- **Auth:** the signature in the link. The link names the viewer and expires after 1 hour.
+- **Rate limit:** 10 per minute and 500 per day per viewer (`429` with `Retry-After`; show "Try again later")
+- **Response 200:** the stored gzip bytes as they are, with exactly these headers:
+  `Content-Type: text/html; charset=utf-8`, `Content-Encoding: gzip` (URLSession decompresses it),
+  `Content-Disposition: attachment; filename="replica.html"`,
+  `Content-Security-Policy: sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'; frame-ancestors 'none'`,
+  `X-Content-Type-Options: nosniff`, `Cache-Control: private, no-store`, `Referrer-Policy: no-referrer`.
+- Never a web page: a browser navigation (`Sec-Fetch-Mode: navigate`) or any `Sec-Fetch-Dest` other
+  than `empty` gets `404`. URLSession sends no `Sec-Fetch-*` headers.
+- Access is re-checked in the database on every request: the owner, or the owner's current Guardian.
+  After the scan is deleted, the member disconnects or is removed, or the 14-day retention runs, the
+  same link returns `404` at once.
+- **Errors:** `404 not_found` for an expired, altered or no-longer-allowed link, or while replicas are
+  switched off. Re-fetch `GET /scans/{id}` once for a fresh link before showing "No copy of this page".
 
 ## Screenshots
 
