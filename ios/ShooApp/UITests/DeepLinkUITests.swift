@@ -43,8 +43,11 @@ final class DeepLinkUITests: XCTestCase {
         // Profile is pushed on Shield: the link still lands on Detail.
         openLink("shoo://scan/\(Self.blocked)", in: app)
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.tabBars.buttons["Activity"].isSelected)
         XCTAssertTrue(app.buttons["detail.verdict.safe"].exists, app.debugDescription)
+        // Detail hides the tab bar (Figma); back lands on the Activity tab.
+        app.buttons["detail.back"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Activity"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Activity"].isSelected)
     }
 
     @MainActor

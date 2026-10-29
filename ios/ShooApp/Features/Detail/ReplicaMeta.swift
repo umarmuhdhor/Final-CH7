@@ -1,4 +1,11 @@
+import CoreGraphics
 import Foundation
+
+/// Where a signal sits on the copied page (`marks` in the meta, #176): document coordinates in CSS px.
+struct ReplicaMark: Equatable, Sendable {
+    var signalId: String
+    var rect: CGRect
+}
 
 /// What the extension wrote into `<meta name="shoo-replica" content="…">` (replica.js `headMeta`).
 /// The device writes it, so every field is untrusted: anything off means "render from the top" (K13).
@@ -13,9 +20,15 @@ struct ReplicaMeta: Equatable, Sendable {
     /// Document y to scroll to first (the sensitive form, else what was on screen). Never negative.
     var focusY: Double
     var truncated: Bool
+    /// Areas per signal for the spotlight on Detail. Out-of-range or null entries are dropped; a wrong
+    /// JSON type breaks the whole meta like any other key.
+    var marks: [ReplicaMark] = []
+
+    /// More marks than any real page needs; the rest are ignored.
+    static let maxMarks = 24
 
     private static let marker = #"<meta name="shoo-replica" content=""#
-    private static let keys: Set<String> = ["v", "url", "capturedAt", "viewport", "focusY", "truncated"]
+    private static let keys: Set<String> = ["v", "url", "capturedAt", "viewport", "focusY", "truncated", "marks"]
     /// replica.js metaToken (`shoo` + up to 8 base-36 chars + `-meta`). Seeing it inside the value means
     /// `$&` in the page URL made `String.replace` paste the token back in (replica.js:279, C26).
     private static let leakedToken = try! Regex("shoo[a-z0-9]{0,8}-meta")
@@ -26,6 +39,15 @@ struct ReplicaMeta: Equatable, Sendable {
         var capturedAt: Date
         var focusY: Double?
         var truncated: Bool?
+        var marks: [WireMark?]?
+    }
+
+    private struct WireMark: Decodable {
+        var signalId: String
+        var x: Double
+        var y: Double
+        var w: Double
+        var h: Double
     }
 
     /// `nil` when the meta is missing or broken in any way; the caller then starts at the top.
@@ -54,8 +76,19 @@ struct ReplicaMeta: Equatable, Sendable {
             url: wire.url.flatMap(URL.init(string:)),
             capturedAt: wire.capturedAt,
             focusY: focusY,
-            truncated: wire.truncated ?? false
+            truncated: wire.truncated ?? false,
+            marks: (wire.marks ?? []).prefix(maxMarks).compactMap { $0.flatMap(mark) }
         )
+    }
+
+    /// A known-looking id and a finite, non-empty box inside the page; anything else is dropped.
+    private static func mark(_ wire: WireMark) -> ReplicaMark? {
+        let numbers = [wire.x, wire.y, wire.w, wire.h]
+        guard numbers.allSatisfy({ $0.isFinite && $0 >= 0 && $0 < 100_000 }), wire.w > 0, wire.h > 0,
+              (1...40).contains(wire.signalId.count),
+              wire.signalId.allSatisfy({ ($0.isLetter && $0.isLowercase && $0.isASCII) || $0 == "_" })
+        else { return nil }
+        return ReplicaMark(signalId: wire.signalId, rect: CGRect(x: wire.x, y: wire.y, width: wire.w, height: wire.h))
     }
 
     /// Time for "Copy of the page · …": the device clock, kept near the scan (K14). No meta → `detectedAt`.

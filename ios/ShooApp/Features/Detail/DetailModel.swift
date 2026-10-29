@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -55,11 +56,18 @@ final class DetailModel {
         return scan.ownerDeviceId == viewer.deviceId
     }
 
-    /// DT-05 / GD-07: only a Guardian, only blocked items (contracts/api.md `verdict_not_allowed`).
+    /// DT-05 / GD-07: only a Guardian, on warning and blocked items alike (Figma 416:9469, #190).
     /// The repository only returns the guardian's own scans and their protected members'.
     var canValidate: Bool {
-        viewer?.mode == .guardian && scan?.status == .blocked
+        viewer?.mode == .guardian && scan != nil
     }
+
+    /// Areas per signal on the page copy (`shoo-replica` meta `marks`, #176). Empty until the copy is shown.
+    var marks: [ReplicaMark] = []
+    /// Width of the copied page in CSS px (the meta's viewport), so marks land on the image.
+    var pageCSSWidth: CGFloat?
+    /// The owner's avatar for the chip, from the family list (best effort).
+    private(set) var ownerAvatarId: String?
 
     /// DT-03: the owner's name is for the guardian's family view, never for Protected.
     func showsOwner(familyModeOn: Bool) -> Bool {
@@ -70,7 +78,7 @@ final class DetailModel {
     /// DT-04: 1–3 signals, heaviest first, in the viewer's wording.
     func evidence(language: AppLanguage) -> [Evidence] {
         guard let scan, let mode = viewer?.mode else { return [] }
-        return Evidence.top(scan.signals, mode: mode, language: language)
+        return Evidence.top(scan.signals, mode: mode, language: language, marks: marks)
     }
 
     /// DT-06: "Verified scam by Adhella" / "Marked safe by you".
@@ -97,6 +105,7 @@ final class DetailModel {
             scan = loadedScan
             viewer = loadedViewer
             state = .loaded
+            await loadOwnerAvatar()
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound
@@ -106,6 +115,13 @@ final class DetailModel {
             Log.ui.error("Detail load failed", error)
             if scan == nil { state = .failed }
         }
+    }
+
+    /// Someone else's scan in the guardian's view: their avatar for the chip. Without it the chip
+    /// shows the first avatar colour.
+    private func loadOwnerAvatar() async {
+        guard viewer?.mode == .guardian, !isOwnScan, ownerAvatarId == nil, let owner = scan?.ownerDeviceId else { return }
+        ownerAvatarId = try? await repository.familyMembers().first { $0.deviceId == owner }?.avatarId
     }
 
     /// The screenshot link failed. It may only have expired (valid 1 h), so ask for the scan once more:

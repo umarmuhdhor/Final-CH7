@@ -304,15 +304,12 @@ actor MockRepository: ShooRepository {
         else {
             throw RepositoryError.api(.notFound, message: "Scan not found")
         }
-        guard scan.status == .blocked else {
-            throw RepositoryError.api(.verdictNotAllowed, message: "Only blocked scans take a verdict")
-        }
+        // GD-07: warning and blocked alike (Figma 416:9469, backend #191); a new verdict replaces the old.
         let verdict = Verdict(value: value, byDeviceId: profile.deviceId, byName: profile.name, decidedAt: now())
         // A verdict applies to the scan's domain for that owner (contracts/api.md).
         for index in allScans.indices
         where allScans[index].domain == scan.domain
-            && allScans[index].ownerDeviceId == scan.ownerDeviceId
-            && allScans[index].status == .blocked {
+            && allScans[index].ownerDeviceId == scan.ownerDeviceId {
             allScans[index].verdict = verdict
         }
         return verdict

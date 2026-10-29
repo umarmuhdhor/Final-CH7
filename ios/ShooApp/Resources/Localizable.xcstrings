@@ -4104,6 +4104,386 @@
           }
         }
       }
+    },
+    "Reasons detected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alasan Terdeteksi"
+          }
+        }
+      }
+    },
+    "What the AI flagged" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang dicurigai AI"
+          }
+        }
+      }
+    },
+    "Signal:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinyal:"
+          }
+        }
+      }
+    },
+    "Scam risk contribution" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontribusi risiko scam"
+          }
+        }
+      }
+    },
+    "Is this site really a scam?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah situs ini benar penipuan?"
+          }
+        }
+      }
+    },
+    "Verified as a scam" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diverifikasi sebagai penipuan"
+          }
+        }
+      }
+    },
+    "Verified safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diverifikasi aman"
+          }
+        }
+      }
+    },
+    "by %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "by %1$@ · %2$@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oleh %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "by you · %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oleh Anda · %@"
+          }
+        }
+      }
+    },
+    "Just now" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baru saja"
+          }
+        }
+      }
+    },
+    "Change" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah"
+          }
+        }
+      }
+    },
+    "Shows the Safe and Danger buttons again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan lagi tombol Aman dan Bahaya"
+          }
+        }
+      }
+    },
+    "%@ still sees Shoo's warning when opening this site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tetap melihat peringatan Shoo saat membuka situs ini."
+          }
+        }
+      }
+    },
+    "You marked this safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda menandai ini aman"
+          }
+        }
+      }
+    },
+    "Opened %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opened %1$@ · %2$@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diakses %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Opened by %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dibuka oleh %@"
+          }
+        }
+      }
+    },
+    "signal.sensitiveForm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensitive form"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Formulir sensitif"
+          }
+        }
+      }
+    },
+    "signal.copiedLogo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied logo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logo tiruan"
+          }
+        }
+      }
+    },
+    "signal.lookalikeDomain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look-alike address"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alamat mirip"
+          }
+        }
+      }
+    },
+    "signal.brandInAddress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brand name in address"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama merek di alamat"
+          }
+        }
+      }
+    },
+    "signal.cheapEnding" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cheap domain ending"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiran domain murah"
+          }
+        }
+      }
+    },
+    "signal.suspiciousLink" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspicious link"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tautan mencurigakan"
+          }
+        }
+      }
+    },
+    "signal.newDomain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domain age"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umur domain"
+          }
+        }
+      }
+    },
+    "signal.urgentWording" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Urgent wording"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahasa mendesak"
+          }
+        }
+      }
+    },
+    "signal.unusualRequest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unusual request"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permintaan tidak wajar"
+          }
+        }
+      }
+    },
+    "signal.hoax" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoax claim"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klaim hoaks"
+          }
+        }
+      }
+    },
+    "signal.knownScam" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Known scam list"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftar penipuan"
+          }
+        }
+      }
+    },
+    "signal.other" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other signal"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinyal lain"
+          }
+        }
+      }
+    },
+    "detail.highRisk" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High risk"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risiko Tinggi"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
