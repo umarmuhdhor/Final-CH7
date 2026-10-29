@@ -3,7 +3,7 @@
 
 import { PSL_RULES } from "./psl.js";
 import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "./domain.js";
-import { captureEvidence } from "./capture.js";
+import { buildReplica, webIO } from "./replica-build.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
 import { createHeartbeat } from "./heartbeat.js";
@@ -13,7 +13,7 @@ const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const SESSION_TTL_MS = 30 * 1000; // onboarding can finish while Safari is open
 const ANALYZE_TIMEOUT_MS = 8 * 1000; // contracts/api.md
-const SCAN_TIMEOUT_MS = 15 * 1000; // includes the screenshot upload
+const SCAN_TIMEOUT_MS = 15 * 1000; // includes the page replica upload
 
 let rules = null;
 function domainFor(hostname) {
@@ -125,43 +125,43 @@ if (browser.alarms) {
 const reports = new Map(); // report key → Promise<backend scan id | null>
 
 /**
- * EX-07. Replies as soon as the screenshot is taken (report.js then unblurs the page / block.js navigates);
- * the POST continues here, so it survives the page going away.
+ * EX-07. Replies at once (block.js navigates as soon as we have the message); the page replica is
+ * finished and the POST runs here, so both survive the page going away.
  */
-async function startReport(message, sender) {
+async function startReport(message) {
     const session = await getSession();
     if (!session?.apiBaseURL) return { ok: false, skipped: "no_api_url" }; // not onboarded → nothing leaves the phone
 
-    let screenshotBase64 = null;
-    try {
-        if (sender?.tab) screenshotBase64 = await captureEvidence(sender.tab.windowId, message.evidence);
-    } catch (error) {
-        console.warn("[Shoo] screenshot failed, sending without it", error);
-    }
-
-    const body = {
-        ...message.scan,
-        ownerDeviceId: session.deviceId,
-        ownerName: (session.name || "").slice(0, 20),
-        ...(screenshotBase64 ? { screenshotBase64 } : {}),
-    };
-    const post = fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
-        method: "POST",
-        token: session.token,
-        timeoutMs: SCAN_TIMEOUT_MS,
-        body: JSON.stringify(body),
-    })
+    const send = (pageReplicaBase64) =>
+        fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
+            method: "POST",
+            token: session.token,
+            timeoutMs: SCAN_TIMEOUT_MS,
+            body: JSON.stringify({
+                ...message.scan,
+                ownerDeviceId: session.deviceId,
+                ownerName: (session.name || "").slice(0, 20),
+                ...(pageReplicaBase64 ? { pageReplicaBase64 } : {}),
+            }),
+        });
+    const post = buildReplica(message.replica, webIO())
+        .catch((error) => {
+            console.warn("[Shoo] page replica failed, sending without it", error);
+            return null;
+        })
+        // 413: the backend's body limit is lower than the replica's (older backend) — the scan matters more.
+        .then((replica) => send(replica).catch((error) => (replica && error.status === 413 ? send(null) : Promise.reject(error))))
         .then((reply) => (typeof reply?.id === "string" ? reply.id : null))
         .catch((error) => {
             console.warn("[Shoo] POST /scans failed", error);
             return null;
         });
     reports.set(message.key, post);
-    return { ok: true, screenshot: Boolean(screenshotBase64) };
+    return { ok: true };
 }
 
 // Content scripts run in the page's process: no message ever answers with the token or the base URLs.
-browser.runtime.onMessage.addListener((message, sender) => {
+browser.runtime.onMessage.addListener((message) => {
     switch (message?.type) {
         case "heartbeat":
             lastSeen.report();
@@ -181,7 +181,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
         case "analyze":
             return analyze(message.snapshot, message.localSignals ?? []);
         case "report":
-            return startReport(message, sender);
+            return startReport(message);
         case "recordId":
             return Promise.resolve(reports.get(message.key) ?? null).then((recordId) => ({ ok: true, recordId }));
         case "verdict":

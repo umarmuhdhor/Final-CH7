@@ -13,6 +13,9 @@ class Node {
     get nodeType() {
         return this._type;
     }
+    get childNodes() {
+        return this._children ?? [];
+    }
 }
 class Element extends Node {
     constructor(tag, attrs = {}, children = []) {
@@ -22,6 +25,12 @@ class Element extends Node {
         this.type = attrs.type ?? tag;
         this._attrs = attrs;
         this._children = children;
+    }
+    get localName() {
+        return this.tagName.toLowerCase();
+    }
+    get attributes() {
+        return Object.entries(this._attrs).map(([name, value]) => ({ name, value }));
     }
     getAttribute(key) {
         return this._attrs[key] ?? null;
@@ -81,7 +90,7 @@ Object.assign(globalThis, { Node, Element, Document, MutationObserver, CSS: { es
 
 await import("../Resources/dom.js");
 await import("../Resources/snapshot.js");
-await import("../Resources/report.js");
+await import("../Resources/replica.js");
 const dom = globalThis.ShooDom;
 
 /** A login page that shadows what the content scripts read: `<form name="querySelectorAll">` and friends. */
@@ -122,9 +131,14 @@ test("the snapshot still reads the page's real forms from a clobbered page", () 
     assert.deepEqual(forms[0].fields.map((f) => [f.type, f.name]), [["password", "pin"]]);
 });
 
-test("the screenshot still finds the fields to blur on a clobbered page", () => {
-    const { doc, pin } = clobberedPage();
-    assert.deepEqual(globalThis.ShooReport.screenshotTargets(doc), { blur: [pin], hide: [] });
+test("the page replica still drops the form target and typed PIN on a clobbered form", () => {
+    const { login, pin } = clobberedPage();
+    pin._attrs.value = "123456"; // React mirrors typed input into the value attribute
+    for (const key of ["attributes", "childNodes", "localName"]) Object.defineProperty(login, key, { value: pin });
+    const html = new Element("html", {}, [new Element("head"), new Element("body", {}, [login])]);
+    const doc = { documentElement: html, baseURI: "https://scam.example/login", doctype: null };
+    const { html: out } = globalThis.ShooReplica.capture(doc, { url: "https://scam.example/login", viewport: { width: 390, height: 844 }, now: "" });
+    assert.match(out, /<form><input type="password" name="pin" id="pin"><\/form>/);
 });
 
 /** One of our UI hosts (shoo-live-score …) and <html>, enough for guard(). */
