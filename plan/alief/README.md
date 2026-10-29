@@ -78,6 +78,7 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 15 | Push + validasi live | c | `feat/GD-06-07-push-validation` | tap push → Detail, It's safe / Not safe live | GD-06, GD-07 | Opus 5.5 |
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
 | 17 | Ditahan | – | nanti | Live Activity lewat push | EX-03 | – |
+| 18 | Page replica | c | `feat/EX-07-replica-backend` → `feat/DT-04-page-replica` | `pageReplicaBase64` di `POST /scans`, bucket `replicas`, `GET /replicas/{id}`, Detail merender salinan halaman (issue #176) | EX-07, DT-04 | Opus 5.5 |
 
 **Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6–B8).
 
