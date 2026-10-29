@@ -105,6 +105,7 @@ Catatan password DB (21 Okt): password role `postgres` dibuat acak oleh Supabase
 | E5 | Ekspor laporan QA ke .docx untuk Google Drive | Format sama dengan QA Catalyst |
 | E6 | Alamat kontak tim di `GET /privacy` (`TODO(sync:alief)` di `backend/api/src/routes/privacy.ts`) + domain sendiri untuk URL kebijakan privasi | Wajib sebelum TestFlight eksternal / App Store (P12) |
 | E7 | Hapus otomatis device yang tidak aktif (mis. `last_seen_at` > 90 hari) — review fase 12 L9, perlu keputusan Alief (Protected yang lama tidak membuka Safari ikut terhapus) | Data device lama tidak tersimpan tanpa batas |
+| E8 | Kuota replica per keluarga (per Guardian) + notifikasi saat `replica_dropped` `global_quota`/`global_bytes` muncul (review security 18a M1): beberapa device gratis yang dipasangkan ke Guardian penyerang bisa menghabiskan 3000 upload / 500 MB global per hari; replica sah lalu dibuang tanpa sinyal ke app | Replica orang lain tidak hilang karena satu penyerang; butuh angka kuota dari Alief + usulan ke Umar di #176 |
 
 ## Referensi
 

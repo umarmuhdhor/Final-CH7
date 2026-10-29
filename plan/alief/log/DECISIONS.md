@@ -769,3 +769,11 @@ Format:
 - Alternatif yang ditolak: memindah screenshot ke R2 sekarang (dihapus di 18c); menghapus ekspor yang hanya dipakai di file sendiri (kosmetik, churn tanpa manfaat).
 - Menggantikan: TODO E1 (pindah screenshot ke R2 kalau > 700 MB).
 - Status: (a) rencana 18a; (b) rencana 18c; (c) `backend/API.md` + `backend/ci/README.md` di branch `docs/EX-07-screenshot-deprecated`, komentar kode di 18a; (d) diterapkan; (e) `.foregroundStyle` di branch `fix/GD-01-foreground-style`, worktree: lihat TODO D12. Detail: `log/verify/fase-18-audit-r2.md`.
+
+## D-alief-C28 · 29 Okt 2026 · implementasi (fase 18a) · Putus hubungan menutup akses salinan halaman, objeknya ikut scan
+
+- Keputusan: (a) Saat Protected memutus hubungan (atau Guardian menghapus anggota), `replicaPathForViewer` langsung berhenti melayani Guardian (404, cek `family_links` tiap request), tetapi objek R2 + `replica_path` tidak dihapus saat itu; objek ikut scan-nya: retensi 14 hari, `DELETE /devices/me`, `POST /devices/me/protected`. Teks `GET /privacy` EN/ID disesuaikan: "We only make a copy while you are connected in a family … When you disconnect, your Guardian can no longer open it." (b) Wire lokal memakai `curl` tanpa `--compressed`, bukan `curl --raw`: `--raw` juga mempertahankan framing chunked, sehingga byte gzip tidak bisa dibandingkan; tanpa `--compressed` curl tidak meng-inflate `Content-Encoding`, jadi bukti "dikirim sekali, apa adanya" tetap. (c) `dueTombstones` dipanggil per store (Supabase 500, R2 = anggaran batch R2 × 100) dengan aturan akhiran path yang sama dengan `storeKind` (dipaku test). (d) `GET /replicas/:id` membaca objek utuh (≤ 307 200 byte) sebelum cek magic `1f 8b`, bukan stream potongan pertama (review TypeScript M2).
+- Alasan: (a) perilaku ini sama dengan screenshot dan scan (data milik Protected, Guardian hanya kehilangan akses), P13 menuntut akses hilang seketika dan itu terpenuhi; menghapus replica saat disconnect butuh jalur hapus baru di route keluarga (folder kita, tetapi di luar langkah 18a) dan teks lama menjanjikan lebih dari kode (review security M2). (b)–(d) temuan saat uji/review.
+- Alternatif yang ditolak: tombstone + null `replica_path` semua scan Protected saat disconnect (bisa dikerjakan nanti bila Alief ingin salinan hilang saat putus hubungan; satu fase kecil).
+- Status: diterapkan di PR 18a.
+
