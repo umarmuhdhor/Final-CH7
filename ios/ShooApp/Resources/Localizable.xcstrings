@@ -1775,7 +1775,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Belum ada yang kamu lindungi"
+            "value" : "Belum ada yang Anda lindungi"
           }
         }
       }
@@ -4101,6 +4101,206 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menampilkan aktivitas siapa yang dilihat"
+          }
+        }
+      }
+    },
+    "Active since %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktif sejak %@"
+          }
+        }
+      }
+    },
+    "Become a Guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjadi Guardian"
+          }
+        }
+      }
+    },
+    "Blocked link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link terblokir"
+          }
+        }
+      }
+    },
+    "Connected account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun Terhubung"
+          }
+        }
+      }
+    },
+    "Edit name" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah nama"
+          }
+        }
+      }
+    },
+    "GUARDIAN MODE" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MODE GUARDIAN"
+          }
+        }
+      }
+    },
+    "Help check suspicious sites your family opens." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bantu cek situs mencurigakan yang dibuka keluarga Anda."
+          }
+        }
+      }
+    },
+    "Invite family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undang Keluarga"
+          }
+        }
+      }
+    },
+    "Linked account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun Tertaut"
+          }
+        }
+      }
+    },
+    "Linked with %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tertaut dengan %@"
+          }
+        }
+      }
+    },
+    "Must use %@'s account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Harus menggunakan akun %@"
+          }
+        }
+      }
+    },
+    "Protect the people closest to you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi orang terdekat"
+          }
+        }
+      }
+    },
+    "Send an invite to your family. Once they join, their status shows up here." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim undangan ke keluarga. Begitu mereka bergabung, statusnya muncul di sini."
+          }
+        }
+      }
+    },
+    "Send links automatically" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim link secara otomatis"
+          }
+        }
+      }
+    },
+    "Share caution history" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan riwayat waspada"
+          }
+        }
+      }
+    },
+    "Shows your linked account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuka akun tertaut"
+          }
+        }
+      }
+    },
+    "Sites checked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs diperiksa"
+          }
+        }
+      }
+    },
+    "This account is linked to another account." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun ini terhubung dengan akun lain."
+          }
+        }
+      }
+    },
+    "When the linked account verifies a link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat yang terhubung memverifikasi link"
+          }
+        }
+      }
+    },
+    "can always see the blocked history" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "selalu bisa melihat riwayat yang terblokir"
           }
         }
       }

@@ -59,6 +59,9 @@ final class ProfileModel {
     /// "Notifikasi" row: Aktif / Mati.
     private(set) var notificationStatus: NotificationAuthorization?
 
+    /// Protected "Akun Tertaut", "Link terblokir" and the "Situs diperiksa" counter (App Group, proposed keys).
+    let linked: LinkedAccountSettings
+
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let notifications: (any NotificationPermission)?
@@ -68,8 +71,10 @@ final class ProfileModel {
         repository: any ShooRepository,
         settings: AppSettings,
         notifications: (any NotificationPermission)? = nil,
+        linked: LinkedAccountSettings? = nil,
         now: @escaping () -> Date = Date.init
     ) {
+        self.linked = linked ?? LinkedAccountSettings()
         self.repository = repository
         self.settings = settings
         self.notifications = notifications
@@ -98,27 +103,21 @@ final class ProfileModel {
         return max(1, (calendar.dateComponents([.day], from: start, to: today).day ?? 0) + 1)
     }
 
-    /// Pribadi: days protected, blocked, warnings. Protected: blocked, warnings ("Dibuka").
+    /// Pribadi and Protected: days protected, blocked, sites checked ("—" until the extension counts them).
     /// Guardian: members, days since the earliest member still connected, the members' blocked total.
-    /// Empty when the server sends no stats (the strip is hidden).
+    /// Empty when the server sends no stats, or a guardian protects nobody yet (the strip is hidden).
     func stats(language: AppLanguage) -> [ProfileStat] {
         let number = { (n: Int) in n.formatted(.number.locale(language.locale)) }
         switch variant {
-        case .personal:
+        case .personal, .protected:
             guard let stats = profile?.stats else { return [] }
             return [
                 ProfileStat(value: number(days(since: stats.since)), label: "Days protected"),
                 ProfileStat(value: number(stats.blocked), label: "Sites blocked"),
-                ProfileStat(value: number(stats.warnings), label: "Warnings"),
-            ]
-        case .protected:
-            guard let stats = profile?.stats else { return [] }
-            return [
-                ProfileStat(value: number(stats.blocked), label: "Sites blocked"),
-                ProfileStat(value: number(stats.warnings), label: "Opened"),
+                ProfileStat(value: linked.checkedCount.map(number) ?? "—", label: "Sites checked"),
             ]
         case .guardian:
-            guard !membersFailed, members.allSatisfy({ $0.stats != nil }) else { return [] }
+            guard !membersFailed, !members.isEmpty, members.allSatisfy({ $0.stats != nil }) else { return [] }
             let since = members.compactMap(\.connectedAt).min()
             return [
                 ProfileStat(value: number(members.count), label: "People protected"),
@@ -133,10 +132,10 @@ final class ProfileModel {
         "@" + (profile?.name ?? "").lowercased().filter { !$0.isWhitespace }
     }
 
-    /// "@adhella · Pribadi" (Figma "Handle"): the username, then the mode.
+    /// "@adhella · Pribadi" (Figma "Handle"): the username, then the mode. Protected has none (Figma).
     func handle(language: AppLanguage) -> String {
         switch variant {
-        case .protected: return username
+        case .protected: return ""
         case .personal: return username + " · " + L10n.string("Personal", language: language)
         case .guardian: return username + " · " + L10n.string("Guardian", language: language)
         }
@@ -161,7 +160,22 @@ final class ProfileModel {
     }
 
     var showsFamilyCode: Bool { settings.mode == .guardian }
-    var showsDisconnect: Bool { settings.mode == .protected }
+
+    /// "Aktif sejak 20 Juni" (Protected Kelola profil): when this device registered.
+    func activeSince(language: AppLanguage) -> String? {
+        guard let since = profile?.stats?.since else { return nil }
+        let date = since.formatted(.dateTime.day().month(.wide).locale(language.locale))
+        return L10n.string("Active since \(date)", language: language)
+    }
+
+    // MARK: Mode Guardian card (Pribadi)
+
+    var showsGuardianCard: Bool { variant == .personal && !settings.guardianCardDismissed }
+
+    /// "Menjadi Guardian": Family mode on, so Profile turns into the Guardian layout.
+    func becomeGuardian() { setFamilyMode(true) }
+
+    func dismissGuardianCard() { settings.guardianCardDismissed = true }
 
     /// Same rule as ON-02.
     var nameProblem: NameRule.Problem? {
@@ -290,26 +304,6 @@ final class ProfileModel {
     /// "Punya kode undangan?": only a guardian who protects nobody can join another family.
     var canJoinAnotherFamily: Bool { settings.mode == .guardian && members.isEmpty && !membersFailed }
 
-    /// Protected leaves their guardian (`DELETE /family/guardian`) and goes back to Connect.
-    func disconnect() async -> Bool {
-        guard showsDisconnect, !isWorking else { return false }
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            try await repository.leaveGuardian()
-        } catch RepositoryError.api(.notFound, _) {
-            // Already disconnected (an earlier answer got lost): same end state.
-        } catch {
-            Log.ui.error("Disconnect failed", error)
-            actionError = "Couldn't disconnect. Check your connection and try again."
-            return false
-        }
-        onSessionEnd()
-        settings.onboardingConnectPassed = false
-        settings.onboardingCompleted = false
-        return true
-    }
-
     /// SECURITY §3 P3: gone on the server first, then a fresh install here (onboarding from the start).
     func deleteMyData() async -> Bool {
         guard !isWorking else { return false }
@@ -325,6 +319,7 @@ final class ProfileModel {
             return false
         }
         // `ApiRepository.deleteMe` has already cleared the Keychain token and App Group session keys.
+        linked.clear()
         onSessionEnd()
         settings.reset()
         return true

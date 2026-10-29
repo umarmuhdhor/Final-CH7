@@ -26,11 +26,12 @@ final class AppSettings {
         static let readAloud = "settings.readAloud"
 
         static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
+        static let guardianCardDismissed = "settings.guardianCardDismissed"
 
         static let all = [
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds,
+            dismissedHomeScanIds, guardianCardDismissed,
         ]
     }
 
@@ -102,6 +103,11 @@ final class AppSettings {
         didSet { defaults.set(dismissedHomeScanIds, forKey: Keys.dismissedHomeScanIds) }
     }
 
+    /// PF-01 Pribadi: the "Mode Guardian" card was closed with X (never shown again on this iPhone).
+    var guardianCardDismissed: Bool {
+        didSet { defaults.set(guardianCardDismissed, forKey: Keys.guardianCardDismissed) }
+    }
+
     init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
         self.defaults = defaults
         language = defaults.string(forKey: Keys.language).flatMap(AppLanguage.init(rawValue:))
@@ -124,6 +130,7 @@ final class AppSettings {
         haptics = defaults.object(forKey: Keys.haptics) as? Bool ?? true
         readAloud = defaults.bool(forKey: Keys.readAloud)
         dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
+        guardianCardDismissed = defaults.bool(forKey: Keys.guardianCardDismissed)
     }
 
     /// Hides a scan's Home card for good. Old ids drop off; a scan older than 24 h has no card anyway.
@@ -172,5 +179,6 @@ final class AppSettings {
         haptics = true
         readAloud = false
         dismissedHomeScanIds = []
+        guardianCardDismissed = false
     }
 }
