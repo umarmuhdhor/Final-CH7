@@ -1,4 +1,13 @@
+import type { Sql } from "postgres";
+import type { Env } from "../env";
+import { clearReplicaPath, precheckReplica, type ReplicaQuota, reserveReplica, scanExists } from "../db/repo/scans";
+import { usableSecret } from "../http/crypto";
+import { ApiError } from "../http/errors";
+import { errorInfo } from "../http/logError";
+import { hit, limits } from "../http/rateLimit";
 import { decodeBase64 } from "./images";
+import { replicaLink } from "./screenshotLinks";
+import { abandonUpload, r2Store } from "./screenshots";
 
 /** contracts/api.md "Page replica" = replica-build.js MAX_BASE64 (400 KB of base64). */
 export const MAX_REPLICA_BASE64 = 409_600;
@@ -13,7 +22,91 @@ export const MAX_REPLICA_HTML = 3_145_728;
  */
 export const INFLATE_SLICE = 4096;
 
+/**
+ * D-alief-C26, R2 instead of Supabase: 500 MB/day × 16 days of object life = 8 GB < 10 GB R2 free;
+ * 3000 × 30 = 90 000 puts/month ≪ 1 M Class A; 3000 < the cron's 4000 R2 deletes per run. Per device
+ * 50 (anti-abuse; a reuse covers the same domain). Past a quota the scan is stored without a replica.
+ */
+export const REPLICA_QUOTA: ReplicaQuota = { owner: 50, global: 3000, globalBytes: 500 * 1024 * 1024 };
+
 export type ReplicaDrop = "invalid" | "too_large" | "not_gzip";
+
+type Drop =
+  | ReplicaDrop
+  | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
+
+// Reason only: never the scan id, URL, path or device (SECURITY §3 P6).
+const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "replica_dropped", reason }));
+
+const QUOTA_DROP = { owner: "quota", global: "global_quota", global_bytes: "global_bytes" } as const;
+
+export const replicasEnabled = (env: Env) => env.REPLICAS_ENABLED === "true";
+
+/**
+ * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse
+ * or a scan without family burns neither the IP slot nor inflate CPU. Kill-switch → reuse/no-family
+ * pre-check → per-IP limit → decode → reserve (per-owner lock, quotas, tombstone) → R2 put.
+ * Any failure drops the replica only; the scan is already stored and answered.
+ */
+export async function attachReplica(
+  sql: Sql,
+  env: Env,
+  scan: { id: string; ownerId: string; domain: string },
+  base64: string,
+  ip: string,
+): Promise<void> {
+  if (!replicasEnabled(env)) return dropped("disabled");
+  const store = r2Store(env);
+  if (!store) return dropped("no_storage");
+
+  const pre = await precheckReplica(sql, scan);
+  if (pre.reuse) {
+    const slot = await reserveReplica(sql, scan, null, REPLICA_QUOTA);
+    if ("gone" in slot) return dropped("scan_gone");
+    // { none }: the reuse expired in between; carry on as a new upload.
+    if (!("none" in slot)) return;
+  }
+  if (!pre.family) return dropped("no_family");
+
+  try {
+    await hit(sql, limits.replicaIp, ip);
+  } catch (err) {
+    if (err instanceof ApiError) return dropped("ip_quota");
+    throw err;
+  }
+
+  const decoded = await decodeReplica(base64);
+  if (!decoded.ok) return dropped(decoded.reason);
+
+  const path = `${scan.ownerId}/${scan.id}-replica.html.gz`;
+  const slot = await reserveReplica(sql, scan, { path, bytes: decoded.bytes.length }, REPLICA_QUOTA);
+  if ("reuse" in slot || "none" in slot) return;
+  if ("gone" in slot) return dropped("scan_gone");
+  if ("quota" in slot) return dropped(QUOTA_DROP[slot.quota]);
+
+  try {
+    await store.put(path, decoded.bytes, "application/gzip");
+  } catch (err) {
+    console.error(JSON.stringify({ event: "replica_dropped", reason: "upload_failed", error: errorInfo(err) }));
+    await clearReplicaPath(sql, scan.ownerId, path).catch(() => undefined);
+    await abandonUpload(sql, store, path);
+    return;
+  }
+  // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
+  if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
+}
+
+/**
+ * Detail's pageReplicaUrl: a 1-hour Worker link for this viewer, like screenshotUrl. Null without a
+ * replica, with the kill-switch off, or without a usable secret.
+ */
+export async function replicaUrl(env: Env, scan: { id: string; replicaPath: string | null }, viewerId: string): Promise<string | null> {
+  if (!scan.replicaPath || !replicasEnabled(env)) return null;
+  const secret = usableSecret(env.SCREENSHOT_URL_SECRET);
+  if (!secret) return null;
+  const origin = env.INVITE_BASE_URL.replace(/\/+$/, "");
+  return replicaLink(secret, origin, scan.id, viewerId, Date.now() / 1000);
+}
 
 export type DecodedReplica =
   | { ok: true; bytes: Uint8Array; htmlBytes: number }

@@ -162,6 +162,98 @@ export async function recentFavicon(sql: Q, ownerId: string, domain: string): Pr
   return row?.path;
 }
 
+export type ReplicaSlot =
+  | { reuse: string }
+  | { upload: string }
+  | { quota: "owner" | "global" | "global_bytes" }
+  | { gone: true }
+  | { none: true };
+
+export interface ReplicaQuota {
+  /** Uploads per owner per 24 h. */
+  owner: number;
+  /** Uploads by everyone per 24 h. */
+  global: number;
+  /** sum(replica_bytes) of everyone's uploads per 24 h. */
+  globalBytes: number;
+}
+
+/**
+ * EX-07 pre-check before the IP limit and the inflate (cheap first, K5): the owner's replica of this
+ * domain from the last 24 h to reuse, and whether the owner has a family link (Protected with a
+ * Guardian, or Guardian with members). Without one nobody else can ever see the replica.
+ * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
+ * the same moment may keep or drop one replica.
+ */
+export async function precheckReplica(
+  sql: Sql,
+  scan: { ownerId: string; domain: string },
+): Promise<{ reuse: string | undefined; family: boolean }> {
+  const [row] = await sql<{ reuse: string | null; family: boolean }[]>`
+    select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse,
+           exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as family`;
+  return { reuse: row?.reuse ?? undefined, family: row?.family ?? false };
+}
+
+/**
+ * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
+ * class 6; 3–5 are taken), reuse the owner's replica of this domain from the last 24 h, else reserve
+ * `upload.path` when the owner uploaded fewer than `quota.owner` and everyone fewer than `quota.global`
+ * objects and `quota.globalBytes` bytes in 24 h (original rows only, index scans_original_replica; not
+ * locked across owners, so parallel scans may overshoot the global counts by a few). replica_bytes is
+ * written on the uploading row only. The path is tombstoned before the upload (D-alief-B12).
+ * `upload` null only looks for a reuse ({ none } when there is nothing to reuse).
+ */
+export async function reserveReplica(
+  sql: Sql,
+  scan: { id: string; ownerId: string; domain: string },
+  upload: { path: string; bytes: number } | null,
+  quota: ReplicaQuota,
+): Promise<ReplicaSlot> {
+  return sql.begin(async (tx): Promise<ReplicaSlot> => {
+    await tx`select pg_advisory_xact_lock(6, hashtext(${scan.ownerId}))`;
+    const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan.ownerId, scan.domain)}) as path`;
+    const reuse = found?.path ?? undefined;
+    if (!reuse && !upload) return { none: true };
+    if (!reuse) {
+      const [mine] = await tx<{ n: number }[]>`
+        select count(*)::int as n from scans
+        where replica_bytes is not null and created_at > now() - interval '24 hours' and owner_id = ${scan.ownerId}`;
+      if (mine!.n >= quota.owner) return { quota: "owner" };
+      const [all] = await tx<{ n: number; bytes: number }[]>`
+        select count(*)::int as n, coalesce(sum(replica_bytes), 0)::bigint::float8 as bytes from scans
+        where replica_bytes is not null and created_at > now() - interval '24 hours'`;
+      if (all!.n >= quota.global) return { quota: "global" };
+      if (all!.bytes + upload!.bytes > quota.globalBytes) return { quota: "global_bytes" };
+    }
+    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
+    const updated = reuse
+      ? await tx`update scans set replica_path = ${reuse}, replica_bytes = null where id = ${scan.id} returning id`
+      : await tx`update scans set replica_path = ${upload!.path}, replica_bytes = ${upload!.bytes} where id = ${scan.id} returning id`;
+    if (updated.length === 0) return { gone: true };
+    if (reuse) return { reuse };
+    await addTombstones(tx, [upload!.path]);
+    return { upload: upload!.path };
+  });
+}
+
+/**
+ * Reuse source: the newest original replica (replica_bytes set) of the owner + domain from the last
+ * 24 h. Only originals count, so reuse never chains and an object is gone 15 days after upload.
+ */
+function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
+  return sql`
+    select replica_path from scans
+    where owner_id = ${ownerId} and domain = ${domain} and replica_bytes is not null
+      and created_at > now() - interval '24 hours'
+    order by created_at desc limit 1`;
+}
+
+/** Clears path and bytes on every scan of the owner that points at it (reuses too). */
+export async function clearReplicaPath(sql: Q, ownerId: string, path: string): Promise<void> {
+  await sql`update scans set replica_path = null, replica_bytes = null where owner_id = ${ownerId} and replica_path = ${path}`;
+}
+
 export interface ScanRow {
   id: string;
   ownerId: string;
@@ -175,6 +267,8 @@ export interface ScanRow {
   screenshotPath: string | null;
   /** The stored favicon (PR-05). The scam site's own favicon_url is never read back. */
   faviconPath: string | null;
+  /** The stored page replica (EX-07), in R2. */
+  replicaPath: string | null;
   detectedAt: string;
   /** detected_at with microseconds, for the cursor. */
   cursorAt: string;
@@ -190,6 +284,7 @@ function selectScans(sql: Sql) {
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
            s.page_title as "pageTitle", s.score, s.status, s.signals,
            s.screenshot_path as "screenshotPath", s.favicon_path as "faviconPath",
+           s.replica_path as "replicaPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
            case when s.status = 'blocked' and v.owner_id is not null then json_build_object(
@@ -249,6 +344,16 @@ export async function faviconPathForViewer(sql: Sql, id: string, viewerId: strin
   const [row] = await sql<{ path: string }[]>`
     select s.favicon_path as path from scans s
     where s.id = ${id} and s.favicon_path is not null
+      and (s.owner_id = ${viewerId}
+           or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
+  return row?.path;
+}
+
+/** The replica path while the viewer owns the scan or is the owner's current guardian (as screenshots). */
+export async function replicaPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
+  const [row] = await sql<{ path: string }[]>`
+    select s.replica_path as path from scans s
+    where s.id = ${id} and s.replica_path is not null
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
   return row?.path;

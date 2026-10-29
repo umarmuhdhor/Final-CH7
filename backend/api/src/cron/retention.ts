@@ -2,7 +2,9 @@ import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { errorInfo } from "../http/logError";
 import { addTombstones, dueTombstones } from "../db/repo/tombstones";
-import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../services/screenshots";
+import {
+  byStore, r2Store, removeTombstoned, type ScreenshotStore, screenshotStore, type StoreKind, type Stores,
+} from "../services/screenshots";
 
 /**
  * 100 paths per Storage DELETE (REMOVE_BATCH); 10 DELETEs keep a run far under the 50 subrequests
@@ -11,6 +13,13 @@ import { removeTombstoned, type ScreenshotStore, screenshotStore } from "../serv
  */
 const BATCH = 100;
 const MAX_BATCHES = 10;
+/**
+ * R2 (replicas, new favicons) has its own budget (K6, D-alief-C26): the binding counts against the
+ * 1000 subrequests to Cloudflare services, not the 50 external ones, and R2 deletes are free.
+ * 40 × 100 = 4000 objects per run, above the global replica quota of 3000/day. Shared by the scans
+ * and tombstone steps; the Cron's CPU for 40 calls is measured in the cloud (LANGKAH MANUAL 3).
+ */
+const R2_MAX_BATCHES = 40;
 /**
  * Scans with a screenshot are deleted in the same large chunks as plain scans: dedupe reuses
  * (no quota, up to 120/h per device) must not queue behind a Storage-bound loop and push other
@@ -47,15 +56,19 @@ export interface RetentionOptions {
   batch?: number;
   /** Storage DELETEs for the scans step. */
   maxBatches?: number;
-  /** Overrides screenshotStore(env); tests only. */
+  /** R2 deletes for the whole run. */
+  r2MaxBatches?: number;
+  /** Overrides screenshotStore(env) (Supabase); tests only. */
   store?: ScreenshotStore;
+  /** Overrides r2Store(env); tests only. */
+  r2Store?: ScreenshotStore;
   plainChunk?: number;
   shotChunk?: number;
   lockTimeoutMs?: number;
 }
 
 /**
- * Daily retention (R4 §5, R2 §6): scans + screenshots + favicons after 14 days, then the small tables.
+ * Daily retention (R4 §5, R2 §6): scans + screenshots + favicons + replicas after 14 days, then the small tables.
  * Verdicts stay (D-alief-14). The heartbeat is written first, so the anti-pause signal never
  * depends on retention succeeding. Each step runs on its own; the first error is rethrown at the
  * end so the Cron event shows the failure. Logs carry counts only.
@@ -77,13 +90,31 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
   await step("heartbeat", async () => {
     await sql`insert into ops_heartbeat (source, at) values ('cron', now()) on conflict (source) do update set at = now()`;
   });
-  const store = opts.store ?? screenshotStore(env);
+  // The R2 store needs only the binding: the REPLICAS_ENABLED kill-switch never stops deletes (K21).
+  const stores: Stores = { supabase: opts.store ?? screenshotStore(env), r2: opts.r2Store ?? r2Store(env) };
+  // Calls left per store. Supabase: the scans step only (the tombstone step has its own TOMBSTONES cap).
+  const budget: Record<StoreKind, number> = { supabase: opts.maxBatches ?? MAX_BATCHES, r2: opts.r2MaxBatches ?? R2_MAX_BATCHES };
   await step("plain_scans", () => deleteOldPlainScans(sql, opts, result));
-  await step("scans", () => deleteOldScans(sql, store, opts, result));
+  await step("scans", () => deleteOldScans(sql, stores, budget, opts, result));
   await step("tombstones", async () => {
     // Objects no row points at any more (deleted device, failed or orphaned upload, retention).
-    const { removed, error } = await removeTombstoned(sql, store, await dueTombstones(sql, TOMBSTONES));
-    result.tombstones = removed;
+    // Per store: a failing or missing store keeps only its own tombstones.
+    let error: unknown;
+    const supabase = await removeTombstoned(sql, stores.supabase, await dueTombstones(sql, TOMBSTONES, "supabase"));
+    result.tombstones += supabase.removed;
+    error ??= supabase.error;
+    const batch = opts.batch ?? BATCH;
+    if (budget.r2 > 0) {
+      const due = await dueTombstones(sql, budget.r2 * batch, "r2");
+      for (let p = 0; p < due.length && budget.r2 > 0; p += batch, budget.r2--) {
+        const r2 = await removeTombstoned(sql, stores.r2, due.slice(p, p + batch));
+        result.tombstones += r2.removed;
+        if (r2.error) {
+          error ??= r2.error;
+          break;
+        }
+      }
+    }
     if (error) throw error;
   });
   await step("family_codes", async () => {
@@ -114,29 +145,29 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
 
 async function deleteOldScans(
   sql: Sql,
-  store: ScreenshotStore | undefined,
+  stores: Stores,
+  budget: Record<StoreKind, number>,
   opts: RetentionOptions,
   result: RetentionResult,
 ): Promise<void> {
   const batch = opts.batch ?? BATCH;
-  let storageCalls = opts.maxBatches ?? MAX_BATCHES;
   const chunk = opts.shotChunk ?? PLAIN_CHUNK;
   const lockTimeout = `${opts.lockTimeoutMs ?? 3000}ms`;
 
-  let storageError: unknown;
+  const storageError: Partial<Record<StoreKind, unknown>> = {};
   for (let i = 0; i < SHOT_CHUNKS; i++) {
     // No transaction is open across the Storage call. Oldest first (index scans_shot_created).
-    // Screenshot and/or favicon (PR-05): both are objects in Storage.
+    // Screenshot, favicon (PR-05) and/or page replica (EX-07): all are stored objects.
     const ids = (await sql<{ id: string }[]>`
       select id from scans where created_at < now() - interval '14 days'
-        and (screenshot_path is not null or favicon_path is not null)
+        and (screenshot_path is not null or favicon_path is not null or replica_path is not null)
       order by created_at, id limit ${chunk}`).map((r) => r.id);
     if (ids.length === 0) break;
 
     // Dedupe shares one object between scans of the same owner. Only paths no scan outside this
     // chunk points at are removed. No new scan can start sharing them: recentScreenshot reuses
     // only an original upload younger than 24 h, so an object lives 15 days at most.
-    // Favicons are reused the same way (recentFavicon), so the same rule applies to them.
+    // Favicons and replicas are reused the same way, so the same rule applies to them.
     const paths = (
       await sql<{ path: string }[]>`
         select s.screenshot_path as path from scans s
@@ -149,7 +180,13 @@ async function deleteOldScans(
         where s.id in ${sql(ids)} and s.favicon_path is not null
           and not exists (
             select 1 from scans o
-            where o.owner_id = s.owner_id and o.favicon_path = s.favicon_path and o.id not in ${sql(ids)})`
+            where o.owner_id = s.owner_id and o.favicon_path = s.favicon_path and o.id not in ${sql(ids)})
+        union
+        select s.replica_path from scans s
+        where s.id in ${sql(ids)} and s.replica_path is not null
+          and not exists (
+            select 1 from scans o
+            where o.owner_id = s.owner_id and o.replica_path = s.replica_path and o.id not in ${sql(ids)})`
     ).map((r) => r.path);
 
     // Rows go on day 14 even while Storage is down or over budget (the privacy page promises it):
@@ -158,28 +195,38 @@ async function deleteOldScans(
     // decideVerdict and deleteDevice. A lock timeout or deadlock rolls the chunk back and stops the
     // loop until tomorrow.
     result.scans += await deleteScans(sql, ids, lockTimeout, sql``, paths);
-    for (let p = 0; p < paths.length && storageCalls > 0 && !storageError; p += batch, storageCalls--) {
-      const removed = await removeTombstoned(sql, store, paths.slice(p, p + batch));
-      result.objects += removed.removed;
-      // One failure is enough: no more Storage calls this run, the tombstones keep the rest.
-      storageError = removed.error;
+    // Grouped per store before batching: each store has its own budget, and one failing store
+    // stops only its own calls.
+    const groups = byStore(paths);
+    for (const kind of ["supabase", "r2"] as const) {
+      const list = groups[kind];
+      for (let p = 0; p < list.length && budget[kind] > 0 && !storageError[kind]; p += batch, budget[kind]--) {
+        const removed = await removeTombstoned(sql, stores[kind], list.slice(p, p + batch));
+        result.objects += removed.removed;
+        // One failure is enough: no more calls to that store this run, the tombstones keep the rest.
+        if (removed.error) storageError[kind] = removed.error;
+      }
     }
     if (ids.length < chunk) break;
     if (i === SHOT_CHUNKS - 1) result.backlog = true;
   }
-  if (storageError) throw storageError;
+  const error = storageError.supabase ?? storageError.r2;
+  if (error) throw error;
 }
 
-/** Scans without a screenshot or favicon: no Storage call, so in large chunks (D-alief-B12). */
+/** Scans without a screenshot, favicon or replica: no Storage call, so in large chunks (D-alief-B12). */
 async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: RetentionResult): Promise<void> {
   const chunk = opts.plainChunk ?? PLAIN_CHUNK;
   const lockTimeout = `${opts.lockTimeoutMs ?? 3000}ms`;
   for (let i = 0; i < PLAIN_CHUNKS; i++) {
     const ids = (await sql<{ id: string }[]>`
-      select id from scans where created_at < now() - interval '14 days' and screenshot_path is null and favicon_path is null
+      select id from scans
+      where created_at < now() - interval '14 days' and screenshot_path is null and favicon_path is null and replica_path is null
       order by created_at, id limit ${chunk}`).map((r) => r.id);
     if (ids.length === 0) return;
-    result.plainScans += await deleteScans(sql, ids, lockTimeout, sql`and screenshot_path is null and favicon_path is null`);
+    result.plainScans += await deleteScans(
+      sql, ids, lockTimeout, sql`and screenshot_path is null and favicon_path is null and replica_path is null`,
+    );
     if (ids.length < chunk) return;
   }
   result.backlog = true;
