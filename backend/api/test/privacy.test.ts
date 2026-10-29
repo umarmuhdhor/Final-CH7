@@ -58,6 +58,10 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       expect(en).toContain(s);
     }
     // No overclaim: the copy is not "without what you typed" in general, and R2's location is only a hint.
+    // Disconnect ends access at once; the copy itself goes with the scan (14 days or delete), say so (P13).
+    expect(en).toContain("We only make a copy while you are connected in a family");
+    expect(en).toContain("When you disconnect, your Guardian can no longer open it.");
+    expect(en).not.toContain("We keep a copy only while");
     expect(en).not.toContain("without anything you typed");
     expect(en).toContain("in Cloudflare R2)");
     expect(en).not.toMatch(/R2[^)]*(Singapore|Asia|APAC|region)/);
@@ -65,9 +69,11 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     for (const s of ["Salinan halaman", "salinan halaman", "Isian yang kamu ketik di kolom halaman dihapus",
       "Teks yang tampil di halaman ikut disalin, termasuk teks yang ditampilkan ulang oleh situs itu", "hanya Guardian-mu dan kamu",
       "Cloudflare (menjalankan API kami dan menyimpan salinan halaman serta ikon situs di Cloudflare R2)",
-      "Supabase (database, dan penyimpanan screenshot serta ikon situs lama"]) {
+      "Supabase (database, dan penyimpanan screenshot serta ikon situs lama",
+      "Salinan hanya dibuat selama kamu terhubung dalam keluarga", "Saat kamu memutus hubungan, Guardian-mu tidak bisa membukanya lagi."]) {
       expect(id).toContain(s);
     }
+    expect(id).not.toContain("Salinan hanya disimpan selama");
   });
 
   it("Indonesian by ?lang=id or Accept-Language", async () => {

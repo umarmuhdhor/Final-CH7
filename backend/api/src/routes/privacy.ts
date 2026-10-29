@@ -50,7 +50,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
       { h: "Copy of the page", items: [
         "When the extension blocks a page or warns you about it, it keeps a copy of the page as you saw it, so your Guardian can see what the page looked like. The copy has no scripts and loads nothing from the internet.",
         "What you typed into the page's fields is removed before the copy is made. The text the page shows is copied, including text the site itself shows back (for example your name or email on a page where you are logged in), and this can include a page wrongly flagged as risky.",
-        "We keep a copy only while you are connected in a family, and only your Guardian and you can open it. It is deleted with the flagged page after 14 days, or right away when you delete your data.",
+        "We only make a copy while you are connected in a family, and only your Guardian and you can open it. When you disconnect, your Guardian can no longer open it. It is deleted with the flagged page after 14 days, or right away when you delete your data.",
       ] },
       { h: "Site icons", items: [
         "To show a flagged site's icon, our server downloads it once from that site and stores a copy with the flagged page. Your phone only ever loads the copy from our server, so the site never sees your IP address. The site sees a request from our server, with no cookies and nothing about you.",
@@ -109,7 +109,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
       { h: "Salinan halaman", items: [
         "Saat extension memblokir halaman atau memberi peringatan, extension menyimpan salinan halaman seperti yang kamu lihat, supaya Guardian bisa melihat tampilan halaman itu. Salinan ini tanpa script dan tidak memuat apa pun dari internet.",
         "Isian yang kamu ketik di kolom halaman dihapus sebelum salinan dibuat. Teks yang tampil di halaman ikut disalin, termasuk teks yang ditampilkan ulang oleh situs itu (misalnya nama atau emailmu di halaman tempat kamu sedang login), dan ini bisa termasuk halaman yang keliru ditandai berisiko.",
-        "Salinan hanya disimpan selama kamu terhubung dalam keluarga, dan hanya Guardian-mu dan kamu yang bisa membukanya. Salinan dihapus bersama halaman yang ditandai setelah 14 hari, atau seketika saat kamu menghapus datamu.",
+        "Salinan hanya dibuat selama kamu terhubung dalam keluarga, dan hanya Guardian-mu dan kamu yang bisa membukanya. Saat kamu memutus hubungan, Guardian-mu tidak bisa membukanya lagi. Salinan dihapus bersama halaman yang ditandai setelah 14 hari, atau seketika saat kamu menghapus datamu.",
       ] },
       { h: "Ikon situs", items: [
         "Untuk menampilkan ikon situs yang ditandai, server kami mengunduhnya sekali dari situs itu dan menyimpan salinannya bersama halaman yang ditandai. HP-mu hanya memuat salinan itu dari server kami, jadi situs itu tidak pernah melihat alamat IP-mu. Situs itu hanya melihat permintaan dari server kami, tanpa cookie dan tanpa apa pun tentang kamu.",

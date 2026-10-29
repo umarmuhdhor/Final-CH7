@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { app } from "../src/app";
 import { runRetention } from "../src/cron/retention";
+import { addTombstones, dueTombstones } from "../src/db/repo/tombstones";
 import type { Env } from "../src/env";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 import { limits } from "../src/http/rateLimit";
@@ -633,6 +634,19 @@ describe("retention and tombstones with replicas (K6)", () => {
   const admin = adminSql();
   const ageTombstone = (path: string, age: string) =>
     admin`update storage_tombstones set created_at = now() - ${age}::interval where path = ${path}`;
+  it("dueTombstones splits paths by the same rule as storeKind (SQL R2_PATH = TypeScript storeKind)", async () => {
+    const paths = [
+      "o/s1-replica.html.gz", "o/s2-icon.png", "o/s3-icon.svg", "o/s4-favicon.png", "o/s5.jpg", "o/s6.png",
+      "o/s7-icon.PNG", "o/s8-replica.html.gz.jpg", "o/s9-icon.png.jpg", "o/s10-icons.png", "o/s11-replica.html",
+    ];
+    await addTombstones(sql, paths, { settled: true });
+    const r2 = await dueTombstones(sql, 100, "r2");
+    const supabase = await dueTombstones(sql, 100, "supabase");
+    expect([...r2].sort()).toEqual(paths.filter((p) => storeKind(p) === "r2").sort());
+    expect([...supabase].sort()).toEqual(paths.filter((p) => storeKind(p) === "supabase").sort());
+    expect(r2.length).toBe(3);
+  });
+
   /** A store that only records: tests that count calls per store. */
   const fakeStore = (failing = false) => {
     const calls: string[][] = [];
