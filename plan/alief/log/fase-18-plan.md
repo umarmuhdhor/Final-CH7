@@ -15,11 +15,12 @@
 | 6 | `GET /scans/{id}` `pageReplicaUrl` (link `replica` 1 jam), daftar `null` | ajv kontrak checkout + cek eksplisit string/null; ulang setelah #177 |
 | 7 | `routes/replicas.ts` (`Response` mentah, guard magic `1f 8b`, `Content-Disposition: attachment`, tolak `Sec-Fetch-Mode: navigate` / `Sec-Fetch-Dest` selain `empty`, var mati → 404) + `screenshotLinks.ts` kind `replica` + `viewReplica` 10/menit + `viewReplicaDay` 500/hari per viewer (lewat → 429, tanpa batas global) | `replicas.test.ts` (header, rate limit per viewer; `Sec-Fetch-Dest: iframe`/`document` → 404, tanpa `Sec-Fetch-*` → 200) |
 | 8 | `deleteDevice` (`DELETE /devices/me` + `POST /devices/me/protected`), retensi (tiga predikat + `union` path), store per path di `removeTombstoned` + `deleteScreenshots` + retensi (`abandonUpload` tetap) | `devices-me.test.ts`, `retention.test.ts`, `security-review.test.ts` (store palsu per store, bagian Supabase ≤ `storageCalls`, batch R2 ≤ 100, anggaran R2 4000/run terpisah, kill-switch tidak menghentikan hapus) |
-| 9 | IDOR + lintas jenis + kedaluwarsa | `replicas.test.ts` |
-| 10 | `privacy.ts` EN/ID (kata-kata K17), `backend/API.md`, `backend/README.md` (runbook kill-switch/takedown), `quota-estimate.sql`, ARCHITECTURE §2/§3/§4, SECURITY P2/P9/P13, R2, R3 | `privacy.test.ts`, `log-hygiene.test.ts` |
-| 11 | Benchmark CPU kasus terburuk + bom nol 307 200 byte (fixture dari `ios/ShooExtension/Resources/replica-build.js`); angka penentu dari cloud, > 8 ms atau bom tidak andal → rencana B K2 | angka di log |
-| 12 | `qa/replica-e2e.sh` (impor read-only dari `ios/ShooExtension/Resources/`, DOM stand-in; `curl --raw`; `--cloud` untuk uji asap) | jalan hijau |
-| 13 | Review security → typescript → database (berurutan), log, PR, merge, LANGKAH MANUAL (CI deploy + uji asap + kabari #176) | — |
+| 9 | Favicon ke R2 (K23): pola `-icon.<ext>`, `storeFor`, `ORIGINAL_FAVICON` dua pola, `fetchFaviconAll` 1000 | `favicons.test.ts` (baru di R2, lama dari Supabase, reuse, kuota, hapus dua pola) |
+| 10 | IDOR + lintas jenis + kedaluwarsa | `replicas.test.ts` |
+| 11 | `privacy.ts` EN/ID (kata-kata K17), `backend/API.md`, `backend/README.md` (runbook kill-switch/takedown), `quota-estimate.sql`, ARCHITECTURE §2/§3/§4, SECURITY P2/P9/P13, R2, R3 | `privacy.test.ts`, `log-hygiene.test.ts` |
+| 12 | Benchmark CPU kasus terburuk + bom nol 307 200 byte (fixture dari `ios/ShooExtension/Resources/replica-build.js`); angka penentu dari cloud, > 8 ms atau bom tidak andal → rencana B K2 | angka di log |
+| 13 | `qa/replica-e2e.sh` (impor read-only dari `ios/ShooExtension/Resources/`, DOM stand-in; `curl --raw`; `--cloud` untuk uji asap) | jalan hijau |
+| 14 | Review security → typescript → database (berurutan), log, PR, merge, LANGKAH MANUAL (CI deploy + uji asap + kabari #176) | — |
 
 ## 18f — fixture app (setelah #175 merge, ke branch #177)
 

@@ -98,7 +98,7 @@ Catatan password DB (21 Okt): password role `postgres` dibuat acak oleh Supabase
 
 | # | Hal | Manfaat |
 |---|---|---|
-| E1 | ~~Pindah screenshot ke Cloudflare R2~~ diganti: replica di R2 (D-alief-C23), screenshot dihapus di 18c. Sisa: favicon ke R2 + cabut `SUPABASE_SERVICE_ROLE_KEY` dari Worker (D-alief-C27, menunggu keputusan Alief) | Egress favicon (tampilan terbanyak) gratis; Worker tanpa kunci yang melewati RLS seluruh proyek Supabase |
+| E1 | ~~Pindah screenshot ke Cloudflare R2~~ diganti: replica di R2 (D-alief-C23), screenshot dihapus di 18c. Sisa: favicon ke R2 di 18a (K23) + cabut `SUPABASE_SERVICE_ROLE_KEY` dari Worker di 18c (D-alief-C27) | Egress favicon (tampilan terbanyak) gratis; Worker tanpa kunci yang melewati RLS seluruh proyek Supabase |
 | E2 | GitHub Action deploy otomatis aktif (C2) | Tidak perlu deploy manual |
 | E3 | Realtime verdict (Supabase Realtime / WebSocket) menggantikan polling 5 s | Unblock lebih cepat; butuh usulan kontrak |
 | E4 | Deferred deep link setelah install (PR-03 P1) — **direncanakan 26 Okt**: tombol "Install" di `/j/<kode>` menyalin link ke clipboard, app di splash menampilkan `UIPasteControl` "Tempel undangan" hanya kalau `UIPasteboard.detectPatterns` melihat web URL; tanpa fingerprinting. Backend di `feat/PR-03-invite-token` (#128), app di `feat/PR-03-invite-link-app` (#129) | Kode terisi otomatis setelah install dari App Store / TestFlight |
