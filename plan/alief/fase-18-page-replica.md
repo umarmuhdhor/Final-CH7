@@ -162,6 +162,7 @@ Hasil `grep -i screenshot` di `ios/`, `backend/`, `docs/` pada `main` af0d07b. *
    - `npx wrangler r2 bucket create shoo-replicas --location apac`; pastikan akses publik `r2.dev` mati, tanpa custom domain, tanpa CORS.
    - Lifecycle rule: `npx wrangler r2 bucket lifecycle add shoo-replicas expire-17d --expire-days 17` (atau dashboard).
    - `npx wrangler r2 bucket info shoo-replicas` → bucket ada, catat lokasi nyata di log (Wrangler ≥ 4.45 bisa membuat bucket otomatis saat deploy tanpa hint + lifecycle; karena itu bucket dibuat sebelum merge).
+   - **Selesai 29 Okt 2026** (subscription, bucket APAC, lifecycle `expire-17d`, `r2.dev` mati, tanpa domain/CORS): `log/fase-18.md`.
    - Cek token CI `CLOUDFLARE_API_TOKEN` boleh deploy Worker dengan binding R2 (template "Edit Cloudflare Workers"; kalau tidak, tambah izin Workers R2 Storage).
    - Ukur `storage.objects` Supabase per bucket (`supabase db query --linked`), catat di log + ARCHITECTURE §3. Pastikan timestamp migrasi paling baru di `main`.
 2. Merge PR 18a (setelah review Umar) di menit :10–:40 dan tidak di 18:30–19:30 UTC (cron `5 * * * *` + `0 19 * * *`; job deploy jalan beberapa menit setelah merge, setelah test). Catat jam job deploy selesai. CI `backend.yml` menjalankan `supabase db push` + `wrangler deploy`; tunggu hijau. Tidak ada deploy dari branch, rollback = forward-fix.
@@ -188,7 +189,7 @@ xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination "platform=
 - [ ] `GET /replicas/:id` mengirim header persis issue butir 4 + `Content-Disposition: attachment`, byte gzip apa adanya (`curl --raw` di e2e + cloud; vitest tidak membuktikan `encodeBody`); navigasi browser → 404; 404 setelah hapus, retensi, disconnect, link kedaluwarsa, link jenis lain (test + uji asap cloud).
 - [ ] Replica scan hidup tidak dihapus cron tombstone; scan yang hanya punya replica dihapus bersama objeknya pada hari 14 (test).
 - [ ] Kuota per device 50/24 jam, reuse 24 jam, kuota global 1000 upload, batas tampilan per viewer + global terbukti (test); objek > 307 200 byte atau bukan gzip tidak pernah sampai R2 (test); anggaran R2 + Supabase tercatat (log + ARCHITECTURE §3).
-- [ ] Bucket R2 privat (tanpa `r2.dev`/domain/CORS) + lifecycle 17 hari aktif, lokasi nyata tercatat (screenshot pengaturan di log).
+- [x] Bucket R2 privat (tanpa `r2.dev`/domain/CORS) + lifecycle 17 hari aktif, lokasi nyata tercatat (output Wrangler di `log/fase-18.md`, 29 Okt).
 - [ ] CPU seluruh invocation `POST /scans` kasus terburuk ≤ 8 ms di cloud, atau rencana B K2 dipakai dan dicatat di DECISIONS + #176.
 - [ ] Wire lokal `qa/replica-e2e.sh` lulus: HTML yang dibaca app = HTML yang dikirim extension.
 - [ ] Detail: replica tampil tanpa JS dan tanpa koneksi IP selain ke Worker (`ReplicaViewTests` dengan listener lokal → nol koneksi, nol navigasi; DNS tidak diklaim); font device tidak dimuat; menu edit/callout/context menu mati walau halaman memaksa `user-select`; proses web mati → placeholder; 429 → "Try again later"; privacy cover; scroll ke `focusY` (halaman lebar + `truncated` di-clamp); label + "Copied from" + "Page cut short" EN/ID.
