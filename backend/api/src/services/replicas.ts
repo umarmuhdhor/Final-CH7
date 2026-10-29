@@ -35,8 +35,9 @@ type Drop =
   | ReplicaDrop
   | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
 
-// Reason only: never the scan id, URL, path or device (SECURITY §3 P6).
-const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "replica_dropped", reason }));
+// Reason only: never the scan id, URL, path or device (SECURITY §3 P6). One level for every drop,
+// so a log filter on the event sees them all.
+const dropped = (reason: Drop) => console.error(JSON.stringify({ event: "replica_dropped", reason }));
 
 const QUOTA_DROP = { owner: "quota", global: "global_quota", global_bytes: "global_bytes" } as const;
 
@@ -88,7 +89,9 @@ export async function attachReplica(
     await store.put(path, decoded.bytes, "application/gzip");
   } catch (err) {
     console.error(JSON.stringify({ event: "replica_dropped", reason: "upload_failed", error: errorInfo(err) }));
-    await clearReplicaPath(sql, scan.ownerId, path).catch(() => undefined);
+    // Left set, the path would be reused for 24 hours as a link that always 404s: say so in the log.
+    await clearReplicaPath(sql, scan.ownerId, path).catch((e: unknown) =>
+      console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
     await abandonUpload(sql, store, path);
     return;
   }

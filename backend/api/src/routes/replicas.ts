@@ -46,7 +46,7 @@ replicas.get("/replicas/:id", async (c) => {
   const path = await replicaPathForViewer(sql, id, viewerId);
   const store = r2Store(c.env);
   if (!path || !store) throw errors.notFound();
-  let body: ReadableStream<Uint8Array> | undefined;
+  let body: Uint8Array | undefined;
   try {
     body = await gzipBody(await store.get(path));
   } catch (err) {
@@ -70,29 +70,12 @@ replicas.get("/replicas/:id", async (c) => {
 });
 
 /**
- * The object's stream, or undefined when it is missing or does not start with the gzip magic
- * (1f 8b): only then is `Content-Encoding: gzip` true. The first chunk is read to check and sent first.
+ * The object's bytes, or undefined when it is missing or does not start with the gzip magic (1f 8b):
+ * only then is `Content-Encoding: gzip` true. Read whole: an object is at most 307 200 bytes (put
+ * refuses more), and a stream's first chunk may be shorter than the magic.
  */
-async function gzipBody(object: Response | undefined): Promise<ReadableStream<Uint8Array> | undefined> {
-  if (!object?.body) return undefined;
-  const reader = object.body.getReader();
-  const first = await reader.read();
-  if (first.done || first.value.length < 2 || first.value[0] !== 0x1f || first.value[1] !== 0x8b) {
-    await reader.cancel().catch(() => undefined);
-    return undefined;
-  }
-  let sentFirst = false;
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      if (!sentFirst) {
-        sentFirst = true;
-        controller.enqueue(first.value);
-        return;
-      }
-      const next = await reader.read();
-      if (next.done) controller.close();
-      else controller.enqueue(next.value);
-    },
-    cancel: (reason) => reader.cancel(reason),
-  });
+async function gzipBody(object: Response | undefined): Promise<Uint8Array | undefined> {
+  if (!object) return undefined;
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  return bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? bytes : undefined;
 }
