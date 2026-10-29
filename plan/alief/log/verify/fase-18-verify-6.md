@@ -1,4 +1,4 @@
-# Fase 18 — verify ronde 6 (29 Okt 2026), BELUM DIPERBAIKI di rencana
+# Fase 18 — verify ronde 6 (29 Okt 2026), diterapkan ke rencana
 
 Konteks baru: PR #178 (extension) **sudah merge ke `main`** 29 Okt 04:05 UTC (a57c531), sebelum 18a. #177 belum merge. Backend `main` membuang `pageReplicaBase64` (`z.object` strip, `routes/scans.ts:46`) atau 413 > 256 KB lalu extension kirim ulang tanpa replica (`background.js:153`). Scan baru tanpa bukti; `DetailView.swift:70` menyembunyikan bukti saat `screenshotUrl` nil.
 
@@ -36,5 +36,5 @@ Review berurutan: security (ecc:security-reviewer) → wiring (general-purpose).
 
 ## Sisa
 
-- Review database/retensi (ecc:database-reviewer) belum jalan.
-- Semua temuan di atas belum diterapkan ke `fase-18-page-replica.md`, `log/fase-18-plan.md`, TODO, DECISIONS.
+- Semua 24 temuan diterapkan (29 Okt): `fase-18-page-replica.md` (header, Keadaan 29 Okt, K1/K2/K4/K5/K6/K9/K10/K11–K14/K16–K19, K21 kill-switch, K22 `replica.js`, peta dampak, Output, Langkah kerja 18a 13 langkah + 18f + 18b, LANGKAH MANUAL, Verifikasi, DoD, handoff 18c), `log/fase-18-plan.md` (nomor langkah sama), TODO C26/C27/D10, DECISIONS C24/C25, README baris 18, PROGRESS baris 18.
+- Review database/retensi (ecc:database-reviewer): lihat bagian Database di bawah.
