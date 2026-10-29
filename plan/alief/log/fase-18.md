@@ -1,6 +1,6 @@
 # Log fase 18 — Page replica: EX-07 backend, DT-04 Detail
 
-- **Status:** [r] 18a — PR branch `feat/EX-07-replica-backend`, reviewer @umarmuhdhor (belum merge, belum deploy). 18f/18b belum mulai (menunggu #175, #177, TODO C27).
+- **Status:** [r] 18a — PR #182 `feat/EX-07-replica-backend`, reviewer @umarmuhdhor (belum merge, belum deploy). 18f/18b belum mulai (menunggu #175, #177, TODO C27).
 - **Model:** Claude Opus 5.5. 29 Okt 2026.
 - **Rencana:** `log/fase-18-plan.md`, `fase-18-page-replica.md`.
 
