@@ -27,7 +27,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 15 | Push tap + validasi GD-06/07 | c | feat/GD-06-07-push-validation | [x] | 22 Okt 2026 | 22 Okt 2026 | #54 (merged `dd36e3e`) | Tap push / `shoo://scan` → Detail di tab Activity (juga cold start), token APNs Guardian saja via `PATCH /devices/me`, banner foreground Guardian saja, notifikasi tampil dihapus bersama datanya (P13); crash tap dari background ditemukan e2e dan diperbaiki; review security + swift diperbaiki; 281 unit + 51 UI (43 lulus, 8 opt-in dilewati), e2e lokal tiga kondisi lulus (verdict `safe` di Protected ≤ 551 ms); pending B6/B7 + D7 (uji iPhone) | log/fase-15.md |
 | 16 | QA-E2E + fixbug + retest | c | fix/QA-* | [ ] | | | | | qa/QA-E2E-*.md |
 | 17 | Ditahan: Live Activity push | – | – | [!] | | | | Spike S3 Umar (PR #41): extension tidak bisa memakai Dynamic Island, MVP memakai pill in-page. Phase 2 lewat push server (path C) diusulkan di issue #49, menunggu keputusan Umar | – |
-| 18 | Page replica EX-07 (backend) + DT-04 (Detail), issue #176 | c | fix/EX-07-app-fixtures, feat/EX-07-replica-backend, feat/DT-04-page-replica | [ ] | | | | Plan + cek kelayakan K1–K20 + peta dampak, 2 ronde verifikasi, ditulis 29 Okt; 18b menunggu TODO C27 (`pageReplicaUrl` di ShooShared) | log/fase-18.md |
+| 18 | Page replica EX-07 (backend) + DT-04 (Detail), issue #176 | c | fix/EX-07-app-fixtures, feat/EX-07-replica-backend, feat/DT-04-page-replica | [ ] | | | | Plan + cek kelayakan K1–K20 + peta dampak, replica di Cloudflare R2 (D-alief-C23), ditulis 29 Okt; 18b menunggu TODO C27 (`pageReplicaUrl` di ShooShared) | log/fase-18.md |
 
 ## Gate & milestone
 
