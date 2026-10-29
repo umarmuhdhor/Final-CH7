@@ -18,7 +18,15 @@
 | `wrangler r2 bucket cors list` | Tidak ada konfigurasi CORS (API code 10059) |
 | `wrangler r2 bucket info shoo-replicas` | location **APAC**, 0 objek, 0 B |
 
-Belum: notifikasi billing/usage R2, cek izin token CI `CLOUDFLARE_API_TOKEN` untuk binding R2, ukur `storage.objects` Supabase (TODO D10).
+Sisa langkah 1, dicek 29 Okt 2026 (dashboard Cloudflare di Chrome Alief, `supabase db query --linked`):
+
+| Langkah | Hasil |
+|---|---|
+| Token CI `CLOUDFLARE_API_TOKEN` | Token "Edit Cloudflare Workers" (dibuat 23 Okt, dipakai terakhir 28 Okt) punya `Account.Workers R2 Storage` + `Account.Workers Scripts`: deploy dengan binding R2 boleh, token tidak perlu diubah |
+| Notifikasi usage R2 | "Shoo R2 storage above 5 GB (free tier 10 GB)", Usage based billing → R2 Storage, ambang 5 000 000 000 byte, email pemilik akun. Alert kedua (Class A > 500 000, kuota gratis 1 juta/bulan) belum: Alief buat sendiri di Notifications |
+| `storage.objects` Supabase | Hanya bucket `screenshots`: 7 objek, 287 634 byte |
+| Baris `scans` | 20 baris (20 dengan `screenshot_path`), tabel + index 212 992 byte: migrasi 18a cepat |
+| Migrasi cloud | Terakhir `20261027100000`. `20261028120000_favicons` + `20261028130000_notification_settings` dari `main` **belum** di cloud: `backend.yml` di `main` gagal sejak 28 Okt 06:08 UTC (run 40645434933, `favicons.test.ts:375` `objectExists` false; run sebelumnya juga `retention.test.ts`, Storage lokal di CI tidak stabil), jadi job deploy tidak jalan. Merge 18a akan menerapkan **3 migrasi + Worker sekaligus**. 18a memindah `objectExists` favicon ke R2 (`favicons.test.ts:348`) dan test PR hijau, tetapi test retensi Supabase Storage bisa tetap gagal di `main` |
 
 ## 18a — backend (29 Okt 2026)
 
@@ -100,7 +108,7 @@ Input dibuat dengan `gzipBase64` dari `ios/ShooExtension/Resources/replica-build
 
 ## LANGKAH MANUAL tersisa (Alief, setelah review Umar; deploy hanya lewat CI)
 
-- [ ] 1 (sisa). Cek token CI `CLOUDFLARE_API_TOKEN` boleh deploy Worker dengan binding R2; ukur `storage.objects` Supabase per bucket + jumlah baris `scans` (`supabase db query --linked`), catat di sini + ARCHITECTURE §3; notifikasi billing/usage R2.
+- [~] 1 (sisa). Token CI, `storage.objects`, jumlah `scans`, alert storage R2: selesai 29 Okt (tabel di LANGKAH MANUAL 1). Tersisa: alert R2 Class A (Alief). Perhatikan: deploy `main` macet sejak 28 Okt, merge 18a membawa 3 migrasi.
 - [ ] 2. Merge PR 18a di menit :10–:40, tidak di 18:30–19:30 UTC; tunggu CI `backend.yml` (`supabase db push` + `wrangler deploy`) hijau; catat jam deploy.
 - [ ] 3. `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud --bench` dengan `wrangler tail` terbuka: header + byte, Sec-Fetch 404, CPU `POST /scans` terburuk + bom (tanpa 1102/OOM), `wrangler r2 object get … --remote` ada sebelum dan hilang setelah `DELETE /devices/me` (skrip berhenti dan menampilkan perintahnya).
 - [ ] 4. Kabari Umar di #176: backend hidup sejak jam deploy; gerbang TestFlight tetap sampai 18b merge.
