@@ -38,3 +38,19 @@ Review berurutan: security (ecc:security-reviewer) → wiring (general-purpose).
 
 - Semua 24 temuan diterapkan (29 Okt): `fase-18-page-replica.md` (header, Keadaan 29 Okt, K1/K2/K4/K5/K6/K9/K10/K11–K14/K16–K19, K21 kill-switch, K22 `replica.js`, peta dampak, Output, Langkah kerja 18a 13 langkah + 18f + 18b, LANGKAH MANUAL, Verifikasi, DoD, handoff 18c), `log/fase-18-plan.md` (nomor langkah sama), TODO C26/C27/D10, DECISIONS C24/C25, README baris 18, PROGRESS baris 18.
 - Review database/retensi (ecc:database-reviewer): lihat bagian Database di bawah.
+
+## Database (ecc:database-reviewer, 29 Okt, setelah temuan di atas diterapkan)
+
+1. **TINGGI** Hapus R2 tidak boleh ikut `REPLICAS_ENABLED`. Fix: var hanya menutup tulis/baca; `storeFor` cek binding saja; test var mati → retensi + hapus device tetap menghapus (K6, K21).
+2. **TINGGI** Index kuota tidak terdefinisi (favicon tanpa kuota). Fix: `replica_bytes` hanya di baris upload asli + `scans_original_replica on scans(created_at) include (owner_id) where replica_bytes is not null`.
+3. **TINGGI** Rebuild index memegang ACCESS EXCLUSIVE sampai commit. Fix: `set local lock_timeout` + `statement_timeout`; index baru dulu, drop lama di akhir; catat jumlah baris `scans`.
+4. **SEDANG** Urutan `attachReplica` boros. Fix: `precheckReplica` (reuse + keluarga) sebelum `replicaIp` dan decode.
+5. **SEDANG** Relasi keluarga: batas diterima (scan sebelum pairing tanpa replica, race tidak di bawah lock); kunci advisory kelas baru 6.
+6. **SEDANG** `clearReplicaPath` meng-null path + bytes; `check (replica_bytes is null or replica_path is not null)`.
+7. **SEDANG** Runbook takedown: tombstone dulu, semua baris reuse di-null.
+8. **SEDANG** `hitLight` 20 000 baris: ukur `EXPLAIN ANALYZE`.
+9. **SEDANG** Batch R2 100 (= `REMOVE_BATCH`), store tidak ada → batch `failed`, tombstone tetap.
+10. **RENDAH** `dueTombstones` pakai `split_part` + `scans_replica_path`; lifecycle 17 hari cukup (cron mati > 1 hari → 404, diterima); `deleteDevice` `returning replica_path`.
+11. pgTAP: `retention_indexes` `plan(4+)` lewat `indexdef`, `security_review` 23514 untuk path/bytes.
+
+Semua diterapkan ke `fase-18-page-replica.md` (K5, K6, K21, Output, langkah 2/4/7/8, LANGKAH MANUAL 1, DoD), `log/fase-18-plan.md`, DECISIONS C25 (i). Belum terverifikasi: transaksi `supabase db push`, biaya `ADD COLUMN … CHECK`, biaya `hitLight`, perilaku R2 `delete(keys)` saat satu key gagal.
