@@ -743,7 +743,7 @@ Format:
 - Alasan: Umar merge #178 29 Okt 04:05 UTC (a57c531) sebelum 18a. Extension di `main` tidak lagi mengirim screenshot; backend membuang replica sampai 18a ter-deploy (tidak bisa dipulihkan) dan Detail tanpa 18b menyembunyikan blok bukti (`DetailView.swift:70`). Build TestFlight yang sudah terpasang tidak terdampak, jadi menahan build baru dari `main` cukup untuk menutup regresi bagi pengguna demo. Tanggal merge #178 tidak menentukan kapan screenshot berhenti: build lama terus mengirim sampai di-update.
 - Alternatif yang ditolak: menunggu #177 untuk 18a (jendela tanpa bukti lebih lama tanpa alasan teknis); revert #178 (file Umar, dan 18a tinggal sehari).
 - Menggantikan: D-alief-C22(b) ("Umar merge #178 setelah uji asap cloud"). C22(e) sama dengan C22(c), dibaca sebagai satu butir.
-- Status: usulan, dikabarkan ke Umar lewat C26/C27 (belum dikirim).
+- Status: usulan, dikabarkan ke Umar lewat C26/C27 di #176 (29 Okt, issuecomment-6489173061/-6489173425); menunggu jawaban gerbang TestFlight + #175.
 
 ## D-alief-C25 · 29 Okt 2026 · plan (fase 18, verify ronde 6) · Batas tambahan replica dan app lebih tidak percaya
 
