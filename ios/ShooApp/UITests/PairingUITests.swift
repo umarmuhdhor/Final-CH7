@@ -59,9 +59,15 @@ final class PairingUITests: XCTestCase {
         name.tap()
         name.typeText("Mom")
         app.buttons["name.continue"].tap()
-        app.buttons["mode.protected"].tap()
-        app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 10))
+        // Same steps as OnboardingUITests: the CI runner is slow, so wait for each screen before tapping.
+        let protected = app.buttons["mode.protected"]
+        XCTAssertTrue(protected.waitForExistence(timeout: 10), app.debugDescription)
+        protected.tap()
+        let next = app.buttons["mode.continue"]
+        let enabled = NSPredicate(format: "isEnabled == true")
+        wait(for: [expectation(for: enabled, evaluatedWith: next)], timeout: 5)
+        next.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["greeting.avatar"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["greeting.continue"].tap()
 
         let join = app.buttons["connect.join"]
