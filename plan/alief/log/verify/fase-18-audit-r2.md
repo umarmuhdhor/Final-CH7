@@ -19,7 +19,7 @@ Pertanyaan Alief: apa lagi di kode yang perlu disesuaikan karena replica pindah 
 | B7 | OK | Extension bersih setelah #178: `capture.js` hilang, tanpa izin `tabs`/`activeTab`, semua file di `Resources/` direferensikan | `manifest.json`, grep | — | — |
 | B8 | RENDAH | Branch remote usang: `fix/EX-07-blur-coverage`, `fix/EX-07-screenshot` (usang), `feat/EX-07-page-replica` (sudah merge) | `git branch -r` | Info untuk Umar di C26 (f) | Draf C26 |
 | B9 | SEDANG (tooling) | `ref/sim.sh` memilih nama simulator; `-destination name=…` memakai OS:latest = SDK 27.1, runtime 27.1 tidak terpasang → "Unable to find a device matching the provided destination specifier"; dua device bernama sama | build gagal sebelum perbaikan | `sim.sh` sekarang mengekspor `SIM_ID` (iPhone di runtime terbaru ≤ SDK); Verifikasi fase 18 memakai `id=$SIM_ID`; `SIM` tetap untuk perintah lama | Selesai |
-| B10 | RENDAH | 9 worktree lokal untuk branch yang sudah merge; `default-indonesian` belum punya PR | `git worktree list`, `gh pr list` | TODO D12 (Alief, tidak dihapus agent) | Belum |
+| B10 | RENDAH | 9 worktree lokal untuk branch yang sudah merge; `default-indonesian` belum punya PR | `git worktree list`, `gh pr list` | 7 worktree bersih tanpa proses dihapus (branch tetap); 2 masih dipakai proses + `default-indonesian` dibiarkan (TODO D12) | Sebagian |
 | B11 | Info | TODO yang masih terbuka di kode, sudah dilacak: kontak tim (`routes/privacy.ts:11`, `AppConfig.swift:29`, TODO E), video tutorial (`TutorialVideoPlayer.swift:10`, C15) | grep | — | Dilacak |
 
 ## Tidak diubah (bukan akibat Supabase)
