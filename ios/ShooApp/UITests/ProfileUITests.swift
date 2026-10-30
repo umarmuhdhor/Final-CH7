@@ -149,12 +149,11 @@ final class ProfileUITests: XCTestCase {
 
         let autoSend = app.switches["linked.autoSend"]
         let share = app.switches["linked.shareWarnings"]
+        // Locked on until the extension honors them (#183): today every check goes to the guardian.
         XCTAssertEqual(autoSend.value as? String, "1")
-        XCTAssertTrue(share.isEnabled)
-        autoSend.switches.firstMatch.tap()
-        XCTAssertFalse(share.isEnabled, "Bagikan riwayat waspada follows Kirim link secara otomatis")
-        autoSend.switches.firstMatch.tap()
-        XCTAssertTrue(share.isEnabled)
+        XCTAssertEqual(share.value as? String, "1")
+        XCTAssertFalse(autoSend.isEnabled)
+        XCTAssertFalse(share.isEnabled)
 
         // Only the guardian can disconnect (Figma "Harus menggunakan akun Adhella").
         XCTAssertTrue(app.descendants(matching: .any)["profile.disconnect.locked"].exists, app.debugDescription)
@@ -232,12 +231,13 @@ final class ProfileUITests: XCTestCase {
     }
 
     @MainActor
-    func testProtectedNotificationsHaveTheLinkedSwitchOnly() {
+    func testProtectedNotificationsHaveWarningsOnly() {
         let app = openProfile(mode: "protected")
         reveal(app.buttons["profile.notifications"], in: app)
         app.buttons["profile.notifications"].tap()
-        XCTAssertTrue(app.switches["notifications.linkVerified"].waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.switches["notifications.warning"].exists)
+        XCTAssertTrue(app.switches["notifications.warning"].waitForExistence(timeout: 5), app.debugDescription)
+        // "Link terblokir" waits for the server push (#183).
+        XCTAssertFalse(app.switches["notifications.linkVerified"].exists)
         XCTAssertFalse(app.switches["notifications.summary"].exists)
         XCTAssertFalse(app.buttons["notifications.quietTime"].exists)
     }

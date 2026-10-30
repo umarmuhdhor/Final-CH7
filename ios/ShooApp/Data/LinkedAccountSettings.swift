@@ -23,6 +23,11 @@ final class LinkedAccountSettings {
         static let all = [statsChecked, autoSendLinks, shareWarnings, notifyLinkVerified]
     }
 
+    /// `false` until the extension and server honor the switches (#183). Until then the UI shows the
+    /// "Akun Tertaut" switches locked at what really happens (everything shared) and hides
+    /// "Link terblokir", so no switch looks live while doing nothing (lead review on #184).
+    static let switchesAreLive = false
+
     @ObservationIgnored private let defaults: UserDefaults
 
     var autoSendLinks: Bool {

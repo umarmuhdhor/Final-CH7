@@ -4304,6 +4304,16 @@
           }
         }
       }
+    },
+    "Coming soon" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segera hadir"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

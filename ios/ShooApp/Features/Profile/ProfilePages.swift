@@ -778,13 +778,24 @@ private struct ConnectionPage: View {
         .padding(.top, 38)
 
         ProfileCard {
-            ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), isOn: $linked.autoSendLinks)
-                .accessibilityIdentifier("linked.autoSend")
-            ProfileDivider()
-            ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), isOn: $linked.shareWarnings)
-                .disabled(!linked.autoSendLinks)
-                .opacity(linked.autoSendLinks ? 1 : 0.45)
-                .accessibilityIdentifier("linked.shareWarnings")
+            if LinkedAccountSettings.switchesAreLive {
+                ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), isOn: $linked.autoSendLinks)
+                    .accessibilityIdentifier("linked.autoSend")
+                ProfileDivider()
+                ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), isOn: $linked.shareWarnings)
+                    .disabled(!linked.autoSendLinks)
+                    .opacity(linked.autoSendLinks ? 1 : 0.45)
+                    .accessibilityIdentifier("linked.shareWarnings")
+            } else {
+                // Today the extension sends every check to the guardian, so both read on and can't change.
+                ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), subtitle: Text("Coming soon"), isOn: .constant(true))
+                    .disabled(true)
+                    .accessibilityIdentifier("linked.autoSend")
+                ProfileDivider()
+                ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), subtitle: Text("Coming soon"), isOn: .constant(true))
+                    .disabled(true)
+                    .accessibilityIdentifier("linked.shareWarnings")
+            }
         }
         .padding(.horizontal, ProfileStyle.margin)
         .padding(.top, 29)
@@ -914,13 +925,16 @@ private struct NotificationsPage: View {
 
             if model.variant == .protected {
                 // Figma: Protected has no summary or quiet hours, and a switch for its guardian's checks.
-                @Bindable var linked = model.linked
-                ProfileSection(title: "Connected account") {
-                    ProfileToggleRow(
-                        symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
-                        isOn: $linked.notifyLinkVerified
-                    )
-                    .accessibilityIdentifier("notifications.linkVerified")
+                // Hidden until the server sends that push (#183).
+                if LinkedAccountSettings.switchesAreLive {
+                    @Bindable var linked = model.linked
+                    ProfileSection(title: "Connected account") {
+                        ProfileToggleRow(
+                            symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
+                            isOn: $linked.notifyLinkVerified
+                        )
+                        .accessibilityIdentifier("notifications.linkVerified")
+                    }
                 }
             } else {
                 summaryAndQuietHours
