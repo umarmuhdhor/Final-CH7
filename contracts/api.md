@@ -22,7 +22,7 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 | POST | `/devices` | `{ name, mode: "guardian"\|"protected", avatarId?, apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
 | GET | `/devices/me` | — | `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } \| null }` — Protected learns its guardian, or that it was disconnected | PR-04, PF-01, EX-06 |
 | PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` | `{ ok }` | ON-05, PF-01, GD-03 |
-| DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
+| DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots + page replicas, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
 
 `avatarId` (ON-02, #120): optional, one of `avatar_01`…`avatar_12`. The 4 memoji in the ON-02 picker are `avatar_01`…`avatar_04`; `avatar_05`…`avatar_12` stay for the random pick. Missing or unknown → the server picks at random, as before. The response `avatarId` is the source of truth. Chosen once at registration: `PATCH /devices/me` does not change it (not in the MVP).
 
@@ -44,15 +44,35 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/scans` | ScanResult without `id`/`verdict`, + `screenshotBase64?` | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
-| GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` is always `null` in lists | PR-05, GD-05 |
-| GET | `/scans/{id}` | — | ScanResult, `screenshotUrl` = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
+| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` (`screenshotBase64?` deprecated) | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
+| GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` and `pageReplicaUrl` are always `null` in lists | PR-05, GD-05 |
+| GET | `/scans/{id}` | — | ScanResult, `pageReplicaUrl` (and `screenshotUrl` for older scans) = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 
 Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
 The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. So one page = one Activity item = one push.
 
-`screenshotBase64` (optional — some Safari builds can't capture; `null` = absent): JPEG or PNG, base64, **no `data:` prefix**, longest side ≤ 1280 px, ≤ 150 KB (the backend drops larger screenshots and still stores the scan). Evidence area only (the sensitive form, else the visible screen), every text field blurred before capture (PRD §10). Backend stores it and returns it as `screenshotUrl`.
+#### Page replica (evidence, EX-07)
+
+The evidence is a **copy of the page's DOM**, not a screenshot (#176). A screenshot needs the page to still be painted on screen; a page blocked at ≥ 80 is gone (block screen) before a capture is reliable, and a scam site is often taken down within hours. The extension serializes the DOM the moment it reports, and the app rebuilds the page from it later.
+
+`pageReplicaBase64` (optional, `null` = absent): one HTML document, UTF-8, **gzip-compressed, then base64** (no `data:` prefix). ≤ 400 KB as base64, ≤ 3 MB once decompressed (the backend drops a replica over either limit, or one that isn't valid gzip, and still stores the scan). Backend stores it and returns it as `pageReplicaUrl`.
+
+What the extension guarantees in the document:
+- **Static**: no `<script>`, `<noscript>`, `<iframe>`/`<frame>`/`<object>`/`<embed>` (a grey box of the same size instead), no `on*` attribute, no `javascript:` URL, no `<base>`, no `<meta http-equiv>` except the CSP below, no form `action`/`formaction`.
+- **Nothing loads from the network**: every stylesheet is inlined as `<style>`, small images (≤ 40 KB each, ≤ 300 KB total) are inlined as `data:` URIs, every other resource URL is removed. Links keep their look but point to `#`; the original link is in `data-shoo-href` (evidence for the Guardian, never opened).
+- **No typed input** (PRD §10): no `value` attribute on `<input>`, empty `<textarea>`, editable areas (`[contenteditable]`, `[role=textbox]`) emptied. Open shadow roots become declarative shadow DOM (`<template shadowrootmode="open">`).
+- `<head>` starts with:
+  - `<meta charset="utf-8">`
+  - `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'">`
+  - `<meta name="viewport" content="width=<page viewport width>">`
+  - `<meta name="shoo-replica" content="<JSON>">`: `{ "v": 1, "url", "capturedAt", "viewport": { "width", "height" }, "focusY", "truncated" }`. `url` is the shareable URL (origin + path). `focusY` = document y (CSS px) of the sensitive form, else of what was on screen: scroll there first. `truncated: true` = the page was too big and the end was cut.
+
+What the **app must do anyway** (a replica comes from a device, so the backend can't vouch for it): render with JavaScript off (`WKWebpagePreferences.allowsContentJavaScript = false`), cancel every navigation after the first load (`decidePolicyFor` → `.cancel`), no network (load with `loadHTMLString(_, baseURL: nil)`, non-persistent `WKWebsiteDataStore`), and label it "Copy of the page, <time>". Show a placeholder when `pageReplicaUrl` is `null`.
+
+`screenshotBase64` / `screenshotUrl` are **deprecated**: the extension no longer sends a screenshot. Backend keeps accepting it and the app keeps showing `screenshotUrl` until the last old scan is deleted (14 days), then both are removed in a follow-up PR.
+
+`GET <pageReplicaUrl>` answers the HTML with `Content-Type: text/html; charset=utf-8` (it may send `Content-Encoding: gzip`; URLSession decompresses it), `Content-Security-Policy: sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:`, `X-Content-Type-Options: nosniff` and `Cache-Control: private, no-store`, so the link stays inert even if it is opened in a browser.
 
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |

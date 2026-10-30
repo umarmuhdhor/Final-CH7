@@ -25,9 +25,17 @@ export const limits = {
   // PR-05: favicon downloads (subrequests to a URL a web page chose). Attempts count, not stored
   // files, so failing URLs cannot make the Worker fetch without limit. Reuses do not count.
   fetchFavicon: { bucket: "favicons_fetch", max: 30, windowSeconds: 86400 },
-  // All devices together, key "all", hitLight: 200 × 64 KB × 15 days ≈ 190 MB of Storage at most,
-  // which with the screenshots' 675 MB stays under the 1 GB of Supabase Free (D-alief-B12).
-  fetchFaviconAll: { bucket: "favicons_fetch_all", max: 200, windowSeconds: 86400 },
+  // All devices together, key "all", hitLight. New favicons live in R2 (D-alief-C27): 1000 × 64 KB ×
+  // 16 days ≈ 1 GB of the 10 GB R2 free tier, outside the replicas' 500 MB/day.
+  fetchFaviconAll: { bucket: "favicons_fetch_all", max: 1000, windowSeconds: 86400 },
+  // EX-07 replica uploads per client IP (D-alief-C26): devices are free to create, so this caps how
+  // fast one IP can spend the global quota. Not lower: mobile carriers put many users behind one
+  // CGNAT IP. Only replicas that passed the reuse and family pre-check count.
+  replicaIp: { bucket: "replicas_ip", max: 300, windowSeconds: 86400 },
+  // GET /replicas/{id} per viewer: anti-scraping only, R2 egress is free. No global cap: a 429 still
+  // costs a Worker request, so it would protect nothing (D-alief-C26).
+  viewReplica: { bucket: "replicas_view", max: 10, windowSeconds: 60 },
+  viewReplicaDay: { bucket: "replicas_view_day", max: 500, windowSeconds: 86400 },
   createVerdict: { bucket: "verdicts_create", max: 60, windowSeconds: 60 },
   // EX-06 polls every 5 s per open block screen (several tabs), plus one lookup per page (SECURITY T10).
   getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },

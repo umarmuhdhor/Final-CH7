@@ -62,6 +62,7 @@
     }
   ],
   "screenshotUrl": "https://example.invalid/screens/blocked-92.png",
+  "pageReplicaUrl": null,
   "ownerDeviceId": "dev_mom",
   "ownerName": "Mom",
   "detectedAt": "2026-10-21T04:05:00Z",

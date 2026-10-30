@@ -8,7 +8,7 @@ import { hit, limits } from "../http/rateLimit";
 import { UUID } from "../http/validate";
 import { faviconContentType } from "../services/favicons";
 import { verifyFaviconLink } from "../services/screenshotLinks";
-import { screenshotStore } from "../services/screenshots";
+import { storeFor } from "../services/screenshots";
 
 const NO_STORE = "private, no-store";
 
@@ -29,7 +29,8 @@ favicons.get("/favicons/:id", async (c) => {
   await hit(c.get("sql"), limits.viewFavicon, viewerId);
 
   const path = await faviconPathForViewer(c.get("sql"), id, viewerId);
-  const store = screenshotStore(c.env);
+  // New favicons in R2, old ones in Supabase until they expire (D-alief-C27).
+  const store = path ? storeFor(c.env, path) : undefined;
   const contentType = path ? faviconContentType(path) : undefined;
   if (!path || !store || !contentType) throw errors.notFound();
   let object: Response | undefined;

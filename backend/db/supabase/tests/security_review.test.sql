@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(12);
+select plan(19);
 
 select is(
   (select count(*)::int from information_schema.role_table_grants
@@ -17,6 +17,18 @@ select ok(has_column_privilege('shoo_api', 'storage_tombstones', 'attempts', 'UP
 select throws_ok($$insert into storage_tombstones (path) values (repeat('a', 301))$$, '23514', null, 'tombstone path length is checked');
 select has_index('public', 'scans', 'scans_original_shot', 'partial index on original uploads');
 select has_index('public', 'scans', 'scans_shot_path', 'index for path lookups per owner');
+
+-- Fase 18 (EX-07): page replica columns.
+insert into devices (id, name, mode, avatar_id, token_hash) values ('t_rp', 'Mom', 'protected', 'avatar_01', '\x10');
+insert into scans (id, owner_id, url, domain, score, status, detected_at)
+  values ('t_rs', 't_rp', 'https://a.example/', 'a.example', 92, 'blocked', now());
+select throws_ok($$update scans set replica_path = repeat('a', 301) where id = 't_rs'$$, '23514', null, 'replica_path length is checked');
+select throws_ok($$update scans set replica_path = 'ab' where id = 't_rs'$$, '23514', null, 'replica_path at least 3 characters');
+select throws_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', replica_bytes = 0 where id = 't_rs'$$, '23514', null, 'replica_bytes at least 1');
+select throws_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', replica_bytes = 307201 where id = 't_rs'$$, '23514', null, 'replica_bytes at most 307 200');
+select throws_ok($$update scans set replica_bytes = 10 where id = 't_rs'$$, '23514', null, 'replica_bytes needs replica_path');
+select lives_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', replica_bytes = 307200 where id = 't_rs'$$, 'an original upload of 307 200 bytes');
+select lives_ok($$update scans set replica_bytes = null where id = 't_rs'$$, 'a reuse row keeps the path without bytes');
 
 -- The test runner cannot switch to shoo_api, so the policies are checked in the catalog.
 select policies_are('public', 'blocklist_entries',
