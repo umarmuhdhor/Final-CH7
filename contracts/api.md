@@ -61,7 +61,7 @@ The evidence is a **copy of the page's DOM**, not a screenshot (#176). A screens
 What the extension guarantees in the document:
 - **Static**: no `<script>`, `<noscript>`, `<iframe>`/`<frame>`/`<object>`/`<embed>` (a grey box of the same size instead), no `on*` attribute, no `javascript:` URL, no `<base>`, no `<meta http-equiv>` except the CSP below, no form `action`/`formaction`.
 - **Nothing loads from the network**: every stylesheet is inlined as `<style>`, small images (≤ 40 KB each, ≤ 300 KB total) are inlined as `data:` URIs, every other resource URL is removed. Links keep their look but point to `#`; the original link is in `data-shoo-href` (evidence for the Guardian, never opened).
-- **No typed input** (PRD §10): no `value` attribute on `<input>`, empty `<textarea>`, editable areas (`[contenteditable]`, `[role=textbox]`) emptied. Open shadow roots become declarative shadow DOM (`<template shadowrootmode="open">`).
+- **No typed input** (PRD §10): no `value` attribute on `<input>`, empty `<textarea>`, form fields keep only the attributes that shape their look (`type`, `name`, `id`, `class`, `style`, `placeholder`, size and state attributes; never `data-*`, `aria-*` or `title`), editable areas (`[contenteditable]`, `[role=textbox|searchbox|combobox]`) emptied, and an empty `<body>` when the page is in `designMode`. Open shadow roots become declarative shadow DOM (`<template shadowrootmode="open">`).
 - `<head>` starts with:
   - `<meta charset="utf-8">`
   - `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'">`

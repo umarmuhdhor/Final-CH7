@@ -23,9 +23,14 @@
     // Attributes that would load, run or send something, or that only make sense with the live page.
     const DROP_ATTRS = new Set(["srcset", "sizes", "integrity", "nonce", "ping", "action", "formaction", "target", "manifest", "autofocus", "loading", "fetchpriority", "http-equiv", "poster", "background", "lowsrc", "dynsrc", "longdesc"]);
     const KEEP_VALUE = new Set(["submit", "button", "reset"]); // a button's label, not something typed
+    // Form fields keep only what shapes their look; a page script can mirror typed text into any other
+    // attribute (data-*, aria-valuetext, title). placeholder is the page's own prompt ("Masukkan PIN"), kept as evidence.
+    const FIELDS = new Set(["input", "select", "textarea"]);
+    const FIELD_ATTRS = new Set(["type", "name", "id", "class", "style", "disabled", "readonly", "checked", "placeholder", "size", "maxlength", "minlength", "multiple", "rows", "cols", "src", "alt", "width", "height", "hidden", "dir", "lang", "value"]);
+    const EDITABLE_ROLES = new Set(["textbox", "searchbox", "combobox"]);
     const EDITABLE = (el, attr) => {
         const editable = attr(el, "contenteditable");
-        return (editable != null && editable.toLowerCase() !== "false") || attr(el, "role") === "textbox";
+        return (editable != null && editable.toLowerCase() !== "false") || EDITABLE_ROLES.has((attr(el, "role") || "").toLowerCase());
     };
     const ATTR_NAME = /^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/;
     const SCRIPT_URL = /^[\s\u0000-\u001f]*((java|vb)[\s\u0000-\u001f]*script[\s\u0000-\u001f]*:|data:text\/html)/i;
@@ -111,6 +116,8 @@
         const root = getter("Document", "documentElement")(doc);
         if (!root || localName(root) !== "html") return null; // SVG or XML document: no replica
         const base = getter("Document", "baseURI")(doc) || page.url;
+        // designMode "on" makes the whole page one editable area: its text may be typed, so the body stays empty.
+        const editableDoc = String(getter("Document", "designMode")(doc) ?? "").toLowerCase() === "on";
         const nonce = `shoo${Math.random().toString(36).slice(2, 10)}`;
         const sheets = [];
         const resources = [];
@@ -157,12 +164,14 @@
             const list = attributes(el);
             if (!list) return;
             const isInput = name === "input";
+            const isField = FIELDS.has(name);
             const type = isInput ? (getAttr(el, "type") || "text").toLowerCase() : null;
             for (const attr of list) {
                 const key = attr.name;
                 const lower = key.toLowerCase();
                 let value = attr.value;
                 if (!ATTR_NAME.test(key) || lower.startsWith("on") || DROP_ATTRS.has(lower)) continue;
+                if (isField && !FIELD_ATTRS.has(lower)) continue;
                 if (SCRIPT_URL.test(value)) continue;
                 if (isInput && lower === "value" && !KEEP_VALUE.has(type)) continue; // typed input (PRD §10)
                 if (lower === "style") value = inlineStyle(value);
@@ -263,7 +272,7 @@
             if (VOID.has(lower)) return;
             writeShadow(node, depth);
             // Typed input never leaves the phone: no textarea text, no editable area content.
-            if (lower !== "textarea" && !EDITABLE(node, getAttr)) writeChildren(node, depth + 1);
+            if (lower !== "textarea" && !EDITABLE(node, getAttr) && !(lower === "body" && editableDoc)) writeChildren(node, depth + 1);
             if (lower === "body") adopted(doc); // constructed sheets come last, as in the cascade
             emit(`</${name}>`);
         }
@@ -276,7 +285,8 @@
         if (!headWritten) html = html.replace(/^<html[^>]*>/, (open) => `${open}<head>${headMeta(page, metaToken)}</head>`);
         const doctype = getter("Document", "doctype")(doc) ? "<!doctype html>" : ""; // none = quirks mode, as on the page
         const meta = JSON.stringify({ v: 1, url: page.url, capturedAt: page.now, viewport: page.viewport, focusY: focusY(page), truncated });
-        html = doctype + html.replace(metaToken, escapeAttr(meta));
+        // A function, not a string: "$&" or "$'" in the page URL would otherwise splice the document into the meta.
+        html = doctype + html.replace(metaToken, () => escapeAttr(meta));
         return { html, sheets, resources, nonce, truncated };
     }
 
