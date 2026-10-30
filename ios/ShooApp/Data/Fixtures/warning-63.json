@@ -62,6 +62,7 @@
     }
   ],
   "screenshotUrl": "https://example.invalid/screens/warning-63.png",
+  "pageReplicaUrl": null,
   "ownerDeviceId": "dev_me",
   "ownerName": "Adhella",
   "detectedAt": "2026-10-21T03:40:00Z",
