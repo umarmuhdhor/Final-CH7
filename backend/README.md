@@ -48,10 +48,11 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/family/members`](API.md#get-familymembers) | Guardian app | Family cards: members, extension status, last scan |
 | DELETE | [`/family/members/{deviceId}`](API.md#delete-familymembersdeviceid) | Guardian app | Remove a member |
 | DELETE | [`/family/guardian`](API.md#delete-familyguardian) | Protected app | Disconnect from my Guardian |
-| POST | [`/scans`](API.md#post-scans) | extension | Report a warned or blocked page (+ screenshot); pushes the Guardian |
+| POST | [`/scans`](API.md#post-scans) | extension | Report a warned or blocked page (+ page replica); pushes the Guardian |
 | GET | [`/scans`](API.md#get-scans) | app, Activity | My or my family's scans, newest first, paged |
-| GET | [`/scans/{id}`](API.md#get-scansid) | app, Detail | One scan with a 1-hour screenshot link |
-| GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link |
+| GET | [`/scans/{id}`](API.md#get-scansid) | app, Detail | One scan with 1-hour replica (and, for older scans, screenshot) links |
+| GET | [`/replicas/{scanId}`](API.md#get-replicasscanidvexpsig) | app, Detail | The page replica (gzip HTML) behind `pageReplicaUrl` (EX-07) |
+| GET | [`/screenshots/{scanId}`](API.md#get-screenshotsscanidvexpsig) | app, Detail | The screenshot image behind that link (deprecated, 18c) |
 | GET | [`/favicons/{scanId}`](API.md#get-faviconsscanidvexpsig) | app, Activity + Detail | The stored site icon behind a `faviconUrl` link (PR-05) |
 | POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
 | GET | [`/verdicts?domain=`](API.md#get-verdictsdomain) | extension | Poll for the Guardian's decision on a block screen |
@@ -108,8 +109,10 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129): `DWTZNGA7Y8.com.umarmuhdhor.shoo` (dev builds and TestFlight share that team and bundle ID); `""` → no app listed |
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret | Supabase secret key (`sb_secret_…`, name `shoo-worker`) for Storage only; unset → screenshots dropped |
+| `REPLICAS` | R2 binding | Private bucket `shoo-replicas` (APAC hint, no `r2.dev`, no custom domain, no CORS, lifecycle `expire-17d`): page replicas and new favicons. Tests and `wrangler dev` use a local bucket |
+| `REPLICAS_ENABLED` | var | `"true"`. Kill-switch: anything else stops storing and serving page replicas at once (deletes keep running), see [Kill-switch and takedown](#page-replicas-kill-switch-and-takedown) |
 | `SCREENSHOT_MAX_BYTES` | var | `153600` (same as the bucket `file_size_limit`) |
-| `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot links (`openssl rand -base64 32`, ≥ 32 characters); unset or shorter → `screenshotUrl` null; changing it invalidates every link |
+| `SCREENSHOT_URL_SECRET` | secret | HMAC key for screenshot, favicon and replica links (`openssl rand -base64 32`, ≥ 32 characters); unset or shorter → `screenshotUrl` null; changing it invalidates every link |
 | `APNS_KEY_P8_B64`, `APNS_KEY_ID`, `APNS_TEAM_ID` | secret | APNs token auth (`.p8` as one line of base64, B7). Any APNs value unset → pushes only logged (`push_log` `logged`) |
 | `RATE_KEY_SECRET` | secret | HMAC key for rate-limit keys and join attempt IPs (`openssl rand -base64 32`, ≥ 32 characters). **Required**: unset or shorter → every rate-limited request is a 500 (fail closed). Set it before deploying. Changing it resets all counters once, including the join-failure budget, so rotate it while no family code is shared and expect one deploy window where old and new isolates count apart |
 | `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
@@ -119,9 +122,9 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 
 `triggers.crons: ["0 19 * * *"]` (03:00 WITA) runs `src/cron/retention.ts`:
 - writes `ops_heartbeat('cron')` first (anti-pause signal, also written by `/healthz/db`);
-- scans older than 14 days without a screenshot or favicon in chunks of 2000, max 25 per run (no Storage call);
-- scans older than 14 days with a screenshot and/or favicon in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects, at most 10 Storage DELETEs of 100 paths per run (`backlog: true` in the log when rows are left). Paths over that budget, or left by a Storage failure, stay tombstoned; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
-- `storage_tombstones` (intent log of every screenshot and favicon object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run;
+- scans older than 14 days without a screenshot, favicon or page replica in chunks of 2000, max 25 per run (no Storage call);
+- scans older than 14 days with a screenshot, favicon and/or page replica in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects oldest first, grouped per store: at most 10 Supabase Storage DELETEs of 100 paths per run (50 external subrequests per Cron) and at most 40 R2 deletes of 100 keys per run (R2 binding, shared with the tombstone step; `backlog: true` in the log when rows are left). Paths over a budget, or left by a store failure, stay tombstoned; a failing store stops only its own calls; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
+- `storage_tombstones` (intent log of every screenshot, favicon and replica object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run for Supabase plus what is left of the R2 budget. The store comes from the path: `-replica.html.gz` and `-icon.<ext>` are in R2, everything else in Supabase Storage. `REPLICAS_ENABLED` never stops deletes;
 - `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
 
 `scheduled()` awaits the run, so a failed step fails the Cron event.
@@ -134,21 +137,41 @@ Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler
 
 Check for a backlog (SQL editor): `select count(*) from scans where created_at < now() - interval '15 days';` should be 0.
 
-## Quota (Supabase Free)
+## Quota (Supabase Free + R2)
 
 `db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); one block screen polling `GET /verdicts` all day ≈ 17k `rate_limit_hits` rows ≈ 4 MB (kept 1 day).
 - DB 500 MB: ≈ 300k scans alive (14 days) ≈ 20k scans/day.
-- Storage 1 GB: screenshots ≤ 150 KB, ≤ 50 per device per day, kept 14 days; favicons ≤ 64 KB, ≤ 30 downloads per device and 200 in total per day (≈ 190 MB worst case). Move to R2 (`ScreenshotStore`) when Storage > 700 MB.
-- Egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB. Move to R2 when egress > 3.5 GB.
+- Supabase Storage 1 GB: screenshots only from older builds (≤ 150 KB, ≤ 50 per device and 300 in total per day, kept 14 days) and favicons stored before fase 18a (`-favicon.`, gone within 15 days). Both are removed in 18c.
+- Supabase egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB.
+- R2 (`shoo-replicas`, free tier 10 GB-month, 1 M Class A, 10 M Class B, free egress, D-alief-C26): page replicas ≤ 300 KB gzip, ≤ 50 per device, 3000 and 500 MB in total per 24 h, ≤ 300 per IP per 24 h; objects live ≤ 16 days → ≤ 8 GB worst case. New favicons ≤ 64 KB, 1000 downloads per day in total → ≈ 1 GB worst case. Views: 10 per minute and 500 per day per viewer, no global cap (egress is free). Check: R2 dashboard → `shoo-replicas` → Metrics.
 - Check (SQL editor): `select pg_size_pretty(pg_database_size(current_database()));` and Storage usage in the Supabase dashboard (Settings → Usage).
+
+## Page replicas: kill-switch and takedown
+
+- **Kill-switch** (D-alief-C25 d): set `"REPLICAS_ENABLED": "false"` in `api/wrangler.jsonc` and merge (CI deploys). From that deploy on, `POST /scans` stores no replica (scans and pushes go on), `pageReplicaUrl` is `null` and `GET /replicas/{id}` answers 404. Retention, tombstones and `DELETE /devices/me` keep deleting R2 objects. A dashboard-only change of the var is overwritten by the next CI deploy.
+- **Takedown of one object** (SQL editor, as postgres), tombstone first so the cron removes the object even if the next steps fail:
+
+  ```sql
+  begin;
+  insert into storage_tombstones (path, created_at) values ('<owner>/<scan>-replica.html.gz', now() - interval '1 hour')
+    on conflict (path) do nothing;
+  -- Every scan that reuses the object, not only the original.
+  update scans set replica_path = null, replica_bytes = null
+    where owner_id = '<owner>' and replica_path = '<owner>/<scan>-replica.html.gz';
+  commit;
+  ```
+
+  The link answers 404 at once; the next retention run removes the object. To remove it right away as
+  well: `npx wrangler r2 object delete shoo-replicas/<owner>/<scan>-replica.html.gz --remote` (without
+  `--remote` Wrangler only touches the local bucket).
 
 ## Rollback
 
 - Worker: `npx wrangler rollback` (dashboard → Deployments shows versions). Secrets are not versioned.
 - Database: migrations only move forward. Undo with a new migration; every migration must work with the Worker version that is still live (ci/README.md).
 
-## Deploy (manual until the GitHub Action is on)
+## Deploy
 
-Cloud actions are always done by a person (plan/alief/README.md §6 rule 9). Step-by-step checklists: "LANGKAH MANUAL" in `plan/alief/log/fase-07.md` … `fase-12.md`. Order: `(cd backend/db && supabase db push)` first, then `pnpm -C backend/api run deploy`.
+Since #48 the GitHub Action (`.github/workflows/backend.yml`, see `ci/README.md`) runs `supabase db push` and then `wrangler deploy` on every push to `main` that touches `backend/**`. Deploy only through it: a Worker deployed from a branch is overwritten by the next `main` deploy (for fase 18 that older Worker would drop replica tombstones and orphan R2 objects, K18). Rollback is a forward fix through a new PR. Cloud actions outside CI are always done by a person (plan/alief/README.md §6 rule 9); checklists are the "LANGKAH MANUAL" blocks in `plan/alief/log/fase-*.md`. Bindings must exist before the deploy that uses them (R2 bucket `shoo-replicas`: created 29 Oct 2026).
 
 Cloud URL: `https://shoo-api.afindo-mi01.workers.dev` (shared with Imelda, TODO C7).

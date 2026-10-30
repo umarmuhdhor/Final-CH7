@@ -97,10 +97,22 @@ final class OnboardingModel {
         step = .name
     }
 
-    func submitName() {
-        guard step == .name, canSubmitName else { return }
+    /// Opened from an invite link (PR-03, WhatsApp/QR): only a Protected joins with a code, so ON-03 and
+    /// the greeting are skipped and Connect opens with the code filled in.
+    var opensWithInvite: Bool { environment.router.pendingJoinCode != nil }
+
+    /// ON-02 Next. Without an invite link ON-03 shows right away, in the same tap, so the slide starts at
+    /// once. With one, registration runs in the returned task.
+    @discardableResult
+    func submitName() -> Task<Void, Never>? {
+        guard step == .name, canSubmitName, !isWorking else { return nil }
         movedBack = false
-        step = .mode
+        guard opensWithInvite else {
+            step = .mode
+            return nil
+        }
+        selectedMode = .protected
+        return Task { await registerDevice(skipGreeting: true) }
     }
 
     /// Back from ON-02 or ON-03 (only before registration: after that the mode is saved for good),
@@ -118,7 +130,14 @@ final class OnboardingModel {
     }
 
     func register() async {
-        guard step == .mode, !isWorking, let selectedMode, case .success(let trimmed) = NameRule.validate(name) else { return }
+        guard step == .mode else { return }
+        await registerDevice(skipGreeting: selectedMode == .protected && opensWithInvite)
+    }
+
+    /// From ON-03, or from ON-02 when an invite link opened the app. A failure there shows ON-03 with
+    /// Protected picked and the error, so Next tries again.
+    private func registerDevice(skipGreeting: Bool) async {
+        guard !isWorking, let selectedMode, case .success(let trimmed) = NameRule.validate(name) else { return }
         isWorking = true
         registrationFailed = false
         defer { isWorking = false }
@@ -126,10 +145,12 @@ final class OnboardingModel {
             avatarId = try await environment.register(name: trimmed, mode: selectedMode, avatarId: selectedAvatarId).avatarId
             registeredName = trimmed
             movedBack = false
-            step = .greeting
+            step = skipGreeting ? .connect : .greeting
         } catch {
             Log.app.error("Registration failed", error)
             registrationFailed = true
+            movedBack = false
+            step = .mode
         }
     }
 

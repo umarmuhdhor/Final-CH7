@@ -15,6 +15,15 @@ final class QALayoutUITests: XCTestCase {
         return app
     }
 
+    /// GD-01: with notifications denied the Guardian gets a "Notifications are off" popup once per launch.
+    /// It covers Home, so close it before measuring.
+    @MainActor
+    private func closeNotificationReminder(in app: XCUIApplication) {
+        let notNow = app.alerts.buttons["Not now"].firstMatch
+        if notNow.waitForExistence(timeout: 5) { notNow.tap() }
+        XCTAssertTrue(app.alerts.firstMatch.waitForNonExistence(timeout: 5), app.debugDescription)
+    }
+
     /// P2-1: at large text the slide text scrolls above Skip / Next instead of running under them.
     @MainActor
     func testSplashControlsStayReachableAtLargeText() {
@@ -41,14 +50,14 @@ final class QALayoutUITests: XCTestCase {
         ], textSize: "UICTContentSizeCategoryL")
         let invite = app.buttons["family.invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
+        closeNotificationReminder(in: app)
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.exists, app.debugDescription)
         XCTAssertLessThanOrEqual(invite.frame.maxY, tabBar.frame.minY + 1, "invite \(invite.frame) tab bar \(tabBar.frame)")
         XCTAssertTrue(invite.isHittable)
     }
 
-    /// P2-4 / P2-7: at accessibility sizes Invite scrolls with the content, and the notification banner scrolls too
-    /// (pinned, it left almost no room to scroll on an iPhone SE).
+    /// P2-4: at accessibility sizes Invite scrolls with the content. (P2-7's pinned notification banner is a popup now.)
     @MainActor
     func testInviteButtonIsReachableAtAccessibilitySizes() {
         let app = launch([
@@ -61,6 +70,7 @@ final class QALayoutUITests: XCTestCase {
         ])
         let invite = app.buttons["family.invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
+        closeNotificationReminder(in: app)
         for _ in 0..<4 where !invite.isHittable || invite.frame.maxY > app.tabBars.firstMatch.frame.minY {
             app.swipeUp()
         }

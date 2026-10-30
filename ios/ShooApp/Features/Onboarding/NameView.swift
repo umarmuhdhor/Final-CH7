@@ -45,10 +45,18 @@ struct NameView: View {
                     .id("name.form")
             }
         } footer: {
-            Button("Next") { model.submitName() }
-                .buttonStyle(OnboardingCapsuleButtonStyle())
-                .disabled(!model.canSubmitName)
-                .accessibilityIdentifier("name.continue")
+            Button {
+                model.submitName()
+            } label: {
+                // An invite link registers right here (Protected), so Next can be busy for a moment.
+                ZStack {
+                    Text("Next").opacity(model.isWorking ? 0 : 1)
+                    if model.isWorking { ProgressView().tint(.white) }
+                }
+            }
+            .buttonStyle(OnboardingCapsuleButtonStyle())
+            .disabled(!model.canSubmitName)
+            .accessibilityIdentifier("name.continue")
         }
         .onChange(of: visibleProblem) { _, problem in
             guard let problem else { return }

@@ -19,9 +19,7 @@ body { margin: 0; min-height: 100vh; color: var(--ink);
          border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.7);
          -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
          box-shadow: 0 6px 18px rgba(31,42,55,.12); font-size: 15px; font-weight: 700; }
-.brand svg { width: 16px; height: 16px; }
-.brand .shield { fill: var(--danger); }
-.brand .mark { stroke: #fff; stroke-width: 1.5; stroke-linecap: round; }
+.brand img { width: 18px; height: 18px; border-radius: 50%; }
 
 /* Score ring: bezel → track (148 → 138) with the red "tube" up to the score → centre disc (89.84). */
 .ring { position: relative; width: 148px; height: 148px; border-radius: 50%; border: 1px solid #e4e6ea;

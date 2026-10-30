@@ -3,7 +3,8 @@ import type { Sql, TransactionSql } from "postgres";
 type Q = Sql | TransactionSql;
 
 /**
- * storage_tombstones (D-alief-B12, SECURITY §3 P13): an intent log of every screenshot and favicon object.
+ * storage_tombstones (D-alief-B12, SECURITY §3 P13): an intent log of every screenshot, favicon and
+ * replica object, in Supabase Storage or R2 (the store follows from the path, storeKind).
  * Written in the transaction that reserves an upload (before the object can exist) and with the
  * rows' delete; dropped only after Storage confirmed a remove of a path no scan points at, and
  * only once it is older than 10 minutes (an upload, 5 s timeout, may still be landing). So a
@@ -32,19 +33,26 @@ export async function markTombstonesTried(sql: Sql, paths: string[]): Promise<vo
   await sql`update storage_tombstones set attempts = attempts + 1, last_try_at = now() where path in ${sql(paths)}`;
 }
 
+// Same rule as storeKind (services/screenshots.ts): replicas and new favicons live in R2.
+const R2_PATH = String.raw`(t.path like '%-replica.html.gz' or t.path ~ '-icon\.[a-z]+$')`;
+
 /**
- * What the cron may remove: no scan points at the path (a live scan or a dedupe reuse keeps its
- * object; no new scan can start pointing at it, recentScreenshot/recentFavicon reuse originals of live scans
- * only) and older than 10 minutes.
+ * What the cron may remove from one store: no scan points at the path (a live scan or a reuse keeps
+ * its object; no new scan can start pointing at it, the reuse helpers pick originals of live scans
+ * only) and older than 10 minutes. A replica tombstone is written at reservation, so without the
+ * replica_path check the cron would remove a live replica 10 minutes after upload (K6).
  */
-export async function dueTombstones(sql: Sql, limit: number): Promise<string[]> {
+export async function dueTombstones(sql: Sql, limit: number, store: "supabase" | "r2" = "supabase"): Promise<string[]> {
   const rows = await sql<{ path: string }[]>`
     select t.path from storage_tombstones t
     where t.created_at < now() - interval '10 minutes'
+      and ${sql.unsafe(store === "r2" ? R2_PATH : `not ${R2_PATH}`)}
       and not exists (
         select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.screenshot_path = t.path)
       and not exists (
         select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.favicon_path = t.path)
+      and not exists (
+        select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.replica_path = t.path)
     order by t.last_try_at nulls first, t.created_at, t.path
     limit ${limit}`;
   return rows.map((r) => r.path);
