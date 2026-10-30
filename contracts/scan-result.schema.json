@@ -64,7 +64,16 @@
         "null"
       ],
       "format": "uri",
-      "description": "Evidence area only, typed input blurred (PRD §10)."
+      "description": "Deprecated (EX-07 page replica): only on scans made before the extension switched to pageReplicaUrl. Evidence area only, typed input blurred (PRD §10).",
+      "deprecated": true
+    },
+    "pageReplicaUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri",
+      "description": "Copy of the page's DOM as static HTML (gzip), short-lived URL from GET /scans/{id}; null in lists and when absent. Render with JavaScript off and no network (contracts/api.md, Page replica)."
     },
     "ownerDeviceId": {
       "type": "string",
