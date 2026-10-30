@@ -651,8 +651,8 @@ exactly like a screenshot link.
 
 ## Verdicts
 
-A **verdict** is the Guardian's decision on a blocked domain: `safe` ("It's safe") or `not_safe`
-("Not safe"). It applies per owner and domain, so it covers every visit by that person to that site.
+A **verdict** is the Guardian's decision on a flagged domain (warning or blocked): `safe` ("Aman") or
+`not_safe` ("Bahaya"). It applies per owner and domain, so it covers every visit by that person to that site.
 
 ### `POST /verdicts`
 
@@ -667,7 +667,7 @@ confirmation step.
 
 | Field | Type | Rules |
 |---|---|---|
-| `scanId` | string | The blocked scan the Guardian is looking at |
+| `scanId` | string | The warning or blocked scan the Guardian is looking at |
 | `value` | `"safe"` \| `"not_safe"` | |
 
 ```json
@@ -681,7 +681,9 @@ confirmation step.
 ```
 
 - A new verdict replaces the previous one for that owner and domain.
-- A Guardian can decide on its own blocked scans and on its members' blocked scans.
+- A Guardian can decide on its own scans and on its members' scans, warning or blocked (Figma "Detail
+  Aktivitas Waspada"; before GD-07 warning scans answered `409`).
+- Every scan of that owner and domain then carries the verdict, warning or blocked.
 - A `not_safe` on a connected member's scan also queues the domain for **manual** review before it can
   enter the global blocklist (at most 10 new domains per Guardian per 24 h). Government, education and bank domains, and
   shared roots such as `co.id` or `vercel.app`, are never queued.
@@ -690,7 +692,6 @@ confirmation step.
 |---|---|
 | `404 not_found` | Unknown scan id |
 | `403 verdict_not_allowed` | Not your scan and not one of your members' scans |
-| `409 verdict_not_allowed` | The scan is a warning, not blocked |
 
 ### `GET /verdicts?domain=`
 

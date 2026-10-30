@@ -383,7 +383,7 @@ describe("GET /scans", () => {
     expect((await list(g, "?owner=family")).body.items).toEqual([]);
   });
 
-  it("verdict only on blocked scans; warning scans keep verdict null", async () => {
+  it("the domain's verdict shows on warning and blocked scans alike (GD-07)", async () => {
     const g = await createDevice("Adhella", "guardian");
     const mom = await createDevice("Mom");
     await connect(g, mom);
@@ -395,8 +395,9 @@ describe("GET /scans", () => {
     const blocked = body.items.find((i) => i.status === "blocked")!;
     const warning = body.items.find((i) => i.status === "warning")!;
     expect(blocked.verdict).toEqual({ value: "not_safe", byDeviceId: g.deviceId, byName: "Adhella", decidedAt: "2026-10-21T04:06:00.000Z" });
-    expect(warning.verdict).toBeNull();
+    expect(warning.verdict).toEqual(blocked.verdict);
     expectScanResult(blocked);
+    expectScanResult(warning);
   });
 
   it("matches contracts/fixtures/activity-family.json for the seeded family", async () => {

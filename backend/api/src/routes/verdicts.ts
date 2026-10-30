@@ -48,8 +48,7 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   }
   if ("verdict" in result) return c.json({ verdict: result.verdict });
   if (result.error === "not_found") throw errors.notFound();
-  if (result.error === "not_allowed") throw errors.verdictNotAllowed(403, "Not the owner's guardian");
-  throw errors.verdictNotAllowed(409, "Only blocked scans take a verdict");
+  throw errors.verdictNotAllowed(403, "Not the owner's guardian");
 });
 
 /** EX-06: polled by the extension of either mode while a block screen is open. */
