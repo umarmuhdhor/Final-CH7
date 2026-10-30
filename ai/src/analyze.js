@@ -59,7 +59,7 @@ export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "
     // Our rules' weights only, never the client's numbers. But localSignals can lift the WORD weights (impersonation
     // above), so a client can move this gate score by up to +20 (D-imelda-27). Low risk: the client controls the snapshot anyway.
     const score = signals.reduce((sum, s) => sum + s.weight, 0);
-    const reality = llm ? llm.check(snapshot, { official, score, ruleIds: signals.map((s) => s.id), client, deadlineMs: deadline - now() }).catch(() => null) : Promise.resolve(null);
+    const reality = llm ? llm.check(snapshot, { official, score, ruleIds: signals.map((s) => s.id), localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : Promise.resolve(null);
     const [days, layer4] = await Promise.all([age, reality]);
     if (layer4) signals.push(layer4);
     const domainSignal = days === null ? null : buildNewDomainSignal(days);

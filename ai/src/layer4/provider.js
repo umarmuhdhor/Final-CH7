@@ -23,6 +23,7 @@ export function createProvider({ config, fetch }) {
                     temperature: 0, // A13: repeatable answers
                     max_tokens: 200,
                     response_format: { type: "json_object" },
+                    chat_template_kwargs: { thinking: false }, // no hidden reasoning pass: measured 1.2 s median (test-layer4)
                 }),
                 signal,
                 // The key must not follow a redirect to another host. "manual" (not "error": Workers reject it and every call
