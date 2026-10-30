@@ -69,7 +69,10 @@ create table scans (
   score           int not null check (score between 30 and 100),
   status          scan_status not null,
   signals         jsonb not null default '[]'::jsonb check (jsonb_typeof(signals) = 'array'),
-  screenshot_path text,                                   -- '<owner_id>/<scan_id>.jpg' di bucket screenshots
+  screenshot_path text,                                   -- '<owner_id>/<scan_id>.jpg' di bucket screenshots (deprecated, 18c)
+  -- favicon_path: '<owner_id>/<scan_id>-icon.<ext>' di R2 (sejak 18a) atau '-favicon.<ext>' di Supabase (lama)
+  -- replica_path: '<owner_id>/<scan_id>-replica.html.gz' di R2 shoo-replicas (fase 18, 3–300 char);
+  -- replica_bytes: 1–307200, hanya di baris upload asli (reuse 24 jam: path tanpa bytes), check bytes → path
   detected_at     timestamptz not null,
   created_at      timestamptz not null default now(),
   check ((status = 'blocked') = (score >= 80))
@@ -148,6 +151,12 @@ grant select, insert, delete on storage_tombstones to shoo_api;   -- + update (a
 create index scans_original_shot on scans(created_at)             -- kuota + dedupe: upload asli saja
   where screenshot_path = owner_id || '/' || id || '.jpg' or screenshot_path = owner_id || '/' || id || '.png';
 create index scans_shot_path on scans(owner_id, screenshot_path) where screenshot_path is not null;
+-- fase 18 (20261029100000_page_replicas.sql)
+create index scans_replica_path on scans(owner_id, replica_path) where replica_path is not null;
+create index scans_original_replica on scans(created_at) include (owner_id, replica_bytes) where replica_bytes is not null;
+-- jalur retensi: plain = ketiga path null; stored-files = salah satu path terisi
+create index scans_plain_created on scans(created_at, id) where screenshot_path is null and favicon_path is null and replica_path is null;
+create index scans_shot_created on scans(created_at, id) where screenshot_path is not null or favicon_path is not null or replica_path is not null;
 ```
 
 Password role `shoo_api` tidak pernah ada di file migrasi (migrasi `supabase db reset`/`db push` tidak memproses variabel psql). Lokal: `seed.sql` menjalankan `alter role shoo_api password 'shoo_api_local';` (nilai dev, tidak rahasia). Cloud: `alter role shoo_api password '...'` dijalankan Alief lewat SQL editor (LANGKAH MANUAL fase 07). pgTAP: `select has_role('shoo_api');`. Setiap file test pgTAP diawali `create extension if not exists pgtap with schema extensions;`.

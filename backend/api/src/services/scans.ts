@@ -11,16 +11,19 @@ const MAX_SIDE = 1280;
 const DAILY_QUOTA = 50;
 /**
  * All owners together (D-alief-B12): 300 × 150 KB × 15 days ≈ 675 MB, under the 1 GB Storage of
- * Supabase Free. Past it scans are still stored, only without a screenshot.
+ * Supabase Free. Past it scans are still stored, only without a screenshot. Page replicas and new
+ * favicons live in R2 (D-alief-C23, C27) and use none of it; old builds still send screenshots until
+ * 18c, so the quota stays 300 (D-alief-C25 c).
  */
 const GLOBAL_DAILY_QUOTA = 300;
 const DEFAULT_MAX_BYTES = 150 * 1024;
 
 /**
  * ScanResult (contracts/scan-result.schema.json). pageTitle is omitted when unknown. faviconUrl is
- * our signed link to the stored copy (PR-05), never the scam site's URL.
+ * our signed link to the stored copy (PR-05), never the scam site's URL. pageReplicaUrl (EX-07) is
+ * always present: a signed link on GET /scans/{id}, null in lists.
  */
-export function toScanResult(row: ScanRow, screenshotUrl: string | null, faviconUrl: string | null) {
+export function toScanResult(row: ScanRow, screenshotUrl: string | null, faviconUrl: string | null, pageReplicaUrl: string | null = null) {
   return {
     id: row.id,
     url: row.url,
@@ -31,6 +34,7 @@ export function toScanResult(row: ScanRow, screenshotUrl: string | null, favicon
     status: row.status,
     signals: row.signals,
     screenshotUrl,
+    pageReplicaUrl,
     ownerDeviceId: row.ownerId,
     ownerName: row.ownerName,
     detectedAt: row.detectedAt,

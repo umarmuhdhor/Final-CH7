@@ -5,16 +5,17 @@ import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/sc
 import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
-import { hit, hitLight, limits } from "../http/rateLimit";
+import { clientIp, hit, hitLight, limits } from "../http/rateLimit";
+import { maxRequestBytes } from "../http/bodyLimit";
 import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
 import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachFavicon, faviconUrl } from "../services/favicons";
+import { attachReplica, replicaUrl } from "../services/replicas";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
 import { errorInfo } from "../http/logError";
 
-const MAX_BODY = 256 * 1024;
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 /** http(s) URL without control or bidi characters (Postgres rejects NUL; the Guardian UI shows the URL). */
@@ -41,7 +42,7 @@ const signal = z.object({
   evidence: text(500).optional(),
 });
 
-// ScanResult without id/verdict/screenshotUrl (contracts/api.md). ownerDeviceId/ownerName are
+// ScanResult without id/verdict/screenshotUrl/pageReplicaUrl (contracts/api.md). ownerDeviceId/ownerName are
 // accepted and ignored: the owner is always the token's device (R3 §4).
 const scanBody = z
   .object({
@@ -54,6 +55,9 @@ const scanBody = z
     signals: z.array(signal).max(20),
     detectedAt: isoTime.refine((v) => Date.parse(v) <= Date.now() + FUTURE_SKEW_MS, "must not be in the future"),
     screenshotBase64: z.string().nullish(),
+    // EX-07: gzip + base64 page replica. No .max(): an oversized replica is dropped by
+    // decodeReplica, while a 422 would make the extension drop the whole scan.
+    pageReplicaBase64: z.string().nullish(),
   })
   .refine((b) => b.status === (b.score >= 80 ? "blocked" : "warning"), {
     message: "must be blocked for score >= 80, else warning",
@@ -108,7 +112,8 @@ scans.post("/scans", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hit(sql, limits.createScan, principal.deviceId);
-  const body = await readJson(c, scanBody, MAX_BODY);
+  // 512 KB on the exact path only, like the early check in app.ts (also for chunked bodies).
+  const body = await readJson(c, scanBody, maxRequestBytes(c.req.method, c.req.path));
   // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
   await hitLight(sql, limits.createScanAll, "all");
 
@@ -145,6 +150,7 @@ scans.post("/scans", async (c) => {
   // response. The Hyperdrive connection lives for the whole invocation, waitUntil included (checked
   // locally with wrangler dev; cloud check in fase 11 LANGKAH MANUAL step 6).
   // Like the screenshot, a push problem never fails a stored scan (a retry would duplicate it).
+  const deliveries: Promise<unknown>[] = [];
   try {
     const scan = { id, status: body.status, score: body.score };
     // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
@@ -152,15 +158,28 @@ scans.post("/scans", async (c) => {
     const sender = pushSender(c.env);
     for (const push of pushes) {
       if (!push) continue;
-      c.executionCtx.waitUntil(
-        deliverPush(sql, sender, push).catch((err) =>
-          // Name only: a DB error can quote values (D-alief-40).
-          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
-        ),
+      const delivery = deliverPush(sql, sender, push).catch((err) =>
+        // Name only: a DB error can quote values (D-alief-40).
+        console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
       );
+      deliveries.push(delivery);
+      c.executionCtx.waitUntil(delivery);
     }
   } catch (err) {
     console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
+  }
+  // EX-07 (K2, D-alief-C22 a): the replica only after the pushes went out. Inflating up to 3 MB costs
+  // CPU; if the invocation is killed for it, the scan and the Guardian's push are already done.
+  // Outside the try above: a failed push lookup does not drop the replica.
+  const replica = body.pageReplicaBase64;
+  if (replica) {
+    const ip = clientIp((n) => c.req.header(n));
+    const ref = { id, ownerId: principal.deviceId, domain: body.domain };
+    c.executionCtx.waitUntil(
+      Promise.allSettled(deliveries)
+        .then(() => attachReplica(sql, c.env, ref, replica, ip))
+        .catch((err) => console.error(JSON.stringify({ event: "replica_dropped", reason: "error", error: errorInfo(err) }))),
+    );
   }
   return c.json({ id }, 201);
 });
@@ -196,19 +215,26 @@ scans.get("/scans", async (c) => {
   const page = rows.slice(0, q.limit);
   const last = page.at(-1);
   return c.json({
-    // Lists never carry a screenshot URL (D-alief-04); favicons are signed per viewer (PR-05).
+    // Lists never carry a screenshot or replica URL (D-alief-04, EX-07); favicons are signed per viewer (PR-05).
     items: await Promise.all(page.map(async (r) => toScanResult(r, null, await faviconUrl(c.env, r, deviceId)))),
     nextCursor: rows.length > q.limit && last ? encodeCursor(last.cursorAt, last.id) : null,
   });
 });
 
-/** DT-*: one scan with 1-hour signed screenshot and favicon URLs. 404 for anything the caller may not see. */
+/** DT-*: one scan with 1-hour signed screenshot, favicon and replica URLs. 404 for anything the caller may not see. */
 scans.get("/scans/:id", async (c) => {
   const id = c.req.param("id");
   if (!UUID.test(id)) throw errors.notFound();
   const viewerId = c.get("principal").deviceId;
   const row = await findVisibleScan(c.get("sql"), id, viewerId);
   if (!row) throw errors.notFound();
-  return c.json(toScanResult(row, await screenshotUrl(c.env, row, viewerId), await faviconUrl(c.env, row, viewerId)));
+  return c.json(
+    toScanResult(
+      row,
+      await screenshotUrl(c.env, row, viewerId),
+      await faviconUrl(c.env, row, viewerId),
+      await replicaUrl(c.env, row, viewerId),
+    ),
+  );
 });
 

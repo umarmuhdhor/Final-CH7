@@ -6,6 +6,7 @@ import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 import { limits } from "../src/http/rateLimit";
 import { downloadFavicon, isPublicIp, MAX_FAVICON_BYTES, sniffFavicon } from "../src/services/faviconFetch";
 import { faviconLink, screenshotLink } from "../src/services/screenshotLinks";
+import { screenshotStore } from "../src/services/screenshots";
 import { jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
@@ -343,7 +344,10 @@ const stored = async (id: string) => {
 };
 const droppedFor = (reason: string) => until(() => logs.some((l) => l.includes(`"event":"favicon_dropped"`) && l.includes(`"reason":"${reason}"`)));
 
-const objectExists = (path: string) =>
+/** New favicons live in R2 (D-alief-C27). */
+const objectExists = async (path: string) => (await env.REPLICAS.head(path)) !== null;
+/** Old favicons (`-favicon.`) stay in Supabase Storage until they expire. */
+const supabaseHas = (path: string) =>
   realFetch(`${env.SUPABASE_URL}/storage/v1/object/info/screenshots/${path}`, {
     headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
   }).then(async (r) => {
@@ -367,15 +371,17 @@ const connect = async (g: Created, p: Created) => {
 };
 
 describe("POST /scans stores the favicon (PR-05)", () => {
-  it("downloads once in waitUntil and stores <owner>/<scan>-favicon.<ext>; scan answers 201 first", async () => {
+  it("downloads once in waitUntil and stores <owner>/<scan>-icon.<ext> in R2; scan answers 201 first", async () => {
     const web = mockInternet({ [ICON_URL]: () => image(ico(), "image/x-icon") });
     const p = await createDevice("Mom");
     const id = await postScan(p);
-    expect(await stored(id)).toBe(`${p.deviceId}/${id}-favicon.ico`);
-    expect(await objectExists(`${p.deviceId}/${id}-favicon.ico`)).toBe(true);
+    expect(await stored(id)).toBe(`${p.deviceId}/${id}-icon.ico`);
+    expect(await objectExists(`${p.deviceId}/${id}-icon.ico`)).toBe(true);
     expect(web.requests.map((r) => r.url)).toEqual([ICON_URL]);
+    expect((await env.REPLICAS.head(`${p.deviceId}/${id}-icon.ico`))?.httpMetadata?.contentType).toBe("image/x-icon");
+    expect(await supabaseHas(`${p.deviceId}/${id}-icon.ico`)).toBe(false);
     // The tombstone stays (young): the cron removes the object if the row goes (D-alief-B12).
-    expect((await sql`select 1 from storage_tombstones where path = ${`${p.deviceId}/${id}-favicon.ico`}`).length).toBe(1);
+    expect((await sql`select 1 from storage_tombstones where path = ${`${p.deviceId}/${id}-icon.ico`}`).length).toBe(1);
   });
 
   it("a slow or failing favicon never fails the scan", async () => {
@@ -401,7 +407,7 @@ describe("POST /scans stores the favicon (PR-05)", () => {
     // Another owner never shares it.
     const other = await createDevice("Dad");
     const third = await postScan(other);
-    expect(await stored(third)).toBe(`${other.deviceId}/${third}-favicon.png`);
+    expect(await stored(third)).toBe(`${other.deviceId}/${third}-icon.png`);
   });
 
   it("no reuse past 24 h: downloads again", async () => {
@@ -411,7 +417,7 @@ describe("POST /scans stores the favicon (PR-05)", () => {
     await stored(first);
     await sql`update scans set created_at = now() - interval '25 hours' where id = ${first}`;
     const second = await postScan(p);
-    expect(await stored(second)).toBe(`${p.deviceId}/${second}-favicon.png`);
+    expect(await stored(second)).toBe(`${p.deviceId}/${second}-icon.png`);
     expect(web.requests).toHaveLength(2);
   });
 
@@ -467,7 +473,7 @@ describe("POST /scans stores the favicon (PR-05)", () => {
     expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
     release();
     await droppedFor("scan_gone");
-    expect(await objectExists(`${p.deviceId}/${id}-favicon.png`)).toBe(false);
+    expect(await objectExists(`${p.deviceId}/${id}-icon.png`)).toBe(false);
   });
 });
 
@@ -580,7 +586,7 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
   it("after DELETE /devices/me → 404 at once, and the object is removed from Storage", async () => {
     const { p, id } = await setup();
     const link = await linkFor(p, id);
-    const path = `${p.deviceId}/${id}-favicon.ico`;
+    const path = `${p.deviceId}/${id}-icon.ico`;
     expect(await objectExists(path)).toBe(true);
     expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
     expect((await call(link)).status).toBe(404);
@@ -590,7 +596,7 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
   it("retention: day 14 removes the scan, the link → 404 and the object is gone", async () => {
     const { p, id } = await setup();
     const link = await linkFor(p, id);
-    const path = `${p.deviceId}/${id}-favicon.ico`;
+    const path = `${p.deviceId}/${id}-icon.ico`;
     await sql`update scans set created_at = now() - interval '15 days' where id = ${id}`;
     const r = await runRetention(sql, env);
     expect(r.scans).toBe(1);
@@ -615,5 +621,71 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
     const k = await keyHash(`${limits.viewFavicon.bucket}:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select ${limits.viewFavicon.bucket}, ${k} from generate_series(1, ${limits.viewFavicon.max})`;
     expect((await call(await linkFor(p, id))).status).toBe(429);
+  });
+});
+
+describe("old favicons (`-favicon.`, Supabase) next to new ones (`-icon.`, R2) (K23, D-alief-C27)", () => {
+  const store = screenshotStore(env)!;
+  /** A scan whose favicon was stored before 18a: `<owner>/<scan>-favicon.png` in Supabase Storage. */
+  const oldFavicon = async (p: Created, ageHours = 1) => {
+    const id = await postScan(p, { faviconUrl: null });
+    const path = `${p.deviceId}/${id}-favicon.png`;
+    await store.put(path, png(16, 16), "image/png");
+    await sql`update scans set favicon_path = ${path}, created_at = now() - make_interval(hours => ${ageHours}) where id = ${id}`;
+    await sql`insert into storage_tombstones (path) values (${path})`;
+    return { id, path };
+  };
+
+  it("an old favicon is still served, from Supabase", async () => {
+    const p = await createDevice("Mom");
+    const { id } = await oldFavicon(p);
+    const res = await call(await linkFor(p, id));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(png(16, 16));
+  });
+
+  it("a new scan within 24 h reuses the old favicon (either pattern is an original)", async () => {
+    const web = mockInternet({ [ICON_URL]: () => image(png(16, 16)), "https://b.example/favicon.ico": () => image(png(16, 16)) });
+    const p = await createDevice("Mom");
+    const { path } = await oldFavicon(p);
+    const id = await postScan(p);
+    expect(await stored(id)).toBe(path);
+    expect(web.requests.filter((r) => r.url === ICON_URL)).toEqual([]);
+    // And a new-pattern original is reused too.
+    const fresh = await postScan(p, { domain: "b.example", url: "https://b.example/", faviconUrl: "https://b.example/favicon.ico" });
+    const icon = await stored(fresh);
+    expect(icon).toBe(`${p.deviceId}/${fresh}-icon.png`);
+    const again = await postScan(p, { domain: "b.example", url: "https://b.example/", faviconUrl: "https://b.example/favicon.ico" });
+    expect(await stored(again)).toBe(icon);
+  });
+
+  it("DELETE /devices/me removes each pattern from its own store", async () => {
+    mockInternet({ [ICON_URL]: () => image(png(16, 16)) });
+    const p = await createDevice("Mom");
+    const old = await oldFavicon(p, 30);
+    const id = await postScan(p);
+    const icon = await stored(id);
+    expect(icon).toBe(`${p.deviceId}/${id}-icon.png`);
+    expect(await supabaseHas(old.path)).toBe(true);
+    expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
+    await until(async () => !(await supabaseHas(old.path)) && !(await objectExists(icon)));
+  });
+
+  it("retention removes an old favicon from Supabase and a new one from R2", async () => {
+    mockInternet({ [ICON_URL]: () => image(png(16, 16)) });
+    const p = await createDevice("Mom");
+    const old = await oldFavicon(p, 30);
+    const id = await postScan(p);
+    const icon = await stored(id);
+    await sql`update scans set created_at = now() - interval '15 days'`;
+    const r = await runRetention(sql, env);
+    expect(r.objects).toBe(2);
+    expect(await supabaseHas(old.path)).toBe(false);
+    expect(await objectExists(icon)).toBe(false);
+  });
+
+  it("fetchFaviconAll is 1000 per day (R2, D-alief-C27)", () => {
+    expect(limits.fetchFaviconAll).toMatchObject({ max: 1000, windowSeconds: 86400 });
   });
 });

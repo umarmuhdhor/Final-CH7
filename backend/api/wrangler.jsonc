@@ -34,8 +34,15 @@
     // Supabase project URL, for Storage only (not a secret). The key is a secret (wrangler secret put).
     "SUPABASE_URL": "https://nmekxihgjszgcibqytyj.supabase.co",
     // contracts/api.md: screenshots over 150 KB are dropped.
-    "SCREENSHOT_MAX_BYTES": "153600"
+    "SCREENSHOT_MAX_BYTES": "153600",
+    // EX-07 kill-switch (D-alief-C25 d, not a secret): "false" stops storing and serving page
+    // replicas at once. Retention and DELETE /devices/me still remove R2 objects either way.
+    "REPLICAS_ENABLED": "true"
   },
+  // EX-07 page replicas and PR-05 favicons (D-alief-C23, C27): private bucket, no r2.dev, no custom
+  // domain, no CORS, 17-day lifecycle rule as a safety net (fase 18 LANGKAH MANUAL 1). Tests and
+  // `wrangler dev` use a local Miniflare bucket.
+  "r2_buckets": [{ "binding": "REPLICAS", "bucket_name": "shoo-replicas" }],
   // Daily retention at 19:00 UTC = 03:00 WITA (src/cron/retention.ts, R4 §5), and hourly at :05
   // the PF-01 notifications (src/cron/notifications.ts). Kept in sync with CRONS in src/index.ts.
   "triggers": { "crons": ["0 19 * * *", "5 * * * *"] },
