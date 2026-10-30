@@ -96,7 +96,7 @@
           "$ref": "#/$defs/Verdict"
         }
       ],
-      "description": "null until a Guardian decides. Only blocked items can get a verdict in MVP."
+      "description": "null until a Guardian decides. Warning and blocked items can get a verdict."
     }
   },
   "$defs": {
