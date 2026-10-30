@@ -25,7 +25,17 @@ final class ProfileUITests: XCTestCase {
         let button = app.buttons["profileButton"]
         XCTAssertTrue(button.waitForExistence(timeout: 10), app.debugDescription)
         button.tap()
-        XCTAssertTrue(app.buttons["profile.manage"].waitForExistence(timeout: 5), app.debugDescription)
+        let manage = app.buttons["profile.manage"]
+        if !manage.waitForExistence(timeout: 3) {
+            // GD-01: with notifications denied (a fresh CI simulator) the Guardian gets a "Notifications are off"
+            // popup once per launch, which can swallow the tap. Close it and tap again.
+            let notNow = app.alerts.buttons["Not now"].firstMatch
+            if notNow.waitForExistence(timeout: 2) {
+                notNow.tap()
+                button.tap()
+            }
+        }
+        XCTAssertTrue(manage.waitForExistence(timeout: 5), app.debugDescription)
         return app
     }
 
