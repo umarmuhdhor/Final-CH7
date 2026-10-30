@@ -77,7 +77,7 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe" }` (guardian) | `{ verdict }` — applies to the scan's domain for that owner. Error `verdict_not_allowed`: not the owner's guardian, or the scan isn't `blocked` (`warning` scans keep `verdict: null` in MVP) | GD-07 |
+| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe" }` (guardian) | `{ verdict }` — applies to the scan's domain for that owner. Error `verdict_not_allowed`: not the owner's guardian. `warning` and `blocked` scans can both get a verdict (#190) | GD-07 |
 | GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
 
 Extension polls `GET /verdicts?domain=` every 5 s while the block screen is open, for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
