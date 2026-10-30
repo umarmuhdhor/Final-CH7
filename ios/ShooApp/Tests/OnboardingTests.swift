@@ -84,7 +84,7 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        model.submitName()
+        await model.submitName()?.value
         model.selectedMode = mode
         await model.register()
         return model
@@ -100,16 +100,16 @@ struct OnboardingModelTests {
         #expect(model.step == .name)
     }
 
-    @Test func invalidNameStaysOnNameStep() {
+    @Test func invalidNameStaysOnNameStep() async {
         let model = model()
         model.skipSplash()
         model.name = "   "
         #expect(!model.canSubmitName)
-        model.submitName()
+        await model.submitName()?.value
         #expect(model.step == .name)
         model.name = "Rina"
         #expect(model.canSubmitName)
-        model.submitName()
+        await model.submitName()?.value
         #expect(model.step == .mode)
     }
 
@@ -144,7 +144,7 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        model.submitName()
+        await model.submitName()?.value
         await model.register()
         #expect(model.step == .mode)
         #expect(settings.mode == nil)
@@ -159,10 +159,39 @@ struct OnboardingModelTests {
         let model = OnboardingModel(environment: env)
         model.skipSplash()
         model.name = "Rina"
-        model.submitName()
+        await model.submitName()?.value
         model.selectedMode = .guardian
         await model.register()
         #expect(model.step == .mode)
+        #expect(model.registrationFailed)
+        #expect(settings.mode == nil)
+    }
+
+    @Test func inviteLinkSkipsModeAndGreeting() async {
+        env.router.pendingJoinCode = "482193"
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        await model.submitName()?.value
+        #expect(model.step == .connect)
+        #expect(settings.mode == .protected)
+        // Connect still gets the code: nothing joins until the user taps Connect (T11).
+        #expect(env.router.pendingJoinCode == "482193")
+    }
+
+    @Test func inviteLinkRegistrationErrorShowsModeWithProtectedPicked() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let env = AppEnvironment(
+            repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
+        )
+        env.router.pendingJoinCode = "482193"
+        let model = OnboardingModel(environment: env)
+        model.skipSplash()
+        model.name = "Rina"
+        await model.submitName()?.value
+        #expect(model.step == .mode)
+        #expect(model.selectedMode == .protected)
         #expect(model.registrationFailed)
         #expect(settings.mode == nil)
     }
