@@ -16,7 +16,7 @@
 
 1. **Uptime + anti-pause (B9) ditunda sejak 21 Okt** (`TODO.md:44`). `/healthz` dan `/healthz/db` ada (`routes/health.ts:7,10-16`), tetapi tidak ada yang memanggilnya terjadwal. Supabase Free di-pause kalau aktivitas database kurang dalam 7 hari (ARCHITECTURE §3).
 2. **Cron gagal diam-diam.** Retensi menulis satu baris `{"event":"retention",…,"failed":n}` lalu melempar error (`cron/retention.ts:141-142`), notifikasi satu baris `{"event":"notifications",…}` (`cron/notifications.ts:49`). Tidak ada yang membaca log. Kalau retensi gagal, janji "hapus setelah 14 hari" (P13) rusak tanpa ada yang tahu. Fase 20 butuh "satu run retensi `failed: 0`" sebagai gerbang (`fase-20-screenshot-sunset.md:219,264`), dan hari ini satu-satunya bukti adalah membuka log.
-3. **Error Worker.** `app.onError` menulis `{"requestId","route","error":{name,code}}` tanpa field `event` (`app.ts:81-87`). Event lain (`replica_read_failed`, `push_config_incomplete`, `replica_clear_failed`, `screenshots_delete_failed`, dst.) tersebar di 20+ titik. CPU sejauh ini aman (`wrangler tail` 31 Okt: `POST /scans` 52–186 ms, `POST /devices` 20–60 ms, `GET /scans` 3–40 ms, semua `outcome: ok`), tetapi CPU cron retensi dengan 40 panggilan R2 belum terukur (`retention.ts:17-22`, fase 18 LANGKAH MANUAL 3).
+3. **Error Worker.** `app.onError` menulis `{"requestId","route","error":{name,code}}` tanpa field `event` (`app.ts:81-87`). Event lain (`replica_read_failed`, `push_config_incomplete`, `replica_clear_failed`, `screenshots_delete_failed`, dst.) tersebar di 20+ titik. CPU sejauh ini aman (`wrangler tail` 31 Okt, belum tercatat di log fase mana pun, `fase-19-replica-quota.md:48`: `POST /scans` 52–186 ms, `POST /devices` 20–60 ms, `GET /scans` 3–40 ms, semua `outcome: ok`), tetapi CPU cron retensi dengan 40 panggilan R2 belum terukur (`retention.ts:17-22`, fase 18 LANGKAH MANUAL 3).
 4. **Biaya/kuota.** R2: notifikasi storage > 5 GB sudah ada, alert Class A belum (`log/fase-18.md:26`, `TODO.md:93`). Supabase DB/Storage/egress dicek manual tanpa jadwal (`TODO.md:94`).
 5. **Antrean blocklist (D9)** hanya terlihat kalau seseorang membuka SQL editor (`TODO.md:92`).
 6. **Fase 19 K5** menetapkan sinyal `replica_dropped` + gauge per jam `replica_quota_usage` untuk dipakai fase 21 (`fase-19-replica-quota.md:98-104`); belum ada yang membacanya.
@@ -56,7 +56,7 @@ Fakta cloud dari docs dicek 31 Okt 2026; sumber di kolom temuan.
 | C8 | Notifikasi Cloudflare di Free | Sebagian | Halaman notifikasi: "Usage Based Billing" untuk akun Pay-as-you-go; tidak ada jenis notifikasi khusus Workers/R2/Cron (per docs, 31 Okt 2026: developers.cloudflare.com/notifications/notification-available/). Faktanya notifikasi "Shoo R2 storage above 5 GB" sudah dibuat 29 Okt (`log/fase-18.md:26`): akun sudah PAYG karena langganan R2 | LANGKAH MANUAL 2: tambah Class A dan Class B dengan cara yang sama |
 | C9 | Metrik Worker tanpa invocation log | Ya | Dataset GraphQL `workersInvocationsAdaptive`: `sum { requests errors subrequests }`, `quantiles { cpuTimeP50 cpuTimeP99 }`, `dimensions { status scriptName datetime }` (developers.cloudflare.com/analytics/graphql-api/tutorials/querying-workers-metrics/); status `success`, `clientDisconnected`, `scriptThrewException`, `exceededResources`, `internalError`; metrik disimpan ±3 bulan (developers.cloudflare.com/workers/observability/metrics-and-analytics/). Token: Account → Account Analytics → Read (…/graphql-api/getting-started/authentication/api-token-auth/). Ketersediaan GraphQL di Free **tidak disebut** di docs; apakah invocation Cron masuk dataset ini **belum terverifikasi** | LANGKAH MANUAL 4 (spike satu `curl` + introspeksi) sebelum 21b memakai angka ini |
 | C10 | Metrik R2 | Ya | `r2OperationsAdaptiveGroups` (`actionType`, `actionStatus`, `bucketName`, **`objectName`**, `sum { requests }`) dan `r2StorageAdaptiveGroups` (`payloadSize`, `objectCount`) (developers.cloudflare.com/r2/platform/metrics-analytics/). Class A = `PutObject`, `ListObjects`, `CopyObject`, `CreateMultipartUpload`, …; Class B = `GetObject`, `HeadObject`, …; `DeleteObject` gratis; Free 10 GB-bulan, 1 jt A, 10 jt B (developers.cloudflare.com/r2/pricing/) | Query **tidak pernah** memilih `objectName` (kunci = `<owner>/<scan>-replica.html.gz`, berisi id device; P6). Kelompokkan per `actionType` saja |
-| C11 | Ukuran DB dari Worker | Ya, diverifikasi di test 21a | `pg_database_size(current_database())` cukup dengan hak CONNECT; `shoo_api` sudah login ke DB (`init.sql:181`). README sudah memakainya sebagai cek manual (`backend/README.md` bagian Quota) | Test 21a memanggilnya sebagai `shoo_api` |
+| C11 | Ukuran DB dari Worker | Ya, diverifikasi di test 21a | `pg_database_size(current_database())` cukup dengan hak CONNECT; `shoo_api` sudah login ke DB (`init.sql:177`). README sudah memakainya sebagai cek manual (`backend/README.md` bagian Quota) | Test 21a memanggilnya sebagai `shoo_api` |
 | C12 | Supabase Storage + egress dari Worker/CI | Tidak | Egress hanya di dashboard; Management API butuh access token, dan #68 memutuskan CI tanpa access token Supabase (`backend.yml:72-73`). Storage kosong setelah fase 20 | D11: checklist mingguan manual (K4) |
 | C13 | Status cron yang bisa dibaca | Perlu tabel baru | `ops_heartbeat.source` hanya boleh `'cron'`/`'healthz'` (`init.sql:98-101`); `'cron'` ditulis **di awal** retensi (`retention.ts:90-92`), jadi tidak membuktikan run sukses. Notifikasi tidak menulis apa pun ke ops | K2: tabel `ops_jobs` |
 | C14 | Antrean blocklist (D9) | Ya | Antrean = `approved_at is null and rejected_at is null and removed_at is null and families > 0` (`ref/R2-skema-db.md:187` + `20261025100000_blocklist_rejected.sql:1-15`) | `/ops/status` memberi jumlah + umur tertua (jam), tanpa domain |
@@ -71,14 +71,14 @@ Fakta cloud dari docs dicek 31 Okt 2026; sumber di kolom temuan.
 
 | Sisi | File / tempat | Jenis | Sub-fase | Catatan |
 |---|---|---|---|---|
-| DB | `migrations/<ts>_ops_jobs.sql` | Baru | 21a | Tabel `ops_jobs` (K2), grant CRUD `shoo_api`, RLS + policy seperti `init.sql:196-207`. Add-only: Worker lama tidak menyentuhnya |
-| DB test | `tests/ops_jobs.test.sql` baru; `grants.test.sql:13-16,23-27`, `schema.test.sql:10` | Baru / Ganti | 21a | Tabel ada, check `job`, grant, RLS, anon/authenticated tanpa hak |
+| DB | `migrations/<ts>_ops_jobs.sql` | Baru | 21a | Tabel `ops_jobs` (K2), grant `select, insert, update` (tanpa `delete`) ke `shoo_api`, revoke dari `anon, authenticated, service_role`, RLS + policy (pola `security_review.sql:36-40`). Add-only: Worker lama tidak menyentuhnya |
+| DB test | `tests/ops_jobs.test.sql` baru; `grants.test.sql` (`table_privs_are` sendiri SELECT/INSERT/UPDATE, bukan daftar CRUD `:13-16`; `ops_jobs` di daftar `:23-27`), `schema.test.sql:10` | Baru / Ganti | 21a | Tabel ada, check `job`, grant, RLS, anon/authenticated tanpa hak |
 | Backend | `src/cron/retention.ts` | Ganti | 21a | `startJob('retention')` setelah heartbeat; `finishJob` di akhir dengan `failed`, `backlog` (sebelum `throw`, `:141-142`) |
 | Backend | `src/cron/notifications.ts` | Ganti | 21a | `finishJob('notifications')` setelah kirim; gagal tulis ops di-log `ops_job_write_failed`, tidak menggagalkan push |
 | Backend | `src/db/repo/ops.ts` (baru) | Baru | 21a | `startJob`, `finishJob`, `opsSnapshot` (satu round trip, angka saja) |
 | Backend | `src/services/opsStatus.ts` (baru) | Baru | 21a/21c | Ambang (K3) → `{ ok, failing: [{code, level}], numbers }`; fungsi murni, mudah dites |
 | Backend | `src/routes/ops.ts` (baru), `src/app.ts:65-77` | Baru / Ganti | 21a | `GET /ops/status`; token `OPS_STATUS_TOKEN` (K6) |
-| Backend | `src/env.ts`, `src/http/rateLimit.ts` | Ganti | 21a | `OPS_STATUS_TOKEN?: string`; limit `opsStatus` key `"all"` 30/jam |
+| Backend | `src/env.ts`, `test/env.d.ts`, `src/http/rateLimit.ts` | Ganti | 21a | `OPS_STATUS_TOKEN?: string` (di kedua deklarasi `Env`); limit `opsStatus` key `"all"` 30/jam, dihitung hanya setelah token cocok (K6) |
 | Backend | `vitest.config.ts:31-36`, `.dev.vars.example` | Ganti | 21a | Binding test `OPS_STATUS_TOKEN`; contoh lokal kosong |
 | Backend | `src/services/opsStatus.ts` + `replicaUsage` fase 19 | Ganti | 21c | `replica_full` / `replica_reserve` / `replica_family_cap` |
 | Test | `test/ops-status.test.ts` (baru), `test/retention.test.ts`, `test/log-hygiene.test.ts`, `test/security-headers.test.ts`, `test/cache-headers.test.ts` | Baru / Ganti | 21a | Lihat Langkah kerja |
@@ -89,7 +89,7 @@ Fakta cloud dari docs dicek 31 Okt 2026; sumber di kolom temuan.
 | Extension / kontrak | — | Tidak ada | — | `/ops/status` bukan endpoint klien, tidak masuk `contracts/` (`/healthz` juga tidak ada di `contracts/api.md`) |
 | Privasi | Respons `/ops/status`, issue `ops-alert`, log Actions | — | 21a/21b | Angka agregat + kode cek saja; tanpa id, domain, nama, path, IP, URL (P6). Token tidak pernah di URL |
 | Biaya Free | Workers, Hyperdrive, Actions | — | — | 96 run/hari × 1 request `/ops/status` + 96 `/healthz` + 1 `/healthz/db` ≈ 200 request Worker/hari (0,2 % dari 100k). `opsSnapshot` ≈ 1 query gabungan. Actions di repo publik gratis |
-| Dokumen | `backend/README.md` (bagian baru "Monitoring and alerts" = runbook), `backend/API.md` (`GET /ops/status`), `plan/alief/log/fase-21.md` | Baru / Ganti | 21a/21b | TODO/PROGRESS di-update saat eksekusi, bukan di plan ini |
+| Dokumen | `backend/README.md` (bagian baru "Monitoring and alerts" = runbook), `backend/API.md` (`GET /ops/status`), `plan/alief/ref/R3-catatan-api.md` §7 (env `OPS_STATUS_TOKEN`; README Env merujuk ke sana), `plan/alief/log/fase-21.md` | Baru / Ganti | 21a/21b | TODO/PROGRESS di-update saat eksekusi, bukan di plan ini |
 
 ## Keputusan
 
@@ -123,15 +123,15 @@ create table ops_jobs (
 | `retention_stale` | alert | `ops_jobs.retention.ok_at` null atau < now − 26 jam | `ops_jobs` |
 | `retention_failed` | alert | run terakhir `failed > 0` | `ops_jobs` |
 | `retention_backlog` | warn | `backlog = true` | `ops_jobs` |
-| `retention_overdue` | alert | ada scan `created_at < now() - 15 days` (`exists`, index `scans_created`) | `scans` |
+| `retention_overdue` | alert | ada scan `created_at < now() - interval '15 days 6 hours'` (`exists`, index `scans_created`; margin 6 jam supaya Cron 19:00 yang telat tidak memicu alert palsu) | `scans` |
 | `tombstones_stuck` | warn | tombstone `created_at < now() - 2 days` > 0 | `storage_tombstones` |
 | `notifications_stale` | alert | `ok_at` < now − 2 jam 15 menit (cron tiap jam `:05`) | `ops_jobs` |
 | `db_size_high` | warn ≥ 350 MB, alert ≥ 450 MB | `pg_database_size` (Free 500 MB) | Postgres |
 | `blocklist_queue` | warn | antrean > 0 dan tertua > 24 jam (D9) | `blocklist_entries` |
-| `replica_reserve` / `replica_full` | warn / alert | gauge fase 19 `level` = `reserve` / `full` (= drop `global_*` terjadi) | `replicaUsage` fase 19 (21c) |
+| `replica_reserve` / `replica_full` | warn / alert | gauge fase 19 `level` = `reserve` / `full` (K5.2 fase 19: `full` = replica ukuran maksimal tidak muat lagi di kuota global, `uploads ≥ Q.global` atau `bytes + M > Q.globalBytes`; drop `global_*` mungkin, bukan bukti drop) | `replicaUsage` fase 19 (21c) |
 | `replica_family_cap` | warn | `familiesAtCap ≥ 3` dalam 24 jam | `replicaUsage` fase 19 (21c) |
 
-Dicek oleh workflow (GraphQL, 24 jam terakhir, skrip 21b): `worker_exceeded_cpu` alert kalau status `exceededResources` > 0; `worker_errors` alert kalau `errors/requests > 1 %` dengan ≥ 50 request; `worker_requests_high` warn ≥ 80 000/hari (Free 100k); `r2_class_a_high` warn ≥ 500 000 bulan berjalan; `r2_class_b_high` warn ≥ 5 000 000; `r2_storage_high` warn ≥ 5 GB (dobel dengan notifikasi Cloudflare). Uptime: `healthz_down` alert kalau 3 percobaan gagal; `ops_status_unreachable` alert kalau `/ops/status` bukan 200. `warn` hanya masuk ringkasan harian, tidak membuka issue.
+Dicek oleh workflow (GraphQL, 24 jam terakhir, skrip 21b): `worker_exceeded_cpu` alert kalau status `exceededResources` > 0; `worker_errors` alert kalau `errors/requests > 1 %` dengan ≥ 50 request; `worker_requests_high` warn ≥ 80 000/hari (Free 100k); `r2_class_a_high` warn ≥ 500 000 bulan berjalan; `r2_class_b_high` warn ≥ 5 000 000; `r2_storage_high` warn ≥ 5 GB (dobel dengan notifikasi Cloudflare). Uptime: `healthz_down` alert kalau 3 percobaan gagal; `ops_status_unreachable` alert kalau `/ops/status` bukan 200; `healthz_db_failed` alert kalau `/healthz/db` harian bukan 200. `warn` hanya masuk ringkasan harian, tidak membuka issue.
 
 Aturan fase 19 K5.1 "`reserve`/`family_*` > 20 per jam" butuh hitungan log per alasan: hanya bisa lewat alert Cloudflare (C7, belum terverifikasi). Gantinya dari DB: `replica_family_cap` dan `replica_reserve`. `screenshot_dropped`/`screenshot_ignored` sengaja tidak dipakai (`fase-20-screenshot-sunset.md:326`).
 
@@ -140,7 +140,7 @@ Aturan fase 19 K5.1 "`reserve`/`family_*` > 20 per jam" butuh hitungan log per a
 **K5 — Ringkasan harian (D9 + D11).** Run `41 20 * * *` menulis job summary Actions berisi kode + level saja (K6) dan baris "antrean blocklist: ada/tidak". Angka persis dibaca Alief sendiri: `curl -H "Authorization: Bearer $OPS_STATUS_TOKEN" …/ops/status` dari Mac (token dari password manager). D9 tetap review manual di SQL editor (query `ref/R2-skema-db.md:187` + `rejected_at is null`); fase 21 hanya membuatnya terlihat.
 
 **K6 — Privasi dan akses (rekomendasi: token header, isi minimum; butuh jawaban Alief).**
-- `GET /ops/status` hanya dengan `Authorization: Bearer <OPS_STATUS_TOKEN>` (secret Worker ≥ 32 karakter, `wrangler secret put`; dibandingkan constant-time). Secret kosong/pendek atau token salah → 404 `not_found` (endpoint tidak terlihat). Rate limit `"all"` 30/jam sebelum membandingkan token. Tidak pernah token di query string.
+- `GET /ops/status` hanya dengan `Authorization: Bearer <OPS_STATUS_TOKEN>` (secret Worker ≥ 32 karakter, `wrangler secret put`; dibandingkan constant-time: SHA-256 kedua sisi lalu `crypto.subtle.timingSafeEqual`, karena `src/` belum punya helper). Secret kosong/pendek atau token salah → 404 `not_found` (endpoint tidak terlihat) **tanpa query DB** (klien `sql` lazy, `app.ts:32,44`). Rate limit `"all"` 30/jam baru dihitung setelah token cocok: kalau dihitung dulu, siapa saja bisa menghabiskan 30 slot dan membutakan workflow (429 → `ops_status_unreachable` palsu). Tidak pernah token di query string.
 - Respons: angka agregat + `failing[]`; tanpa id, domain, path, nama, IP, URL. `Cache-Control: private, no-store` sudah global (`app.ts:30`).
 - Repo publik: skrip tidak mencetak body respons; issue/job summary hanya berisi kode cek, level, dan waktu UTC. Angka (DB size, jumlah antrean, request) tidak ditulis ke issue. Alternatif: tulis angka juga (lebih praktis, membocorkan kondisi operasional ke publik). Rekomendasi: kode saja.
 - Token CI: `OPS_STATUS_TOKEN` + `CF_ANALYTICS_TOKEN` (hanya Account Analytics Read, satu akun) di GitHub Environment `ops` yang dikunci ke `main`, bukan `production` (yang memegang `SUPABASE_DB_URL` deploy). Alternatif ditolak: workflow langsung ke DB dengan `SUPABASE_DB_URL` (kredensial owner DB di job terjadwal yang tidak perlu).
@@ -159,13 +159,13 @@ Sampai dijawab: 21a tetap jalan (endpoint berguna dipanggil manual); keep-alive 
 
 ## Output
 
-- Migrasi `backend/db/supabase/migrations/<ts>_ops_jobs.sql` (`set local lock_timeout = '5s'`): tabel K2, `grant select, insert, update on ops_jobs to shoo_api`, RLS + policy `shoo_api_all`, `revoke all … from anon, authenticated`.
+- Migrasi `backend/db/supabase/migrations/<ts>_ops_jobs.sql` (`set local lock_timeout = '5s'`): tabel K2, `grant select, insert, update on ops_jobs to shoo_api`, RLS + policy `shoo_api_all`, `revoke all … from anon, authenticated, service_role` (pola `security_review.sql:36-40`).
 - pgTAP `tests/ops_jobs.test.sql`; `grants.test.sql` + `schema.test.sql` menyebut `ops_jobs` (plan count disesuaikan).
-- `src/db/repo/ops.ts`: `startJob(sql, job)`, `finishJob(sql, job, {failed, backlog})`, `opsSnapshot(sql)` → `{ jobs, scansOverdue: boolean, tombstonesStuck: number, dbBytes: number, blocklistQueue: number, blocklistOldestHours: number | null }`.
+- `src/db/repo/ops.ts`: `startJob(sql, job)`, `finishJob(sql, job, {failed, backlog})`, `opsSnapshot(sql)` → `{ jobs, scansOverdue: boolean, tombstonesStuck: number, dbBytes: number, blocklistQueue: number, blocklistOldestHours: number | null, healthzAgeHours: number | null }` (umur `ops_heartbeat.healthz`, angka saja, bukan alert).
 - `src/services/opsStatus.ts`: `evaluate(snapshot, now)` → `{ ok: boolean, failing: {code, level}[] }` (K3).
-- `src/routes/ops.ts`: `GET /ops/status` → 200 `{ ok, failing, jobs: {retention:{ageHours, failed, backlog}, notifications:{ageHours}}, dbBytes, blocklistQueue, blocklistOldestHours, tombstonesStuck }`; 404 tanpa/ salah token; 429 lewat limit.
-- `src/cron/retention.ts`, `src/cron/notifications.ts`: tulis `ops_jobs`; event baru `ops_job_write_failed` (`{event, job, error: errorInfo}`).
-- `env.ts` `OPS_STATUS_TOKEN?`; `rateLimit.ts` `opsStatus: { bucket: "ops_status", max: 30, windowSeconds: 3600 }`; `vitest.config.ts`; `.dev.vars.example`.
+- `src/routes/ops.ts`: `GET /ops/status` → 200 `{ ok, failing, jobs: {retention:{ageHours, failed, backlog}, notifications:{ageHours}}, dbBytes, blocklistQueue, blocklistOldestHours, tombstonesStuck, healthzAgeHours }`; 404 tanpa/ salah token (tanpa query DB); 429 lewat limit (hanya dengan token benar).
+- `src/cron/retention.ts`, `src/cron/notifications.ts`: tulis `ops_jobs`; opsi test `ops?` (penulis palsu) di `RetentionOptions` dan `opts` notifikasi. Retensi: gagal tulis = `retention_step_failed` dengan `step: "ops_start"`/`"ops_finish"`; notifikasi: event baru `ops_job_write_failed` (`{event, job, error: errorInfo}`).
+- `env.ts` + `test/env.d.ts` `OPS_STATUS_TOKEN?`; `rateLimit.ts` `opsStatus: { bucket: "ops_status", max: 30, windowSeconds: 3600 }` (dipanggil setelah token cocok); `vitest.config.ts`; `.dev.vars.example`.
 - Test: `test/ops-status.test.ts` (baru), perubahan `retention.test.ts`, `log-hygiene.test.ts`, `security-headers.test.ts`, `cache-headers.test.ts`.
 - 21b: `backend/ci/ops-watch.mjs` (mode `--quick` dan `--daily`), `backend/ci/ops-watch.test.mjs`, `backend/ci/README.md` (bagian ops-watch); PR usulan `.github/workflows/ops-watch.yml`.
 - 21c: `opsStatus.ts` + `ops.ts` memakai `replicaUsage` fase 19; test baru di `ops-status.test.ts`.
@@ -176,7 +176,7 @@ Runbook (masuk `backend/README.md`, Inggris seperti file itu; isi inti):
 | Kode | Langkah pertama | Langkah berikutnya |
 |---|---|---|
 | `healthz_down` / `ops_status_unreachable` | Buka `https://shoo-api.afindo-mi01.workers.dev/healthz`; dashboard Workers → Deployments | Deploy terakhir rusak → `npx wrangler rollback`, lalu fix maju lewat PR (bagian Rollback). Cloudflare down → tunggu, catat |
-| `retention_failed` / `retention_stale` | Query Builder: `event = retention_step_failed` (field `step`, `error.name`, `error.code`) | `wrangler tail --format json` saat trigger lokal tidak mungkin di cloud: perbaiki lewat PR; jangan jalankan retensi manual dari Mac. Fase 20 menunggu run `failed: 0` |
+| `retention_failed` / `retention_stale` | Query Builder: `event = retention_step_failed` (field `step`, `error.name`, `error.code`) | Reproduksi lokal (`wrangler dev --test-scheduled` + trigger README bagian Retention), perbaiki lewat PR; jangan jalankan retensi cloud manual dari Mac, run berikutnya 19:00 UTC. Fase 20 menunggu run `failed: 0` |
 | `retention_overdue` / `retention_backlog` | SQL editor: `select count(*) from scans where created_at < now() - interval '15 days'` | Backlog lebih dari 2 hari → naikkan chunk/anggaran lewat PR (P13 terlanggar selama ada) |
 | `tombstones_stuck` | Query Builder: `screenshots_delete_failed`, `replica_clear_failed` | Cek binding R2 / kunci Supabase (sebelum fase 20) |
 | `notifications_stale` | Query Builder: `push_failed`, `push_config_incomplete`; Cron Events di dashboard Worker | Fix lewat PR |
@@ -192,11 +192,11 @@ Runbook (masuk `backend/README.md`, Inggris seperti file itu; isi inti):
 
 1. **Merah — DB.** `tests/ops_jobs.test.sql`: `has_table`, check `job` menolak `'x'`, grant `shoo_api` SELECT/INSERT/UPDATE saja, anon/authenticated tanpa hak, RLS aktif. Update `grants.test.sql`, `schema.test.sql`. `supabase test db` → merah.
 2. **Hijau — migrasi** `<ts>_ops_jobs.sql` (K2). `supabase db reset && supabase test db` → hijau.
-3. **Merah — cron.** `retention.test.ts`: run sukses → `ops_jobs.retention` `failed = 0`, `ok_at` baru, `backlog` sesuai; satu langkah gagal (store palsu melempar) → `failed = 1`, `ok_at` tidak berubah, `finished_at` baru, error tetap dilempar; DB `ops_jobs` dikunci/di-drop di test → retensi tetap menjalankan langkah lain dan log `ops_job_write_failed`. Notifikasi: run → `ops_jobs.notifications.ok_at` baru; gagal tulis ops → push tetap terkirim.
-4. **Hijau — `db/repo/ops.ts` + panggilan di `retention.ts` (setelah `heartbeat`, dan sebelum `console.log` `:141`) dan `notifications.ts` (sebelum `:49`).** Tulis `ops_jobs` di dalam `step(...)` sendiri supaya gagal tulis = satu langkah gagal biasa (retensi) / try-catch (notifikasi).
+3. **Merah — cron.** `retention.test.ts`: run sukses → `ops_jobs.retention` `failed = 0`, `ok_at` baru, `backlog` sesuai; satu langkah gagal (store palsu melempar) → `failed = 1`, `ok_at` tidak berubah, `finished_at` baru, error tetap dilempar; opsi test `ops` yang melempar (pola `store?`/`r2Store?`, `retention.ts:61-64`; tidak men-drop/mengunci tabel: test jalan sebagai `shoo_api` tanpa DDL, `lock_timeout` 5 s di `hardening.sql:7`) → retensi tetap menjalankan langkah lain dan log `retention_step_failed` `step: "ops_finish"`. Notifikasi: run → `ops_jobs.notifications.ok_at` baru; `opts.ops` melempar → push tetap terkirim, log `ops_job_write_failed`.
+4. **Hijau — `db/repo/ops.ts` + panggilan di `retention.ts` (setelah `heartbeat`, dan sebelum `console.log` `:141`, dengan `failed` = `errors.length` sebelum langkah itu) dan `notifications.ts` (sebelum `:49`).** Tulis `ops_jobs` di dalam `step(...)` sendiri supaya gagal tulis = satu langkah gagal biasa (retensi) / try-catch (notifikasi).
 5. **Merah — evaluasi.** `ops-status.test.ts` bagian unit `evaluate`: tiap kode K3 di tepi ambang (26 jam − 1 menit vs + 1 menit, 350/450 MB, antrean 24 jam, dst.), `ok = false` hanya kalau ada `alert`.
 6. **Hijau — `services/opsStatus.ts`.**
-7. **Merah — route.** `ops-status.test.ts` bagian HTTP: tanpa header → 404 bentuk kontrak error; token salah → 404; secret kosong atau < 32 karakter → 404 walau header cocok; token benar → 200 dengan field Output; respons tidak memuat UUID, domain, path (`/[0-9a-f-]{36}/`, `.example`, `replica.html.gz`); `pg_database_size` jalan sebagai `shoo_api` (C11); 31 panggilan → 429; header keamanan + `Cache-Control: private, no-store`.
+7. **Merah — route.** `ops-status.test.ts` bagian HTTP: tanpa header → 404 bentuk kontrak error; token salah → 404; secret kosong atau < 32 karakter → 404 walau header cocok (env di-override per request: `app.fetch(req, { ...env, OPS_STATUS_TOKEN: "" }, ctx)`, pola `test/replicas.test.ts:243`); token benar → 200 dengan field Output; respons tidak memuat UUID, domain, path (`/[0-9a-f-]{36}/`, `.example`, `replica.html.gz`); `pg_database_size` jalan sebagai `shoo_api` (C11); 31 panggilan dengan token benar → 429; 40 panggilan token salah → tetap 404 dan tidak menambah baris `rate_limit_hits` bucket `ops_status`; header keamanan + `Cache-Control: private, no-store`.
 8. **Hijau — `routes/ops.ts`, `app.ts`, `env.ts`, `rateLimit.ts`, `vitest.config.ts`, `.dev.vars.example`.**
 9. `log-hygiene.test.ts`: alur penuh + `/ops/status` + retensi → tidak ada token ops, id, domain di log.
 10. `EXPLAIN` lokal untuk `opsSnapshot` dengan data `db/scripts/quota-estimate.sql`: `scans_created` dipakai untuk `exists`, tanpa seq scan `scans`. Catat di log.
@@ -206,18 +206,18 @@ Runbook (masuk `backend/README.md`, Inggris seperti file itu; isi inti):
 ### 21b — skrip + workflow (`feat/B9-ops-watch`, setelah K7 dijawab dan LANGKAH MANUAL 4 selesai)
 
 1. **Merah — `ops-watch.test.mjs`** (`node:test`, `fetch` dipalsukan): `--quick` → `healthz_down` setelah 3 gagal, `ops_status_unreachable` untuk non-200, kode dari `failing[]` diteruskan; `--daily` → kode K3 GraphQL di tepi ambang; query R2 **tidak** memuat `objectName` (assert pada string query); output stdout hanya kode/level, tidak ada angka, URL, atau token; logika issue: buat kalau ada `alert` dan tidak ada issue terbuka, comment hanya kalau himpunan kode berubah, tutup setelah 2 run hijau (state = label + comment terakhir, lewat `gh` CLI yang dipalsukan).
-2. **Hijau — `ops-watch.mjs`** (Node 24, tanpa dependency; `gh` CLI bawaan runner untuk issue).
+2. **Hijau — `ops-watch.mjs`** (Node 24, tanpa dependency; `gh` CLI bawaan runner untuk issue; `gh label create ops-alert --force` sebelum membuat issue; input `simulate` dibaca dari env dan hanya diterima kalau ada di daftar kode K3).
 3. `node --test backend/ci/` hijau. `backend/ci/README.md` bagian ops-watch.
-4. PR berisi `.github/workflows/ops-watch.yml` (jadwal K1, `concurrency: ops-watch`, `timeout-minutes: 5`, `permissions: contents: read, issues: write`, `environment: ops`, `if: vars.OPS_WATCH_ENABLED == 'true'`, action di-pin SHA seperti `public-blocklist.yml:25-26`). Reviewer + merge: @umarmuhdhor.
+4. PR berisi `.github/workflows/ops-watch.yml` (jadwal K1, `concurrency: ops-watch`, `timeout-minutes: 5`, `permissions: contents: read, issues: write`, `environment: ops`, `if: vars.OPS_WATCH_ENABLED == 'true'`, action di-pin SHA seperti `public-blocklist.yml:25-26`; `workflow_dispatch` input `simulate` diteruskan lewat `env:`, tidak pernah `${{ inputs.simulate }}` di dalam `run:`). Reviewer + merge: @umarmuhdhor.
 
 ### 21c — kuota replica (`feat/EX-07-ops-replica`, setelah fase 19 merge)
 
 1. Merah: `ops-status.test.ts` — level `reserve`/`full`, `familiesAtCap` 2 vs 3, dari `replicaUsage` fase 19 tanpa id.
-2. Hijau: `opsSnapshot` memanggil `replicaUsage`; `evaluate` menambah tiga kode K3. Runbook baris replica.
+2. Hijau: `opsSnapshot` memanggil `replicaUsage(sql, REPLICA_QUOTA)` (tanda tangan fase 19, `fase-19-replica-quota.md:61`); `evaluate` menambah tiga kode K3. Runbook baris replica.
 
 ## LANGKAH MANUAL
 
-- [ ] **1. (Alief, setelah 21a live)** Buat token: `openssl rand -base64 32` → simpan di password manager → dari `backend/api/`: `npx wrangler secret put OPS_STATUS_TOKEN` (di luar 18:30–19:30 UTC; perintah ini men-deploy versi baru dengan kode yang sama). Uji: `curl -s -H "Authorization: Bearer <token>" https://shoo-api.afindo-mi01.workers.dev/ops/status` → 200; tanpa header → 404. Catat hasil (tanpa token) di `log/fase-21.md`.
+- [ ] **1. (Alief, setelah 21a live)** Buat token: `openssl rand -base64 32` → simpan di password manager → dari `backend/api/`: `npx wrangler secret put OPS_STATUS_TOKEN` (di luar 18:30–19:30 UTC; perintah ini men-deploy versi baru dengan kode yang sama). Uji (token tidak diketik sebagai argumen, SECURITY §1): `read -rs OPS_STATUS_TOKEN` (tempel dari password manager), lalu `curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" https://shoo-api.afindo-mi01.workers.dev/ops/status` → 200; tanpa header → 404. Catat hasil (tanpa token) di `log/fase-21.md`.
 - [ ] **2. (Alief, D10 sisa)** Cloudflare dashboard → Notifications → Add → Usage Based Billing → R2 Class A operations, ambang 500 000, email pemilik akun; ulangi untuk Class B, ambang 5 000 000. Kalau produk R2 Class A/B tidak bisa dipilih: catat di log, `r2_class_*` dari 21b jadi satu-satunya penjaga. Centang D10 di TODO setelah ini.
 - [ ] **3. (Alief)** Catat siapa pemilik email notifikasi: Supabase (Organization → Members, owner proyek `shoo-demo`; email pause/kuota) dan Cloudflare (billing). Kalau bukan Alief, minta pemiliknya meneruskan email ke Alief (tanpa berbagi login).
 - [ ] **4. (Alief, spike sebelum 21b)** Cloudflare → My Profile → API Tokens → Create Custom Token: hanya **Account → Account Analytics → Read**, akun Shoo saja, tanpa izin lain, kedaluwarsa 1 tahun. Dari Mac: satu `curl` POST `https://api.cloudflare.com/client/v4/graphql` dengan query `workersInvocationsAdaptive` (filter `scriptName: "shoo-api"`, 24 jam) dan `r2OperationsAdaptiveGroups` (dimensi `actionType` saja). Catat: (a) GraphQL jalan di Free, (b) nilai `status` yang muncul, (c) apakah invocation Cron ikut terhitung (cari dataset `workersInvocationsScheduled` lewat introspeksi kalau tidak), (d) apakah 500 dari `onError` masuk `errors` (C16). Kirim token ke Umar lewat password manager untuk Environment `ops` (K7).
@@ -235,15 +235,15 @@ pnpm -C backend/api exec vitest run test/ops-status.test.ts
 (cd backend/db && supabase db reset && supabase test db)   # ops_jobs, grants, schema
 node --test backend/ci/                                    # 21b
 (cd backend/api && npx wrangler deploy --dry-run --outdir /tmp/shoo-worker)
-git grep -n "objectName" backend/ci/                       # 21b: 0 hasil
+git grep -n "objectName" backend/ci/ops-watch.mjs         # 21b: 0 hasil (file test boleh memuatnya di assert)
 ```
 
-1. Lokal: `pnpm -C backend/api dev --test-scheduled` + `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+19+*+*+*"` → `select * from ops_jobs` (lokal) baris `retention` `failed = 0`.
-2. Lokal: `curl -H "Authorization: Bearer $OPS_STATUS_TOKEN" http://localhost:8787/ops/status` → `ok: true`; ubah `ops_jobs.ok_at` jadi 2 hari lalu → `failing` memuat `retention_stale`.
+1. Lokal (Supabase lokal jalan; `backend/api/.dev.vars` dari `.dev.vars.example` dengan `OPS_STATUS_TOKEN=` diisi `openssl rand -base64 32`, kosong = 404): terminal 1 `pnpm -C backend/api dev --test-scheduled`; terminal 2 `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=0+19+*+*+*"` lalu `docker exec -i supabase_db_shoo psql -U postgres -c "select job, failed, backlog, ok_at, finished_at from ops_jobs"` → baris `retention` `failed = 0`.
+2. Lokal: `export OPS_STATUS_TOKEN=$(sed -n 's/^OPS_STATUS_TOKEN=//p' backend/api/.dev.vars)`; `curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" http://localhost:8787/ops/status` → `ok: true`; `docker exec -i supabase_db_shoo psql -U postgres -c "update ops_jobs set ok_at = now() - interval '2 days' where job = 'retention'"` → `curl` yang sama: `failing` memuat `retention_stale`.
 3. Cloud (setelah LANGKAH MANUAL 1): `/ops/status` → 200; tanpa token → 404.
 4. Cloud, pagi setelah run 19:00 UTC pertama sesudah deploy: `jobs.retention.failed = 0`, `ageHours` < 12.
 5. Cloud: `/ops/status` satu jam setelah deploy → `jobs.notifications.ageHours` < 1,2.
-6. Uji alert (setelah 21b): `workflow_dispatch` dengan input `simulate=retention_failed` (hanya mengubah evaluasi di skrip, tidak menyentuh backend) → issue `ops-alert` terbuka, di-assign Alief, isi hanya kode; dua run normal → issue tertutup. Email GitHub diterima Alief.
+6. Uji alert (setelah 21b): `gh workflow run ops-watch.yml -f simulate=retention_failed` (hanya mengubah evaluasi di skrip, tidak menyentuh backend) → issue `ops-alert` terbuka, di-assign Alief, isi hanya kode; dua run normal → issue tertutup. Email GitHub diterima Alief.
 7. Log Actions run 6: tidak ada token, URL, angka DB, atau body JSON (baca manual).
 
 ## Kriteria selesai (DoD)
@@ -256,14 +256,14 @@ git grep -n "objectName" backend/ci/                       # 21b: 0 hasil
 - [ ] Issue K7 dibuat dan dijawab; jawabannya ditautkan di `log/fase-21.md`.
 - [ ] 21b merge; satu alert uji membuka dan menutup issue `ops-alert`; Alief menerima email.
 - [ ] Notifikasi R2 Class A + Class B ada (atau dicatat tidak tersedia); D10 dicentang.
-- [ ] `/healthz/db` terpanggil harian ≥ 7 hari berturut-turut (`ops_heartbeat.healthz.at`), dan tidak ada email peringatan pause dari Supabase.
+- [ ] 7 run `--daily` berturut-turut hijau di riwayat Actions (`/healthz/db` 200 tiap run), `healthzAgeHours` < 25 di `/ops/status` pada hari ke-7, dan tidak ada email peringatan pause dari Supabase.
 - [ ] Hasil spike LANGKAH MANUAL 4 (GraphQL Free, status Cron, `errors`) dan 5 (custom alert) tercatat.
 - [ ] 21c merge setelah fase 19 (atau dicatat ditunda dengan alasan).
 - [ ] TODO B9, D9 (kanal terlihat), D11 (otomatis + checklist) diperbarui saat eksekusi.
 
 ## Risiko & rollback
 
-- **Workflow terjadwal tidak jalan** (antrean GitHub penuh, repo sepi 60 hari) → alert hilang diam-diam. Mitigasi: cron Worker tetap menjaga Supabase (C1); run harian menulis `ops_heartbeat('healthz')`, jadi umurnya terlihat di `/ops/status` (tambahkan sebagai angka, bukan alert). Setelah proyek selesai, kehilangan monitor diterima.
+- **Workflow terjadwal tidak jalan** (antrean GitHub penuh, repo sepi 60 hari) → alert hilang diam-diam. Mitigasi: cron Worker tetap menjaga Supabase (C1); run harian menulis `ops_heartbeat('healthz')`, jadi umurnya terlihat di `/ops/status` (`healthzAgeHours`, angka, bukan alert). Setelah proyek selesai, kehilangan monitor diterima.
 - **Repo publik** memperlihatkan kode alert. Diterima dengan K6 (tanpa angka). Kalau Alief/Umar menolak, ganti kanal ke UptimeRobot/Better Stack (akun baru, keyword monitor pada `/ops/status` tidak bisa tanpa header → hanya `/healthz`), atau hanya email kegagalan workflow.
 - **Token ops bocor** → hanya angka agregat yang terbaca; rotasi: `wrangler secret put OPS_STATUS_TOKEN` + update secret Environment `ops`. Tidak ada data pengguna di respons.
 - **Tulis `ops_jobs` menambah titik gagal di cron** → dibungkus `step`/try-catch; retensi tetap menghapus data. Rollback: revert PR (tabel dibiarkan; migrasi hanya maju).
@@ -276,7 +276,13 @@ git grep -n "objectName" backend/ci/                       # 21b: 0 hasil
 
 - Fase 19 K5 tetap berlaku: jangan menambah field id ke `replica_dropped`/`replica_quota_usage`. Fase 21 membaca kuota dari DB (`replicaUsage`), bukan dari log, kecuali LANGKAH MANUAL 5 menemukan custom alert di Free.
 - Fase 20: gerbang "satu run retensi `failed: 0`" bisa dibaca dari `/ops/status` (`jobs.retention.failed`, `ageHours`) setelah 21a live. Setelah 20b, `screenshots_delete_failed` diganti nama `objects_delete_failed` (fase 20 K5): runbook ikut diganti di PR 20b.
+- Fase 24 K8 (`fase-24-privacy-data.md:98`) menulis hitungan `inactive_devices` "ikut `ops_jobs` lewat `RetentionResult`": `ops_jobs` (K2) hanya menyimpan `failed`/`backlog`, tanpa hitungan. Hitungan tetap di log; langkah fase 24 yang gagal masuk `failed` lewat `step`. Kalau fase 24 butuh hitungan di DB, kolom baru = migrasi fase 24.
 - `app.onError` (`app.ts:85`) tidak punya field `event`. Kalau nanti dibutuhkan filter mudah, tambahkan `event: "unhandled_error"` di PR kecil terpisah (backend saja, dengan update `log-hygiene.test.ts`).
 - `wrangler tail` dan Query Builder dipakai hanya oleh Alief di mesin sendiri. Jangan menempel output yang memuat URL (`/replicas/…?sig=`, `/j/<code>`) ke issue, PR, atau log plan.
 - Biaya: tidak ada akun atau SDK baru di rekomendasi. UptimeRobot/Better Stack hanya cadangan dan butuh akun yang dibuat manusia.
 - Hal yang belum terverifikasi: Hyperdrive dihitung aktivitas Supabase (C1); GraphQL di Free + status Cron + arti `errors` (C9, C16; LANGKAH MANUAL 4); custom alert di Free (C7; LANGKAH MANUAL 5); siapa penerima notifikasi workflow terjadwal setelah PR di-merge Umar (C3, mungkin Umar, karena itu kanal utama = issue ber-assignee); crash extension di Organizer (K8).
+
+## Riwayat verifikasi
+
+- Ronde 1 (31 Okt 2026): 20 temuan (0 kritis, 0 tinggi, 7 sedang, 13 rendah); diperbaiki: rate limit `/ops/status` dihitung setelah token cocok (sebelumnya siapa saja bisa menghabiskan 30 slot/jam dan membutakan workflow; token salah kini 404 tanpa query DB), grant `ops_jobs` seragam `select, insert, update` + `grants.test.sql` tanpa daftar CRUD, gauge `full` disamakan dengan fase 19 K5.2 (bukan bukti drop), test gagal-tulis `ops_jobs` lewat opsi `ops?` (bukan drop/lock tabel) dengan nama event per cron, `git grep objectName` hanya `ops-watch.mjs`, DoD anti-pause lewat riwayat run + `healthzAgeHours` (field ditambah ke Output), perintah persis Verifikasi 1–2/6; rendah: `test/env.d.ts`, `init.sql:177`, margin `retention_overdue` 15 hari 6 jam, `timingSafeEqual` atas SHA-256, token lewat `read -rs`, label `ops-alert` + `simulate` lewat `env:`, `replicaUsage(sql, REPLICA_QUOTA)`, `healthz_db_failed`, angka `wrangler tail` belum tercatat, runbook `retention_failed`, `R3` §7, catatan fase 24 K8; semua di baris yang sama, jadi rujukan `:19,76,131-132,215` dari fase 19/24 tetap tepat; dicatat tanpa diubah: tidak ada.
+- Ronde 2 (31 Okt 2026): bagian yang diubah dibaca ulang; 1 temuan rendah (cara override env di test secret kosong/pendek), diperbaiki; 0 kritis/tinggi/sedang. Belum terverifikasi: Hyperdrive dihitung aktivitas Supabase (C1), GraphQL di Free + dataset Cron + arti `errors` (C9, C16; LANGKAH MANUAL 4), custom alert di Free (C7; LANGKAH MANUAL 5), penerima notifikasi workflow terjadwal setelah merge Umar (C3), crash extension di Organizer (K8).
