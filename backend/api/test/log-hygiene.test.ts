@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { runRetention } from "../src/cron/retention";
+import { logReplicaUsage } from "../src/services/replicas";
 import { limits } from "../src/http/rateLimit";
 import { PUSH_CAP } from "../src/services/push/notify";
 import { b64, jpeg } from "./helpers/images";
@@ -44,6 +45,18 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
       json: { ...body, domain: "other-private.example", url: "https://other-private.example/x", pageReplicaBase64: "@@broken@@" },
     });
     await vi.waitFor(() => expect(lines.some((l) => l.includes('"replica_dropped"'))).toBe(true));
+    // Fase 19: a family over its quota, and the hourly gauge: reason and aggregates only.
+    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_bytes)
+      select ${g.deviceId}, 'https://quota-private.example/', 'quota-private.example', 92, 'blocked', now(),
+             ${g.deviceId} || '/f' || n || '-replica.html.gz', 1000
+      from generate_series(1, 60) n`;
+    await call("/scans", {
+      method: "POST", token: p.token, ip,
+      json: { ...body, domain: "third-private.example", url: "https://third-private.example/x", pageReplicaBase64: await gzipBase64("<html>x</html>") },
+    });
+    await vi.waitFor(() => expect(lines.some((l) => l.includes('"reason":"family_quota"'))).toBe(true));
+    await logReplicaUsage(sql);
+    expect(lines.some((l) => l.includes('"event":"replica_quota_usage"'))).toBe(true);
     const detail = (await (await call(`/scans/${id}`, { token: g.token })).json()) as { screenshotUrl: string | null; pageReplicaUrl: string | null };
     if (detail.screenshotUrl) await call(new URL(detail.screenshotUrl).pathname + new URL(detail.screenshotUrl).search, { token: g.token });
     expect(detail.pageReplicaUrl).toBeTruthy();
@@ -72,7 +85,7 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     for (const leak of [
       g.token, p.token, g.deviceId, p.deviceId, id, "Adhella", "Mom Secret", "very-private-domain", "https://",
       "shoo_wrong", code, ip, "sig=", "ab".repeat(32), env.SCREENSHOT_URL_SECRET!, env.RATE_KEY_SECRET!,
-      "replica.html.gz", "other-private",
+      "replica.html.gz", "other-private", "quota-private", "third-private",
     ]) {
       expect(all, `log contains ${leak.slice(0, 12)}`).not.toContain(leak);
     }
