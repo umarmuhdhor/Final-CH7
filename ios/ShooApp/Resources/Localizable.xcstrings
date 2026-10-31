@@ -692,6 +692,16 @@
         }
       }
     },
+    "Copied from %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disalin dari %@"
+          }
+        }
+      }
+    },
     "Copy" : {
       "localizations" : {
         "id" : {
@@ -720,6 +730,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Salin link"
+          }
+        }
+      }
+    },
+    "Copy of the page · %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salinan halaman · %@"
           }
         }
       }
@@ -876,6 +896,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gagal mengirim. Periksa koneksi lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Couldn't show the copy of the page. Try again later." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salinan halaman belum bisa ditampilkan. Coba lagi nanti."
           }
         }
       }
@@ -1769,6 +1799,16 @@
         }
       }
     },
+    "No copy of this page" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada salinan halaman ini"
+          }
+        }
+      }
+    },
     "No need to guess which sites are safe. Let Shoo do the work for you and your family." : {
       "localizations" : {
         "id" : {
@@ -2098,6 +2138,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Membuka detail"
+          }
+        }
+      }
+    },
+    "Page cut short" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman terpotong"
           }
         }
       }
@@ -2531,6 +2581,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpan nama"
+          }
+        }
+      }
+    },
+    "Saving a copy of the page…" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyimpan salinan halaman…"
           }
         }
       }

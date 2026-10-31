@@ -69,6 +69,14 @@ actor MockRepository: ShooRepository {
     nonisolated let pageSize: Int
     private nonisolated let bundle: Bundle
     private nonisolated let now: @Sendable () -> Date
+    /// `-debug.replicaFixture YES`: Detail of a scan with a screenshot gets a page copy link (`FixtureReplicaLoader`).
+    /// The contract fixtures have `pageReplicaUrl: null`, so previews and the UI gate need this to show a copy.
+    nonisolated let pageCopies: Bool
+
+    /// Link the Detail screen gets for a fixture page copy; `example.invalid` never resolves.
+    static func fixtureReplicaURL(scanId: String) -> URL {
+        URL(string: "https://example.invalid/replicas/\(scanId)")!
+    }
 
     init(
         mode: UserMode = .guardian,
@@ -76,9 +84,11 @@ actor MockRepository: ShooRepository {
         latency: Duration = .milliseconds(300),
         pageSize: Int = MockRepository.pageSize,
         bundle: Bundle = .main,
+        pageCopies: Bool = false,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         profile = mode == .guardian ? Self.guardianProfile : Self.protectedProfile
+        self.pageCopies = pageCopies
         self.scenario = scenario
         self.latency = latency
         self.pageSize = pageSize
@@ -291,7 +301,10 @@ actor MockRepository: ShooRepository {
         else {
             throw RepositoryError.api(.notFound, message: "Scan not found")
         }
-        return scan
+        guard pageCopies, scan.screenshotUrl != nil else { return scan }
+        var copy = scan
+        copy.pageReplicaUrl = Self.fixtureReplicaURL(scanId: scan.id)
+        return copy
     }
 
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {

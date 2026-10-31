@@ -60,12 +60,34 @@ actor StubRepository: ShooRepository {
             throw RepositoryError.network
         }
         // Read first, then let the test act: the answer is a snapshot from before that action.
-        let scan = try await base.scan(id: id)
+        scanCalls += 1
+        if let goneFromCall, scanCalls >= goneFromCall {
+            throw RepositoryError.api(.notFound, message: "Scan not found")
+        }
+        var scan = try await base.scan(id: id)
+        editScan?(&scan, scanCalls)
         if let hook = onScan {
             onScan = nil
             await hook()
         }
         return scan
+    }
+
+    /// `scan(id:)` calls so far, the load's own included.
+    private(set) var scanCalls = 0
+    private var editScan: (@Sendable (inout ScanResult, Int) -> Void)?
+
+    private var goneFromCall: Int?
+
+    /// From this call on (counted like `scanCalls`), `scan(id:)` answers 404.
+    func setGone(fromCall: Int) { goneFromCall = fromCall }
+
+    /// The next `count` loads fail with `.network` (not counted in `scanCalls`).
+    func failNextLoads(_ count: Int) { failLoads = count }
+
+    /// Changes every scan `scan(id:)` returns; gets the call number (from 1).
+    func setEditScan(_ edit: @escaping @Sendable (inout ScanResult, Int) -> Void) {
+        editScan = edit
     }
 
     /// Runs once during the next `scan(id:)`, after the scan was read.

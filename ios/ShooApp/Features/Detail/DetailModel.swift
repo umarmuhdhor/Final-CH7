@@ -39,11 +39,27 @@ final class DetailModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
 
-    init(scanId: String, repository: any ShooRepository, now: @escaping () -> Date = Date.init) {
+    /// fase 18b: a push can open Detail before the Worker stored the page copy (`waitUntil`).
+    /// Within this many seconds of the scan, the screen waits for it instead of saying "no copy".
+    static let copyWindow: TimeInterval = 60
+    /// Ask again 3 s after the load, then once more at 15 s; never a third time.
+    static let copyRetryDelays: [Duration] = [.seconds(3), .seconds(12)]
+
+    /// Waiting for the page copy of a scan that just came in (`awaitsCopy`).
+    private(set) var isSavingCopy = false
+
+    init(
+        scanId: String,
+        repository: any ShooRepository,
+        now: @escaping () -> Date = Date.init,
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) {
         self.scanId = scanId
         self.repository = repository
         self.now = now
+        self.sleep = sleep
     }
 
     // MARK: Derived
@@ -87,11 +103,20 @@ final class DetailModel {
         return VerdictNote.text(for: verdict, viewerDeviceId: viewer?.deviceId, language: language)
     }
 
+    /// No copy and no screenshot yet, on a scan from the last minute (the device clock decides, so
+    /// a scan "from the future" does not count).
+    var awaitsCopy: Bool {
+        guard let scan, scan.pageReplicaUrl == nil, scan.screenshotUrl == nil else { return false }
+        let age = now().timeIntervalSince(scan.detectedAt)
+        return age >= 0 && age <= Self.copyWindow
+    }
+
     // MARK: Actions
 
     func load() async {
         if scan == nil { state = .loading }
         screenshotLinkRefreshed = false
+        replicaLinkRefreshed = false
         let epoch = verdictEpoch
         do {
             async let fetchedScan = repository.scan(id: scanId)
@@ -124,23 +149,66 @@ final class DetailModel {
         ownerAvatarId = try? await repository.familyMembers().first { $0.deviceId == owner }?.avatarId
     }
 
+    /// After `load()`: while `awaitsCopy`, asks for the scan again (`copyRetryDelays`) and takes only
+    /// `pageReplicaUrl` from the answer, so a verdict being sent is never overwritten.
+    func waitForCopy() async {
+        guard awaitsCopy else { return }
+        isSavingCopy = true
+        defer { isSavingCopy = false }
+        for delay in Self.copyRetryDelays {
+            do { try await sleep(delay) } catch { return }
+            guard let current = scan, current.pageReplicaUrl == nil else { return }
+            do {
+                let fresh = try await repository.scan(id: scanId)
+                if let link = fresh.pageReplicaUrl, scan?.id == current.id, scan?.pageReplicaUrl == nil {
+                    scan?.pageReplicaUrl = link
+                    return
+                }
+            } catch let error where error.isCancellation {
+                return
+            } catch RepositoryError.api(.notFound, _) {
+                scan = nil
+                state = .notFound
+                return
+            } catch {
+                // Offline for a moment: the second try may still bring it.
+            }
+        }
+    }
+
     /// The screenshot link failed. It may only have expired (valid 1 h), so ask for the scan once more:
     /// that brings a fresh link, or a 404 when the scan is really gone (contracts/api.md, D-alief-C04).
     /// `true` when a new link came back.
     func refreshScreenshotLink() async -> Bool {
-        guard !screenshotLinkRefreshed, let current = scan else { return false }
+        guard !screenshotLinkRefreshed else { return false }
         screenshotLinkRefreshed = true
+        let fresh = await refreshLink(\.screenshotUrl)
+        if fresh == nil { screenshotLinkRefreshed = false }
+        return fresh ?? false
+    }
+
+    /// Same for the page copy link (`GET /replicas/:id`, valid 1 h). Not after a 429 (the view decides).
+    func refreshReplicaLink() async -> Bool {
+        guard !replicaLinkRefreshed else { return false }
+        replicaLinkRefreshed = true
+        let fresh = await refreshLink(\.pageReplicaUrl)
+        if fresh == nil { replicaLinkRefreshed = false }
+        return fresh ?? false
+    }
+
+    /// `true` when a new link came back, `false` when not, `nil` when cancelled (try again next time).
+    private func refreshLink(_ link: WritableKeyPath<ScanResult, URL?>) async -> Bool? {
+        guard let current = scan else { return false }
         do {
             let fresh = try await repository.scan(id: scanId)
             // A `load()` that finished meanwhile already brought the newest link.
-            guard let link = fresh.screenshotUrl, link != current.screenshotUrl,
-                  scan?.screenshotUrl == current.screenshotUrl
+            guard let url = fresh[keyPath: link], url != current[keyPath: link],
+                  scan?[keyPath: link] == current[keyPath: link]
             else { return false }
-            scan?.screenshotUrl = link
+            scan?[keyPath: link] = url
             return true
         } catch let error where error.isCancellation {
-            screenshotLinkRefreshed = false
-            return false
+            return nil
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound
@@ -179,6 +247,8 @@ final class DetailModel {
     @ObservationIgnored private var verdictEpoch = 0
     /// One fresh screenshot link per load; a second failure shows "isn't available".
     @ObservationIgnored private var screenshotLinkRefreshed = false
+    /// One fresh page copy link per load, like the screenshot.
+    @ObservationIgnored private var replicaLinkRefreshed = false
 
     private static func isCancellation(_ error: any Error) -> Bool {
         error is CancellationError || (error as? URLError)?.code == .cancelled
