@@ -30,14 +30,16 @@ extension XCUIApplication {
     @MainActor
     func dismissNotificationsReminder(timeout: TimeInterval = UITestTimeout.optional, file: StaticString = #filePath, line: UInt = #line) {
         let notNow = alerts.buttons["Not now"].firstMatch
-        guard notNow.waitForExistence(timeout: timeout) else { return }
-        notNow.tap()
+        if notNow.waitForExistence(timeout: timeout) { notNow.tap() }
+        // No other alert may cover the screen either.
         XCTAssertTrue(alerts.firstMatch.waitForNonExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
     }
 
     /// Taps `element`, then waits for `condition`. A tap during a push or pop transition can be lost (F3, F4),
     /// so it taps again (at most `retries` times) while `element` is still there. Only for taps that are
-    /// safe to repeat: Back, opening a pushed screen or a sheet. Each retap shows in the xcresult.
+    /// safe to repeat: Back, opening a pushed screen or a sheet. Each retap shows in the xcresult. With
+    /// `-UITestReduceMotion` transitions are instant, so a retap after `UITestTimeout.screen` means the
+    /// first tap was lost, not that the next screen is still sliding in.
     @MainActor
     func tap(_ element: XCUIElement, until condition: XCUIElement, retries: Int = 2, file: StaticString = #filePath, line: UInt = #line) {
         element.tapWhenHittable(file: file, line: line)
@@ -55,7 +57,10 @@ extension XCUIElement {
     /// `waitForExistence` can land while a transition still covers it.
     @MainActor
     func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(waitForExistence(timeout: timeout), "\(self) never appeared", file: file, line: line)
+        guard waitForExistence(timeout: timeout) else {
+            XCTFail("\(self) never appeared", file: file, line: line)
+            return
+        }
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
         XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: timeout), .completed, "\(self) never became tappable", file: file, line: line)
         tap()
