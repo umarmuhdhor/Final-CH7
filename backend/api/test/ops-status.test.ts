@@ -189,6 +189,9 @@ describe("GET /ops/status (fase 21a, K6)", () => {
       env, createExecutionContext(),
     );
     expect(basic.status).toBe(404);
+    const head = await app.fetch(new Request("http://api.test/ops/status", { method: "HEAD" }), env, createExecutionContext());
+    expect(head.status).toBe(404);
+    expect((await status(TOKEN.slice(0, 0))).status).toBe(404);
   });
 
   it("an empty or short secret → 404 even when the header matches it", async () => {

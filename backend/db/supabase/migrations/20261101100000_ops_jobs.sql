@@ -19,4 +19,7 @@ create table ops_jobs (
 grant select, insert, update on ops_jobs to shoo_api;
 revoke all on ops_jobs from anon, authenticated, service_role;
 alter table ops_jobs enable row level security;
-create policy shoo_api_all on ops_jobs for all to shoo_api using (true) with check (true);
+-- Per command, no DELETE policy: a later stray `grant delete` still removes nothing (security review 21a).
+create policy shoo_api_read on ops_jobs for select to shoo_api using (true);
+create policy shoo_api_write on ops_jobs for insert to shoo_api with check (true);
+create policy shoo_api_update on ops_jobs for update to shoo_api using (true) with check (true);

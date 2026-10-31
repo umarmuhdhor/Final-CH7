@@ -13,14 +13,16 @@ const digest = async (text: string) => crypto.subtle.digest("SHA-256", encoder.e
 
 /**
  * Constant-time compare of the bearer value with OPS_STATUS_TOKEN (fase 21 K6): both sides are
- * hashed first, so timingSafeEqual always compares 32 bytes and the length leaks nothing.
- * A missing or short secret (< 32 characters) never matches.
+ * hashed first, so timingSafeEqual always compares 32 bytes and the length leaks nothing. The hashes
+ * run even without a usable secret (< 32 characters never matches), so the timing does not tell
+ * whether the secret is set.
  */
 async function authorized(secret: string | undefined, header: string | undefined): Promise<boolean> {
   const usable = usableSecret(secret);
-  if (!usable || !header?.startsWith("Bearer ")) return false;
-  const [a, b] = await Promise.all([digest(header.slice("Bearer ".length)), digest(usable)]);
-  return crypto.subtle.timingSafeEqual(a, b);
+  const bearer = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+  const [a, b] = await Promise.all([digest(bearer), digest(usable ?? "")]);
+  const same = crypto.subtle.timingSafeEqual(a, b);
+  return same && usable !== undefined && bearer !== "";
 }
 
 const hours = (h: number | null) => (h === null ? null : Math.round(h * 10) / 10);
