@@ -22,7 +22,9 @@ function hmacKey(secret: string, usage: "sign" | "verify"): Promise<CryptoKey> {
     if (keys.size >= 8) keys.clear();
     key = crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
     keys.set(id, key);
-    key.catch(() => keys.delete(id));
+    key.catch(() => {
+      if (keys.get(id) === key) keys.delete(id);
+    });
   }
   return key;
 }

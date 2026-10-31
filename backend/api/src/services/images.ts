@@ -6,9 +6,12 @@ export interface ImageInfo {
 
 /** Strict base64 (no `data:` prefix, no whitespace). Undefined when malformed or longer than maxBytes. */
 export function decodeBase64(text: string, maxBytes: number): Uint8Array | undefined {
-  if (text.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(text)) return undefined;
+  if (text.length % 4 !== 0) return undefined;
   if ((text.length / 4) * 3 - 2 > maxBytes) return undefined;
-  // Fase 22 O4: native decode where workerd has it (no binary string, no per-byte loop).
+  // Fase 22 O4: native decode where workerd has it (no binary string, no per-byte loop, no regex
+  // pass over 400 KB). fromBase64 throws on any character outside the standard alphabet and on `=`
+  // before the end; the one thing it skips is ASCII whitespace, which makes the output shorter than
+  // the length the text implies, so the exact length check rejects it like the regex below.
   const native = (Uint8Array as { fromBase64?: (s: string) => Uint8Array }).fromBase64;
   if (typeof native === "function") {
     let bytes: Uint8Array;
@@ -17,8 +20,11 @@ export function decodeBase64(text: string, maxBytes: number): Uint8Array | undef
     } catch {
       return undefined;
     }
+    const pad = text.endsWith("==") ? 2 : text.endsWith("=") ? 1 : 0;
+    if (bytes.length !== (text.length / 4) * 3 - pad) return undefined;
     return bytes.length > maxBytes ? undefined : bytes;
   }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(text)) return undefined;
   let bin: string;
   try {
     bin = atob(text);

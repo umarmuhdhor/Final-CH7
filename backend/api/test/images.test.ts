@@ -66,6 +66,10 @@ describe("decodeBase64: native fromBase64 and the fallback agree (fase 22 O4)", 
     ["padding in the middle", "AA==AAAA", 10],
     ["three padding characters", "A===", 10],
     ["non-canonical last character", "AB==", 10],
+    ["whitespace inside a 4-multiple", "AA A", 10],
+    ["tab inside", "AAA\tAAAA", 10],
+    ["padding first", "=AAA", 10],
+    ["data: prefix", "data:image/png;base64,AAAA", 100],
   ];
 
   it.each(cases)("%s", (_name, text, max) => {
