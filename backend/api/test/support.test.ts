@@ -14,7 +14,7 @@ describe("GET /support (E6, fase 24c-1)", () => {
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     const html = await res.text();
     expect(html).toContain('<html lang="en">');
-    for (const s of [CONTACT, "Profile → Delete account", "Disconnect", 'href="/privacy?lang=en"', 'href="/terms?lang=en"', "Shoo support"]) {
+    for (const s of [CONTACT, "Profile → Delete account", "tap Disconnect", "ask your Guardian to disconnect you", "disconnects them first", 'href="/privacy?lang=en"', 'href="/terms?lang=en"', "Shoo support"]) {
       expect(html).toContain(s);
     }
     expect(html).not.toContain("<script");
@@ -24,7 +24,7 @@ describe("GET /support (E6, fase 24c-1)", () => {
     for (const res of [await call("/support?lang=id"), await call("/support", { headers: { "accept-language": "id-ID,id;q=0.9" } })]) {
       const html = await res.text();
       expect(html).toContain('<html lang="id">');
-      for (const s of [CONTACT, "Profil → Hapus akun", "Putuskan", 'href="/privacy?lang=id"', "Bantuan Shoo"]) expect(html).toContain(s);
+      for (const s of [CONTACT, "Profil → Hapus akun", "ketuk Putuskan koneksi", "minta Guardian memutuskan koneksi", 'href="/privacy?lang=id"', "Bantuan Shoo"]) expect(html).toContain(s);
     }
   });
 

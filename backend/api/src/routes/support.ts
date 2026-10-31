@@ -13,10 +13,12 @@ const TEXT: Record<"en" | "id", LegalText> = {
     sections: [
       { h: "Contact", items: [`Questions or problems: ${CONTACT}.`] },
       { h: "Leave a family", items: [
-        "Guardian or protected person: open the family member in the app and tap Disconnect. The Guardian loses access at once and their decisions about your sites are deleted.",
+        "Guardian: open the family member in the app and tap Disconnect. You lose access to their flagged pages at once, and your decisions about their sites are deleted.",
+        "Protected person: ask your Guardian to disconnect you, or delete your account (below).",
       ] },
       { h: "Delete everything", items: [
-        "In the app: Profile → Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are deleted from our server at once.",
+        "In the app: Profile → Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are removed from our server right away.",
+        "A Guardian who still protects someone disconnects them first; the app asks for it.",
         "Deleting only the app leaves your account on our server until you delete it in the app first or contact us.",
       ] },
       { h: "More", items: [
@@ -31,10 +33,12 @@ const TEXT: Record<"en" | "id", LegalText> = {
     sections: [
       { h: "Kontak", items: [`Pertanyaan atau masalah: ${CONTACT}.`] },
       { h: "Keluar dari keluarga", items: [
-        "Guardian atau orang yang dilindungi: buka anggota keluarga di app lalu ketuk Putuskan koneksi. Guardian langsung kehilangan akses dan keputusannya tentang situsmu dihapus.",
+        "Guardian: buka anggota keluarga di app lalu ketuk Putuskan koneksi. Kamu langsung kehilangan akses ke halaman yang ditandai miliknya, dan keputusanmu tentang situsnya dihapus.",
+        "Orang yang dilindungi: minta Guardian memutuskan koneksi, atau hapus akunmu (di bawah).",
       ] },
       { h: "Hapus semuanya", items: [
         "Di app: Profil → Hapus akun. Device, halaman yang ditandai, salinan halaman, screenshot, ikon situs, keputusan, dan hubungan keluarga langsung dihapus dari server kami.",
+        "Guardian yang masih melindungi seseorang memutuskan koneksinya dulu; app akan memintanya.",
         "Menghapus app saja membuat akunmu tetap ada di server kami sampai kamu menghapusnya di app dulu atau menghubungi kami.",
       ] },
       { h: "Lainnya", items: [
