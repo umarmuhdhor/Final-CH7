@@ -47,11 +47,19 @@ struct URLSessionReplicaLoader: ReplicaLoading {
         if status == 429 { throw ReplicaLoadError.rateLimited }
         guard status == 200 else { throw ReplicaLoadError.unavailable }
         // Counted after inflating: a 300 KB gzip can hold far more than 3 MB.
-        var data = Data()
-        for try await byte in bytes {
-            data.append(byte)
-            if data.count > Self.maxHTMLBytes { throw ReplicaLoadError.unavailable }
+        // Bytes go into a reserved buffer (not `Data` one by one); a dropped connection mid-body is
+        // "unavailable" like one that never started, never an expired link.
+        var buffer: [UInt8] = []
+        buffer.reserveCapacity(Int(min(max(response.expectedContentLength, 64 * 1024), Int64(Self.maxHTMLBytes))))
+        do {
+            for try await byte in bytes {
+                buffer.append(byte)
+                if buffer.count > Self.maxHTMLBytes { throw ReplicaLoadError.unavailable }
+            }
+        } catch let error as URLError where error.code != .cancelled {
+            throw ReplicaLoadError.unavailable
         }
+        let data = Data(buffer)
         guard let html = String(data: data, encoding: .utf8) else { throw ReplicaLoadError.unavailable }
         return html
     }
