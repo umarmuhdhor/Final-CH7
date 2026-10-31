@@ -14,6 +14,9 @@ export const limits = {
   // 1000/day is far above a demo's sign-ups; reaching it blocks new devices only, not existing ones.
   createDeviceAll: { bucket: "devices_create_all", max: 1000, windowSeconds: 86400 },
   healthDb: { bucket: "healthz_db", max: 1, windowSeconds: 60 },
+  // GET /ops/status, key "all", counted only after the token matched (fase 21 K6): the ops-watch
+  // workflow calls it 4×/h, the rest is for Alief by hand.
+  opsStatus: { bucket: "ops_status", max: 30, windowSeconds: 3600 },
   familyCode: { bucket: "family_code", max: 6, windowSeconds: 60 },
   createScan: { bucket: "scans_create", max: 120, windowSeconds: 3600 },
   // All devices together, key "all", checked with hitLight (D-alief-B12): bounds what retention

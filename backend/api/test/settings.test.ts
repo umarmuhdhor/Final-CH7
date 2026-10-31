@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runNotifications } from "../src/cron/notifications";
+import type { OpsWriter } from "../src/db/repo/ops";
 import { CRONS } from "../src/index";
 import { summaryText } from "../src/services/push/messages";
 import { guardianPush, ownPush } from "../src/services/push/notify";
@@ -14,6 +15,7 @@ import { call, createDevice, type Created } from "./helpers/seed";
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
+afterEach(() => vi.restoreAllMocks());
 
 const TOKEN = "a".repeat(64);
 const TOKEN_G = "b".repeat(64);
@@ -128,6 +130,52 @@ describe("push switches (Situs berbahaya / diblokir / Aktivitas orang dilindungi
     expect(await guardianPush(sql, mom, scan("blocked"), DAY_JAKARTA)).toBeDefined();
     await call(`/family/members/${p.deviceId}`, { method: "PATCH", token: g.token, json: { notify: false } });
     expect(await guardianPush(sql, mom, scan("blocked"), DAY_JAKARTA)).toBeUndefined();
+  });
+});
+
+describe("hourly cron: ops_jobs (fase 21a)", () => {
+  it("a run moves notifications ok_at", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await runNotifications(sql, env, { sender: new Recorder() });
+    expect((await sql`select failed, ok_at > now() - interval '1 minute' as fresh from ops_jobs where job = 'notifications'`)[0])
+      .toEqual({ failed: 0, fresh: true });
+  });
+
+  it("a failing status write still sends the pushes and logs ops_job_write_failed without details", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const lines: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Renatta");
+    await link(g, p);
+    await patch(g, { apnsToken: TOKEN_G, notifications: { quietHours: false } });
+    await sql`update devices set ext_last_seen_at = now() - interval '30 hours' where id = ${p.deviceId}`;
+    const sender = new Recorder();
+    const broken: OpsWriter = {
+      start: async () => { throw new Error(`ops down ${g.deviceId}`); },
+      finish: async () => { throw new Error(`ops down ${g.deviceId}`); },
+    };
+
+    expect((await runNotifications(sql, env, { sender, ops: broken })).protectionOff).toBe(1);
+    expect(sender.sent).toHaveLength(1);
+    expect(lines).toEqual(Array(2).fill('{"event":"ops_job_write_failed","job":"notifications","error":{"name":"Error"}}'));
+  });
+
+  it("a broken APNs config fails the run (ok_at stays); a rejected device token does not", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Renatta");
+    await link(g, p);
+    await patch(g, { apnsToken: TOKEN_G, notifications: { quietHours: false } });
+    const job = async () => (await sql`select failed, ok_at is not null as ok from ops_jobs where job = 'notifications'`)[0];
+
+    await sql`update devices set ext_last_seen_at = now() - interval '30 hours' where id = ${p.deviceId}`;
+    await runNotifications(sql, env, { sender: { send: async () => ({ result: "failed:config" }) } });
+    expect(await job()).toEqual({ failed: 1, ok: false });
+
+    await sql`update family_links set off_notified_at = null`;
+    await runNotifications(sql, env, { sender: { send: async () => ({ result: "failed:400 BadDeviceToken" }) } });
+    expect(await job()).toEqual({ failed: 0, ok: true });
   });
 });
 

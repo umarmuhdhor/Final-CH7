@@ -19,6 +19,7 @@ declare namespace Cloudflare {
     REPLICAS_ENABLED?: string;
     SCREENSHOT_URL_SECRET?: string;
     RATE_KEY_SECRET?: string;
+    OPS_STATUS_TOKEN?: string;
     /** Tests only: "1" runs the slow opt-in cases (vitest.config.ts). */
     SHOO_SLOW_TESTS?: string;
   }

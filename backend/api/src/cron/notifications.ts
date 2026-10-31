@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { opsWriter, type OpsWriter } from "../db/repo/ops";
 import type { Env, Language } from "../env";
 import { errorInfo } from "../http/logError";
 import { deliverPush } from "../services/push/deliver";
@@ -32,22 +33,40 @@ interface Candidate extends QuietHours {
  * proposed). Rows are claimed before sending, so an overlapping run never pushes twice; a claimed
  * push that then fails is not retried (same as the scan push).
  */
-export async function runNotifications(sql: Sql, env: Env, opts: { sender?: PushSender; now?: Date } = {}): Promise<NotificationsResult> {
+export async function runNotifications(
+  sql: Sql, env: Env, opts: { sender?: PushSender; now?: Date; ops?: OpsWriter } = {},
+): Promise<NotificationsResult> {
   const now = opts.now ?? new Date();
   const sender = opts.sender ?? pushSender(env);
+  const ops = opts.ops ?? opsWriter;
+  await writeOps(() => ops.start(sql, "notifications"));
   const off = await protectionOff(sql, now, MAX_PUSHES);
   const summaries = await weeklySummaries(sql, now, MAX_PUSHES - off.length);
   const messages = [...off, ...summaries];
+  // A run fails (fase 21a, ops_jobs) on pushes that threw or found the APNs config broken. An APNs
+  // rejection of one device (bad or expired token) is normal and only lands in push_log.
+  let failed = 0;
   for (const m of messages) {
     try {
-      await deliverPush(sql, sender, m);
+      if ((await deliverPush(sql, sender, m)) === "failed:config") failed++;
     } catch (err) {
+      failed++;
       console.error(JSON.stringify({ event: "push_failed", source: "cron", error: errorInfo(err) }));
     }
   }
   const result = { protectionOff: off.length, summaries: summaries.length };
+  await writeOps(() => ops.finish(sql, "notifications", { failed, backlog: false }));
   console.log(JSON.stringify({ event: "notifications", ...result }));
   return result;
+}
+
+/** A failed status write never fails the pushes (fase 21a): logged, then the run goes on. */
+async function writeOps(write: () => Promise<void>): Promise<void> {
+  try {
+    await write();
+  } catch (err) {
+    console.error(JSON.stringify({ event: "ops_job_write_failed", job: "notifications", error: errorInfo(err) }));
+  }
 }
 
 /**
