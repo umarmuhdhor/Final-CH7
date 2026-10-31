@@ -73,7 +73,15 @@ final class AppEnvironment {
             )
             session = nil
         } else {
+            #if DEBUG
+            // Live QA on a local stack: `-debug.aiBaseURL http://localhost:8788` gives the extension layers 3–4
+            // (AppConfig has no AI URL in Debug). `SessionStore.isAllowed` still rejects anything but HTTPS or localhost.
+            let store = SessionStore(
+                aiBaseURL: Self.value(after: "-debug.aiBaseURL", in: arguments).flatMap(URL.init(string:)) ?? AppConfig.aiBaseURL
+            )
+            #else
             let store = SessionStore()
+            #endif
             let client = APIClient(
                 baseURL: AppConfig.apiBaseURL,
                 token: { try store.readToken() },

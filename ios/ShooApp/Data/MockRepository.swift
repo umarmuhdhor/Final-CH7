@@ -15,6 +15,15 @@ actor MockRepository: ShooRepository {
         case oneMember
         /// Fixture data plus a third, connected member without risky sites (UI gate GD-03: 3 people).
         case threeMembers
+        // Figma parity QA (`MockScenarios`): the content the Figma frames show, and variants of it.
+        case figma
+        case mixedVerdicts
+        case heavy
+        case edge
+        case allSafe
+        case allBlocked
+        /// Imelda's eval corpus with the detector's real results (`Fixtures/corpus-scans.json`).
+        case corpus
     }
 
     /// Not in contracts/fixtures: only the 3-member UI gate uses it.
@@ -87,7 +96,12 @@ actor MockRepository: ShooRepository {
         pageCopies: Bool = false,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
-        profile = mode == .guardian ? Self.guardianProfile : Self.protectedProfile
+        let dataset = MockScenarios.dataset(for: scenario, now: now(), bundle: bundle)
+        if let dataset {
+            profile = mode == .guardian ? dataset.guardian : dataset.protected
+        } else {
+            profile = mode == .guardian ? Self.guardianProfile : Self.protectedProfile
+        }
         self.pageCopies = pageCopies
         self.scenario = scenario
         self.latency = latency
@@ -106,6 +120,9 @@ actor MockRepository: ShooRepository {
         case .empty:
             allScans = []
             members = []
+        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus:
+            allScans = dataset?.scans ?? []
+            members = dataset?.members ?? []
         }
     }
 
