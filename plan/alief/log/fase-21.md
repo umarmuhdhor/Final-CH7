@@ -1,6 +1,6 @@
 # Log fase 21 — Monitoring, alert, dan observability
 
-- **Status:** [r] 21a — PR `feat/B9-ops-status` (lihat PR), reviewer @umarmuhdhor, **pending LANGKAH MANUAL 1–3** (setelah merge). 21b tertahan (workflow `.github/` milik Umar, pertanyaan di PR 21a). 21c: lihat bagian 21c di bawah.
+- **Status:** [r] 21a — PR `feat/B9-ops-status` (lihat PR), reviewer @umarmuhdhor, **pending LANGKAH MANUAL 1–3** (setelah merge). 21b tertahan (workflow `.github/` milik Umar, pertanyaan di PR 21a). [r] 21c — PR `feat/EX-07-ops-replica` (stacked di #211 19a + #209 21a), **pending merge #209 + #211**, lalu LANGKAH MANUAL 1 21a.
 - **Model:** Claude Opus 5.5, sesi track be. 1 Nov 2026.
 - **Rencana:** `fase-21-monitoring.md` (sudah diverifikasi 2 ronde + cek lintas fase R8). Tidak ada `fase-21-plan.md` terpisah: Langkah kerja 21a di file fase sudah per langkah TDD, dipakai langsung.
 - **Keputusan K:** semua dari R8 §c (D-alief-C29): K1 A (workflow `ops-watch`), K3 angka tabel, K6 token header + 404 + issue kode saja. Lihat D-alief-B13 di bawah.
@@ -81,10 +81,43 @@ Verifikasi cloud setelah butir 1: pagi setelah run 19:00 UTC pertama → `jobs.r
 
 Tidak ada.
 
+## 21c — kuota replica di `/ops/status` (`feat/EX-07-ops-replica`)
+
+Dasar: `feat/EX-07-replica-family-quota` (19a, #211) + merge `feat/B9-ops-status` (21a, #209); konflik satu baris daftar `leak` di `log-hygiene.test.ts` (keduanya digabung). Fase 19 belum merge, jadi PR ini stacked; isinya hanya commit 21c setelah #209 dan #211 merge.
+
+### Checklist langkah
+
+- [x] 1. Merah: `test/ops-status.test.ts` — `replica_reserve` (warn) / `replica_full` (alert) dari `level` gauge; `replica_family_cap` 2 → tidak, 3 → warn; `opsSnapshot` membaca `replicaUsage` (60 upload satu keluarga → `familiesAtCap` 1); respons 200 punya `replica` dengan field K5.2 persis; urutan kode tetap.
+- [x] 2. Hijau: `opsSnapshot(sql, { quota, maxBytes })` memanggil `replicaUsage` fase 19 (kuota masuk sebagai parameter, repo tidak mengimpor service). `evaluate` + `OPS_THRESHOLDS.replicaFamiliesAtCap = 3`. Runbook README (4 baris: `replica_full`, `replica_reserve`, `replica_family_cap`, `replica_unknown`) + API.md.
+- [x] 3. Setelah review security: query gauge gagal → `replica: null`, kode `replica_unknown` (warn), satu baris `ops_replica_usage_failed` (nama + SQLSTATE saja); angka kesehatan lain tetap terjawab.
+
+### Verifikasi
+
+| Perintah | Hasil |
+|---|---|
+| `pnpm -C backend/api typecheck` | bersih |
+| `vitest run test/ops-status.test.ts test/log-hygiene.test.ts` | 27/27 |
+| `vitest run` (suite penuh) | 582 lulus, 1 skip |
+| pgTAP | tidak dijalankan ulang: tanpa migrasi baru (21a sudah PASS) |
+
+Catatan lokal: migrasi `ops_jobs` dipasang ke DB lokal dengan `psql` (tanpa reset) karena DB lokal terakhir di-reset dari cabang tanpa 21a.
+
+### Review (berurutan)
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:security-reviewer` | Tidak ada CRITICAL/HIGH. Urutan benar (auth → rate limit → query). LOW 1: `topFamily*` saat `families = 1` = pemakaian satu keluarga (hanya pemegang token). LOW 2: query gauge per panggilan (dibatasi 30/jam). LOW 3: gauge gagal → seluruh `/ops/status` 500 | LOW 1: README: angka `replica` tidak pernah ke tempat publik (kode saja). LOW 2: diterima. LOW 3: `replica: null` + `replica_unknown` (`491ce4c`) |
+| `ecc:typescript-reviewer` | Tidak ada CRITICAL/HIGH. MEDIUM: jalur gagal gauge tidak dites sampai log. LOW: repo menulis log (`console.error` di repo), dua round trip berurutan, urutan semua kode belum dipaku | MEDIUM: test baru (`sql` palsu gagal di query kedua → `replica` null, satu baris log nama + kode, tanpa teks SQL). LOW urutan: dipaku. LOW log di repo: diterima (satu tempat, `errorInfo`). LOW round trip: diterima (30/jam) |
+
+### Privasi Apple (SECURITY §3)
+
+- Respons hanya angka agregat dari gauge fase 19 (tanpa id/domain/path); test 200 memaku field persis.
+- Log baru `ops_replica_usage_failed`: hanya `error.name` + SQLSTATE (test).
+
 ## Catatan handoff
 
 - 21b: workflow harus memperlakukan 429 dari `/ops/status` sebagai "tidak diketahui" (bukan sehat, bukan `ops_status_unreachable` palsu), dan tidak pernah mencetak angka (`dbBytes`, antrean) di log Actions (review security LOW 4, 5).
 - Kalau `blocklist_entries` lewat ±10k baris: migrasi `create index concurrently blocklist_queue on blocklist_entries(first_seen_at) where approved_at is null and rejected_at is null and removed_at is null and families > 0` (di luar transaksi; review database MEDIUM).
-- 21c (`feat/EX-07-ops-replica`) menambah `replica_reserve`/`replica_full`/`replica_family_cap` dari `replicaUsage` fase 19, stacked di atas 19a.
+- 21c selesai (stacked). Workflow 21b: kode `replica_*` ikut daftar kode publik; angka `replica` tidak pernah dicetak.
 - `R3-catatan-api.md` §7: tambah `OPS_STATUS_TOKEN` (koordinator, PR plan).
 - `app.onError` tanpa field `event` tetap (PR kecil terpisah kalau dibutuhkan).

@@ -1,6 +1,7 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import type { Sql } from "postgres";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../src/app";
 import { finishJob, opsSnapshot, startJob, type OpsSnapshot } from "../src/db/repo/ops";
 import type { Env } from "../src/env";
@@ -15,6 +16,7 @@ const sql = testSql();
 // shoo_api may only queue a domain with (domain, families); first_seen_at is set by a person here.
 const admin = adminSql();
 beforeEach(() => resetDb(sql));
+afterEach(() => vi.restoreAllMocks());
 
 useRateKeySecret(env.RATE_KEY_SECRET);
 const TOKEN = env.OPS_STATUS_TOKEN!;
@@ -151,6 +153,16 @@ describe("evaluate: K3 thresholds (fase 21a)", () => {
     expect(codes(s).map((f) => f.code)).toEqual([
       "retention_failed", "retention_backlog", "notifications_stale", "replica_full", "replica_family_cap",
     ]);
+    s.replica!.level = "reserve";
+    s.dbBytes = 400 * MB;
+    s.blocklistQueue = 1;
+    s.blocklistOldestHours = 30;
+    expect(codes(s).map((f) => f.code)).toEqual([
+      "retention_failed", "retention_backlog", "notifications_stale", "db_size_high", "blocklist_queue",
+      "replica_reserve", "replica_family_cap",
+    ]);
+    s.replica = null;
+    expect(codes(s).map((f) => f.code).slice(-1)).toEqual(["replica_unknown"]);
   });
 });
 
@@ -166,6 +178,27 @@ describe("opsSnapshot + ops_jobs writers", () => {
     expect(s.blocklistOldestHours).toBeNull();
     expect(s.healthzAgeHours).toBeNull();
     expect(s.replica).toMatchObject({ level: "ok", uploads: 0, families: 0, familiesAtCap: 0 });
+  });
+
+  it("a failing gauge query gives replica null + one ops_replica_usage_failed line (name and code only); health numbers stay", async () => {
+    await finishJob(sql, "retention", { failed: 0, backlog: false });
+    const errors: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errors.push(a.map(String).join(" ")));
+    // The first query (health) goes to the DB; the second (the gauge) fails like a statement timeout.
+    let calls = 0;
+    const flaky = ((...args: Parameters<Sql>) => {
+      calls += 1;
+      if (calls >= 2) {
+        return Promise.reject(Object.assign(new Error("canceling statement select secret-domain.example"), { code: "57014" }));
+      }
+      return (sql as unknown as (...a: Parameters<Sql>) => unknown)(...args);
+    }) as unknown as Sql;
+    const s = await opsSnapshot(flaky, REPLICA_OPTS);
+    expect(s.replica).toBeNull();
+    expect(s.retention.failed).toBe(0);
+    expect(s.retention.okAgeHours).not.toBeNull();
+    expect(errors).toEqual(['{"event":"ops_replica_usage_failed","error":{"name":"Error","code":"57014"}}']);
+    expect(evaluate(s).failing).toContainEqual({ code: "replica_unknown", level: "warn" });
   });
 
   it("replica numbers come from the fase 19 gauge (replicaUsage), aggregates only (21c)", async () => {
