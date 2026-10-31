@@ -8,6 +8,7 @@ export interface OpsWriter {
   finish(sql: Sql, job: OpsJob, run: { failed: number; backlog: boolean }): Promise<void>;
 }
 
+/** started_at newer than finished_at = a run is going on, or died without finishing (read by hand, runbook). */
 export async function startJob(sql: Sql, job: OpsJob): Promise<void> {
   await sql`insert into ops_jobs (job, started_at) values (${job}, now())
             on conflict (job) do update set started_at = now()`;
@@ -43,7 +44,7 @@ export interface OpsSnapshot {
 
 /** One round trip. `exists` on scans uses the index scans_created. */
 export async function opsSnapshot(sql: Sql): Promise<OpsSnapshot> {
-  const [r] = await sql<{
+  const [row] = await sql<{
     rOk: number | null; rAge: number | null; rFailed: number | null; rBacklog: boolean | null;
     nOk: number | null; nAge: number | null;
     overdue: boolean; stuck: number; dbBytes: number; queue: number; oldest: number | null; healthz: number | null;
@@ -67,14 +68,16 @@ export async function opsSnapshot(sql: Sql): Promise<OpsSnapshot> {
       select count(*)::int as n, min(first_seen_at) as oldest from blocklist_entries
       where approved_at is null and rejected_at is null and removed_at is null and families > 0
     ) q`;
+  // A select without from-filters always returns one row.
+  const r = row!;
   return {
-    retention: { okAgeHours: r!.rOk, ageHours: r!.rAge, failed: r!.rFailed ?? 0, backlog: r!.rBacklog ?? false },
-    notifications: { okAgeHours: r!.nOk, ageHours: r!.nAge },
-    scansOverdue: r!.overdue,
-    tombstonesStuck: r!.stuck,
-    dbBytes: r!.dbBytes,
-    blocklistQueue: r!.queue,
-    blocklistOldestHours: r!.oldest,
-    healthzAgeHours: r!.healthz,
+    retention: { okAgeHours: r.rOk, ageHours: r.rAge, failed: r.rFailed ?? 0, backlog: r.rBacklog ?? false },
+    notifications: { okAgeHours: r.nOk, ageHours: r.nAge },
+    scansOverdue: r.overdue,
+    tombstonesStuck: r.stuck,
+    dbBytes: r.dbBytes,
+    blocklistQueue: r.queue,
+    blocklistOldestHours: r.oldest,
+    healthzAgeHours: r.healthz,
   };
 }

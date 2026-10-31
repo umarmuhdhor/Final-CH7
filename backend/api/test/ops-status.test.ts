@@ -4,16 +4,18 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app";
 import { finishJob, opsSnapshot, startJob, type OpsSnapshot } from "../src/db/repo/ops";
 import type { Env } from "../src/env";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 import { limits } from "../src/http/rateLimit";
 import { evaluate } from "../src/services/opsStatus";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
-import { createDevice, freshIp } from "./helpers/seed";
+import { call, createDevice, freshIp } from "./helpers/seed";
 
 const sql = testSql();
 // shoo_api may only queue a domain with (domain, families); first_seen_at is set by a person here.
 const admin = adminSql();
 beforeEach(() => resetDb(sql));
 
+useRateKeySecret(env.RATE_KEY_SECRET);
 const TOKEN = env.OPS_STATUS_TOKEN!;
 const MB = 1024 * 1024;
 
@@ -30,6 +32,7 @@ const healthy = (): OpsSnapshot => ({
 });
 const codes = (s: OpsSnapshot) => evaluate(s).failing;
 
+// The order of `failing` is part of the interface: ops-watch (21b) compares code sets run to run.
 describe("evaluate: K3 thresholds (fase 21a)", () => {
   it("a healthy snapshot is ok with nothing failing", () => {
     expect(evaluate(healthy())).toEqual({ ok: true, failing: [] });
@@ -177,21 +180,16 @@ const opsHits = async () =>
   (await sql<{ n: number }[]>`select count(*)::int as n from rate_limit_hits where bucket = ${limits.opsStatus.bucket}`)[0]!.n;
 
 describe("GET /ops/status (fase 21a, K6)", () => {
-  it("no header, a wrong token or a non-Bearer header → 404 not_found, the same body as an unknown path", async () => {
-    const unknown = await (await status(null, {})).clone().json();
-    for (const res of [await status(null), await status("x".repeat(40)), await status(TOKEN + "x")]) {
+  it("no header, a wrong token, a non-Bearer header or HEAD → 404 not_found, the same body as an unknown path", async () => {
+    const unknown = await call("/nope");
+    const expected = await unknown.json();
+    expect(expected).toEqual({ error: { code: "not_found", message: "Not found" } });
+    const basic = await call("/ops/status", { headers: { authorization: `Basic ${TOKEN}` } });
+    for (const res of [await status(null), await status("x".repeat(40)), await status(TOKEN + "x"), basic]) {
       expect(res.status).toBe(404);
-      expect(await res.json()).toEqual({ error: { code: "not_found", message: "Not found" } });
+      expect(await res.json()).toEqual(expected);
     }
-    expect(unknown).toEqual({ error: { code: "not_found", message: "Not found" } });
-    const basic = await app.fetch(
-      new Request("http://api.test/ops/status", { headers: { authorization: `Basic ${TOKEN}`, "cf-connecting-ip": freshIp() } }),
-      env, createExecutionContext(),
-    );
-    expect(basic.status).toBe(404);
-    const head = await app.fetch(new Request("http://api.test/ops/status", { method: "HEAD" }), env, createExecutionContext());
-    expect(head.status).toBe(404);
-    expect((await status(TOKEN.slice(0, 0))).status).toBe(404);
+    expect((await call("/ops/status", { method: "HEAD" })).status).toBe(404);
   });
 
   it("an empty or short secret → 404 even when the header matches it", async () => {
@@ -243,7 +241,10 @@ describe("GET /ops/status (fase 21a, K6)", () => {
   it("rate limit 30/h counts only calls with the right token: 31st → 429; wrong tokens never write a row", async () => {
     for (let i = 0; i < 40; i++) expect((await status("y".repeat(40))).status).toBe(404);
     expect(await opsHits()).toBe(0);
-    for (let i = 0; i < 30; i++) expect((await status(TOKEN)).status).toBe(200);
+    // 29 earlier calls as rows (each request opens a DB connection; the local pool is shared by the suite).
+    const key = await keyHash(`${limits.opsStatus.bucket}:all`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select ${limits.opsStatus.bucket}, ${key} from generate_series(1, 29)`;
+    expect((await status(TOKEN)).status).toBe(200);
     const limited = await status(TOKEN);
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBeTruthy();

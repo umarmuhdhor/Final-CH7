@@ -152,13 +152,30 @@ describe("hourly cron: ops_jobs (fase 21a)", () => {
     await sql`update devices set ext_last_seen_at = now() - interval '30 hours' where id = ${p.deviceId}`;
     const sender = new Recorder();
     const broken: OpsWriter = {
-      start: async () => {},
+      start: async () => { throw new Error(`ops down ${g.deviceId}`); },
       finish: async () => { throw new Error(`ops down ${g.deviceId}`); },
     };
 
     expect((await runNotifications(sql, env, { sender, ops: broken })).protectionOff).toBe(1);
     expect(sender.sent).toHaveLength(1);
-    expect(lines).toEqual(['{"event":"ops_job_write_failed","job":"notifications","error":{"name":"Error"}}']);
+    expect(lines).toEqual(Array(2).fill('{"event":"ops_job_write_failed","job":"notifications","error":{"name":"Error"}}'));
+  });
+
+  it("a broken APNs config fails the run (ok_at stays); a rejected device token does not", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Renatta");
+    await link(g, p);
+    await patch(g, { apnsToken: TOKEN_G, notifications: { quietHours: false } });
+    const job = async () => (await sql`select failed, ok_at is not null as ok from ops_jobs where job = 'notifications'`)[0];
+
+    await sql`update devices set ext_last_seen_at = now() - interval '30 hours' where id = ${p.deviceId}`;
+    await runNotifications(sql, env, { sender: { send: async () => ({ result: "failed:config" }) } });
+    expect(await job()).toEqual({ failed: 1, ok: false });
+
+    await sql`update family_links set off_notified_at = null`;
+    await runNotifications(sql, env, { sender: { send: async () => ({ result: "failed:400 BadDeviceToken" }) } });
+    expect(await job()).toEqual({ failed: 0, ok: true });
   });
 });
 

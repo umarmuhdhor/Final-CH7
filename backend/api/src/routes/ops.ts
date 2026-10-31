@@ -9,7 +9,7 @@ import { evaluate } from "../services/opsStatus";
 export const ops = new Hono<AppEnv>();
 
 const encoder = new TextEncoder();
-const digest = async (text: string) => crypto.subtle.digest("SHA-256", encoder.encode(text));
+const digest = async (text: string): Promise<ArrayBuffer> => crypto.subtle.digest("SHA-256", encoder.encode(text));
 
 /**
  * Constant-time compare of the bearer value with OPS_STATUS_TOKEN (fase 21 K6): both sides are
@@ -22,10 +22,11 @@ async function authorized(secret: string | undefined, header: string | undefined
   const bearer = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
   const [a, b] = await Promise.all([digest(bearer), digest(usable ?? "")]);
   const same = crypto.subtle.timingSafeEqual(a, b);
+  // An empty bearer and an unusable secret both hash "": these two checks stop that match.
   return same && usable !== undefined && bearer !== "";
 }
 
-const hours = (h: number | null) => (h === null ? null : Math.round(h * 10) / 10);
+const hours = (h: number | null): number | null => (h === null ? null : Math.round(h * 10) / 10);
 
 /**
  * Internal health check for the ops-watch workflow and Alief (fase 21a, B9). Not a client endpoint,
