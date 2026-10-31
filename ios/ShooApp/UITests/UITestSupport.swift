@@ -45,7 +45,7 @@ extension XCUIApplication {
         element.tapWhenHittable(file: file, line: line)
         for attempt in 0...retries {
             if condition.waitForExistence(timeout: UITestTimeout.screen) { return }
-            guard attempt < retries, element.exists, element.isHittable else { break }
+            guard attempt < retries, element.exists else { break }
             XCTContext.runActivity(named: "Retap \(element.identifier) (attempt \(attempt + 2))") { _ in element.tap() }
         }
         XCTFail("\(condition) did not appear after tapping \(element)\n\(debugDescription)", file: file, line: line)
@@ -54,15 +54,19 @@ extension XCUIApplication {
 
 extension XCUIElement {
     /// Waits until the element exists and can be tapped, then taps it. A plain `tap()` right after
-    /// `waitForExistence` can land while a transition still covers it.
+    /// `waitForExistence` can land while a transition still covers it. Some elements never report
+    /// `isHittable` though they take taps (toolbar buttons on iOS 26, e.g. `profileButton`): after
+    /// `hittableWait` those are tapped anyway, and `tap(_:until:)` checks the result.
     @MainActor
-    func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, file: StaticString = #filePath, line: UInt = #line) {
+    func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, hittableWait: TimeInterval = 2, file: StaticString = #filePath, line: UInt = #line) {
         guard waitForExistence(timeout: timeout) else {
             XCTFail("\(self) never appeared", file: file, line: line)
             return
         }
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
-        XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: timeout), .completed, "\(self) never became tappable", file: file, line: line)
+        if XCTWaiter().wait(for: [hittable], timeout: hittableWait) != .completed {
+            XCTContext.runActivity(named: "\(identifier) not reported hittable, tapping anyway") { _ in }
+        }
         tap()
     }
 }
