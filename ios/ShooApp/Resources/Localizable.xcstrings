@@ -4263,6 +4263,74 @@
         }
       }
     },
+    "activity.note.notSafe %@" : {
+      "comment" : "Activity row (Figma 450:8734): the guardian marked this site not safe. %@ = guardian's name or 'you'",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "According to %@, this website is dangerous!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurut %@ website ini berbahaya!"
+          }
+        }
+      }
+    },
+    "activity.note.safe %@" : {
+      "comment" : "Activity row (Figma 450:8744): the guardian marked this blocked site safe. %@ = guardian's name or 'you'",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "According to %@, this link is safe.\nShoo still doesn't recommend opening it"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurut %@ link ini aman.\nShoo tetap tak menyarankan untuk membuka link ini"
+          }
+        }
+      }
+    },
+    "activity.note.unseen %@" : {
+      "comment" : "Activity row (Figma 450:8739): blocked site, the guardian has not decided yet. %@ = guardian's name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ hasn't seen this website yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ belum melihat website ini"
+          }
+        }
+      }
+    },
+    "activity.note.you" : {
+      "comment" : "Activity row note: the viewer made the verdict themselves",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kamu"
+          }
+        }
+      }
+    },
     "Shows whose activity to see" : {
       "localizations" : {
         "id" : {
