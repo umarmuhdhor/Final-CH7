@@ -11,8 +11,11 @@ final class DetailUITests: XCTestCase {
     }
 
     @MainActor
-    private func openDetail(_ scanId: String, mode: String = "guardian", language: String = "en") -> XCUIApplication {
+    private func openDetail(
+        _ scanId: String, mode: String = "guardian", language: String = "en", pageCopy: Bool = false
+    ) -> XCUIApplication {
         let app = XCUIApplication()
+        if pageCopy { app.launchArguments += ["-debug.replicaFixture", "YES"] }
         app.launchArguments += [
             "-UITestMock", "YES",
             "-settings.onboardingCompleted", "YES",
@@ -23,6 +26,18 @@ final class DetailUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
         return app
+    }
+
+    /// fase 18b: the page copy is drawn into the cards, with its line above them.
+    @MainActor
+    func testPageCopyShowsWithItsLine() {
+        let app = openDetail(Self.blocked92, pageCopy: true)
+        let line = app.descendants(matching: .any)["detail.pageCopy"].firstMatch
+        XCTAssertTrue(line.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(line.label.contains("Copy of the page"), line.label)
+        XCTAssertTrue(line.label.contains("Copied from bca-verifikasi.site/login/pin"), line.label)
+        XCTAssertTrue(app.buttons["detail.screenshot"].firstMatch.isEnabled)
+        XCTAssertFalse(app.webViews.firstMatch.exists, "no live web view on screen")
     }
 
     @MainActor

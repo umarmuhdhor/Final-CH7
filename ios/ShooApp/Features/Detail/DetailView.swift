@@ -349,7 +349,7 @@ struct DetailView: View {
         }
         copyState = .loading
         do {
-            let html = try await replicaLoader.html(at: url)
+            let html = try await pageLoader.html(at: url)
             // Up to 3 MB of device-written text: checked off the main thread.
             let (locked, meta) = await Task.detached(priority: .userInitiated) {
                 (ReplicaHTML.locked(html), ReplicaMeta.read(from: html))
@@ -396,6 +396,13 @@ struct DetailView: View {
             // A new link restarts `.task(id:)`; otherwise the cards show no photo.
             _ = await model.refreshScreenshotLink()
         }
+    }
+
+    private var pageLoader: any ReplicaLoading {
+        #if DEBUG
+        if env.repository is MockRepository { return FixtureReplicaLoader() }
+        #endif
+        return replicaLoader
     }
 
     private var loader: any ScreenshotLoading {

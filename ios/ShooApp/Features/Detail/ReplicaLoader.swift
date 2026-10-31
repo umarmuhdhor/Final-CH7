@@ -70,3 +70,33 @@ struct URLSessionReplicaLoader: ReplicaLoading {
         #endif
     }
 }
+
+#if DEBUG
+/// The page copy `MockRepository` links to with `-debug.replicaFixture YES`: a stand-in bank login page as
+/// replica.js writes it (CSP meta, `shoo-replica` meta with marks), so previews and the UI gate show the
+/// copy, the "Copy of the page" line and both spotlight variants.
+struct FixtureReplicaLoader: ReplicaLoading {
+    func html(at url: URL) async throws -> String {
+        let meta = #"{&quot;v&quot;:1,&quot;url&quot;:&quot;https://bca-verifikasi.site/login/pin&quot;,&quot;capturedAt&quot;:&quot;2026-10-31T03:42:00Z&quot;,&quot;focusY&quot;:300,&quot;truncated&quot;:false,&quot;marks&quot;:[{&quot;signalId&quot;:&quot;asks_pin&quot;,&quot;x&quot;:24,&quot;y&quot;:332,&quot;w&quot;:342,&quot;h&quot;:52},{&quot;signalId&quot;:&quot;unreasonable_request&quot;,&quot;x&quot;:24,&quot;y&quot;:420,&quot;w&quot;:342,&quot;h&quot;:44},{&quot;signalId&quot;:&quot;unreasonable_request&quot;,&quot;x&quot;:24,&quot;y&quot;:560,&quot;w&quot;:342,&quot;h&quot;:52}]}"#
+        let field = "display:block;box-sizing:border-box;width:342px;height:52px;margin:0 24px;border:1px solid #c9d3df;border-radius:10px;background:#fff"
+        return """
+            <!doctype html><html><head><meta charset="utf-8">\
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">\
+            <meta name="viewport" content="width=device-width,initial-scale=1">\
+            <meta name="shoo-replica" content="\(meta)"><title>KlikBCA - Verifikasi Akun</title></head>\
+            <body style="margin:0;font-family:-apple-system,Helvetica,sans-serif;background:#f3f6fa;color:#1d2733">\
+            <div style="height:64px;background:#0a5cab;color:#fff;font-weight:700;font-size:20px;line-height:64px;padding:0 24px">KlikBCA</div>\
+            <div style="padding:28px 24px 0;font-size:22px;font-weight:700">Verifikasi Akun Anda</div>\
+            <div style="padding:10px 24px 0;font-size:15px;color:#4b5868;height:80px">Akun Anda dibekukan sementara. Selesaikan verifikasi dalam 15 menit.</div>\
+            <div style="padding:60px 24px 8px;font-size:14px;font-weight:600">PIN KlikBCA (6 digit)</div>\
+            <input type="password" name="pin" style="\(field)">\
+            <div style="margin:36px 24px 0;height:44px;font-size:15px;color:#b42318;font-weight:600">Transfer biaya aktivasi Rp 150.000 untuk membuka akun</div>\
+            <div style="padding:52px 24px 8px;font-size:14px;font-weight:600">Nomor rekening tujuan</div>\
+            <input type="text" name="rekening" style="\(field)">\
+            <div style="margin:32px 24px;height:52px;border-radius:26px;background:#0a5cab;color:#fff;text-align:center;line-height:52px;font-weight:700">Verifikasi Sekarang</div>\
+            <div style="height:300px"></div></body></html>
+            """
+    }
+}
+#endif
+

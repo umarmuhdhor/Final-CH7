@@ -67,7 +67,10 @@ final class AppEnvironment {
         if usesMock {
             let scenario = Self.value(after: "-mock.scenario", in: arguments)
                 .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
-            repository = MockRepository(mode: settings.mode ?? .guardian, scenario: scenario)
+            repository = MockRepository(
+                mode: settings.mode ?? .guardian, scenario: scenario,
+                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
+            )
             session = nil
         } else {
             let store = SessionStore()
