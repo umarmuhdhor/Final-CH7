@@ -41,6 +41,8 @@ struct URLSessionScreenshotLoader: ScreenshotLoading {
         configuration.httpShouldSetCookies = false
         configuration.urlCredentialStorage = nil
         configuration.timeoutIntervalForRequest = 20
+        // The request timeout is idle time only: a body dripping one byte every 19 s would never end.
+        configuration.timeoutIntervalForResource = 30
         return configuration
     }
 

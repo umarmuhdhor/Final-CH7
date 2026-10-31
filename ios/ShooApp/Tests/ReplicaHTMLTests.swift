@@ -99,6 +99,28 @@ struct ReplicaHTMLTests {
         #expect(took < .seconds(1))
     }
 
+    /// SVG gradients in a real capture are not `<link>` (security review 31 Oct, L5).
+    @Test func svgGradientIsNotALink() throws {
+        let svg = #"<svg><defs><linearGradient id="g"><stop offset="0"/></linearGradient></defs></svg>"#
+        let page = Self.extensionSample.replacingOccurrences(of: "<title>KlikBCA</title>", with: "<title>KlikBCA</title>\(svg)")
+        #expect(ReplicaHTML.locked(page) != nil)
+    }
+
+    @Test(arguments: ["<link", "<link/>", "<base\nhref=x>", "<frameset>"])
+    func tagNameEndsAtWhitespaceSlashBracketOrEnd(tag: String) {
+        #expect(!ReplicaHTML.passesGate("<p>x</p>\(tag)"))
+    }
+
+    /// A BOM or a blank line before the doctype keeps the lock after it (security review 31 Oct, L4).
+    @Test func doctypeAfterBOMOrWhitespaceStaysFirst() throws {
+        for prefix in ["\u{FEFF}", "\n  "] {
+            let locked = try #require(ReplicaHTML.locked(prefix + "<!doctype html><html><body>x</body></html>"))
+            let doctype = try #require(locked.range(of: "<!doctype html>"))
+            let csp = try #require(locked.range(of: "Content-Security-Policy"))
+            #expect(doctype.upperBound <= csp.lowerBound)
+        }
+    }
+
     @Test func escapedTextIsNotATag() {
         // `&lt;link` in the sample is page text, not markup.
         #expect(ReplicaHTML.passesGate(Self.extensionSample))

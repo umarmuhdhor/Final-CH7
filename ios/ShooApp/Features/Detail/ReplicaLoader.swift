@@ -68,7 +68,7 @@ struct URLSessionReplicaLoader: ReplicaLoading {
     /// plain HTTP only for the local Worker (`wrangler dev`) in Debug builds.
     static func isAllowed(_ url: URL, host allowedHost: String) -> Bool {
         guard let host = url.host(), host == allowedHost,
-              url.path().hasPrefix("/replicas/"), !url.path().contains("..")
+              url.path().hasPrefix("/replicas/"), !url.path(percentEncoded: false).contains(".."), url.user() == nil
         else { return false }
         if url.scheme == "https" { return url.port == nil }
         #if DEBUG
