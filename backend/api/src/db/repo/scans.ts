@@ -213,6 +213,8 @@ export async function precheckReplica(
            exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as "hasFamily",
            c.*
     from (${replicaCountsQuery(sql, scan.ownerId)}) c`;
+  // An aggregate without group by: always exactly one row. The counts also run for a reuse or a
+  // device without family, where they are not used: one index-only pass, cheaper than a second trip.
   const r = row!;
   const reuse = r.reuse ?? undefined;
   return { reuse, family: r.hasFamily, quota: reuse || !r.hasFamily ? undefined : quotaFull(r, bytes, quota) };

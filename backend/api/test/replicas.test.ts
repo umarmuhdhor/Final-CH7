@@ -974,6 +974,18 @@ describe("quota pre-check before the IP slot and the inflate (fase 22 K12)", () 
     expect(await ipRows()).toBe(1);
   });
 
+  it("a full quota never blocks a reuse: the same domain within 24 h keeps the earlier replica", async () => {
+    const { p } = await family();
+    const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    const path = (await stored(first)).path;
+    await fakeUploads(p.deviceId, REPLICA_QUOTA.owner);
+    const count = inflates();
+    const again = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    await until(async () => (await row(again))?.path === path);
+    expect(count()).toBe(0);
+    expect(logs.some((l) => l.includes('"replica_dropped"'))).toBe(false);
+  });
+
   it("malformed base64 skips the byte estimate and is still dropped as invalid by the decoder", async () => {
     const { p } = await family();
     await postScan(p, { pageReplicaBase64: "AAA" }, freshIp());
