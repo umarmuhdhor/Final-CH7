@@ -1,0 +1,672 @@
+[
+  {
+    "id": "435:20058",
+    "name": "Pribadi/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 293,
+    "y": 597,
+    "w": 402,
+    "h": 1135
+  },
+  {
+    "id": "435:20373",
+    "name": "Guardian/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 3282,
+    "y": 597,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "435:20899",
+    "name": "Guardian/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 3760,
+    "y": 597,
+    "w": 402,
+    "h": 1089
+  },
+  {
+    "id": "435:20630",
+    "name": "Guardian/Home · Belum ada orang",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 5498,
+    "y": 597,
+    "w": 402,
+    "h": 1135
+  },
+  {
+    "id": "441:2736",
+    "name": "protected/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 493,
+    "y": 2830,
+    "w": 402,
+    "h": 1080
+  },
+  {
+    "id": "441:3063",
+    "name": "protected/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 921,
+    "y": 2830,
+    "w": 402,
+    "h": 1031
+  },
+  {
+    "id": "441:3800",
+    "name": "protected/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 2043,
+    "y": 2814,
+    "w": 402,
+    "h": 1481
+  },
+  {
+    "id": "441:4414",
+    "name": "protected/Home ",
+    "section": "HOME",
+    "sectionId": "141:6094",
+    "x": 2507,
+    "y": 2814,
+    "w": 402,
+    "h": 1481
+  },
+  {
+    "id": "110:3585",
+    "name": "Splash Screen",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 196,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:3692",
+    "name": "Onboarding",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 628,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:3786",
+    "name": "Onboarding",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 1060,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:3912",
+    "name": "Atur Nama",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 1686,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4271",
+    "name": "Atur Nama",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 2570,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4345",
+    "name": "Choose Mode",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 3714,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4558",
+    "name": "Choose Mode - Guardian",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 4167,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4605",
+    "name": "Choose Mode - Protected",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 4167,
+    "y": 2258,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "140:5762",
+    "name": "Connect with Guardian",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 4609,
+    "y": 2258,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "205:1081",
+    "name": "Kode Kadaluarsa",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 4609,
+    "y": 3217,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "141:5887",
+    "name": "Connect with Guardian",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 5051,
+    "y": 2258,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "205:1182",
+    "name": "Kode Kadaluarsa",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 5051,
+    "y": 3217,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4440",
+    "name": "Aktifkan Ekstensi",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 6849,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "126:5678",
+    "name": "Aktifkan Ekstensi",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 7636,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "141:5945",
+    "name": "Aktifkan Ekstensi",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 5706,
+    "y": 2258,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4779",
+    "name": "Aktifkan Ekstensi",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 4620,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4817",
+    "name": "Kirim Undangan",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 5073,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "110:4023",
+    "name": "Atur Nama",
+    "section": "ONBOARDING",
+    "sectionId": "141:5987",
+    "x": 2128,
+    "y": 631,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "416:8541",
+    "name": "Aktivitas - Profil Pribadi",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 240,
+    "y": 615,
+    "w": 402,
+    "h": 1135
+  },
+  {
+    "id": "416:8669",
+    "name": "Aktivitas - Profil Pribadi : Filtered",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 682,
+    "y": 615,
+    "w": 402,
+    "h": 1094
+  },
+  {
+    "id": "416:8768",
+    "name": "Aktivitas - Profil Guardian",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 1280,
+    "y": 615,
+    "w": 402,
+    "h": 1135
+  },
+  {
+    "id": "416:8989",
+    "name": "Aktivitas - Profil Guardian / Only one selected",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 1722,
+    "y": 615,
+    "w": 402,
+    "h": 1135
+  },
+  {
+    "id": "416:9255",
+    "name": "Guardian/Detail Aktivitas",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 4832,
+    "y": 615,
+    "w": 402,
+    "h": 1810
+  },
+  {
+    "id": "416:9362",
+    "name": "Guardian/Detail Aktivitas Setelah Validasi",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 5287,
+    "y": 615,
+    "w": 402,
+    "h": 1296
+  },
+  {
+    "id": "416:9469",
+    "name": "Guardian/Detail Aktivitas Waspada",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 6004,
+    "y": 615,
+    "w": 402,
+    "h": 1311
+  },
+  {
+    "id": "480:5490",
+    "name": "Aktivitas · Semua · Belum ada aktivitas",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 2717,
+    "y": 615,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "480:5520",
+    "name": "Aktivitas · Waspada · Kosong",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 3172,
+    "y": 615,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "480:5550",
+    "name": "Aktivitas · Diblokir · Kosong",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 3627,
+    "y": 615,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "480:5580",
+    "name": "Aktivitas · Semua · Perlindungan mati",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 4082,
+    "y": 615,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "480:5768",
+    "name": "Guardian/Detail Aktivitas · Ditandai Aman",
+    "section": "Activity",
+    "sectionId": "413:1778",
+    "x": 6481,
+    "y": 607,
+    "w": 402,
+    "h": 1480
+  },
+  {
+    "id": "450:8443",
+    "name": "Aktivitas - Profil Pribadi",
+    "section": "Activity",
+    "sectionId": "450:4935",
+    "x": 793,
+    "y": 703,
+    "w": 402,
+    "h": 1135
+  },
+  {
+    "id": "450:8574",
+    "name": "Aktivitas - Profil Pribadi : Filtered",
+    "section": "Activity",
+    "sectionId": "450:4935",
+    "x": 1251,
+    "y": 703,
+    "w": 402,
+    "h": 1094
+  },
+  {
+    "id": "450:8657",
+    "name": "Aktivitas - Profil Pribadi : Filtered",
+    "section": "Activity",
+    "sectionId": "450:4935",
+    "x": 1709,
+    "y": 703,
+    "w": 402,
+    "h": 1094
+  },
+  {
+    "id": "487:4221",
+    "name": "Guardian/Detail Aktivitas, sebelum  di cek",
+    "section": "Activity",
+    "sectionId": "450:4935",
+    "x": 3099,
+    "y": 694,
+    "w": 402,
+    "h": 1745
+  },
+  {
+    "id": "487:5990",
+    "name": "Guardian/Detail Aktivitas Waspada",
+    "section": "Activity",
+    "sectionId": "450:4935",
+    "x": 3541,
+    "y": 694,
+    "w": 402,
+    "h": 1311
+  },
+  {
+    "id": "480:5227",
+    "name": "Profile/Pribadi · Ajak jadi Guardian",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 756,
+    "y": 538,
+    "w": 402,
+    "h": 1506
+  },
+  {
+    "id": "416:10338",
+    "name": "Profile/Pribadi",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 303,
+    "y": 538,
+    "w": 402,
+    "h": 1290
+  },
+  {
+    "id": "416:10447",
+    "name": "Profile/Guardian",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 2362,
+    "y": 538,
+    "w": 402,
+    "h": 1391
+  },
+  {
+    "id": "416:10574",
+    "name": "Guardian/Detail Orang Dilindungi",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 2817,
+    "y": 538,
+    "w": 402,
+    "h": 1201
+  },
+  {
+    "id": "416:10676",
+    "name": "Guardian/Detail Orang Dilindungi · Putuskan",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 3272,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "416:12854",
+    "name": "Pengaturan/Kelola profil",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 4192,
+    "y": 538,
+    "w": 402,
+    "h": 914
+  },
+  {
+    "id": "416:12916",
+    "name": "Pengaturan/Notifikasi",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 4647,
+    "y": 538,
+    "w": 402,
+    "h": 910
+  },
+  {
+    "id": "416:12986",
+    "name": "Pengaturan/Bahasa",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 5102,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "416:13007",
+    "name": "Pengaturan/Tema",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 5557,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "416:13074",
+    "name": "Pengaturan/Aksesibilitas",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 6012,
+    "y": 538,
+    "w": 402,
+    "h": 879
+  },
+  {
+    "id": "416:13147",
+    "name": "Pengaturan/Tentang Shoo",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 6467,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "480:5353",
+    "name": "Profile/Guardian · Belum ada orang",
+    "section": "Profile",
+    "sectionId": "416:9961",
+    "x": 1907,
+    "y": 538,
+    "w": 402,
+    "h": 1336
+  },
+  {
+    "id": "455:10275",
+    "name": "Profile/Pribadi",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 360,
+    "y": 538,
+    "w": 402,
+    "h": 1287
+  },
+  {
+    "id": "455:10571",
+    "name": "Profile/Pribadi",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 840,
+    "y": 538,
+    "w": 402,
+    "h": 877
+  },
+  {
+    "id": "455:9515",
+    "name": "Pengaturan/Mode akun",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 2822,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "457:10896",
+    "name": "Pengaturan/Mode akun",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 3257,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "455:9627",
+    "name": "Pengaturan/Notifikasi",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 4134,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "455:9697",
+    "name": "Pengaturan/Bahasa",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 2808,
+    "y": 1721,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "455:9718",
+    "name": "Pengaturan/Tema",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 3263,
+    "y": 1721,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "455:9785",
+    "name": "Pengaturan/Aksesibilitas",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 3718,
+    "y": 1721,
+    "w": 402,
+    "h": 879
+  },
+  {
+    "id": "455:9858",
+    "name": "Pengaturan/Tentang Shoo",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 4173,
+    "y": 1721,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "462:11043",
+    "name": "Pengaturan/Kelola profil",
+    "section": "Profile",
+    "sectionId": "455:9046",
+    "x": 3692,
+    "y": 538,
+    "w": 402,
+    "h": 874
+  },
+  {
+    "id": "487:7897",
+    "name": "Protected/Detail · Dibuka Guardian · Opsi 1",
+    "section": "AI vs GUARDIAN - EKSPLORASI",
+    "sectionId": "480:6835",
+    "x": 434,
+    "y": 563,
+    "w": 402,
+    "h": 1767
+  },
+  {
+    "id": "487:8620",
+    "name": "Protected/Detail · Dibuka Guardian · Opsi 2",
+    "section": "AI vs GUARDIAN - EKSPLORASI",
+    "sectionId": "480:6835",
+    "x": 894,
+    "y": 563,
+    "w": 402,
+    "h": 1758
+  }
+]
