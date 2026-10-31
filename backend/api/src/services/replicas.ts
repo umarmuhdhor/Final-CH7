@@ -19,12 +19,13 @@ export const MAX_REPLICA_BYTES = 307_200;
 export const MAX_REPLICA_HTML = 3_145_728;
 /**
  * gzip input per DecompressionStream write (K2, D-alief-C25 e). One write inflates its whole input
- * before the output can be counted, and zero-gzip inflates ±1000:1, so a 300 KB write could expand
- * to ±300 MB. 16 KB slices bound one step to ±16 MB (far below the Worker's 128 MB) and cut the
- * write + yield rounds for a 300 KB replica from ±75 to ±19 (fase 22 K4 a). The yield after each
- * write stays a macrotask: a microtask yield let a whole bomb through in workerd (fase 22 C4).
+ * before the output can be counted, and deflate inflates at most ±1032:1, so a 300 KB write could
+ * expand to ±300 MB. 8 KB slices bound one step to ±8.5 MB and cut the write + yield rounds for a
+ * 300 KB replica from ±75 to ±38 (fase 22 K4 a). Not 16 KB as planned: concurrent bombs share one
+ * isolate's 128 MB, and the peak is per request (security review 22a-2). The yield after each write
+ * stays a macrotask: a microtask yield let a whole bomb through in workerd (fase 22 C4).
  */
-export const INFLATE_SLICE = 16_384;
+export const INFLATE_SLICE = 8192;
 
 /**
  * D-alief-C26, R2 instead of Supabase: 500 MB/day × 16 days of object life = 8 GB < 10 GB R2 free;

@@ -44,7 +44,7 @@ describe("decodeReplica (EX-07, K2: strict base64, gzip magic, streamed inflate 
     expect(MAX_REPLICA_BASE64).toBe(409_600);
     expect(MAX_REPLICA_BYTES).toBe(307_200);
     expect(MAX_REPLICA_HTML).toBe(3_145_728);
-    expect(INFLATE_SLICE).toBe(16_384); // fase 22 K4 (a)
+    expect(INFLATE_SLICE).toBe(8192); // fase 22 K4 (a), halved after security review 22a-2
   });
 
   it("a valid replica: the gzip bytes as sent (stored as is) and the inflated size", async () => {
@@ -98,14 +98,14 @@ describe("decodeReplica (EX-07, K2: strict base64, gzip magic, streamed inflate 
   });
 
   it("gzip bomb with a fake ISIZE (claims 100 bytes, inflates past 3 MB) → too_large", async () => {
-    // 32 MB of zeros gzip to ≈ 32 KB: more than one 16 KB slice, so the output is counted before the
+    // 32 MB of zeros gzip to ≈ 32 KB: several 8 KB slices, so the output is counted before the
     // (fake) trailer is reached. A bomb that fits one slice fails the trailer check instead (invalid).
     const bomb = await zeroBomb(32);
     bomb.set([100, 0, 0, 0], bomb.length - 4);
     expect(await decodeReplica(b64(bomb))).toMatchObject({ ok: false, reason: "too_large" });
   });
 
-  it("zero bomb of 307 200 bytes: aborted after the 16 KB slice that crosses 3 MB, not after a full inflate", async () => {
+  it("zero bomb of 307 200 bytes: aborted after the 8 KB slice that crosses 3 MB, not after a full inflate", async () => {
     // 320 MB of zeros gzip to ≈ 326 KB; the first 307 200 bytes are the largest bomb the extension limit allows.
     const bomb = (await zeroBomb(320)).subarray(0, MAX_REPLICA_BYTES);
     const r = await decodeReplica(b64(bomb));
