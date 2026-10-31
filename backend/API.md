@@ -10,7 +10,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 ## Contents
 
 - [General rules](#general-rules): auth, request format, errors, rate limits, caching
-- [Health](#health): `GET /healthz`, `GET /healthz/db`
+- [Health](#health): `GET /healthz`, `GET /healthz/db`, `GET /ops/status`
 - [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `POST /devices/me/protected`, `DELETE /devices/me`
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
@@ -112,6 +112,39 @@ Free project from pausing.
 - **Auth:** none
 - **Rate limit:** 1 per minute per IP
 - **Response 200:** `{ "ok": true }`
+
+### `GET /ops/status`
+
+**For:** the ops-watch workflow and the backend owner (fase 21a, B9). Internal: not part of
+`contracts/api.md`, no client calls it.
+
+- **Auth:** `Authorization: Bearer <OPS_STATUS_TOKEN>` (Worker secret, at least 32 characters). Without
+  the right token, with a short or unset secret, or with the token in any other place, the answer is
+  the same `404 not_found` as an unknown path, and no table is touched.
+- **Rate limit:** 30 per hour for all callers together, counted only after the token matched (wrong
+  tokens cannot use it up).
+- **Response 200:** aggregate numbers only, never an id, domain, path or name. Ages are hours (one
+  decimal, database clock); `null` = never happened.
+
+  ```json
+  {
+    "ok": true,
+    "failing": [{ "code": "retention_backlog", "level": "warn" }],
+    "jobs": {
+      "retention": { "ageHours": 9.2, "okAgeHours": 9.2, "failed": 0, "backlog": true },
+      "notifications": { "ageHours": 0.4, "okAgeHours": 0.4 }
+    },
+    "dbBytes": 52428800,
+    "blocklistQueue": 0,
+    "blocklistOldestHours": null,
+    "tombstonesStuck": 0,
+    "healthzAgeHours": 13.1
+  }
+  ```
+
+  `ok` is `false` only when a code with level `alert` fails. `ageHours` = since the job last finished,
+  `okAgeHours` = since it last finished with `failed: 0`. Codes and thresholds:
+  [README, Monitoring and alerts](README.md#monitoring-and-alerts).
 
 ## Devices
 
