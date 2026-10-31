@@ -7,6 +7,7 @@ import type { Env } from "../src/env";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 import { limits } from "../src/http/rateLimit";
 import { evaluate } from "../src/services/opsStatus";
+import { MAX_REPLICA_BYTES, REPLICA_QUOTA } from "../src/services/replicas";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, freshIp } from "./helpers/seed";
 
@@ -29,7 +30,12 @@ const healthy = (): OpsSnapshot => ({
   blocklistQueue: 0,
   blocklistOldestHours: null,
   healthzAgeHours: null,
+  replica: {
+    level: "ok", uploads: 0, bytes: 0, uploadsMax: REPLICA_QUOTA.global, bytesMax: REPLICA_QUOTA.globalBytes,
+    families: 0, familiesAtCap: 0, topFamilyUploads: 0, topFamilyBytes: 0,
+  },
 });
+const REPLICA_OPTS = { quota: REPLICA_QUOTA, maxBytes: MAX_REPLICA_BYTES };
 const codes = (s: OpsSnapshot) => evaluate(s).failing;
 
 // The order of `failing` is part of the interface: ops-watch (21b) compares code sets run to run.
@@ -109,18 +115,38 @@ describe("evaluate: K3 thresholds (fase 21a)", () => {
     expect(codes(s)).toEqual([]);
   });
 
+  it("replica_reserve (warn) and replica_full (alert) follow the fase 19 gauge level (21c)", () => {
+    const s = healthy();
+    s.replica.level = "reserve";
+    expect(evaluate(s)).toEqual({ ok: true, failing: [{ code: "replica_reserve", level: "warn" }] });
+    s.replica.level = "full";
+    expect(evaluate(s)).toEqual({ ok: false, failing: [{ code: "replica_full", level: "alert" }] });
+  });
+
+  it("replica_family_cap: warn from 3 families at their cap in 24 h, not at 2 (21c)", () => {
+    const s = healthy();
+    s.replica.familiesAtCap = 2;
+    expect(codes(s)).toEqual([]);
+    s.replica.familiesAtCap = 3;
+    expect(evaluate(s)).toEqual({ ok: true, failing: [{ code: "replica_family_cap", level: "warn" }] });
+  });
+
   it("several codes are listed together in a fixed order", () => {
     const s = healthy();
     s.retention.failed = 2;
     s.retention.backlog = true;
     s.notifications.okAgeHours = null;
-    expect(codes(s).map((f) => f.code)).toEqual(["retention_failed", "retention_backlog", "notifications_stale"]);
+    s.replica.level = "full";
+    s.replica.familiesAtCap = 5;
+    expect(codes(s).map((f) => f.code)).toEqual([
+      "retention_failed", "retention_backlog", "notifications_stale", "replica_full", "replica_family_cap",
+    ]);
   });
 });
 
 describe("opsSnapshot + ops_jobs writers", () => {
   it("empty DB: jobs never ran, nothing overdue, DB size read as shoo_api (C11)", async () => {
-    const s = await opsSnapshot(sql);
+    const s = await opsSnapshot(sql, REPLICA_OPTS);
     expect(s.retention).toEqual({ okAgeHours: null, ageHours: null, failed: 0, backlog: false });
     expect(s.notifications).toEqual({ okAgeHours: null, ageHours: null });
     expect(s.scansOverdue).toBe(false);
@@ -129,6 +155,16 @@ describe("opsSnapshot + ops_jobs writers", () => {
     expect(s.blocklistQueue).toBe(0);
     expect(s.blocklistOldestHours).toBeNull();
     expect(s.healthzAgeHours).toBeNull();
+    expect(s.replica).toMatchObject({ level: "ok", uploads: 0, families: 0, familiesAtCap: 0 });
+  });
+
+  it("replica numbers come from the fase 19 gauge (replicaUsage), aggregates only (21c)", async () => {
+    const a = await createDevice("Replica A");
+    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_bytes)
+      select ${a.deviceId}, 'https://r.example/', 'r.example', 92, 'blocked', now(), ${a.deviceId} || '/r' || g || '-replica.html.gz', 1000
+      from generate_series(1, ${REPLICA_QUOTA.family}) g`;
+    const s = await opsSnapshot(sql, REPLICA_OPTS);
+    expect(s.replica).toMatchObject({ level: "ok", uploads: REPLICA_QUOTA.family, families: 1, familiesAtCap: 1 });
   });
 
   it("finishJob with failed = 0 moves ok_at; a failed run keeps the old ok_at and records failed + backlog", async () => {
@@ -136,7 +172,7 @@ describe("opsSnapshot + ops_jobs writers", () => {
     await finishJob(sql, "retention", { failed: 0, backlog: false });
     await sql`update ops_jobs set ok_at = now() - interval '3 hours', finished_at = now() - interval '3 hours'`;
     await finishJob(sql, "retention", { failed: 2, backlog: true });
-    const s = await opsSnapshot(sql);
+    const s = await opsSnapshot(sql, REPLICA_OPTS);
     expect(s.retention.failed).toBe(2);
     expect(s.retention.backlog).toBe(true);
     expect(s.retention.okAgeHours).toBeCloseTo(3, 1);
@@ -151,7 +187,7 @@ describe("opsSnapshot + ops_jobs writers", () => {
     await admin`insert into blocklist_entries (domain, families, first_seen_at) values
       ('q1.example', 1, now() - interval '30 hours'), ('q2.example', 2, now() - interval '1 hour'), ('q3.example', 0, now() - interval '90 hours')`;
     await sql`insert into ops_heartbeat (source, at) values ('healthz', now() - interval '5 hours')`;
-    const s = await opsSnapshot(sql);
+    const s = await opsSnapshot(sql, REPLICA_OPTS);
     expect(s.scansOverdue).toBe(true);
     expect(s.tombstonesStuck).toBe(1);
     expect(s.blocklistQueue).toBe(2);
@@ -163,7 +199,7 @@ describe("opsSnapshot + ops_jobs writers", () => {
     const d = await createDevice("Mom");
     await sql`insert into scans (owner_id, url, domain, score, status, detected_at, created_at)
       values (${d.deviceId}, 'https://a.example/', 'a.example', 92, 'blocked', now(), now() - interval '15 days 5 hours')`;
-    expect((await opsSnapshot(sql)).scansOverdue).toBe(false);
+    expect((await opsSnapshot(sql, REPLICA_OPTS)).scansOverdue).toBe(false);
   });
 });
 
@@ -209,8 +245,12 @@ describe("GET /ops/status (fase 21a, K6)", () => {
     expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'none'");
     const body = (await res.json()) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual([
-      "blocklistOldestHours", "blocklistQueue", "dbBytes", "failing", "healthzAgeHours", "jobs", "ok", "tombstonesStuck",
+      "blocklistOldestHours", "blocklistQueue", "dbBytes", "failing", "healthzAgeHours", "jobs", "ok", "replica", "tombstonesStuck",
     ]);
+    expect(body.replica).toEqual({
+      level: "ok", uploads: 0, bytes: 0, uploadsMax: REPLICA_QUOTA.global, bytesMax: REPLICA_QUOTA.globalBytes,
+      families: 0, familiesAtCap: 0, topFamilyUploads: 0, topFamilyBytes: 0,
+    });
     expect(body.ok).toBe(true);
     expect(body.failing).toEqual([]);
     expect(body.jobs).toEqual({

@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { replicaUsage, type ReplicaQuota, type ReplicaUsage } from "./scans";
 
 export type OpsJob = "retention" | "notifications";
 
@@ -40,10 +41,15 @@ export interface OpsSnapshot {
   blocklistOldestHours: number | null;
   /** Last /healthz/db (the ops-watch keep-alive): a number for the reader, never an alert. */
   healthzAgeHours: number | null;
+  /** Fase 21c: the fase 19 K5.2 gauge (same numbers as the hourly `replica_quota_usage` line). */
+  replica: ReplicaUsage;
 }
 
-/** One round trip. `exists` on scans uses the index scans_created. */
-export async function opsSnapshot(sql: Sql): Promise<OpsSnapshot> {
+/**
+ * Two round trips: the health query (`exists` on scans uses the index scans_created), then the
+ * replica gauge. The quota comes in from the service, so this repo does not import services.
+ */
+export async function opsSnapshot(sql: Sql, replica: { quota: ReplicaQuota; maxBytes: number }): Promise<OpsSnapshot> {
   const [row] = await sql<{
     rOk: number | null; rAge: number | null; rFailed: number | null; rBacklog: boolean | null;
     nOk: number | null; nAge: number | null;
@@ -70,6 +76,7 @@ export async function opsSnapshot(sql: Sql): Promise<OpsSnapshot> {
     ) q`;
   // A select without from-filters always returns one row.
   const r = row!;
+  const usage = await replicaUsage(sql, replica.quota, replica.maxBytes);
   return {
     retention: { okAgeHours: r.rOk, ageHours: r.rAge, failed: r.rFailed ?? 0, backlog: r.rBacklog ?? false },
     notifications: { okAgeHours: r.nOk, ageHours: r.nAge },
@@ -79,5 +86,6 @@ export async function opsSnapshot(sql: Sql): Promise<OpsSnapshot> {
     blocklistQueue: r.queue,
     blocklistOldestHours: r.oldest,
     healthzAgeHours: r.healthz,
+    replica: usage,
   };
 }

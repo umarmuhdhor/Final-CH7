@@ -5,6 +5,7 @@ import { usableSecret } from "../http/crypto";
 import { errors } from "../http/errors";
 import { hit, limits } from "../http/rateLimit";
 import { evaluate } from "../services/opsStatus";
+import { MAX_REPLICA_BYTES, REPLICA_QUOTA } from "../services/replicas";
 
 export const ops = new Hono<AppEnv>();
 
@@ -38,7 +39,7 @@ ops.get("/ops/status", async (c) => {
   if (!(await authorized(c.env.OPS_STATUS_TOKEN, c.req.header("authorization")))) throw errors.notFound();
   const sql = c.get("sql");
   await hit(sql, limits.opsStatus, "all");
-  const s = await opsSnapshot(sql);
+  const s = await opsSnapshot(sql, { quota: REPLICA_QUOTA, maxBytes: MAX_REPLICA_BYTES });
   const { ok, failing } = evaluate(s);
   return c.json({
     ok,
@@ -55,5 +56,6 @@ ops.get("/ops/status", async (c) => {
     blocklistOldestHours: hours(s.blocklistOldestHours),
     tombstonesStuck: s.tombstonesStuck,
     healthzAgeHours: hours(s.healthzAgeHours),
+    replica: s.replica,
   });
 });

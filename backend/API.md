@@ -138,12 +138,18 @@ Free project from pausing.
     "blocklistQueue": 0,
     "blocklistOldestHours": null,
     "tombstonesStuck": 0,
-    "healthzAgeHours": 13.1
+    "healthzAgeHours": 13.1,
+    "replica": {
+      "level": "ok", "uploads": 412, "bytes": 9830400, "uploadsMax": 3000, "bytesMax": 524288000,
+      "families": 37, "familiesAtCap": 0, "topFamilyUploads": 41, "topFamilyBytes": 1048576
+    }
   }
   ```
 
   `ok` is `false` only when a code with level `alert` fails. `ageHours` = since the job last finished,
-  `okAgeHours` = since it last finished with `failed: 0`. Codes and thresholds:
+  `okAgeHours` = since it last finished with `failed: 0`. `replica` (fase 21c) = the page-replica
+  quota of the last 24 h, the same numbers as the hourly `replica_quota_usage` log line (fase 19):
+  totals, family count and the largest family's share, never which family. Codes and thresholds:
   [README, Monitoring and alerts](README.md#monitoring-and-alerts).
 
 ## Devices

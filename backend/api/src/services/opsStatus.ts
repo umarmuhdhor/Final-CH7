@@ -18,6 +18,8 @@ export const OPS_THRESHOLDS = {
   /** Supabase Free has 500 MB. */
   dbAlertBytes: 450 * MB,
   blocklistQueueHours: 24,
+  /** Fase 21c: families at their replica cap in 24 h (fase 19 K2: 60 uploads or 10 MB each). */
+  replicaFamiliesAtCap: 3,
 } as const;
 
 /**
@@ -40,5 +42,10 @@ export function evaluate(s: OpsSnapshot): { ok: boolean; failing: OpsFailure[] }
   if (s.dbBytes >= t.dbAlertBytes) add(true, "db_size_high", "alert");
   else add(s.dbBytes >= t.dbWarnBytes, "db_size_high", "warn");
   add(s.blocklistQueue > 0 && (s.blocklistOldestHours ?? 0) > t.blocklistQueueHours, "blocklist_queue", "warn");
+  // Fase 21c: a quota state, not a drop. Normal use is far below the global quota, so `full` alone
+  // points to abuse or a wrong setting; real drops are `replica_dropped` lines (runbook).
+  add(s.replica.level === "full", "replica_full", "alert");
+  add(s.replica.level === "reserve", "replica_reserve", "warn");
+  add(s.replica.familiesAtCap >= t.replicaFamiliesAtCap, "replica_family_cap", "warn");
   return { ok: !failing.some((f) => f.level === "alert"), failing };
 }
