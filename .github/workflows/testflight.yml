@@ -1,0 +1,159 @@
+# Build the app and upload it to TestFlight (A17, issue #173). Manual only: Actions tab > testflight > Run workflow.
+# Setup (identifiers, App Store Connect API key, environment `testflight`): steps 1–5 in issue #173.
+# Skipped until the `testflight` environment has SHOO_BUNDLE_ID and the ASC_* secrets.
+name: testflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  # Never cancel an upload half-way: App Store Connect may already hold the build number.
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: macos-26 # Xcode 26.x: the app uses iOS 26.2 SDK APIs (SFSafariSettings)
+    timeout-minutes: 45
+    # Secrets live only in this environment, which is limited to `main` (issue #173 step 4).
+    environment: testflight
+    steps:
+      # Environment variables are not visible to a job-level `if`, so the check runs as the first step.
+      - name: Check setup
+        id: setup
+        env:
+          BUNDLE_ID: ${{ vars.SHOO_BUNDLE_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          # `runner.temp` is not available in job-level env, so the paths are set here.
+          {
+            echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8"
+            echo "ARCHIVE_PATH=$RUNNER_TEMP/Shoo.xcarchive"
+            echo "EXPORT_PATH=$RUNNER_TEMP/export"
+          } >> "$GITHUB_ENV"
+          if [ -z "$BUNDLE_ID" ] || [ -z "$KEY_ID" ]; then
+            echo "::notice::TestFlight upload skipped: environment 'testflight' is not set up yet (issue #173)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.setup.outputs.ready == 'true'
+
+      - name: Install XcodeGen
+        if: steps.setup.outputs.ready == 'true'
+        run: brew install xcodegen
+
+      # Same file every developer writes by hand (ios/Config/Local.xcconfig.example), filled from the environment.
+      - name: Write signing config
+        if: steps.setup.outputs.ready == 'true'
+        env:
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          BUNDLE_ID: ${{ vars.SHOO_BUNDLE_ID }}
+          APP_GROUP: ${{ vars.SHOO_APP_GROUP }}
+        run: |
+          {
+            echo "DEVELOPMENT_TEAM = $TEAM_ID"
+            echo "SHOO_BUNDLE_ID = $BUNDLE_ID"
+            echo "SHOO_APP_GROUP = $APP_GROUP"
+          } > ios/Config/Local.xcconfig
+
+      - name: Generate project
+        if: steps.setup.outputs.ready == 'true'
+        working-directory: ios
+        run: xcodegen
+
+      # The key is written to the runner's temp folder only; the runner is destroyed after the job.
+      - name: Write App Store Connect key
+        if: steps.setup.outputs.ready == 'true'
+        env:
+          KEY_P8_B64: ${{ secrets.ASC_KEY_P8_B64 }}
+        run: |
+          printf '%s' "$KEY_P8_B64" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+
+      # TestFlight rejects a build number it has seen, so every run gets offset + run number.
+      # TF_BUILD_OFFSET = highest build number uploaded by hand before CI (issue #173 step 2).
+      - name: Build number
+        if: steps.setup.outputs.ready == 'true'
+        id: build
+        env:
+          OFFSET: ${{ vars.TF_BUILD_OFFSET }}
+        run: |
+          OFFSET=${OFFSET:-0}
+          if ! [[ "$OFFSET" =~ ^[0-9]+$ ]]; then echo "::error::TF_BUILD_OFFSET must be a whole number"; exit 1; fi
+          echo "number=$(( OFFSET + GITHUB_RUN_NUMBER ))" >> "$GITHUB_OUTPUT"
+
+      # Automatic signing with the API key: Xcode creates or fetches the certificates and profiles itself
+      # (cloud signing), so no .p12 or provisioning profile is stored in the repo or in secrets.
+      - name: Archive
+        if: steps.setup.outputs.ready == 'true'
+        env:
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          if xcodebuild archive \
+            -project ios/Shoo.xcodeproj \
+            -scheme Shoo \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$ARCHIVE_PATH" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            CURRENT_PROJECT_VERSION=${{ steps.build.outputs.number }} \
+            > archive.log 2>&1; then status=0; else status=$?; fi
+          tail -40 archive.log
+          echo "::group::Errors"
+          grep -E ": error: |error: " archive.log | cut -c1-600 | head -60 || true
+          echo "::endgroup::"
+          exit $status
+
+      # destination=upload: the export step also uploads the build to App Store Connect.
+      - name: Export and upload to TestFlight
+        if: steps.setup.outputs.ready == 'true'
+        env:
+          TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+          if xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportPath "$EXPORT_PATH" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            > export.log 2>&1; then status=0; else status=$?; fi
+          tail -40 export.log
+          exit $status
+
+      - name: Summary
+        if: steps.setup.outputs.ready == 'true'
+        run: |
+          echo "Uploaded build ${{ steps.build.outputs.number }} from \`${GITHUB_SHA::7}\`." >> "$GITHUB_STEP_SUMMARY"
+          echo "App Store Connect processes it for ~10–30 min before it shows in TestFlight." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
