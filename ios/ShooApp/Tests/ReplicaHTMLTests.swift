@@ -83,6 +83,22 @@ struct ReplicaHTMLTests {
         #expect(ReplicaHTML.locked(upper) == nil)
     }
 
+    /// A `>` inside an attribute must not hide a second `http-equiv` (security review M1).
+    @Test func httpEquivHiddenAfterAQuotedBracketIsRefused() {
+        let hidden = Self.extensionSample.replacingOccurrences(
+            of: "<title>", with: #"<meta content=">" http-equiv="refresh"><title>"#
+        )
+        #expect(ReplicaHTML.locked(hidden) == nil)
+    }
+
+    /// `<meta <meta <meta …` with no `>` was quadratic and froze the main thread (security review H1).
+    @Test func unclosedMetaFloodStaysFast() {
+        let flood = String(repeating: "<meta ", count: 500_000)
+        let clock = ContinuousClock()
+        let took = clock.measure { _ = ReplicaHTML.passesGate(flood) }
+        #expect(took < .seconds(1))
+    }
+
     @Test func escapedTextIsNotATag() {
         // `&lt;link` in the sample is page text, not markup.
         #expect(ReplicaHTML.passesGate(Self.extensionSample))

@@ -33,16 +33,18 @@ enum ReplicaHTML {
     }
 
     /// Fail-closed lexical gate (K11), case-insensitive. A real capture has exactly one `<meta http-equiv>` (its CSP).
+    /// `http-equiv` is counted anywhere in the file, not per tag: a `>` inside an attribute can't hide a second one,
+    /// and the scan stays linear on a hostile 3 MB file (one pass per needle).
     static func passesGate(_ html: String) -> Bool {
         let lower = html.lowercased()
         guard !refusedTags.contains(where: lower.contains) else { return false }
         var httpEquiv = 0
-        var rest = lower[...]
-        while let open = rest.range(of: "<meta") {
-            let tag = rest[open.lowerBound...].prefix { $0 != ">" }
-            if tag.contains("http-equiv") { httpEquiv += 1 }
-            rest = rest[open.upperBound...]
+        var from = lower.startIndex
+        while let hit = lower.range(of: "http-equiv", range: from..<lower.endIndex) {
+            httpEquiv += 1
+            if httpEquiv > 1 { return false }
+            from = hit.upperBound
         }
-        return httpEquiv <= 1
+        return true
     }
 }

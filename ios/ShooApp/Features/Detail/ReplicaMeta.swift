@@ -69,10 +69,16 @@ struct ReplicaMeta: Equatable, Sendable {
     /// "Copied from <host+path>" when the copy came from another page of the same site (24-hour reuse, K4).
     /// Only for the scan's domain or a subdomain: the device could write any URL here. Plain text, shortened.
     func copiedFrom(scanURL: URL, domain: String) -> String? {
-        guard let url, url != scanURL, let host = url.host()?.lowercased() else { return nil }
+        guard let url, url != scanURL, ["http", "https"].contains(url.scheme?.lowercased()),
+              let host = url.host()?.lowercased()
+        else { return nil }
         let domain = domain.lowercased()
         guard host == domain || host.hasSuffix("." + domain) else { return nil }
-        let text = host + url.path(percentEncoded: false)
+        // The decoded path is device text: no line breaks or bidi controls that could reorder the line.
+        let path = String(String.UnicodeScalarView(url.path(percentEncoded: false).unicodeScalars.filter { scalar in
+            ![.control, .format, .lineSeparator, .paragraphSeparator].contains(scalar.properties.generalCategory)
+        }))
+        let text = host + path
         guard text.count > Self.maxCopiedFromLength else { return text }
         return String(text.prefix(Self.maxCopiedFromLength - 1)) + "…"
     }

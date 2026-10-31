@@ -127,4 +127,15 @@ struct ReplicaMetaTests {
         #expect(long.count == ReplicaMeta.maxCopiedFromLength)
         #expect(long.hasSuffix("…"))
     }
+
+    /// The decoded path is device text: no line breaks or bidi overrides (security review M3).
+    @Test func copiedFromDropsControlAndBidiCharacters() throws {
+        let scanURL = try #require(URL(string: "https://klikbca-login.site/masuk"))
+        func copied(_ link: String) -> String? {
+            ReplicaMeta(url: URL(string: link), capturedAt: Self.detectedAt, focusY: 0, truncated: false)
+                .copiedFrom(scanURL: scanURL, domain: "klikbca-login.site")
+        }
+        #expect(copied("https://klikbca-login.site/a%0Ab%E2%80%AEc%E2%80%8Fd") == "klikbca-login.site/abcd")
+        #expect(copied("ftp://klikbca-login.site/otp") == nil)
+    }
 }
