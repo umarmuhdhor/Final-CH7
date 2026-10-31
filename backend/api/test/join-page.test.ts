@@ -1,4 +1,7 @@
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
+import { app } from "../src/app";
 import { storeUrl } from "../src/routes/join-page";
 import { call } from "./helpers/seed";
 
@@ -44,6 +47,27 @@ describe("GET /j/:code", () => {
     const a = nonceOf((await page("/j/482193")).res);
     const b = nonceOf((await page("/j/482193")).res);
     expect(a).not.toBe(b);
+  });
+
+  it("the install hint says to open Shoo and tap Paste (fase 26 26b), in English and Indonesian", async () => {
+    const { html: en } = await page("/j/482193");
+    expect(en).toContain("We copy the invite for you. After installing, open Shoo and tap Paste.");
+    const { html: id } = await page("/j/482193", "id-ID,id;q=0.9");
+    expect(id).toContain("Undangan sudah kami salin. Setelah install, buka Shoo lalu ketuk Tempel.");
+    expect(en).not.toContain("so Shoo can paste it after you install");
+  });
+
+  it("Install goes to APP_STORE_URL when it is a TestFlight link (fase 26 Q1, var not set yet)", async () => {
+    const link = "https://testflight.apple.com/join/AbCd1234";
+    const ctx = createExecutionContext();
+    const res = await app.fetch(
+      new Request("http://api.test/j/482193", { headers: { "cf-connecting-ip": "198.51.100.77" } }),
+      { ...env, APP_STORE_URL: link },
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain(`id="install" href="${link}"`);
   });
 
   it("Indonesian for Accept-Language id", async () => {
