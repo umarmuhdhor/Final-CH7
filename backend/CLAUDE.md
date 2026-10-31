@@ -6,7 +6,7 @@ Devices, family pairing, scans (Activity), verdicts, push, 14-day retention. Spe
 - Family code: 6 digits, valid 30 min, reused while more than 5 min is left (`refresh` replaces it), rate-limited attempts, max 3 protected per guardian (GD-04, PR-03, PRD §10, issue #128).
 - Verdicts apply per domain (PRD §5). A `safe` verdict must reach the protected device's block screen (EX-06).
 - Push via APNs when a protected device posts a scan (GD-06). APNs key only in `.env`, never committed.
-- Delete scans + screenshots older than 14 days automatically.
+- Delete scans + screenshots + page replicas + favicons older than 14 days automatically.
 - JSON shapes come from contracts/ only. If you need a change, PR to the lead first.
 - Supabase recommended (DB + edge functions + cron + realtime). If you choose it, document schema + RPCs here and keep api.md JSON shapes.
 - Don't touch anything outside `backend/` and `ios/ShooApp/`.

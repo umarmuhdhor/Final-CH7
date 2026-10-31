@@ -5,6 +5,7 @@ import { runRetention } from "../src/cron/retention";
 import { limits } from "../src/http/rateLimit";
 import { PUSH_CAP } from "../src/services/push/notify";
 import { b64, jpeg } from "./helpers/images";
+import { gzipBase64 } from "./helpers/replica";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice } from "./helpers/seed";
 
@@ -28,11 +29,25 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     const { id: _i, verdict: _v, screenshotUrl: _s, ownerDeviceId: _o, ownerName: _n, ...body } = blocked92;
     const scanRes = await call("/scans", {
       method: "POST", token: p.token, ip,
-      json: { ...body, domain: "very-private-domain.example", url: "https://very-private-domain.example/login?u=mom", screenshotBase64: b64(jpeg(50, 50)) },
+      json: {
+        ...body, domain: "very-private-domain.example", url: "https://very-private-domain.example/login?u=mom",
+        screenshotBase64: b64(jpeg(50, 50)),
+        pageReplicaBase64: await gzipBase64("<html><body>Mom Secret very-private-domain</body></html>"),
+      },
     });
     const { id } = (await scanRes.json()) as { id: string };
-    const detail = (await (await call(`/scans/${id}`, { token: g.token })).json()) as { screenshotUrl: string | null };
+    // EX-07: the replica is stored in waitUntil after the push.
+    await vi.waitFor(async () => expect((await sql`select replica_path from scans where id = ${id}`)[0]?.replica_path).toBeTruthy());
+    // A broken replica on a second scan: the drop is logged with its reason only.
+    await call("/scans", {
+      method: "POST", token: p.token, ip,
+      json: { ...body, domain: "other-private.example", url: "https://other-private.example/x", pageReplicaBase64: "@@broken@@" },
+    });
+    await vi.waitFor(() => expect(lines.some((l) => l.includes('"replica_dropped"'))).toBe(true));
+    const detail = (await (await call(`/scans/${id}`, { token: g.token })).json()) as { screenshotUrl: string | null; pageReplicaUrl: string | null };
     if (detail.screenshotUrl) await call(new URL(detail.screenshotUrl).pathname + new URL(detail.screenshotUrl).search, { token: g.token });
+    expect(detail.pageReplicaUrl).toBeTruthy();
+    await call(new URL(detail.pageReplicaUrl!).pathname + new URL(detail.pageReplicaUrl!).search);
     await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "not_safe" } });
     await call("/verdicts?domain=very-private-domain.example", { token: p.token });
     await call("/devices/me", { token: "shoo_wrongwrongwrong", ip });
@@ -57,6 +72,7 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     for (const leak of [
       g.token, p.token, g.deviceId, p.deviceId, id, "Adhella", "Mom Secret", "very-private-domain", "https://",
       "shoo_wrong", code, ip, "sig=", "ab".repeat(32), env.SCREENSHOT_URL_SECRET!, env.RATE_KEY_SECRET!,
+      "replica.html.gz", "other-private",
     ]) {
       expect(all, `log contains ${leak.slice(0, 12)}`).not.toContain(leak);
     }
@@ -72,6 +88,7 @@ describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; 
       verdicts_get: "verdicts.test.ts", auth_fail: "security-headers.test.ts", auth_fail_all: "security-headers.test.ts",
       devices_create_all: "security-review.test.ts", scans_create_all: "security-review.test.ts",
       favicons_view: "favicons.test.ts", favicons_fetch: "favicons.test.ts", favicons_fetch_all: "favicons.test.ts",
+      replicas_ip: "replicas.test.ts", replicas_view: "replicas.test.ts", replicas_view_day: "replicas.test.ts",
     };
     expect(Object.values(limits).map((l) => l.bucket).sort()).toEqual(Object.keys(tested).sort());
     // Not in `limits`: join attempts (family.test.ts "too_many_attempts") and the push cap (push-notify.test.ts).

@@ -254,3 +254,12 @@ test("detectBrands: no duplicates and at most 3 names", () => {
     const got = detectBrands(page(SCAM_URL, MS_FIELDS(), { title: "Login Microsoft", imageAlts: ["Microsoft", "Microsoft"] }));
     assert.deepEqual(got, ["Microsoft"]);
 });
+
+test("brand_logo_offsite: otp / pin in the title count as an action word", () => {
+    assert.ok(find(run({ title: "OTP - BCA" }), "brand_logo_offsite"), "OTP - BCA");
+    assert.ok(find(run({ title: "Masukkan PIN - BCA" }), "brand_logo_offsite"), "Masukkan PIN - BCA");
+});
+test("brand_logo_offsite: blog titles about a brand still stay silent", () => {
+    assert.equal(find(run({ title: "Cara cek saldo BCA" }), "brand_logo_offsite"), undefined);
+    assert.equal(find(run({ title: "Pinjaman BCA 2026" }), "brand_logo_offsite"), undefined, "pinjaman is not pin");
+});

@@ -7,7 +7,7 @@ import { errorInfo } from "../http/logError";
 import { hit, hitLight, limits } from "../http/rateLimit";
 import { downloadFavicon, type DownloadOptions, FAVICON_CONTENT_TYPE, FAVICON_EXT, type FetchFail } from "./faviconFetch";
 import { faviconLink } from "./screenshotLinks";
-import { abandonUpload, screenshotStore } from "./screenshots";
+import { abandonUpload, r2Store } from "./screenshots";
 
 type Drop = FetchFail | "quota" | "no_storage" | "scan_gone" | "upload_failed";
 
@@ -15,9 +15,10 @@ type Drop = FetchFail | "quota" | "no_storage" | "scan_gone" | "upload_failed";
 const dropped = (reason: Drop) => console.log(JSON.stringify({ event: "favicon_dropped", reason }));
 
 /**
- * PR-05: store the scam site's favicon next to the screenshot, so the app only talks to this
- * Worker (SECURITY P9). Runs in waitUntil after POST /scans answered; any failure drops the
- * favicon only. Order: reuse the owner's favicon of this domain from the last 24 h (no download),
+ * PR-05: store the scam site's favicon, so the app only talks to this Worker (SECURITY P9). New
+ * favicons go to R2 as `<owner>/<scan>-icon.<ext>` (D-alief-C27: most-viewed object, free egress, no
+ * external subrequest per view); old `-favicon.<ext>` objects stay in Supabase until they expire.
+ * Runs in waitUntil after POST /scans answered; any failure drops the favicon only. Order: reuse the owner's favicon of this domain from the last 24 h (no download),
  * else spend the download quota, download with the guards of faviconFetch, reserve + tombstone the
  * path (D-alief-B12), upload. Same cleanup as attachScreenshot when the upload fails or the scan
  * was deleted meanwhile.
@@ -29,7 +30,8 @@ export async function attachFavicon(
   faviconUrl: string,
   opts: DownloadOptions = {},
 ): Promise<void> {
-  const store = screenshotStore(env);
+  // Only the binding, like deletes: favicons are not behind the replica kill-switch.
+  const store = r2Store(env);
   if (!store) return dropped("no_storage");
 
   const early = await reserveFavicon(sql, scan, null);
@@ -48,7 +50,7 @@ export async function attachFavicon(
   if (!download.ok) return dropped(download.reason);
   const { type, bytes } = download.favicon;
 
-  const path = `${scan.ownerId}/${scan.id}-favicon.${FAVICON_EXT[type]}`;
+  const path = `${scan.ownerId}/${scan.id}-icon.${FAVICON_EXT[type]}`;
   // A parallel scan of the same domain may have stored one meanwhile: then that one is reused.
   const slot = await reserveFavicon(sql, scan, path);
   if ("reuse" in slot || "none" in slot) return;
@@ -77,7 +79,7 @@ export async function faviconUrl(env: Env, scan: { id: string; faviconPath: stri
   return faviconLink(secret, origin, scan.id, viewerId, Date.now() / 1000);
 }
 
-/** Served content type from the stored path's extension. */
+/** Served content type from the stored path's extension (both `-favicon.<ext>` and `-icon.<ext>`). */
 export function faviconContentType(path: string): string | undefined {
   const ext = path.slice(path.lastIndexOf(".") + 1);
   const type = (Object.keys(FAVICON_EXT) as (keyof typeof FAVICON_EXT)[]).find((t) => FAVICON_EXT[t] === ext);

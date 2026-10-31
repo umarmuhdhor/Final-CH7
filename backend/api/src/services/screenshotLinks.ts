@@ -2,8 +2,8 @@ import { base64url, fromBase64url } from "../http/crypto";
 
 /**
  * Screenshot links (D-alief-B08): `GET /screenshots/{scanId}?v=<viewer>&exp=<unix>&sig=<HMAC>`.
- * Favicon links (PR-05) are the same with `/favicons/`; the kind is part of the signed message,
- * so a screenshot link never opens a favicon or the other way round.
+ * Favicon links (PR-05) are the same with `/favicons/`, replica links (EX-07) with `/replicas/`; the
+ * kind is part of the signed message, so a link of one kind never opens another.
  * The link only proves who asked and until when; the route checks in the DB on every request
  * that the scan still exists and the viewer may still see it, so delete and disconnect apply at once.
  */
@@ -13,7 +13,7 @@ const encoder = new TextEncoder();
 
 const hmacKey = (secret: string, usage: "sign" | "verify") =>
   crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
-export type LinkKind = "screenshot" | "favicon";
+export type LinkKind = "screenshot" | "favicon" | "replica";
 const message = (kind: LinkKind, scanId: string, viewerId: string, exp: number) =>
   encoder.encode(`${kind}:v1|${scanId}|${viewerId}|${exp}`);
 type LinkQuery = { v?: string; exp?: string; sig?: string };
@@ -37,10 +37,16 @@ export const screenshotLink = (secret: string, origin: string, scanId: string, v
 export const faviconLink = (secret: string, origin: string, scanId: string, viewerId: string, nowSeconds: number) =>
   signedLink("favicon", secret, origin, scanId, viewerId, nowSeconds);
 
+export const replicaLink = (secret: string, origin: string, scanId: string, viewerId: string, nowSeconds: number) =>
+  signedLink("replica", secret, origin, scanId, viewerId, nowSeconds);
+
 export const verifyScreenshotLink = (secret: string, scanId: string, query: LinkQuery, nowSeconds: number) =>
   verifySignedLink("screenshot", secret, scanId, query, nowSeconds);
 export const verifyFaviconLink = (secret: string, scanId: string, query: LinkQuery, nowSeconds: number) =>
   verifySignedLink("favicon", secret, scanId, query, nowSeconds);
+
+export const verifyReplicaLink = (secret: string, scanId: string, query: LinkQuery, nowSeconds: number) =>
+  verifySignedLink("replica", secret, scanId, query, nowSeconds);
 
 /** The viewer device id of a valid, unexpired link of this kind for this scan, else undefined. */
 export async function verifySignedLink(

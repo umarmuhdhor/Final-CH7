@@ -58,7 +58,7 @@ const LOGO_WORDS = ["logo"];
 // Brands whose logo appears on ordinary sites as "sign in with" / share / follow buttons. Only their titles count.
 const ALT_EXEMPT = new Set(["meta", "google", "apple", "microsoft"]);
 // A title that names a brand is only a claim to BE that brand when it also invites an action (blogs say "Cara cek saldo BCA" or "Cara membuat akun BCA").
-const TITLE_ACTION_WORDS = ["login", "signin", "masuk", "verifikasi", "verify", "verification", "secure"];
+const TITLE_ACTION_WORDS = ["login", "signin", "masuk", "verifikasi", "verify", "verification", "secure", "otp", "pin"];
 /** Three or more different brands among the alts looks like a payment-method strip, not an imitation. */
 const PAYMENT_STRIP_BRANDS = 3;
 /** Most brand names layer 4 gets (detectBrands). */

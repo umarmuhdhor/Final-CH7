@@ -1,0 +1,58 @@
+# Fase 18 — verify ronde 6 (29 Okt 2026), diterapkan ke rencana
+
+Konteks baru: PR #178 (extension) **sudah merge ke `main`** 29 Okt 04:05 UTC (a57c531), sebelum 18a. #177 belum merge. Backend `main` membuang `pageReplicaBase64` (`z.object` strip, `routes/scans.ts:46`) atau 413 > 256 KB lalu extension kirim ulang tanpa replica (`background.js:153`). Scan baru tanpa bukti; `DetailView.swift:70` menyembunyikan bukti saat `screenshotUrl` nil.
+
+Review berurutan: security (ecc:security-reviewer) → wiring (general-purpose). Review database belum jalan.
+
+## Security
+
+1. **TINGGI** Replica menyalin seluruh teks halaman skor 30–79 (bisa false positive di webmail/bank). `docs/README.md:7` "page content never stored", `privacy.ts:28`, SECURITY P2 belum mencakup. Fix: K17 + Output ubah README §10 + privacy ("isian yang diketik dihapus; teks yang tampil disalin"); TODO tanya Umar di #176 batasi replica ke `blocked` atau `warning` dengan `focus != null`; baris persetujuan di onboarding Protected.
+2. **SEDANG** Kuota global (1000 upload, 20 000 view) habis murah: 10 device/jam/IP (`rateLimit.ts:12-15`). Fix: limit per IP ~100/24 jam (`limits.replicaIp`), simpan replica hanya kalau owner punya relasi keluarga; ganti "risiko diterima" K5.
+3. **SEDANG** Guard gzip bomb (belum terverifikasi): satu `write` besar ke `DecompressionStream` bisa meng-inflate penuh sebelum counter. Fix: input dipotong 4 KB per `write` (await), cek output tiap potong; bom 307 200 byte nol di benchmark langkah 10 + LANGKAH MANUAL 3 (kriteria: tanpa 1102/OOM).
+4. **SEDANG (terverifikasi)** Bug `replica.js:279` `html.replace(metaToken, escapeAttr(meta))`: `$'`/`$&` di path URL (tidak di-escape `escapeAttr:56`, tidak di-percent-encode) merusak meta. Fix: minta Umar `() => escapeAttr(meta)` (C26); 18b `ReplicaMeta` meta tidak valid → mulai dari atas; test `$'`.
+5. **SEDANG** `<link rel=preconnect>` lolos CSP. Fix: gerbang leksikal fail-closed di `ReplicaHTML` (`<link`, `<base`, `<script`, `<iframe`, `<frame`, `<object`, `<embed`, `<noscript`, `<meta http-equiv` > 1 → placeholder) + test per kasus.
+6. **SEDANG** Rencana usang setelah #178 merge (K16, K18, LANGKAH MANUAL 4, Bacaan wajib, langkah 11, C26). Fix: tulis ulang "#178 sudah merge; jendela tanpa bukti"; gerbang = tidak ada TestFlight dari `main` sampai 18a deploy + 18b merge; langkah 11 dari `main`.
+7. **RENDAH-SEDANG** `replica.js` menyimpan atribut lain di form control (`data-*`, `aria-*`, `title`, `placeholder`); `searchbox`/`combobox`/`designMode` tidak dianggap editable. Fix: minta Umar allow-list atribut + perluas `EDITABLE`.
+8. **RENDAH** Meta dikendalikan penyerang. Fix: `meta.url` hanya kalau host = `scan.domain`/subdomain, teks polos; clamp `capturedAt` ke `[detectedAt − 24 jam, detectedAt + 5 menit]`, clamp `focusY`.
+9. **RENDAH** Fullscreen bisa fokus form. Fix: CSS `pointer-events:none` di control, `-webkit-user-modify:read-only`, `canBecomeFirstResponder` false; test tanpa keyboard.
+10. **RENDAH** Pengecualian 512 KB: cocokkan method `POST` + path ternormalisasi `/scans`; test `/scans/`, `/scans/:id`, `/replicas/*` tetap 256/16 KB.
+11. **RENDAH** Tanpa kill-switch: var `REPLICAS_ENABLED` + runbook takedown (`replica_path = null` + `wrangler r2 object delete --remote`).
+
+## Wiring
+
+1. **TINGGI** 18a tidak perlu menunggu #177: `scan-result.schema.json` tanpa `additionalProperties: false`, ajv `test/helpers/schema.ts:4-9` memakai `contracts/` checkout. Fix: 18a dari `origin/main` sekarang; langkah 6 cek eksplisit `pageReplicaUrl` string|null, ulang setelah #177. Urutan: komentar #176 → 18a merge+deploy → #175 → 18f ke #177 → #177 + ScanResult → 18b → TestFlight → 18c.
+2. **TINGGI (terverifikasi)** CI iOS merah karena `TestDoubles.swift:88` `CountingScansRepository` belum punya `setMemberNotify`/`remindMember`/`becomeProtected` di `main`; perbaikan di PR #175 (open). Fix: prasyarat #175 merge lalu #177 update dari main, sebelum 18f/18b; K19 + DoD :188.
+3. **TINGGI** Mitigasi regresi bukti tidak ada (lihat Security 6). Fix: K16, langkah 4, D10, C26(4)/(d) + DECISIONS baru menggantikan C22(b). Ada draft PR #174 (TestFlight workflow): pastikan gerbangnya ditulis.
+4. **SEDANG** C26/C27 belum dikirim (#176 0 komentar). Fix: revisi lalu kirim hari ini (setelah izin Alief); C27 sebut #175.
+5. **SEDANG** Kuota screenshot 300 → 60 terlalu dini (alasan dari C19 Supabase, sudah diganti C23). Fix: tetap 300 di 18a.
+6. **SEDANG** 18c: ≥ 15 hari setelah `max(created_at) where screenshot_path is not null` dan semua device demo memakai build #178 + 18b.
+7. **SEDANG** DTO sementara C27: requirement protokol `scanDetail(id:)` dengan default extension (10 conformer `ShooRepository`), `ScanDetail: Decodable` (`ScanResult(from:)` + `pageReplicaUrl`), hanya ApiRepository + Mock override; DetailModel simpan `pageReplicaUrl` sendiri; tanggal hapus DTO.
+8. **SEDANG** Titik sentuh hilang di Peta dampak: (a) `test/env.d.ts` tanpa `REPLICAS` (typecheck CI); (b) `scans.test.ts:142-146` 413 > 256 KB → 512 KB; (c) `routes/devices.ts:153-175` `POST /devices/me/protected` juga `deleteDevice` + `deleteScreenshots`; (d) `security-review.test.ts`, `retention.test.ts` satu store; (e) `retention_indexes.test.sql` `has_index` tidak cek predikat → `pg_indexes.indexdef`.
+9. **RENDAH** `abandonUpload` tidak perlu routing per path (pemanggil sudah memberi store).
+10. **RENDAH** Test batas: 409 601 char gagal `% 4` (`invalid`); uji ukuran dengan 409 604 char.
+11. **RENDAH** Sumber usang: langkah 10/11 + `log/fase-18-plan.md:25` → import dari `ios/ShooExtension/Resources/`; header main af0d07b → a57c531.
+12. **RENDAH** Jumlah langkah beda (18a 12 vs 11, 18b 8 vs 7); privacy/docs tanpa langkah di rencana utama; C22 (c)/(e) dobel.
+13. **RENDAH** Verifikasi :176 tambah test `favicons` + `security-review`.
+
+## Sisa
+
+- Semua 24 temuan diterapkan (29 Okt): `fase-18-page-replica.md` (header, Keadaan 29 Okt, K1/K2/K4/K5/K6/K9/K10/K11–K14/K16–K19, K21 kill-switch, K22 `replica.js`, peta dampak, Output, Langkah kerja 18a 13 langkah + 18f + 18b, LANGKAH MANUAL, Verifikasi, DoD, handoff 18c), `log/fase-18-plan.md` (nomor langkah sama), TODO C26/C27/D10, DECISIONS C24/C25, README baris 18, PROGRESS baris 18.
+- Review database/retensi (ecc:database-reviewer): lihat bagian Database di bawah.
+
+## Database (ecc:database-reviewer, 29 Okt, setelah temuan di atas diterapkan)
+
+1. **TINGGI** Hapus R2 tidak boleh ikut `REPLICAS_ENABLED`. Fix: var hanya menutup tulis/baca; `storeFor` cek binding saja; test var mati → retensi + hapus device tetap menghapus (K6, K21).
+2. **TINGGI** Index kuota tidak terdefinisi (favicon tanpa kuota). Fix: `replica_bytes` hanya di baris upload asli + `scans_original_replica on scans(created_at) include (owner_id) where replica_bytes is not null`.
+3. **TINGGI** Rebuild index memegang ACCESS EXCLUSIVE sampai commit. Fix: `set local lock_timeout` + `statement_timeout`; index baru dulu, drop lama di akhir; catat jumlah baris `scans`.
+4. **SEDANG** Urutan `attachReplica` boros. Fix: `precheckReplica` (reuse + keluarga) sebelum `replicaIp` dan decode.
+5. **SEDANG** Relasi keluarga: batas diterima (scan sebelum pairing tanpa replica, race tidak di bawah lock); kunci advisory kelas baru 6.
+6. **SEDANG** `clearReplicaPath` meng-null path + bytes; `check (replica_bytes is null or replica_path is not null)`.
+7. **SEDANG** Runbook takedown: tombstone dulu, semua baris reuse di-null.
+8. **SEDANG** `hitLight` 20 000 baris: ukur `EXPLAIN ANALYZE`.
+9. **SEDANG** Batch R2 100 (= `REMOVE_BATCH`), store tidak ada → batch `failed`, tombstone tetap.
+10. **RENDAH** `dueTombstones` pakai `split_part` + `scans_replica_path`; lifecycle 17 hari cukup (cron mati > 1 hari → 404, diterima); `deleteDevice` `returning replica_path`.
+11. pgTAP: `retention_indexes` `plan(4+)` lewat `indexdef`, `security_review` 23514 untuk path/bytes.
+
+Semua diterapkan ke `fase-18-page-replica.md` (K5, K6, K21, Output, langkah 2/4/7/8, LANGKAH MANUAL 1, DoD), `log/fase-18-plan.md`, DECISIONS C25 (i). Belum terverifikasi: transaksi `supabase db push`, biaya `ADD COLUMN … CHECK`, biaya `hitLight`, perilaku R2 `delete(keys)` saat satu key gagal.
+
+Catatan 29 Okt (setelah ronde 6): batas replica dihitung ulang untuk R2 (D-alief-C26): global 3000 upload + 500 MB, per IP 300, tampilan 500/hari per viewer, batas global tampilan dihapus (temuan database 8 tidak berlaku lagi), anggaran hapus R2 4000/run.

@@ -30,6 +30,8 @@
     { "id": "posindonesia", "name": "Pos Indonesia", "names": ["posindonesia", "postindonesia"], "commonNames": [], "domains": ["posindonesia.co.id"] },
     { "id": "jne", "name": "JNE", "names": ["jne"], "commonNames": [], "domains": ["jne.co.id"] },
     { "id": "jnt", "name": "J&T Express", "names": ["jnt", "jntexpress", "jtexpress"], "commonNames": [], "domains": ["jet.co.id"] },
+    { "id": "agoda", "name": "Agoda", "names": ["agoda"], "commonNames": [], "domains": ["agoda.com", "agoda.co.id"] },
+    { "id": "dhl", "name": "DHL", "names": ["dhl", "dhlexpress"], "commonNames": [], "domains": ["dhl.com", "dhl.co.id"] },
     { "id": "kemensos", "name": "Kemensos", "names": ["kemensos"], "commonNames": [], "domains": ["kemensos.go.id"] },
     { "id": "djp", "name": "DJP (Pajak)", "names": ["djp"], "commonNames": [], "domains": ["pajak.go.id"] },
     { "id": "bpjs", "name": "BPJS", "names": ["bpjs", "bpjskesehatan", "bpjsketenagakerjaan"], "commonNames": [], "domains": ["bpjs-kesehatan.go.id", "bpjsketenagakerjaan.go.id"] },

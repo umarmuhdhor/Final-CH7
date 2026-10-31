@@ -110,7 +110,7 @@
         .bubble.out { opacity: 0; pointer-events: none; }
         .bubble[data-analyzing] { animation: ring 1.2s ease-in-out infinite; }
         @keyframes ring { 50% { box-shadow: 0 4px 14px rgba(0,0,0,.35), 0 0 0 5px color-mix(in srgb, var(--tone) 35%, transparent); } }
-        .shield { width: 12px; height: 13px; fill: var(--tone); }
+        .logo { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; pointer-events: none; }
         .score { font-variant-numeric: tabular-nums; color: var(--tone); letter-spacing: -.02em; }
 
         .card {
@@ -140,8 +140,6 @@
                  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
         @media (prefers-reduced-motion: reduce) { .bubble, .card { transition: none; animation: none; } }
     `;
-
-    const SHIELD = '<svg class="shield" viewBox="0 0 16 18" aria-hidden="true"><path d="M8 0 0 3v6c0 4.6 3.4 8.2 8 9 4.6-.8 8-4.4 8-9V3L8 0z"/></svg>';
 
     const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
     let host = null;
@@ -197,7 +195,8 @@
         bubble.type = "button";
         bubble.setAttribute("aria-haspopup", "dialog");
         bubble.setAttribute("aria-expanded", "false");
-        bubble.innerHTML = `${SHIELD}<span class="score"></span>`;
+        bubble.innerHTML = `<img class="logo" alt=""><span class="score"></span>`;
+        bubble.querySelector(".logo").src = browser.runtime.getURL("images/icon-96.png");
 
         const card = el("div", "card");
         card.hidden = true;

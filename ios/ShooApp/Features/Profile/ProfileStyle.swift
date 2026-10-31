@@ -201,6 +201,8 @@ struct SwipeBackEnabler: UIViewControllerRepresentable {
 struct ProfileSection<Content: View>: View {
     let title: LocalizedStringKey
     var trailing: AnyView?
+    /// Space above the title: 28 on most screens, 15 between the Protected profile's sections (Figma).
+    var top: CGFloat = 28
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -216,7 +218,7 @@ struct ProfileSection<Content: View>: View {
             ProfileCard { content }
         }
         .padding(.horizontal, ProfileStyle.margin)
-        .padding(.top, 28)
+        .padding(.top, top)
     }
 }
 
@@ -436,9 +438,11 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
                     .profileFont(24, .semibold, tracking: -0.48)
                     .foregroundStyle(ProfileStyle.nameInk)
                     .accessibilityAddTraits(.isHeader)
-                Text(verbatim: handle)
-                    .profileFont(14, rounded: true)
-                    .foregroundStyle(ProfileStyle.secondary)
+                if !handle.isEmpty {
+                    Text(verbatim: handle)
+                        .profileFont(14, rounded: true)
+                        .foregroundStyle(ProfileStyle.secondary)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
