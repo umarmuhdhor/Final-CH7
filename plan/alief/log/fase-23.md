@@ -33,10 +33,10 @@ S1_HASIL
 
 ### Test
 
-- Baru `UITests/UITestSupport.swift`: `UITestTimeout.screen = 10` / `.optional = 3`, `XCUIApplication.mock(_:reset:)` (selalu `-UITestMock YES -UITestReduceMotion YES`, plus `-UITestReset YES` kecuali `reset: false`), `dismissNotificationsReminder()`, `tap(_:until:retries:)` (tap ulang hanya kalau elemen masih ada + hittable, tiap tap ulang = `XCTContext.runActivity("Retap …")` di xcresult), `XCUIElement.tapWhenHittable()`.
+- Baru `UITests/UITestSupport.swift`: `UITestTimeout.screen = 10` / `.optional = 3`, `XCUIApplication.mock(_:reset:)` (selalu `-UITestMock YES -UITestReduceMotion YES`, plus `-UITestReset YES` kecuali `reset: false`), `dismissNotificationsReminder()`, `tap(_:until:retries:)` (tap ulang hanya kalau elemen masih ada, tiap tap ulang = `XCTContext.runActivity("Retap …")` di xcresult), `XCUIElement.tapWhenHittable()` (tunggu `isHittable` 2 s, lalu tetap tap: tombol toolbar iOS 26 seperti `profileButton` menerima tap tetapi tidak pernah melapor hittable).
 - Launch mock diganti `mock(_:)` di 10 file: Onboarding, DeepLink, Profile, QALayout, Pairing, Guardian, Protected, Detail, Smoke, Session. `reset: false` hanya untuk relaunch di test yang sama: `GuardianUITests.testFamilyModeIsRememberedAfterRelaunch` (`launch(familyMode: nil)`) dan `OnboardingUITests.testExtensionOffStaysOnTurnOnScreenAndRelaunchNeverReturnsToModeChoice`. Tidak diubah: `AccessibilityAuditUITests`, `PairingGateUITests` (screenshot/audit butuh tampilan asli), `Live*`.
 - F3: `OnboardingUITests` Back → `tap(_:until: invite.open)`. F4: `DeepLinkUITests` sekarang dengan reset (bug d7, R8 §d) + `tap(profileButton, until: profile.back)`. F5/F6: popup GD-01 lewat `dismissNotificationsReminder()` (Profile + QALayout ×2).
-- K3: `ReplicaHTMLTests.unclosedMetaFloodStaysFast` < 5 s + baru `unclosedMetaFloodScalesLinearly` (median 3 run, 800 000 / 200 000 < 8×). `cancelledRenderLeavesNothing` < 5 s dan memeriksa `RenderFailure.cancelled`.
+- K3: `ReplicaHTMLTests.unclosedMetaFloodStaysFast` < 5 s + baru `unclosedMetaFloodScalesLinearly` (median 3 run, 1 600 000 / 400 000 < 8×). `cancelledRenderLeavesNothing` < 5 s dan memeriksa `RenderFailure.cancelled`; baru `renderCancelledMidwayStopsAsCancelled` (batal setelah 50 ms).
 - K4: baru `Tests/WebKitTests.swift` (`@Suite(.serialized)`); `ReplicaSnapshotTests` dan `ReplicaViewTests` jadi `extension WebKitTests` (ID test sekarang `ShooAppTests/WebKitTests/ReplicaSnapshotTests/…`).
 - K2: `AppEnvironmentSessionTests.uiTestReduceMotionIsOnlyForTheArgument`.
 

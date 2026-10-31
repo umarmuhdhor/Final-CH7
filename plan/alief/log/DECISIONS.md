@@ -777,3 +777,12 @@ Format:
 - Alternatif yang ditolak: tombstone + null `replica_path` semua scan Protected saat disconnect (bisa dikerjakan nanti bila Alief ingin salinan hilang saat putus hubungan; satu fase kecil).
 - Status: diterapkan di PR 18a.
 
+
+
+## D-alief-A43 · 1 Nov 2026 · app (fase 23a, C2) · Shield ikut `shooReduceMotion`, flag UI test `-UITestReduceMotion`
+
+- Keputusan: `GlowingShield` dan `HalftoneShield` membaca `\.shooReduceMotion` (setelan app "Kurangi gerakan" ∨ Reduce Motion iPhone ∨ flag UI test), bukan `\.accessibilityReduceMotion` langsung. Flag Debug `-UITestReduceMotion YES` (dipasang `XCUIApplication.mock(_:)` untuk semua UI test mock) menyalakan `AppEnvironment.reducesMotionForUITests` + `UIView.setAnimationsEnabled(false)`. Tidak untuk `AccessibilityAuditUITests`, `PairingGateUITests`, dan screenshot PR (tampilan asli).
+- Alasan: fase 23 K2 (a) (R8 §c): `accessibilityReduceMotion` hanya `get`, jadi kunci environment sendiri; layar lain (Splash, Onboarding, Connect, Detail) sudah memakai `shooReduceMotion`, jadi setelan "Kurangi gerakan" PF-01 sekarang juga menghentikan dua shield (sebelumnya terlewat).
+- Alternatif yang ditolak: mengikat ke `-UITestMock` (screenshot PR juga memakai mock); API privat `_accessibilityReduceMotion`.
+- File: `App/{AppEnvironment,RootView}.swift`, `Features/Shield/GlowingShield.swift`, `Components/HalftoneShield.swift`, `UITests/UITestSupport.swift`.
+- Status: diterapkan di PR 23a (`fix/C2-test-flakes`).
