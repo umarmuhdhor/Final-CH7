@@ -113,11 +113,13 @@ enum ReplicaSnapshot {
     }
 
     /// The window the Detail screen is in, for `render(_:meta:ruleList:in:)`. Opened from a push on a cold
-    /// start, no window may be key yet: then the first window of the active scene.
+    /// start, no window may be key yet and the scene may still be `.foregroundInactive`: then the first
+    /// window of the active scene, else of any scene on screen.
     static var keyWindow: UIWindow? {
         let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
         return scenes.flatMap(\.windows).first { $0.isKeyWindow }
             ?? scenes.first { $0.activationState == .foregroundActive }?.windows.first
+            ?? scenes.first { $0.activationState == .foregroundInactive }?.windows.first
     }
 
     /// `true` on `didFinish`; `false` on failure, a dead content process, or `loadTimeout`.

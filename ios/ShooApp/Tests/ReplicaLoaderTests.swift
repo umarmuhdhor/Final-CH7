@@ -138,6 +138,10 @@ struct ReplicaLoaderTests {
         #expect(!URLSessionReplicaLoader.isAllowed(port, host: "shoo.example"))
         let dots = try #require(URL(string: "https://shoo.example/replicas/../screenshots/abc"))
         #expect(!URLSessionReplicaLoader.isAllowed(dots, host: "shoo.example"))
+        let encoded = try #require(URL(string: "https://shoo.example/replicas/%2e%2e/screenshots/abc"))
+        #expect(!URLSessionReplicaLoader.isAllowed(encoded, host: "shoo.example"))
+        let user = try #require(URL(string: "https://me@shoo.example/replicas/abc"))
+        #expect(!URLSessionReplicaLoader.isAllowed(user, host: "shoo.example"))
         let fine = try #require(URL(string: "https://shoo.example/replicas/abc?e=1"))
         #expect(URLSessionReplicaLoader.isAllowed(fine, host: "shoo.example"))
     }

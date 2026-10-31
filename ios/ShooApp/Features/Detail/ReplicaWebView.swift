@@ -92,7 +92,8 @@ final class ReplicaWebController: NSObject, WKNavigationDelegate, WKUIDelegate {
         decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
     ) {
         // The string load is `about:blank`; everything after it is the page trying to go somewhere.
-        if !firstLoadAllowed, navigationAction.request.url?.scheme == "about" {
+        if !firstLoadAllowed, navigationAction.navigationType == .other,
+           navigationAction.request.url?.absoluteString == "about:blank" {
             firstLoadAllowed = true
             decisionHandler(.allow)
             return

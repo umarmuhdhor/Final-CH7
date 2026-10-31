@@ -16,6 +16,8 @@ struct DetailView: View {
     /// fase 18b: the page copy, drawn once; it comes before the screenshot (old builds) and the placeholder.
     @State private var pageCopy: PageCopy?
     @State private var copyState: PageCopyState = .none
+    /// "Try again" bumps it, so the whole first load (read-aloud, waiting for the copy) runs again.
+    @State private var loadAttempt = 0
     @State private var isZoomed = false
     @State private var copied = false
 
@@ -38,7 +40,7 @@ struct DetailView: View {
             .toolbar(.hidden, for: .tabBar)
             .background(SwipeBackEnabler())
             .accessibilityAction(.escape) { env.router.pop() }
-            .task(id: model.scanId) {
+            .task(id: "\(model.scanId)#\(loadAttempt)") {
                 #if DEBUG
                 if env.repository is MockRepository {
                     model.marks = FixtureMarks.marks(scanId: model.scanId)
@@ -53,7 +55,9 @@ struct DetailView: View {
             }
             .task(id: model.scan?.pageReplicaUrl) { await loadPageCopy() }
             .task(id: model.scan?.screenshotUrl) {
-                guard model.scan?.pageReplicaUrl == nil else { return }
+                // With a copy the screenshot is only the fallback; a refreshed screenshot link after that
+                // fallback must still load.
+                guard model.scan?.pageReplicaUrl == nil || copyState == .unavailable else { return }
                 await loadScreenshot()
             }
             .fullScreenCover(isPresented: $isZoomed) {
@@ -87,9 +91,7 @@ struct DetailView: View {
                     title: "Couldn't load this item",
                     message: "Check your connection and try again."
                 )
-                Button("Try again") {
-                    Task { await model.load() }
-                }
+                Button("Try again") { loadAttempt += 1 }
                 .buttonStyle(.borderedProminent)
                 .padding(.bottom, 32)
             }
@@ -382,6 +384,8 @@ struct DetailView: View {
             Log.ui.error("Page copy load failed")
             // A new link restarts `.task(id:)`.
             if await model.refreshReplicaLink() { return }
+            // Cancelled while asking: the task for the next link owns the state now.
+            guard !Task.isCancelled else { return }
             copyState = .unavailable
             await loadScreenshot()
         }
