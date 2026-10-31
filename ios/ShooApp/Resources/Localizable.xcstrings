@@ -2863,6 +2863,16 @@
         }
       }
     },
+    "Shoo keeps a copy of pages it blocks or warns you about for 14 days, so your Guardian can see the evidence." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo menyimpan salinan halaman yang diblokir atau diberi peringatan selama 14 hari supaya Guardian bisa melihat buktinya."
+          }
+        }
+      }
+    },
     "Shoo uses no third-party libraries or SDKs. It is built only with Apple's frameworks, under the Apple Developer Program License Agreement." : {
       "localizations" : {
         "id" : {

@@ -73,6 +73,10 @@ final class PairingUITests: XCTestCase {
         let join = app.buttons["connect.join"]
         XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(join.isEnabled)
+        // K17: told about the page copy before joining.
+        let copyNote = app.descendants(matching: .any)["connect.copyNote"].firstMatch
+        XCTAssertTrue(copyNote.exists, app.debugDescription)
+        XCTAssertTrue(copyNote.label.contains("14 days"), copyNote.label)
         enter("000000", in: app)
         join.tap()
         let error = app.staticTexts["connect.error"]
