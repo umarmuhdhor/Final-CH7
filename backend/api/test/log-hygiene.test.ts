@@ -66,13 +66,16 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
       expect(info.ok).toBe(false);
     });
     await runRetention(sql, env);
+    // Fase 21a: the ops status endpoint, with and without the token.
+    await call("/ops/status", { headers: { authorization: `Bearer ${env.OPS_STATUS_TOKEN}` } });
+    await call("/ops/status", { headers: { authorization: "Bearer wrong-ops-token-wrong-ops-token-x" } });
 
     expect(lines.length).toBeGreaterThan(0);
     const all = lines.join("\n");
     for (const leak of [
       g.token, p.token, g.deviceId, p.deviceId, id, "Adhella", "Mom Secret", "very-private-domain", "https://",
       "shoo_wrong", code, ip, "sig=", "ab".repeat(32), env.SCREENSHOT_URL_SECRET!, env.RATE_KEY_SECRET!,
-      "replica.html.gz", "other-private",
+      "replica.html.gz", "other-private", env.OPS_STATUS_TOKEN!, "wrong-ops-token",
     ]) {
       expect(all, `log contains ${leak.slice(0, 12)}`).not.toContain(leak);
     }
@@ -89,6 +92,7 @@ describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; 
       devices_create_all: "security-review.test.ts", scans_create_all: "security-review.test.ts",
       favicons_view: "favicons.test.ts", favicons_fetch: "favicons.test.ts", favicons_fetch_all: "favicons.test.ts",
       replicas_ip: "replicas.test.ts", replicas_view: "replicas.test.ts", replicas_view_day: "replicas.test.ts",
+      ops_status: "ops-status.test.ts",
     };
     expect(Object.values(limits).map((l) => l.bucket).sort()).toEqual(Object.keys(tested).sort());
     // Not in `limits`: join attempts (family.test.ts "too_many_attempts") and the push cap (push-notify.test.ts).

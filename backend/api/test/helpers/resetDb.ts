@@ -15,7 +15,7 @@ let admin: Sql | undefined;
 
 /**
  * Empties every table. shoo_api has DELETE (not TRUNCATE), which is enough for tests, except on
- * blocklist_entries: its policy lets the Worker delete undecided rows only (D-alief-B12).
+ * blocklist_entries (its policy lets the Worker delete undecided rows only, D-alief-B12) and ops_jobs.
  */
 export async function resetDb(sql: Sql): Promise<void> {
   await sql.begin(async (tx) => {
@@ -28,4 +28,6 @@ export async function resetDb(sql: Sql): Promise<void> {
   });
   admin ??= adminSql();
   await admin`delete from blocklist_entries`;
+  // shoo_api cannot delete ops_jobs rows (fase 21a): nobody but a person does.
+  await admin`delete from ops_jobs`;
 }

@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { opsWriter, type OpsWriter } from "../db/repo/ops";
 import type { Env, Language } from "../env";
 import { errorInfo } from "../http/logError";
 import { deliverPush } from "../services/push/deliver";
@@ -32,7 +33,9 @@ interface Candidate extends QuietHours {
  * proposed). Rows are claimed before sending, so an overlapping run never pushes twice; a claimed
  * push that then fails is not retried (same as the scan push).
  */
-export async function runNotifications(sql: Sql, env: Env, opts: { sender?: PushSender; now?: Date } = {}): Promise<NotificationsResult> {
+export async function runNotifications(
+  sql: Sql, env: Env, opts: { sender?: PushSender; now?: Date; ops?: OpsWriter } = {},
+): Promise<NotificationsResult> {
   const now = opts.now ?? new Date();
   const sender = opts.sender ?? pushSender(env);
   const off = await protectionOff(sql, now, MAX_PUSHES);
@@ -46,6 +49,13 @@ export async function runNotifications(sql: Sql, env: Env, opts: { sender?: Push
     }
   }
   const result = { protectionOff: off.length, summaries: summaries.length };
+  // Run status for GET /ops/status (fase 21a). One failed push is not a failed run (push_log has it),
+  // and a failed status write never fails the pushes already sent.
+  try {
+    await (opts.ops ?? opsWriter).finish(sql, "notifications", { failed: 0, backlog: false });
+  } catch (err) {
+    console.error(JSON.stringify({ event: "ops_job_write_failed", job: "notifications", error: errorInfo(err) }));
+  }
   console.log(JSON.stringify({ event: "notifications", ...result }));
   return result;
 }

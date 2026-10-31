@@ -39,6 +39,7 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 |---|---|---|---|
 | GET | [`/healthz`](API.md#get-healthz) | uptime monitor | Worker is up (no DB) |
 | GET | [`/healthz/db`](API.md#get-healthzdb) | uptime monitor | DB is reachable; keeps Supabase Free awake |
+| GET | [`/ops/status`](API.md#get-opsstatus) | ops-watch, backend owner | Cron health, DB size, blocklist queue (token, aggregates only) |
 | POST | [`/devices`](API.md#post-devices) | app, onboarding | Register this phone, get its device token |
 | GET | [`/devices/me`](API.md#get-devicesme) | app | My profile, and my Guardian if I am Protected |
 | PATCH | [`/devices/me`](API.md#patch-devicesme) | app, extension | Rename, APNs token, language, extension heartbeat |
@@ -78,6 +79,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
+| `ops_jobs` | one row per cron job (`retention`, `notifications`): last start, last finish, last clean finish (`ok_at`), failed steps, backlog. Read by `GET /ops/status`; `shoo_api` cannot delete rows |
 | `push_log` | one row per push: guardian, scan, result code (`sent`, `logged`, `failed:<status> <reason>`, `failed:timeout\|network\|config`; CHECK). No notification text (D-alief-B11) |
 | `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP |
 
@@ -117,6 +119,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `RATE_KEY_SECRET` | secret | HMAC key for rate-limit keys and join attempt IPs (`openssl rand -base64 32`, ≥ 32 characters). **Required**: unset or shorter → every rate-limited request is a 500 (fail closed). Set it before deploying. Changing it resets all counters once, including the join-failure budget, so rotate it while no family code is shared and expect one deploy window where old and new isolates count apart |
 | `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
 | `APNS_ENV` | var | `sandbox` (Debug builds) → `production` (TestFlight, fase 16) |
+| `OPS_STATUS_TOKEN` | secret | Bearer for `GET /ops/status` (`openssl rand -base64 32`, ≥ 32 characters, kept in the password manager). Unset or shorter → the route is a 404. Rotate with `wrangler secret put` + the GitHub Environment `ops` |
 
 ## Retention (daily cron)
 
@@ -136,6 +139,37 @@ Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler
 `"5 * * * *"` runs `src/cron/notifications.ts` (`scheduled()` picks the job by `controller.cron`, see `CRONS` in `src/index.ts`): "Perlindungan mati" for members whose extension has been silent 24 h, and the Monday "Ringkasan mingguan", at most 40 pushes per run. Quiet hours (`devices.quiet_*` in `devices.time_zone`) are worked out in TypeScript with `Intl`. Migration `20261028130000_notification_settings.sql` adds the switches to `devices` and `family_links.off_notified_at`. Logs: one `{"event":"notifications","protectionOff":n,"summaries":n}` line. Local trigger: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=5+*+*+*+*"`.
 
 Check for a backlog (SQL editor): `select count(*) from scans where created_at < now() - interval '15 days';` should be 0.
+
+## Monitoring and alerts
+
+`GET /ops/status` (fase 21a) judges the backend from the database: both crons write `ops_jobs` (a
+failed write is one failed retention step, or one `ops_job_write_failed` log line for notifications,
+and never stops the other work). Check it by hand, token typed from the password manager and never as
+an argument:
+
+```bash
+read -rs OPS_STATUS_TOKEN
+curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" https://shoo-api.afindo-mi01.workers.dev/ops/status
+```
+
+Who gets alerts: Alief (backend owner). Umar only when the cause is in CI, the extension or `ai/`.
+Never paste `wrangler tail` or Query Builder output that carries URLs (`/replicas/…?sig=`, `/j/<code>`)
+into an issue, PR or plan log. Public places (issues, Actions logs) get codes only, no numbers.
+
+| Code | Level | When | First step | Next step |
+|---|---|---|---|---|
+| `retention_stale` | alert | no clean retention run for 26 h (or never: right after the first deploy, until 19:00 UTC) | Query Builder: `event = retention_step_failed` (`step`, `error.name`, `error.code`) | Reproduce locally (`wrangler dev --test-scheduled`, trigger in [Retention](#retention-daily-cron)), fix through a PR. Do not run cloud retention by hand; the next run is 19:00 UTC |
+| `retention_failed` | alert | the last run had a failed step | same as above | same as above |
+| `retention_overdue` | alert | a scan is older than 15 days 6 h (the privacy page promises 14 days) | SQL editor: `select count(*) from scans where created_at < now() - interval '15 days'` | Backlog for more than 2 days → raise chunks/budget through a PR |
+| `retention_backlog` | warn | the last run left rows for the next one | same as above | same as above |
+| `tombstones_stuck` | warn | a tombstone older than 2 days | Query Builder: `screenshots_delete_failed`, `replica_clear_failed` | Check the R2 binding and the Supabase key |
+| `notifications_stale` | alert | no notifications run for 2 h 15 min (or never) | Query Builder: `push_failed`, `push_config_incomplete`, `ops_job_write_failed`; Cron Events in the Worker dashboard | Fix through a PR |
+| `db_size_high` | warn ≥ 350 MB, alert ≥ 450 MB | `pg_database_size` (Free: 500 MB) | `select relname, pg_size_pretty(pg_total_relation_size(oid)) from pg_class order by pg_total_relation_size(oid) desc limit 10` | Usually `rate_limit_hits` or `scans`: check retention first |
+| `blocklist_queue` | warn | the oldest undecided domain waits more than 24 h (D9) | Review in the SQL editor ([Schema summary](#schema-summary)) | Note approvals and rejections in the active phase log |
+
+`healthzAgeHours` (last `/healthz/db`) is a number only: it shows whether the ops-watch keep-alive
+still runs. The workflow (fase 21b) adds `healthz_down`, `ops_status_unreachable`, `healthz_db_failed`,
+`worker_*` and `r2_*`; their rows join this table with it.
 
 ## Quota (Supabase Free + R2)
 

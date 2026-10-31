@@ -2,12 +2,12 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(27);
+select plan(28);
 
 select has_table('public', t, 'table ' || t || ' exists')
 from unnest(array[
   'devices', 'family_links', 'family_codes', 'join_attempts', 'scans', 'verdicts',
-  'blocklist_entries', 'ops_heartbeat', 'push_log', 'rate_limit_hits'
+  'blocklist_entries', 'ops_heartbeat', 'push_log', 'rate_limit_hits', 'ops_jobs'
 ]) as t;
 
 select has_column('public', 'devices', 'ext_last_seen_at', 'devices.ext_last_seen_at exists');

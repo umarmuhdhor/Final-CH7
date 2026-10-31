@@ -34,6 +34,7 @@ export default defineConfig({
           SUPABASE_SERVICE_ROLE_KEY: storage.key,
           SCREENSHOT_URL_SECRET: "test-screenshot-url-secret-".padEnd(40, "x"),
           RATE_KEY_SECRET: "test-rate-key-secret-".padEnd(40, "x"),
+          OPS_STATUS_TOKEN: "test-ops-status-token-".padEnd(40, "x"),
           // "1" runs slow opt-in tests (e.g. all 10^6 family codes taken). Off by default and in CI.
           SHOO_SLOW_TESTS: process.env.SHOO_SLOW_TESTS ?? "",
         },

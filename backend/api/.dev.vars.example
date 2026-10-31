@@ -18,3 +18,5 @@ SUPABASE_SERVICE_ROLE_KEY=
 RATE_KEY_SECRET=
 # HMAC key for screenshot links (D-alief-B08), at least 32 characters, e.g. `openssl rand -base64 32`.
 SCREENSHOT_URL_SECRET=
+# Bearer for GET /ops/status (fase 21a), at least 32 characters, e.g. `openssl rand -base64 32`. Empty → 404.
+OPS_STATUS_TOKEN=

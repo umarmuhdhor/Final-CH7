@@ -31,6 +31,8 @@ export interface Env {
   RATE_KEY_SECRET?: string;
   /** Secret: HMAC key for screenshot links (D-alief-B08). Unset → screenshotUrl null. */
   SCREENSHOT_URL_SECRET?: string;
+  /** Secret: bearer for GET /ops/status (fase 21a). Unset or < 32 characters → the route is a 404. */
+  OPS_STATUS_TOKEN?: string;
 }
 
 export type DeviceMode = "guardian" | "protected";
