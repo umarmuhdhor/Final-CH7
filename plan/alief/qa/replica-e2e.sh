@@ -94,7 +94,8 @@ replica_url() {
 # app's URLSession does inflate it once). Not --raw: that would also keep the chunked framing.
 fetch() {
   local url=$1 name=$2; shift 2
-  curl -s -D "$W/$name.h" -o "$W/$name.body" -w '%{http_code}' "$@" "$url"
+  # Accept-Encoding like URLSession: without it Cloudflare's edge inflates a gzip body for the client.
+  curl -s -D "$W/$name.h" -o "$W/$name.body" -w '%{http_code}' -H 'Accept-Encoding: gzip' "$@" "$url"
 }
 header() { grep -i "^$1:" "$W/$2.h" | head -1 | cut -d: -f2- | sed 's/^ *//' | tr -d '\r'; }
 
@@ -140,7 +141,8 @@ if [ $BENCH = 1 ]; then
   read -r WAIT_MS WURL <<< "$(replica_url "$WID" 30)"
   say "BENCH worst: POST /scans answered in ${POST_MS} ms, replica visible ${WAIT_MS} ms after the 201 (wall time, local indication)"
   if [ -n "$WURL" ]; then
-    check "$(fetch "$WURL" worst)" 200 "worst case: GET pageReplicaUrl"
+    check "$(fetch "$WURL" worst)" 200 "worst case: GET pageReplicaUrl" || true
+    [ "$(head -c 1 "$W/worst.body")" = "{" ] && say "  body: $(head -c 300 "$W/worst.body")"
     check "$(python3 -c 'import gzip,sys;print(len(gzip.decompress(open(sys.argv[1],"rb").read())))' "$W/worst.body")" 3145728 "worst case inflates to 3 145 728 bytes"
   else
     fail "worst case: pageReplicaUrl still null after 30 s"
@@ -156,7 +158,7 @@ if [ $BENCH = 1 ]; then
   say "BENCH bomb: POST /scans answered in ${POST_MS} ms"
   [ $CLOUD = 0 ] && check "$(psql1 "select coalesce(replica_path, 'null') from scans where id = '$BID'")" null "zero gzip bomb: replica_path null in the DB"
   if [ -n "${WRANGLER_LOG:-}" ]; then
-    DROP=$(tail -n +"$((LOGSTART + 1))" "$WRANGLER_LOG" | grep -o '"event":"replica_dropped","reason":"[a-z_]*"' | head -1)
+    DROP=$(tail -n +"$((LOGSTART + 1))" "$WRANGLER_LOG" | sed 's/\\"/"/g' | grep -o '"event":"replica_dropped","reason":"[a-z_]*"' | head -1)
     check "$DROP" '"event":"replica_dropped","reason":"too_large"' "zero gzip bomb: dropped as too_large in the Worker log"
     tail -n +"$((LOGSTART + 1))" "$WRANGLER_LOG" | grep -qiE 'exceeded (cpu|memory)|1102|out of memory' && fail "Worker log shows a CPU/memory limit" || pass "no CPU/memory limit error in the Worker log"
   fi
