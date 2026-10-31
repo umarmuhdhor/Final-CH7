@@ -56,10 +56,12 @@ final class ConnectModel {
 
     private(set) var state: State = .entering
     private(set) var problem: Problem?
-    /// Digits only, at most 6; editing clears the last problem.
+    /// Digits only, at most 6; editing clears the last problem. A pasted invite link or invite message
+    /// gives the link's code (U6), not every digit in the text.
     var code = "" {
         didSet {
-            let digits = String(code.unicodeScalars.filter { ("0"..."9").contains($0) }.map(Character.init).prefix(Self.codeLength))
+            let linked = code.unicodeScalars.allSatisfy { ("0"..."9").contains($0) } ? nil : InvitePaste.code(inText: code)
+            let digits = linked ?? String(code.unicodeScalars.filter { ("0"..."9").contains($0) }.map(Character.init).prefix(Self.codeLength))
             if digits != code { code = digits }
             if code != oldValue { problem = nil }
         }

@@ -117,6 +117,35 @@ struct ConnectModelTests {
         #expect(!english.isEmpty && !indonesian.isEmpty && english != indonesian)
     }
 
+    /// U6 (fase 26): pasting the invite link or the whole invite message gives the link's code, not
+    /// every digit in the text (`mi01` used to turn `482193` into `014821`).
+    @Test(arguments: [
+        "https://shoo-api.afindo-mi01.workers.dev/j/482193",
+        " https://shoo-api.afindo-mi01.workers.dev/j/482193\n",
+        "(https://shoo-api.afindo-mi01.workers.dev/j/482193).",
+        "Open https://SHOO-API.afindo-mi01.workers.dev/j/482193, then tap Connect",
+    ])
+    func pastedInviteLinkGivesItsCode(text: String) {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
+        model.code = text
+        #expect(model.code == "482193")
+    }
+
+    @Test(arguments: [AppLanguage.english, .indonesian])
+    func pastedInviteMessageGivesItsCode(language: AppLanguage) {
+        let code = FamilyCode(code: "482193", expiresAt: Date(), inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/j/482193")!)
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
+        model.code = FamilyCodeModel.inviteText(for: code, language: language)
+        #expect(model.code == "482193")
+    }
+
+    /// A link that isn't ours is not an invite: the old digit filter applies, same as before U6.
+    @Test func foreignLinkFallsBackToTheDigits() {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
+        model.code = "https://evil.example/j/111111 482193"
+        #expect(model.code == "111111")
+    }
+
     @Test func scannedInviteFillsTheCode() {
         let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
         #expect(model.scanned("https://shoo-api.afindo-mi01.workers.dev/j/482193"))
