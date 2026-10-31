@@ -27,6 +27,10 @@ enum ReplicaSnapshot {
     static let imageWidth: CGFloat = 200
     /// `didFinish` never came: show the placeholder instead of waiting forever.
     static let loadTimeout: Duration = .seconds(10)
+    /// A page that stalls the content process must not keep the hidden view in the window.
+    static let snapshotTimeout: Duration = .seconds(5)
+    /// Time for the newly shown tiles after the frame grows.
+    static let paintDelay: Duration = .milliseconds(300)
 
     /// `lockedHTML` must come from `ReplicaHTML.locked(_:)`. `nil` when WebKit can't draw it.
     static func render(
@@ -53,12 +57,23 @@ enum ReplicaSnapshot {
         let kept = Self.window(focusY: meta?.focusY ?? 0, zoom: zoom, contentHeight: contentHeight)
         webView.frame.size.height = kept.height
         scrollView.contentOffset = CGPoint(x: 0, y: kept.top)
+        // The taller frame shows page parts WebKit has not painted yet; there is no paint-done event
+        // without JS, so let the new size lay out and give the tiles a moment.
+        webView.layoutIfNeeded()
+        await controller.waitForLayout()
+        try? await Task.sleep(for: paintDelay)
 
         let configuration = WKSnapshotConfiguration()
         configuration.rect = CGRect(origin: .zero, size: webView.bounds.size)
         configuration.snapshotWidth = NSNumber(value: Double(imageWidth))
         configuration.afterScreenUpdates = true
-        guard let image = try? await webView.takeSnapshot(configuration: configuration) else { return nil }
+        let image: UIImage? = await first(within: snapshotTimeout, otherwise: nil) { done in
+            webView.takeSnapshot(with: configuration) { image, _ in done(image) }
+        }
+        guard let image else {
+            webView.stopLoading()
+            return nil
+        }
 
         let topCSS = kept.top / zoom
         return PageCopy(
@@ -95,19 +110,28 @@ enum ReplicaSnapshot {
 
     /// `true` on `didFinish`; `false` on failure, a dead content process, or `loadTimeout`.
     private static func finished(_ controller: ReplicaWebController, html: String) async -> Bool {
+        await first(within: loadTimeout, otherwise: false) { done in
+            controller.onFinish = { done(true) }
+            controller.onFailure = { done(false) }
+            controller.load(html)
+        }
+    }
+
+    /// The first answer `start` gives, or `fallback` after `timeout`; later answers are ignored.
+    private static func first<T>(
+        within timeout: Duration, otherwise fallback: T, _ start: (@escaping (T) -> Void) -> Void
+    ) async -> T {
         await withCheckedContinuation { continuation in
             var resumed = false
-            let resume: (Bool) -> Void = { value in
+            let done: (T) -> Void = { value in
                 guard !resumed else { return }
                 resumed = true
                 continuation.resume(returning: value)
             }
-            controller.onFinish = { resume(true) }
-            controller.onFailure = { resume(false) }
-            controller.load(html)
+            start(done)
             Task { @MainActor in
-                try? await Task.sleep(for: loadTimeout)
-                resume(false)
+                try? await Task.sleep(for: timeout)
+                done(fallback)
             }
         }
     }
