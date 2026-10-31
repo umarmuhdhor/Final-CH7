@@ -37,30 +37,60 @@ enum ReplicaHTML {
     }
 
     /// Fail-closed lexical gate (K11), case-insensitive. A real capture has exactly one `<meta http-equiv>` (its CSP).
-    /// `http-equiv` is counted anywhere in the file, not per tag: a `>` inside an attribute can't hide a second one,
-    /// and the scan stays linear on a hostile 3 MB file (one pass per needle).
+    /// `http-equiv` is counted anywhere in the file, not per tag: a `>` inside an attribute can't hide a second one.
+    /// One linear pass over the bytes, so a hostile 3 MB file stays fast (`<meta <meta …` flood, review H1).
     static func passesGate(_ html: String) -> Bool {
-        let lower = html.lowercased()
-        guard !refusedTags.contains(where: { containsTag($0, in: lower) }) else { return false }
-        var httpEquiv = 0
-        var from = lower.startIndex
-        while let hit = lower.range(of: "http-equiv", range: from..<lower.endIndex) {
-            httpEquiv += 1
-            if httpEquiv > 1 { return false }
-            from = hit.upperBound
-        }
-        return true
+        let utf8 = html.utf8
+        return utf8.withContiguousStorageIfAvailable(passesGate)
+            ?? Array(utf8).withUnsafeBufferPointer(passesGate)
     }
 
-    /// `tag` followed by whitespace, `/`, `>` or the end of the file. One pass per needle, like `passesGate`.
-    private static func containsTag(_ tag: String, in lower: String) -> Bool {
-        var from = lower.startIndex
-        while let hit = lower.range(of: tag, range: from..<lower.endIndex) {
-            guard hit.upperBound < lower.endIndex else { return true }
-            let next = lower[hit.upperBound]
-            if next.isWhitespace || next == "/" || next == ">" { return true }
-            from = hit.upperBound
+    private static let refusedNames: [[UInt8]] = refusedTags.map { Array($0.utf8.dropFirst()) }
+    private static let firstLetters = Set(refusedNames.compactMap(\.first))
+
+    private static func passesGate(_ bytes: UnsafeBufferPointer<UInt8>) -> Bool {
+        guard let base = bytes.baseAddress else { return true }
+        let count = bytes.count
+        // ASCII-only lowercasing: every needle is ASCII.
+        @inline(__always) func lower(_ byte: UInt8) -> UInt8 { byte >= 65 && byte <= 90 ? byte | 0x20 : byte }
+        @inline(__always) func matches(_ needle: some Collection<UInt8>, at start: Int) -> Bool {
+            guard start >= 0, start + needle.count <= count else { return false }
+            var k = start
+            for byte in needle {
+                if lower(base[k]) != byte { return false }
+                k += 1
+            }
+            return true
         }
-        return false
+        // memchr jumps to the next `<` / `-`; only those spots are compared.
+        func positions(of byte: UInt8, _ body: (Int) -> Bool) -> Bool {
+            var from = 0
+            while from < count, let hit = memchr(base + from, Int32(byte), count - from) {
+                let at = base.distance(to: hit.assumingMemoryBound(to: UInt8.self))
+                if !body(at) { return false }
+                from = at + 1
+            }
+            return true
+        }
+        let tagsOK = positions(of: UInt8(ascii: "<")) { at in
+            guard at + 1 < count, firstLetters.contains(lower(base[at + 1])) else { return true }
+            for name in refusedNames where matches(name, at: at + 1) {
+                // The name must end there, so SVG's `<linearGradient` is not `<link`.
+                let end = at + 1 + name.count
+                guard end < count else { return false }
+                let next = base[end]
+                if next == 0x20 || (0x09...0x0D).contains(next) || next == UInt8(ascii: "/") || next == UInt8(ascii: ">") {
+                    return false
+                }
+            }
+            return true
+        }
+        guard tagsOK else { return false }
+        var equivs = 0
+        return positions(of: UInt8(ascii: "-")) { at in
+            guard matches("http".utf8, at: at - 4), matches("equiv".utf8, at: at + 1) else { return true }
+            equivs += 1
+            return equivs <= 1
+        }
     }
 }
