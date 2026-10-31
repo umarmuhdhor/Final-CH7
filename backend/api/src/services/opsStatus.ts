@@ -44,8 +44,9 @@ export function evaluate(s: OpsSnapshot): { ok: boolean; failing: OpsFailure[] }
   add(s.blocklistQueue > 0 && (s.blocklistOldestHours ?? 0) > t.blocklistQueueHours, "blocklist_queue", "warn");
   // Fase 21c: a quota state, not a drop. Normal use is far below the global quota, so `full` alone
   // points to abuse or a wrong setting; real drops are `replica_dropped` lines (runbook).
-  add(s.replica.level === "full", "replica_full", "alert");
-  add(s.replica.level === "reserve", "replica_reserve", "warn");
-  add(s.replica.familiesAtCap >= t.replicaFamiliesAtCap, "replica_family_cap", "warn");
+  add(s.replica === null, "replica_unknown", "warn");
+  add(s.replica?.level === "full", "replica_full", "alert");
+  add(s.replica?.level === "reserve", "replica_reserve", "warn");
+  add((s.replica?.familiesAtCap ?? 0) >= t.replicaFamiliesAtCap, "replica_family_cap", "warn");
   return { ok: !failing.some((f) => f.level === "alert"), failing };
 }

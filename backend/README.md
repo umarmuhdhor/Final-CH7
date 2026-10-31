@@ -168,7 +168,12 @@ into an issue, PR or plan log. Public places (issues, Actions logs) get codes on
 | `blocklist_queue` | warn | the oldest undecided domain waits more than 24 h (D9) | Review in the SQL editor ([Schema summary](#schema-summary)) | Note approvals and rejections in the active phase log |
 | `replica_full` | alert | a full-size page replica no longer fits the global quota of 24 h (3000 uploads / 500 MB): new replicas are dropped for everyone (scans and pushes go on) | `replica` in the response; Query Builder: `event = replica_dropped` grouped by `reason` (`global_quota`, `global_bytes`, `reserve`, `family_*`) and `replica_quota_usage` over the last day | Normal use is far below the quota, so this is abuse or a wrong setting. If one family dominates (`topFamilyUploads`): wait, the family quota already stops it. If many: kill-switch ([Page replicas](#page-replicas-kill-switch-and-takedown)) and tell Umar |
 | `replica_reserve` | warn | usage is in the last 600 uploads / 100 MB of the global quota: only families with fewer than 10 uploads still get replicas | same as above | Watch the next hours; usually it drains within 24 h |
-| `replica_family_cap` | warn | 3 or more families reached their own quota (60 uploads or 10 MB) in 24 h | Query Builder: `replica_dropped` `reason` `family_quota` / `family_bytes` | Several heavy families at once can be abuse via fresh families (fase 19 C4); note it in the active phase log. The fase 19 K2 numbers are reviewed after 2 weeks of gauge data |
+| `replica_family_cap` | warn | 3 or more families reached their own quota (60 uploads or 10 MB) in 24 h | Query Builder: `replica_dropped` `reason` `family_quota` / `family_bytes` | Several heavy families at once can be abuse via fresh families (fase 19 C4); note it in the active phase log (codes and counts only). The fase 19 K2 numbers are reviewed after 2 weeks of gauge data |
+| `replica_unknown` | warn | the replica gauge query failed; the other checks still answered | Query Builder: `event = ops_replica_usage_failed` (`error.name`, `error.code`) | Usually a passing DB hiccup; if it repeats, reproduce `replicaUsage` locally |
+
+The `replica` numbers (fase 21c) describe families, even without ids: with one active family,
+`topFamily*` is that family's use. Like every other number here, they never go into an issue, an
+Actions log or any other public place; public places get codes only.
 
 `healthzAgeHours` (last `/healthz/db`) is a number only: it shows whether the ops-watch keep-alive
 still runs. The workflow (fase 21b) adds `healthz_down`, `ops_status_unreachable`, `healthz_db_failed`,

@@ -117,17 +117,27 @@ describe("evaluate: K3 thresholds (fase 21a)", () => {
 
   it("replica_reserve (warn) and replica_full (alert) follow the fase 19 gauge level (21c)", () => {
     const s = healthy();
-    s.replica.level = "reserve";
+    s.replica!.level = "reserve";
     expect(evaluate(s)).toEqual({ ok: true, failing: [{ code: "replica_reserve", level: "warn" }] });
-    s.replica.level = "full";
+    s.replica!.level = "full";
     expect(evaluate(s)).toEqual({ ok: false, failing: [{ code: "replica_full", level: "alert" }] });
+  });
+
+  it("replica_unknown (warn) when the gauge query failed; the other checks still run (21c)", () => {
+    const s = healthy();
+    s.replica = null;
+    s.retention.failed = 1;
+    expect(evaluate(s)).toEqual({
+      ok: false,
+      failing: [{ code: "retention_failed", level: "alert" }, { code: "replica_unknown", level: "warn" }],
+    });
   });
 
   it("replica_family_cap: warn from 3 families at their cap in 24 h, not at 2 (21c)", () => {
     const s = healthy();
-    s.replica.familiesAtCap = 2;
+    s.replica!.familiesAtCap = 2;
     expect(codes(s)).toEqual([]);
-    s.replica.familiesAtCap = 3;
+    s.replica!.familiesAtCap = 3;
     expect(evaluate(s)).toEqual({ ok: true, failing: [{ code: "replica_family_cap", level: "warn" }] });
   });
 
@@ -136,8 +146,8 @@ describe("evaluate: K3 thresholds (fase 21a)", () => {
     s.retention.failed = 2;
     s.retention.backlog = true;
     s.notifications.okAgeHours = null;
-    s.replica.level = "full";
-    s.replica.familiesAtCap = 5;
+    s.replica!.level = "full";
+    s.replica!.familiesAtCap = 5;
     expect(codes(s).map((f) => f.code)).toEqual([
       "retention_failed", "retention_backlog", "notifications_stale", "replica_full", "replica_family_cap",
     ]);

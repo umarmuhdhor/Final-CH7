@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { errorInfo } from "../../http/logError";
 import { replicaUsage, type ReplicaQuota, type ReplicaUsage } from "./scans";
 
 export type OpsJob = "retention" | "notifications";
@@ -41,8 +42,11 @@ export interface OpsSnapshot {
   blocklistOldestHours: number | null;
   /** Last /healthz/db (the ops-watch keep-alive): a number for the reader, never an alert. */
   healthzAgeHours: number | null;
-  /** Fase 21c: the fase 19 K5.2 gauge (same numbers as the hourly `replica_quota_usage` line). */
-  replica: ReplicaUsage;
+  /**
+   * Fase 21c: the fase 19 K5.2 gauge (same numbers as the hourly `replica_quota_usage` line).
+   * Null when its query failed: the health numbers above still answer (code `replica_unknown`).
+   */
+  replica: ReplicaUsage | null;
 }
 
 /**
@@ -76,7 +80,10 @@ export async function opsSnapshot(sql: Sql, replica: { quota: ReplicaQuota; maxB
     ) q`;
   // A select without from-filters always returns one row.
   const r = row!;
-  const usage = await replicaUsage(sql, replica.quota, replica.maxBytes);
+  const usage = await replicaUsage(sql, replica.quota, replica.maxBytes).catch((err: unknown) => {
+    console.error(JSON.stringify({ event: "ops_replica_usage_failed", error: errorInfo(err) }));
+    return null;
+  });
   return {
     retention: { okAgeHours: r.rOk, ageHours: r.rAge, failed: r.rFailed ?? 0, backlog: r.rBacklog ?? false },
     notifications: { okAgeHours: r.nOk, ageHours: r.nAge },

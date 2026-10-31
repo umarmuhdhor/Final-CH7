@@ -149,7 +149,8 @@ Free project from pausing.
   `ok` is `false` only when a code with level `alert` fails. `ageHours` = since the job last finished,
   `okAgeHours` = since it last finished with `failed: 0`. `replica` (fase 21c) = the page-replica
   quota of the last 24 h, the same numbers as the hourly `replica_quota_usage` log line (fase 19):
-  totals, family count and the largest family's share, never which family. Codes and thresholds:
+  totals, family count and the largest family's share, never which family; `null` when that query
+  failed (code `replica_unknown`, the rest still answers). Codes and thresholds:
   [README, Monitoring and alerts](README.md#monitoring-and-alerts).
 
 ## Devices
