@@ -4,6 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Fase 22 O3: smaller bundle = less to parse at cold start. Source maps keep production stack traces
+  // and the CPU flamegraph readable. Function names stay (wrangler keep_names), so log lines do not change.
+  "minify": true,
+  "upload_source_maps": true,
   // Images bundled into the Worker as ArrayBuffer (PR-03 invite link preview, src/routes/join-page.ts).
   "rules": [{ "type": "Data", "globs": ["**/*.jpg"], "fallthrough": false }],
   // Our own JSON logs only: invocation logs record full request URLs, which carry

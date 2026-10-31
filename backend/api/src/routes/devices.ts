@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import postgres from "postgres";
-import { z } from "zod";
+import * as z from "zod";
 import type { AppEnv } from "../env";
 import { deleteDevice, findProfile, insertDevice, insertProtectedCopy, updateDevice } from "../db/repo/devices";
 import { guardianOf } from "../db/repo/families";

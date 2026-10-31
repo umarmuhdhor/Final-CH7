@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { z } from "zod";
+import * as z from "zod";
 import type { AppEnv } from "../env";
 import { blocklistEvents } from "../db/repo/blocklist";
 import { requireDevice } from "../http/auth";
