@@ -20,6 +20,7 @@ const ALLOWLIST = new Set([
   "gojek.com", "grab.com", "traveloka.com", "tiket.com", "kai.id", "telkomsel.com", "indihome.co.id", "telkom.co.id",
   "xl.co.id",
   "indosatooredoo.com", "pln.co.id", "posindonesia.co.id", "pertamina.com", "jne.co.id", "jntexpress.id", "jet.co.id",
+  "agoda.com", "agoda.co.id", "dhl.com", "dhl.co.id",
   // Global popular
   "google.com", "google.co.id", "gmail.com", "youtube.com", "facebook.com", "fb.com", "meta.com", "instagram.com",
   "whatsapp.com", "tiktok.com", "x.com", "twitter.com", "apple.com", "icloud.com", "microsoft.com", "live.com",
