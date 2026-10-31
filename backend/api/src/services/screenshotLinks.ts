@@ -11,8 +11,21 @@ export const LINK_TTL_SECONDS = 3600;
 const SKEW_SECONDS = 60;
 const encoder = new TextEncoder();
 
-const hmacKey = (secret: string, usage: "sign" | "verify") =>
-  crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
+// Fase 22 O1: one import per secret and usage per isolate, not one per link (a list of 50 scans signed
+// 50 keys). Keyed by the secret itself, so a rotated secret gets a new entry and old links fail at once.
+// A failed import is dropped from the cache so the next request tries again.
+const keys = new Map<string, Promise<CryptoKey>>();
+function hmacKey(secret: string, usage: "sign" | "verify"): Promise<CryptoKey> {
+  const id = `${usage}|${secret}`;
+  let key = keys.get(id);
+  if (!key) {
+    if (keys.size >= 8) keys.clear();
+    key = crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [usage]);
+    keys.set(id, key);
+    key.catch(() => keys.delete(id));
+  }
+  return key;
+}
 export type LinkKind = "screenshot" | "favicon" | "replica";
 const message = (kind: LinkKind, scanId: string, viewerId: string, exp: number) =>
   encoder.encode(`${kind}:v1|${scanId}|${viewerId}|${exp}`);
