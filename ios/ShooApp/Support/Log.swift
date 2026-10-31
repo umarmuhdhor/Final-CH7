@@ -45,4 +45,6 @@ enum Log {
     static let app = AppLogger(category: "app")
     static let data = AppLogger(category: "data")
     static let ui = AppLogger(category: "ui")
+    /// Page copy rendering (DT-04): stage names only, never the page or its address.
+    static let replica = AppLogger(category: "replica")
 }

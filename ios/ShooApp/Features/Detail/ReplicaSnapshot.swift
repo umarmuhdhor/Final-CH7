@@ -33,11 +33,37 @@ enum ReplicaSnapshot {
     /// Time for the newly shown tiles after the frame grows.
     static let paintDelay: Duration = .milliseconds(300)
 
+    /// Why `render` gave `nil` (fase 23a, flake F2): the stage, never the page or its address.
+    enum RenderFailure: Error, Equatable {
+        /// Detail closed or a new link: normal.
+        case cancelled
+        /// No `didFinish` within `loadTimeout`, a load error, or a dead content process.
+        case load
+        /// The page has no size to place the window on.
+        case place
+        /// No picture within `snapshotTimeout`.
+        case snapshot
+    }
+
     /// `lockedHTML` must come from `ReplicaHTML.locked(_:)`. `nil` when WebKit can't draw it, or when the
     /// task is cancelled (Detail closed, new link): the hidden view leaves the window at once then.
     static func render(
         _ lockedHTML: String, meta: ReplicaMeta?, ruleList: WKContentRuleList, in window: UIWindow
     ) async -> PageCopy? {
+        switch await attempt(lockedHTML, meta: meta, ruleList: ruleList, in: window) {
+        case .success(let copy): return copy
+        case .failure(.cancelled): Log.replica.info("Replica snapshot nil: cancelled")
+        case .failure(.load): Log.replica.error("Replica snapshot nil: load")
+        case .failure(.place): Log.replica.error("Replica snapshot nil: place")
+        case .failure(.snapshot): Log.replica.error("Replica snapshot nil: snapshot")
+        }
+        return nil
+    }
+
+    /// `render`, with the stage that failed.
+    static func attempt(
+        _ lockedHTML: String, meta: ReplicaMeta?, ruleList: WKContentRuleList, in window: UIWindow
+    ) async -> Result<PageCopy, RenderFailure> {
         let controller = ReplicaWebController(ruleList: ruleList, focusY: meta?.focusY ?? 0)
         controller.scrollsToFocusOnFinish = false
         let webView = controller.webView
@@ -54,15 +80,19 @@ enum ReplicaSnapshot {
             webView.removeFromSuperview()
         }
 
-        guard await finished(controller, html: lockedHTML), !Task.isCancelled else { return nil }
+        let loaded = await finished(controller, html: lockedHTML)
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard loaded else { return .failure(.load) }
         await controller.waitForLayout()
-        guard !Task.isCancelled, place(webView, focusY: meta?.focusY ?? 0) else { return nil }
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard place(webView, focusY: meta?.focusY ?? 0) else { return .failure(.place) }
         // The taller frame shows page parts WebKit has not painted yet; there is no paint-done event
         // without JS, so let the new size lay out and give the tiles a moment. Pages sized with `vh`
         // change height with the frame: place once more on the final size.
         await controller.waitForLayout()
-        guard !Task.isCancelled, place(webView, focusY: meta?.focusY ?? 0) else { return nil }
-        do { try await Task.sleep(for: paintDelay) } catch { return nil }
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard place(webView, focusY: meta?.focusY ?? 0) else { return .failure(.place) }
+        do { try await Task.sleep(for: paintDelay) } catch { return .failure(.cancelled) }
 
         let configuration = WKSnapshotConfiguration()
         configuration.rect = CGRect(origin: .zero, size: webView.bounds.size)
@@ -71,17 +101,18 @@ enum ReplicaSnapshot {
         let image: UIImage? = await first(within: snapshotTimeout, otherwise: nil) { done in
             webView.takeSnapshot(with: configuration) { image, _ in done(image) }
         }
-        guard let image, !Task.isCancelled else { return nil }
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard let image else { return .failure(.snapshot) }
 
         // Marks follow where the picture really starts, after WebKit clamped the offset.
         let zoom = max(webView.scrollView.zoomScale, 0.01)
         let topCSS = webView.scrollView.contentOffset.y / zoom
-        return PageCopy(
+        return .success(PageCopy(
             image: image,
             meta: meta,
             cssWidth: renderWidth / zoom,
             marks: shifted(meta?.marks ?? [], topCSS: topCSS, heightCSS: webView.bounds.height / zoom)
-        )
+        ))
     }
 
     /// Sizes the view to the kept part and scrolls to it. `false` for an empty page.

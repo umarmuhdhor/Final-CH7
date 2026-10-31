@@ -1,0 +1,63 @@
+import XCTest
+
+/// Fase 23a (C2): one way to launch the mock app, wait and tap in every UI test, so a slow CI runner
+/// doesn't fail a test that passes locally (flakes F3–F6, `plan/alief/fase-23-ci-reliability.md`).
+enum UITestTimeout {
+    /// A screen or element that should appear. `waitForExistence` returns as soon as it exists, so a
+    /// longer limit costs nothing when the test passes.
+    static let screen: TimeInterval = 10
+    /// Something that may or may not show (an optional popup): short on purpose.
+    static let optional: TimeInterval = 3
+}
+
+extension XCUIApplication {
+    /// Launches the app on `MockRepository` (`-UITestMock YES`) with the endless shield animations and
+    /// UIKit transitions off (`-UITestReduceMotion YES`, K2), from clean settings (`-UITestReset YES`).
+    /// `reset: false` only for a relaunch inside the same test that checks what was saved.
+    /// Not for screenshots or the accessibility audit: those need the real look.
+    @MainActor
+    static func mock(_ arguments: [String] = [], reset: Bool = true) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += ["-UITestMock", "YES", "-UITestReduceMotion", "YES"]
+        if reset { app.launchArguments += ["-UITestReset", "YES"] }
+        app.launchArguments += arguments
+        app.launch()
+        return app
+    }
+
+    /// GD-01: with notifications denied the Guardian gets a "Notifications are off" popup once per launch.
+    /// It can cover the screen or swallow a tap, so close it when it shows.
+    @MainActor
+    func dismissNotificationsReminder(timeout: TimeInterval = UITestTimeout.optional, file: StaticString = #filePath, line: UInt = #line) {
+        let notNow = alerts.buttons["Not now"].firstMatch
+        guard notNow.waitForExistence(timeout: timeout) else { return }
+        notNow.tap()
+        XCTAssertTrue(alerts.firstMatch.waitForNonExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
+    }
+
+    /// Taps `element`, then waits for `condition`. A tap during a push or pop transition can be lost (F3, F4),
+    /// so it taps again (at most `retries` times) while `element` is still there. Only for taps that are
+    /// safe to repeat: Back, opening a pushed screen or a sheet. Each retap shows in the xcresult.
+    @MainActor
+    func tap(_ element: XCUIElement, until condition: XCUIElement, retries: Int = 2, file: StaticString = #filePath, line: UInt = #line) {
+        element.tapWhenHittable(file: file, line: line)
+        for attempt in 0...retries {
+            if condition.waitForExistence(timeout: UITestTimeout.screen) { return }
+            guard attempt < retries, element.exists, element.isHittable else { break }
+            XCTContext.runActivity(named: "Retap \(element.identifier) (attempt \(attempt + 2))") { _ in element.tap() }
+        }
+        XCTFail("\(condition) did not appear after tapping \(element)\n\(debugDescription)", file: file, line: line)
+    }
+}
+
+extension XCUIElement {
+    /// Waits until the element exists and can be tapped, then taps it. A plain `tap()` right after
+    /// `waitForExistence` can land while a transition still covers it.
+    @MainActor
+    func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(waitForExistence(timeout: timeout), "\(self) never appeared", file: file, line: line)
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
+        XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: timeout), .completed, "\(self) never became tappable", file: file, line: line)
+        tap()
+    }
+}
