@@ -133,6 +133,15 @@ struct ReplicaLoaderTests {
         #expect(ReplicaStubProtocol.requests.allSatisfy { $0.url?.host() != "evil.example" })
     }
 
+    @Test func otherPortOrDotSegmentsAreRefused() throws {
+        let port = try #require(URL(string: "https://shoo.example:8443/replicas/abc"))
+        #expect(!URLSessionReplicaLoader.isAllowed(port, host: "shoo.example"))
+        let dots = try #require(URL(string: "https://shoo.example/replicas/../screenshots/abc"))
+        #expect(!URLSessionReplicaLoader.isAllowed(dots, host: "shoo.example"))
+        let fine = try #require(URL(string: "https://shoo.example/replicas/abc?e=1"))
+        #expect(URLSessionReplicaLoader.isAllowed(fine, host: "shoo.example"))
+    }
+
     @Test func localWorkerOverHTTPInDebugOnly() throws {
         let url = try #require(URL(string: "http://localhost:8787/replicas/abc"))
         #if DEBUG
