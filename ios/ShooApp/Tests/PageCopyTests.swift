@@ -62,6 +62,42 @@ struct PageCopyWaitTests {
         #expect(!model.isSavingCopy)
     }
 
+    @Test func cancelledWaitAsksNoMore() async {
+        let repository = StubRepository()
+        await repository.setEditScan { scan, _ in
+            scan.detectedAt = Self.now.addingTimeInterval(-2)
+            scan.screenshotUrl = nil
+            scan.pageReplicaUrl = nil
+        }
+        let model = DetailModel(
+            scanId: FixtureScan.blocked92, repository: repository, now: { Self.now },
+            sleep: { _ in throw CancellationError() }
+        )
+        await model.load()
+        await model.waitForCopy()
+        #expect(await repository.scanCalls == 1)
+        #expect(!model.isSavingCopy)
+    }
+
+    /// The scan disappears (retention, disconnect) before the first retry.
+    @Test func goneDuringTheWaitIsNotFound() async {
+        let (model, repository, log) = await model(age: 2, copyOnCall: nil)
+        await repository.setGone(fromCall: 2)
+        await model.waitForCopy()
+        #expect(model.state == .notFound)
+        #expect(model.scan == nil)
+        #expect(await log.delays.count == 1)
+    }
+
+    /// A failed call is not counted by `StubRepository`, so the second retry is call 2.
+    @Test func aFailedRetryStillLetsTheSecondOneWork() async {
+        let (model, repository, log) = await model(age: 2, copyOnCall: 2)
+        await repository.failNextLoads(1)
+        await model.waitForCopy()
+        #expect(model.scan?.pageReplicaUrl == Self.replica)
+        #expect(await log.delays.count == 2)
+    }
+
     @Test(arguments: [61.0, -5.0])
     func oldOrFutureScanDoesNotWait(age: TimeInterval) async {
         let (model, repository, log) = await model(age: age, copyOnCall: 2)
@@ -184,7 +220,7 @@ struct ReplicaSnapshotTests {
             """
         let locked = try #require(ReplicaHTML.locked(html))
         let ruleList = try #require(await ReplicaRules.compiled())
-        let window = try #require(ReplicaSnapshot.keyWindow)
+        let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
         let meta = ReplicaMeta(
             url: nil, capturedAt: Date(), focusY: 1000, truncated: false,
             marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 1000, width: 390, height: 200))]
@@ -199,6 +235,30 @@ struct ReplicaSnapshotTests {
         #expect(bottom.red > 0.9 && bottom.green < 0.1)
         let top = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.1)))
         #expect(top.red > 0.9 && top.green > 0.9)
+    }
+
+    /// A cancelled render returns nil at once and leaves no web view behind.
+    @Test func cancelledRenderLeavesNothing() async throws {
+        let locked = try #require(ReplicaHTML.locked("<!doctype html><html><body>x</body></html>"))
+        let ruleList = try #require(await ReplicaRules.compiled())
+        let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+        let task = Task { @MainActor in
+            await ReplicaSnapshot.render(locked, meta: nil, ruleList: ruleList, in: window)
+        }
+        task.cancel()
+        let clock = ContinuousClock()
+        let started = clock.now
+        let copy = await task.value
+        #expect(copy == nil)
+        #expect(clock.now - started < .seconds(2))
+        #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
+    }
+
+    /// Test host without a key window: one of our own.
+    private static func hostWindow() -> UIWindow {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        window.makeKeyAndVisible()
+        return window
     }
 
     private static func color(_ image: UIImage, atFraction point: CGPoint) -> (red: CGFloat, green: CGFloat)? {

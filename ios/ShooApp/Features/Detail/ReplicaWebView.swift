@@ -144,7 +144,8 @@ final class ReplicaWebController: NSObject, WKNavigationDelegate, WKUIDelegate {
         let deadline = clock.now + Self.layoutTimeout
         var last = CGSize.zero
         while clock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(100))
+            // Cancelled: `Task.sleep` would throw at once and the loop would spin on the main actor.
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
             let size = webView.scrollView.contentSize
             if size == last, size != .zero { break }
             last = size

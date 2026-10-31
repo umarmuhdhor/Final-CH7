@@ -46,6 +46,8 @@ struct DetailView: View {
                 }
                 #endif
                 await model.load()
+                // Left before the load ended: nothing is read out and nobody waits for the copy.
+                guard !Task.isCancelled else { return }
                 readAloud()
                 await model.waitForCopy()
             }
@@ -347,6 +349,9 @@ struct DetailView: View {
             copyState = .none
             return
         }
+        // Marks of an earlier picture would land on the wrong part of the next one (or of the screenshot).
+        model.marks = []
+        model.pageCSSWidth = nil
         copyState = .loading
         do {
             let html = try await pageLoader.html(at: url)
@@ -370,6 +375,7 @@ struct DetailView: View {
             model.pageCSSWidth = copy.cssWidth
             copyState = .shown
         } catch ReplicaLoadError.rateLimited {
+            guard !Task.isCancelled else { return }
             copyState = .rateLimited
         } catch {
             guard !error.isCancellation, !Task.isCancelled else { return }
