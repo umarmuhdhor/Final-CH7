@@ -8,10 +8,14 @@ struct DetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
     @Environment(\.screenshotLoader) private var screenshotLoader
+    @Environment(\.replicaLoader) private var replicaLoader
     @State private var model: DetailModel
     /// The page image, in memory only (SECURITY §3 P9), shared by every card.
     @State private var screenshot: UIImage?
     @State private var screenshotLoading = false
+    /// fase 18b: the page copy, drawn once; it comes before the screenshot (old builds) and the placeholder.
+    @State private var pageCopy: PageCopy?
+    @State private var copyState: PageCopyState = .none
     @State private var isZoomed = false
     @State private var copied = false
 
@@ -43,10 +47,15 @@ struct DetailView: View {
                 #endif
                 await model.load()
                 readAloud()
+                await model.waitForCopy()
             }
-            .task(id: model.scan?.screenshotUrl) { await loadScreenshot() }
+            .task(id: model.scan?.pageReplicaUrl) { await loadPageCopy() }
+            .task(id: model.scan?.screenshotUrl) {
+                guard model.scan?.pageReplicaUrl == nil else { return }
+                await loadScreenshot()
+            }
             .fullScreenCover(isPresented: $isZoomed) {
-                if let screenshot { ZoomedScreenshot(image: screenshot) }
+                if let pageImage { ZoomedScreenshot(image: pageImage) }
             }
             .privacyCover()
     }
@@ -108,11 +117,17 @@ struct DetailView: View {
                         .activityFont(17, .medium, tracking: -0.17)
                         .foregroundStyle(DetailStyle.secondary)
                         .accessibilityAddTraits(.isHeader)
+                    PageCopyCaption(
+                        state: model.isSavingCopy ? .saving : copyState,
+                        meta: pageCopy?.meta,
+                        scan: scan,
+                        hasScreenshot: screenshot != nil || screenshotLoading
+                    )
                     ForEach(reasons) { reason in
                         EvidenceCard(
                             reason: reason,
-                            image: screenshot,
-                            isLoadingImage: screenshotLoading,
+                            image: pageImage,
+                            isLoadingImage: screenshotLoading || copyState == .loading || model.isSavingCopy,
                             pageCSSWidth: model.pageCSSWidth,
                             onOpenImage: { isZoomed = true }
                         )
@@ -319,7 +334,48 @@ struct DetailView: View {
         WarningFeedback.readAloud(settings: env.settings, text: ([headerValue(scan)] + reasons).joined(separator: ". "))
     }
 
-    // MARK: Screenshot
+    // MARK: Page copy and screenshot
+
+    private var pageImage: UIImage? { pageCopy?.image ?? screenshot }
+
+    /// fase 18b: fetch, lock, draw once, keep the picture. A failed link may only have expired: the model
+    /// asks for a fresh one once. 429 says "Try again later" without a new link. A copy that can't be
+    /// shown falls back to the screenshot of an old build, then to the placeholder.
+    private func loadPageCopy() async {
+        pageCopy = nil
+        guard let url = model.scan?.pageReplicaUrl else {
+            copyState = .none
+            return
+        }
+        copyState = .loading
+        do {
+            let html = try await replicaLoader.html(at: url)
+            guard let locked = ReplicaHTML.locked(html),
+                  let ruleList = await ReplicaRules.compiled(),
+                  let window = ReplicaSnapshot.keyWindow,
+                  let copy = await ReplicaSnapshot.render(locked, meta: ReplicaMeta.read(from: html), ruleList: ruleList, in: window)
+            else {
+                guard !Task.isCancelled else { return }
+                copyState = .unavailable
+                await loadScreenshot()
+                return
+            }
+            guard !Task.isCancelled else { return }
+            pageCopy = copy
+            model.marks = copy.marks
+            model.pageCSSWidth = copy.cssWidth
+            copyState = .shown
+        } catch ReplicaLoadError.rateLimited {
+            copyState = .rateLimited
+        } catch {
+            guard !error.isCancellation, !Task.isCancelled else { return }
+            Log.ui.error("Page copy load failed")
+            // A new link restarts `.task(id:)`.
+            if await model.refreshReplicaLink() { return }
+            copyState = .unavailable
+            await loadScreenshot()
+        }
+    }
 
     /// One load per link. A failed link may only have expired: the model asks for a fresh one once.
     private func loadScreenshot() async {

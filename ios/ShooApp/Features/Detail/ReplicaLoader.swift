@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum ReplicaLoadError: Error, Equatable {
     /// Gone (deleted, retention, disconnected: the Worker answers 404), expired, too big, or not text.
@@ -10,6 +11,10 @@ enum ReplicaLoadError: Error, Equatable {
 /// Loads the page replica behind `pageReplicaUrl`.
 protocol ReplicaLoading: Sendable {
     func html(at url: URL) async throws -> String
+}
+
+extension EnvironmentValues {
+    @Entry var replicaLoader: any ReplicaLoading = URLSessionReplicaLoader.shared
 }
 
 /// SECURITY §3 P9 + P13: the replica lives in memory only, like the screenshot.

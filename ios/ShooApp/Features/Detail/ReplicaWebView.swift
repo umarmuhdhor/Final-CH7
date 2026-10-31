@@ -44,6 +44,8 @@ final class ReplicaWebController: NSObject, WKNavigationDelegate, WKUIDelegate {
     private var firstLoadAllowed = false
     /// Navigations refused after the first load (links, forms, `meta refresh`).
     private(set) var refusedNavigations = 0
+    /// `false` when the caller places the page itself (`ReplicaSnapshot`).
+    var scrollsToFocusOnFinish = true
     var onFinish: (() -> Void)?
     /// The content process died or the page failed: show the placeholder, never reload.
     var onFailure: (() -> Void)?
@@ -101,6 +103,7 @@ final class ReplicaWebController: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         onFinish?()
+        guard scrollsToFocusOnFinish else { return }
         Task { await scrollToFocus() }
     }
 
@@ -136,7 +139,7 @@ final class ReplicaWebController: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     /// Without JS there is no layout-done event: wait until the content size stops changing (or 2 s).
-    private func scrollToFocus() async {
+    func waitForLayout() async {
         let clock = ContinuousClock()
         let deadline = clock.now + Self.layoutTimeout
         var last = CGSize.zero
@@ -146,6 +149,10 @@ final class ReplicaWebController: NSObject, WKNavigationDelegate, WKUIDelegate {
             if size == last, size != .zero { break }
             last = size
         }
+    }
+
+    private func scrollToFocus() async {
+        await waitForLayout()
         let scrollView = webView.scrollView
         let y = Self.focusOffset(
             focusY: focusY, zoomScale: scrollView.zoomScale,
