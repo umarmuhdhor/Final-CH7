@@ -20,7 +20,12 @@ Simulator sendiri "Shoo Track App 19-26" (iPhone 17, iOS 26.5, `D0936FB9-5C36-49
 
 Deviasi dari plan: 10 iterasi (bukan 20) untuk "sebelum" karena waktu sesi; "sesudah" juga di bawah beban. S2/S4/S5 tidak dijalankan di sesi ini (lihat Catatan handoff).
 
-S1_HASIL
+| Run | Kode | Normal | Beban CPU |
+|---|---|---|---|
+| Sebelum | `origin/main` aa976af | 20/20 lulus, 421 s | 20/20 lulus, 428 s |
+| Sesudah | `fix/C2-test-flakes` 30bec00 | 20/20 lulus, 409 s | 20/20 lulus, 413 s |
+
+F3 (`OnboardingUITests.testGuardianInviteSheetShowsCodeThenGoesToExtension`) + F4 (`DeepLinkUITests.testScanLinkOpensDetailWithVerdictButtonsForTheGuardian`), 10 iterasi masing-masing. **Flake tidak muncul secara lokal**, sebelum maupun sesudah, juga di bawah beban: penyebab di CI (runner GitHub lebih lambat) tidak bisa dibuktikan di Mac ini. Perbaikan 23a menutup penyebab yang terbaca dari log CI (animasi, popup GD-01, tap sebelum hittable, state sisa tanpa reset); bukti akhirnya DoD "3 run CI hijau berturut-turut".
 
 ## 23a — perubahan
 
@@ -40,7 +45,22 @@ S1_HASIL
 - K4: baru `Tests/WebKitTests.swift` (`@Suite(.serialized)`); `ReplicaSnapshotTests` dan `ReplicaViewTests` jadi `extension WebKitTests` (ID test sekarang `ShooAppTests/WebKitTests/ReplicaSnapshotTests/…`).
 - K2: `AppEnvironmentSessionTests.uiTestReduceMotionIsOnlyForTheArgument`.
 
-VERIFIKASI_23A
+### Hasil (1 Nov 2026, simulator sendiri, iPhone 17 iOS 26.5)
+
+| Cek | Hasil |
+|---|---|
+| Scheme penuh `Shoo` (`build-for-testing` + `test-without-building`) | **TEST EXECUTE SUCCEEDED**, 801 s. Unit: 465 test di 44 suite lulus. UI: 72 dijalankan, 8 di-skip (Live*/opt-in), 0 gagal |
+| Scheme penuh sebelum perbaikan `tapWhenHittable` (commit a922136) | 1351 s, 16 UI gagal: 15 `ProfileUITests` + F4, semua di `tapWhenHittable` karena `profileButton` (toolbar iOS 26) tidak pernah melapor `isHittable`. Diperbaiki di 30bec00 (tunggu 2 s, lalu tetap tap) |
+| S1 sesudah | lihat tabel 23a-0 (40/40 lulus) |
+| Tap ulang (`Retap …`) | 0 di scheme penuh dan di S1 sesudah |
+| "not reported hittable, tapping anyway" | 18 di scheme penuh, 10 + 10 di S1: semua `profileButton`, tap pertama berhasil |
+
+Durasi tidak dibandingkan ke `main`: baseline scheme penuh `main` tidak diukur di sesi ini (hanya S1).
+
+### Review
+
+- `ecc:swift-reviewer`: MEDIUM `tapWhenHittable` gagal dua kali → `guard` + satu `XCTFail`; MEDIUM `dismissNotificationsReminder` → selalu assert alert hilang; MEDIUM tap ulang bisa menekan dua kali → didokumentasikan (tap ulang hanya kalau elemen masih ada, tiap tap ulang tercatat di xcresult); MEDIUM rasio ukuran terlalu kecil → 400 000 / 1 600 000; catatan perubahan perilaku shield → ditulis di PR.
+- `ecc:pr-test-analyzer`: MEDIUM batal di tengah render tidak dites → `renderCancelledMidwayStopsAsCancelled`. Celah yang tersisa: propagasi `shooReduceMotion` dari `RootView` ke shield tidak punya test (hanya flag di `AppEnvironmentSessionTests`); belum dites (satu baris `.environment` di `RootView`).
 
 ## Privasi Apple (D-alief-40, SECURITY §3)
 
