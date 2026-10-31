@@ -4,6 +4,11 @@ export interface ImageInfo {
   height: number;
 }
 
+/** `Uint8Array.fromBase64` (ES2026), not yet in the TypeScript lib this project uses. */
+interface Uint8ArrayWithBase64 {
+  fromBase64?: (text: string) => Uint8Array;
+}
+
 /** Strict base64 (no `data:` prefix, no whitespace). Undefined when malformed or longer than maxBytes. */
 export function decodeBase64(text: string, maxBytes: number): Uint8Array | undefined {
   if (text.length % 4 !== 0) return undefined;
@@ -12,7 +17,7 @@ export function decodeBase64(text: string, maxBytes: number): Uint8Array | undef
   // pass over 400 KB). fromBase64 throws on any character outside the standard alphabet and on `=`
   // before the end; the one thing it skips is ASCII whitespace, which makes the output shorter than
   // the length the text implies, so the exact length check rejects it like the regex below.
-  const native = (Uint8Array as { fromBase64?: (s: string) => Uint8Array }).fromBase64;
+  const native = (Uint8Array as Uint8ArrayWithBase64).fromBase64;
   if (typeof native === "function") {
     let bytes: Uint8Array;
     try {

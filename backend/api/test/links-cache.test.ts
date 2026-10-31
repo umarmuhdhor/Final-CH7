@@ -43,6 +43,8 @@ describe("signed links with a cached HMAC key (fase 22 O1)", () => {
 
   it("imports the key once for 50 links and once for 50 checks", async () => {
     const secret = "spy-secret-0123456789abcdef0123456789abcd";
+    // A secret no other test uses, so no cached key can satisfy the count. signedLink reaches hmacKey
+    // before its first await, so the first call caches the promise the other 49 then share.
     const spy = vi.spyOn(crypto.subtle, "importKey");
     const links = await Promise.all(
       Array.from({ length: 50 }, (_, i) => signedLink("favicon", secret, "https://api.test", SCAN, `dev_${i}`, NOW)),

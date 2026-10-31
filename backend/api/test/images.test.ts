@@ -47,9 +47,8 @@ describe("decodeBase64: native fromBase64 and the fallback agree (fase 22 O4)", 
   type WithNative = typeof Uint8Array & { fromBase64?: unknown };
   const U8 = Uint8Array as WithNative;
 
-  it("records whether this workerd has Uint8Array.fromBase64", () => {
-    // Informational: the fallback keeps decodeBase64 working either way.
-    expect(["function", "undefined"]).toContain(typeof U8.fromBase64);
+  it("this workerd has Uint8Array.fromBase64 (else the cases below compare the fallback with itself)", () => {
+    expect(typeof U8.fromBase64).toBe("function");
   });
 
   const bytes = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 37 + 11) & 0xff);
@@ -70,6 +69,9 @@ describe("decodeBase64: native fromBase64 and the fallback agree (fase 22 O4)", 
     ["tab inside", "AAA\tAAAA", 10],
     ["padding first", "=AAA", 10],
     ["data: prefix", "data:image/png;base64,AAAA", 100],
+    ["whitespace before padding", "AA\n=", 10],
+    ["whitespace with one padding", "A A=", 10],
+    ["trailing space", "AAA ", 10],
   ];
 
   it.each(cases)("%s", (_name, text, max) => {
