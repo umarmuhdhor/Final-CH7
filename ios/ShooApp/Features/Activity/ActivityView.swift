@@ -9,6 +9,10 @@ struct ActivityView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: ActivityModel
     @State private var isPickerOpen = false
+    /// For the empty states: nil until read, so Off never flashes before the answer.
+    @State private var extensionStatus: ExtensionStatus?
+    @State private var checkStats = CheckStats()
+    @State private var isTurnOnPresented = false
 
     init(repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil) {
         _model = State(initialValue: ActivityModel(
@@ -66,7 +70,10 @@ struct ActivityView: View {
         .navigationTitle(localized: "Activity")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
-        .refreshable { await model.refresh() }
+        .refreshable {
+            await model.refresh()
+            await readExtension()
+        }
         .onChange(of: model.refreshFailed) { _, failed in
             guard failed else { return }
             AccessibilityNotification.Announcement(
@@ -76,8 +83,12 @@ struct ActivityView: View {
         #if DEBUG
         .onAppear { if UserDefaults.standard.bool(forKey: "debug.activityPicker") { isPickerOpen = true } }
         #endif
+        .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { await readExtension() } }) {
+            TurnOnExtensionSheet()
+        }
         // First appearance, and coming back to the tab after a failed load.
         .task { if model.state != .loaded { await model.retry() } }
+        .task { await readExtension() }
     }
 
     // MARK: Header
@@ -222,16 +233,21 @@ struct ActivityView: View {
         return Text(verbatim: Formatters.day(day, language: language))
     }
 
-    @ViewBuilder
     private var emptyState: some View {
-        switch model.filter {
-        case .all:
-            ActivityMessage(systemImage: "list.bullet.rectangle", title: "No activity yet", message: "Risky sites you open will show up here.")
-        case .warning:
-            ActivityMessage(systemImage: "exclamationmark.triangle", title: "No warnings", message: "Sites that look risky will show up here.")
-        case .blocked:
-            ActivityMessage(systemImage: "hand.raised", title: "Nothing blocked yet", message: "Blocked scam sites will show up here.")
+        let kind = ActivityEmptyKind.of(filter: model.filter, family: model.isFamily, extensionStatus: extensionStatus)
+        return ActivityEmptyState(
+            kind: kind,
+            pill: model.isFamily ? nil : ActivityEmptyText.pill(kind: kind, stats: checkStats, language: language),
+            offSince: ActivityEmptyText.offSince(extensionStatus?.lastSeen, language: language)
+        ) {
+            isTurnOnPresented = true
         }
+    }
+
+    /// The extension's state and counters for the empty states; cheap, read on every appearance.
+    private func readExtension() async {
+        extensionStatus = await env.extensionStatus()
+        checkStats = CheckStats.current()
     }
 }
 

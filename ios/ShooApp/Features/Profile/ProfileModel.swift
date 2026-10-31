@@ -322,6 +322,7 @@ final class ProfileModel {
         linked.clear()
         onSessionEnd()
         settings.reset()
+        CheckStats.clear()
         return true
     }
 }
