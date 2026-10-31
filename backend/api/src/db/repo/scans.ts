@@ -214,7 +214,9 @@ export async function precheckReplica(
  * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
  * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
  * key (6, 0). Every new upload takes that key, so uploads by different members of one family cannot
- * overshoot the family quota either; held for milliseconds, the R2 put runs after commit. Order of the
+ * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
+ * so the family may still change by one member in between); held for milliseconds, the R2 put runs
+ * after commit. Order of the
  * checks (fase 19 K4): owner → family → global → reserve; the first that applies is the reason.
  *
  * The family is the current one: the owner's Guardian (or the owner itself) plus that Guardian's
