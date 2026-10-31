@@ -58,7 +58,8 @@ Dari `origin/main` aa976af (+ cherry-pick `b9987db` dari #210 supaya CI hijau). 
 
 - [x] 1. Merah: `test/join-page.test.ts` — hint EN "We copy the invite for you. After installing, open Shoo and tap Paste." dan ID "Undangan sudah kami salin. Setelah install, buka Shoo lalu ketuk Tempel." (1 merah di kode lama); halaman dengan `APP_STORE_URL` link TestFlight → `id="install" href` sama (lewat `app.fetch` dengan env yang diganti; `call()` tidak bisa mengganti env).
 - [x] 2. Hijau: `TEXT.en.installHint` / `TEXT.id.installHint` (`src/routes/join-page.ts`).
-- [ ] 3. `APP_STORE_URL` di `wrangler.jsonc` tetap kosong sampai Umar menjawab Q1 (pertanyaan di PR 26b, D-alief-C29). Sampai itu tombol Install membuka `https://apps.apple.com/`.
+- [ ] 3. **Gerbang merge:** 26a (`feat/PR-03-deferred-invite-app`, track app) sudah merge dan ada di build TestFlight (review TypeScript MEDIUM).
+- [ ] 4. `APP_STORE_URL` di `wrangler.jsonc` tetap kosong sampai Umar menjawab Q1 (pertanyaan di PR 26b, D-alief-C29). Sampai itu tombol Install membuka `https://apps.apple.com/`.
 
 ### Verifikasi
 
@@ -66,13 +67,13 @@ Dari `origin/main` aa976af (+ cherry-pick `b9987db` dari #210 supaya CI hijau). 
 |---|---|
 | `npx tsc --noEmit` (`backend/api`) | bersih |
 | `vitest run test/join-page.test.ts` | 25/25 (kode lama: 1 merah) |
-| `vitest run` (suite penuh) | lihat PR |
+| `vitest run` (suite penuh) | lihat bawah |
 
 ### Review
 
 | Reviewer | Temuan | Tindakan |
 |---|---|---|
-| `ecc:typescript-reviewer` | (lihat PR) | |
+| `ecc:typescript-reviewer` | Tidak ada CRITICAL/HIGH. MEDIUM: teks menyebut tombol Tempel/Paste yang belum ada di `ios/ShooApp` (`ConnectView` hanya kolom kode). LOW: escaping aman (teks statis lewat `escapeHtml`); `app.fetch` menjalankan semua middleware `app.use("*")`; test hint bisa memaku `lang` | MEDIUM: disengaja — tombol tempel datang dari 26a (track app, `PasteButton` di ON-01 + Connect). **26b tidak boleh merge sebelum 26a ada di build TestFlight**, kalau tidak halaman menyuruh mengetuk tombol yang belum ada. Dicatat di PR. LOW: dibiarkan |
 
 ### Privasi Apple (SECURITY §3)
 
