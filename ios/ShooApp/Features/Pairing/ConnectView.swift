@@ -78,6 +78,18 @@ struct ConnectView: View {
                 }
             }
         } footer: {
+            // fase 18 K17: said before joining, since copies are only made while connected.
+            Label {
+                Text("Shoo keeps a copy of pages it blocks or warns you about for 14 days, so your Guardian can see the evidence.")
+            } icon: {
+                Image(systemName: "info.circle")
+            }
+            .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+            .foregroundStyle(OnboardingTheme.secondaryInk)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("connect.copyNote")
             if tab == .code {
                 Button {
                     Task { await model.join() }
