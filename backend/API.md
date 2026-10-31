@@ -19,7 +19,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
-- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /terms`, `GET /get`
+- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
 - [Scheduled pushes](#scheduled-pushes): protection off, weekly summary (hourly cron)
 
@@ -795,6 +795,14 @@ stored, who can see it, the 14-day deletion, and how "Delete my data" works.
 - **Auth:** none. No database.
 - Language: `lang` first, then `Accept-Language`, else English.
 - *PF-01 proposed:* also says which notification choices, quiet hours and time zone are stored.
+
+### `GET /support?lang=en|id`
+
+**For:** the Support URL in App Store Connect (fase 24c-1, E6): how to reach the team, how to leave a
+family, how "Delete account" removes everything, links to `/privacy` and `/terms`. The contact line is
+the same constant as on `/privacy` (a placeholder until the team mailbox exists).
+
+- **Auth:** none. No database. Language as for `/privacy`.
 
 ### `GET /terms?lang=en|id`
 

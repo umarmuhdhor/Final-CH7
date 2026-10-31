@@ -8,8 +8,9 @@ import type { AppEnv } from "../env";
 // third-party LLM provider (ai/src/layer4/reality.js buildInput, issue #97), and the RDAP domain-age lookup with its
 // 7-day KV cache of domain + registration date (ai/src/rdap/, D-imelda-40).
 
-// TODO(sync:alief): team contact address — replace before external TestFlight / App Store (TODO E).
-const CONTACT = "the Shoo team (contact address coming before public release)";
+// TODO(sync:alief): team contact address (fase 24 K10 mailbox) — replace before external TestFlight /
+// App Store (TODO E6). Shared by /privacy and /support, so one line changes both.
+export const CONTACT = "the Shoo team (contact address coming before public release)";
 
 type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", LegalText> = {

@@ -61,6 +61,7 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/og/invite.jpg`](API.md#get-oginvitejpg) | WhatsApp / Messages crawler | Link preview image for `/j/{code}` |
 | GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
 | GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
+| GET | [`/support`](API.md#get-supportlangenid) | browser, App Store Connect | Support page: contact, delete data, EN/ID |
 
 All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`. Every response is
 `Cache-Control: private, no-store` except `GET /blocklist`. Details: [API.md, General rules](API.md#general-rules).
