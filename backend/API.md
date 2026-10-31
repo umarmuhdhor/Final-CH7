@@ -491,8 +491,9 @@ link (no Guardian, or a Guardian without members: nobody else could ever see it)
 already stored 50 in the last 24 h, when its family (the Guardian and up to 3 members) stored 60 or
 10 MB in the last 24 h, when everyone together stored 3000 or 500 MB in the last 24 h, or when the
 sending IP already sent 300 in the last 24 h. The last 600 uploads and 100 MB of the global quota are
-kept for families with fewer than 10 uploads in the last 24 h. A second scan of the same domain within 24 h
-reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
+kept for families with fewer than 10 uploads in the last 24 h. A full device, family or global quota
+is checked before the replica is decompressed and before it counts against the IP's 300. A second
+scan of the same domain within 24 h reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
 
 **Screenshot rules.** The screenshot is optional, and a bad screenshot never fails the scan: the scan
 is still stored and the answer is still 201. It is dropped when it is not JPEG/PNG, is over 150 KB or
