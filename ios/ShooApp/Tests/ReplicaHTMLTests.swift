@@ -109,11 +109,12 @@ struct ReplicaHTMLTests {
             let runs = (0..<3).map { _ in clock.measure { _ = ReplicaHTML.passesGate(flood) } }
             return runs.sorted()[1]
         }
-        let small = median(200_000)
-        let large = median(800_000)
-        // Under 1 ms the ratio is noise; the 5 s test above covers that case.
+        let small = median(400_000)
+        let large = median(1_600_000)
+        // Under 1 ms the ratio is noise; the 5 s test above still covers that case.
+        // (Not a failure: a gate that fast is not quadratic.)
         guard small > .milliseconds(1) else { return }
-        #expect(large / small < 8, "200 000: \(small), 800 000: \(large)")
+        #expect(large / small < 8, "400 000: \(small), 1 600 000: \(large)")
     }
 
     /// SVG gradients in a real capture are not `<link>` (security review 31 Oct, L5).

@@ -256,6 +256,21 @@ extension WebKitTests {
             #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
         }
 
+        /// Cancelled while WebKit is loading or placing the page (not before it starts): still `.cancelled`.
+        @Test func renderCancelledMidwayStopsAsCancelled() async throws {
+            let locked = try #require(ReplicaHTML.locked("<!doctype html><html><body><div style=\"height:2000px\">x</div></body></html>"))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let task = Task { @MainActor in
+                await ReplicaSnapshot.attempt(locked, meta: nil, ruleList: ruleList, in: window)
+            }
+            try await Task.sleep(for: .milliseconds(50))
+            task.cancel()
+            let result = await task.value
+            #expect(throws: ReplicaSnapshot.RenderFailure.cancelled) { try result.get() }
+            #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
+        }
+
         /// Test host without a key window: one of our own.
         private static func hostWindow() -> UIWindow {
             let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))

@@ -30,20 +30,22 @@ extension XCUIApplication {
     @MainActor
     func dismissNotificationsReminder(timeout: TimeInterval = UITestTimeout.optional, file: StaticString = #filePath, line: UInt = #line) {
         let notNow = alerts.buttons["Not now"].firstMatch
-        guard notNow.waitForExistence(timeout: timeout) else { return }
-        notNow.tap()
+        if notNow.waitForExistence(timeout: timeout) { notNow.tap() }
+        // No other alert may cover the screen either.
         XCTAssertTrue(alerts.firstMatch.waitForNonExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
     }
 
     /// Taps `element`, then waits for `condition`. A tap during a push or pop transition can be lost (F3, F4),
     /// so it taps again (at most `retries` times) while `element` is still there. Only for taps that are
-    /// safe to repeat: Back, opening a pushed screen or a sheet. Each retap shows in the xcresult.
+    /// safe to repeat: Back, opening a pushed screen or a sheet. Each retap shows in the xcresult. With
+    /// `-UITestReduceMotion` transitions are instant, so a retap after `UITestTimeout.screen` means the
+    /// first tap was lost, not that the next screen is still sliding in.
     @MainActor
     func tap(_ element: XCUIElement, until condition: XCUIElement, retries: Int = 2, file: StaticString = #filePath, line: UInt = #line) {
         element.tapWhenHittable(file: file, line: line)
         for attempt in 0...retries {
             if condition.waitForExistence(timeout: UITestTimeout.screen) { return }
-            guard attempt < retries, element.exists, element.isHittable else { break }
+            guard attempt < retries, element.exists else { break }
             XCTContext.runActivity(named: "Retap \(element.identifier) (attempt \(attempt + 2))") { _ in element.tap() }
         }
         XCTFail("\(condition) did not appear after tapping \(element)\n\(debugDescription)", file: file, line: line)
@@ -52,12 +54,19 @@ extension XCUIApplication {
 
 extension XCUIElement {
     /// Waits until the element exists and can be tapped, then taps it. A plain `tap()` right after
-    /// `waitForExistence` can land while a transition still covers it.
+    /// `waitForExistence` can land while a transition still covers it. Some elements never report
+    /// `isHittable` though they take taps (toolbar buttons on iOS 26, e.g. `profileButton`): after
+    /// `hittableWait` those are tapped anyway, and `tap(_:until:)` checks the result.
     @MainActor
-    func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertTrue(waitForExistence(timeout: timeout), "\(self) never appeared", file: file, line: line)
+    func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, hittableWait: TimeInterval = 2, file: StaticString = #filePath, line: UInt = #line) {
+        guard waitForExistence(timeout: timeout) else {
+            XCTFail("\(self) never appeared", file: file, line: line)
+            return
+        }
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
-        XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: timeout), .completed, "\(self) never became tappable", file: file, line: line)
+        if XCTWaiter().wait(for: [hittable], timeout: hittableWait) != .completed {
+            XCTContext.runActivity(named: "\(identifier) not reported hittable, tapping anyway") { _ in }
+        }
         tap()
     }
 }
