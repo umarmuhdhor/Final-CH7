@@ -11,7 +11,6 @@ const sql = testSql();
 beforeEach(() => resetDb(sql));
 afterEach(() => vi.restoreAllMocks());
 
-const MB = 1024 * 1024;
 async function device(id: string, mode: "guardian" | "protected" = "protected") {
   await sql`insert into devices (id, name, mode, avatar_id, token_hash)
     values (${id}, ${id}, ${mode}, 'avatar_01', ${new TextEncoder().encode(id)})`;
@@ -35,7 +34,7 @@ const capture = () => {
 describe("replicaUsage (fase 19 K5.2)", () => {
   it("empty: ok with zeros and the quota maxima", async () => {
     expect(await replicaUsage(sql, REPLICA_QUOTA, MAX_REPLICA_BYTES)).toEqual({
-      level: "ok", uploads: 0, bytes: 0, uploadsMax: 3000, bytesMax: 500 * MB,
+      level: "ok", uploads: 0, bytes: 0, uploadsMax: REPLICA_QUOTA.global, bytesMax: REPLICA_QUOTA.globalBytes,
       families: 0, familiesAtCap: 0, topFamilyUploads: 0, topFamilyBytes: 0,
     });
   });
@@ -145,5 +144,20 @@ describe("logReplicaUsage + hourly cron", () => {
     await worker.scheduled!({ cron: "5 * * * *", scheduledTime: Date.now(), noRetry() {} } as ScheduledController, env);
     expect(logged.some((l) => l.includes('"event":"notifications"'))).toBe(true);
     expect(errors).toEqual(['{"event":"replica_usage_failed","error":{"name":"TypeError"}}']);
+  });
+
+  it("a failing notifications run still logs the gauge, and the cron fails with the original error", async () => {
+    // Notifications fail at their own log line (no module mocking in the workers pool).
+    const logged: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => {
+      const text = a.map(String).join(" ");
+      if (text.includes('"event":"notifications"')) throw new RangeError("notifications broke");
+      logged.push(text);
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(
+      worker.scheduled!({ cron: "5 * * * *", scheduledTime: Date.now(), noRetry() {} } as ScheduledController, env),
+    ).rejects.toThrow("notifications broke");
+    expect(logged.some((l) => l.includes('"event":"replica_quota_usage"'))).toBe(true);
   });
 });

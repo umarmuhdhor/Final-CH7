@@ -216,8 +216,8 @@ export async function precheckReplica(
  * key (6, 0). Every new upload takes that key, so uploads by different members of one family cannot
  * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
  * so the family may still change by one member in between); held for milliseconds, the R2 put runs
- * after commit. Order of the
- * checks (fase 19 K4): owner → family → global → reserve; the first that applies is the reason.
+ * after commit. Order of the checks (fase 19 K4): owner → family → family_bytes → global →
+ * global_bytes → reserve; the first that applies is the reason.
  *
  * The family is the current one: the owner's Guardian (or the owner itself) plus that Guardian's
  * members, from family_links at this moment, with no column that remembers it (fase 19 K1, P13).
@@ -330,6 +330,9 @@ export async function replicaUsage(sql: Sql, q: ReplicaQuota, maxBytes: number):
            coalesce(max(n), 0)::int as "topFamilyUploads", coalesce(max(b), 0)::float8 as "topFamilyBytes"
     from fam`;
   const u = r!;
+  // `reserve` = usage has entered the reserve zone (K5.2). quotaFull also adds the size of the upload
+  // at hand, so a full-size upload from a heavy family is refused slightly before the gauge says
+  // `reserve` (at most MAX_REPLICA_BYTES early). Deliberate: the gauge reports usage, not one upload.
   const level = u.uploads >= q.global || u.bytes + maxBytes > q.globalBytes ? "full"
     : u.uploads >= q.global - q.reserveUploads || u.bytes > q.globalBytes - q.reserveBytes ? "reserve"
     : "ok";

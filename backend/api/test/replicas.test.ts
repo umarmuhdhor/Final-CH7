@@ -432,7 +432,8 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const ids = await Promise.all([4, 5, 6, 7].map((n) => postScan(p, { ...other(n), pageReplicaBase64: replica })));
     await until(async () => logs.filter((l) => l.includes(`"reason":"quota"`)).length === 3);
     const rows = await Promise.all(ids.map(row));
-    expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
+    expect(rows.every(Boolean)).toBe(true);
+    expect(rows.filter((r) => r?.path != null)).toHaveLength(1);
   });
 
   it("parallel scans of different owners cannot overrun the global quota (global key 6, 0)", async () => {
@@ -443,7 +444,8 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const ids = await Promise.all(owners.map(({ p }) => postScan(p, { pageReplicaBase64: replica })));
     await until(async () => logs.filter((l) => l.includes(`"reason":"global_quota"`)).length === 3);
     const rows = await Promise.all(ids.map(row));
-    expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
+    expect(rows.every(Boolean)).toBe(true);
+    expect(rows.filter((r) => r?.path != null)).toHaveLength(1);
   });
 
   // ---- Fase 19a (TODO E8, review security 18a M1, D-alief-B14): family quota + reserve for light families.
@@ -544,7 +546,8 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const ids = await Promise.all([g, ...members].map((d, n) => postScan(d, { ...other(n + 10), pageReplicaBase64: replica })));
     await until(async () => logs.filter((l) => l.includes(`"reason":"family_quota"`)).length === 3);
     const rows = await Promise.all(ids.map(row));
-    expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
+    expect(rows.every(Boolean)).toBe(true);
+    expect(rows.filter((r) => r?.path != null)).toHaveLength(1);
   });
 
   it("churn (accepted, C4): a member that leaves takes its uploads along; the Guardian's family has room again", async () => {
