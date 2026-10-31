@@ -15,7 +15,7 @@ export const QUEUE_CAP_PER_DAY = 10;
 
 export type VerdictResult =
   | { verdict: Verdict }
-  | { error: "not_found" | "not_allowed" | "not_blocked" };
+  | { error: "not_found" | "not_allowed" };
 
 const lockDomain = async (tx: TransactionSql, domain: string): Promise<void> => {
   await tx`select pg_advisory_xact_lock(4, hashtext(${domain}))`;
@@ -25,7 +25,7 @@ const lockDomain = async (tx: TransactionSql, domain: string): Promise<void> => 
  * POST /verdicts (R2 §5, R4 §4) in one transaction. Lock order everywhere: family_links row,
  * then the guardian's queue lock (only here), then domain locks (by lock key). The link row is read `for share`, so a disconnect cannot commit
  * between the check and the insert. The guardian may decide on its own scans and on scans of
- * its currently linked protected members. Blocklist eligibility is a snapshot taken here.
+ * its currently linked protected members, warning or blocked. Blocklist eligibility is a snapshot taken here.
  */
 export async function decideVerdict(
   sql: Sql,
@@ -46,7 +46,7 @@ export async function decideVerdict(
       if (link.length === 0) return { error: "not_allowed" as const };
       linked = true;
     }
-    if (scan.status !== "blocked") return { error: "not_blocked" as const };
+    // Warning scans take a verdict too (GD-07, Figma "Detail Aktivitas Waspada", issue #176 comment).
 
     let eligible = value === "not_safe" && scan.ownerMode === "protected" && linked && !neverQueue(scan.domain);
     // Serializes this guardian's queue count, so parallel verdicts cannot pass the daily cap.

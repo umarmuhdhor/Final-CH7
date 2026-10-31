@@ -11,6 +11,26 @@
         }
       }
     },
+    "%@ sites checked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ situs diperiksa"
+          }
+        }
+      }
+    },
+    "%@ sites checked · last at %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ situs diperiksa · terakhir %2$@"
+          }
+        }
+      }
+    },
     "%@ will no longer get your warnings." : {
       "localizations" : {
         "id" : {
@@ -672,6 +692,16 @@
         }
       }
     },
+    "Copied from %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disalin dari %@"
+          }
+        }
+      }
+    },
     "Copy" : {
       "localizations" : {
         "id" : {
@@ -700,6 +730,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Salin link"
+          }
+        }
+      }
+    },
+    "Copy of the page · %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salinan halaman · %@"
           }
         }
       }
@@ -856,6 +896,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gagal mengirim. Periksa koneksi lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Couldn't show the copy of the page. Try again later." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salinan halaman belum bisa ditampilkan. Coba lagi nanti."
           }
         }
       }
@@ -1729,7 +1779,6 @@
       }
     },
     "No activity yet" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -1746,6 +1795,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tidak ada koneksi. Periksa internet lalu coba lagi."
+          }
+        }
+      }
+    },
+    "No copy of this page" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada salinan halaman ini"
           }
         }
       }
@@ -1775,7 +1834,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Belum ada yang kamu lindungi"
+            "value" : "Belum ada yang Anda lindungi"
           }
         }
       }
@@ -1797,6 +1856,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Belum ada situs berisiko"
+          }
+        }
+      }
+    },
+    "No sites blocked yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada situs yang diblokir"
           }
         }
       }
@@ -1864,6 +1933,16 @@
         }
       }
     },
+    "Nothing suspicious" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak ada yang mencurigakan"
+          }
+        }
+      }
+    },
     "Notifications" : {
       "localizations" : {
         "id" : {
@@ -1912,6 +1991,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mati"
+          }
+        }
+      }
+    },
+    "Off for %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mati sejak %@ lalu"
           }
         }
       }
@@ -2049,6 +2138,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Membuka detail"
+          }
+        }
+      }
+    },
+    "Page cut short" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman terpotong"
           }
         }
       }
@@ -2234,12 +2333,11 @@
       }
     },
     "Protection is off" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Perlindungan mati"
+            "value" : "Perlindungan sedang mati"
           }
         }
       }
@@ -2457,6 +2555,16 @@
         }
       }
     },
+    "Safari extension on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi Safari aktif"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "id" : {
@@ -2473,6 +2581,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Simpan nama"
+          }
+        }
+      }
+    },
+    "Saving a copy of the page…" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyimpan salinan halaman…"
           }
         }
       }
@@ -2703,6 +2821,16 @@
         }
       }
     },
+    "Shoo blocks scam sites automatically before the page can open." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo otomatis memblokir situs penipuan sebelum halamannya sempat terbuka."
+          }
+        }
+      }
+    },
     "Shoo blocks scam sites in Safari. Try it:" : {
       "localizations" : {
         "id" : {
@@ -2795,12 +2923,32 @@
         }
       }
     },
+    "Shoo keeps a copy of pages it blocks or warns you about for 14 days, so your Guardian can see the evidence." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo menyimpan salinan halaman yang diblokir atau diberi peringatan selama 14 hari supaya Guardian bisa melihat buktinya."
+          }
+        }
+      }
+    },
     "Shoo uses no third-party libraries or SDKs. It is built only with Apple's frameworks, under the Apple Developer Program License Agreement." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo tidak memakai pustaka atau SDK pihak ketiga. Shoo dibuat hanya dengan framework Apple, di bawah Apple Developer Program License Agreement."
+          }
+        }
+      }
+    },
+    "Shoo's Safari extension is off, so the sites you open aren't checked." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi Shoo di Safari tidak aktif, jadi situs yang Anda buka tidak diperiksa."
           }
         }
       }
@@ -2947,6 +3095,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ringkasan"
+          }
+        }
+      }
+    },
+    "Suspicious sites found while you browse in Safari will show up here." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs mencurigakan yang terdeteksi saat Anda menjelajah di Safari akan muncul di sini."
           }
         }
       }
@@ -3099,6 +3257,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ekstensi berhasil diaktifkan dan siap membantu mengenali potensi penipuan di internet."
+          }
+        }
+      }
+    },
+    "The sites you opened lately look safe. We'll let you know if anything seems off." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs yang Anda buka akhir-akhir ini terlihat aman. Kami akan memberi tahu jika ada yang janggal."
           }
         }
       }
@@ -3272,7 +3440,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktifkan Ekstensi"
+            "value" : "Aktifkan ekstensi"
           }
         }
       }
@@ -4095,12 +4263,670 @@
         }
       }
     },
+    "activity.note.notSafe %@" : {
+      "comment" : "Activity row (Figma 450:8734): the guardian marked this site not safe. %@ = guardian's name or 'you'",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "According to %@, this website is dangerous!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurut %@ website ini berbahaya!"
+          }
+        }
+      }
+    },
+    "activity.note.safe %@" : {
+      "comment" : "Activity row (Figma 450:8744): the guardian marked this blocked site safe. %@ = guardian's name or 'you'",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "According to %@, this link is safe.\nShoo still doesn't recommend opening it"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menurut %@ link ini aman.\nShoo tetap tak menyarankan untuk membuka link ini"
+          }
+        }
+      }
+    },
+    "activity.note.unseen %@" : {
+      "comment" : "Activity row (Figma 450:8739): blocked site, the guardian has not decided yet. %@ = guardian's name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ hasn't seen this website yet"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ belum melihat website ini"
+          }
+        }
+      }
+    },
+    "activity.note.you" : {
+      "comment" : "Activity row note: the viewer made the verdict themselves",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "you"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kamu"
+          }
+        }
+      }
+    },
     "Shows whose activity to see" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Menampilkan aktivitas siapa yang dilihat"
+          }
+        }
+      }
+    },
+    "Active since %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktif sejak %@"
+          }
+        }
+      }
+    },
+    "Become a Guardian" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjadi Guardian"
+          }
+        }
+      }
+    },
+    "Blocked link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link terblokir"
+          }
+        }
+      }
+    },
+    "Connected account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun Terhubung"
+          }
+        }
+      }
+    },
+    "Edit name" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah nama"
+          }
+        }
+      }
+    },
+    "GUARDIAN MODE" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MODE GUARDIAN"
+          }
+        }
+      }
+    },
+    "Help check suspicious sites your family opens." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bantu cek situs mencurigakan yang dibuka keluarga Anda."
+          }
+        }
+      }
+    },
+    "Invite family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undang Keluarga"
+          }
+        }
+      }
+    },
+    "Linked account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun Tertaut"
+          }
+        }
+      }
+    },
+    "Linked with %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tertaut dengan %@"
+          }
+        }
+      }
+    },
+    "Must use %@'s account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Harus menggunakan akun %@"
+          }
+        }
+      }
+    },
+    "Protect the people closest to you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi orang terdekat"
+          }
+        }
+      }
+    },
+    "Send an invite to your family. Once they join, their status shows up here." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim undangan ke keluarga. Begitu mereka bergabung, statusnya muncul di sini."
+          }
+        }
+      }
+    },
+    "Send links automatically" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kirim link secara otomatis"
+          }
+        }
+      }
+    },
+    "Share caution history" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan riwayat waspada"
+          }
+        }
+      }
+    },
+    "Shows your linked account" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuka akun tertaut"
+          }
+        }
+      }
+    },
+    "Sites checked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs diperiksa"
+          }
+        }
+      }
+    },
+    "This account is linked to another account." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun ini terhubung dengan akun lain."
+          }
+        }
+      }
+    },
+    "When the linked account verifies a link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat yang terhubung memverifikasi link"
+          }
+        }
+      }
+    },
+    "can always see the blocked history" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "selalu bisa melihat riwayat yang terblokir"
+          }
+        }
+      }
+    },
+    "Coming soon" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segera hadir"
+          }
+        }
+      }
+    },
+    "Reasons detected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alasan Terdeteksi"
+          }
+        }
+      }
+    },
+    "What the AI flagged" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang dicurigai AI"
+          }
+        }
+      }
+    },
+    "Signal:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinyal:"
+          }
+        }
+      }
+    },
+    "Scam risk contribution" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontribusi risiko scam"
+          }
+        }
+      }
+    },
+    "Is this site really a scam?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah situs ini benar penipuan?"
+          }
+        }
+      }
+    },
+    "Verified as a scam" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diverifikasi sebagai penipuan"
+          }
+        }
+      }
+    },
+    "Verified safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diverifikasi aman"
+          }
+        }
+      }
+    },
+    "by %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "by %1$@ · %2$@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oleh %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "by you · %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "oleh Anda · %@"
+          }
+        }
+      }
+    },
+    "Just now" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baru saja"
+          }
+        }
+      }
+    },
+    "Change" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah"
+          }
+        }
+      }
+    },
+    "Shows the Safe and Danger buttons again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan lagi tombol Aman dan Bahaya"
+          }
+        }
+      }
+    },
+    "%@ still sees Shoo's warning when opening this site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tetap melihat peringatan Shoo saat membuka situs ini."
+          }
+        }
+      }
+    },
+    "You marked this safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda menandai ini aman"
+          }
+        }
+      }
+    },
+    "Opened %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opened %1$@ · %2$@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diakses %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "Opened by %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dibuka oleh %@"
+          }
+        }
+      }
+    },
+    "signal.sensitiveForm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sensitive form"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Formulir sensitif"
+          }
+        }
+      }
+    },
+    "signal.copiedLogo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied logo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logo tiruan"
+          }
+        }
+      }
+    },
+    "signal.lookalikeDomain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Look-alike address"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alamat mirip"
+          }
+        }
+      }
+    },
+    "signal.brandInAddress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Brand name in address"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama merek di alamat"
+          }
+        }
+      }
+    },
+    "signal.cheapEnding" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cheap domain ending"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiran domain murah"
+          }
+        }
+      }
+    },
+    "signal.suspiciousLink" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspicious link"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tautan mencurigakan"
+          }
+        }
+      }
+    },
+    "signal.newDomain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Domain age"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umur domain"
+          }
+        }
+      }
+    },
+    "signal.urgentWording" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Urgent wording"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bahasa mendesak"
+          }
+        }
+      }
+    },
+    "signal.unusualRequest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unusual request"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permintaan tidak wajar"
+          }
+        }
+      }
+    },
+    "signal.hoax" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hoax claim"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klaim hoaks"
+          }
+        }
+      }
+    },
+    "signal.knownScam" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Known scam list"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daftar penipuan"
+          }
+        }
+      }
+    },
+    "signal.other" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Other signal"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinyal lain"
+          }
+        }
+      }
+    },
+    "detail.highRisk" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High risk"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Risiko Tinggi"
           }
         }
       }

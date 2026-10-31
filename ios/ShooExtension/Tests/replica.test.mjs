@@ -64,6 +64,36 @@ test("typed input never leaves the phone: no value, no textarea text, editable a
     assert.match(html, /page text stays/);
 });
 
+test("form fields keep only their look: a page script can't smuggle typed text out through other attributes", () => {
+    const { html } = run(
+        h("body", {},
+            h("input", { type: "text", name: "pin", class: "f", placeholder: "Masukkan PIN", "data-value": "123456", "aria-valuetext": "123456", title: "123456" }),
+            h("select", { name: "bank", "data-picked": "mandiri" }, h("option", {}, "BCA")),
+            h("textarea", { rows: "3", "data-draft": "my address" }),
+            h("div", { role: "searchbox" }, "typed search"),
+            h("div", { role: "Combobox" }, "typed combo"),
+        ),
+    );
+    assert.doesNotMatch(html, /123456|mandiri|my address|typed/);
+    assert.match(html, /<input type="text" name="pin" class="f" placeholder="Masukkan PIN">/);
+    assert.match(html, /<select name="bank"><option>BCA<\/option><\/select>/);
+});
+
+test("designMode on: the whole page is editable, so the body stays empty", () => {
+    const doc = { ...docOf(h("body", { class: "b" }, h("p", {}, "typed anywhere"))), designMode: "on" };
+    const { html } = capture(doc, page);
+    assert.doesNotMatch(html, /typed anywhere/);
+    assert.match(html, /<body class="b"><\/body>/);
+});
+
+test("a $ pattern in the page URL can't splice the document into the meta tag", () => {
+    const url = "https://bca-verifikasi.site/a$'b$&c$`d";
+    const { html } = capture(docOf(h("body", {}, "Halo")), { ...page, url });
+    const meta = JSON.parse(html.match(/name="shoo-replica" content="([^"]*)"/)[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
+    assert.equal(meta.url, url);
+    assert.equal(html.match(/<body>/g).length, 1);
+});
+
 test("frames, media and embeds become grey boxes of the same size", () => {
     const { html } = run(h("body", {}, h("iframe", { src: "https://other.example/form" }), h("video", { src: "a.mp4" }), h("object", { data: "x.pdf" })));
     assert.doesNotMatch(html, /other\.example|a\.mp4|x\.pdf|<iframe|<video|<object/);

@@ -98,12 +98,16 @@ describe("POST /verdicts", () => {
     expect((await verdict(g, "not-a-uuid", "safe")).status).toBe(404);
   });
 
-  it("warning scan → 409 verdict_not_allowed", async () => {
+  it("warning scan takes a verdict too (GD-07, Figma Waspada)", async () => {
     const { g, p } = await family();
     const id = await scan(p, warning41 as Fixture);
     const res = await verdict(g, id, "safe");
-    expect(res.status).toBe(409);
-    expect(await errorCode(res)).toBe("verdict_not_allowed");
+    expect(res.status, await res.clone().text()).toBe(200);
+    expect(((await res.json()) as VerdictBody).verdict?.value).toBe("safe");
+    const item = (await (await call(`/scans/${id}`, { token: g.token })).json()) as Record<string, unknown>;
+    expectScanResult(item);
+    expect((item.verdict as { value: string }).value).toBe("safe");
+    expect((await lookup(p, warning41.domain))?.value).toBe("safe");
   });
 
   it.each([
@@ -174,13 +178,22 @@ describe("POST /verdicts", () => {
     expect(await lookup(other, blocked92.domain)).toBeNull();
   });
 
-  it("a warning scan on a domain with a verdict keeps verdict null", async () => {
+  it("a warning scan on a domain with a verdict carries it too", async () => {
     const { g, p } = await family();
     const blocked = await scan(p, blocked92 as Fixture, "same-domain.example");
     const warning = await scan(p, warning41 as Fixture, "same-domain.example");
     await verdict(g, blocked, "not_safe");
-    const w = (await (await call(`/scans/${warning}`, { token: g.token })).json()) as { verdict: unknown };
-    expect(w.verdict).toBeNull();
+    const w = (await (await call(`/scans/${warning}`, { token: g.token })).json()) as { verdict: { value: string } | null };
+    expect(w.verdict?.value).toBe("not_safe");
+  });
+
+  it("a new verdict replaces the old one (Ubah)", async () => {
+    const { g, p } = await family();
+    const id = await scan(p, warning41 as Fixture);
+    await verdict(g, id, "safe");
+    const res = await verdict(g, id, "not_safe");
+    expect(res.status).toBe(200);
+    expect((await lookup(p, warning41.domain))?.value).toBe("not_safe");
   });
 
   it("ScanResult verdicts match the two contract fixtures in shape and values", async () => {

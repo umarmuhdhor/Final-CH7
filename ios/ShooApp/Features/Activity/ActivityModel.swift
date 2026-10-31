@@ -80,6 +80,9 @@ final class ActivityModel {
     private var nextCursor: String?
     /// The guardian's own device: Family Activity shows members only, so its rows are left out.
     private var ownDeviceId: String?
+    /// Own list only (Figma 450:8739): the Protected user's guardian, for "Virellia belum melihat
+    /// website ini" under a blocked row. Nil for a guardian or a Protected user without one.
+    private(set) var guardianName: String?
 
     @ObservationIgnored private let repository: any ShooRepository
     /// Bumped when a first-page request starts and again when one is applied, so neither an older
@@ -99,6 +102,8 @@ final class ActivityModel {
     }
 
     var isFamily: Bool { baseOwner == .family }
+    /// The user's own history (PR-05), not Family Activity or one member's list.
+    var isOwnList: Bool { baseOwner == .me }
 
     /// The `owner=` actually requested: the person picker narrows Family Activity.
     var owner: ScanOwnerFilter {
@@ -126,6 +131,7 @@ final class ActivityModel {
 
     func load() async {
         await refreshPeople()
+        await refreshViewer()
         guard !Task.isCancelled else { return }
         await loadFirstPage()
     }
@@ -205,6 +211,25 @@ final class ActivityModel {
             }
             cursor = page.nextCursor
         }
+    }
+
+    /// Who is looking at the own list: their device (a verdict they made reads "you") and their
+    /// guardian. Re-read on every load (a guardian can connect or leave); a failure keeps the last.
+    private func refreshViewer() async {
+        guard isOwnList else { return }
+        do {
+            let me = try await repository.me()
+            ownDeviceId = me.deviceId
+            guardianName = me.guardian?.name
+        } catch {
+            if !error.isCancellation { Log.ui.error("Activity profile failed", error) }
+        }
+    }
+
+    /// Note under an own-list row: the guardian's verdict, or that they have not looked yet.
+    func note(for scan: ScanResult) -> ActivityNote? {
+        guard isOwnList else { return nil }
+        return ActivityNote(scan: scan, guardianName: guardianName, viewerDeviceId: ownDeviceId)
     }
 
     /// Members for the picker, re-read on every load (members come and go in Profile).

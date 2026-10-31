@@ -49,6 +49,7 @@ struct ProfileView: View {
             guard scenePhase == .active else { return }
             extensionStatus = await env.extensionStatus()
             await model.refreshNotifications()
+            model.linked.refresh()
         }
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
             TurnOnExtensionSheet()
@@ -76,8 +77,28 @@ struct ProfileView: View {
             stats: model.stats(language: language)
         ) {
             AvatarView(id: model.profile?.avatarId ?? "", size: 88)
+                .overlay(alignment: .bottomTrailing) {
+                    if model.variant == .protected, let guardian = model.profile?.guardian {
+                        GuardianBadge(name: guardian.name, avatarId: guardian.avatarId)
+                            .offset(x: 16, y: 4)
+                    }
+                }
         } badge: {
-            if model.variant != .protected {
+            if model.variant == .protected {
+                if model.profile?.guardian != nil {
+                    Button { env.router.show(.profilePage(.connection)) } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: ConnectedPillButtonStyle.symbol)
+                                .font(.system(size: 15))
+                                .accessibilityHidden(true)
+                            Text("Connected")
+                        }
+                    }
+                    .buttonStyle(ConnectedPillButtonStyle())
+                    .accessibilityHint(Text("Shows your linked account"))
+                    .accessibilityIdentifier("profile.connectedPill")
+                }
+            } else {
                 Button { isInvitePresented = true } label: {
                     HStack(spacing: 8) {
                         QRGlyph()
@@ -89,7 +110,15 @@ struct ProfileView: View {
             }
         }
 
+        if model.showsGuardianCard {
+            GuardianModeCard {
+                model.becomeGuardian()
+            } onDismiss: {
+                model.dismissGuardianCard()
+            }
+        }
         if model.variant == .guardian { familySection }
+        if model.variant == .protected { guardianSection }
         protectionSection
         accountSection
         preferencesSection
@@ -107,10 +136,40 @@ struct ProfileView: View {
 
     // MARK: Sections
 
+    /// Protected sections sit 15 pt apart (Figma "Profile/Pribadi" of the protected user), others 28.
+    private var sectionTop: CGFloat { model.variant == .protected ? 15 : 28 }
+
+    /// Protected: "Terhubung", the guardian who gets the warnings.
+    @ViewBuilder private var guardianSection: some View {
+        if let guardian = model.profile?.guardian {
+            ProfileSection(title: "Connected") {
+                Button { env.router.show(.profilePage(.connection)) } label: {
+                    HStack(spacing: 12) {
+                        InitialsAvatar(name: guardian.name, avatarId: guardian.avatarId, size: 36)
+                        Text(verbatim: guardian.name)
+                            .profileFont(17, tracking: -0.17)
+                            .foregroundStyle(ProfileStyle.ink)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ProfileStyle.chevron)
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, 17)
+                    .frame(minHeight: 55)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Shows your linked account"))
+                .accessibilityIdentifier("profile.guardianRow")
+            }
+        }
+    }
+
     /// Pribadi and Protected: "Perlindungan" with the extension status (the switch lives in Safari).
     @ViewBuilder private var protectionSection: some View {
         if model.variant != .guardian {
-            ProfileSection(title: "Protection") {
+            ProfileSection(title: "Protection", top: model.variant == .protected && model.profile?.guardian != nil ? sectionTop : 28) {
                 extensionRow
             }
         }
@@ -143,18 +202,7 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
             } else if model.members.isEmpty {
-                HStack(spacing: 12) {
-                    Text("No one protected yet")
-                        .profileFont(15)
-                        .foregroundStyle(ProfileStyle.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button { isInvitePresented = true } label: { Text("Invite") }
-                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
-                        .accessibilityIdentifier("profile.members.invite")
-                }
-                .padding(.horizontal, 17)
-                .frame(minHeight: 62)
-                .accessibilityIdentifier("profile.members.empty")
+                FamilyEmptyCard { isInvitePresented = true }
             } else {
                 ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
                     if index > 0 { ProfileDivider(leading: 73) }
@@ -209,8 +257,11 @@ struct ProfileView: View {
     }
 
     private var accountSection: some View {
-        ProfileSection(title: "Account") {
+        ProfileSection(title: "Account", top: sectionTop) {
             if model.variant == .protected {
+                // Figma: Kelola profil first, then Terhubung.
+                navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
+                ProfileDivider()
                 navRow(symbol: ProfileStyle.switchSymbol, title: Text("Connected"), page: .connection, id: "profile.connection")
             } else {
                 navRow(
@@ -218,9 +269,9 @@ struct ProfileView: View {
                     value: L10n.string(model.variant == .guardian ? "Guardian" : "Personal", language: language),
                     page: .mode, id: "profile.mode"
                 )
+                ProfileDivider()
+                navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
             }
-            ProfileDivider()
-            navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
             ProfileDivider()
             navRow(symbol: "bell.fill", title: Text("Notifications"), page: .notifications, id: "profile.notifications")
             ProfileDivider()
@@ -229,7 +280,7 @@ struct ProfileView: View {
     }
 
     private var preferencesSection: some View {
-        ProfileSection(title: "Preferences") {
+        ProfileSection(title: "Preferences", top: sectionTop) {
             navRow(
                 symbol: "circle.lefthalf.filled", title: Text("Theme"),
                 value: L10n.string(themeTitle, language: language),

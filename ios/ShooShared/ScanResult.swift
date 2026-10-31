@@ -11,6 +11,7 @@ struct ScanResult: Codable, Identifiable, Hashable {
     var status: ScanStatus
     var signals: [Signal]
     var screenshotUrl: URL?
+    var pageReplicaUrl: URL?
     var ownerDeviceId: String
     var ownerName: String
     var detectedAt: Date

@@ -376,7 +376,7 @@ private struct StatusStrip: View {
             Image(systemName: "circle.grid.3x3.fill")
                 .font(.system(size: 13))
                 .accessibilityHidden(true)
-            (Text("Security status:") + Text(verbatim: " ") + Text(value).foregroundColor(valueColor))
+            (Text("Security status:") + Text(verbatim: " ") + Text(value).foregroundStyle(valueColor))
                 .onboardingFont(15, relativeTo: .subheadline)
                 .tracking(-0.15)
         }

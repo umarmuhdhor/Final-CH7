@@ -2,6 +2,12 @@
 
 Lingkup: hanya layer 3. `localSignals` kosong (bobot kata versi quiet). Skor = jumlah bobot, maks 100. Tertangkap = skor ≥ 30.
 
+> **Koreksi 29 Okt 2026** (angka di bawah ditulis 26 Okt dan dibiarkan apa adanya):
+> - **17 dari 25** dihitung ulang dari berkas tersimpan: di HEAD `5c19d6f` hasilnya **18**, dan dengan perubahan yang belum di-commit (`mobile token`, kata aksi di title) **19**. Hanya situs 19 yang pindah (25 → 50). Penyebab 17 vs 18 di HEAD tidak diselidiki.
+> - **"18 situs mengirim data ke Telegram" tidak bisa diulang.** Yang bisa diulang: 12 situs punya host + token + method di skrip inline, 13 punya host `api.telegram.org`, 19 menyebut kata "telegram". Lihat [hasil-analisis-telegram.md](hasil-analisis-telegram.md).
+> - **Batas tampilan di ekstensi** (dikonfirmasi Imelda langsung, 29 Okt 2026): layer 2 maks 35, layer 3 maks 35, total 70. Tangkapan ≥ 30 di dokumen ini tidak berubah oleh batas 35. Skor ≥ 50 hanya bisa dicapai gabungan layer, dan ≥ 80 tidak bisa dicapai layer 2 + 3.
+> - **Uji penuh dengan RDAP live, sinyal umur hari ini, dan Telegram:** [HASIL-L3-PENUH.md](HASIL-L3-PENUH.md). Umur domain tidak stabil (RDAP kena batas 1,5 dtk di 25% permintaan siang, 2% malam), jadi tangkapan "umur hari ini" ditulis sebagai rentang 15–19.
+
 ## 1. Ringkasan
 
 | pola dominan | jumlah situs | tertangkap L3 (≥30) | lolos |

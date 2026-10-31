@@ -302,3 +302,35 @@ test("security: user-content hosts of official domains are not exempt", () => {
     }
     assert.deepEqual(analyzeSnapshot(page("https://accounts.google.com/signin", SENSITIVE())), [], "first-party google still exempt");
 });
+
+// ---- bank token fields count as one-time codes --------------------------------
+test("asks_otp: bank token fields (mobile token, token lunak, KeyBCA)", () => {
+    expectSignal("asks_otp", [field({ type: "password", name: "mobileToken" })], "camelCase mobileToken");
+    expectSignal("asks_otp", [field({ label: "Masukkan Token Lunak" })], "token lunak");
+    expectSignal("asks_otp", [field({ name: "inputRespons", label: "Respon KeyBCA" })], "KeyBCA");
+});
+test("asks_otp: a CSRF or API token is not a one-time code", () => {
+    expectNone([field({ name: "csrf_token" })], "csrf_token");
+    expectNone([field({ name: "_token" })], "_token");
+    expectNone([field({ label: "API token" })], "api token");
+});
+test("asks_otp: autocomplete=one-time-code", () => {
+    expectSignal("asks_otp", [field({ autocomplete: "one-time-code" })], "iPhone OTP autofill");
+});
+
+// ---- digit boxes: one box per digit, no label (scam sample 15: id code1..code5) ---------------
+const boxes = (prefix, n, extra = {}) => Array.from({ length: n }, (_, i) => field({ type: "tel", id: `${prefix}${i + 1}`, ...extra }));
+test("asks_otp: one box per digit (code1..code5, kode_1.., otp1..)", () => {
+    expectSignal("asks_otp", boxes("code", 5), "code1..code5");
+    expectSignal("asks_otp", boxes("kode_", 6), "kode_1..kode_6");
+    expectSignal("asks_otp", boxes("otp", 4), "otp1..otp4");
+    expectSignal("asks_otp", boxes("digit-", 4), "digit-1..digit-4");
+    expectSignal("asks_otp", [...boxes("code", 5), field({ type: "hidden", name: "code", id: "fullcode" })], "with the hidden joined value, as in sample 15");
+});
+test("asks_otp: digit boxes, negatives", () => {
+    expectNone(boxes("code", 3), "three boxes are not enough");
+    expectNone(boxes("address", 5), "other numbered fields");
+    expectNone(boxes("zipcode", 5), "zipcode1.. is not a code box");
+    expectNone(boxes("code", 5, { type: "hidden" }), "hidden fields ask nothing");
+    expectNone([field({ id: "code1" }), field({ id: "code2" }), field({ name: "name" }), field({ name: "phone" })], "two code fields plus others");
+});

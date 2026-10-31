@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 
@@ -38,11 +39,27 @@ final class DetailModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
 
-    init(scanId: String, repository: any ShooRepository, now: @escaping () -> Date = Date.init) {
+    /// fase 18b: a push can open Detail before the Worker stored the page copy (`waitUntil`).
+    /// Within this many seconds of the scan, the screen waits for it instead of saying "no copy".
+    static let copyWindow: TimeInterval = 60
+    /// Ask again 3 s after the load, then once more at 15 s; never a third time.
+    static let copyRetryDelays: [Duration] = [.seconds(3), .seconds(12)]
+
+    /// Waiting for the page copy of a scan that just came in (`awaitsCopy`).
+    private(set) var isSavingCopy = false
+
+    init(
+        scanId: String,
+        repository: any ShooRepository,
+        now: @escaping () -> Date = Date.init,
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) {
         self.scanId = scanId
         self.repository = repository
         self.now = now
+        self.sleep = sleep
     }
 
     // MARK: Derived
@@ -55,11 +72,18 @@ final class DetailModel {
         return scan.ownerDeviceId == viewer.deviceId
     }
 
-    /// DT-05 / GD-07: only a Guardian, only blocked items (contracts/api.md `verdict_not_allowed`).
+    /// DT-05 / GD-07: only a Guardian, on warning and blocked items alike (Figma 416:9469, #190).
     /// The repository only returns the guardian's own scans and their protected members'.
     var canValidate: Bool {
-        viewer?.mode == .guardian && scan?.status == .blocked
+        viewer?.mode == .guardian && scan != nil
     }
+
+    /// Areas per signal on the page copy (`shoo-replica` meta `marks`, #176). Empty until the copy is shown.
+    var marks: [ReplicaMark] = []
+    /// Width of the copied page in CSS px (the meta's viewport), so marks land on the image.
+    var pageCSSWidth: CGFloat?
+    /// The owner's avatar for the chip, from the family list (best effort).
+    private(set) var ownerAvatarId: String?
 
     /// DT-03: the owner's name is for the guardian's family view, never for Protected.
     func showsOwner(familyModeOn: Bool) -> Bool {
@@ -70,7 +94,7 @@ final class DetailModel {
     /// DT-04: 1–3 signals, heaviest first, in the viewer's wording.
     func evidence(language: AppLanguage) -> [Evidence] {
         guard let scan, let mode = viewer?.mode else { return [] }
-        return Evidence.top(scan.signals, mode: mode, language: language)
+        return Evidence.top(scan.signals, mode: mode, language: language, marks: marks)
     }
 
     /// DT-06: "Verified scam by Adhella" / "Marked safe by you".
@@ -79,11 +103,20 @@ final class DetailModel {
         return VerdictNote.text(for: verdict, viewerDeviceId: viewer?.deviceId, language: language)
     }
 
+    /// No copy and no screenshot yet, on a scan from the last minute (the device clock decides, so
+    /// a scan "from the future" does not count).
+    var awaitsCopy: Bool {
+        guard let scan, scan.pageReplicaUrl == nil, scan.screenshotUrl == nil else { return false }
+        let age = now().timeIntervalSince(scan.detectedAt)
+        return age >= 0 && age <= Self.copyWindow
+    }
+
     // MARK: Actions
 
     func load() async {
         if scan == nil { state = .loading }
         screenshotLinkRefreshed = false
+        replicaLinkRefreshed = false
         let epoch = verdictEpoch
         do {
             async let fetchedScan = repository.scan(id: scanId)
@@ -97,6 +130,7 @@ final class DetailModel {
             scan = loadedScan
             viewer = loadedViewer
             state = .loaded
+            await loadOwnerAvatar()
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound
@@ -108,23 +142,73 @@ final class DetailModel {
         }
     }
 
+    /// Someone else's scan in the guardian's view: their avatar for the chip. Without it the chip
+    /// shows the first avatar colour.
+    private func loadOwnerAvatar() async {
+        guard viewer?.mode == .guardian, !isOwnScan, ownerAvatarId == nil, let owner = scan?.ownerDeviceId else { return }
+        ownerAvatarId = try? await repository.familyMembers().first { $0.deviceId == owner }?.avatarId
+    }
+
+    /// After `load()`: while `awaitsCopy`, asks for the scan again (`copyRetryDelays`) and takes only
+    /// `pageReplicaUrl` from the answer, so a verdict being sent is never overwritten.
+    func waitForCopy() async {
+        guard awaitsCopy else { return }
+        isSavingCopy = true
+        defer { isSavingCopy = false }
+        for delay in Self.copyRetryDelays {
+            do { try await sleep(delay) } catch { return }
+            guard let current = scan, current.pageReplicaUrl == nil else { return }
+            do {
+                let fresh = try await repository.scan(id: scanId)
+                if let link = fresh.pageReplicaUrl, scan?.id == current.id, scan?.pageReplicaUrl == nil {
+                    scan?.pageReplicaUrl = link
+                    return
+                }
+            } catch let error where error.isCancellation {
+                return
+            } catch RepositoryError.api(.notFound, _) {
+                scan = nil
+                state = .notFound
+                return
+            } catch {
+                // Offline for a moment: the second try may still bring it.
+            }
+        }
+    }
+
     /// The screenshot link failed. It may only have expired (valid 1 h), so ask for the scan once more:
     /// that brings a fresh link, or a 404 when the scan is really gone (contracts/api.md, D-alief-C04).
     /// `true` when a new link came back.
     func refreshScreenshotLink() async -> Bool {
-        guard !screenshotLinkRefreshed, let current = scan else { return false }
+        guard !screenshotLinkRefreshed else { return false }
         screenshotLinkRefreshed = true
+        let fresh = await refreshLink(\.screenshotUrl)
+        if fresh == nil { screenshotLinkRefreshed = false }
+        return fresh ?? false
+    }
+
+    /// Same for the page copy link (`GET /replicas/:id`, valid 1 h). Not after a 429 (the view decides).
+    func refreshReplicaLink() async -> Bool {
+        guard !replicaLinkRefreshed else { return false }
+        replicaLinkRefreshed = true
+        let fresh = await refreshLink(\.pageReplicaUrl)
+        if fresh == nil { replicaLinkRefreshed = false }
+        return fresh ?? false
+    }
+
+    /// `true` when a new link came back, `false` when not, `nil` when cancelled (try again next time).
+    private func refreshLink(_ link: WritableKeyPath<ScanResult, URL?>) async -> Bool? {
+        guard let current = scan else { return false }
         do {
             let fresh = try await repository.scan(id: scanId)
             // A `load()` that finished meanwhile already brought the newest link.
-            guard let link = fresh.screenshotUrl, link != current.screenshotUrl,
-                  scan?.screenshotUrl == current.screenshotUrl
+            guard let url = fresh[keyPath: link], url != current[keyPath: link],
+                  scan?[keyPath: link] == current[keyPath: link]
             else { return false }
-            scan?.screenshotUrl = link
+            scan?[keyPath: link] = url
             return true
         } catch let error where error.isCancellation {
-            screenshotLinkRefreshed = false
-            return false
+            return nil
         } catch RepositoryError.api(.notFound, _) {
             scan = nil
             state = .notFound
@@ -163,6 +247,8 @@ final class DetailModel {
     @ObservationIgnored private var verdictEpoch = 0
     /// One fresh screenshot link per load; a second failure shows "isn't available".
     @ObservationIgnored private var screenshotLinkRefreshed = false
+    /// One fresh page copy link per load, like the screenshot.
+    @ObservationIgnored private var replicaLinkRefreshed = false
 
     private static func isCancellation(_ error: any Error) -> Bool {
         error is CancellationError || (error as? URLError)?.code == .cancelled

@@ -21,8 +21,9 @@ flowchart LR
   end
   subgraph SB["Supabase shoo-demo (Free, ap-southeast-1)"]
     PG[("Postgres\nrole shoo_api")]
-    ST[("Storage\nbucket screenshots (private)")]
+    ST[("Storage\nbucket screenshots (private,\nscreenshot lama + favicon lama, 18c)")]
   end
+  R2[("Cloudflare R2\nshoo-replicas (private)\nreplica + favicon baru")]
   AI["AI service /analyze\n(Imelda)"]
   APNS["APNs"]
   APP -- "REST + Bearer device token" --> W
@@ -30,6 +31,7 @@ flowchart LR
   EXT -- "POST /analyze" --> AI
   W --> HD --> PG
   W -- "Storage REST (service key)" --> ST
+  W -- "binding REPLICAS" --> R2
   CRON --> W
   W -- "relay + shared secret" --> PF["Edge Function push\n(Supabase, Deno)"]
   PF -- "HTTP/2 + JWT ES256" --> APNS --> APP
@@ -47,9 +49,10 @@ Satu-satunya pintu ke data adalah Worker. Postgres tidak diekspos lewat PostgRES
 | API | Cloudflare Worker, TypeScript, Hono, zod, postgres.js | `backend/api/` | Runtime-agnostic: hanya Web API (`fetch`, `crypto.subtle`) |
 | Koneksi DB | Cloudflare Hyperdrive (**cache dimatikan**, `--caching-disabled`) → Direct connection Supabase (fallback: session pooler 5432) | `backend/api/wrangler.jsonc` | Lokal: `localConnectionString` / env `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB` ke `supabase start` (port 54322). Cache Hyperdrive aktif secara default (60 s + 15 s) dan akan membuat verdict/otorisasi basi di cloud, jadi wajib dimatikan (D-alief-17) |
 | DB | Supabase Postgres 15+, migrasi SQL, pgTAP | `backend/db/supabase/` | Role `shoo_api` least-privilege (R2 §3) |
-| Screenshot | Supabase Storage, bucket private `screenshots`, disajikan hanya lewat Worker `/screenshots/{scanId}` (link HMAC 1 jam, cek akses tiap request, `no-store`, D-alief-B08) | lewat `ScreenshotStore` di `backend/api/src/services/screenshots.ts` | Adapter: ganti ke R2 = satu file (E1) |
+| Screenshot | Supabase Storage, bucket private `screenshots`, disajikan hanya lewat Worker `/screenshots/{scanId}` (link HMAC 1 jam, cek akses tiap request, `no-store`, D-alief-B08) | lewat `ScreenshotStore` di `backend/api/src/services/screenshots.ts` | Dihapus di 18c (extension #178 tidak lagi mengirim screenshot). Favicon baru pindah ke R2 di 18a (`-icon.<ext>`); favicon lama `-favicon.<ext>` tetap di sini sampai habis 15 hari (D-alief-C27) |
+| Salinan halaman (fase 18, aktif setelah 18a ter-deploy) | Cloudflare R2, bucket privat `shoo-replicas` (binding `REPLICAS`, tanpa `r2.dev`/domain/CORS, lifecycle 17 hari), disajikan hanya lewat Worker `/replicas/{scanId}` (link HMAC 1 jam, cek akses tiap request) | `R2ReplicaStore` di `backend/api/src/services/replicaStore.ts`; store dipilih dari path (`storeFor`, `services/screenshots.ts`): `-replica.html.gz` + `-icon.<ext>` → R2, sisanya Supabase | D-alief-C23, C26, C27. Juga menyimpan favicon baru. Kill-switch `REPLICAS_ENABLED` hanya menutup tulis/baca replica |
 | Push | APNs HTTP/2, token-based (JWT ES256 dari `.p8`) | `backend/api/src/services/push/`, `backend/db/supabase/functions/push/` | **Jalur utama yang direncanakan: relay** Worker → Edge Function Supabase `push` (Deno) dengan shared secret, karena tidak ada dokumen resmi bahwa `fetch()` Worker bisa HTTP/2 ke origin. Jalur langsung Worker → APNs hanya dipakai kalau spike di Worker **yang sudah di-deploy** lulus (fase 07, D-alief-16) |
-| Retensi | Worker Cron Trigger harian | `backend/api/src/cron/retention.ts` | Hapus scan > 14 hari + objek Storage-nya (lewat Storage API, bukan SQL) |
+| Retensi | Worker Cron Trigger harian | `backend/api/src/cron/retention.ts` | Hapus scan > 14 hari + objeknya per store (Supabase Storage API ≤ 10 batch/run, R2 binding ≤ 40 batch/run), bukan lewat SQL |
 | CI (draf) | GitHub Actions | `backend/ci/backend.yml`, `ios/ShooApp/ci/ios-app.yml` | Inert sampai Umar memindahkannya ke `.github/workflows/` (C2) |
 
 ## 3. Hosting, kuota & biaya
@@ -60,7 +63,8 @@ Satu-satunya pintu ke data adalah Worker. Postgres tidak diekspos lewat PostgRES
 | Hyperdrive | Free | 100.000 query/hari, 10 konfigurasi, ±20 koneksi origin per konfigurasi, query maks 60 s | Cache dimatikan; satu request = sedikit query. Fallback: postgres.js langsung ke pooler via `connect()` TCP |
 | Edge Functions (relay push) | Supabase Free | 500.000 invocation/bulan | Satu invocation per push |
 | Supabase DB | Free | 500 MB, 2 proyek aktif, pause setelah 7 hari tanpa aktivitas database | Retensi 14 hari; Cron retensi harian **menulis** ke DB; monitor uptime (B9) memanggil `/healthz/db` yang menulis `ops_heartbeat` (bukan `select 1`) |
-| Supabase Storage | Free | 1 GB file, 5 GB egress/bulan | ≤ 150 KB/screenshot, 1 per pemilik+domain per 24 jam, maks 50/device/hari, hanya dimuat di Detail, cache di app, retensi 14 hari. Ambang pindah ke R2: 700 MB atau 3,5 GB egress |
+| Supabase Storage | Free | 1 GB file, 5 GB egress/bulan | ≤ 150 KB/screenshot, 1 per pemilik+domain per 24 jam, maks 50/device/hari, global 300/hari, hanya dimuat di Detail, tanpa cache di app, retensi 14 hari. Batas waspada (D11): 700 MB atau 3,5 GB egress. Diukur 29 Okt 2026: 7 objek, 287 634 byte (hanya `screenshots`). Favicon baru ke R2 sejak 18a; setelah 18c Storage kosong dan kunci service_role dicabut (D-alief-C27) |
+| Cloudflare R2 (fase 18) | Free (langganan $0, kartu terdaftar) | 10 GB-bulan, 1 juta Class A + 10 juta Class B/bulan, egress gratis; binding dihitung di 1000 subrequest layanan Cloudflare, bukan 50 | Replica ≤ 307 200 byte; global 3000 upload + 500 MB/hari (terburuk 8 GB), 50/device, 300/IP; tampilan 10/menit + 500/hari per viewer; hapus cron ≤ 4000 objek/run; lifecycle 17 hari (D-alief-C26). Favicon baru ≤ 64 KB, 1000 unduhan/hari global (±1 GB terburuk) |
 | APNs | Termasuk Apple Developer Program | – | Sandbox dulu, production saat TestFlight |
 | TestFlight | Apple Developer Program | – | Butuh tim berbayar + record App Store Connect (B8), kunci APNs Production (B7) |
 
@@ -70,9 +74,9 @@ Perkiraan kasar: 150 KB × 50/hari × 14 hari = ±105 MB per device paling sibuk
 
 1. **Onboarding (ON-02, ON-03, fase 13).** App → `POST /devices {name, mode, apnsToken?}` → `{deviceId, token, avatarId}`. App menulis `device.id`, `device.token`, `device.mode`, `device.name`, `api.baseURL`, `ai.baseURL` ke App Group (kontrak) + menyimpan token di Keychain untuk app sendiri. Kalau bahasa app = ID, app langsung memanggil `PATCH /devices/me {language: "id"}`.
 2. **Pairing (GD-04, PR-01..03, fase 08 + 14).** Guardian → `POST /family/code` (tiap 60 s, app menghitung mundur) → QR + kode + `inviteUrl` https. Protected → `POST /family/join {code}` (scan QR, ketik kode, atau buka `shoo://join?code=`) → `{guardian}`. Server menolak kalau kode salah/kedaluwarsa, keluarga penuh (3), atau percobaan berlebih.
-3. **Scan → push (EX-07, GD-06, fase 09 + 11 + 15).** Extension → `POST /scans` (skor ≥ 30, + `screenshotBase64?`) → Worker menyimpan scan, mengunggah screenshot (kalau lolos kuota) → kalau pemiliknya Protected: kirim push (relay Edge Function → APNs) ke Guardian dengan teks sesuai bahasa Guardian dan `scanId` → tap → app membuka Detail (`GET /scans/{id}`).
+3. **Scan → push (EX-07, GD-06, fase 09 + 11 + 15 + 18).** Extension → `POST /scans` (skor ≥ 30, + `pageReplicaBase64?`, body ≤ 512 KB; build lama: `screenshotBase64?`) → Worker menyimpan scan, mengunggah screenshot lama (kalau lolos kuota) → kalau pemiliknya Protected: kirim push ke Guardian dengan teks sesuai bahasa Guardian dan `scanId` → 201 → **setelah push terkirim**, di `waitUntil`, replica divalidasi (inflate per 4 KB ≤ 3 MB) dan disimpan ke R2 (kalau ada relasi keluarga dan lolos kuota) → tap → app membuka Detail (`GET /scans/{id}`, `pageReplicaUrl` link Worker 1 jam → `GET /replicas/{id}` gzip apa adanya).
 4. **Verdict → buka blokir (GD-07, EX-06, fase 10 + 15).** Guardian menekan It's safe / Not safe di Detail → `POST /verdicts {scanId, value}` (langsung, tanpa konfirmasi) → verdict berlaku untuk domain itu milik pemilik scan → extension Protected yang polling `GET /verdicts?domain=` tiap 5 s melihat `safe` → layar blokir terbuka. Target: `GET /verdicts` mencerminkan keputusan ≤ 1 s setelah `POST /verdicts`; layar blokir terbuka ≤ 10 s ujung ke ujung (polling 5 s). `not_safe` → domain masuk antrean `blocklist_entries` dan baru muncul di `GET /blocklist` setelah review manual (D-alief-25, R4 §4).
-5. **Retensi (fase 12).** Cron harian menghapus scan > 14 hari + objek Storage-nya, kode keluarga kedaluwarsa, dan catatan percobaan join lama. Verdict tidak dihapus (dipakai blocklist, D-alief-14).
+5. **Retensi (fase 12, 18).** Cron harian menghapus scan > 14 hari + objeknya (Supabase Storage atau R2, dipilih dari path), kode keluarga kedaluwarsa, dan catatan percobaan join lama. Verdict tidak dihapus (dipakai blocklist, D-alief-14).
 
 ## 5. Di Mac Alief (lokal)
 

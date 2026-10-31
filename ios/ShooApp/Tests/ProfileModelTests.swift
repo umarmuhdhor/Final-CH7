@@ -13,10 +13,15 @@ struct ProfileModelTests {
         return settings
     }
 
+    /// App Group stand-in, so tests never touch the real suite.
+    func linked() -> LinkedAccountSettings {
+        LinkedAccountSettings(defaults: UserDefaults(suiteName: "linked.\(UUID().uuidString)")!)
+    }
+
     func model(mode: UserMode) -> (ProfileModel, MockRepository, AppSettings) {
         let repository = MockRepository(mode: mode, latency: .zero)
         let settings = settings(mode: mode)
-        return (ProfileModel(repository: repository, settings: settings), repository, settings)
+        return (ProfileModel(repository: repository, settings: settings, linked: linked()), repository, settings)
     }
 
     @Test func guardianSeesNameMembersAndFamilyCode() async {
@@ -26,16 +31,14 @@ struct ProfileModelTests {
         #expect(model.profile?.name == "Adhella")
         #expect(model.members.count == 2)
         #expect(model.showsFamilyCode)
-        #expect(!model.showsDisconnect)
     }
 
-    @Test func protectedSeesGuardianAndDisconnectButNoFamilyCode() async {
+    @Test func protectedSeesGuardianButNoFamilyCode() async {
         let (model, _, _) = model(mode: .protected)
         await model.load()
         #expect(model.profile?.guardian?.name == "Adhella")
         #expect(model.members.isEmpty)
         #expect(!model.showsFamilyCode)
-        #expect(model.showsDisconnect)
     }
 
     @Test func savingANameUsesTheOnboardingRule() async throws {
@@ -93,19 +96,6 @@ struct ProfileModelTests {
         #expect(try await repository.me().language == "id")
     }
 
-    @Test func disconnectSendsProtectedBackToConnect() async throws {
-        let (model, repository, settings) = model(mode: .protected)
-        var ended = false
-        model.onSessionEnd = { ended = true }
-        await model.load()
-        #expect(await model.disconnect())
-        #expect(ended)
-        #expect(try await repository.me().guardian == nil)
-        #expect(!settings.onboardingCompleted)
-        #expect(!settings.onboardingConnectPassed)
-        #expect(settings.mode == .protected)
-    }
-
     @Test func deleteMyDataStartsOverWithAFreshInstall() async throws {
         let (model, repository, settings) = model(mode: .guardian)
         await model.load()
@@ -113,14 +103,6 @@ struct ProfileModelTests {
         #expect(settings.mode == nil)
         #expect(!settings.onboardingCompleted)
         #expect(try await repository.familyMembers().isEmpty)
-    }
-
-    @Test func disconnectThatAlreadyHappenedCountsAsDone() async throws {
-        let (model, repository, settings) = model(mode: .protected)
-        await model.load()
-        try await repository.leaveGuardian()
-        #expect(await model.disconnect())
-        #expect(!settings.onboardingCompleted)
     }
 
     @Test func membersFailingStillShowsTheProfile() async {
@@ -160,13 +142,14 @@ struct ProfileModelTests {
 
     func redesignModel(
         mode: UserMode, familyMode: Bool = false, repository: (any ShooRepository)? = nil,
-        notifications: (any NotificationPermission)? = nil
+        notifications: (any NotificationPermission)? = nil, linked: LinkedAccountSettings? = nil
     ) -> ProfileModel {
         let settings = settings(mode: mode)
         settings.familyModeOn = familyMode
         return ProfileModel(
             repository: repository ?? MockRepository(mode: mode, latency: .zero), settings: settings,
-            notifications: notifications, now: { Self.start.addingTimeInterval(2 * 86_400) }
+            notifications: notifications, linked: linked ?? self.linked(),
+            now: { Self.start.addingTimeInterval(2 * 86_400) }
         )
     }
 
@@ -192,16 +175,68 @@ struct ProfileModelTests {
         #expect(protected.variant == .protected)
     }
 
-    @Test func personalStatsAreDaysBlockedWarnings() async {
+    /// "Situs diperiksa" waits for the extension's counter (proposed App Group key `stats.checked`).
+    @Test func personalStatsShowADashUntilTheExtensionCounts() async {
         let model = redesignModel(mode: .guardian)
         await model.load()
-        #expect(model.stats(language: .english).map(\.value) == ["3", "3", "5"])
+        #expect(model.stats(language: .english).map(\.value) == ["3", "3", "—"])
     }
 
-    @Test func protectedStatsAreBlockedAndOpened() async {
+    @Test func protectedStatsReadTheExtensionsCheckedCounter() async {
+        let defaults = UserDefaults(suiteName: "linked.\(UUID().uuidString)")!
+        defaults.set(1284, forKey: LinkedAccountSettings.Key.statsChecked)
+        let model = redesignModel(mode: .protected, linked: LinkedAccountSettings(defaults: defaults))
+        await model.load()
+        #expect(model.stats(language: .english).map(\.value) == ["3", "3", "1,284"])
+        #expect(model.stats(language: .indonesian).map(\.value) == ["3", "3", "1.284"])
+        defaults.set(1300, forKey: LinkedAccountSettings.Key.statsChecked)
+        model.linked.refresh()
+        #expect(model.stats(language: .english).last?.value == "1,300")
+    }
+
+    @Test func guardianWithNobodyProtectedShowsNoStats() async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        for member in try await repository.familyMembers() { try await repository.removeMember(deviceId: member.deviceId) }
+        let model = redesignModel(mode: .guardian, familyMode: true, repository: repository)
+        await model.load()
+        #expect(model.members.isEmpty)
+        #expect(model.stats(language: .english).isEmpty)
+    }
+
+    @Test func guardianCardShowsForPribadiUntilClosedOrUsed() {
+        let personal = redesignModel(mode: .guardian)
+        #expect(personal.showsGuardianCard)
+        personal.becomeGuardian()
+        #expect(personal.variant == .guardian)
+        #expect(!personal.showsGuardianCard)
+        personal.setFamilyMode(false)
+        #expect(personal.showsGuardianCard)
+        personal.dismissGuardianCard()
+        #expect(!personal.showsGuardianCard)
+        #expect(!redesignModel(mode: .protected).showsGuardianCard)
+    }
+
+    @Test func activeSinceIsTheRegistrationDay() async {
         let model = redesignModel(mode: .protected)
         await model.load()
-        #expect(model.stats(language: .english).map(\.value) == ["3", "1"])
+        #expect(model.activeSince(language: .english) == "Active since September 14")
+        #expect(model.activeSince(language: .indonesian) == "Aktif sejak 14 September")
+    }
+
+    @Test func linkedSwitchesDefaultOnAndClearWithTheAccount() async {
+        let defaults = UserDefaults(suiteName: "linked.\(UUID().uuidString)")!
+        let linked = LinkedAccountSettings(defaults: defaults)
+        #expect(linked.autoSendLinks && linked.shareWarnings && linked.notifyLinkVerified)
+        linked.autoSendLinks = false
+        linked.notifyLinkVerified = false
+        #expect(LinkedAccountSettings(defaults: defaults).autoSendLinks == false)
+        #expect(LinkedAccountSettings(defaults: defaults).notifyLinkVerified == false)
+        defaults.set(7, forKey: LinkedAccountSettings.Key.statsChecked)
+
+        let model = redesignModel(mode: .protected, linked: linked)
+        await model.load()
+        #expect(await model.deleteMyData())
+        for key in LinkedAccountSettings.Key.all { #expect(defaults.object(forKey: key) == nil) }
     }
 
     /// People, days since the earliest member still connected, the members' blocked total (Mom 3 + Dad 1).
@@ -238,7 +273,7 @@ struct ProfileModelTests {
 
         let protected = redesignModel(mode: .protected)
         await protected.load()
-        #expect(protected.handle(language: .english) == "@mom")
+        #expect(protected.handle(language: .english).isEmpty)
     }
 
     @Test func deleteMessageSaysWhoIsAffected() async {

@@ -89,6 +89,7 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
 
 /// Round 50 pt back button over the header gradient (Liquid Glass on iOS 26+).
 struct OnboardingBackButton: View {
+    var identifier = "onboarding.back"
     let action: () -> Void
 
     var body: some View {
@@ -101,7 +102,7 @@ struct OnboardingBackButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Back"))
-        .accessibilityIdentifier("onboarding.back")
+        .accessibilityIdentifier(identifier)
     }
 }
 

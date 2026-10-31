@@ -80,17 +80,17 @@ struct GuardianHomeModelTests {
         #expect(model.pendingScan?.domain == "promo-undian-shopee.click")
     }
 
-    /// contracts/api.md still allows verdicts on blocked scans only: the refusal is said, not shown as a network error.
-    @Test func refusedVerdictOnAWarningSiteKeepsTheCard() async throws {
+    /// GD-07 (#190, #191): a warning site takes a verdict too.
+    @Test func verdictOnAWarningSiteIsSaved() async throws {
         let model = model(settings: try settings())
         await model.refresh()
         model.dismissPending()
         #expect(model.level == .warning)
         #expect(model.canDecide)
         await model.decide(.safe)
-        #expect(model.verdictNotAllowed)
+        #expect(!model.verdictNotAllowed)
         #expect(!model.verdictFailed)
-        #expect(model.pendingScan?.domain == "promo-undian-shopee.click")
+        #expect(model.scans.first { $0.domain == "promo-undian-shopee.click" }?.verdict?.value == .safe)
     }
 
     @Test func failureShowsError() async throws {

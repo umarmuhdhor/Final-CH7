@@ -9,6 +9,10 @@ struct ActivityView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: ActivityModel
     @State private var isPickerOpen = false
+    /// For the empty states: nil until read, so Off never flashes before the answer.
+    @State private var extensionStatus: ExtensionStatus?
+    @State private var checkStats = CheckStats()
+    @State private var isTurnOnPresented = false
 
     init(repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil) {
         _model = State(initialValue: ActivityModel(
@@ -66,7 +70,10 @@ struct ActivityView: View {
         .navigationTitle(localized: "Activity")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
-        .refreshable { await model.refresh() }
+        .refreshable {
+            await model.refresh()
+            await readExtension()
+        }
         .onChange(of: model.refreshFailed) { _, failed in
             guard failed else { return }
             AccessibilityNotification.Announcement(
@@ -76,8 +83,12 @@ struct ActivityView: View {
         #if DEBUG
         .onAppear { if UserDefaults.standard.bool(forKey: "debug.activityPicker") { isPickerOpen = true } }
         #endif
+        .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { await readExtension() } }) {
+            TurnOnExtensionSheet()
+        }
         // First appearance, and coming back to the tab after a failed load.
         .task { if model.state != .loaded { await model.retry() } }
+        .task { await readExtension() }
     }
 
     // MARK: Header
@@ -202,7 +213,8 @@ struct ActivityView: View {
         } label: {
             ActivityRow(
                 scan: scan, language: language,
-                owner: model.isFamily ? .init(name: scan.ownerName, avatarId: model.avatarId(for: scan.ownerDeviceId)) : nil
+                owner: model.isFamily ? .init(name: scan.ownerName, avatarId: model.avatarId(for: scan.ownerDeviceId)) : nil,
+                note: model.note(for: scan), ownList: model.isOwnList
             )
         }
         .buttonStyle(.plain)
@@ -222,16 +234,21 @@ struct ActivityView: View {
         return Text(verbatim: Formatters.day(day, language: language))
     }
 
-    @ViewBuilder
     private var emptyState: some View {
-        switch model.filter {
-        case .all:
-            ActivityMessage(systemImage: "list.bullet.rectangle", title: "No activity yet", message: "Risky sites you open will show up here.")
-        case .warning:
-            ActivityMessage(systemImage: "exclamationmark.triangle", title: "No warnings", message: "Sites that look risky will show up here.")
-        case .blocked:
-            ActivityMessage(systemImage: "hand.raised", title: "Nothing blocked yet", message: "Blocked scam sites will show up here.")
+        let kind = ActivityEmptyKind.of(filter: model.filter, family: model.isFamily, extensionStatus: extensionStatus)
+        return ActivityEmptyState(
+            kind: kind,
+            pill: model.isFamily ? nil : ActivityEmptyText.pill(kind: kind, stats: checkStats, language: language),
+            offSince: ActivityEmptyText.offSince(extensionStatus?.lastSeen, language: language)
+        ) {
+            isTurnOnPresented = true
         }
+    }
+
+    /// The extension's state and counters for the empty states; cheap, read on every appearance.
+    private func readExtension() async {
+        extensionStatus = await env.extensionStatus()
+        checkStats = CheckStats.current()
     }
 }
 
@@ -398,6 +415,10 @@ struct ActivityRow: View {
     let language: AppLanguage
     /// Family Activity only: whose scan it is.
     var owner: Owner?
+    /// Own list only: the guardian's verdict, or that they have not looked yet (Figma 450:8443).
+    var note: ActivityNote?
+    /// Own list: Figma 450:8443 badges (solid "Diblokir"), the verdict goes in `note`.
+    var ownList = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// Host and path only: query strings and fragments can carry personal data or tokens, and
@@ -410,18 +431,22 @@ struct ActivityRow: View {
     }
 
     var body: some View {
-        let badge = ScanBadge(scan: scan)
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 12) {
-                    ActivityBadge(badge: badge)
-                    site
+        VStack(alignment: .leading, spacing: 12) {
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 12) {
+                        statusBadge
+                        site
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 16) {
+                        site
+                        statusBadge
+                    }
                 }
-            } else {
-                HStack(alignment: .top, spacing: 16) {
-                    site
-                    ActivityBadge(badge: badge)
-                }
+            }
+            if let note {
+                ActivityNoteView(note: note, language: language)
             }
         }
         .padding(17)
@@ -432,9 +457,30 @@ struct ActivityRow: View {
         // One stop: site, status, (who), when.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            Text(verbatim: scan.domain + ", ") + Text(ActivityBadge(badge: badge).title)
+            Text(verbatim: scan.domain + ", ") + statusTitle
                 + Text(verbatim: ", " + ([owner?.name].compactMap { $0 } + [time]).joined(separator: ", "))
+                + (note.map { Text(verbatim: ". ") + $0.text(language: language) } ?? Text(verbatim: ""))
         )
+    }
+
+    /// The own list keeps the detection status on the badge ("Waspada" / "Diblokir") and puts the
+    /// guardian's verdict in the note below (Figma 450:8443); Family lists still show the verdict.
+    @ViewBuilder
+    private var statusBadge: some View {
+        if ownList && scan.status == .blocked {
+            ActivityBlockedPill(markedSafe: scan.verdict?.value == .safe)
+        } else if ownList {
+            ActivityBadge(badge: .warning)
+        } else {
+            ActivityBadge(badge: ScanBadge(scan: scan))
+        }
+    }
+
+    private var statusTitle: Text {
+        if ownList {
+            return Text(ActivityBadge(badge: ScanBadge(status: scan.status)).title)
+        }
+        return Text(ActivityBadge(badge: ScanBadge(scan: scan)).title)
     }
 
     private var time: String { Formatters.time(scan.detectedAt, language: language) }

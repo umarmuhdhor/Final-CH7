@@ -1,11 +1,13 @@
 // Layer 4: "is the data this page asks for reasonable for this kind of page?" (M4).
 // - Only a small summary leaves the server: host, title (<= 120 chars), field labels (<= 12), brand names (<= 3, from
-//   brands.json, D-imelda-42) and ids of rules that fired. No page text, no URL path or query, no typed values (SECURITY A1, A4).
+//   brands.json, D-imelda-42), ids of rules that fired and layer 2 reason codes (our codes only, from the client's
+//   `suspicious_link`). No page text, no URL path or query, no typed values (SECURITY A1, A4).
 // - Page words go into the user message as JSON data; the system prompt is a fixed string.
 // - The answer must match schema.js, else it is ignored. Layer 4 can only ADD a signal (D-imelda-06).
 // - Any failure, timeout or cap -> no signal; layer 3 already answered.
-import { SYSTEM_PROMPT, PROMPT_VERSION } from "../../prompts/reality-check.js";
+import { SYSTEM_PROMPT, PROMPT_VERSION, LINK_TEXT } from "../../prompts/reality-check.js";
 import { hostOf } from "../layer3/official.js";
+import { IGNORED_TYPES } from "../layer3/forms.js";
 import { buildIndex, findPhrase, evidenceOf } from "../layer3/match.js";
 import { detectBrands } from "../layer3/content.js";
 import { fold } from "../layer3/text.js";
@@ -23,6 +25,7 @@ export const OUTCOMES = Object.freeze(["gated", "capped", "timeout", "http_error
 const MAX_FIELDS = 12;
 const MAX_LABEL = 60;
 const MAX_TITLE = 120;
+const MAX_LINK_CHECKS = 12;
 
 /** Control chars out, emails and digit runs of 4+ masked (a title may carry a name or an order number), then cut. */
 const clean = (s, max) =>
@@ -44,18 +47,44 @@ export function passesGate(snapshot, { official, score }) {
     return score >= GATE_MIN_SCORE;
 }
 
+/**
+ * Reason codes from the client's layer 2 `suspicious_link` (its evidence is "code,code,..."). Untrusted: only codes the
+ * prompt has a legend for survive, so nothing from the client but our own words reaches the model.
+ */
+function linkChecks(localSignals) {
+    if (!Array.isArray(localSignals)) return [];
+    const codes = new Set();
+    for (const s of localSignals.slice(0, 30)) {
+        if (!s || typeof s !== "object" || s.id !== "suspicious_link" || s.layer !== 2 || typeof s.evidence !== "string") continue;
+        for (const code of s.evidence.slice(0, 500).split(",")) {
+            const c = code.trim();
+            if (Object.hasOwn(LINK_TEXT, c)) codes.add(c);
+        }
+    }
+    return [...codes].slice(0, MAX_LINK_CHECKS);
+}
+
 /** What the model sees. Exported for tests. */
-export function buildInput(snapshot, ruleIds) {
+export function buildInput(snapshot, ruleIds, localSignals = []) {
     const fields = [];
     for (const form of snapshot.forms) {
         for (const f of form.fields) {
             if (fields.length >= MAX_FIELDS) break;
+            const type = clean(f.type, 20).toLowerCase() || "text";
+            if (IGNORED_TYPES.has(type)) continue; // hidden values and buttons ask nothing and would eat the 12 slots
             const label = clean(f.label || f.placeholder || f.name || f.id, MAX_LABEL);
-            if (label || f.type) fields.push({ type: clean(f.type, 20) || "text", label });
+            fields.push({ type, label });
         }
     }
     // site is null for IPs, intranet names and junk. brands: names from brands.json (our wording), at most 3, [] when none (D-imelda-42)
-    return { site: registrableDomain(hostOf(snapshot.url)), title: clean(snapshot.title, MAX_TITLE), fields, brands: detectBrands(snapshot), rules: ruleIds.slice(0, 20) };
+    return {
+        site: registrableDomain(hostOf(snapshot.url)),
+        title: clean(snapshot.title, MAX_TITLE),
+        fields,
+        brands: detectBrands(snapshot),
+        rules: ruleIds.slice(0, 20),
+        link_checks: linkChecks(localSignals),
+    };
 }
 
 const MASKED = /\[(?:number|email)\]/;
@@ -120,9 +149,9 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
         meta: { promptVersion: PROMPT_VERSION, model: config.model }, // record both with every eval run (SECURITY A13)
         /** Outcome counters since this checker was built (one Worker isolate). A wrong model or key shows up as http_error / bad_schema, not as "always reasonable". */
         stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, outcomes: { ...outcomes } }),
-        async check(snapshot, { official, score, ruleIds, client = "unknown", deadlineMs = config.timeoutMs }) {
+        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs }) {
             if (!passesGate(snapshot, { official, score })) return end("gated");
-            const input = buildInput(snapshot, ruleIds);
+            const input = buildInput(snapshot, ruleIds, localSignals);
             if (!input.site) return end("gated"); // not a public domain: nothing sensible to judge, nothing to send
             const budget = Math.min(config.timeoutMs, deadlineMs);
             if (budget <= 0 || !perClient(client).ok || !withinCap()) return end("capped");

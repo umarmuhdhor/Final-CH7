@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Shoo
@@ -59,12 +60,34 @@ actor StubRepository: ShooRepository {
             throw RepositoryError.network
         }
         // Read first, then let the test act: the answer is a snapshot from before that action.
-        let scan = try await base.scan(id: id)
+        scanCalls += 1
+        if let goneFromCall, scanCalls >= goneFromCall {
+            throw RepositoryError.api(.notFound, message: "Scan not found")
+        }
+        var scan = try await base.scan(id: id)
+        editScan?(&scan, scanCalls)
         if let hook = onScan {
             onScan = nil
             await hook()
         }
         return scan
+    }
+
+    /// `scan(id:)` calls so far, the load's own included.
+    private(set) var scanCalls = 0
+    private var editScan: (@Sendable (inout ScanResult, Int) -> Void)?
+
+    private var goneFromCall: Int?
+
+    /// From this call on (counted like `scanCalls`), `scan(id:)` answers 404.
+    func setGone(fromCall: Int) { goneFromCall = fromCall }
+
+    /// The next `count` loads fail with `.network` (not counted in `scanCalls`).
+    func failNextLoads(_ count: Int) { failLoads = count }
+
+    /// Changes every scan `scan(id:)` returns; gets the call number (from 1).
+    func setEditScan(_ edit: @escaping @Sendable (inout ScanResult, Int) -> Void) {
+        editScan = edit
     }
 
     /// Runs once during the next `scan(id:)`, after the scan was read.
@@ -139,8 +162,8 @@ struct DetailModelTests {
     // MARK: DT-05 who sees the buttons
 
     @Test(arguments: [
-        (FixtureScan.warning41, UserMode.guardian, false),
-        (FixtureScan.warning63, .guardian, false),
+        (FixtureScan.warning41, UserMode.guardian, true),
+        (FixtureScan.warning63, .guardian, true),
         (FixtureScan.blocked92, .guardian, true),
         (FixtureScan.verifiedScam, .guardian, true),
         (FixtureScan.markedSafe, .guardian, true),
@@ -148,7 +171,7 @@ struct DetailModelTests {
         (FixtureScan.blocked92, .protected, false),
         (FixtureScan.markedSafe, .protected, false),
     ])
-    func onlyGuardianValidatesBlockedItems(id: String, mode: UserMode, expected: Bool) async {
+    func onlyGuardianValidatesWarningAndBlockedItems(id: String, mode: UserMode, expected: Bool) async {
         let model = await loaded(id, mode: mode)
         #expect(model.state == .loaded)
         #expect(model.canValidate == expected)
@@ -164,7 +187,10 @@ struct DetailModelTests {
             "Form asks for m-banking PIN",
             "Verification page asks for PIN + OTP",
         ])
-        #expect(evidence[0].line(language: .english) == "Domain age 3 days · +30%")
+        #expect(evidence[0].weightText(language: .english) == "+30%")
+        #expect(evidence.map(\.runningWeights) == [[30], [30, 25], [30, 25, 22]])
+        #expect(evidence.map(\.index) == [0, 1, 2])
+        #expect(evidence.map(\.kind) == [.newDomain, .sensitiveForm, .unusualRequest])
     }
 
     @Test func protectedEvidenceUsesSimpleLabels() async {
@@ -174,8 +200,7 @@ struct DetailModelTests {
             "Asks for your bank PIN — banks never do this",
             "A real bank page would not ask this",
         ])
-        #expect(model.evidence(language: .indonesian)[0].line(language: .indonesian)
-            == "Situs ini baru dibuat 3 hari lalu · +30%")
+        #expect(model.evidence(language: .indonesian)[0].text == "Situs ini baru dibuat 3 hari lalu")
     }
 
     @Test func voiceOverReadsTheWeightInWords() async {
@@ -196,6 +221,37 @@ struct DetailModelTests {
         scan.signals.reverse()
         let evidence = Evidence.top(scan.signals, mode: .guardian, language: .english)
         #expect(evidence.map(\.weight) == [15, 14, 12])
+    }
+
+    @Test func marksGoToTheirSignal() {
+        let scan = FixtureLoader.scan("blocked-92")
+        let pin = CGRect(x: 20, y: 120, width: 350, height: 52)
+        let marks = [ReplicaMark(signalId: "asks_pin", rect: pin), ReplicaMark(signalId: "other", rect: .zero)]
+        let evidence = Evidence.top(scan.signals, mode: .guardian, language: .english, marks: marks)
+        #expect(evidence.map(\.highlights) == [[], [pin], []])
+    }
+
+    @Test(arguments: [
+        ("asks_otp", SignalKind.sensitiveForm),
+        ("asks_selfie_ktp", .sensitiveForm),
+        ("brand_logo_offsite", .copiedLogo),
+        ("new_domain", .newDomain),
+        ("db_match", .knownScam),
+        ("something_new", .other),
+    ])
+    func signalKindFollowsTheId(id: String, kind: SignalKind) {
+        #expect(SignalKind(signalId: id) == kind)
+    }
+
+    @Test(arguments: [
+        ([30, 25, 22], [0.3, 0.25, 0.22]),
+        ([70, 50], [0.7, 0.3]),
+        ([-5, 10], [0, 0.1]),
+    ])
+    func contributionBarNeverPassesTheWholeBar(weights: [Int], expected: [Double]) {
+        let fractions = ContributionBar.fractions(weights)
+        #expect(zip(fractions, expected).allSatisfy { abs($0 - $1) < 0.0001 })
+        #expect(fractions.reduce(0, +) <= 1.0001)
     }
 
     @Test func singleSignalGivesOneItem() {
@@ -326,7 +382,7 @@ struct DetailModelTests {
         #expect(model.verdictSaves == 1)
         let warning = DetailModel(scanId: FixtureScan.warning41, repository: MockRepository(latency: .zero))
         await warning.load()
-        #expect(await warning.setVerdict(.safe) == .ignored)
+        #expect(await warning.setVerdict(.safe) == .saved)
     }
 
     @Test func protectedNeverSendsAVerdict() async {
@@ -338,12 +394,13 @@ struct DetailModelTests {
         #expect(model.scan?.verdict == nil)
     }
 
-    @Test func warningNeverSendsAVerdict() async {
+    @Test func warningTakesAVerdictToo() async {
         let stub = StubRepository()
         let model = DetailModel(scanId: FixtureScan.warning41, repository: stub)
         await model.load()
-        await model.setVerdict(.notSafe)
-        #expect(await stub.verdictCalls == 0)
+        #expect(await model.setVerdict(.notSafe) == .saved)
+        #expect(await stub.verdictCalls == 1)
+        #expect(model.scan?.verdict?.value == .notSafe)
     }
 
     @Test func secondTapWhileSendingIsIgnored() async {

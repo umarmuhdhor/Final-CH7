@@ -18,13 +18,24 @@ final class ProfileUITests: XCTestCase {
             "-settings.familyModeOn", familyMode ? "YES" : "NO",
             "-settings.textSize", "1",
             "-settings.theme", "light",
+            "-settings.guardianCardDismissed", "NO",
             "-UITestExtensionActive", "YES",
         ] + extra
         app.launch()
         let button = app.buttons["profileButton"]
         XCTAssertTrue(button.waitForExistence(timeout: 10), app.debugDescription)
         button.tap()
-        XCTAssertTrue(app.buttons["profile.manage"].waitForExistence(timeout: 5), app.debugDescription)
+        let manage = app.buttons["profile.manage"]
+        if !manage.waitForExistence(timeout: 3) {
+            // GD-01: with notifications denied (a fresh CI simulator) the Guardian gets a "Notifications are off"
+            // popup once per launch, which can swallow the tap. Close it and tap again.
+            let notNow = app.alerts.buttons["Not now"].firstMatch
+            if notNow.waitForExistence(timeout: 2) {
+                notNow.tap()
+                button.tap()
+            }
+        }
+        XCTAssertTrue(manage.waitForExistence(timeout: 5), app.debugDescription)
         return app
     }
 
@@ -42,6 +53,7 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["profile.extension.active"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["profile.member.dev_mom"].exists)
         XCTAssertFalse(app.buttons["profile.connection"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["profile.guardianCard"].exists, app.debugDescription)
         app.buttons["profile.invite"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["invite.code"].waitForExistence(timeout: 5), app.debugDescription)
     }
@@ -61,6 +73,22 @@ final class ProfileUITests: XCTestCase {
         XCTAssertFalse(switchButton.waitForExistence(timeout: 1), "Nothing left to switch")
         app.buttons["profile.back"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
+    }
+
+    @MainActor
+    func testGuardianCardTurnsOnFamilyModeOrCloses() {
+        let app = openProfile(mode: "guardian")
+        let become = app.buttons["profile.guardianCard.become"]
+        XCTAssertTrue(become.waitForExistence(timeout: 5), app.debugDescription)
+        become.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["profile.guardianCard"].exists)
+
+        let again = openProfile(mode: "guardian")
+        let close = again.buttons["profile.guardianCard.close"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5), again.debugDescription)
+        close.tap()
+        XCTAssertFalse(again.descendants(matching: .any)["profile.guardianCard"].exists)
     }
 
     @MainActor
@@ -119,20 +147,27 @@ final class ProfileUITests: XCTestCase {
     }
 
     @MainActor
-    func testProtectedDisconnectGoesBackToConnect() {
+    func testProtectedLinkedAccountHasSwitchesAndALockedDisconnect() {
         let app = openProfile(mode: "protected")
         XCTAssertFalse(app.buttons["profile.invite"].exists)
-        let connection = app.buttons["profile.connection"]
-        reveal(connection, in: app)
-        connection.tap()
+        let pill = app.buttons["profile.connectedPill"]
+        XCTAssertTrue(pill.waitForExistence(timeout: 5), app.debugDescription)
+        pill.tap()
         let guardian = app.descendants(matching: .any)["profile.guardian"]
         XCTAssertTrue(guardian.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(guardian.label.contains("Adhella"), guardian.debugDescription)
-        app.buttons["profile.disconnect"].tap()
-        let confirm = app.buttons["profile.disconnect.confirm"].firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), app.debugDescription)
-        confirm.tap()
-        XCTAssertTrue(app.staticTexts["Connect your account"].waitForExistence(timeout: 10), app.debugDescription)
+
+        let autoSend = app.switches["linked.autoSend"]
+        let share = app.switches["linked.shareWarnings"]
+        // Locked on until the extension honors them (#183): today every check goes to the guardian.
+        XCTAssertEqual(autoSend.value as? String, "1")
+        XCTAssertEqual(share.value as? String, "1")
+        XCTAssertFalse(autoSend.isEnabled)
+        XCTAssertFalse(share.isEnabled)
+
+        // Only the guardian can disconnect (Figma "Harus menggunakan akun Adhella").
+        XCTAssertTrue(app.descendants(matching: .any)["profile.disconnect.locked"].exists, app.debugDescription)
+        XCTAssertFalse(app.buttons["profile.disconnect"].exists)
     }
 
     @MainActor
@@ -206,8 +241,20 @@ final class ProfileUITests: XCTestCase {
     }
 
     @MainActor
-    func testQuietHoursTimeOpensAPicker() {
+    func testProtectedNotificationsHaveWarningsOnly() {
         let app = openProfile(mode: "protected")
+        reveal(app.buttons["profile.notifications"], in: app)
+        app.buttons["profile.notifications"].tap()
+        XCTAssertTrue(app.switches["notifications.warning"].waitForExistence(timeout: 5), app.debugDescription)
+        // "Link terblokir" waits for the server push (#183).
+        XCTAssertFalse(app.switches["notifications.linkVerified"].exists)
+        XCTAssertFalse(app.switches["notifications.summary"].exists)
+        XCTAssertFalse(app.buttons["notifications.quietTime"].exists)
+    }
+
+    @MainActor
+    func testQuietHoursTimeOpensAPicker() {
+        let app = openProfile(mode: "guardian")
         reveal(app.buttons["profile.notifications"], in: app)
         app.buttons["profile.notifications"].tap()
         let time = app.buttons["notifications.quietTime"]

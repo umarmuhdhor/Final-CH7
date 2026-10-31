@@ -59,14 +59,24 @@ final class PairingUITests: XCTestCase {
         name.tap()
         name.typeText("Mom")
         app.buttons["name.continue"].tap()
-        app.buttons["mode.protected"].tap()
-        app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 10))
+        // Same steps as OnboardingUITests: the CI runner is slow, so wait for each screen before tapping.
+        let protected = app.buttons["mode.protected"]
+        XCTAssertTrue(protected.waitForExistence(timeout: 10), app.debugDescription)
+        protected.tap()
+        let next = app.buttons["mode.continue"]
+        let enabled = NSPredicate(format: "isEnabled == true")
+        wait(for: [expectation(for: enabled, evaluatedWith: next)], timeout: 5)
+        next.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["greeting.avatar"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["greeting.continue"].tap()
 
         let join = app.buttons["connect.join"]
         XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(join.isEnabled)
+        // K17: told about the page copy before joining.
+        let copyNote = app.descendants(matching: .any)["connect.copyNote"].firstMatch
+        XCTAssertTrue(copyNote.exists, app.debugDescription)
+        XCTAssertTrue(copyNote.label.contains("14 days"), copyNote.label)
         enter("000000", in: app)
         join.tap()
         let error = app.staticTexts["connect.error"]
@@ -88,6 +98,26 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 10), app.debugDescription)
+    }
+
+    /// A new install opened from an invite link (WhatsApp): no mode choice, Connect has the code, one tap joins.
+    @MainActor
+    func testInviteLinkOnNewInstallSkipsModeChoice() {
+        let app = launch(mode: "protected", onboarded: false)
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
+        openLink("shoo://join?code=482193", in: app)
+        app.buttons["splash.skip"].tap()
+        let name = app.textFields["name.field"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10))
+        name.tap()
+        name.typeText("Mom")
+        app.buttons["name.continue"].tap()
+        let field = app.textFields["connect.code"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.buttons["mode.protected"].exists)
+        XCTAssertEqual(field.value as? String, "482193")
+        app.buttons["connect.join"].tap()
+        XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
     /// T11: an invite link only fills the code; nothing joins until Connect is tapped.
