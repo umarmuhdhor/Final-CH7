@@ -83,13 +83,13 @@ Input dibuat dengan `gzipBase64` dari `ios/ShooExtension/Resources/replica-build
 
 - [x] Replica sah → 201 + `pageReplicaUrl`; `GET /scans` key `pageReplicaUrl` = `null` (cek eksplisit, juga di e2e); rusak / bom / terlalu besar → dibuang, scan 201 — `replicas.test.ts` "POST /scans stores…", e2e.
 - [x] Batas 409 600 / 3 145 728 lolos; 409 604 `too_large`, 409 601 `invalid`, 3 145 729 dibuang, semua 201; body > 524 288 → 413; `/scans/`, `/scans/:id` 256 KB — `replicas.test.ts`, `scans.test.ts`.
-- [~] Bom 307 200 byte di-abort setelah potongan 4 KB (test, `consumed === 4096`); cloud tanpa 1102/OOM → LANGKAH MANUAL 3.
+- [x] Bom 307 200 byte di-abort setelah potongan 4 KB (test, `consumed === 4096`); cloud 31 Okt: 201, tanpa replica, `replica_dropped: too_large` di `wrangler tail`, tanpa 1102/OOM (LANGKAH MANUAL 3).
 - [x] Push + favicon tetap jalan walau replica gagal/lambat — test urutan (`DecompressionStream` dipanggil setelah push), replica melempar → push tetap.
-- [~] `GET /replicas/:id` header persis + `Content-Disposition`, byte gzip apa adanya (e2e `curl` tanpa `--compressed`: magic `1f8b`, byte = input), navigasi browser 404, 404 setelah `DELETE /devices/me`, `POST /devices/me/protected`, retensi, disconnect, link kedaluwarsa, link jenis lain (test + e2e). Uji asap cloud → LANGKAH MANUAL 3.
+- [x] `GET /replicas/:id` header persis + `Content-Disposition`, byte gzip apa adanya (e2e `curl` tanpa `--compressed`: magic `1f8b`, byte = input), navigasi browser 404, 404 setelah `DELETE /devices/me`, `POST /devices/me/protected`, retensi, disconnect, link kedaluwarsa, link jenis lain (test + e2e). Uji asap cloud lulus 31 Okt (LANGKAH MANUAL 3).
 - [x] Replica scan hidup tidak dihapus cron tombstone; scan yang hanya punya replica dihapus pada hari 14 bersama objeknya (test retensi).
 - [~] Kuota 50/24 jam, reuse 24 jam, global 3000 + 500 MB (juga paralel lintas owner), `replicaIp` 300, tanpa keluarga → tidak disimpan, tampilan 10/menit + 500/hari → 429 (test); retensi > 1000 objek R2 per run (4000 R2 + 1000 Supabase, test); kuota screenshot 300 tetap; objek > 307 200 byte atau bukan gzip tidak sampai R2 (test); anggaran di ARCHITECTURE §3. CPU cron 40 batch R2 dari cloud → LANGKAH MANUAL 3.
 - [x] Bucket R2 privat + lifecycle 17 hari (LANGKAH MANUAL 1 di atas).
-- [ ] CPU `POST /scans` terburuk ≤ 8 ms di cloud → LANGKAH MANUAL 3 (indikasi lokal di atas: berisiko).
+- [~] CPU `POST /scans` terburuk ≤ 8 ms di cloud: **tidak tercapai**. `wrangler tail` 31 Okt: `POST /scans` 52–186 ms, `POST /devices` (tanpa replica) 20–60 ms, tetapi 81/81 request `outcome: ok`, nol `exceededCpu`/1102. Batas 10 ms Free tidak memotong Worker pada skala ini. Rencana B K2 belum dipakai; pantau CPU error selama QA, dicatat di #176.
 - [x] Wire lokal `qa/replica-e2e.sh` lulus: HTML yang dibaca app = HTML yang dikirim extension (byte gzip identik).
 - [x] Favicon baru di R2 (`-icon.`), favicon lama `-favicon.` tetap tampil dan terhapus dari Supabase; `fetchFaviconAll` 1000 — `favicons.test.ts`.
 - [x] Kill-switch mati → tanpa `put`, `/replicas` 404, `pageReplicaUrl` null, hapus tetap jalan (test); runbook takedown di `backend/README.md`.
@@ -110,8 +110,9 @@ Input dibuat dengan `gzipBase64` dari `ios/ShooExtension/Resources/replica-build
 
 - [~] 1 (sisa). Token CI, `storage.objects`, jumlah `scans`, alert storage R2: selesai 29 Okt (tabel di LANGKAH MANUAL 1). Tersisa: alert R2 Class A (Alief). Perhatikan: deploy `main` macet sejak 28 Okt, merge 18a membawa 3 migrasi.
 - [x] 2. Merge PR 18a di menit :10–:40, tidak di 18:30–19:30 UTC; tunggu CI `backend.yml` (`supabase db push` + `wrangler deploy`) hijau; catat jam deploy. **#182 merge 30 Okt 2026 03:25 UTC, run `backend.yml` di 2214e82 sukses (deploy + 3 migrasi); replica tersimpan mulai jam itu.**
-- [ ] 3. `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud --bench` dengan `wrangler tail` terbuka: header + byte, Sec-Fetch 404, CPU `POST /scans` terburuk + bom (tanpa 1102/OOM), `wrangler r2 object get … --remote` ada sebelum dan hilang setelah `DELETE /devices/me` (skrip berhenti dan menampilkan perintahnya).
-- [ ] 4. Kabari Umar di #176: backend hidup sejak jam deploy; gerbang TestFlight tetap sampai 18b merge.
+- [x] 3. `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud --bench` dengan `wrangler tail` terbuka: header + byte, Sec-Fetch 404, CPU `POST /scans` terburuk + bom (tanpa 1102/OOM), `wrangler r2 object get … --remote` ada sebelum dan hilang setelah `DELETE /devices/me` (skrip berhenti dan menampilkan perintahnya).
+  **31 Okt 2026 16:47 WITA: ALL PASS** (31 cek). Run pertama gagal 6 cek karena skrip, bukan backend: tanpa `Accept-Encoding: gzip` edge Cloudflare meng-inflate body untuk klien (URLSession selalu mengirimnya), dan grep log tidak cocok dengan kutip ber-escape di JSON `wrangler tail`. Keduanya diperbaiki di `qa/replica-e2e.sh`. Worst case: `POST /scans` 610 ms wall, replica terlihat 817 ms setelah 201, inflate tepat 3 145 728 byte. CPU: lihat checklist di atas. `wrangler r2 object get` tidak dijalankan (run tanpa TTY melewati jeda itu); link 404 setelah `DELETE /devices/me` lulus, penghapusan objek dibuktikan test retensi.
+- [x] 4. Kabari Umar di #176: backend hidup sejak jam deploy; gerbang TestFlight tetap sampai 18b merge. **31 Okt: 18b sudah merge, jadi gerbang dibuka; hasil uji asap cloud ikut (#176 issuecomment-6541332662). PR #174 di-update dari `main` dan ready for review; ping #173.**
 
 ## 18b — app (31 Okt 2026)
 
@@ -126,7 +127,8 @@ Penyimpangan dari rencana: layar penuh menampilkan gambar replica (zoom), bukan 
 
 Belum:
 - [ ] UI test live `SHOO_LIVE_REPLICA=1` lewat `qa/replica-e2e.sh`.
-- [ ] Gerbang UI: Detail dengan replica × {Guardian, Protected} × {EN, ID}, layar SE + XL (fixture `MockRepository` masih `pageReplicaUrl: null`).
-- [ ] Review berurutan `ecc:security-reviewer` (K11, K12) → `ecc:swift-reviewer`.
+- [x] Gerbang UI: Detail dengan replica × {Guardian, Protected} × {EN, ID}, layar SE + XL (fixture `MockRepository` masih `pageReplicaUrl: null`).
+- [x] Review berurutan `ecc:security-reviewer` (K11, K12) → `ecc:swift-reviewer` (31 Okt). Keduanya nol CRITICAL/HIGH. Perbaikan di **#204** `fix/DT-04-replica-hardening`: batas total 30 s, gerbang leksikal dengan batas nama tag (SVG `<linearGradient` bukan `<link`), doctype setelah BOM, `about:blank` saja, `%2e%2e`; Detail: "Try again" menjalankan ulang load penuh, fallback screenshot dengan link baru, cold start dari push, refresh yang dibatalkan. Security M1 (meta pertama) bukan masalah: `replica.js` menulis meta tepat setelah `<head>`. **Ditunda** (swift review): ketajaman snapshot (lebar 200 pt di-upscale di kartu 270 pt) dan memori view tersembunyi 390 × 3000 pt @3x, representable `ReplicaWebView` yang tidak dipakai, `Task.detached` tanpa cancel, `Race` Sendable untuk Swift 6.
+  Gerbang UI 31 Okt: `-debug.replicaFixture`, scan blocked-92, iPhone SE (3rd gen) + iPhone 17 Pro Max × {Guardian, Protected} × {EN, ID}: 8 layar, semua menampilkan salinan + baris "Copy of the page" / "Salinan halaman", chip pemilik hanya di Guardian.
 - [ ] `marks` + `viewport.width` di meta replica: menunggu Umar (#176). Sampai itu salinan tampil tanpa spotlight.
 
