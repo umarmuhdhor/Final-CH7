@@ -376,6 +376,14 @@ private struct ManageProfilePage: View {
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
+        if model.variant == .protected {
+            ProtectedManageProfilePage(model: model)
+        } else {
+            guardianBody
+        }
+    }
+
+    private var guardianBody: some View {
         ProfileScreen(title: "Manage profile") {
             VStack(spacing: 12) {
                 AvatarView(id: model.profile?.avatarId ?? "", size: 95)
@@ -429,6 +437,131 @@ private struct ManageProfilePage: View {
         }
         .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
         .modifier(ActionErrorAlert(model: model))
+    }
+}
+
+/// Figma "Pengaturan/Kelola profil" of the protected user: avatar, "Aktif sejak", the name edited in
+/// place, and "Hapus akun" low on the page.
+private struct ProtectedManageProfilePage: View {
+    @Bindable var model: ProfileModel
+    @Environment(\.locale) private var locale
+    @FocusState private var isNameFocused: Bool
+    @State private var isDeleteConfirming = false
+
+    private var language: AppLanguage { AppLanguage(locale: locale) }
+
+    var body: some View {
+        ProfileScreen(title: "Manage profile") {
+            AvatarView(id: model.profile?.avatarId ?? "", size: 95)
+                .padding(4.5)
+                .background(ProfileStyle.card, in: Circle())
+                .shadow(color: Color(hex: 0x1A1C2E, opacity: 0.12), radius: 7, y: 5)
+                .accessibilityHidden(true)
+                .padding(.top, 4)
+
+            if let since = model.activeSince(language: language) {
+                HStack(spacing: 6) {
+                    Image(systemName: "shield.fill").accessibilityHidden(true)
+                    Text(verbatim: since)
+                }
+                .profileFont(22, .medium, tracking: -0.22)
+                .foregroundStyle(ProfileStyle.secondary)
+                .padding(.horizontal, 21)
+                .padding(.vertical, 5)
+                .overlay(Capsule().stroke(ProfileStyle.card.opacity(0.9), lineWidth: 1.3))
+                .padding(.top, 12)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("profile.activeSince")
+            }
+
+            ProfileSection(title: "Personal info", top: 69) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Name").profileFont(13).foregroundStyle(ProfileStyle.secondary)
+                            .accessibilityHidden(true)
+                        // Same word as the label, so Voice Control "Tap Name" works (WCAG 2.5.3).
+                        TextField(text: $model.nameDraft) { Text("Name") }
+                            .profileFont(17, tracking: -0.17)
+                            .foregroundStyle(ProfileStyle.ink)
+                            .textContentType(.givenName)
+                            .submitLabel(.done)
+                            .focused($isNameFocused)
+                            .onSubmit { Task { await save() } }
+                            .accessibilityHint(Text("1 to 20 characters"))
+                            .accessibilityIdentifier("profile.name")
+                    }
+                    Button { isNameFocused = true } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ProfileStyle.chevron)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Edit name"))
+                    .padding(.trailing, -14)
+                }
+                .padding(.horizontal, 17)
+                .padding(.vertical, 5)
+                .frame(minHeight: 58)
+                ProfileDivider(leading: 17)
+            }
+
+            if let message = nameMessage {
+                message
+                    .profileFont(13)
+                    .foregroundStyle(Color.readableRed)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, ProfileStyle.margin + 16)
+                    .padding(.top, 10)
+                    .accessibilityIdentifier("profile.error")
+            }
+
+            ProfileCard {
+                Button { isDeleteConfirming = true } label: {
+                    ProfileRow(
+                        symbol: "xmark", title: Text("Delete account"),
+                        subtitle: Text("All your data and history are deleted for good"),
+                        titleColor: ProfileStyle.red, titleWeight: .medium,
+                        iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isWorking)
+                .accessibilityIdentifier("profile.manage.delete")
+            }
+            .padding(.horizontal, ProfileStyle.margin)
+            // Figma keeps "Hapus akun" near the bottom of the screen.
+            .padding(.top, 301)
+        }
+        .onChange(of: isNameFocused) { _, focused in
+            // Leaving the field keeps a valid edit, like Return does.
+            if !focused, model.nameDraft != model.profile?.name, model.nameProblem == nil { Task { await save() } }
+        }
+        .onChange(of: model.nameError) { _, message in
+            if let message { announce(message) }
+        }
+        .deleteAccountSheet(model: model, isPresented: $isDeleteConfirming)
+        .modifier(ActionErrorAlert(model: model))
+    }
+
+    private var nameMessage: Text? {
+        switch model.nameProblem {
+        case .empty: return Text("Enter a name.")
+        case .tooLong: return Text("Use 20 characters or fewer.")
+        case nil: return model.nameError.map { Text(verbatim: L10n.string($0, language: language)) }
+        }
+    }
+
+    private func save() async {
+        guard model.nameDraft != model.profile?.name else { return }
+        if await model.saveName() {
+            isNameFocused = false
+            announce("Name saved")
+        }
+    }
+
+    private func announce(_ message: String.LocalizationValue) {
+        AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
     }
 }
 
@@ -586,67 +719,20 @@ private struct NamePage: View {
     }
 }
 
-// MARK: Terhubung (Protected)
+// MARK: Akun Tertaut (Protected)
 
+/// Figma "Pengaturan/Mode akun" of the protected user ("Akun Tertaut"): who this iPhone is linked to,
+/// what the guardian gets, and "Putuskan koneksi" locked — only the guardian can disconnect.
 private struct ConnectionPage: View {
     let model: ProfileModel
     @Environment(\.locale) private var locale
-    @State private var isDisconnectConfirming = false
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        ProfileScreen(title: "Connected") {
+        ProfileScreen(title: "Linked account") {
             if let guardian = model.profile?.guardian {
-                ProfileSection(title: "Your guardian") {
-                    HStack(spacing: 12) {
-                        AvatarView(id: guardian.avatarId, size: 44)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: guardian.name)
-                                .profileFont(17, .medium, tracking: -0.17)
-                                .foregroundStyle(ProfileStyle.nameInk)
-                            Text("Gets your warnings")
-                                .profileFont(13, rounded: true)
-                                .foregroundStyle(ProfileStyle.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(.horizontal, 17)
-                    .frame(minHeight: 72)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("profile.guardian")
-                }
-                VStack(spacing: 10) {
-                    ProfileCard {
-                        Button { isDisconnectConfirming = true } label: {
-                            ProfileRow(
-                                symbol: "xmark", title: Text("Disconnect"), titleColor: ProfileStyle.red, titleWeight: .medium,
-                                iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(model.isWorking)
-                        .accessibilityIdentifier("profile.disconnect")
-                    }
-                    PageNote(text: Text("\(guardian.name) will no longer see the sites Shoo warns you about."))
-                        .padding(.horizontal, -ProfileStyle.margin)
-                }
-                .padding(.horizontal, ProfileStyle.margin)
-                .padding(.top, 28)
-                .sheet(isPresented: $isDisconnectConfirming) {
-                    ProfileConfirmSheet(
-                        title: L10n.string("Disconnect from \(guardian.name)?", language: language),
-                        message: L10n.string("\(guardian.name) will no longer see the sites Shoo warns you about.", language: language),
-                        confirmTitle: L10n.string("Disconnect", language: language),
-                        confirmIdentifier: "profile.disconnect.confirm",
-                        isWorking: model.isWorking
-                    ) {
-                        AvatarView(id: guardian.avatarId, size: 64)
-                    } onConfirm: {
-                        Task { if await model.disconnect() { isDisconnectConfirming = false } }
-                    }
-                    .environment(\.locale, locale)
-                }
+                linked(guardian)
             } else if model.state == .loaded {
                 Text("Not connected to a guardian yet")
                     .profileFont(17, .semibold)
@@ -657,7 +743,114 @@ private struct ConnectionPage: View {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
-        .modifier(ActionErrorAlert(model: model))
+        .task { model.linked.refresh() }
+    }
+
+    @ViewBuilder private func linked(_ guardian: GuardianInfo) -> some View {
+        @Bindable var linked = model.linked
+
+        Text("This account is linked to another account.")
+            .profileFont(15, tracking: -0.15)
+            .foregroundStyle(ProfileStyle.secondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(6)
+            .padding(.horizontal, 40)
+            .padding(.top, 24)
+
+        HStack(alignment: .top, spacing: 17) {
+            person(name: Text("You")) {
+                AvatarView(id: model.profile?.avatarId ?? "", size: 84)
+                    .padding(3.66)
+                    .background(ProfileStyle.card, in: Circle())
+                    .shadow(color: Color(hex: 0x1F78BF, opacity: 0.18), radius: 11, y: 7)
+            }
+            LinkDots().padding(.top, 39)
+            person(name: Text(verbatim: guardian.name)) {
+                AvatarView(id: guardian.avatarId, size: 85)
+                    .padding(3.5)
+                    .background(ProfileStyle.card, in: Circle())
+                    .shadow(color: Color(hex: 0x1A1C2E, opacity: 0.12), radius: 7, y: 5)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Linked with \(guardian.name)"))
+        .accessibilityIdentifier("profile.guardian")
+        .padding(.top, 38)
+
+        ProfileCard {
+            if LinkedAccountSettings.switchesAreLive {
+                ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), isOn: $linked.autoSendLinks)
+                    .accessibilityIdentifier("linked.autoSend")
+                ProfileDivider()
+                ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), isOn: $linked.shareWarnings)
+                    .disabled(!linked.autoSendLinks)
+                    .opacity(linked.autoSendLinks ? 1 : 0.45)
+                    .accessibilityIdentifier("linked.shareWarnings")
+            } else {
+                // Today the extension sends every check to the guardian, so both read on and can't change.
+                ProfileToggleRow(symbol: "paperplane.fill", title: Text("Send links automatically"), subtitle: Text("Coming soon"), isOn: .constant(true))
+                    .disabled(true)
+                    .accessibilityIdentifier("linked.autoSend")
+                ProfileDivider()
+                ProfileToggleRow(symbol: "clock", title: Text("Share caution history"), subtitle: Text("Coming soon"), isOn: .constant(true))
+                    .disabled(true)
+                    .accessibilityIdentifier("linked.shareWarnings")
+            }
+        }
+        .padding(.horizontal, ProfileStyle.margin)
+        .padding(.top, 29)
+
+        (Text(verbatim: guardian.name).fontWeight(.semibold) + Text(" ") + Text("can always see the blocked history"))
+            .profileFont(15)
+            .foregroundStyle(ProfileStyle.secondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(6)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 28)
+            .padding(.top, 9)
+
+        ProfileCard {
+            ProfileRow(
+                symbol: "lock.fill", title: Text("Disconnect"),
+                subtitle: Text("Must use \(guardian.name)'s account"),
+                accessory: .none, titleColor: ProfileStyle.secondary, titleWeight: .medium,
+                iconTint: Color.dynamic(0x727272, dark: 0x9EA6B4), iconFill: Color.dynamic(0xEDEDED, dark: 0x2A303A)
+            )
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("profile.disconnect.locked")
+        }
+        .padding(.horizontal, ProfileStyle.margin)
+        // Figma keeps the locked row near the bottom of the screen.
+        .padding(.top, 205)
+    }
+
+    private func person<Avatar: View>(name: Text, @ViewBuilder avatar: () -> Avatar) -> some View {
+        VStack(spacing: 8) {
+            avatar()
+            name
+                .profileFont(17, .bold, tracking: -0.17)
+                .foregroundStyle(ProfileStyle.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(width: 92)
+    }
+}
+
+/// The five blue dots between the two avatars, largest in the middle (Figma "Frame 1618872250").
+private struct LinkDots: View {
+    private static let dots: [(size: CGFloat, opacity: Double)] = [(9.16, 0.56), (11, 0.77), (14, 1), (11, 0.77), (9.16, 0.56)]
+
+    var body: some View {
+        HStack(spacing: 9.5) {
+            ForEach(Array(Self.dots.enumerated()), id: \.offset) { _, dot in
+                Circle()
+                    .fill(Color(hex: 0x0088FF, opacity: dot.opacity))
+                    .frame(width: dot.size, height: dot.size)
+            }
+        }
+        .frame(height: 14)
+        .accessibilityHidden(true)
     }
 }
 
@@ -730,34 +923,22 @@ private struct NotificationsPage: View {
                 }
             }
 
-            ProfileSection(title: "Summary") {
-                ProfileToggleRow(
-                    symbol: "globe", title: Text("Weekly summary"), subtitle: Text("Every Monday, \(Self.clock("08:00", language: language))"),
-                    isOn: binding(\.weeklySummary) { NotificationSettingsUpdate(weeklySummary: $0) }
-                )
-                .accessibilityIdentifier("notifications.summary")
-            }
-
-            ProfileSection(title: "Quiet hours") {
-                ProfileToggleRow(
-                    symbol: nil, title: Text("Quiet hours"),
-                    isOn: binding(\.quietHours) { NotificationSettingsUpdate(quietHours: $0) }
-                )
-                .accessibilityIdentifier("notifications.quietHours")
-                ProfileDivider(leading: 17)
-                Button { isQuietTimePresented = true } label: {
-                    ProfileRow(
-                        symbol: nil, title: Text("Time"),
-                        accessory: .value("\(Self.clock(settings.quietStart, language: language)) – \(Self.clock(settings.quietEnd, language: language))")
-                    )
-                    .frame(minHeight: 44)
+            if model.variant == .protected {
+                // Figma: Protected has no summary or quiet hours, and a switch for its guardian's checks.
+                // Hidden until the server sends that push (#183).
+                if LinkedAccountSettings.switchesAreLive {
+                    @Bindable var linked = model.linked
+                    ProfileSection(title: "Connected account") {
+                        ProfileToggleRow(
+                            symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
+                            isOn: $linked.notifyLinkVerified
+                        )
+                        .accessibilityIdentifier("notifications.linkVerified")
+                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(!settings.quietHours)
-                .opacity(settings.quietHours ? 1 : 0.5)
-                .accessibilityIdentifier("notifications.quietTime")
+            } else {
+                summaryAndQuietHours
             }
-            PageNote(text: Text("Blocked-site alerts still come during quiet hours."))
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
@@ -770,6 +951,37 @@ private struct NotificationsPage: View {
             .environment(\.locale, locale)
         }
         .modifier(ActionErrorAlert(model: model))
+    }
+
+    @ViewBuilder private var summaryAndQuietHours: some View {
+        ProfileSection(title: "Summary") {
+            ProfileToggleRow(
+                symbol: "globe", title: Text("Weekly summary"), subtitle: Text("Every Monday, \(Self.clock("08:00", language: language))"),
+                isOn: binding(\.weeklySummary) { NotificationSettingsUpdate(weeklySummary: $0) }
+            )
+            .accessibilityIdentifier("notifications.summary")
+        }
+
+        ProfileSection(title: "Quiet hours") {
+            ProfileToggleRow(
+                symbol: nil, title: Text("Quiet hours"),
+                isOn: binding(\.quietHours) { NotificationSettingsUpdate(quietHours: $0) }
+            )
+            .accessibilityIdentifier("notifications.quietHours")
+            ProfileDivider(leading: 17)
+            Button { isQuietTimePresented = true } label: {
+                ProfileRow(
+                    symbol: nil, title: Text("Time"),
+                    accessory: .value("\(Self.clock(settings.quietStart, language: language)) – \(Self.clock(settings.quietEnd, language: language))")
+                )
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
+            .disabled(!settings.quietHours)
+            .opacity(settings.quietHours ? 1 : 0.5)
+            .accessibilityIdentifier("notifications.quietTime")
+        }
+        PageNote(text: Text("Blocked-site alerts still come during quiet hours."))
     }
 
     /// First time: the system prompt here. After a yes or a no only Settings can change it.
