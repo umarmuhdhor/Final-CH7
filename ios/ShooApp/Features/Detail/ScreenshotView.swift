@@ -126,86 +126,8 @@ extension EnvironmentValues {
     @Entry var screenshotLoader: any ScreenshotLoading = URLSessionScreenshotLoader.shared
 }
 
-/// DT-04: large evidence screenshot, tap to zoom. No share, save or context menu (SECURITY §3 P9).
-struct ScreenshotView: View {
-    let url: URL
-    /// Asked when the link fails: `true` = a fresh `url` is on its way (the old one had expired).
-    var refreshLink: (() async -> Bool)?
-
-    @Environment(\.screenshotLoader) private var loader
-    @State private var image: UIImage?
-    @State private var failed = false
-    @State private var isZoomed = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Screenshot")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-            content
-        }
-        .task(id: url) { await load() }
-        .fullScreenCover(isPresented: $isZoomed) {
-            if let image { ZoomedScreenshot(image: image) }
-        }
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        if let image {
-            Button {
-                isZoomed = true
-            } label: {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: 360)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.3)))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Screenshot of the page"))
-            .accessibilityAddTraits(.isImage)
-            .accessibilityHint(Text("Opens a larger view"))
-            .accessibilityIdentifier("detail.screenshot")
-        } else if failed {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Screenshot isn't available anymore", systemImage: "photo.badge.exclamationmark")
-                    .font(.subheadline)
-                    .accessibilityIdentifier("detail.screenshotUnavailable")
-                Button("Try again") {
-                    Task { await load() }
-                }
-                .frame(minHeight: 44)
-            }
-        } else {
-            ProgressView()
-                .frame(maxWidth: .infinity, minHeight: 120)
-                .accessibilityLabel(Text("Loading screenshot"))
-        }
-    }
-
-    private func load() async {
-        image = nil
-        failed = false
-        do {
-            let data = try await loader.imageData(at: url)
-            image = ScreenshotDecoder.image(from: data)
-            failed = image == nil
-        } catch is CancellationError {
-            // The view went away.
-        } catch {
-            guard !error.isCancellation, !Task.isCancelled else { return }
-            Log.ui.error("Screenshot load failed")
-            // The model allows one fresh link per load; a new link restarts `.task(id: url)`.
-            if let refreshLink, await refreshLink() { return }
-            failed = true
-        }
-    }
-}
-
 /// Full-screen screenshot: pinch or double-tap to zoom, drag when zoomed.
-private struct ZoomedScreenshot: View {
+struct ZoomedScreenshot: View {
     let image: UIImage
 
     @Environment(\.dismiss) private var dismiss

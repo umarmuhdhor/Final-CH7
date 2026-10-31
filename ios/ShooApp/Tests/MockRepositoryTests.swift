@@ -104,10 +104,11 @@ struct MockRepositoryTests {
         #expect(scan.verdict == verdict)
     }
 
-    @Test func verdictOnWarningIsNotAllowed() async {
-        await #expect {
-            try await guardian().setVerdict(scanId: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01", value: .notSafe)
-        } throws: { ($0 as? RepositoryError)?.apiCode == .verdictNotAllowed }
+    /// GD-07 (#191): warnings take a verdict too.
+    @Test func verdictOnWarningIsSaved() async throws {
+        let repo = guardian()
+        let verdict = try await repo.setVerdict(scanId: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01", value: .notSafe)
+        #expect(try await repo.scan(id: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e01").verdict == verdict)
     }
 
     @Test func protectedCannotSetVerdict() async {

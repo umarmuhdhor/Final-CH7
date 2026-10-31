@@ -178,7 +178,7 @@ struct ProfileScreen<Content: View>: View {
 }
 
 /// Keeps the edge swipe back with the navigation bar hidden.
-private struct SwipeBackEnabler: UIViewControllerRepresentable {
+struct SwipeBackEnabler: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> Controller { Controller() }
     func updateUIViewController(_ controller: Controller, context: Context) {}
 

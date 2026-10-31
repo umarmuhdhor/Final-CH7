@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Shoo
@@ -36,6 +37,16 @@ struct ReplicaMetaTests {
         let json = #"{"v":1,"url":"https://x.site/a&quot;b","capturedAt":"2026-10-29T08:00:00Z","focusY":0,"truncated":false}"#
         let meta = try #require(ReplicaMeta.read(from: Self.page(content: Self.escaped(json))))
         #expect(meta.url?.absoluteString == "https://x.site/a&quot;b")
+    }
+
+    @Test func marksAreReadAndBadOnesDropped() throws {
+        let json = #"{"v":1,"url":"https://x.site/","capturedAt":"2026-10-29T08:00:00Z","marks":[{"signalId":"asks_pin","x":20,"y":1284,"w":350,"h":52},{"signalId":"asks_pin","x":-1,"y":0,"w":10,"h":10},{"signalId":"<script>","x":0,"y":0,"w":10,"h":10},{"signalId":"cheap_tld","x":0,"y":0,"w":0,"h":10},null]}"#
+        let meta = try #require(ReplicaMeta.read(from: Self.page(content: Self.escaped(json))))
+        #expect(meta.marks == [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 20, y: 1284, width: 350, height: 52))])
+    }
+
+    @Test func noMarksIsFine() throws {
+        #expect(try #require(ReplicaMeta.read(from: Self.page(content: Self.escaped(Self.valid)))).marks.isEmpty)
     }
 
     @Test func truncatedIsRead() throws {

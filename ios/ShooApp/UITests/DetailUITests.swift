@@ -30,7 +30,7 @@ final class DetailUITests: XCTestCase {
         let app = openDetail(Self.blocked92)
         let header = app.descendants(matching: .any)["detail.header"]
         XCTAssertTrue((header.value as? String ?? "").contains("Blocked"))
-        XCTAssertTrue(app.staticTexts["detail.link"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["detail.link"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["detail.owner"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["detail.evidence.2"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["detail.evidence.3"].exists)
@@ -42,16 +42,31 @@ final class DetailUITests: XCTestCase {
         let note = app.descendants(matching: .any)["detail.verdictNote"]
         XCTAssertTrue(note.waitForExistence(timeout: 5))
         XCTAssertTrue((header.value as? String ?? "").contains("Verified scam by you"), header.debugDescription)
-        XCTAssertTrue(app.buttons["detail.verdict.notSafe"].isSelected)
+        // The card replaces the buttons; "Change" is only offered on a safe verdict (Figma 480:5768).
+        XCTAssertFalse(app.buttons["detail.verdict.notSafe"].exists)
+        XCTAssertFalse(app.buttons["detail.verdictChange"].exists)
+    }
+
+    @MainActor
+    func testChangeBringsTheButtonsBackOnASafeVerdict() {
+        let app = openDetail(Self.markedSafe)
+        XCTAssertFalse(app.buttons["detail.verdict.safe"].exists)
+        let change = app.buttons["detail.verdictChange"]
+        XCTAssertTrue(change.waitForExistence(timeout: 5), app.debugDescription)
+        change.tap()
+        XCTAssertTrue(app.buttons["detail.verdict.notSafe"].waitForExistence(timeout: 5))
+        app.buttons["detail.verdict.notSafe"].tap()
+        let header = app.descendants(matching: .any)["detail.header"]
+        let expectation = expectation(for: NSPredicate(format: "value CONTAINS 'Verified scam by you'"), evaluatedWith: header)
+        wait(for: [expectation], timeout: 5)
     }
 
     @MainActor
     func testScreenshotZoomHasNoShareOrSave() {
         let app = openDetail(Self.blocked92)
-        let screenshot = app.buttons["detail.screenshot"]
-        if !screenshot.waitForExistence(timeout: 5) {
-            app.swipeUp()
-        }
+        let screenshot = app.buttons["detail.screenshot"].firstMatch
+        // The first photo sits under the verdict footer until scrolled.
+        app.swipeUp()
         XCTAssertTrue(screenshot.waitForExistence(timeout: 5), app.debugDescription)
         screenshot.tap()
         XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
@@ -62,12 +77,12 @@ final class DetailUITests: XCTestCase {
     }
 
     @MainActor
-    func testWarningHasNoButtonsAndNoScreenshotBlock() {
+    func testWarningTakesAVerdictAndHasNoPhotoWithoutAScreenshot() {
         let app = openDetail(Self.warning41)
         XCTAssertTrue((app.descendants(matching: .any)["detail.header"].value as? String ?? "").contains("Warning"))
-        XCTAssertFalse(app.buttons["detail.verdict.safe"].exists)
+        // GD-07: warnings take a verdict too (Figma 416:9469, #190).
+        XCTAssertTrue(app.buttons["detail.verdict.safe"].exists)
         XCTAssertFalse(app.buttons["detail.screenshot"].exists)
-        XCTAssertFalse(app.staticTexts["Screenshot"].exists)
     }
 
     @MainActor
@@ -85,7 +100,8 @@ final class DetailUITests: XCTestCase {
         let app = openDetail(Self.markedSafe, mode: "protected", language: "id")
         let header = app.descendants(matching: .any)["detail.header"]
         XCTAssertTrue((header.value as? String ?? "").contains("Ditandai aman oleh Adhella"), header.debugDescription)
-        XCTAssertTrue(app.navigationBars["Detail"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].exists)
+        XCTAssertFalse(app.buttons["detail.verdictChange"].exists)
     }
 
     /// Screens below the fold for the UI gate (attached to the result bundle, `keepAlways`).
@@ -94,9 +110,9 @@ final class DetailUITests: XCTestCase {
         let app = openDetail(Self.blocked92)
         attach(app, "blocked-92-guardian-en-top")
         app.swipeUp()
-        XCTAssertTrue(app.buttons["detail.screenshot"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["detail.screenshot"].firstMatch.waitForExistence(timeout: 5))
         attach(app, "blocked-92-guardian-en-bottom")
-        app.buttons["detail.screenshot"].tap()
+        app.buttons["detail.screenshot"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
         attach(app, "blocked-92-guardian-en-zoom")
         app.buttons["detail.screenshotClose"].tap()
