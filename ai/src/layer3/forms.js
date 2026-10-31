@@ -6,7 +6,7 @@ import { vocabulary, hasAny } from "./text.js";
 import { buildSignal } from "./signals.js";
 
 /** Field types that cannot ask for anything: buttons, hidden values, tick boxes. */
-const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "checkbox", "radio"]);
+export const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image", "checkbox", "radio"]);
 
 // Entries are single words or "two words". Indonesian + English.
 const RULES = {
@@ -34,6 +34,12 @@ const NOT_A_PIN = ["location", "lokasi", "map", "peta"];
 /** A selfie field that is a profile photo, not an ID check. */
 const PROFILE_PHOTO = ["profile", "profil", "avatar"];
 const POSTAL = ["postal", "zip", "postcode", "kodepos", "kode pos"];
+/**
+ * One box per digit of a code (code1..code5, kode_1.., otp1..), usually with no label at all. A single such name proves
+ * nothing, so it takes MIN_CODE_BOXES in the same form. Anchored: "zipcode1" and "address1" do not match.
+ */
+const CODE_BOX = /^(?:code|kode|otp|digit)[-_ ]?\d{1,2}$/i;
+const MIN_CODE_BOXES = 4;
 /** `accept` values that allow a photo or video. Missing `accept` = any file, so it allows one too. */
 const PHOTO_ACCEPT = /image|video|\.(jpe?g|png|heic|heif|webp)\b/i;
 
@@ -95,6 +101,8 @@ export function formSignals(snapshot, { official }) {
             const final = kind === null && selfie && formAsksKtp ? "asks_selfie_ktp" : kind;
             if (final) raise(final, f);
         }
+        const codeBoxes = form.fields.filter((f) => !IGNORED_TYPES.has(f.type.toLowerCase()) && [f.name, f.id].some((v) => v && CODE_BOX.test(v.trim())));
+        if (codeBoxes.length >= MIN_CODE_BOXES) raise("asks_otp", codeBoxes[0]);
     }
     // A card form always asks number + expiry + CVV: that is ONE request for card data, not two (review #60).
     // Otherwise every small shop with its own card checkout scores 50 (struck-out fields). CVV alone still counts.
