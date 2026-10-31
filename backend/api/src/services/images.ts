@@ -8,6 +8,17 @@ export interface ImageInfo {
 export function decodeBase64(text: string, maxBytes: number): Uint8Array | undefined {
   if (text.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(text)) return undefined;
   if ((text.length / 4) * 3 - 2 > maxBytes) return undefined;
+  // Fase 22 O4: native decode where workerd has it (no binary string, no per-byte loop).
+  const native = (Uint8Array as { fromBase64?: (s: string) => Uint8Array }).fromBase64;
+  if (typeof native === "function") {
+    let bytes: Uint8Array;
+    try {
+      bytes = native(text);
+    } catch {
+      return undefined;
+    }
+    return bytes.length > maxBytes ? undefined : bytes;
+  }
   let bin: string;
   try {
     bin = atob(text);
