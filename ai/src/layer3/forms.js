@@ -15,7 +15,8 @@ const RULES = {
     // Too common on their own (captcha: "kode keamanan"), so they need card context.
     cvvNeedsCard: ["kode keamanan", "security code"],
     card: ["nomor kartu", "no kartu", "card number", "cc number", "cardnumber", "ccnumber", "credit card", "debit card", "kartu kredit", "kartu debit"],
-    otp: ["otp", "kode verifikasi", "verification code", "sms code"],
+    // Bank token fields (cash-management phishing kits ask for them next to the password) are one-time codes too.
+    otp: ["otp", "kode verifikasi", "verification code", "sms code", "mobile token", "token lunak", "soft token", "keybca", "key bca"],
     // "one-time donation" is not a code: needs a code-like word next to it.
     otpNeedsCode: ["one time"],
     pin: ["pin", "mpin", "m pin", "passcode", "pass code", "kode sandi", "kode akses"],

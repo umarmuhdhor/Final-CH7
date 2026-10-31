@@ -489,3 +489,20 @@ test("link rules data: lowercase words, no duplicates", () => {
     }
     for (const w of [...rules.baitWords, ...rules.carriers, ...rules.pathBait]) assert.ok(w.length >= 3, w);
 });
+
+// ---------- Agoda and DHL (found as scam kits in ai/test-layer3) ----------
+test("agoda.com, agoda.co.id, dhl.com, dhl.co.id -> no signals (official)", async () => {
+    for (const host of ["agoda.com", "www.agoda.com", "agoda.co.id", "dhl.com", "dhl.co.id"]) {
+        assert.deepEqual(await scan(`https://${host}/`), [], host);
+    }
+});
+
+test("ag0da.com, dh1.com, dhl-express.xyz -> lookalike_domain", async () => {
+    for (const host of ["ag0da.com", "dh1.com", "dhl-express.xyz"]) {
+        assert.ok(ids(await scan(`https://${host}/`)).includes("lookalike_domain"), host);
+    }
+});
+
+test("words that merely contain dhl are not the DHL brand (adhlete.com, studhall.com)", async () => {
+    for (const host of ["adhlete.com", "studhall.com"]) assert.deepEqual(await scan(`https://${host}/`), [], host);
+});
