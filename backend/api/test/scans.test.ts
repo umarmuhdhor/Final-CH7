@@ -139,9 +139,30 @@ describe("POST /scans", () => {
     await postOk(p, extensionBody(blocked92, { signals }));
   });
 
-  it("413 for a body over 256 KB", async () => {
+  it("POST /scans takes up to 512 KB (EX-07 page replica); 413 above it", async () => {
     const p = await createDevice("Mom");
-    const res = await post(p, extensionBody(blocked92, { screenshotBase64: "A".repeat(300 * 1024) }));
+    // 300 KB passed the old 256 KB limit only with a replica-sized body; the replica itself is checked later.
+    expect((await post(p, extensionBody(blocked92, { pageReplicaBase64: "A".repeat(300 * 1024) }))).status).toBe(201);
+    const over = await post(p, extensionBody(blocked92, { pageReplicaBase64: "A".repeat(512 * 1024) }));
+    expect(over.status).toBe(413);
+    expect(await errorCode(over)).toBe("too_large");
+  });
+
+  it("the 512 KB limit is POST /scans exactly: /scans/, /scans/{id} and other routes stay at 256 KB", async () => {
+    const p = await createDevice("Mom");
+    const big = JSON.stringify(extensionBody(blocked92, { pageReplicaBase64: "A".repeat(300 * 1024) }));
+    const headers = { "content-type": "application/json" };
+    for (const [method, path] of [
+      ["POST", "/scans/"],
+      ["POST", `/scans/${crypto.randomUUID()}`],
+      ["PATCH", "/scans"],
+      ["POST", "/verdicts"],
+    ] as const) {
+      const res = await call(path, { method, token: p.token, headers, body: big });
+      expect(res.status, `${method} ${path}`).toBe(413);
+    }
+    // Declared length alone, before auth: GET /replicas with a 300 KB content-length.
+    const res = await call(`/replicas/${crypto.randomUUID()}`, { headers: { "content-length": String(300 * 1024) } });
     expect(res.status).toBe(413);
   });
 
@@ -362,7 +383,7 @@ describe("GET /scans", () => {
     expect((await list(g, "?owner=family")).body.items).toEqual([]);
   });
 
-  it("verdict only on blocked scans; warning scans keep verdict null", async () => {
+  it("the domain's verdict shows on warning and blocked scans alike (GD-07)", async () => {
     const g = await createDevice("Adhella", "guardian");
     const mom = await createDevice("Mom");
     await connect(g, mom);
@@ -374,8 +395,9 @@ describe("GET /scans", () => {
     const blocked = body.items.find((i) => i.status === "blocked")!;
     const warning = body.items.find((i) => i.status === "warning")!;
     expect(blocked.verdict).toEqual({ value: "not_safe", byDeviceId: g.deviceId, byName: "Adhella", decidedAt: "2026-10-21T04:06:00.000Z" });
-    expect(warning.verdict).toBeNull();
+    expect(warning.verdict).toEqual(blocked.verdict);
     expectScanResult(blocked);
+    expectScanResult(warning);
   });
 
   it("matches contracts/fixtures/activity-family.json for the seeded family", async () => {
@@ -404,10 +426,14 @@ describe("GET /scans", () => {
     expect(Object.keys(body).sort()).toEqual(["items", "nextCursor"]);
     expect(body.nextCursor).toBe(activityFamily.nextCursor);
 
-    // Times are compared as instants; lists never carry a screenshot URL (D-alief-04).
+    // Times are compared as instants; lists never carry a screenshot URL (D-alief-04). EX-07: every
+    // item has pageReplicaUrl null (contracts/api.md); the fixture predates the key, so it is checked
+    // here and left out of the comparison.
+    for (const item of body.items) expect(Object.hasOwn(item, "pageReplicaUrl") && item.pageReplicaUrl === null).toBe(true);
     const normal = (x: unknown) =>
       JSON.parse(JSON.stringify(x), (k, v) =>
-        typeof v === "string" && /At$/.test(k) ? new Date(v).toISOString() : k === "screenshotUrl" ? null : v,
+        k === "pageReplicaUrl" ? undefined
+          : typeof v === "string" && /At$/.test(k) ? new Date(v).toISOString() : k === "screenshotUrl" ? null : v,
       );
     expect(normal(body.items)).toEqual(normal(fixtures));
     for (const item of body.items) expectScanResult(item);

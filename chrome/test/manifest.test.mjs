@@ -39,7 +39,7 @@ test("content scripts: shim first, then the Safari order, content.js last", () =
 test("blocked.html's scripts and stylesheet are web-accessible and exist", () => {
     const html = read("blocked.html");
     const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]);
-    assert.deepEqual(refs, ["blocked.css", "browser-shim.js", "block.js", "blocked-page.js"]);
+    assert.deepEqual(refs, ["blocked.css", "images/icon-96.png", "browser-shim.js", "block.js", "blocked-page.js"]);
     const war = manifest.web_accessible_resources.flatMap((r) => r.resources);
     for (const ref of [...refs, "blocked.html"]) assert.ok(war.includes(ref), ref);
 });

@@ -3,6 +3,7 @@ import { PAGE_TYPES, ASK_KINDS } from "../../prompts/reality-check.js";
 
 const PAGE = new Set(PAGE_TYPES);
 const ASKS = new Set(ASK_KINDS);
+const MAX_RAW_ASKS = 20; // a longer list is not an answer to "what does the form ask"
 const OPEN_FENCE = /^```(?:json)?[ \t]*\r?\n/i;
 const CLOSE_FENCE = /\r?\n?```$/;
 
@@ -27,9 +28,10 @@ export function parseVerdict(content) {
     }
     if (v === null || typeof v !== "object" || Array.isArray(v)) return null;
     if (!PAGE.has(v.page_type)) return null;
-    if (!Array.isArray(v.asks) || v.asks.length > ASK_KINDS.length || !v.asks.every((a) => ASKS.has(a))) return null;
+    if (!Array.isArray(v.asks) || v.asks.length > MAX_RAW_ASKS) return null;
+    const asks = [...new Set(v.asks.filter((a) => ASKS.has(a)))]; // unknown values ("email") are dropped, not obeyed; an empty list means no signal
     if (typeof v.reasonable !== "boolean") return null;
     if (typeof v.confidence !== "number" || !(v.confidence >= 0 && v.confidence <= 1)) return null;
     if (v.evidence !== null && v.evidence !== undefined && typeof v.evidence !== "string") return null;
-    return { pageType: v.page_type, asks: [...new Set(v.asks)], reasonable: v.reasonable, confidence: v.confidence, evidence: v.evidence ?? null };
+    return { pageType: v.page_type, asks, reasonable: v.reasonable, confidence: v.confidence, evidence: v.evidence ?? null };
 }

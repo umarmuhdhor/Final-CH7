@@ -31,8 +31,8 @@ export const errors = {
   codeUnavailable: () => new ApiError(503, "code_unavailable", "No free family code, try again"),
   // PF-01 "Punya kode undangan?" (proposed): a guardian with members cannot become protected.
   hasMembers: () => new ApiError(409, "has_members", "Disconnect the people you protect first"),
-  // Verdicts (contracts/api.md, R3 §1): 403 not the owner's guardian, 409 scan is not blocked.
-  verdictNotAllowed: (status: 403 | 409, message: string) => new ApiError(status, "verdict_not_allowed", message),
+  // Verdicts (contracts/api.md, R3 §1): 403 not the owner's guardian. Warning scans are allowed (GD-07).
+  verdictNotAllowed: (status: 403, message: string) => new ApiError(status, "verdict_not_allowed", message),
 };
 
 export function errorResponse(c: Context, err: ApiError): Response {

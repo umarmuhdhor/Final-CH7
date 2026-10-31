@@ -8,7 +8,8 @@ select 'q_dev_' || g, 'Name ' || g, case when g % 4 = 0 then 'guardian' else 'pr
        'avatar_' || lpad((g % 12 + 1)::text, 2, '0'), sha256(('q' || g)::bytea)
 from generate_series(1, 100) g;
 
-insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, screenshot_path)
+insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, screenshot_path,
+                   replica_path, replica_bytes)
 select 'q_dev_' || (g % 100 + 1),
        'https://login-secure-' || g || '.example-bank-verify.com/account/verify?session=' || md5(g::text) || '&ref=sms-campaign-2026',
        'login-secure-' || g || '.example-bank-verify.com',
@@ -16,7 +17,10 @@ select 'q_dev_' || (g % 100 + 1),
        30 + g % 71, case when 30 + g % 71 >= 80 then 'blocked' else 'warning' end::scan_status,
        (select jsonb_agg(jsonb_build_object('id', 'signal_' || s, 'layer', 1 + s % 4, 'weight', 5 + s,
           'label', 'Domain looks like a known bank but is not on the official list ' || s)) from generate_series(1, 20) s),
-       now() - make_interval(mins => g), case when g % 3 = 0 then 'q_dev_' || (g % 100 + 1) || '/' || g || '.jpg' end
+       now() - make_interval(mins => g), case when g % 3 = 0 then 'q_dev_' || (g % 100 + 1) || '/' || g || '.jpg' end,
+       -- EX-07: most new scans carry a page replica (R2); a third reuse an earlier one (path, no bytes).
+       case when g % 3 <> 0 then 'q_dev_' || (g % 100 + 1) || '/' || g || '-replica.html.gz' end,
+       case when g % 3 = 1 then 20000 + g end
 from generate_series(1, 1000) g;
 
 insert into rate_limit_hits (bucket, key_hash) select 'verdicts_get', sha256(g::text::bytea) from generate_series(1, 17000) g;
@@ -26,5 +30,6 @@ select relname as table, pg_size_pretty(pg_total_relation_size(c.oid)) as size, 
 from pg_class c join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind = 'r' order by bytes desc;
 select pg_size_pretty(pg_database_size(current_database())) as database_size,
-       (select count(*) from scans where screenshot_path is not null) as screenshots;
+       (select count(*) from scans where screenshot_path is not null) as screenshots,
+       (select count(*) from scans where replica_path is not null) as replicas;
 rollback;

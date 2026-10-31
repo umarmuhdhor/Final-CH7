@@ -2,6 +2,10 @@ import type { Sql } from "postgres";
 
 export interface Env {
   DB: Hyperdrive;
+  /** R2 bucket `shoo-replicas`: page replicas (EX-07) and new favicons (PR-05, D-alief-C27). */
+  REPLICAS?: R2Bucket;
+  /** Kill-switch (D-alief-C25 d): only "true" stores and serves replicas. Deletes ignore it. */
+  REPLICAS_ENABLED?: string;
   INVITE_BASE_URL: string;
   /** TestFlight or App Store link on the invite page (PR-03). Unset → apps.apple.com. */
   APP_STORE_URL?: string;

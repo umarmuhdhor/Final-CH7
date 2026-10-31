@@ -48,9 +48,9 @@
     pipeline.subscribe(async (state) => {
         if (state.status !== "blocked" || state.scanId === blockedScanId) return;
         blockedScanId = state.scanId;
-        // EX-07 takes the evidence screenshot first — the page is gone once we leave (≤ 1.2 s).
+        // EX-07 copies the page (replica) and hands the report to background first — the page is gone once we leave (≤ 1.2 s).
         const report = globalThis.ShooReport;
-        // Never let a failed screenshot keep the page open.
+        // Never let a failed report keep the page open.
         await Promise.resolve(report?.ready(state.scanId)).catch(() => {});
         const reportKey = report?.keyFor(state.scanId) ?? null;
         const target = `${browser.runtime.getURL("blocked.html")}#${encode(payloadFor({ ...state, reportKey }))}`;

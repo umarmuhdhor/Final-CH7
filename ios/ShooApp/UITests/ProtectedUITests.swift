@@ -78,4 +78,32 @@ final class ProtectedUITests: XCTestCase {
         first.tap()
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 5))
     }
+
+    @MainActor
+    func testActivityEmptyShowsExtensionOn() {
+        let app = launch(extra: ["-debug.tab", "activity", "-mock.scenario", "empty"])
+        XCTAssertTrue(app.descendants(matching: .any)["activity.empty"].waitForExistence(timeout: 10), app.debugDescription)
+        let pill = app.descendants(matching: .any)["activity.statusPill"]
+        XCTAssertTrue(pill.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(pill.label.contains("Safari extension on"), pill.debugDescription)
+        XCTAssertFalse(app.buttons["activity.turnOn"].exists)
+    }
+
+    @MainActor
+    func testActivityEmptyWithProtectionOffOffersTurnOn() {
+        let app = launch(
+            extensionActive: false,
+            extra: ["-debug.tab", "activity", "-mock.scenario", "empty", "-UITestExtensionStatus", "offTwoDays"]
+        )
+        let turnOn = app.buttons["activity.turnOn"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["activity.offSince"].label.contains("2 days"), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["activity.statusPill"].exists)
+
+        // Same guide as Shield's Turn on; Close brings Activity back.
+        turnOn.tap()
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["turnOn.close"].tap()
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 5))
+    }
 }

@@ -1,4 +1,4 @@
-# backend/ci — backend GitHub Action (TODO C2)
+# backend/ci — backend GitHub Action
 
 The workflow lives in `.github/workflows/backend.yml` (lead's folder, live since #48). This README lists what it needs.
 

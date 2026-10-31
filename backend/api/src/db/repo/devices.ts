@@ -150,7 +150,7 @@ export async function insertProtectedCopy(sql: Sql, fromId: string, tokenHash: U
 /**
  * Deletes the device and, through `on delete cascade`, its family links (either side),
  * codes, join attempts, scans, verdicts on its scans or made by it, and push log rows.
- * Returns the screenshot and favicon paths of its scans, to remove from Storage after commit.
+ * Returns the screenshot, favicon and replica paths of its scans, to remove from Storage/R2 after commit.
  */
 export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
   return sql.begin(async (tx) => {
@@ -161,11 +161,12 @@ export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
     // Deleting the scans first (with returning) leaves no window for an upload to slip in.
     // Locked by id first, the order retention uses, so the two cannot deadlock.
     await tx`select 1 from scans where owner_id = ${id} order by id for update`;
-    const shots = await tx<{ path: string | null; favicon: string | null }[]>`
-      delete from scans where owner_id = ${id} returning screenshot_path as path, favicon_path as favicon`;
+    const shots = await tx<{ path: string | null; favicon: string | null; replica: string | null }[]>`
+      delete from scans where owner_id = ${id}
+      returning screenshot_path as path, favicon_path as favicon, replica_path as replica`;
     await tx`delete from devices where id = ${id}`;
     // Tombstoned with the delete: if removing the objects fails later, the cron retries (D-alief-B12).
-    const paths = [...new Set(shots.flatMap((s) => [s.path, s.favicon].filter((p): p is string => p !== null)))];
+    const paths = [...new Set(shots.flatMap((s) => [s.path, s.favicon, s.replica].filter((p): p is string => p !== null)))];
     await addTombstones(tx, paths);
     return paths;
   });
