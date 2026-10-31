@@ -67,7 +67,7 @@ Dari `origin/main` aa976af (+ cherry-pick `b9987db` dari #210 supaya CI hijau). 
 |---|---|
 | `npx tsc --noEmit` (`backend/api`) | bersih |
 | `vitest run test/join-page.test.ts` | 25/25 (kode lama: 1 merah) |
-| `vitest run` (suite penuh) | lihat bawah |
+| `vitest run` (suite penuh) | 537 lulus, 1 skip |
 
 ### Review
 
