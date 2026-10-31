@@ -109,7 +109,24 @@ Input dibuat dengan `gzipBase64` dari `ios/ShooExtension/Resources/replica-build
 ## LANGKAH MANUAL tersisa (Alief, setelah review Umar; deploy hanya lewat CI)
 
 - [~] 1 (sisa). Token CI, `storage.objects`, jumlah `scans`, alert storage R2: selesai 29 Okt (tabel di LANGKAH MANUAL 1). Tersisa: alert R2 Class A (Alief). Perhatikan: deploy `main` macet sejak 28 Okt, merge 18a membawa 3 migrasi.
-- [ ] 2. Merge PR 18a di menit :10–:40, tidak di 18:30–19:30 UTC; tunggu CI `backend.yml` (`supabase db push` + `wrangler deploy`) hijau; catat jam deploy.
+- [x] 2. Merge PR 18a di menit :10–:40, tidak di 18:30–19:30 UTC; tunggu CI `backend.yml` (`supabase db push` + `wrangler deploy`) hijau; catat jam deploy. **#182 merge 30 Okt 2026 03:25 UTC, run `backend.yml` di 2214e82 sukses (deploy + 3 migrasi); replica tersimpan mulai jam itu.**
 - [ ] 3. `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud --bench` dengan `wrangler tail` terbuka: header + byte, Sec-Fetch 404, CPU `POST /scans` terburuk + bom (tanpa 1102/OOM), `wrangler r2 object get … --remote` ada sebelum dan hilang setelah `DELETE /devices/me` (skrip berhenti dan menampilkan perintahnya).
 - [ ] 4. Kabari Umar di #176: backend hidup sejak jam deploy; gerbang TestFlight tetap sampai 18b merge.
+
+## 18b — app (31 Okt 2026)
+
+Tiga PR bertumpuk, merge berurutan: #199 → #200 → #201. Semua merge `main` dicek: patch DT-04 dan DT-01 identik per file dengan commit aslinya, `Localizable.xcstrings` menyimpan 35 perubahan `main` + 29 perubahan DT-01 tanpa string terhapus yang hidup lagi.
+
+- **#199** `feat/DT-04-page-replica` (bagian 1): `ReplicaMeta`, `ReplicaHTML.locked` + gerbang leksikal, `URLSessionReplicaLoader`, `LockedWebView`/`ReplicaWebController`, `ReplicaViewTests` dengan listener lokal. Base `main`, 423 test lulus.
+- **#200** `feat/DT-01-detail-redesign`: redesign Detail dari Figma (gauge, kartu bukti, spotlight `marks`, footer verdict). Base #199, 428 test + `DetailUITests` (7) lulus.
+- **#201** `feat/DT-04-replica-detail` (bagian 2): `ReplicaSnapshot` menggambar replica sekali di `LockedWebView` tersembunyi (di window, di luar bounds, tanpa VoiceOver) dan menyimpan satu gambar ≤ 3000 pt sekitar `focusY`; kartu + layar penuh memakai gambar itu (tidak ada web view hidup di layar, K12). Urutan replica → screenshot → "No copy of this page". `waitForCopy` 3 s + 15 s, hanya menambal `pageReplicaUrl`. Refresh link sekali, 429 → "Try again later". Caption "Copy of the page · …", "Copied from …", "Page cut short" EN/ID. 442 test + `DetailUITests` (7) lulus.
+- **#202** `feat/PR-01-page-copy-note` (K17): baris info salinan halaman di layar Connect (onboarding Protected + sheet), EN/ID, sebelum bergabung. Base `main`, 384 test + `PairingUITests` (6) lulus. Halaman privasi sudah memakai kata-kata K17 sejak 18a.
+
+Penyimpangan dari rencana: layar penuh menampilkan gambar replica (zoom), bukan web view yang bisa di-scroll. Lebih ketat untuk K12 (tidak ada form control sama sekali); bagian halaman di luar jendela 3000 pt tidak terlihat.
+
+Belum:
+- [ ] UI test live `SHOO_LIVE_REPLICA=1` lewat `qa/replica-e2e.sh`.
+- [ ] Gerbang UI: Detail dengan replica × {Guardian, Protected} × {EN, ID}, layar SE + XL (fixture `MockRepository` masih `pageReplicaUrl: null`).
+- [ ] Review berurutan `ecc:security-reviewer` (K11, K12) → `ecc:swift-reviewer`.
+- [ ] `marks` + `viewport.width` di meta replica: menunggu Umar (#176). Sampai itu salinan tampil tanpa spotlight.
 
