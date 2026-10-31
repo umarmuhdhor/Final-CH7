@@ -777,3 +777,10 @@ Format:
 - Alternatif yang ditolak: tombstone + null `replica_path` semua scan Protected saat disconnect (bisa dikerjakan nanti bila Alief ingin salinan hilang saat putus hubungan; satu fase kecil).
 - Status: diterapkan di PR 18a.
 
+
+## D-alief-C29 · 1 Nov 2026 · eksekusi fase 19–26 (permintaan Alief) · Semua K memakai rekomendasi, pertanyaan ke Umar lewat PR
+
+- Keputusan: (a) Semua keputusan K fase 19–26 yang masih terbuka memakai rekomendasi di [`ref/R8-fase-19-26-lintas.md`](../ref/R8-fase-19-26-lintas.md) §(c). Alief: "Pakai semua rekomendasi" (1 Nov 2026). Sesi eksekusi tidak bertanya lagi per K; K yang tidak ada di tabel §(c) memakai rekomendasi di file fase. (b) Tujuh pertanyaan ke Umar di R8 §(b) **tidak** dibuat sebagai issue. Pertanyaannya ditulis di isi PR sub-fase yang bersangkutan, bagian `## Questions for Umar` (bernomor, sama dengan R8 §(b), dengan default yang dipakai sampai dijawab). Alief: "masukin PR aja, capek gw issue issue lama dibalesnya" (1 Nov 2026). (c) Eksekusi lewat dua sesi track: **be** (`backend/**`) dan **app** (`ios/ShooApp/**`), masing-masing urut R8 §(a), subagent satu per satu.
+- Alasan: Alief ingin langsung eksekusi; rekomendasi sudah lewat 2–3 ronde verifikasi. Issue lama jarang dijawab, sedangkan PR pasti dibaca Umar saat review.
+- Deviasi: (b) menyimpang dari CLAUDE.md root rule 7 (pertanyaan lewat issue) atas pilihan Alief. Kalau Umar meminta issue, pertanyaan dipindah ke issue dan PR menautkannya.
+- Status: berlaku mulai 1 Nov 2026.
