@@ -786,3 +786,11 @@ Format:
 - Alternatif yang ditolak: mengikat ke `-UITestMock` (screenshot PR juga memakai mock); API privat `_accessibilityReduceMotion`.
 - File: `App/{AppEnvironment,RootView}.swift`, `Features/Shield/GlowingShield.swift`, `Components/HalftoneShield.swift`, `UITests/UITestSupport.swift`.
 - Status: diterapkan di PR 23a (`fix/C2-test-flakes`).
+
+
+## D-alief-A44 · 1 Nov 2026 · app (fase 26a, PR-03) · Kartu tempel undangan: sumber kode dan tempatnya
+
+- Keputusan: (1) "Undangan kedaluwarsa" (U5, K5) untuk kode yang datang dari link, QR, atau tempel (`ConnectModel.prefill`/`pasted`) selama pengguna belum mengubahnya; kode yang diketik tetap pesan lama. (2) Baris tempel Connect (U2) di footer yang dipin di atas tombol Hubungkan (tab Kode, hanya saat kode < 6 digit), karena di form yang di-scroll baris itu tertutup footer saat keyboard muncul dan iOS mengabaikan tap `PasteButton` yang tertutup; di tiga tempat K9 (onboarding, sheet Shield, Profil "Have an invite code?"). (3) Kartu splash (U1) hanya setelah brand splash, sebelum mode dipilih, dan tanpa link undangan yang sudah menunggu. (4) UI test menulis pasteboard simulator lalu menekan `PasteButton` asli (K6 a): spike S2 membuktikan XCUITest bisa menekannya tanpa prompt (`log/fase-26.md`); tidak ada tombol palsu di build Debug. (5) Saat kartu splash tampil, gambar slide mengecil setinggi kartu (minimal ¼ layar) supaya teks slide tidak terpotong. (6) Di ukuran teks aksesibilitas kartu hanya judul + tombol (splash) atau hanya tombol (Connect), dan gambar slide boleh mengecil sampai 0 (review a11y).
+- Alasan: rekomendasi fase 26 K1 (c), K4 ketat, K5, K7 (R8 §c, D-alief-C29). QR juga bukan kode yang diketik, jadi "cek 6 digit" sama menyesatkannya.
+- File: `Features/Pairing/{InvitePaste,InvitePasteCard,ConnectModel,ConnectView}.swift`, `Features/Onboarding/{OnboardingModel,SplashView,OnboardingStyle}.swift`, `App/AppEnvironment.swift`.
+- Status: diterapkan di PR 26a (`feat/PR-03-deferred-invite-app`).
