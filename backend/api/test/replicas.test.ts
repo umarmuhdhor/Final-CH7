@@ -13,7 +13,7 @@ import { faviconLink, replicaLink, screenshotLink } from "../src/services/screen
 import { R2ReplicaStore } from "../src/services/replicaStore";
 import { type ScreenshotStore, storeFor, storeKind, SupabaseStorageStore } from "../src/services/screenshots";
 import {
-  decodeReplica, INFLATE_SLICE, MAX_REPLICA_BASE64, MAX_REPLICA_BYTES, MAX_REPLICA_HTML, REPLICA_QUOTA,
+  decodeReplica, estimatedBytes, INFLATE_SLICE, MAX_REPLICA_BASE64, MAX_REPLICA_BYTES, MAX_REPLICA_HTML, REPLICA_QUOTA,
 } from "../src/services/replicas";
 import { b64 } from "./helpers/images";
 import { gzip, gzipBase64, SAMPLE_HTML, zeroBomb } from "./helpers/replica";
@@ -44,7 +44,7 @@ describe("decodeReplica (EX-07, K2: strict base64, gzip magic, streamed inflate 
     expect(MAX_REPLICA_BASE64).toBe(409_600);
     expect(MAX_REPLICA_BYTES).toBe(307_200);
     expect(MAX_REPLICA_HTML).toBe(3_145_728);
-    expect(INFLATE_SLICE).toBe(4096);
+    expect(INFLATE_SLICE).toBe(8192); // fase 22 K4 (a), halved after security review 22a-2
   });
 
   it("a valid replica: the gzip bytes as sent (stored as is) and the inflated size", async () => {
@@ -98,12 +98,14 @@ describe("decodeReplica (EX-07, K2: strict base64, gzip magic, streamed inflate 
   });
 
   it("gzip bomb with a fake ISIZE (claims 100 bytes, inflates past 3 MB) → too_large", async () => {
-    const bomb = await gzip(new Uint8Array(4 * 1024 * 1024));
+    // 32 MB of zeros gzip to ≈ 32 KB: several 8 KB slices, so the output is counted before the
+    // (fake) trailer is reached. A bomb that fits one slice fails the trailer check instead (invalid).
+    const bomb = await zeroBomb(32);
     bomb.set([100, 0, 0, 0], bomb.length - 4);
     expect(await decodeReplica(b64(bomb))).toMatchObject({ ok: false, reason: "too_large" });
   });
 
-  it("zero bomb of 307 200 bytes: aborted after the 4 KB slice that crosses 3 MB, not after a full inflate", async () => {
+  it("zero bomb of 307 200 bytes: aborted after the 8 KB slice that crosses 3 MB, not after a full inflate", async () => {
     // 320 MB of zeros gzip to ≈ 326 KB; the first 307 200 bytes are the largest bomb the extension limit allows.
     const bomb = (await zeroBomb(320)).subarray(0, MAX_REPLICA_BYTES);
     const r = await decodeReplica(b64(bomb));
@@ -398,7 +400,10 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
     await droppedFor("quota");
     expect(await row(id)).toEqual({ path: null, bytes: null });
-    expect(REPLICA_QUOTA).toEqual({ owner: 50, global: 3000, globalBytes: 500 * 1024 * 1024 });
+    expect(REPLICA_QUOTA).toEqual({
+      owner: 50, family: 60, familyBytes: 10 * 1024 * 1024, global: 3000, globalBytes: 500 * 1024 * 1024,
+      reserveUploads: 600, reserveBytes: 100 * 1024 * 1024, lightFamily: 10,
+    });
   });
 
   it("global quota: 3000 uploads by everyone in 24 h", async () => {
@@ -429,7 +434,8 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const ids = await Promise.all([4, 5, 6, 7].map((n) => postScan(p, { ...other(n), pageReplicaBase64: replica })));
     await until(async () => logs.filter((l) => l.includes(`"reason":"quota"`)).length === 3);
     const rows = await Promise.all(ids.map(row));
-    expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
+    expect(rows.every(Boolean)).toBe(true);
+    expect(rows.filter((r) => r?.path != null)).toHaveLength(1);
   });
 
   it("parallel scans of different owners cannot overrun the global quota (global key 6, 0)", async () => {
@@ -440,7 +446,131 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const ids = await Promise.all(owners.map(({ p }) => postScan(p, { pageReplicaBase64: replica })));
     await until(async () => logs.filter((l) => l.includes(`"reason":"global_quota"`)).length === 3);
     const rows = await Promise.all(ids.map(row));
-    expect(rows.filter((r) => r?.path !== null)).toHaveLength(1);
+    expect(rows.every(Boolean)).toBe(true);
+    expect(rows.filter((r) => r?.path != null)).toHaveLength(1);
+  });
+
+  // ---- Fase 19a (TODO E8, review security 18a M1, D-alief-B14): family quota + reserve for light families.
+
+  /** Guardian + 3 Protected: the largest family (init.sql max 3 per Guardian). */
+  const bigFamily = async () => {
+    const { g, p } = await family();
+    const p2 = await createDevice("Dad");
+    const p3 = await createDevice("Aunt");
+    await connect(g, p2);
+    await connect(g, p3);
+    return { g, members: [p, p2, p3] as const };
+  };
+
+  it("family quota: 60 uploads across Guardian + members → the next one from any member is family_quota; another family still stores", async () => {
+    const { g, members } = await bigFamily();
+    await fakeUploads(g.deviceId, 15);
+    for (const m of members) await fakeUploads(m.deviceId, 15);
+    const id = await postScan(members[2], { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("family_quota");
+    expect(await row(id)).toEqual({ path: null, bytes: null });
+    expect(await r2Keys(`${members[2].deviceId}/`)).toEqual([]);
+
+    const { p: elsewhere } = await family();
+    const ok = await postScan(elsewhere, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    expect((await stored(ok)).path).toBe(`${elsewhere.deviceId}/${ok}-replica.html.gz`);
+  });
+
+  it("the Guardian's own scans count for the family too", async () => {
+    const { g, p } = await family();
+    await fakeUploads(p.deviceId, 30);
+    await fakeUploads(g.deviceId, 30);
+    const id = await postScan(g, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("family_quota");
+    expect(await row(id)).toEqual({ path: null, bytes: null });
+  });
+
+  it("family byte quota: 34 × 307 200 bytes → a small page still fits, the next full-size one is family_bytes", async () => {
+    const { g, p } = await family();
+    // 34 × 307 200 = 10 444 800: 40 960 bytes left of 10 MiB.
+    await fakeUploads(g.deviceId, 34, MAX_REPLICA_BYTES);
+    const small = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    expect((await stored(small)).path).not.toBeNull();
+    const big = await postScan(p, { ...other(3), pageReplicaBase64: b64(await gzipOfSize(MAX_REPLICA_BYTES)) });
+    await droppedFor("family_bytes");
+    expect(await row(big)).toEqual({ path: null, bytes: null });
+  });
+
+  it("reserve: past 2400 global uploads only families with < 10 uploads still store; at 3000 nobody does", async () => {
+    const someone = await createDevice("Else");
+    await fakeUploads(someone.deviceId, REPLICA_QUOTA.global - REPLICA_QUOTA.reserveUploads);
+    const heavy = await family();
+    await fakeUploads(heavy.g.deviceId, REPLICA_QUOTA.lightFamily);
+    const light = await family();
+    await fakeUploads(light.g.deviceId, REPLICA_QUOTA.lightFamily - 1);
+
+    const h = await postScan(heavy.p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("reserve");
+    expect(await row(h)).toEqual({ path: null, bytes: null });
+    const l = await postScan(light.p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    expect((await stored(l)).path).not.toBeNull();
+
+    await fakeUploads(someone.deviceId, REPLICA_QUOTA.reserveUploads);
+    const fresh = await family();
+    const f = await postScan(fresh.p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("global_quota");
+    expect(await row(f)).toEqual({ path: null, bytes: null });
+  });
+
+  it("reserve by bytes: past 400 MB global only light families still store", async () => {
+    const someone = await createDevice("Else");
+    // 1366 × 307 200 = 419 635 200 > 400 MiB.
+    await fakeUploads(someone.deviceId, 1366, MAX_REPLICA_BYTES);
+    const heavy = await family();
+    await fakeUploads(heavy.g.deviceId, REPLICA_QUOTA.lightFamily);
+    const h = await postScan(heavy.p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("reserve");
+    expect(await row(h)).toEqual({ path: null, bytes: null });
+    const light = await family();
+    const l = await postScan(light.p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    expect((await stored(l)).path).not.toBeNull();
+  });
+
+  it("the first reason that applies is logged: device full and family full → quota", async () => {
+    const { g, p } = await family();
+    await fakeUploads(p.deviceId, REPLICA_QUOTA.owner);
+    await fakeUploads(g.deviceId, REPLICA_QUOTA.family - REPLICA_QUOTA.owner);
+    await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("quota");
+    expect(logs.some((l) => l.includes(`"reason":"family_quota"`))).toBe(false);
+  });
+
+  it("parallel scans of different members cannot overrun the family quota (counts under the global key)", async () => {
+    const { g, members } = await bigFamily();
+    await fakeUploads(g.deviceId, 20);
+    for (const m of members) await fakeUploads(m.deviceId, 13);
+    const replica = await gzipBase64(SAMPLE_HTML);
+    const ids = await Promise.all([g, ...members].map((d, n) => postScan(d, { ...other(n + 10), pageReplicaBase64: replica })));
+    await until(async () => logs.filter((l) => l.includes(`"reason":"family_quota"`)).length === 3);
+    const rows = await Promise.all(ids.map(row));
+    expect(rows.every(Boolean)).toBe(true);
+    expect(rows.filter((r) => r?.path != null)).toHaveLength(1);
+  });
+
+  it("churn (accepted, C4): a member that leaves takes its uploads along; the Guardian's family has room again", async () => {
+    const { g, p } = await family();
+    await fakeUploads(p.deviceId, 40);
+    await fakeUploads(g.deviceId, 20);
+    expect((await call("/family/guardian", { method: "DELETE", token: p.token })).status).toBe(200);
+    const p2 = await createDevice("New");
+    await connect(g, p2);
+    const id = await postScan(p2, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    expect((await stored(id)).path).not.toBeNull();
+  });
+
+  it("a reuse within 24 h never counts against the family quota", async () => {
+    const { g, p } = await family();
+    const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    const { path } = await stored(first);
+    await fakeUploads(g.deviceId, REPLICA_QUOTA.family - 1);
+    const again = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await until(async () => (await row(again))?.path === path);
+    expect(await row(again)).toEqual({ path, bytes: null });
   });
 
   it("the scan deleted while the replica is processed → nothing left in R2", async () => {
@@ -770,5 +900,95 @@ describe("retention and tombstones with replicas (K6)", () => {
     await expect(runRetention(sql, env, { store: supabase, r2Store: r2 })).rejects.toThrow("store down");
     expect(r2.calls).toHaveLength(2); // one in the scans step, one retry of due tombstones
     expect(supabase.calls.flat()).toHaveLength(250);
+  });
+});
+
+describe("quota pre-check before the IP slot and the inflate (fase 22 K12)", () => {
+  it("estimatedBytes: the decoded size from the length and padding; 0 for a shape the decoder refuses", () => {
+    expect(estimatedBytes("AAAA")).toBe(3);
+    expect(estimatedBytes("AAA=")).toBe(2);
+    expect(estimatedBytes("AA==")).toBe(1);
+    expect(estimatedBytes("A".repeat(MAX_REPLICA_BASE64))).toBe(MAX_REPLICA_BYTES);
+    for (const bad of ["", "AAA", "A".repeat(MAX_REPLICA_BASE64 + 4)]) expect(estimatedBytes(bad)).toBe(0);
+  });
+
+  /** Counts DecompressionStream constructions (decodeReplica builds one per inflate). */
+  const inflates = () => {
+    const Real = DecompressionStream;
+    let n = 0;
+    vi.spyOn(streams, "DecompressionStream").mockImplementation(function (format: "gzip") {
+      n += 1;
+      return new Real(format);
+    } as unknown as () => DecompressionStream);
+    return () => n;
+  };
+  const ipRows = async () =>
+    (await sql`select 1 from rate_limit_hits where bucket = ${limits.replicaIp.bucket}`).length;
+
+  it("device quota full → quota, with no inflate and no replicas_ip row", async () => {
+    const count = inflates();
+    const { p } = await family();
+    await fakeUploads(p.deviceId, REPLICA_QUOTA.owner);
+    const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    await droppedFor("quota");
+    expect(await row(id)).toEqual({ path: null, bytes: null });
+    expect(count()).toBe(0);
+    expect(await ipRows()).toBe(0);
+  });
+
+  it("family quota full (Guardian's uploads) → family_quota for a member, no inflate, no IP slot", async () => {
+    const count = inflates();
+    const { g, p } = await family();
+    await fakeUploads(g.deviceId, REPLICA_QUOTA.family);
+    await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    await droppedFor("family_quota");
+    expect(count()).toBe(0);
+    expect(await ipRows()).toBe(0);
+  });
+
+  it("global quota full → global_quota, no inflate, no IP slot", async () => {
+    const count = inflates();
+    const { p } = await family();
+    const someone = await createDevice("Else");
+    await fakeUploads(someone.deviceId, REPLICA_QUOTA.global);
+    await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    await droppedFor("global_quota");
+    expect(count()).toBe(0);
+    expect(await ipRows()).toBe(0);
+  });
+
+  it("family bytes: the size comes from the base64 length, so a full-size replica is refused before decode; a small one still stores", async () => {
+    const count = inflates();
+    const { p } = await family();
+    // 34 × 307 200 = 10 444 800: 40 960 bytes left of 10 MiB.
+    await fakeUploads(p.deviceId, 34, MAX_REPLICA_BYTES);
+    const big = await postScan(p, { pageReplicaBase64: b64(await gzipOfSize(MAX_REPLICA_BYTES)) }, freshIp());
+    await droppedFor("family_bytes");
+    expect(await row(big)).toEqual({ path: null, bytes: null });
+    expect(count()).toBe(0);
+    expect(await ipRows()).toBe(0);
+
+    const small = await postScan(p, { ...other(3), pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    expect((await stored(small)).path).toBe(`${p.deviceId}/${small}-replica.html.gz`);
+    expect(count()).toBe(1);
+    expect(await ipRows()).toBe(1);
+  });
+
+  it("a full quota never blocks a reuse: the same domain within 24 h keeps the earlier replica", async () => {
+    const { p } = await family();
+    const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    const path = (await stored(first)).path;
+    await fakeUploads(p.deviceId, REPLICA_QUOTA.owner);
+    const count = inflates();
+    const again = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, freshIp());
+    await until(async () => (await row(again))?.path === path);
+    expect(count()).toBe(0);
+    expect(logs.some((l) => l.includes('"replica_dropped"'))).toBe(false);
+  });
+
+  it("malformed base64 skips the byte estimate and is still dropped as invalid by the decoder", async () => {
+    const { p } = await family();
+    await postScan(p, { pageReplicaBase64: "AAA" }, freshIp());
+    await droppedFor("invalid");
   });
 });

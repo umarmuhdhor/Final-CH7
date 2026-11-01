@@ -59,8 +59,8 @@ struct URLSessionReplicaLoader: ReplicaLoading {
         } catch let error as URLError where error.code != .cancelled {
             throw ReplicaLoadError.unavailable
         }
-        let data = Data(buffer)
-        guard let html = String(data: data, encoding: .utf8) else { throw ReplicaLoadError.unavailable }
+        // Straight from the buffer, without an extra `Data` of our own (fase 22 S8: peak −3 MB).
+        guard let html = String(bytes: buffer, encoding: .utf8) else { throw ReplicaLoadError.unavailable }
         return html
     }
 

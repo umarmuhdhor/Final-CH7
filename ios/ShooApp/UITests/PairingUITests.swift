@@ -9,25 +9,20 @@ final class PairingUITests: XCTestCase {
 
     @MainActor
     private func launch(mode: String, onboarded: Bool = true, language: String = "en", extra: [String] = []) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        var arguments = [
             "-settings.language", language,
             "-UITestExtensionActive", "YES",
             "-UITestNotifications", "denied",
             "-settings.familyModeOn", "YES",
         ] + extra
         if onboarded {
-            app.launchArguments += [
+            arguments += [
                 "-settings.onboardingCompleted", "YES",
                 "-settings.onboardingConnectPassed", "YES",
                 "-settings.mode", mode,
             ]
-        } else {
-            app.launchArguments += ["-UITestReset", "YES"]
         }
-        app.launch()
-        return app
+        return XCUIApplication.mock(arguments)
     }
 
     @MainActor

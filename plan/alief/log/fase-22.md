@@ -65,6 +65,36 @@ Diubah (juga cherry-pick `b9987db` dari #210 supaya CI hijau): `backend/api/src/
 - Link bertanda tangan tetap sama persis (vektor emas), jadi hapus/putus tetap berlaku seketika (cek DB di route tidak berubah).
 - Source map diunggah ke Cloudflare (akun yang sama dengan Worker), berisi kode sumber saja, tanpa data pengguna.
 
+## 22a-2 — `fix/EX-07-replica-inflate` (stacked di 19a `feat/EX-07-replica-family-quota`, #211)
+
+### Checklist langkah
+
+- [x] 13a. K4 (a): test batas diperketat dulu (`INFLATE_SLICE` dipaku, bom zero-gzip `consumed` = satu slice) → `INFLATE_SLICE` naik, yield `setTimeout(0)` tetap. **Deviasi:** 8 192, bukan 16 384 (lihat review security). Putaran write + yield untuk replica 300 KB: ±75 → ±38. Test bom ISIZE palsu memakai bom 32 MB (±32 KB gzip, beberapa slice); bom yang muat satu slice gagal di cek trailer (`invalid`), tetap dibuang.
+- [x] 13b. K12 (a): test merah dulu (4/4 merah tanpa drop awal: device penuh → `quota`, keluarga → `family_quota`, global → `global_quota`, byte keluarga dari panjang base64 → `family_bytes`; semua tanpa `DecompressionStream` dan tanpa baris `replicas_ip`). Lalu `precheckReplica(sql, scan, bytes, quota)` menghitung kuota di statement yang sama (fragmen `replicaCountsQuery`, juga dipakai `reserveReplica` di bawah `(6, 0)`), `attachReplica` drop dengan alasan yang sama sebelum `hit(replicaIp)`. `estimatedBytes` dari panjang + padding (tanpa regex; 0 untuk bentuk yang pasti ditolak decoder). Reuse tidak pernah diblokir kuota penuh (test).
+- [x] 13c. `API.md` aturan replica: kuota penuh dicek sebelum dekompresi dan sebelum slot IP.
+- [ ] 14. LANGKAH MANUAL 4 setelah merge (`replica-e2e.sh --cloud --bench`).
+
+**Deviasi lain:** rencana K12 menyebut cek byte "hanya kalau string lolos regex + panjang"; di sini hanya panjang (tanpa pass regex 400 KB, sejalan dengan O4). String dengan panjang benar tapi karakter salah bisa terdrop sebagai `family_bytes` alih-alih `invalid`; keduanya drop, reason hanya di log.
+
+### Verifikasi
+
+| Perintah | Hasil |
+|---|---|
+| `pnpm -C backend/api typecheck` | bersih |
+| `vitest run test/replicas.test.ts` | 84/84 (K12 tanpa drop awal: 4 merah) |
+| `vitest run` (suite penuh) | 558 lulus, 1 skip |
+
+### Review (berurutan)
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:security-reviewer` | Tidak ada CRITICAL/HIGH. Rasio deflate maks ±1032:1, multi-member/stored block tidak lebih buruk. MEDIUM: puncak ±17 MB per request dengan slice 16 KB; beberapa bom bersamaan di satu isolate (128 MB) bisa > 100 MB. LOW: hitungan kuota juga jalan untuk reuse/tanpa keluarga. Tidak ada jalur penyalahgunaan pre-check (estimasi hanya untuk upload sendiri), TOCTOU aman (`reserveReplica` tetap penentu), fragmen SQL ter-bind | MEDIUM: slice 8 KB (puncak ±8,5 MB) (`ef8bd23`). LOW: diterima, satu pass index-only lebih murah daripada round trip kedua (komentar) |
+| `ecc:typescript-reviewer` | Tidak ada CRITICAL/HIGH. Tipe baris benar (`family` vs `hasFamily`, `"all"` dikutip), spy tidak lulus karena alasan salah (kasus kecil membuktikan spy aktif). MEDIUM: hitungan untuk reuse dibuang. LOW: komentar `row!`; tidak ada test reuse + kuota penuh | MEDIUM/LOW komentar ditambah. Test reuse + kuota penuh ditambah (reuse tetap, tanpa inflate, tanpa drop) |
+
+### Privasi Apple (SECURITY §3)
+
+- Tidak ada data, kolom, atau log baru; `replica_dropped` tetap `reason` saja.
+
 ## D-alief-B15 · 1 Nov 2026 · fase 22a · CPU Worker
 
 - Keputusan: K1 (a) target p50 ≤ 10 ms per rute DB, p99 tanpa `exceededCpu`; K2 (a) `import * as z`; K3 (a) minify + source map; K4 (a) inflate penuh lebih murah (slice 16 KB, yield `setTimeout` tetap); K5 (b) sampai S3 diukur; K6 (a) tetap Free, pemicu pindah = `exceededResources` > 0 atau 1102; K11 (c) angka bundle di deskripsi PR sambil menunggu Umar; K12 (a) pre-check kuota sebelum slot IP + inflate. Sumber: R8 §c (D-alief-C29).

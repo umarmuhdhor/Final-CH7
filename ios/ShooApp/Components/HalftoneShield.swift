@@ -7,7 +7,7 @@ import SwiftUI
 struct HalftoneShield: View {
     var isOn = true
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     /// Figma "Ilustrasi": 220 × 176; the 184 × 201 shield frame sits at (18, −13) and overflows it.
     static let size = CGSize(width: 220, height: 176)

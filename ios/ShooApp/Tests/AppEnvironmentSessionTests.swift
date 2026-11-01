@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import Shoo
 
 /// Fase 13: `AppEnvironment` with the real repository — registration, foreground sync, session expiry.
@@ -206,6 +207,22 @@ struct AppEnvironmentSessionTests {
         #expect(AppEnvironment.live(arguments: ["-UITestMock", "YES"], registerForPush: {}).repository is MockRepository)
         #expect(AppEnvironment.live(arguments: ["-UITestMock", "YES"], registerForPush: {}).session == nil)
         #expect(AppEnvironment.live(arguments: [], registerForPush: {}).repository is ApiRepository)
+    }
+
+    /// Fase 23a K2: UI tests stop the endless shield animations (`-UITestReduceMotion YES`, Debug only).
+    @Test func uiTestReduceMotionIsOnlyForTheArgument() {
+        defer { UIView.setAnimationsEnabled(true) }
+        let still = AppEnvironment.live(arguments: ["-UITestMock", "YES", "-UITestReduceMotion", "YES"], registerForPush: {})
+        #if DEBUG
+        #expect(still.reducesMotionForUITests)
+        #expect(!UIView.areAnimationsEnabled)
+        #else
+        #expect(!still.reducesMotionForUITests)
+        #endif
+        UIView.setAnimationsEnabled(true)
+        #expect(!AppEnvironment.live(arguments: ["-UITestMock", "YES"], registerForPush: {}).reducesMotionForUITests)
+        #expect(!AppEnvironment.live(arguments: ["-UITestMock", "YES", "-UITestReduceMotion", "NO"], registerForPush: {}).reducesMotionForUITests)
+        #expect(UIView.areAnimationsEnabled)
     }
 
     /// Only a Debug build in the simulator uses localhost; on a real iPhone localhost is the phone.

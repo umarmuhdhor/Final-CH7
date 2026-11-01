@@ -8,15 +8,12 @@ final class SessionUITests: XCTestCase {
 
     @MainActor
     func testSessionExpiredStartsOnboardingOver() {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        let app = XCUIApplication.mock([
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "guardian",
             "-settings.language", "en",
             "-debug.sessionExpired", "YES",
-        ]
-        app.launch()
+        ])
         XCTAssertTrue(app.staticTexts["Session expired"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["sessionExpired.restart"].tap()
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 5), app.debugDescription)

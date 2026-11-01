@@ -8,15 +8,11 @@ final class SmokeUITests: XCTestCase {
 
     @MainActor
     private func launch(language: String, mode: String = "guardian") -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        XCUIApplication.mock([
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", mode,
             "-settings.language", language,
-        ]
-        app.launch()
-        return app
+        ])
     }
 
     @MainActor

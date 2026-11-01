@@ -91,12 +91,30 @@ struct ReplicaHTMLTests {
         #expect(ReplicaHTML.locked(hidden) == nil)
     }
 
-    /// `<meta <meta <meta …` with no `>` was quadratic and froze the main thread (security review H1).
+    /// `<meta <meta <meta …` with no `>` was quadratic and froze the main thread for minutes (security
+    /// review H1). 5 s, not 1 s: a CI runner shared with the simulator took 1.0–1.3 s (fase 23a K3).
     @Test func unclosedMetaFloodStaysFast() {
         let flood = String(repeating: "<meta ", count: 500_000)
         let clock = ContinuousClock()
         let took = clock.measure { _ = ReplicaHTML.passesGate(flood) }
-        #expect(took < .seconds(1))
+        #expect(took < .seconds(5))
+    }
+
+    /// The gate stays linear whatever the runner's speed: 4× the input takes about 4× the time
+    /// (quadratic would be 16×). Median of three runs per size against noise.
+    @Test func unclosedMetaFloodScalesLinearly() {
+        func median(_ count: Int) -> Duration {
+            let flood = String(repeating: "<meta ", count: count)
+            let clock = ContinuousClock()
+            let runs = (0..<3).map { _ in clock.measure { _ = ReplicaHTML.passesGate(flood) } }
+            return runs.sorted()[1]
+        }
+        let small = median(400_000)
+        let large = median(1_600_000)
+        // Under 1 ms the ratio is noise; the 5 s test above still covers that case.
+        // (Not a failure: a gate that fast is not quadratic.)
+        guard small > .milliseconds(1) else { return }
+        #expect(large / small < 8, "400 000: \(small), 1 600 000: \(large)")
     }
 
     /// SVG gradients in a real capture are not `<link>` (security review 31 Oct, L5).
