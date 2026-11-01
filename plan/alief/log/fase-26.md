@@ -49,3 +49,37 @@ Simulator sendiri "Shoo Track App 19-26" (iPhone 17, iOS 26.5, `D0936FB9-5C36-49
 | Log | Tidak ada log baru |
 | Data keluar | Tidak berubah: hanya 6 digit ke `POST /family/join` setelah tap |
 | P1–P7, P9–P13 | Tidak tersentuh |
+
+## 26b — backend (`feat/PR-03-deferred-invite-page`, sesi track be, 1 Nov 2026)
+
+Dari `origin/main` aa976af (+ cherry-pick `b9987db` dari #210 supaya CI hijau). File log ini disalin dari #208 (`fix/PR-03-invite-paste`) lalu bagian ini ditambahkan di akhir, supaya kedua PR bisa merge tanpa konflik. Baris tabel status di atas ("bukan track app") tidak diubah di sini; status 26b: [r] PR terbuka, `APP_STORE_URL` pending Q1.
+
+### Checklist langkah (`fase-26-deferred-invite.md` Langkah kerja 26b)
+
+- [x] 1. Merah: `test/join-page.test.ts` — hint EN "We copy the invite for you. After installing, open Shoo and tap Paste." dan ID "Undangan sudah kami salin. Setelah install, buka Shoo lalu ketuk Tempel." (1 merah di kode lama); halaman dengan `APP_STORE_URL` link TestFlight → `id="install" href` sama (lewat `app.fetch` dengan env yang diganti; `call()` tidak bisa mengganti env).
+- [x] 2. Hijau: `TEXT.en.installHint` / `TEXT.id.installHint` (`src/routes/join-page.ts`).
+- [ ] 3. **Gerbang merge:** 26a (`feat/PR-03-deferred-invite-app`, track app) sudah merge dan ada di build TestFlight (review TypeScript MEDIUM).
+- [ ] 4. `APP_STORE_URL` di `wrangler.jsonc` tetap kosong sampai Umar menjawab Q1 (pertanyaan di PR 26b, D-alief-C29). Sampai itu tombol Install membuka `https://apps.apple.com/`.
+
+### Verifikasi
+
+| Perintah | Hasil |
+|---|---|
+| `npx tsc --noEmit` (`backend/api`) | bersih |
+| `vitest run test/join-page.test.ts` | 25/25 (kode lama: 1 merah) |
+| `vitest run` (suite penuh) | 537 lulus, 1 skip |
+
+### Review
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:typescript-reviewer` | Tidak ada CRITICAL/HIGH. MEDIUM: teks menyebut tombol Tempel/Paste yang belum ada di `ios/ShooApp` (`ConnectView` hanya kolom kode). LOW: escaping aman (teks statis lewat `escapeHtml`); `app.fetch` menjalankan semua middleware `app.use("*")`; test hint bisa memaku `lang` | MEDIUM: disengaja — tombol tempel datang dari 26a (track app, `PasteButton` di ON-01 + Connect). **26b tidak boleh merge sebelum 26a ada di build TestFlight**, kalau tidak halaman menyuruh mengetuk tombol yang belum ada. Dicatat di PR. LOW: dibiarkan |
+
+### Privasi Apple (SECURITY §3)
+
+- Teks saja. Tidak ada data, log, atau header baru; halaman tetap `private, no-store` dan CSP nonce yang sama.
+
+### LANGKAH MANUAL
+
+- [ ] 1. **(Umar)** Jawab Q1/Q2 di PR 26b (`## Questions for Umar`). Kalau Q1 = link publik TestFlight: Alief mengisi `APP_STORE_URL` di `backend/api/wrangler.jsonc` (var publik, bukan secret) lewat PR kecil; deploy hanya lewat CI.
+- [ ] 2. **(Alief, setelah merge + CI deploy)** `curl -s https://shoo-api.afindo-mi01.workers.dev/j/482193 | grep -o 'class="hint">[^<]*'` → teks baru; `curl -s https://shoo-api.afindo-mi01.workers.dev/j/482193 | grep -o 'id="install" href="[^"]*"'` dan `curl -sI https://shoo-api.afindo-mi01.workers.dev/get | grep -i '^location'` → link store sama.

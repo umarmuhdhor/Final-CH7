@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import markedSafe from "../../../contracts/fixtures/blocked-marked-safe.json";
 import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json";
@@ -427,5 +427,46 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect((await blocklist(p)).domains).toEqual([]);
     const inc = await blocklist(p, `?since=${encodeURIComponent(before.nextSince!)}`);
     expect(inc.removed?.map((r) => r.domain)).toEqual(["gone.example"]);
+  });
+});
+
+describe("GET /verdicts logs verdict_seen for fresh verdicts (EX-06, fase 25 K7)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const seen = () => {
+    const lines: string[] = [];
+    vi.spyOn(console, "log").mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
+    return () => lines.filter((l) => l.includes('"verdict_seen"')).map((l) => JSON.parse(l) as Record<string, unknown>);
+  };
+
+  it("a verdict decided within 120 s: one line with exactly event, ageMs ≥ 0 and value; no domain or ids", async () => {
+    const g = await createDevice("Guardian Name", "guardian");
+    const p = await createDevice("Protected Name");
+    await connect(g, p);
+    const id = await scan(p, blocked92 as Fixture, "fresh-private.example");
+    expect((await verdict(g, id, "safe")).status).toBe(200);
+    const lines = seen();
+    expect(await lookup(p, "fresh-private.example")).toMatchObject({ value: "safe" });
+    const got = lines();
+    expect(got).toHaveLength(1);
+    expect(Object.keys(got[0]!)).toEqual(["event", "ageMs", "value"]);
+    expect(got[0]).toMatchObject({ event: "verdict_seen", value: "safe" });
+    expect(got[0]!.ageMs).toEqual(expect.any(Number));
+    expect(got[0]!.ageMs as number).toBeGreaterThanOrEqual(0);
+    expect(got[0]!.ageMs as number).toBeLessThanOrEqual(120_000);
+    const text = JSON.stringify(got);
+    for (const leak of ["fresh-private", g.deviceId, p.deviceId, id, "Guardian Name", g.token, p.token]) expect(text).not.toContain(leak);
+  });
+
+  it("a verdict older than 120 s, or no verdict at all: no line", async () => {
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("P");
+    await connect(g, p);
+    const id = await scan(p, blocked92 as Fixture, "old.example");
+    expect((await verdict(g, id, "not_safe")).status).toBe(200);
+    await admin`update verdicts set decided_at = now() - interval '121 seconds' where scan_id = ${id}`;
+    const lines = seen();
+    expect(await lookup(p, "old.example")).toMatchObject({ value: "not_safe" });
+    expect(await lookup(p, "never-decided.example")).toBeNull();
+    expect(lines()).toEqual([]);
   });
 });

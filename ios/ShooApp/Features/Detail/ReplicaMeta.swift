@@ -31,7 +31,9 @@ struct ReplicaMeta: Equatable, Sendable {
     private static let keys: Set<String> = ["v", "url", "capturedAt", "viewport", "focusY", "truncated", "marks"]
     /// replica.js metaToken (`shoo` + up to 8 base-36 chars + `-meta`). Seeing it inside the value means
     /// `$&` in the page URL made `String.replace` paste the token back in (replica.js:279, C26).
-    private static let leakedToken = try! Regex("shoo[a-z0-9]{0,8}-meta")
+    /// `nonisolated(unsafe)`: `Regex` is not `Sendable`, but this one is a constant only ever matched
+    /// (fase 22 S5).
+    nonisolated(unsafe) private static let leakedToken = try! Regex("shoo[a-z0-9]{0,8}-meta")
 
     private struct Wire: Decodable {
         var v: Int

@@ -14,16 +14,12 @@ final class DetailUITests: XCTestCase {
     private func openDetail(
         _ scanId: String, mode: String = "guardian", language: String = "en", pageCopy: Bool = false
     ) -> XCUIApplication {
-        let app = XCUIApplication()
-        if pageCopy { app.launchArguments += ["-debug.replicaFixture", "YES"] }
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        let app = XCUIApplication.mock((pageCopy ? ["-debug.replicaFixture", "YES"] : []) + [
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", mode,
             "-settings.language", language,
             "-debug.detail", scanId,
-        ]
-        app.launch()
+        ])
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
         return app
     }

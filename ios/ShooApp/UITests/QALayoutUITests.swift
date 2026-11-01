@@ -9,25 +9,13 @@ final class QALayoutUITests: XCTestCase {
 
     @MainActor
     private func launch(_ arguments: [String], textSize: String = "UICTContentSizeCategoryAccessibilityXL") -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments = ["-UITestMock", "YES", "-UIPreferredContentSizeCategoryName", textSize, "-settings.language", "en"] + arguments
-        app.launch()
-        return app
-    }
-
-    /// GD-01: with notifications denied the Guardian gets a "Notifications are off" popup once per launch.
-    /// It covers Home, so close it before measuring.
-    @MainActor
-    private func closeNotificationReminder(in app: XCUIApplication) {
-        let notNow = app.alerts.buttons["Not now"].firstMatch
-        if notNow.waitForExistence(timeout: 5) { notNow.tap() }
-        XCTAssertTrue(app.alerts.firstMatch.waitForNonExistence(timeout: 5), app.debugDescription)
+        XCUIApplication.mock(["-UIPreferredContentSizeCategoryName", textSize, "-settings.language", "en"] + arguments)
     }
 
     /// P2-1: at large text the slide text scrolls above Skip / Next instead of running under them.
     @MainActor
     func testSplashControlsStayReachableAtLargeText() {
-        let app = launch(["-UITestReset", "YES"])
+        let app = launch([])
         let next = app.buttons["splash.next"]
         XCTAssertTrue(next.waitForExistence(timeout: 10), app.debugDescription)
         let title = app.staticTexts["Browse calmer, feeling safe."]
@@ -50,7 +38,8 @@ final class QALayoutUITests: XCTestCase {
         ], textSize: "UICTContentSizeCategoryL")
         let invite = app.buttons["family.invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
-        closeNotificationReminder(in: app)
+        // GD-01: with notifications denied the "Notifications are off" popup covers Home; close it before measuring.
+        app.dismissNotificationsReminder(timeout: UITestTimeout.screen)
         let tabBar = app.tabBars.firstMatch
         XCTAssertTrue(tabBar.exists, app.debugDescription)
         XCTAssertLessThanOrEqual(invite.frame.maxY, tabBar.frame.minY + 1, "invite \(invite.frame) tab bar \(tabBar.frame)")
@@ -70,7 +59,8 @@ final class QALayoutUITests: XCTestCase {
         ])
         let invite = app.buttons["family.invite"]
         XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
-        closeNotificationReminder(in: app)
+        // GD-01: with notifications denied the "Notifications are off" popup covers Home; close it before measuring.
+        app.dismissNotificationsReminder(timeout: UITestTimeout.screen)
         for _ in 0..<4 where !invite.isHittable || invite.frame.maxY > app.tabBars.firstMatch.frame.minY {
             app.swipeUp()
         }

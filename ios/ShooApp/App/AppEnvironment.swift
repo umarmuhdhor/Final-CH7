@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 
 /// Dependencies every screen reads from the SwiftUI environment:
 /// `@Environment(AppEnvironment.self) private var env`.
@@ -26,6 +27,9 @@ final class AppEnvironment {
     @ObservationIgnored private var sentDeviceInfo = false
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
+    /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
+    /// so XCUITest finds it idle (fase 23a K2). Not for screenshots or the accessibility audit.
+    @ObservationIgnored private(set) var reducesMotionForUITests = false
 
     init(
         repository: any ShooRepository,
@@ -73,7 +77,15 @@ final class AppEnvironment {
             )
             session = nil
         } else {
+            #if DEBUG
+            // Live QA on a local stack: `-debug.aiBaseURL http://localhost:8788` gives the extension layers 3–4
+            // (AppConfig has no AI URL in Debug). `SessionStore.isAllowed` still rejects anything but HTTPS or localhost.
+            let store = SessionStore(
+                aiBaseURL: Self.value(after: "-debug.aiBaseURL", in: arguments).flatMap(URL.init(string:)) ?? AppConfig.aiBaseURL
+            )
+            #else
             let store = SessionStore()
+            #endif
             let client = APIClient(
                 baseURL: AppConfig.apiBaseURL,
                 token: { try store.readToken() },
@@ -128,6 +140,11 @@ final class AppEnvironment {
             environment.router.selectedTab = tab
         }
         if Self.value(after: "-debug.profile", in: arguments) == "YES" { environment.router.openProfile() }
+        if Self.value(after: "-UITestReduceMotion", in: arguments) == "YES" {
+            environment.reducesMotionForUITests = true
+            // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.
+            UIView.setAnimationsEnabled(false)
+        }
         // Detail (fase 03): `-debug.detail <scanId>` opens it on the selected tab.
         if let scanId = Self.value(after: "-debug.detail", in: arguments) {
             environment.router.showDetail(scanId: scanId)

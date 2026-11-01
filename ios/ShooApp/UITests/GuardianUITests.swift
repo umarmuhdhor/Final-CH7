@@ -8,19 +8,17 @@ final class GuardianUITests: XCTestCase {
 
     @MainActor
     private func launch(familyMode: Bool?, extra: [String] = []) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        var arguments = [
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "guardian",
             "-settings.language", "en",
             "-UITestExtensionActive", "YES",
         ] + extra
         if let familyMode {
-            app.launchArguments += ["-settings.familyModeOn", familyMode ? "YES" : "NO"]
+            arguments += ["-settings.familyModeOn", familyMode ? "YES" : "NO"]
         }
-        app.launch()
-        return app
+        // `nil` = the relaunch that checks the saved Family mode: keep the settings.
+        return XCUIApplication.mock(arguments, reset: familyMode != nil)
     }
 
     @MainActor
@@ -110,16 +108,13 @@ final class GuardianUITests: XCTestCase {
 
     @MainActor
     func testHomeOffersTurnOnWhenTheExtensionIsOff() {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        let app = XCUIApplication.mock([
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "guardian",
             "-settings.language", "en",
             "-settings.familyModeOn", "NO",
             "-UITestExtensionStatus", "switchedOff",
-        ]
-        app.launch()
+        ])
         XCTAssertTrue(app.descendants(matching: .any)["home.status.off"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.buttons["home.turnOn"].exists)
     }
