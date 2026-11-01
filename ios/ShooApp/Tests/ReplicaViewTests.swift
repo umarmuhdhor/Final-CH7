@@ -77,9 +77,9 @@ extension WebKitTests {
                 """
         }
 
-        private func lockedController(focusY: Double = 0) async throws -> ReplicaWebController {
+        private func lockedController() async throws -> ReplicaWebController {
             let rules = try #require(await ReplicaRules.compiled())
-            return ReplicaWebController(ruleList: rules, focusY: focusY)
+            return ReplicaWebController(ruleList: rules)
         }
 
         private func load(_ controller: ReplicaWebController, _ html: String) async {
@@ -147,21 +147,6 @@ extension WebKitTests {
             #expect(webView.canPerformAction(#selector(UIResponderStandardEditActions.selectAll(_:)), withSender: nil) == false)
             #expect(webView.canBecomeFirstResponder == false)
             #expect(webView.becomeFirstResponder() == false)
-        }
-
-        @Test(arguments: [
-            (1284.0, 1.0, 3000.0, 844.0, 1284.0),
-            (1284.0, 0.5, 3000.0, 844.0, 642.0),
-            (5000.0, 1.0, 3000.0, 844.0, 2156.0),
-            (-10.0, 1.0, 3000.0, 844.0, 0.0),
-            (Double.nan, 1.0, 3000.0, 844.0, 0.0),
-            (400.0, 1.0, 600.0, 844.0, 0.0),
-        ])
-        func focusOffsetStaysInsideThePage(focusY: Double, zoom: Double, content: Double, bounds: Double, expected: Double) {
-            let y = ReplicaWebController.focusOffset(
-                focusY: focusY, zoomScale: zoom, contentHeight: content, boundsHeight: bounds
-            )
-            #expect(Double(y) == expected, "got \(y)")
         }
     }
 }

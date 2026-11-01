@@ -786,3 +786,11 @@ Format:
 - Alternatif yang ditolak: mengikat ke `-UITestMock` (screenshot PR juga memakai mock); API privat `_accessibilityReduceMotion`.
 - File: `App/{AppEnvironment,RootView}.swift`, `Features/Shield/GlowingShield.swift`, `Components/HalftoneShield.swift`, `UITests/UITestSupport.swift`.
 - Status: diterapkan di PR 23a (`fix/C2-test-flakes`).
+
+## D-alief-A46 · 1 Nov 2026 · app (fase 22b, DT-04) · Salinan halaman 390 pt × 1800 pt, `prepare` ikut batal, kode replika mati dihapus
+
+- Keputusan: `ReplicaSnapshot.imageWidth = renderWidth` (390 pt) dan `windowHeight = 1800` (K7 a); satu frame tetap (K8 a); hapus `ReplicaWebView` SwiftUI + scroll-ke-fokus yang tidak dipakai (K9 a). Persiapan HTML (`ReplicaHTML.locked` + `ReplicaMeta.read`) pindah dari `Task.detached` ke `nonisolated static func prepare(_:) async` di `DetailView`, jadi pembatalan Detail ikut sampai ke pindai (C14, bug d6). Loader membuat `String` langsung dari buffer. Tiga peringatan strict concurrency di `Features/Detail` diperbaiki (`Regex` konstan `nonisolated(unsafe)`, `Race<T: Sendable>`).
+- Alasan: gambar 200 pt diperbesar ke 390 pt buram saat zoom; puncak memori app di iPhone SE simulator naik +0,2 MB (gerbang K7 ≤ +60 MB); jendela 1800 pt menahan bitmap ≈ 11 MB @2x. `Task.detached` tidak mewarisi pembatalan.
+- Alternatif yang ditolak: dua frame (K8 b, belum ada bukti tekanan memori WebContent); loader per potongan dengan delegate (109 ms vs ambang 100 ms hanya di simulator; ditunda sampai ukur iPhone fisik).
+- File: `Features/Detail/{ReplicaSnapshot,ReplicaWebView,DetailView,ReplicaLoader,ReplicaMeta}.swift`, `Tests/{PageCopyTests,ReplicaViewTests,ReplicaMetaTests,DetailPerfTests}.swift`.
+- Status: diterapkan di PR 22b (`fix/DT-04-snapshot-perf`).
