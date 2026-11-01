@@ -28,13 +28,13 @@ const rows = Object.entries(map).filter(([k]) => k !== "_note").flatMap(([sec, l
 const count = {};
 for (const [, id] of rows) count[notes[id]?.[0] ?? "test"] = (count[notes[id]?.[0] ?? "test"] ?? 0) + 1;
 
-p("# QA — Figma parity, iOS app (2026-10-31)");
+p("# QA — Figma parity, iOS app (2026-10-31, frames re-checked 2026-11-01)");
 p();
 p("Every iOS frame marked **Ready for dev** on the Figma page *High Fidelity*, plus HOME and *AI vs Guardian — Eksplorasi* (not marked, shown as they are), next to the app as it is on `main` today. Safari extension and web frames are out of scope.");
 p();
 p("| | |\n|---|---|");
-p("| Device | iPhone 17 simulator, iOS 26.3, Bahasa Indonesia, light, `TZ=Asia/Jakarta` (WIB) |");
-p("| App | `main` @ 2720b13 + this branch's QA additions (no screen changed) |");
+p("| Device | Frame tables: iPhone 17 Pro simulator, iOS 26.4 (2026-11-01). Tests 1–2: iPhone 17 simulator, iOS 26.3 (2026-10-31). Bahasa Indonesia, light, `TZ=Asia/Jakarta` (WIB) |");
+p("| App | Frame tables: `feat/GD-01-home-figma` after the Figma parity pass (Home, Profile, Activity, Detail, Onboarding, Pairing; one Figma font, Figma shadows). Tests 1–2: `main` @ 2720b13 |");
 p("| Test 1 | `MockRepository` scenarios `figma`, `mixedVerdicts`, `heavy`, `edge`, `allSafe`, `allBlocked` (`Data/MockScenarios.swift`) |");
 p("| Test 2a | Imelda's eval corpus (`ai/eval/data`, 108 samples, holdout included) through layers 1–4 on a local `shoo-ai` Worker → scenario `corpus` |");
 p("| Test 2b/2c | Two paired simulators on a local stack built like prod; the Protected Safari opens every corpus URL that still resolves |");
@@ -50,10 +50,10 @@ p("## Findings");
 p();
 const sev = { missing: 0, gap: 1, minor: 2 };
 const found = rows.filter(([, id]) => notes[id] && notes[id][0] in sev).sort((a, b) => sev[notes[a[1]][0]] - sev[notes[b[1]][0]]);
-p("Bugs and gaps the run found outside the frame-by-frame view:");
+p("Bugs and gaps the 2026-10-31 run found outside the frame-by-frame view (status as of that run unless marked):");
 p();
 p("1. 🔴 **Emoji in a name shows as ⍰ boxes** (scenario `edge`, `Bayu 🧑‍💻`) on Guardian Home and Profile: the custom font has no emoji fallback for ZWJ sequences. `edge-home-guardian`, `edge-pf-guardian`.");
-p("2. 🟠 **Code expired shows the generic error**: joining with the mock's `code_expired` code shows \"Ada yang salah. Coba lagi.\" (`on-connect-expired`), not Figma's \"Kode kadaluarsa…\" (205:1182).");
+p("2. ✅ **Code expired shows the generic error** — fixed by 2026-11-01: `on-connect-expired` now shows \"Kode kedaluwarsa, minta kode baru dan coba lagi.\" as in Figma 205:1182.");
 p("3. 🟡 **\"Notifikasi mati\" popup on every Home / Activity launch** in the mock run although `-UITestNotifications granted` is passed; the popup covers the hero in the Home shots.");
 p("4. 🟡 **Gauge label for 30–49**: a 39% warning (`corpus-dt-real-lphone`) reads \"Risiko Tinggi\", the same as 72%.");
 p("5. 🟡 **Counters** do not cap: Guardian Profile shows \"3.000 Situs diblokir\" in `heavy` (no \"999+\"); fits, but wider than Figma's tile.");
@@ -110,6 +110,8 @@ for (const [name, what] of Object.entries(variants)) {
 
 // ---- corpus
 const s = corpus.summary;
+// Expected score and verdict per sample: contracts/README.md thresholds, docs/mandates/imelda.md targets.
+const expected = (r) => (r.label === "scam" ? "≥ 80 % · Scam (blocked)" : "< 30 % · Not scam (normal)");
 p("## Test 2a — Imelda's corpus through layers 1–4 (offline)");
 p();
 p("`node ai/eval/run.mjs --analyze-url http://127.0.0.1:8788 --json --show-holdout` against `wrangler dev` of `ai/` with the LLM key in `ai/.dev.vars` and the prebuilt public blocklist (190 000 domains, `ai/scripts/build-blocklist.mjs`) in local KV. `plan/alief/qa/corpus-to-scans.mjs` turns the rows into the `corpus` scenario. No live page was opened for this test.");
@@ -120,16 +122,18 @@ p(`| Legit | ${s.counts.legit} | ${s.legit.atLeast30} | ${s.legit.atLeast50} | $
 p();
 p(`Targets (docs/mandates/imelda.md): 0 legit ≥ 30 — **${s.legit.atLeast30} found**; ≥ 90 % scam ≥ 50 — **${Math.round((100 * s.scam.atLeast50) / s.counts.scam)} %**; ≥ 70 % scam ≥ 80 — **${Math.round((100 * s.scam.atLeast80) / s.counts.scam)} %**. \`/analyze\` p95 ${Math.round(s.timing.analyzeRemoteP95Ms)} ms, remote failures ${s.remoteFailures}. ${corpus.results.filter((r) => r.signals.some((g) => g.includes(":L4:"))).length} samples got a layer-4 signal.`);
 p();
+p("Expected per sample, from the corpus label and the thresholds in `contracts/README.md` and the targets in `docs/mandates/imelda.md`: a scam page should score **≥ 80 %** (blocked; 50 % is the floor), a legit page **< 30 %** (normal, nothing shown).");
+p();
 p("### Detector mismatches");
 p();
-p("| Sample | Label | Real? | Score | Signals |\n|---|---|---|---|---|");
+p("| Sample | Label | Real? | Expected | Score | Signals |\n|---|---|---|---|---|---|");
 for (const r of corpus.results.filter((r) => (r.label === "scam" && r.score < 30) || (r.label === "legit" && r.score >= 30)))
-    p(`| \`${r.id}\` | ${r.label === "scam" ? "scam missed" : "legit flagged"} | ${r.synthetic ? "synthetic" : "real"}${r.holdout ? " · holdout" : ""} | ${r.score} | ${r.signals.join(", ") || "—"} |`);
+    p(`| \`${r.id}\` | ${r.label === "scam" ? "scam missed" : "legit flagged"} | ${r.synthetic ? "synthetic" : "real"}${r.holdout ? " · holdout" : ""} | ${expected(r)} | ${r.score} | ${r.signals.join(", ") || "—"} |`);
 p();
 p("<details><summary>All 108 samples</summary>");
 p();
-p("| Sample | Label | Real? | L1–2 | Total | Status | Signals |\n|---|---|---|---|---|---|---|");
-for (const r of corpus.results) p(`| \`${r.id}\` | ${r.label} | ${r.synthetic ? "syn" : "real"}${r.holdout ? " · H" : ""} | ${r.localScore} | ${r.score} | ${r.status} | ${r.signals.join(", ")} |`);
+p("| Sample | Label | Real? | Expected | L1–2 | Total | Status | Signals |\n|---|---|---|---|---|---|---|---|");
+for (const r of corpus.results) p(`| \`${r.id}\` | ${r.label} | ${r.synthetic ? "syn" : "real"}${r.holdout ? " · H" : ""} | ${expected(r)} | ${r.localScore} | ${r.score} | ${r.status} | ${r.signals.join(", ")} |`);
 p();
 p("</details>");
 p();
