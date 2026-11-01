@@ -1,0 +1,1165 @@
+{
+  "summary": "44 pages opened (23 legit, 21 scam). 14 reached the server as a scan (score ≥ 30), 10 Guardian push attempt(s) in push_log.",
+  "rows": [
+    {
+      "id": "scam-03",
+      "label": "scam",
+      "offline": 34,
+      "live": "**Blocked page, 100%** (\"Pretends to be BRI\", \"This site was made 11 days ago\", \"Link sent to Adhella\")",
+      "scan": "100 blocked",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-05",
+      "label": "scam",
+      "offline": 33,
+      "live": "**Blocked page, 88%** (\"Pretends to be BNI\", address looks like scammers' ones)",
+      "scan": "88 blocked",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-06",
+      "label": "scam",
+      "offline": 0,
+      "live": "fake KlikBCA login (User ID + PIN) loads; **0% badge** (missed: the page is on sites.google.com)",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-08",
+      "label": "scam",
+      "offline": 25,
+      "live": "blank white page, nothing loaded; no badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-09",
+      "label": "scam",
+      "offline": 100,
+      "live": "**Blocked page, 100%** (\"This site is known to cheat people\": edgeone.dev is on the public scam list)",
+      "scan": "100 blocked",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-10",
+      "label": "scam",
+      "offline": 100,
+      "live": "**Blocked page, 100%** (same as scam-09, public scam list)",
+      "scan": "100 blocked",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-11",
+      "label": "scam",
+      "offline": 0,
+      "live": "Blogger page \"Video Mesum Deddy Dan Chika\", no posts; **0% badge** (missed)",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-12",
+      "label": "scam",
+      "offline": 31,
+      "live": "**Blocked page, 86%** (\"Asks for the code sent to your phone\")",
+      "scan": "86 blocked",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-13",
+      "label": "scam",
+      "offline": 21,
+      "live": "**76% popup** \"This site looks suspicious\" (Leave this page / Continue anyway)",
+      "scan": "76 warning",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-14",
+      "label": "scam",
+      "offline": 12,
+      "live": "**67% popup** \"This site looks suspicious\"",
+      "scan": "67 warning",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-15",
+      "label": "scam",
+      "offline": 5,
+      "live": "blank white page, nothing loaded; no badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-16",
+      "label": "scam",
+      "offline": 31,
+      "live": "**Blocked page, 86%** (same kit as scam-12)",
+      "scan": "86 blocked",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-17",
+      "label": "scam",
+      "offline": 24,
+      "live": "Cloudflare's own \"Suspected Phishing\" page in front of the site; **24% badge**",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-18",
+      "label": "scam",
+      "offline": 45,
+      "live": "parked page with loan ads; **45% banner** \"Be careful: this address looks like BSI's\"",
+      "scan": "45 warning",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-19",
+      "label": "scam",
+      "offline": 24,
+      "live": "Safari's own red \"Deceptive Website Warning\" (page not loaded); no Shoo badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-20",
+      "label": "scam",
+      "offline": 0,
+      "live": "fake Instagram login; **45% banner** \"Be careful\"",
+      "scan": "45 warning",
+      "push": "failed:network"
+    },
+    {
+      "id": "scam-21",
+      "label": "scam",
+      "offline": 100,
+      "live": "**Blocked page, 100%** (public scam list)",
+      "scan": "100 blocked",
+      "push": "none"
+    },
+    {
+      "id": "scam-22",
+      "label": "scam",
+      "offline": 18,
+      "live": "**63% popup** \"This site looks suspicious\"",
+      "scan": "63 warning",
+      "push": "none"
+    },
+    {
+      "id": "scam-23",
+      "label": "scam",
+      "offline": 13,
+      "live": "fake SIM A/B/C/D sign-up via Telegram; **13% badge** (missed)",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-24",
+      "label": "scam",
+      "offline": 24,
+      "live": "\"Register now\" form asking name, province and phone for Telegram; **24% badge** (missed)",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "scam-25",
+      "label": "scam",
+      "offline": 24,
+      "live": "free 60 GB data form asking name and Telegram number; **39% banner** \"Be careful\"",
+      "scan": "39 warning",
+      "push": "none"
+    },
+    {
+      "id": "legit-01",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-02",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-03",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-04",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-05",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-06",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-07",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-08",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-09",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-10",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-11",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-12",
+      "label": "legit",
+      "offline": 100,
+      "live": "**Blocked page, 100%** (\"This site is known to cheat people\"): mit.edu is on the public scam list. Wrong block.",
+      "scan": "100 blocked",
+      "push": "none"
+    },
+    {
+      "id": "legit-13",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-14",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-15",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-16",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-17",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-18",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-19",
+      "label": "legit",
+      "offline": 0,
+      "live": "cookie notice on top; 0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-20",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-21",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-22",
+      "label": "legit",
+      "offline": 0,
+      "live": "0% badge",
+      "scan": "none",
+      "push": "—"
+    },
+    {
+      "id": "legit-23",
+      "label": "legit",
+      "offline": 0,
+      "live": "page now shows 404 Not Found; 0% badge",
+      "scan": "none",
+      "push": "—"
+    }
+  ],
+  "scans": [
+    {
+      "id": "efd3644d-17df-4913-abfd-bd5b5d063257",
+      "domain": "qlolla-bybri.com",
+      "url": "https://qlolla-bybri.com/",
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "brand_logo_offsite",
+          "label": {
+            "en": "BRI logo on an unofficial site",
+            "id": "Logo BRI di situs tidak resmi"
+          },
+          "layer": 3,
+          "weight": 25,
+          "evidence": "BRI",
+          "labelSimple": {
+            "en": "Pretends to be BRI",
+            "id": "Berpura-pura menjadi BRI"
+          }
+        },
+        {
+          "id": "new_domain",
+          "label": {
+            "en": "Domain age 11 days",
+            "id": "Umur domain 11 hari"
+          },
+          "layer": 3,
+          "weight": 20,
+          "labelSimple": {
+            "en": "This site was made 11 days ago",
+            "id": "Situs ini baru dibuat 11 hari lalu"
+          }
+        },
+        {
+          "id": "asks_password",
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "layer": 3,
+          "weight": 15,
+          "evidence": "password",
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          }
+        },
+        {
+          "id": "brand_plus_keyword",
+          "label": {
+            "en": "Brand name plus extra word (BRI + by)",
+            "id": "Nama brand ditambah kata lain (BRI + by)"
+          },
+          "layer": 2,
+          "weight": 14,
+          "evidence": "bri · level 2 · by",
+          "labelSimple": {
+            "en": "This address mixes BRI with the word \"by\"",
+            "id": "Alamat ini menggabungkan BRI dengan kata \"by\""
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:09:35.381823+00:00"
+    },
+    {
+      "id": "02f0076d-6f8b-4116-8c8e-0364ee6d3df3",
+      "domain": "kodepembatalanbybni.pages.dev",
+      "url": "https://kodepembatalanbybni.pages.dev/",
+      "score": 88,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "brand_logo_offsite",
+          "label": {
+            "en": "BNI logo on an unofficial site",
+            "id": "Logo BNI di situs tidak resmi"
+          },
+          "layer": 3,
+          "weight": 25,
+          "evidence": "BNI",
+          "labelSimple": {
+            "en": "Pretends to be BNI",
+            "id": "Berpura-pura menjadi BNI"
+          }
+        },
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (bait word in the name)",
+            "id": "Tautan terlihat mencurigakan (kata umpan di nama)"
+          },
+          "layer": 2,
+          "weight": 19,
+          "evidence": "free_host,free_name_bait",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        },
+        {
+          "id": "brand_plus_keyword",
+          "label": {
+            "en": "Brand name plus extra word (BNI + by)",
+            "id": "Nama brand ditambah kata lain (BNI + by)"
+          },
+          "layer": 2,
+          "weight": 14,
+          "evidence": "bni · level 2 · by",
+          "labelSimple": {
+            "en": "This address mixes BNI with the word \"by\"",
+            "id": "Alamat ini menggabungkan BNI dengan kata \"by\""
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:09:47.102976+00:00"
+    },
+    {
+      "id": "b017dfe3-4541-4432-b468-5d1edf71f24c",
+      "domain": "edgeone.dev",
+      "url": "https://storee-dp9hsk1cxr2y.edgeone.dev/",
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "db_match",
+          "label": {
+            "en": "Found on a public list of phishing sites",
+            "id": "Ada di daftar publik situs phishing"
+          },
+          "layer": 1,
+          "weight": 100,
+          "evidence": "public",
+          "labelSimple": {
+            "en": "This site is known to cheat people. Do not enter anything here",
+            "id": "Situs ini sudah dikenal menipu orang. Jangan isi apa pun di sini"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:10:31.880922+00:00"
+    },
+    {
+      "id": "cb779b91-7f17-4e59-8b6b-397f410d92f4",
+      "domain": "edgeone.dev",
+      "url": "https://storee-dp8iiud7biuu.edgeone.dev/",
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "db_match",
+          "label": {
+            "en": "Found on a public list of phishing sites",
+            "id": "Ada di daftar publik situs phishing"
+          },
+          "layer": 1,
+          "weight": 100,
+          "evidence": "public",
+          "labelSimple": {
+            "en": "This site is known to cheat people. Do not enter anything here",
+            "id": "Situs ini sudah dikenal menipu orang. Jangan isi apa pun di sini"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:10:47.318374+00:00"
+    },
+    {
+      "id": "96d67d93-82ce-40d2-97b8-cd2ef0fd3bb8",
+      "domain": "fkregs-on.com",
+      "url": "https://registers-app15.fkregs-on.com/code.php",
+      "score": 86,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "evidence": "PENDAFTARAN VIA TELEGRAM",
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_otp",
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "layer": 3,
+          "weight": 25,
+          "evidence": "otp",
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          }
+        },
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (app-style name with a number, hyphen in the site name, bait word in path)",
+            "id": "Tautan terlihat mencurigakan (nama bergaya aplikasi dengan angka, tanda hubung di nama situs, kata umpan di path)"
+          },
+          "layer": 2,
+          "weight": 21,
+          "evidence": "word_digit_subdomain,hyphen_registrable,file_ext,path_bait",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        },
+        {
+          "id": "new_domain",
+          "label": {
+            "en": "Domain age 73 days",
+            "id": "Umur domain 73 hari"
+          },
+          "layer": 3,
+          "weight": 10,
+          "labelSimple": {
+            "en": "This site was made 73 days ago",
+            "id": "Situs ini baru dibuat 73 hari lalu"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:11:20.849634+00:00"
+    },
+    {
+      "id": "0154da6a-3b29-481b-af38-d6c3215bb048",
+      "domain": "regnows-dfg.com",
+      "url": "https://regs-apps14.regnows-dfg.com/code.php",
+      "score": 76,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "evidence": "PENDAFTARAN VIA TELEGRAM",
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_otp",
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "layer": 3,
+          "weight": 25,
+          "evidence": "otp",
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          }
+        },
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (app-style name with a number, hyphen in the site name, bait word in path)",
+            "id": "Tautan terlihat mencurigakan (nama bergaya aplikasi dengan angka, tanda hubung di nama situs, kata umpan di path)"
+          },
+          "layer": 2,
+          "weight": 21,
+          "evidence": "word_digit_subdomain,hyphen_registrable,file_ext,path_bait",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:11:39.323982+00:00"
+    },
+    {
+      "id": "fe4d6f2c-ca93-4a0c-ba88-78cb5ea7453a",
+      "domain": "thems.blog",
+      "url": "https://pendaftaran-umum04.thems.blog/code",
+      "score": 67,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_otp",
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "layer": 3,
+          "weight": 25,
+          "evidence": "code1",
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          }
+        },
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (app-style name with a number, bait word in path)",
+            "id": "Tautan terlihat mencurigakan (nama bergaya aplikasi dengan angka, kata umpan di path)"
+          },
+          "layer": 2,
+          "weight": 12,
+          "evidence": "word_digit_subdomain,path_bait",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:11:53.932834+00:00"
+    },
+    {
+      "id": "08be5bb3-09df-4c01-8b40-f2da2294b85f",
+      "domain": "fkregs-on.com",
+      "url": "https://registersw-app17.fkregs-on.com/code.php",
+      "score": 86,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "evidence": "PENDAFTARAN VIA TELEGRAM",
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_otp",
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "layer": 3,
+          "weight": 25,
+          "evidence": "otp",
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          }
+        },
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (app-style name with a number, hyphen in the site name, bait word in path)",
+            "id": "Tautan terlihat mencurigakan (nama bergaya aplikasi dengan angka, tanda hubung di nama situs, kata umpan di path)"
+          },
+          "layer": 2,
+          "weight": 21,
+          "evidence": "word_digit_subdomain,hyphen_registrable,file_ext,path_bait",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        },
+        {
+          "id": "new_domain",
+          "label": {
+            "en": "Domain age 73 days",
+            "id": "Umur domain 73 hari"
+          },
+          "layer": 3,
+          "weight": 10,
+          "labelSimple": {
+            "en": "This site was made 73 days ago",
+            "id": "Situs ini baru dibuat 73 hari lalu"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:12:24.723489+00:00"
+    },
+    {
+      "id": "f87f03ef-484d-4b03-8f79-c8da9a73fb3d",
+      "domain": "cuz-bankkbsi.com",
+      "url": "https://www.cuz-bankkbsi.com/",
+      "score": 45,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "label": {
+            "en": "Domain spelled like BSI",
+            "id": "Nama domain meniru BSI"
+          },
+          "layer": 2,
+          "weight": 25,
+          "evidence": "bsi · level 3 · typo",
+          "labelSimple": {
+            "en": "This address looks like BSI's, but it is not the real one",
+            "id": "Alamat ini mirip alamat BSI, tapi bukan yang asli"
+          }
+        },
+        {
+          "id": "new_domain",
+          "label": {
+            "en": "Domain age 15 days",
+            "id": "Umur domain 15 hari"
+          },
+          "layer": 3,
+          "weight": 20,
+          "labelSimple": {
+            "en": "This site was made 15 days ago",
+            "id": "Situs ini baru dibuat 15 hari lalu"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:12:55.560025+00:00"
+    },
+    {
+      "id": "2aeedaae-4d40-49cc-b029-16f53ee3c264",
+      "domain": "viinwkwk-dot.github.io",
+      "url": "https://viinwkwk-dot.github.io/instagram./",
+      "score": 45,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_password",
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "layer": 3,
+          "weight": 15,
+          "evidence": "passwd",
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:13:27.660513+00:00"
+    },
+    {
+      "id": "2a748e83-91a7-42c1-a4be-91e4224f338a",
+      "domain": "helpnets.info",
+      "url": "https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/",
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "db_match",
+          "label": {
+            "en": "Found on a public list of phishing sites",
+            "id": "Ada di daftar publik situs phishing"
+          },
+          "layer": 1,
+          "weight": 100,
+          "evidence": "public",
+          "labelSimple": {
+            "en": "This site is known to cheat people. Do not enter anything here",
+            "id": "Situs ini sudah dikenal menipu orang. Jangan isi apa pun di sini"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:13:42.344924+00:00"
+    },
+    {
+      "id": "25ea1e24-fad0-4735-bc47-aff810eb4380",
+      "domain": "d33wubrfki0l68.cloudfront.net",
+      "url": "https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html",
+      "score": 63,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "evidence": "DHL Express",
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (bait word in the file name)",
+            "id": "Tautan terlihat mencurigakan (kata umpan di nama file)"
+          },
+          "layer": 2,
+          "weight": 18,
+          "evidence": "file_ext,free_host,free_file_bait",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        },
+        {
+          "id": "asks_password",
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "layer": 3,
+          "weight": 15,
+          "evidence": "password",
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:14:00.172617+00:00"
+    },
+    {
+      "id": "57908c99-7c44-4f94-8504-afb336aec764",
+      "domain": "gratiskuota60gb.blogspot.com",
+      "url": "https://gratiskuota60gb.blogspot.com/",
+      "score": 39,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "suspicious_link",
+          "label": {
+            "en": "The link looks suspicious (bait word in the name, year or amount in the name)",
+            "id": "Tautan terlihat mencurigakan (kata umpan di nama, tahun atau jumlah di nama)"
+          },
+          "layer": 2,
+          "weight": 24,
+          "evidence": "free_host,free_name_bait,free_name_number",
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          }
+        },
+        {
+          "id": "urgent_language",
+          "label": {
+            "en": "Urgent language: \"klaim sekarang\"",
+            "id": "Kalimat mendesak: \"klaim sekarang\""
+          },
+          "layer": 3,
+          "weight": 15,
+          "evidence": "KLAIM SEKARANG",
+          "labelSimple": {
+            "en": "Rushes you to act fast",
+            "id": "Memaksa kamu cepat-cepat bertindak"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:14:46.372637+00:00"
+    },
+    {
+      "id": "09a0fac1-135c-44e3-be36-5ae17d018fe2",
+      "domain": "mit.edu",
+      "url": "https://www.mit.edu/",
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "db_match",
+          "label": {
+            "en": "Found on a public list of phishing sites",
+            "id": "Ada di daftar publik situs phishing"
+          },
+          "layer": 1,
+          "weight": 100,
+          "evidence": "public",
+          "labelSimple": {
+            "en": "This site is known to cheat people. Do not enter anything here",
+            "id": "Situs ini sudah dikenal menipu orang. Jangan isi apa pun di sini"
+          }
+        }
+      ],
+      "created_at": "2026-11-01T14:17:58.427921+00:00"
+    }
+  ],
+  "pushes": [
+    {
+      "scan_id": "efd3644d-17df-4913-abfd-bd5b5d063257",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:09:36.121092+00:00"
+    },
+    {
+      "scan_id": "02f0076d-6f8b-4116-8c8e-0364ee6d3df3",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:09:47.859014+00:00"
+    },
+    {
+      "scan_id": "b017dfe3-4541-4432-b468-5d1edf71f24c",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:10:32.732782+00:00"
+    },
+    {
+      "scan_id": "cb779b91-7f17-4e59-8b6b-397f410d92f4",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:10:48.052448+00:00"
+    },
+    {
+      "scan_id": "96d67d93-82ce-40d2-97b8-cd2ef0fd3bb8",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:11:21.772516+00:00"
+    },
+    {
+      "scan_id": "0154da6a-3b29-481b-af38-d6c3215bb048",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:11:40.152944+00:00"
+    },
+    {
+      "scan_id": "fe4d6f2c-ca93-4a0c-ba88-78cb5ea7453a",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:11:54.820232+00:00"
+    },
+    {
+      "scan_id": "08be5bb3-09df-4c01-8b40-f2da2294b85f",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:12:25.50298+00:00"
+    },
+    {
+      "scan_id": "f87f03ef-484d-4b03-8f79-c8da9a73fb3d",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:12:56.394823+00:00"
+    },
+    {
+      "scan_id": "2aeedaae-4d40-49cc-b029-16f53ee3c264",
+      "result": "failed:network",
+      "created_at": "2026-11-01T14:13:28.532595+00:00"
+    }
+  ],
+  "shots": [
+    {
+      "caption": "Safari · scam-03",
+      "path": "img/figma-parity/live-l2/safari-scam-03.jpg"
+    },
+    {
+      "caption": "Safari · scam-05",
+      "path": "img/figma-parity/live-l2/safari-scam-05.jpg"
+    },
+    {
+      "caption": "Safari · scam-06",
+      "path": "img/figma-parity/live-l2/safari-scam-06.jpg"
+    },
+    {
+      "caption": "Safari · scam-08",
+      "path": "img/figma-parity/live-l2/safari-scam-08.jpg"
+    },
+    {
+      "caption": "Safari · scam-09",
+      "path": "img/figma-parity/live-l2/safari-scam-09.jpg"
+    },
+    {
+      "caption": "Safari · scam-10",
+      "path": "img/figma-parity/live-l2/safari-scam-10.jpg"
+    },
+    {
+      "caption": "Safari · scam-11",
+      "path": "img/figma-parity/live-l2/safari-scam-11.jpg"
+    },
+    {
+      "caption": "Safari · scam-12",
+      "path": "img/figma-parity/live-l2/safari-scam-12.jpg"
+    },
+    {
+      "caption": "Safari · scam-13",
+      "path": "img/figma-parity/live-l2/safari-scam-13.jpg"
+    },
+    {
+      "caption": "Safari · scam-14",
+      "path": "img/figma-parity/live-l2/safari-scam-14.jpg"
+    },
+    {
+      "caption": "Safari · scam-15",
+      "path": "img/figma-parity/live-l2/safari-scam-15.jpg"
+    },
+    {
+      "caption": "Safari · scam-16",
+      "path": "img/figma-parity/live-l2/safari-scam-16.jpg"
+    },
+    {
+      "caption": "Safari · scam-17",
+      "path": "img/figma-parity/live-l2/safari-scam-17.jpg"
+    },
+    {
+      "caption": "Safari · scam-18",
+      "path": "img/figma-parity/live-l2/safari-scam-18.jpg"
+    },
+    {
+      "caption": "Safari · scam-19",
+      "path": "img/figma-parity/live-l2/safari-scam-19.jpg"
+    },
+    {
+      "caption": "Safari · scam-20",
+      "path": "img/figma-parity/live-l2/safari-scam-20.jpg"
+    },
+    {
+      "caption": "Safari · scam-21",
+      "path": "img/figma-parity/live-l2/safari-scam-21.jpg"
+    },
+    {
+      "caption": "Safari · scam-22",
+      "path": "img/figma-parity/live-l2/safari-scam-22.jpg"
+    },
+    {
+      "caption": "Safari · scam-23",
+      "path": "img/figma-parity/live-l2/safari-scam-23.jpg"
+    },
+    {
+      "caption": "Safari · scam-24",
+      "path": "img/figma-parity/live-l2/safari-scam-24.jpg"
+    },
+    {
+      "caption": "Safari · scam-25",
+      "path": "img/figma-parity/live-l2/safari-scam-25.jpg"
+    },
+    {
+      "caption": "Safari · legit-12",
+      "path": "img/figma-parity/live-l2/safari-legit-12.jpg"
+    },
+    {
+      "caption": "Guardian: home",
+      "path": "img/figma-parity/live-l2/guardian-1-home.jpg"
+    },
+    {
+      "caption": "Guardian: activity",
+      "path": "img/figma-parity/live-l2/guardian-2-activity.jpg"
+    },
+    {
+      "caption": "Guardian: activity more",
+      "path": "img/figma-parity/live-l2/guardian-3-activity-more.jpg"
+    },
+    {
+      "caption": "Guardian: detail fkregs",
+      "path": "img/figma-parity/live-l2/guardian-4-detail-fkregs.jpg"
+    },
+    {
+      "caption": "Guardian: push simctl",
+      "path": "img/figma-parity/live-l2/guardian-5-push-simctl.jpg"
+    },
+    {
+      "caption": "Protected: home",
+      "path": "img/figma-parity/live-l2/protected-1-home.jpg"
+    },
+    {
+      "caption": "Protected: activity",
+      "path": "img/figma-parity/live-l2/protected-2-activity.jpg"
+    }
+  ]
+}

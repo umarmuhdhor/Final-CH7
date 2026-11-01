@@ -58,6 +58,7 @@ p(`- **Screens vs Figma:** ${rows.length} Figma frames checked. ${count.match ??
 p("- **Test 1, unusual fake data:** the screens still work. 2 small issues: a 39% warning says \"Risiko Tinggi\", and big counters don't shorten to \"999+\".");
 p(`- **Test 2a, scam detector on saved pages:** misses its targets. It blocks only ${s.scam.atLeast80} of ${scamN} scam pages (${pct(s.scam.atLeast80, scamN)}%, target 70%) and wrongly flags ${s.legit.atLeast30} of ${legitN} normal pages (target 0).`);
 p(`- **Test 2b/2c, real websites on two phones:** ${liveScam ? `one of the 2 live scam pages got a ${liveScam.scan.split(" ")[0]}% warning and reached the Guardian's app. ` : ""}The Guardian only sees it after turning Family mode on by hand. Push can't be tested on a laptop setup.`);
+p("- **Test 3, Imelda's link lists (`ai/test-layer2`):** offline, from the link alone, only 3 of 25 scam links are blocked. Live, with the real page, the extension blocks or warns on most scam pages that still exist. But it **wrongly blocks `mit.edu`** because that domain is on the public scam list.");
 p();
 
 // ---- legend
@@ -112,6 +113,7 @@ p();
 p("### Still open");
 p();
 p("| # | Problem | Where to see it | How bad |\n|---|---|---|---|");
+p("| 12 | **`mit.edu` is blocked** (100%, \"This site is known to cheat people\"). The domain is on the public scam list the AI server builds, so the extension blocks the whole real MIT site, and the Guardian gets it as a blocked site. The list needs an allowlist check for big real sites. | Test 3, `legit-12`; `live-l2/safari-legit-12.jpg`, `guardian-1-home.jpg` | 🔴 Team AI / lead |");
 p("| 6 | The Guardian sees nothing from the family after pairing. Family mode must be switched on by hand on Home first. Figma always shows the family. | `live/guardian-activity.jpg` (off) vs `guardian-activity-family.jpg` (on) | 🟠 |");
 p("| 7 | Push can't be tested on the laptop setup. The local server can't use HTTP/2, which Apple's push service needs, so every push logs `failed:network`. Production uses the deployed server, so this is only a test setup limit. A cloud staging server is needed for a full push test. | Test 2b/2c, step 4 | 🟠 |");
 p(`| 11 | The scam detector misses its targets: ${s.legit.atLeast30} normal pages flagged (target 0), ${scamMissed} scam pages missed, only ${pct(s.scam.atLeast80, scamN)}% of scams blocked (target 70%). | Test 2a | ⚪ Team AI |`);
@@ -317,6 +319,89 @@ if (live) {
     p();
 }
 
+// ---- test 3: ai/test-layer2 link datasets
+const l2File = join(here, "img/figma-parity/layer2-dataset-results.json");
+if (existsSync(l2File)) {
+    const l2 = JSON.parse(readFileSync(l2File, "utf8"));
+    const t = l2.summary;
+    const l2live = existsSync(join(here, "img/figma-parity/live-l2/live-results.json")) ? read("img/figma-parity/live-l2/live-results.json") : null;
+    const l2dns = existsSync(join(here, "img/figma-parity/layer2-dataset-dns.json")) ? read("img/figma-parity/layer2-dataset-dns.json") : [];
+    const liveRow = Object.fromEntries((l2live?.rows ?? []).map((r) => [r.id, r]));
+    const dsLink = (r) => {
+        const lines = readFileSync(join(here, "../../..", r.file), "utf8").split("\n");
+        const n = lines.findIndex((l) => l.includes(r.url)) + 1;
+        return `[\`${r.id}\`](../../../${r.file}#L${n})`;
+    };
+    p("## Test 3: Imelda's link datasets (`ai/test-layer2`)");
+    p();
+    p(`**What it checks:** the link lists in \`ai/test-layer2/dataset.md\` (${t.counts.scam} scam links) and \`dataset-legit.md\` (${t.counts.legit} normal links). These are links only, with no saved page. Two parts:`);
+    p();
+    p("- **3a, offline:** each link goes through all 4 layers like Test 2a. L1 = the public scam list, matched the same way as the extension. L2 = the real detector. L3–4 = the server, which only gets the link (no page text).");
+    p(`- **3b, live:** Maria's Safari opens every link that still exists (${l2dns.filter((d) => d.resolves).length} of ${l2dns.length}), with the extension on. Each screenshot shows what the extension showed on that page.`);
+    p();
+    p("**Result:**");
+    p();
+    p("| Check | Target | Result | |\n|---|---|---|---|");
+    p(`| Scam links blocked (80 or more) | at least 70% | ${t.scam.atLeast80} of ${t.counts.scam} = ${pct(t.scam.atLeast80, t.counts.scam)}% | ${pass(t.scam.atLeast80 / t.counts.scam >= 0.7)} |`);
+    p(`| Scam links scoring 50 or more | at least 90% | ${t.scam.atLeast50} of ${t.counts.scam} = ${pct(t.scam.atLeast50, t.counts.scam)}% | ${pass(t.scam.atLeast50 / t.counts.scam >= 0.9)} |`);
+    p(`| Scam links that got any warning (30 or more) | no target | ${t.scam.atLeast30} of ${t.counts.scam} = ${pct(t.scam.atLeast30, t.counts.scam)}% | |`);
+    p(`| Scam links on the public scam list (L1) | no target | ${t.scam.blocklist} of ${t.counts.scam} | |`);
+    p(`| Normal links wrongly flagged (30 or more) | 0 | ${t.legit.atLeast30} of ${t.counts.legit} | ${pass(t.legit.atLeast30 === 0)} |`);
+    p(`| Server errors | 0 | ${t.remoteFailures} | ${pass(t.remoteFailures === 0)} |`);
+    p();
+    if (l2live) {
+        const opened = l2live.rows.filter((r) => r.label === "scam");
+        const lv = (r) => (r.scan === "none" ? 0 : Number(r.scan.split(" ")[0]));
+        const lvBlocked = opened.filter((r) => lv(r) >= 80).length;
+        const lvWarned = opened.filter((r) => lv(r) >= 30 && lv(r) < 80).length;
+        const legitWrong = l2live.rows.filter((r) => r.label === "legit" && r.scan !== "none").length;
+        p("**Live result (3b),** on the pages that still exist:");
+        p();
+        p("| What | Result | |\n|---|---|---|");
+        p(`| Scam pages blocked by the extension | ${lvBlocked} of ${opened.length} = ${pct(lvBlocked, opened.length)}% (target 70%) | ${pass(lvBlocked / opened.length >= 0.7)} |`);
+        p(`| Scam pages with a warning (30 to 79) | ${lvWarned} of ${opened.length} | ⚠️ |`);
+        p(`| Scam pages with no warning | ${opened.length - lvBlocked - lvWarned} of ${opened.length}: 5 missed (under 30), 2 blank pages, 1 stopped by Safari's own warning first | ❌ |`);
+        p(`| Normal pages blocked or warned | ${legitWrong} of ${l2live.rows.filter((r) => r.label === "legit").length} (\`mit.edu\`, problem 12) | ${legitWrong ? "❌" : "✅"} |`);
+        p("| Scans in the Guardian's app | Every scan of 30 or more shows in Adhella's Home and Activity with Maria's name | ✅ |");
+        p("| Push to the Guardian | The first 10 were tried and failed with `failed:network` (laptop setup, problem 7). The last 4 got none: the server sends at most 10 pushes per 10 minutes to one Guardian (`PUSH_CAP` in `backend/api/src/services/push/notify.ts`), by design. | ⚠️ |");
+        p();
+        p("**Live is much better than offline** because the real page adds layers 3 and 4: the server reads the page text and forms (OTP, PIN, \"code sent to your phone\"). Offline, the server only gets the link.");
+        p();
+        p("**Missed live:** a fake KlikBCA login on `sites.google.com` (0%), a Blogger page (0%), two Telegram sign-up forms on Blogger (13% and 24%), and a page behind Cloudflare's own phishing warning (24%). `m-pajak.top` and `apply.wozspace.site` showed a blank page, so there was nothing to check.");
+        p();
+        p(`Raw count: ${l2live.summary} Quiet hours were switched off for this run, like on 2026-10-31.`);
+        p();
+    }
+    p("**How to read the table:** \"Offline\" is the 3a score. \"Extension showed\" is what the Safari screenshot shows (3b). Click a screenshot to see it full size. The link name goes to its line in the dataset file.");
+    p();
+    const cell = (v) => (v === "—" || v === undefined ? "n/a" : v);
+    const shotOf = (id) => (existsSync(join(here, `img/figma-parity/live-l2/safari-${id}.jpg`)) ? `<a href="img/figma-parity/live-l2/safari-${id}.jpg">${img(`img/figma-parity/live-l2/safari-${id}.jpg`, 120)}</a>` : "not opened (site gone)");
+    const head = "| Link | Should get | Offline | Why | Extension showed (3b) | Screenshot | Sent to server | Push |\n|---|---|---|---|---|---|---|---|";
+    const row = (r) => {
+        const lv = liveRow[r.id];
+        p(`| ${dsLink(r)}<br><code>${r.host}</code><br>${r.note} | ${expected(r)} | **${r.score}** ${right(r)} | ${signals(r.signals)} | ${cell(lv?.live)} | ${shotOf(r.id)} | ${cell(lv?.scan)} | ${cell(lv?.push)} |`);
+    };
+    p("### Scam links");
+    p();
+    p(head);
+    l2.results.filter((r) => r.label === "scam").forEach(row);
+    p();
+    p("### Normal links");
+    p();
+    p(head);
+    l2.results.filter((r) => r.label === "legit").forEach(row);
+    p();
+    const appShots = (l2live?.shots ?? []).filter((x) => !x.path.includes("/safari-"));
+    if (appShots.length) {
+        p("### What our app showed after the visit");
+        p();
+        p("| " + appShots.map((x) => x.caption).join(" | ") + " |");
+        p("|" + appShots.map(() => "---").join("|") + "|");
+        p("| " + appShots.map((x) => img(x.path, 140)).join(" | ") + " |");
+        p();
+    }
+}
+
 // ---- rerun
 p("## How to run it again");
 p();
@@ -336,8 +421,14 @@ p("TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -
 p("TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -only-testing:ShooAppUITests/LiveQAUITests/testProtectedJoins  # Protected sim");
 p("bash plan/alief/qa/live-visit.sh <protected-udid>");
 p("# then write live/observations.json from the shots, and");
-p("node plan/alief/qa/live-results.mjs");
+p("node plan/alief/qa/live-results.mjs live corpus-results.json <run start> <run end>");
 p("xcrun simctl push <guardian-udid> com.aliefauzan.shoo plan/alief/qa/push-live-warning.apns   # app side of the push");
+p("# Test 3: ai/test-layer2 links (3a offline, then 3b live; the AI server allows 300 /analyze calls per 10 min)");
+p("node plan/alief/qa/layer2-dataset-test.mjs");
+p("node plan/alief/qa/corpus-dns.mjs plan/alief/qa/img/figma-parity/layer2-dataset-results.json plan/alief/qa/img/figma-parity/layer2-dataset-dns.json");
+p("bash plan/alief/qa/live-visit.sh <protected-udid> 15 img/figma-parity/layer2-dataset-dns.json img/figma-parity/live-l2");
+p("# then write live-l2/observations.json from the shots, and");
+p("node plan/alief/qa/live-results.mjs live-l2 layer2-dataset-results.json <run start> <run end>");
 p("node plan/alief/qa/figma-parity-report.mjs");
 p("```");
 p();

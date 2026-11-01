@@ -341,7 +341,7 @@
       "id": "trap-berita-waspada-penipuan",
       "label": "legit",
       "offline": 20,
-      "live": "Safari \"This Connection Is Not Private\" (certificate for another host); no badge",
+      "live": "Safari \"This Connection Is Not Private\" (the certificate is for another site); no badge",
       "scan": "none",
       "push": "—"
     },
@@ -357,7 +357,7 @@
       "id": "lphone-login",
       "label": "scam",
       "offline": 39,
-      "live": "redirects to the real icloud.com Find Devices; 0% badge (cloaked kit)",
+      "live": "redirects to the real icloud.com Find Devices; 0% badge (the scam hides itself from this visit)",
       "scan": "none",
       "push": "—"
     }

@@ -8,6 +8,7 @@ Run on 2026-11-01 (first run 2026-10-31). Branch `feat/GD-01-home-figma`, PR #22
 - **Test 1, unusual fake data:** the screens still work. 2 small issues: a 39% warning says "Risiko Tinggi", and big counters don't shorten to "999+".
 - **Test 2a, scam detector on saved pages:** misses its targets. It blocks only 15 of 52 scam pages (29%, target 70%) and wrongly flags 4 of 56 normal pages (target 0).
 - **Test 2b/2c, real websites on two phones:** one of the 2 live scam pages got a 76% warning and reached the Guardian's app. The Guardian only sees it after turning Family mode on by hand. Push can't be tested on a laptop setup.
+- **Test 3, Imelda's link lists (`ai/test-layer2`):** offline, from the link alone, only 3 of 25 scam links are blocked. Live, with the real page, the extension blocks or warns on most scam pages that still exist. But it **wrongly blocks `mit.edu`** because that domain is on the public scam list.
 
 ## How to read this report
 
@@ -62,6 +63,7 @@ Found outside the screen-by-screen tables. First seen on 2026-10-31, checked aga
 
 | # | Problem | Where to see it | How bad |
 |---|---|---|---|
+| 12 | **`mit.edu` is blocked** (100%, "This site is known to cheat people"). The domain is on the public scam list the AI server builds, so the extension blocks the whole real MIT site, and the Guardian gets it as a blocked site. The list needs an allowlist check for big real sites. | Test 3, `legit-12`; `live-l2/safari-legit-12.jpg`, `guardian-1-home.jpg` | 🔴 Team AI / lead |
 | 6 | The Guardian sees nothing from the family after pairing. Family mode must be switched on by hand on Home first. Figma always shows the family. | `live/guardian-activity.jpg` (off) vs `guardian-activity-family.jpg` (on) | 🟠 |
 | 7 | Push can't be tested on the laptop setup. The local server can't use HTTP/2, which Apple's push service needs, so every push logs `failed:network`. Production uses the deployed server, so this is only a test setup limit. A cloud staging server is needed for a full push test. | Test 2b/2c, step 4 | 🟠 |
 | 11 | The scam detector misses its targets: 4 normal pages flagged (target 0), 15 scam pages missed, only 29% of scams blocked (target 70%). | Test 2a | ⚪ Team AI |
@@ -472,7 +474,7 @@ Raw count: 45 pages opened (43 legit, 2 scam). 1 reached the server as a scan (s
 | Page | Type | Offline score (2a) | What Safari showed | Sent to server | Push |
 |---|---|---|---|---|---|
 | [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam | 21 | **76% High risk popup** ("This site looks suspicious", "Link sent to Adhella", Leave this page / Continue anyway), copy in English | 76 warning | failed:network |
-| [`lphone-login`](../../../ai/eval/data/scam/seed.json#L3)<br>[view](corpus-view/lphone-login.html) | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (cloaked kit) | none | n/a |
+| [`lphone-login`](../../../ai/eval/data/scam/seed.json#L3)<br>[view](corpus-view/lphone-login.html) | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (the scam hides itself from this visit) | none | n/a |
 
 <details><summary>43 normal pages</summary>
 
@@ -520,7 +522,7 @@ Raw count: 45 pages opened (43 legit, 2 scam). 1 reached the server as a scan (s
 | [`trap-cloud-storage`](../../../ai/eval/data/legit/seed.json#L112)<br>[view](corpus-view/trap-cloud-storage.html) | normal | 0 | redirects to a sedo.com parking page (cookie dialog); 0% badge | none | n/a |
 | [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal | 49 | blog post now 404; **24% badge** (under 30, nothing sent) | none | n/a |
 | [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal | 34 | GitHub Pages 404; badge collapsed to a dot | none | n/a |
-| [`trap-berita-waspada-penipuan`](../../../ai/eval/data/legit/traps.json#L253)<br>[view](corpus-view/trap-berita-waspada-penipuan.html) | normal | 20 | Safari "This Connection Is Not Private" (certificate for another host); no badge | none | n/a |
+| [`trap-berita-waspada-penipuan`](../../../ai/eval/data/legit/traps.json#L253)<br>[view](corpus-view/trap-berita-waspada-penipuan.html) | normal | 20 | Safari "This Connection Is Not Private" (the certificate is for another site); no badge | none | n/a |
 
 </details>
 
@@ -556,6 +558,107 @@ Pairing (`LiveQAUITests`): both phones go through onboarding in Bahasa Indonesia
 
 </details>
 
+## Test 3: Imelda's link datasets (`ai/test-layer2`)
+
+**What it checks:** the link lists in `ai/test-layer2/dataset.md` (25 scam links) and `dataset-legit.md` (23 normal links). These are links only, with no saved page. Two parts:
+
+- **3a, offline:** each link goes through all 4 layers like Test 2a. L1 = the public scam list, matched the same way as the extension. L2 = the real detector. L3–4 = the server, which only gets the link (no page text).
+- **3b, live:** Maria's Safari opens every link that still exists (44 of 48), with the extension on. Each screenshot shows what the extension showed on that page.
+
+**Result:**
+
+| Check | Target | Result | |
+|---|---|---|---|
+| Scam links blocked (80 or more) | at least 70% | 3 of 25 = 12% | ❌ fail |
+| Scam links scoring 50 or more | at least 90% | 3 of 25 = 12% | ❌ fail |
+| Scam links that got any warning (30 or more) | no target | 11 of 25 = 44% | |
+| Scam links on the public scam list (L1) | no target | 3 of 25 | |
+| Normal links wrongly flagged (30 or more) | 0 | 1 of 23 | ❌ fail |
+| Server errors | 0 | 0 | ✅ pass |
+
+**Live result (3b),** on the pages that still exist:
+
+| What | Result | |
+|---|---|---|
+| Scam pages blocked by the extension | 7 of 21 = 33% (target 70%) | ❌ fail |
+| Scam pages with a warning (30 to 79) | 6 of 21 | ⚠️ |
+| Scam pages with no warning | 8 of 21: 5 missed (under 30), 2 blank pages, 1 stopped by Safari's own warning first | ❌ |
+| Normal pages blocked or warned | 1 of 23 (`mit.edu`, problem 12) | ❌ |
+| Scans in the Guardian's app | Every scan of 30 or more shows in Adhella's Home and Activity with Maria's name | ✅ |
+| Push to the Guardian | The first 10 were tried and failed with `failed:network` (laptop setup, problem 7). The last 4 got none: the server sends at most 10 pushes per 10 minutes to one Guardian (`PUSH_CAP` in `backend/api/src/services/push/notify.ts`), by design. | ⚠️ |
+
+**Live is much better than offline** because the real page adds layers 3 and 4: the server reads the page text and forms (OTP, PIN, "code sent to your phone"). Offline, the server only gets the link.
+
+**Missed live:** a fake KlikBCA login on `sites.google.com` (0%), a Blogger page (0%), two Telegram sign-up forms on Blogger (13% and 24%), and a page behind Cloudflare's own phishing warning (24%). `m-pajak.top` and `apply.wozspace.site` showed a blank page, so there was nothing to check.
+
+Raw count: 44 pages opened (23 legit, 21 scam). 14 reached the server as a scan (score ≥ 30), 10 Guardian push attempt(s) in push_log. Quiet hours were switched off for this run, like on 2026-10-31.
+
+**How to read the table:** "Offline" is the 3a score. "Extension showed" is what the Safari screenshot shows (3b). Click a screenshot to see it full size. The link name goes to its line in the dataset file.
+
+### Scam links
+
+| Link | Should get | Offline | Why | Extension showed (3b) | Screenshot | Sent to server | Push |
+|---|---|---|---|---|---|---|---|
+| [`scam-01`](../../../ai/test-layer2/dataset.md#L12)<br><code>bni-diirect.com</code><br>BNI Direct — login perusahaan palsu | ≥ 80 % · scam, block it | **30** ⚠️ only warned | lookalike_domain (L2, +10), new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-02`](../../../ai/test-layer2/dataset.md#L13)<br><code>bni-directbni.com</code><br>BNI Direct — login perusahaan palsu | ≥ 80 % · scam, block it | **30** ⚠️ only warned | lookalike_domain (L2, +10), new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-03`](../../../ai/test-layer2/dataset.md#L14)<br><code>qlolla-bybri.com</code><br>BRI QLola — login palsu | ≥ 80 % · scam, block it | **34** ⚠️ only warned | brand_plus_keyword (L2, +14), new_domain (L3, +20) | **Blocked page, 100%** ("Pretends to be BRI", "This site was made 11 days ago", "Link sent to Adhella") | <a href="img/figma-parity/live-l2/safari-scam-03.jpg"><img src="img/figma-parity/live-l2/safari-scam-03.jpg" width="120"></a> | 100 blocked | failed:network |
+| [`scam-04`](../../../ai/test-layer2/dataset.md#L15)<br><code>cusbsi.com</code><br>BSI Cash Management — login palsu | ≥ 80 % · scam, block it | **20** ❌ missed | new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-05`](../../../ai/test-layer2/dataset.md#L16)<br><code>kodepembatalanbybni.pages.dev</code><br>BNI — pembatalan transaksi palsu | ≥ 80 % · scam, block it | **33** ⚠️ only warned | brand_plus_keyword (L2, +14), suspicious_link (L2, +19) | **Blocked page, 88%** ("Pretends to be BNI", address looks like scammers' ones) | <a href="img/figma-parity/live-l2/safari-scam-05.jpg"><img src="img/figma-parity/live-l2/safari-scam-05.jpg" width="120"></a> | 88 blocked | failed:network |
+| [`scam-06`](../../../ai/test-layer2/dataset.md#L17)<br><code>sites.google.com</code><br>BCA — pengembalian dana palsu | ≥ 80 % · scam, block it | **0** ❌ missed | none | fake KlikBCA login (User ID + PIN) loads; **0% badge** (missed: the page is on sites.google.com) | <a href="img/figma-parity/live-l2/safari-scam-06.jpg"><img src="img/figma-parity/live-l2/safari-scam-06.jpg" width="120"></a> | none | n/a |
+| [`scam-07`](../../../ai/test-layer2/dataset.md#L18)<br><code>yaigsjv.1238bll.my.id</code><br>GoPay — aktivasi/pemulihan akun palsu | ≥ 80 % · scam, block it | **33** ⚠️ only warned | suspicious_link (L2, +13), new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-08`](../../../ai/test-layer2/dataset.md#L19)<br><code>m-pajak.top</code><br>DJP/M-Pajak — login pajak palsu | ≥ 80 % · scam, block it | **25** ❌ missed | cheap_tld (L2, +5), new_domain (L3, +20) | blank white page, nothing loaded; no badge | <a href="img/figma-parity/live-l2/safari-scam-08.jpg"><img src="img/figma-parity/live-l2/safari-scam-08.jpg" width="120"></a> | none | n/a |
+| [`scam-09`](../../../ai/test-layer2/dataset.md#L20)<br><code>storee-dp9hsk1cxr2y.edgeone.dev</code><br>Agoda Indonesia — bantuan/login palsu | ≥ 80 % · scam, block it | **100** ✅ blocked | db_match (L1, +100), suspicious_link (L2, +11) | **Blocked page, 100%** ("This site is known to cheat people": edgeone.dev is on the public scam list) | <a href="img/figma-parity/live-l2/safari-scam-09.jpg"><img src="img/figma-parity/live-l2/safari-scam-09.jpg" width="120"></a> | 100 blocked | failed:network |
+| [`scam-10`](../../../ai/test-layer2/dataset.md#L21)<br><code>storee-dp8iiud7biuu.edgeone.dev</code><br>Agoda Indonesia — verifikasi palsu | ≥ 80 % · scam, block it | **100** ✅ blocked | db_match (L1, +100) | **Blocked page, 100%** (same as scam-09, public scam list) | <a href="img/figma-parity/live-l2/safari-scam-10.jpg"><img src="img/figma-parity/live-l2/safari-scam-10.jpg" width="120"></a> | 100 blocked | failed:network |
+| [`scam-11`](../../../ai/test-layer2/dataset.md#L22)<br><code>deddydanchika.blogspot.com</code><br>Facebook — login untuk menonton video | ≥ 80 % · scam, block it | **0** ❌ missed | none | Blogger page "Video Mesum Deddy Dan Chika", no posts; **0% badge** (missed) | <a href="img/figma-parity/live-l2/safari-scam-11.jpg"><img src="img/figma-parity/live-l2/safari-scam-11.jpg" width="120"></a> | none | n/a |
+| [`scam-12`](../../../ai/test-layer2/dataset.md#L23)<br><code>registers-app15.fkregs-on.com</code><br>Bantuan laptop sekolah palsu → Telegram | ≥ 80 % · scam, block it | **31** ⚠️ only warned | suspicious_link (L2, +21), new_domain (L3, +10) | **Blocked page, 86%** ("Asks for the code sent to your phone") | <a href="img/figma-parity/live-l2/safari-scam-12.jpg"><img src="img/figma-parity/live-l2/safari-scam-12.jpg" width="120"></a> | 86 blocked | failed:network |
+| [`scam-13`](../../../ai/test-layer2/dataset.md#L24)<br><code>regs-apps14.regnows-dfg.com</code><br>Bantuan laptop/ponsel mahasiswa palsu → Telegram | ≥ 80 % · scam, block it | **21** ❌ missed | suspicious_link (L2, +21) | **76% popup** "This site looks suspicious" (Leave this page / Continue anyway) | <a href="img/figma-parity/live-l2/safari-scam-13.jpg"><img src="img/figma-parity/live-l2/safari-scam-13.jpg" width="120"></a> | 76 warning | failed:network |
+| [`scam-14`](../../../ai/test-layer2/dataset.md#L25)<br><code>pendaftaran-umum04.thems.blog</code><br>Bantuan bibit ikan palsu → Telegram | ≥ 80 % · scam, block it | **12** ❌ missed | suspicious_link (L2, +12) | **67% popup** "This site looks suspicious" | <a href="img/figma-parity/live-l2/safari-scam-14.jpg"><img src="img/figma-parity/live-l2/safari-scam-14.jpg" width="120"></a> | 67 warning | failed:network |
+| [`scam-15`](../../../ai/test-layer2/dataset.md#L26)<br><code>apply.wozspace.site</code><br>Sembako Ramadhan Pertamina palsu → Telegram | ≥ 80 % · scam, block it | **5** ❌ missed | cheap_tld (L2, +5) | blank white page, nothing loaded; no badge | <a href="img/figma-parity/live-l2/safari-scam-15.jpg"><img src="img/figma-parity/live-l2/safari-scam-15.jpg" width="120"></a> | none | n/a |
+| [`scam-16`](../../../ai/test-layer2/dataset.md#L27)<br><code>registersw-app17.fkregs-on.com</code><br>Pendaftaran/BSU palsu → Telegram | ≥ 80 % · scam, block it | **31** ⚠️ only warned | suspicious_link (L2, +21), new_domain (L3, +10) | **Blocked page, 86%** (same kit as scam-12) | <a href="img/figma-parity/live-l2/safari-scam-16.jpg"><img src="img/figma-parity/live-l2/safari-scam-16.jpg" width="120"></a> | 86 blocked | failed:network |
+| [`scam-17`](../../../ai/test-layer2/dataset.md#L28)<br><code>login-mybca-bisnis.ibcbank-aceh.com</code><br>myBCA Bisnis — login perusahaan palsu | ≥ 80 % · scam, block it | **24** ❌ missed | brand_plus_keyword (L2, +14), new_domain (L3, +10) | Cloudflare's own "Suspected Phishing" page in front of the site; **24% badge** | <a href="img/figma-parity/live-l2/safari-scam-17.jpg"><img src="img/figma-parity/live-l2/safari-scam-17.jpg" width="120"></a> | none | n/a |
+| [`scam-18`](../../../ai/test-layer2/dataset.md#L29)<br><code>www.cuz-bankkbsi.com</code><br>CUZ by BSI — login perusahaan palsu | ≥ 80 % · scam, block it | **45** ⚠️ only warned | lookalike_domain (L2, +25), new_domain (L3, +20) | parked page with loan ads; **45% banner** "Be careful: this address looks like BSI's" | <a href="img/figma-parity/live-l2/safari-scam-18.jpg"><img src="img/figma-parity/live-l2/safari-scam-18.jpg" width="120"></a> | 45 warning | failed:network |
+| [`scam-19`](../../../ai/test-layer2/dataset.md#L30)<br><code>shopeeofficial-refund.vercel.app</code><br>Shopee — pengembalian dana palsu | ≥ 80 % · scam, block it | **24** ❌ missed | suspicious_link (L2, +24) | Safari's own red "Deceptive Website Warning" (page not loaded); no Shoo badge | <a href="img/figma-parity/live-l2/safari-scam-19.jpg"><img src="img/figma-parity/live-l2/safari-scam-19.jpg" width="120"></a> | none | n/a |
+| [`scam-20`](../../../ai/test-layer2/dataset.md#L31)<br><code>viinwkwk-dot.github.io</code><br>Instagram — login palsu berbahasa Indonesia | ≥ 80 % · scam, block it | **0** ❌ missed | none | fake Instagram login; **45% banner** "Be careful" | <a href="img/figma-parity/live-l2/safari-scam-20.jpg"><img src="img/figma-parity/live-l2/safari-scam-20.jpg" width="120"></a> | 45 warning | failed:network |
+| [`scam-21`](../../../ai/test-layer2/dataset.md#L32)<br><code>helpnets.info</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **100** ✅ blocked | db_match (L1, +100), suspicious_link (L2, +34) | **Blocked page, 100%** (public scam list) | <a href="img/figma-parity/live-l2/safari-scam-21.jpg"><img src="img/figma-parity/live-l2/safari-scam-21.jpg" width="120"></a> | 100 blocked | none |
+| [`scam-22`](../../../ai/test-layer2/dataset.md#L33)<br><code>d33wubrfki0l68.cloudfront.net</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **18** ❌ missed | suspicious_link (L2, +18) | **63% popup** "This site looks suspicious" | <a href="img/figma-parity/live-l2/safari-scam-22.jpg"><img src="img/figma-parity/live-l2/safari-scam-22.jpg" width="120"></a> | 63 warning | none |
+| [`scam-23`](../../../ai/test-layer2/dataset.md#L8)<br><code>simgratisonine.blogspot.com</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **13** ❌ missed | suspicious_link (L2, +13) | fake SIM A/B/C/D sign-up via Telegram; **13% badge** (missed) | <a href="img/figma-parity/live-l2/safari-scam-23.jpg"><img src="img/figma-parity/live-l2/safari-scam-23.jpg" width="120"></a> | none | n/a |
+| [`scam-24`](../../../ai/test-layer2/dataset.md#L35)<br><code>bantuannbansos2026.blogspot.com</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **24** ❌ missed | suspicious_link (L2, +24) | "Register now" form asking name, province and phone for Telegram; **24% badge** (missed) | <a href="img/figma-parity/live-l2/safari-scam-24.jpg"><img src="img/figma-parity/live-l2/safari-scam-24.jpg" width="120"></a> | none | n/a |
+| [`scam-25`](../../../ai/test-layer2/dataset.md#L36)<br><code>gratiskuota60gb.blogspot.com</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **24** ❌ missed | suspicious_link (L2, +24) | free 60 GB data form asking name and Telegram number; **39% banner** "Be careful" | <a href="img/figma-parity/live-l2/safari-scam-25.jpg"><img src="img/figma-parity/live-l2/safari-scam-25.jpg" width="120"></a> | 39 warning | none |
+
+### Normal links
+
+| Link | Should get | Offline | Why | Extension showed (3b) | Screenshot | Sent to server | Push |
+|---|---|---|---|---|---|---|---|
+| [`legit-01`](../../../ai/test-layer2/dataset-legit.md#L12)<br><code>github.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-01.jpg"><img src="img/figma-parity/live-l2/safari-legit-01.jpg" width="120"></a> | none | n/a |
+| [`legit-02`](../../../ai/test-layer2/dataset-legit.md#L13)<br><code>www.wikipedia.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-02.jpg"><img src="img/figma-parity/live-l2/safari-legit-02.jpg" width="120"></a> | none | n/a |
+| [`legit-03`](../../../ai/test-layer2/dataset-legit.md#L14)<br><code>www.rfc-editor.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-03.jpg"><img src="img/figma-parity/live-l2/safari-legit-03.jpg" width="120"></a> | none | n/a |
+| [`legit-04`](../../../ai/test-layer2/dataset-legit.md#L15)<br><code>www.python.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-04.jpg"><img src="img/figma-parity/live-l2/safari-legit-04.jpg" width="120"></a> | none | n/a |
+| [`legit-05`](../../../ai/test-layer2/dataset-legit.md#L16)<br><code>www.debian.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-05.jpg"><img src="img/figma-parity/live-l2/safari-legit-05.jpg" width="120"></a> | none | n/a |
+| [`legit-06`](../../../ai/test-layer2/dataset-legit.md#L17)<br><code>www.kernel.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-06.jpg"><img src="img/figma-parity/live-l2/safari-legit-06.jpg" width="120"></a> | none | n/a |
+| [`legit-07`](../../../ai/test-layer2/dataset-legit.md#L18)<br><code>www.mozilla.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-07.jpg"><img src="img/figma-parity/live-l2/safari-legit-07.jpg" width="120"></a> | none | n/a |
+| [`legit-08`](../../../ai/test-layer2/dataset-legit.md#L19)<br><code>www.eff.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-08.jpg"><img src="img/figma-parity/live-l2/safari-legit-08.jpg" width="120"></a> | none | n/a |
+| [`legit-09`](../../../ai/test-layer2/dataset-legit.md#L20)<br><code>www.archive.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-09.jpg"><img src="img/figma-parity/live-l2/safari-legit-09.jpg" width="120"></a> | none | n/a |
+| [`legit-10`](../../../ai/test-layer2/dataset-legit.md#L21)<br><code>www.nasa.gov</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-10.jpg"><img src="img/figma-parity/live-l2/safari-legit-10.jpg" width="120"></a> | none | n/a |
+| [`legit-11`](../../../ai/test-layer2/dataset-legit.md#L22)<br><code>www.loc.gov</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-11.jpg"><img src="img/figma-parity/live-l2/safari-legit-11.jpg" width="120"></a> | none | n/a |
+| [`legit-12`](../../../ai/test-layer2/dataset-legit.md#L23)<br><code>www.mit.edu</code><br>dari Imelda | < 30 % · not scam, show nothing | **100** ❌ wrongly flagged | db_match (L1, +100) | **Blocked page, 100%** ("This site is known to cheat people"): mit.edu is on the public scam list. Wrong block. | <a href="img/figma-parity/live-l2/safari-legit-12.jpg"><img src="img/figma-parity/live-l2/safari-legit-12.jpg" width="120"></a> | 100 blocked | none |
+| [`legit-13`](../../../ai/test-layer2/dataset-legit.md#L24)<br><code>www.berkeley.edu</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-13.jpg"><img src="img/figma-parity/live-l2/safari-legit-13.jpg" width="120"></a> | none | n/a |
+| [`legit-14`](../../../ai/test-layer2/dataset-legit.md#L25)<br><code>www.cloudflare.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-14.jpg"><img src="img/figma-parity/live-l2/safari-legit-14.jpg" width="120"></a> | none | n/a |
+| [`legit-15`](../../../ai/test-layer2/dataset-legit.md#L26)<br><code>developer.apple.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-15.jpg"><img src="img/figma-parity/live-l2/safari-legit-15.jpg" width="120"></a> | none | n/a |
+| [`legit-16`](../../../ai/test-layer2/dataset-legit.md#L27)<br><code>docs.python.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-16.jpg"><img src="img/figma-parity/live-l2/safari-legit-16.jpg" width="120"></a> | none | n/a |
+| [`legit-17`](../../../ai/test-layer2/dataset-legit.md#L28)<br><code>medium.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-17.jpg"><img src="img/figma-parity/live-l2/safari-legit-17.jpg" width="120"></a> | none | n/a |
+| [`legit-18`](../../../ai/test-layer2/dataset-legit.md#L29)<br><code>blog.google</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-18.jpg"><img src="img/figma-parity/live-l2/safari-legit-18.jpg" width="120"></a> | none | n/a |
+| [`legit-19`](../../../ai/test-layer2/dataset-legit.md#L30)<br><code>vercel.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | cookie notice on top; 0% badge | <a href="img/figma-parity/live-l2/safari-legit-19.jpg"><img src="img/figma-parity/live-l2/safari-legit-19.jpg" width="120"></a> | none | n/a |
+| [`legit-20`](../../../ai/test-layer2/dataset-legit.md#L31)<br><code>deno.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-20.jpg"><img src="img/figma-parity/live-l2/safari-legit-20.jpg" width="120"></a> | none | n/a |
+| [`legit-21`](../../../ai/test-layer2/dataset-legit.md#L32)<br><code>developer.apple.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-21.jpg"><img src="img/figma-parity/live-l2/safari-legit-21.jpg" width="120"></a> | none | n/a |
+| [`legit-22`](../../../ai/test-layer2/dataset-legit.md#L33)<br><code>docs.github.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-22.jpg"><img src="img/figma-parity/live-l2/safari-legit-22.jpg" width="120"></a> | none | n/a |
+| [`legit-23`](../../../ai/test-layer2/dataset-legit.md#L34)<br><code>developer.mozilla.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | page now shows 404 Not Found; 0% badge | <a href="img/figma-parity/live-l2/safari-legit-23.jpg"><img src="img/figma-parity/live-l2/safari-legit-23.jpg" width="120"></a> | none | n/a |
+
+### What our app showed after the visit
+
+| Guardian: home | Guardian: activity | Guardian: activity more | Guardian: detail fkregs | Guardian: push simctl | Protected: home | Protected: activity |
+|---|---|---|---|---|---|---|
+| <img src="img/figma-parity/live-l2/guardian-1-home.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-2-activity.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-3-activity-more.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-4-detail-fkregs.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-5-push-simctl.jpg" width="140"> | <img src="img/figma-parity/live-l2/protected-1-home.jpg" width="140"> | <img src="img/figma-parity/live-l2/protected-2-activity.jpg" width="140"> |
+
 ## How to run it again
 
 ```bash
@@ -574,7 +677,13 @@ TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -onl
 TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -only-testing:ShooAppUITests/LiveQAUITests/testProtectedJoins  # Protected sim
 bash plan/alief/qa/live-visit.sh <protected-udid>
 # then write live/observations.json from the shots, and
-node plan/alief/qa/live-results.mjs
+node plan/alief/qa/live-results.mjs live corpus-results.json <run start> <run end>
 xcrun simctl push <guardian-udid> com.aliefauzan.shoo plan/alief/qa/push-live-warning.apns   # app side of the push
+# Test 3: ai/test-layer2 links (3a offline, then 3b live; the AI server allows 300 /analyze calls per 10 min)
+node plan/alief/qa/layer2-dataset-test.mjs
+node plan/alief/qa/corpus-dns.mjs plan/alief/qa/img/figma-parity/layer2-dataset-results.json plan/alief/qa/img/figma-parity/layer2-dataset-dns.json
+bash plan/alief/qa/live-visit.sh <protected-udid> 15 img/figma-parity/layer2-dataset-dns.json img/figma-parity/live-l2
+# then write live-l2/observations.json from the shots, and
+node plan/alief/qa/live-results.mjs live-l2 layer2-dataset-results.json <run start> <run end>
 node plan/alief/qa/figma-parity-report.mjs
 ```
