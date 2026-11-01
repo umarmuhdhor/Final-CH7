@@ -20,6 +20,9 @@ final class FamilyCodeModel {
     /// Longest a code lives (contracts/api.md). A device clock far from the server's never makes
     /// the countdown longer than this or stuck at zero.
     static let codeLifetime: TimeInterval = 30 * 60
+    /// "Refresh code" stays locked until the code has this long left, the same 5 min the server
+    /// keeps handing back the active code for. Tapping it sooner only spends `/family/code`'s rate limit.
+    static let replaceUnlocksAt = 5 * 60
     /// Members are re-read this often, so someone joining shows up while the code is on screen.
     static let membersInterval = 5
 
@@ -101,6 +104,14 @@ final class FamilyCodeModel {
         }
     }
 
+    /// "Refresh code" works once the code on screen is in its last 5 min (or there is none).
+    var canReplace: Bool { code == nil || secondsLeft <= Self.replaceUnlocksAt }
+
+    /// "24:59": how long until "Refresh code" unlocks.
+    var replaceUnlocksIn: String {
+        Duration.seconds(max(0, secondsLeft - Self.replaceUnlocksAt)).formatted(.time(pattern: .minuteSecond))
+    }
+
     /// Asks for the guardian's code. `replace` ("Refresh code") always gets a new one, and the old one
     /// stops working on the server; otherwise the server hands back the active code.
     func refreshCode(replace: Bool = false) async {
@@ -108,6 +119,8 @@ final class FamilyCodeModel {
             codeState = .full
             return
         }
+        // Locked while the code has time left: the one on screen keeps working.
+        if replace, !canReplace { return }
         if code == nil { codeState = .loading }
         do {
             let fresh = try await repository.createFamilyCode(refresh: replace)
@@ -127,6 +140,8 @@ final class FamilyCodeModel {
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Family code failed", error)
+            // A code with time left stays on screen (rate_limited, no connection): it still works.
+            if code != nil, !tick(), secondsLeft > 0 { return }
             expiry = nil
             codeState = isFull ? .full : .unavailable
             secondsLeft = 0

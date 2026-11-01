@@ -109,9 +109,16 @@ struct InviteSheet: View {
                     // A new code: the old one stops working, also in links already sent.
                     Task { await model.refreshCode(replace: true) }
                 } label: {
-                    Label("Refresh code", systemImage: "arrow.clockwise")
+                    if model.canReplace {
+                        Label("Refresh code", systemImage: "arrow.clockwise")
+                    } else {
+                        // Locked while the code has time left: it keeps working, so a new one isn't needed yet.
+                        Label("New code in \(model.replaceUnlocksIn)", systemImage: "lock.fill")
+                            .monospacedDigit()
+                    }
                 }
-                .buttonStyle(OnboardingLinkButtonStyle(color: Self.refreshBlue, weight: .semibold))
+                .buttonStyle(OnboardingLinkButtonStyle(color: model.canReplace ? Self.refreshBlue : OnboardingTheme.secondaryInk, weight: .semibold))
+                .disabled(!model.canReplace)
                 .accessibilityIdentifier("invite.refresh")
                 Text("Valid for \(model.timeLeft)")
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
