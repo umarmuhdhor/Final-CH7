@@ -21,7 +21,7 @@
       "id": "bank-login-danamon",
       "label": "legit",
       "offline": 0,
-      "live": "page still blank at 15 s, no badge yet",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -77,7 +77,7 @@
       "id": "checkout-ruparupa",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -85,7 +85,7 @@
       "id": "checkout-shopee-cart",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "Shopee language picker; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -93,7 +93,7 @@
       "id": "checkout-sociolla",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -101,7 +101,7 @@
       "id": "checkout-tokopedia-cart",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -109,7 +109,7 @@
       "id": "checkout-traveloka",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "app-download sheet on top; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -117,7 +117,7 @@
       "id": "checkout-zalora",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -125,7 +125,7 @@
       "id": "gov-bi",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -133,7 +133,7 @@
       "id": "gov-bpjs-kesehatan",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -141,7 +141,7 @@
       "id": "gov-dukcapil",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -149,7 +149,7 @@
       "id": "gov-kemensos",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -157,7 +157,7 @@
       "id": "gov-komdigi",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -165,7 +165,7 @@
       "id": "gov-ojk",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -173,7 +173,7 @@
       "id": "gov-pajak",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "PSA popup on top; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -181,7 +181,7 @@
       "id": "popular-cnnindonesia",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -189,7 +189,7 @@
       "id": "popular-detik",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -197,7 +197,7 @@
       "id": "popular-idntimes",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "ad interstitial; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -205,7 +205,7 @@
       "id": "popular-kompas",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "ad interstitial; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -213,7 +213,7 @@
       "id": "popular-kumparan",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -221,7 +221,7 @@
       "id": "popular-liputan6",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "ad interstitial; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -229,7 +229,7 @@
       "id": "popular-tribunnews",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -237,7 +237,7 @@
       "id": "popular-wikipedia-id",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -245,7 +245,7 @@
       "id": "bank-login-bni-web",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -253,7 +253,7 @@
       "id": "bank-login-mandiri-web",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "cookie notice on top; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -261,7 +261,7 @@
       "id": "checkout-bhinneka",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -269,7 +269,7 @@
       "id": "gov-kemenkeu",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -277,7 +277,7 @@
       "id": "popular-merdeka",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "ad interstitial; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -285,7 +285,7 @@
       "id": "official-tokopedia-home",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -293,7 +293,7 @@
       "id": "official-bca-home",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -301,7 +301,7 @@
       "id": "official-shopee-home",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "Shopee language picker; 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -309,7 +309,7 @@
       "id": "popular-wikipedia",
       "label": "legit",
       "offline": 0,
-      "live": "0% badge (Safari location prompt on top, left unanswered)",
+      "live": "0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -317,7 +317,7 @@
       "id": "trap-cloud-storage",
       "label": "legit",
       "offline": 0,
-      "live": "redirects to a sedo.com parking page; small 0% badge",
+      "live": "redirects to a sedo.com parking page (cookie dialog); 0% badge",
       "scan": "none",
       "push": "—"
     },
@@ -325,7 +325,7 @@
       "id": "trap-blog-cek-saldo-bca",
       "label": "legit",
       "offline": 49,
-      "live": "blog post now 404; 0% badge",
+      "live": "blog post now 404; **24% badge** (under 30, nothing sent)",
       "scan": "none",
       "push": "—"
     },
@@ -333,7 +333,7 @@
       "id": "trap-github-pages-dokumentasi",
       "label": "legit",
       "offline": 34,
-      "live": "GitHub Pages 404; small 0% badge",
+      "live": "GitHub Pages 404; badge collapsed to a dot",
       "scan": "none",
       "push": "—"
     },
@@ -341,7 +341,7 @@
       "id": "trap-berita-waspada-penipuan",
       "label": "legit",
       "offline": 20,
-      "live": "\"Safari can’t open the page\" (no server); badge dot only",
+      "live": "Safari \"This Connection Is Not Private\" (the certificate is for another site); no badge",
       "scan": "none",
       "push": "—"
     },
@@ -349,27 +349,41 @@
       "id": "regs-apps14-code-php",
       "label": "scam",
       "offline": 21,
-      "live": "**46% Waspada banner** (\"Asks for the code sent to your phone\"), copy in English",
-      "scan": "46 warning",
+      "live": "**76% High risk popup** (\"This site looks suspicious\", \"Link sent to Adhella\", Leave this page / Continue anyway), copy in English",
+      "scan": "76 warning",
       "push": "failed:network"
     },
     {
       "id": "lphone-login",
       "label": "scam",
       "offline": 39,
-      "live": "redirects to the real icloud.com Find Devices; 0% badge (cloaked kit)",
+      "live": "redirects to the real icloud.com Find Devices; 0% badge (the scam hides itself from this visit)",
       "scan": "none",
       "push": "—"
     }
   ],
   "scans": [
     {
-      "id": "9017be9d-e4d7-4237-b8fe-1b3e0cd15165",
+      "id": "b1c73a03-e6bc-428c-a4d5-64ac9d26074e",
       "domain": "regnows-dfg.com",
       "url": "https://regs-apps14.regnows-dfg.com/code.php",
-      "score": 46,
+      "score": 76,
       "status": "warning",
       "signals": [
+        {
+          "id": "unreasonable_request",
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "layer": 4,
+          "weight": 30,
+          "evidence": "PENDAFTARAN VIA TELEGRAM",
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
         {
           "id": "asks_otp",
           "label": {
@@ -399,52 +413,14 @@
           }
         }
       ],
-      "created_at": "2026-10-31T14:41:51.820245+00:00"
-    },
-    {
-      "id": "8c8002b0-be8b-4145-a9f3-378b4d0a14a1",
-      "domain": "regnows-dfg.com",
-      "url": "https://regs-apps14.regnows-dfg.com/code.php",
-      "score": 46,
-      "status": "warning",
-      "signals": [
-        {
-          "id": "asks_otp",
-          "label": {
-            "en": "Form asks for a one-time code (OTP)",
-            "id": "Form meminta kode sekali pakai (OTP)"
-          },
-          "layer": 3,
-          "weight": 25,
-          "evidence": "otp",
-          "labelSimple": {
-            "en": "Asks for the code sent to your phone",
-            "id": "Meminta kode yang dikirim ke HP kamu"
-          }
-        },
-        {
-          "id": "suspicious_link",
-          "label": {
-            "en": "The link looks suspicious (app-style name with a number, hyphen in the site name, bait word in path)",
-            "id": "Tautan terlihat mencurigakan (nama bergaya aplikasi dengan angka, tanda hubung di nama situs, kata umpan di path)"
-          },
-          "layer": 2,
-          "weight": 21,
-          "evidence": "word_digit_subdomain,hyphen_registrable,file_ext,path_bait",
-          "labelSimple": {
-            "en": "The address of this page looks like the ones scammers use",
-            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
-          }
-        }
-      ],
-      "created_at": "2026-10-31T14:40:45.358063+00:00"
+      "created_at": "2026-11-01T13:29:16.545461+00:00"
     }
   ],
   "pushes": [
     {
-      "scan_id": "9017be9d-e4d7-4237-b8fe-1b3e0cd15165",
+      "scan_id": "b1c73a03-e6bc-428c-a4d5-64ac9d26074e",
       "result": "failed:network",
-      "created_at": "2026-10-31T14:41:53.412465+00:00"
+      "created_at": "2026-11-01T13:29:17.464436+00:00"
     }
   ],
   "shots": [

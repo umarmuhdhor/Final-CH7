@@ -1,0 +1,542 @@
+{
+  "regs-apps14-code-php": {
+    "file": "ai/eval/data/scam/real.json",
+    "line": 3,
+    "view": "regs-apps14-code-php.html"
+  },
+  "cusbsi-bsi-cash-management": {
+    "file": "ai/eval/data/scam/real.json",
+    "line": 24,
+    "view": "cusbsi-bsi-cash-management.html"
+  },
+  "lphone-login": {
+    "file": "ai/eval/data/scam/seed.json",
+    "line": 3,
+    "view": "lphone-login.html"
+  },
+  "fixture-bca-verifikasi": {
+    "file": "ai/eval/data/scam/seed.json",
+    "line": 34,
+    "view": "fixture-bca-verifikasi.html"
+  },
+  "fixture-promo-shopee": {
+    "file": "ai/eval/data/scam/seed.json",
+    "line": 50,
+    "view": "fixture-promo-shopee.html"
+  },
+  "fixture-bansos-kemensos": {
+    "file": "ai/eval/data/scam/seed.json",
+    "line": 66,
+    "view": "fixture-bansos-kemensos.html"
+  },
+  "synthetic-p0stindonesia": {
+    "file": "ai/eval/data/scam/seed.json",
+    "line": 82,
+    "view": "synthetic-p0stindonesia.html"
+  },
+  "syn-bri-token-expired": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 3,
+    "view": "syn-bri-token-expired.html"
+  },
+  "syn-mandiri-livin-upgrade": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 57,
+    "view": "syn-mandiri-livin-upgrade.html"
+  },
+  "syn-bni-mobile-banking": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 103,
+    "view": "syn-bni-mobile-banking.html"
+  },
+  "syn-bsi-sharia-bonus": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 159,
+    "view": "syn-bsi-sharia-bonus.html"
+  },
+  "syn-bca-klikbca-clean": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 212,
+    "view": "syn-bca-klikbca-clean.html"
+  },
+  "syn-cimb-octo-limit": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 258,
+    "view": "syn-cimb-octo-limit.html"
+  },
+  "syn-bca-blokir-kartu": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 282,
+    "view": "syn-bca-blokir-kartu.html"
+  },
+  "syn-bri-cashback-survey": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 338,
+    "view": "syn-bri-cashback-survey.html"
+  },
+  "syn-mandiri-kyc-update": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 384,
+    "view": "syn-mandiri-kyc-update.html"
+  },
+  "syn-dana-kaget-bonus": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 438,
+    "view": "syn-dana-kaget-bonus.html"
+  },
+  "syn-ovo-upgrade-premier": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 484,
+    "view": "syn-ovo-upgrade-premier.html"
+  },
+  "syn-gopay-driver-refund": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 537,
+    "view": "syn-gopay-driver-refund.html"
+  },
+  "syn-shopeepay-limit": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 590,
+    "view": "syn-shopeepay-limit.html"
+  },
+  "syn-linkaja-hadiah": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 636,
+    "view": "syn-linkaja-hadiah.html"
+  },
+  "syn-dana-premium-pin": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 682,
+    "view": "syn-dana-premium-pin.html"
+  },
+  "syn-ovo-undian-grab": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 737,
+    "view": "syn-ovo-undian-grab.html"
+  },
+  "syn-gopay-later-pinjam": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 761,
+    "view": "syn-gopay-later-pinjam.html"
+  },
+  "syn-jne-paket-tertahan": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 814,
+    "view": "syn-jne-paket-tertahan.html"
+  },
+  "syn-jnt-tarif-selisih": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 867,
+    "view": "syn-jnt-tarif-selisih.html"
+  },
+  "syn-sicepat-apk": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 912,
+    "view": "syn-sicepat-apk.html"
+  },
+  "syn-anteraja-alamat": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 936,
+    "view": "syn-anteraja-alamat.html"
+  },
+  "syn-pos-kiriman-luar-negeri": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 981,
+    "view": "syn-pos-kiriman-luar-negeri.html"
+  },
+  "syn-tiki-nomor-resi": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1004,
+    "view": "syn-tiki-nomor-resi.html"
+  },
+  "syn-ninja-ganti-rugi": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1058,
+    "view": "syn-ninja-ganti-rugi.html"
+  },
+  "syn-tokopedia-undian": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1104,
+    "view": "syn-tokopedia-undian.html"
+  },
+  "syn-telkomsel-poin": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1151,
+    "view": "syn-telkomsel-poin.html"
+  },
+  "syn-lazada-giveaway": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1196,
+    "view": "syn-lazada-giveaway.html"
+  },
+  "syn-shopee-flash-undian": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1250,
+    "view": "syn-shopee-flash-undian.html"
+  },
+  "syn-bpjs-bonus-iuran": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1304,
+    "view": "syn-bpjs-bonus-iuran.html"
+  },
+  "syn-pertamina-subsidi": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1349,
+    "view": "syn-pertamina-subsidi.html"
+  },
+  "syn-bukalapak-voucher": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1402,
+    "view": "syn-bukalapak-voucher.html"
+  },
+  "syn-bpjs-kesehatan-nonaktif": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1447,
+    "view": "syn-bpjs-kesehatan-nonaktif.html"
+  },
+  "syn-pajak-djp-sptp": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1501,
+    "view": "syn-pajak-djp-sptp.html"
+  },
+  "syn-etilang-denda": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1554,
+    "view": "syn-etilang-denda.html"
+  },
+  "syn-samsat-pajak-kendaraan": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1600,
+    "view": "syn-samsat-pajak-kendaraan.html"
+  },
+  "syn-prakerja-gelombang": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1624,
+    "view": "syn-prakerja-gelombang.html"
+  },
+  "syn-dukcapil-ktp-digital": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1685,
+    "view": "syn-dukcapil-ktp-digital.html"
+  },
+  "syn-kemensos-bansos-pkh": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1738,
+    "view": "syn-kemensos-bansos-pkh.html"
+  },
+  "syn-icloud-terkunci": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1791,
+    "view": "syn-icloud-terkunci.html"
+  },
+  "syn-find-my-iphone-hilang": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1845,
+    "view": "syn-find-my-iphone-hilang.html"
+  },
+  "syn-apple-pay-tagihan": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1870,
+    "view": "syn-apple-pay-tagihan.html"
+  },
+  "syn-loker-admin-online": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1916,
+    "view": "syn-loker-admin-online.html"
+  },
+  "syn-pinjol-cair-cepat": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 1961,
+    "view": "syn-pinjol-cair-cepat.html"
+  },
+  "syn-investasi-kripto-profit": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 2014,
+    "view": "syn-investasi-kripto-profit.html"
+  },
+  "syn-olx-pembeli-cod": {
+    "file": "ai/eval/data/scam/synthetic.json",
+    "line": 2059,
+    "view": "syn-olx-pembeli-cod.html"
+  },
+  "bank-login-bri": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 3,
+    "view": "bank-login-bri.html"
+  },
+  "bank-login-btn": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 29,
+    "view": "bank-login-btn.html"
+  },
+  "bank-login-danamon": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 55,
+    "view": "bank-login-danamon.html"
+  },
+  "bank-login-klikbca": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 526,
+    "view": "bank-login-klikbca.html"
+  },
+  "bank-login-mega": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 578,
+    "view": "bank-login-mega.html"
+  },
+  "bank-login-permata": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 630,
+    "view": "bank-login-permata.html"
+  },
+  "checkout-bukalapak": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 687,
+    "view": "checkout-bukalapak.html"
+  },
+  "checkout-lazada": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 716,
+    "view": "checkout-lazada.html"
+  },
+  "checkout-orami": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 762,
+    "view": "checkout-orami.html"
+  },
+  "checkout-ruparupa": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 816,
+    "view": "checkout-ruparupa.html"
+  },
+  "checkout-shopee-cart": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 869,
+    "view": "checkout-shopee-cart.html"
+  },
+  "checkout-sociolla": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 898,
+    "view": "checkout-sociolla.html"
+  },
+  "checkout-tokopedia-cart": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 937,
+    "view": "checkout-tokopedia-cart.html"
+  },
+  "checkout-traveloka": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 979,
+    "view": "checkout-traveloka.html"
+  },
+  "checkout-zalora": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1017,
+    "view": "checkout-zalora.html"
+  },
+  "gov-bi": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1056,
+    "view": "gov-bi.html"
+  },
+  "gov-bpjs-kesehatan": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1093,
+    "view": "gov-bpjs-kesehatan.html"
+  },
+  "gov-dukcapil": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1119,
+    "view": "gov-dukcapil.html"
+  },
+  "gov-kemensos": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1161,
+    "view": "gov-kemensos.html"
+  },
+  "gov-komdigi": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1195,
+    "view": "gov-komdigi.html"
+  },
+  "gov-ojk": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1228,
+    "view": "gov-ojk.html"
+  },
+  "gov-pajak": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1271,
+    "view": "gov-pajak.html"
+  },
+  "popular-cnnindonesia": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1420,
+    "view": "popular-cnnindonesia.html"
+  },
+  "popular-detik": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1475,
+    "view": "popular-detik.html"
+  },
+  "popular-idntimes": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1550,
+    "view": "popular-idntimes.html"
+  },
+  "popular-kompas": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1589,
+    "view": "popular-kompas.html"
+  },
+  "popular-kumparan": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1659,
+    "view": "popular-kumparan.html"
+  },
+  "popular-liputan6": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1710,
+    "view": "popular-liputan6.html"
+  },
+  "popular-tribunnews": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1765,
+    "view": "popular-tribunnews.html"
+  },
+  "popular-wikipedia-id": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1819,
+    "view": "popular-wikipedia-id.html"
+  },
+  "bank-login-bni-web": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1899,
+    "view": "bank-login-bni-web.html"
+  },
+  "bank-login-mandiri-web": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1926,
+    "view": "bank-login-mandiri-web.html"
+  },
+  "checkout-bhinneka": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 1994,
+    "view": "checkout-bhinneka.html"
+  },
+  "gov-kemenkeu": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 2093,
+    "view": "gov-kemenkeu.html"
+  },
+  "popular-merdeka": {
+    "file": "ai/eval/data/legit/real.json",
+    "line": 2119,
+    "view": "popular-merdeka.html"
+  },
+  "official-tokopedia-home": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 3,
+    "view": "official-tokopedia-home.html"
+  },
+  "official-bca-home": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 19,
+    "view": "official-bca-home.html"
+  },
+  "official-shopee-home": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 35,
+    "view": "official-shopee-home.html"
+  },
+  "popular-wikipedia": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 51,
+    "view": "popular-wikipedia.html"
+  },
+  "trap-dana-sosial": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 66,
+    "view": "trap-dana-sosial.html"
+  },
+  "trap-mandiri-jaya": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 81,
+    "view": "trap-mandiri-jaya.html"
+  },
+  "trap-toko-iphone-bekas": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 96,
+    "view": "trap-toko-iphone-bekas.html"
+  },
+  "trap-cloud-storage": {
+    "file": "ai/eval/data/legit/seed.json",
+    "line": 112,
+    "view": "trap-cloud-storage.html"
+  },
+  "trap-toko-logo-bank-checkout": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 3,
+    "view": "trap-toko-logo-bank-checkout.html"
+  },
+  "trap-blog-cek-saldo-bca": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 59,
+    "view": "trap-blog-cek-saldo-bca.html"
+  },
+  "trap-github-pages-dokumentasi": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 105,
+    "view": "trap-github-pages-dokumentasi.html"
+  },
+  "trap-sign-in-google-facebook": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 151,
+    "view": "trap-sign-in-google-facebook.html"
+  },
+  "trap-fintech-kyc-sah": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 199,
+    "view": "trap-fintech-kyc-sah.html"
+  },
+  "trap-berita-waspada-penipuan": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 253,
+    "view": "trap-berita-waspada-penipuan.html"
+  },
+  "trap-portal-orang-tua-sekolah": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 277,
+    "view": "trap-portal-orang-tua-sekolah.html"
+  },
+  "trap-asuransi-klaim-resmi": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 322,
+    "view": "trap-asuransi-klaim-resmi.html"
+  },
+  "trap-toko-kopi-kartu-native": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 376,
+    "view": "trap-toko-kopi-kartu-native.html"
+  },
+  "trap-batik-card-checkout-en": {
+    "file": "ai/eval/data/legit/traps.json",
+    "line": 447,
+    "view": "trap-batik-card-checkout-en.html"
+  },
+  "syn-sekolah-portal2": {
+    "file": "ai/eval/data/legit/url-shapes.json",
+    "line": 3,
+    "view": "syn-sekolah-portal2.html"
+  },
+  "syn-toko-app3-index-php": {
+    "file": "ai/eval/data/legit/url-shapes.json",
+    "line": 25,
+    "view": "syn-toko-app3-index-php.html"
+  },
+  "syn-kampus-code-path": {
+    "file": "ai/eval/data/legit/url-shapes.json",
+    "line": 46,
+    "view": "syn-kampus-code-path.html"
+  }
+}

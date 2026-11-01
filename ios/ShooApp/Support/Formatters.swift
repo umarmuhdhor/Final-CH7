@@ -47,7 +47,9 @@ enum Formatters {
     }
 
     /// "Today · 10.42 WIB" / "Hari ini · 10.42 WIB" (Guardian Home recent rows).
-    static func dayAndTime(_ date: Date, now: Date = Date(), language: AppLanguage, timeZone: TimeZone = .current) -> String {
+    /// `compact`: "Today, 10.42" / "Hari ini, 10.42", no time zone (family rows and the waiting site on Home).
+    static func dayAndTime(_ date: Date, now: Date = Date(), language: AppLanguage, timeZone: TimeZone = .current,
+                           compact: Bool = false) -> String {
         var calendar = Calendar.current
         calendar.timeZone = timeZone
         let yesterday = calendar.date(byAdding: .day, value: -1, to: now) ?? now
@@ -68,6 +70,7 @@ enum Formatters {
         }
         var time = Date.FormatStyle(date: .omitted, time: .shortened, locale: language.locale)
         time.timeZone = timeZone
+        if compact { return "\(day), \(date.formatted(time))" }
         let zone = timeZone.localizedName(for: .shortStandard, locale: language.locale) ?? ""
         return [day, [date.formatted(time), zone].filter { !$0.isEmpty }.joined(separator: " ")].joined(separator: " · ")
     }

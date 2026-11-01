@@ -73,6 +73,7 @@ struct MemberDetailView: View {
         ProfileHeaderCard(
             banner: "MemberBanner",
             bannerHeight: 112,
+            badgeBottom: -1,
             name: member.name,
             handle: handle(member),
             stats: stats(member)
@@ -83,7 +84,8 @@ struct MemberDetailView: View {
             statusPill(active: member.extensionActive)
         }
 
-        ProfileSection(title: "Protection") {
+        // Figma: 32 pt under the profile card.
+        ProfileSection(title: "Protection", top: 32) {
             ProfileRow(
                 symbol: ProfileStyle.extensionSymbol, title: Text("Safari extension"),
                 accessory: member.extensionActive
@@ -130,13 +132,16 @@ struct MemberDetailView: View {
             }
         }
 
-        ProfileSection(title: "Recent activity", trailing: AnyView(
+        ProfileSection(title: "Latest activity", trailing: AnyView(
             Button { env.router.show(.memberActivity(deviceId: member.deviceId)) } label: {
-                Text("See all")
+                Text("View all")
                     .profileFont(15, .medium, tracking: -0.15)
                     .foregroundStyle(ProfileStyle.link)
                     .frame(minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            // Keeps the 44 pt tap area without pushing the card down (Figma: card 32 pt under the title).
+            .padding(.vertical, -12)
             .accessibilityIdentifier("member.seeAll")
         )) {
             if model.recent.isEmpty {
@@ -205,7 +210,9 @@ struct MemberDetailView: View {
                 .profileFont(14, .medium, tracking: -0.14)
                 .foregroundStyle(active ? ProfileStyle.greenText : ProfileStyle.secondary)
         }
-        .padding(.horizontal, 12)
+        // Figma "Status": 7 / 12 leading / 14 trailing.
+        .padding(.leading, 12)
+        .padding(.trailing, 14)
         .padding(.vertical, 7)
         .background(active ? ProfileStyle.greenPill : ProfileStyle.iconFill, in: Capsule())
         .accessibilityElement(children: .combine)

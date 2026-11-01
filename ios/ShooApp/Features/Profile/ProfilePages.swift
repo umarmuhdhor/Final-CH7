@@ -389,6 +389,8 @@ private struct ManageProfilePage: View {
                 AvatarView(id: model.profile?.avatarId ?? "", size: 95)
                     .padding(4.5)
                     .background(ProfileStyle.card, in: Circle())
+                    // Figma "Avatar": #1A1C2E 12 %, y 6, blur 16.
+                    .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
                     .accessibilityHidden(true)
                 Button { isAvatarPickerPresented = true } label: {
                     Text("Change photo")
@@ -417,9 +419,10 @@ private struct ManageProfilePage: View {
                 Button { isDeleteConfirming = true } label: {
                     ProfileRow(
                         symbol: "xmark", title: Text("Delete account"),
-                        subtitle: Text("All your data and history are deleted for good"),
+                        subtitle: Text("All data and history will be deleted for good"),
                         titleColor: ProfileStyle.red, titleWeight: .medium,
-                        iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill
+                        iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill,
+                        style: .settings
                     )
                 }
                 .buttonStyle(.plain)
@@ -455,7 +458,8 @@ private struct ProtectedManageProfilePage: View {
             AvatarView(id: model.profile?.avatarId ?? "", size: 95)
                 .padding(4.5)
                 .background(ProfileStyle.card, in: Circle())
-                .shadow(color: Color(hex: 0x1A1C2E, opacity: 0.12), radius: 7, y: 5)
+                // Figma "Avatar": #1A1C2E 12 %, y 6, blur 16.
+                .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
                 .accessibilityHidden(true)
                 .padding(.top, 4)
 
@@ -520,9 +524,10 @@ private struct ProtectedManageProfilePage: View {
                 Button { isDeleteConfirming = true } label: {
                     ProfileRow(
                         symbol: "xmark", title: Text("Delete account"),
-                        subtitle: Text("All your data and history are deleted for good"),
+                        subtitle: Text("All data and history will be deleted for good"),
                         titleColor: ProfileStyle.red, titleWeight: .medium,
-                        iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill
+                        iconTint: ProfileStyle.red, iconFill: ProfileStyle.redIconFill,
+                        style: .settings
                     )
                 }
                 .buttonStyle(.plain)
@@ -895,29 +900,30 @@ private struct NotificationsPage: View {
             ProfileSection(title: "Warnings") {
                 ProfileToggleRow(
                     symbol: "bell.fill", title: Text("Dangerous sites"), subtitle: Text("When you open a high-risk site"),
-                    isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
+                    style: .settings, isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
                 )
                 .accessibilityIdentifier("notifications.warning")
                 ProfileDivider()
                 ProfileToggleRow(
                     symbol: "network.badge.shield.half.filled", title: Text("Blocked sites"), subtitle: Text("Every time Shoo blocks a site"),
-                    isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
+                    style: .settings, isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
                 )
                 .accessibilityIdentifier("notifications.blocked")
             }
-            .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -12)
+            // Figma: the first title sits 24 pt under the back button; the header leaves 16.
+            .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20)
 
             if model.variant == .guardian {
                 ProfileSection(title: "Family · Guardian mode") {
                     ProfileToggleRow(
                         symbol: "person.fill", title: Text("Activity of people you protect"), subtitle: Text("When they open a dangerous site"),
-                        isOn: binding(\.family) { NotificationSettingsUpdate(family: $0) }
+                        style: .settings, isOn: binding(\.family) { NotificationSettingsUpdate(family: $0) }
                     )
                     .accessibilityIdentifier("notifications.family")
                     ProfileDivider()
                     ProfileToggleRow(
                         symbol: ProfileStyle.extensionSymbol, title: Text("Protection off"), subtitle: Text("When their extension is off"),
-                        isOn: binding(\.protectionOff) { NotificationSettingsUpdate(protectionOff: $0) }
+                        style: .settings, isOn: binding(\.protectionOff) { NotificationSettingsUpdate(protectionOff: $0) }
                     )
                     .accessibilityIdentifier("notifications.protectionOff")
                 }
@@ -931,7 +937,7 @@ private struct NotificationsPage: View {
                     ProfileSection(title: "Connected account") {
                         ProfileToggleRow(
                             symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
-                            isOn: $linked.notifyLinkVerified
+                            style: .settings, isOn: $linked.notifyLinkVerified
                         )
                         .accessibilityIdentifier("notifications.linkVerified")
                     }
@@ -957,7 +963,7 @@ private struct NotificationsPage: View {
         ProfileSection(title: "Summary") {
             ProfileToggleRow(
                 symbol: "globe", title: Text("Weekly summary"), subtitle: Text("Every Monday, \(Self.clock("08:00", language: language))"),
-                isOn: binding(\.weeklySummary) { NotificationSettingsUpdate(weeklySummary: $0) }
+                style: .settings, isOn: binding(\.weeklySummary) { NotificationSettingsUpdate(weeklySummary: $0) }
             )
             .accessibilityIdentifier("notifications.summary")
         }
@@ -965,16 +971,16 @@ private struct NotificationsPage: View {
         ProfileSection(title: "Quiet hours") {
             ProfileToggleRow(
                 symbol: nil, title: Text("Quiet hours"),
-                isOn: binding(\.quietHours) { NotificationSettingsUpdate(quietHours: $0) }
+                style: .settings, isOn: binding(\.quietHours) { NotificationSettingsUpdate(quietHours: $0) }
             )
             .accessibilityIdentifier("notifications.quietHours")
             ProfileDivider(leading: 17)
             Button { isQuietTimePresented = true } label: {
                 ProfileRow(
                     symbol: nil, title: Text("Time"),
-                    accessory: .value("\(Self.clock(settings.quietStart, language: language)) – \(Self.clock(settings.quietEnd, language: language))")
+                    accessory: .value("\(Self.clock(settings.quietStart, language: language)) – \(Self.clock(settings.quietEnd, language: language))"),
+                    minHeight: 44
                 )
-                .frame(minHeight: 44)
             }
             .buttonStyle(.plain)
             .disabled(!settings.quietHours)
@@ -1066,7 +1072,8 @@ private struct LanguagePage: View {
     var body: some View {
         ProfileScreen(title: "Language") {
             ProfileSection(title: "App language") {
-                ForEach(Array(AppLanguage.allCases.enumerated()), id: \.element) { index, language in
+                // Figma lists Bahasa Indonesia first.
+                ForEach(Array([AppLanguage.indonesian, .english].enumerated()), id: \.element) { index, language in
                     if index > 0 { ProfileDivider(leading: 17) }
                     RadioRow(
                         title: Text(Self.spokenName(language)),
@@ -1076,7 +1083,8 @@ private struct LanguagePage: View {
                         .accessibilityIdentifier("language.\(language.code)")
                 }
             }
-            .padding(.top, -12)
+            // Figma: the first title sits 24 pt under the back button; the header leaves 16.
+            .padding(.top, -20)
             PageNote(text: Text("Warnings in Safari and notifications use this language too."))
         }
     }
@@ -1106,25 +1114,29 @@ private struct ThemePage: View {
         @Bindable var settings = env.settings
         ProfileScreen(title: "Theme") {
             ProfileSection(title: "Appearance") {
+                // Figma "Pilihan Tema": three columns spread edge to edge, 20 / 16 inside the card.
                 HStack(alignment: .top, spacing: 0) {
                     ThemeOption(image: "ThemePreviewLight", title: Text("Light"), isSelected: settings.theme == .light) { settings.theme = .light }
                         .accessibilityIdentifier("theme.light")
+                    Spacer(minLength: 8)
                     ThemeOption(image: "ThemePreviewDark", title: Text("Dark"), isSelected: settings.theme == .dark) { settings.theme = .dark }
                         .accessibilityIdentifier("theme.dark")
+                    Spacer(minLength: 8)
                     ThemeOption(image: "ThemePreviewSystem", title: Text("Automatic"), isSelected: settings.theme == .system) { settings.theme = .system }
                         .accessibilityIdentifier("theme.system")
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 17)
                 .padding(.vertical, 16)
             }
-            .padding(.top, -12)
+            // Figma: the first title sits 24 pt under the back button; the header leaves 16.
+            .padding(.top, -20)
             PageNote(text: Text("Automatic follows light or dark mode on your iPhone."))
 
-            ProfileSection(title: "Effects") {
+            ProfileSection(title: "Effects", top: 24) {
                 ProfileToggleRow(
                     symbol: "circle.lefthalf.filled", title: Text("Reduce glass effects"),
-                    subtitle: Text("Solid backgrounds that also save battery"),
-                    isOn: $settings.reduceGlass
+                    subtitle: Text("Solid card backgrounds that also save battery"),
+                    style: .settings, isOn: $settings.reduceGlass
                 )
                 .accessibilityIdentifier("theme.reduceGlass")
             }
@@ -1141,23 +1153,24 @@ private struct ThemeOption: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 12) {
+            // Figma: the chosen preview sits in a 2 pt blue ring 3 pt out (94 × 160); the others keep
+            // only the 3 pt inset (90 × 156), so their name and radio sit 4 pt higher.
+            VStack(spacing: 10) {
                 Image(image)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 84, height: 150)
-                    .padding(5)
+                    .padding(isSelected ? 5 : 3)
                     .overlay(
                         RoundedRectangle(cornerRadius: 21, style: .continuous)
                             .strokeBorder(ProfileStyle.link, lineWidth: 2)
                             .opacity(isSelected ? 1 : 0)
                     )
                 title
-                    .profileFont(15, isSelected ? .medium : .regular)
+                    .profileFont(15, isSelected ? .medium : .regular, tracking: -0.15)
                     .foregroundStyle(ProfileStyle.ink)
                 ProfileRadio(isOn: isSelected)
             }
-            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1185,7 +1198,7 @@ private struct AccessibilityPage: View {
                             .frame(width: 40, height: 40)
                             .background(ProfileStyle.card, in: Circle())
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: "bca-verifikasi.site").profileFont(20).foregroundStyle(ProfileStyle.ink)
+                            Text(verbatim: "bca-verifikasi.site").profileFont(20, tracking: -0.2).foregroundStyle(ProfileStyle.ink)
                             Text("Today · \(Self.sampleTime(locale: locale))").profileFont(15, rounded: true).foregroundStyle(ProfileStyle.secondary)
                         }
                     }
@@ -1195,36 +1208,39 @@ private struct AccessibilityPage: View {
                     .accessibilityHidden(true)
                     TextSizeSlider(level: $settings.textSize)
                     Text(verbatim: L10n.string(settings.textSize.title, language: AppLanguage(locale: locale)))
-                        .profileFont(15, .medium)
+                        .profileFont(15, .medium, tracking: -0.15)
                         .foregroundStyle(ProfileStyle.ink)
                         .frame(maxWidth: .infinity)
                         .accessibilityHidden(true)
                 }
-                .padding(14)
+                // Figma: 18 inside the card's 1 pt border; ProfileCard already adds 5 above and below.
+                .padding(.horizontal, 19)
+                .padding(.vertical, 14)
             }
-            .padding(.top, -12)
+            // Figma: the first title sits 24 pt under the back button; the header leaves 16.
+            .padding(.top, -20)
 
             ProfileSection(title: "Display") {
-                ProfileToggleRow(symbol: "Aa", title: Text("Bold text"), isOn: $settings.boldText)
+                ProfileToggleRow(symbol: "Aa", title: Text("Bold text"), style: .settings, isOn: $settings.boldText)
                     .accessibilityIdentifier("accessibility.bold")
                 ProfileDivider()
-                ProfileToggleRow(symbol: "circle.lefthalf.filled", title: Text("High contrast"), isOn: $settings.highContrast)
+                ProfileToggleRow(symbol: "circle.lefthalf.filled", title: Text("High contrast"), style: .settings, isOn: $settings.highContrast)
                     .accessibilityIdentifier("accessibility.contrast")
                 ProfileDivider()
                 ProfileToggleRow(
-                    symbol: ProfileStyle.extensionSymbol, title: Text("Reduce motion"), subtitle: Text("Turns off animations in Shoo"),
-                    isOn: $settings.reduceMotion
+                    symbol: ProfileStyle.extensionSymbol, title: Text("Reduce motion"), subtitle: Text("Turns off gauge and card-swipe animations"),
+                    style: .settings, isOn: $settings.reduceMotion
                 )
                 .accessibilityIdentifier("accessibility.reduceMotion")
             }
 
             ProfileSection(title: "When there is a warning") {
-                ProfileToggleRow(symbol: "bell.fill", title: Text("Vibrate"), isOn: $settings.haptics)
+                ProfileToggleRow(symbol: "bell.fill", title: Text("Vibrate"), style: .settings, isOn: $settings.haptics)
                     .accessibilityIdentifier("accessibility.haptics")
                 ProfileDivider()
                 ProfileToggleRow(
-                    symbol: "person.fill", title: Text("Read warnings aloud"), subtitle: Text("VoiceOver reads the score and reasons"),
-                    isOn: $settings.readAloud
+                    symbol: "person.fill", title: Text("Read warnings aloud"), subtitle: Text("The score and reasons are read with VoiceOver"),
+                    style: .settings, isOn: $settings.readAloud
                 )
                 .accessibilityIdentifier("accessibility.readAloud")
             }
@@ -1250,14 +1266,16 @@ private struct TextSizeSlider: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(verbatim: "A").font(.system(size: 13, weight: .medium)).foregroundStyle(ProfileStyle.secondary)
+            Text(verbatim: "A").font(FigmaFont.font(size: 13, weight: .medium)).foregroundStyle(ProfileStyle.secondary)
             GeometryReader { geo in
-                let inset: CGFloat = 4
-                let step = (geo.size.width - inset * 2) / CGFloat(levels.count - 1)
+                // Figma "Track" 268: the rail runs from its left edge to 6 pt short of its right edge.
+                let inset: CGFloat = 0
+                let trailing: CGFloat = 6
+                let step = (geo.size.width - inset - trailing) / CGFloat(levels.count - 1)
                 let x = { (i: Int) in inset + step * CGFloat(i) }
                 ZStack(alignment: .leading) {
-                    Capsule().fill(ProfileStyle.iconFill).frame(height: 4).padding(.horizontal, inset)
-                    Capsule().fill(ProfileStyle.link).frame(width: x(level.rawValue), height: 4).padding(.leading, inset)
+                    Capsule().fill(ProfileStyle.sliderRail).frame(height: 4).padding(.leading, inset).padding(.trailing, trailing)
+                    Capsule().fill(ProfileStyle.link).frame(width: x(level.rawValue) - inset, height: 4).padding(.leading, inset)
                     ForEach(levels, id: \.rawValue) { stop in
                         Circle()
                             .fill(stop.rawValue <= level.rawValue ? ProfileStyle.link : ProfileStyle.chevron)
@@ -1266,7 +1284,7 @@ private struct TextSizeSlider: View {
                     }
                     Circle()
                         .fill(.white)
-                        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                        .shadow(color: .black.opacity(0.18), radius: 3, y: 2)
                         .frame(width: 28, height: 28)
                         .offset(x: x(level.rawValue) - 14)
                 }
@@ -1278,7 +1296,7 @@ private struct TextSizeSlider: View {
                 })
             }
             .frame(height: 28)
-            Text(verbatim: "A").font(.system(size: 22, weight: .medium)).foregroundStyle(ProfileStyle.ink)
+            Text(verbatim: "A").font(FigmaFont.font(size: 22, weight: .medium)).foregroundStyle(ProfileStyle.ink)
         }
         .accessibilityElement()
         .accessibilityLabel(Text("Text size"))
@@ -1325,22 +1343,25 @@ private struct AboutPage: View {
                     .frame(width: 88, height: 88)
                     .accessibilityHidden(true)
                 Text(verbatim: "Shoo")
-                    .profileFont(28, .bold)
+                    .profileFont(28, .bold, tracking: -0.56)
                     .foregroundStyle(ProfileStyle.nameInk)
                     .padding(.top, 16)
                     .accessibilityAddTraits(.isHeader)
                 Text("Version \(version)")
                     .profileFont(13, rounded: true)
                     .foregroundStyle(ProfileStyle.secondary)
+                    // Figma sets it on a 20 pt line.
+                    .padding(.vertical, 2)
                     .padding(.top, 3)
                 Text("Protect yourself and your family from scam sites.")
-                    .profileFont(15)
+                    .profileFont(15, tracking: -0.15)
                     .foregroundStyle(ProfileStyle.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.top, 10)
                     .padding(.horizontal, ProfileStyle.margin)
             }
-            .padding(.top, 8)
+            // Figma: the icon starts 28 pt under the back button; the header leaves 16.
+            .padding(.top, 12)
 
             ProfileCard {
                 linkRow(Text("Privacy policy"), id: "about.privacy") { openURL(page("privacy")) }
@@ -1350,13 +1371,13 @@ private struct AboutPage: View {
                 linkRow(Text("Third-party licenses"), id: "about.licenses", isLink: false) { env.router.show(.profilePage(.licenses)) }
             }
             .padding(.horizontal, ProfileStyle.margin)
-            .padding(.top, 28)
+            .padding(.top, 32)
 
             ProfileCard {
                 linkRow(Text("Rate on the App Store"), id: "about.rate") { rate() }
                 ProfileDivider(leading: 17)
                 ShareLink(item: AppConfig.shareURL, message: Text("Shoo blocks scam sites in Safari. Try it:")) {
-                    ProfileRow(symbol: nil, title: Text("Share Shoo")).frame(minHeight: 44)
+                    ProfileRow(symbol: nil, title: Text("Share Shoo"), minHeight: 44)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("about.share")
@@ -1366,19 +1387,21 @@ private struct AboutPage: View {
                 }
             }
             .padding(.horizontal, ProfileStyle.margin)
-            .padding(.top, 16)
+            .padding(.top, 20)
 
             Text("© 2026 Shoo · Made in Indonesia")
-                .profileFont(13)
+                .profileFont(13, rounded: true)
                 .foregroundStyle(ProfileStyle.secondary)
+                // Figma sets it on a 20 pt line.
+                .padding(.vertical, 2)
                 .padding(.top, 28)
         }
     }
 
     private func linkRow(_ title: Text, value: String? = nil, id: String, isLink: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            ProfileRow(symbol: nil, title: title, accessory: value.map { .value($0) } ?? .chevron)
-                .frame(minHeight: 44)
+            // Figma "Tentang Shoo": 44 pt text rows.
+            ProfileRow(symbol: nil, title: title, accessory: value.map { .value($0) } ?? .chevron, minHeight: 44)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isLink ? .isLink : [])

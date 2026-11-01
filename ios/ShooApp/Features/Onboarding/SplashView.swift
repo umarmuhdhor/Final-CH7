@@ -79,7 +79,7 @@ struct SplashView: View {
         HStack {
             Button { model.skipSplash() } label: {
                 Text("Skip")
-                    .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
+                    .onboardingFont(14, weight: .medium, family: .sfPro, relativeTo: .subheadline)
                     .tracking(-0.14)
                     .foregroundStyle(OnboardingTheme.ink)
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
@@ -97,19 +97,21 @@ struct SplashView: View {
                     withAnimation { page += 1 }
                 }
             } label: {
+                // Figma "Iconly/Light Outline/Arrow Right": 16 × 13 pt, thin stroke.
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 17.5, weight: .regular))
                     .foregroundStyle(OnboardingTheme.onButton)
                     .frame(width: 62, height: 62)
+                    // Figma "Button/Full/Circle": gradient only, no shadow.
                     .background(OnboardingTheme.buttonGradient, in: Circle())
-                    .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isLast ? Text("Get started") : Text("Next"))
             .accessibilityIdentifier("splash.next")
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        // Figma "Horizontal Slider": the 62 pt button ends 66 pt above the screen bottom.
+        .padding(.bottom, 32)
     }
 }
 

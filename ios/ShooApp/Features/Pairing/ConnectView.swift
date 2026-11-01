@@ -65,7 +65,8 @@ struct ConnectView: View {
                     }
                     .padding(.top, 24)
                 case .code:
-                    VStack(spacing: 24) {
+                    // Figma "Frame 91": 32 between the label and the boxes.
+                    VStack(spacing: 32) {
                         Text("Enter the invite code")
                             .onboardingBodyStyle()
                         VStack(spacing: 12) {
@@ -112,6 +113,9 @@ struct ConnectView: View {
                     .accessibilityIdentifier("connect.skip")
             }
         }
+        .footerEndsWithLink(onSkip != nil)
+        .headlineInset(24)
+        .messageLineHeight(24)
         .onChange(of: tab) { scanRefused = false }
         .onChange(of: scanRefused) { _, refused in
             guard refused else { return }
@@ -157,7 +161,7 @@ private struct ConnectTabs: View {
             withAnimation(.snappy(duration: 0.3)) { tab = value }
         } label: {
             Text(title)
-                .onboardingFont(13.33, weight: isSelected ? .semibold : .medium, relativeTo: .footnote)
+                .onboardingFont(13.33, weight: isSelected ? .semibold : .medium, family: .sfPro, relativeTo: .footnote)
                 .tracking(-0.08)
                 .foregroundStyle(OnboardingTheme.ink)
                 .frame(maxWidth: .infinity, minHeight: 46)
@@ -165,7 +169,8 @@ private struct ConnectTabs: View {
                     if isSelected {
                         Capsule()
                             .fill(OnboardingTheme.card)
-                            .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
+                            // Figma: #000 6 %, y 2, blur 20.
+                            .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
                             .matchedGeometryEffect(id: "thumb", in: thumb)
                     }
                 }
@@ -223,8 +228,9 @@ private struct CodeField: View {
     @FocusState private var focused: Bool
     @Environment(\.shooReduceMotion) private var reduceMotion
     /// Grows with Dynamic Type; the boxes share the row, so six always fit an iPhone SE width.
-    @ScaledMetric(relativeTo: .title2) private var digitSize: CGFloat = 24
-    private var boxWidth: CGFloat { min(max(46, digitSize * 2), 56) }
+    @ScaledMetric(relativeTo: .title2) private var digitSize: CGFloat = 26
+    /// Figma "row": 72 pt tall (62 wide for its 5 boxes; 6 boxes share the same 342 pt row here).
+    @ScaledMetric(relativeTo: .title2) private var boxHeight: CGFloat = 72
 
     var body: some View {
         ZStack {
@@ -236,22 +242,22 @@ private struct CodeField: View {
                 .tint(.clear)
                 .accessibilityLabel(Text("6-digit code"))
                 .accessibilityIdentifier("connect.code")
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 let digits = Array(code)
                 ForEach(0..<ConnectModel.codeLength, id: \.self) { index in
                     let isActive = focused && index == min(digits.count, ConnectModel.codeLength - 1)
                     ZStack {
                         if index < digits.count {
                             Text(verbatim: String(digits[index]))
-                                .font(.system(size: min(digitSize, 32), weight: .semibold, design: .rounded))
+                                // Figma uses Geist SemiBold 26, which the app doesn't bundle; SF Pro Display is closest.
+                                .font(FigmaFont.font(size: min(digitSize, 34), weight: .semibold))
                                 .foregroundStyle(OnboardingTheme.ink)
                         } else if isActive {
                             Caret(reduceMotion: reduceMotion)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .aspectRatio(62 / 72, contentMode: .fit)
-                    .frame(maxWidth: boxWidth)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: min(boxHeight, 96))
                     .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -259,6 +265,7 @@ private struct CodeField: View {
                     }
                 }
             }
+            .padding(.horizontal, 6)
             .accessibilityHidden(true)
             .allowsHitTesting(false)
         }
@@ -302,7 +309,8 @@ struct ProtectedByView: View {
             title: Text("Connected to \(guardian.name)!"),
             message: Text("Your account is connected. You now get online protection with your Guardian's support."),
             idPrefix: "protectedBy",
-            onContinue: onContinue
+            onContinue: onContinue,
+            messageOpacity: 0.7
         ) {
             Image("ConnectedIllustration")
                 .resizable()
@@ -314,6 +322,9 @@ struct ProtectedByView: View {
                         .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
                         .offset(x: 198.5, y: 186.5)
                 }
+                // Figma: the illustration at y 58.5, the headline at 402.
+                .padding(.top, -3.5)
+                .padding(.bottom, 43.5)
                 .accessibilityHidden(true)
         }
     }

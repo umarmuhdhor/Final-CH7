@@ -220,9 +220,10 @@ final class OnboardingModel {
     #if DEBUG
     /// UI-gate screenshots only (`-debug.onboardingStep greeting`): shows a step with sample data.
     func showForScreenshot(_ step: OnboardingStep) {
-        name = "Rina"
+        // The name and mode steps start empty, as in Figma "Atur Nama · kosong" and "Choose Mode".
+        name = step == .name ? "" : "Rina"
         registeredName = "Rina"
-        selectedMode = mode ?? .guardian
+        selectedMode = step == .mode ? nil : mode ?? .guardian
         avatarId = "avatar_05"
         movedBack = false
         self.step = step

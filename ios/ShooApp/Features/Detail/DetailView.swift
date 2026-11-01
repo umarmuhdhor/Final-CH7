@@ -115,7 +115,8 @@ struct DetailView: View {
                 topBar(owner: ownerName(scan))
                 scoreCard(scan)
                     .padding(.horizontal, 16)
-                    .padding(.top, 16)
+                    // Figma: Back 40–90, Score Card at 114.
+                    .padding(.top, 24)
                 VStack(alignment: .leading, spacing: 16) {
                     Text(markedSafe ? "What the AI flagged" : "Reasons detected")
                         .activityFont(17, .medium, tracking: -0.17)
@@ -138,8 +139,9 @@ struct DetailView: View {
                     }
                 }
                 .padding(.horizontal, ActivityStyle.margin)
-                .padding(.top, 32)
-                .padding(.bottom, 24)
+                // Figma: "Alasan Terdeteksi" 24 pt under the Score Card; the last card ends 12 pt above the footer.
+                .padding(.top, 24)
+                .padding(.bottom, 12)
             }
         }
         .scrollIndicators(.hidden)
@@ -186,6 +188,7 @@ struct DetailView: View {
                 .padding(.vertical, 8)
                 .background(.white.opacity(0.7), in: Capsule())
                 .overlay(Capsule().stroke(.white.opacity(0.9)))
+                .figmaCardShadow()
                 .padding(.horizontal, 84)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Opened by \(owner)"))
@@ -202,9 +205,13 @@ struct DetailView: View {
 
     /// DT-01 gauge, DT-02 badge, DT-03 link and time (Figma "Score Card").
     private func scoreCard(_ scan: ScanResult) -> some View {
-        VStack(spacing: 10) {
+        let unseenBy = unseenGuardian(scan)
+        return VStack(spacing: 10) {
+            if let unseenBy {
+                UnseenBanner(guardianName: unseenBy)
+            }
             VStack(spacing: 10) {
-                gauge(scan)
+                gauge(scan, cropped: unseenBy != nil)
                 badges(scan)
             }
             .accessibilityElement(children: .ignore)
@@ -236,21 +243,47 @@ struct DetailView: View {
             Text(verbatim: openedText(scan.detectedAt))
                 .activityFont(13, rounded: true)
                 .foregroundStyle(DetailStyle.secondary)
+                // Figma "Waktu": 20 pt line.
+                .frame(minHeight: 20)
                 .accessibilityIdentifier("detail.time")
         }
-        .padding(.top, 8)
+        // The banner sits flush at the top, inside the 1 pt stroke (Figma 487:4221).
+        .padding(.top, unseenBy == nil ? 8 : 1)
         .padding(.bottom, 24)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(colors: [DetailStyle.cardTop, DetailStyle.background], startPoint: .top, endPoint: .bottom),
             in: RoundedRectangle(cornerRadius: 32, style: .continuous)
         )
-        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(.white.opacity(0.9)))
+        // Figma: 1 pt white inside stroke on the top and sides, none at the bottom.
+        .overlay(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .strokeBorder(.white)
+                .mask {
+                    VStack(spacing: 0) {
+                        Color.black
+                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 32)
+                    }
+                }
+        )
+        .figmaCardShadow()
     }
 
-    /// 370 × 237 in Figma (219 when warning: the shorter label row); scales down on narrower screens.
-    private func gauge(_ scan: ScanResult) -> some View {
-        let height: CGFloat = scan.status == .blocked ? 237 : 219
+    /// The viewer's own blocked site their guardian hasn't decided on yet: "Virellia belum melihat link ini"
+    /// (Figma 487:4221). Same rule as the note under the Activity row (`ActivityNote.unseen`).
+    private func unseenGuardian(_ scan: ScanResult) -> String? {
+        guard model.isOwnScan,
+              case .unseen(let name)? = ActivityNote(
+                  scan: scan, guardianName: model.viewer?.guardian?.name, viewerDeviceId: model.viewer?.deviceId
+              )
+        else { return nil }
+        return name
+    }
+
+    /// 370 × 237 in Figma (219 when warning: the shorter label row; 213 under the "not seen" banner,
+    /// the halo cut at the bottom); scales down on narrower screens.
+    private func gauge(_ scan: ScanResult, cropped: Bool = false) -> some View {
+        let height: CGFloat = cropped ? 213 : scan.status == .blocked ? 237 : 219
         return Color.clear
             .aspectRatio(ScoreGauge.size.width / height, contentMode: .fit)
             .frame(maxWidth: ScoreGauge.size.width)
@@ -267,21 +300,23 @@ struct DetailView: View {
     private func badges(_ scan: ScanResult) -> some View {
         let status = ScanBadge(status: scan.status)
         if let verdict = scan.verdict, verdict.value == .safe {
-            HStack(spacing: 8) {
+            // Figma 480:5780 "Status": 6 pt apart; the blue chip is 30 high, 1 pt inside stroke, 11 pt tick.
+            HStack(spacing: 6) {
                 GreyBadge(title: ActivityBadge(badge: status).title)
-                Label {
-                    Text(verbatim: VerdictNote.markedSafeChip(for: verdict, viewerDeviceId: model.viewer?.deviceId, language: language))
-                } icon: {
+                HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
+                        .activityFont(10, .semibold)
+                        .accessibilityHidden(true)
+                    Text(verbatim: VerdictNote.markedSafeChip(for: verdict, viewerDeviceId: model.viewer?.deviceId, language: language))
+                        .activityFont(13)
                 }
-                .labelStyle(ChipLabelStyle())
-                .activityFont(13, tracking: -0.13)
                 .foregroundStyle(DetailStyle.markedText)
                 .padding(.leading, 8)
                 .padding(.trailing, 9)
                 .padding(.vertical, 6)
+                .frame(minHeight: 30)
                 .background(DetailStyle.markedFill, in: Capsule())
-                .overlay(Capsule().stroke(DetailStyle.markedStroke))
+                .overlay(Capsule().strokeBorder(DetailStyle.markedStroke))
             }
         } else {
             ActivityBadge(badge: status)
@@ -441,6 +476,39 @@ private extension ScanBadge {
     }
 }
 
+/// Grey strip across the top of the Score Card: the guardian hasn't looked at this blocked site yet
+/// (Figma 487:4221). Top corners follow the card, bottom corners 6 pt.
+private struct UnseenBanner: View {
+    let guardianName: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "eye.slash.fill")
+                .activityFont(24.35, .bold)
+                .foregroundStyle(DetailStyle.secondary)
+                .accessibilityHidden(true)
+            Text("detail.unseen \(guardianName)")
+                .activityFont(15, .bold, tracking: -0.15)
+                .foregroundStyle(DetailStyle.unseenText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 17)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, minHeight: 57)
+        .background(
+            DetailStyle.unseenFill,
+            in: UnevenRoundedRectangle(
+                topLeadingRadius: 31, bottomLeadingRadius: 6, bottomTrailingRadius: 6, topTrailingRadius: 31,
+                style: .continuous
+            )
+        )
+        .padding(.horizontal, 1)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("detail.unseen")
+    }
+}
+
 /// The AI's badge once a guardian marked the site safe: same words, grey (Figma 480:5780).
 private struct GreyBadge: View {
     let title: LocalizedStringKey
@@ -459,17 +527,8 @@ private struct GreyBadge: View {
         .padding(.vertical, 4)
         .frame(minHeight: 23)
         .background(DetailStyle.greyBadgeFill, in: Capsule())
-        .overlay(Capsule().stroke(DetailStyle.greyBadgeStroke))
+        .overlay(Capsule().strokeBorder(DetailStyle.greyBadgeStroke, lineWidth: 0.75))
         .fixedSize()
-    }
-}
-
-private struct ChipLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) {
-            configuration.icon
-            configuration.title
-        }
     }
 }
 

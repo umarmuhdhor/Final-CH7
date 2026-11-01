@@ -1,4 +1,6 @@
+import CoreText
 import SwiftUI
+import UIKit
 
 /// Figma "Aktivitas – Profil Pribadi / Guardian" + "Picker" (PR-05, GD-05): colours, type and
 /// the pieces of the Activity list. Values are the Figma ones. Light only, like Profile (PF-01):
@@ -39,29 +41,7 @@ enum ActivityStyle {
 
 // MARK: Type
 
-/// Figma sizes that still follow Dynamic Type: the size scales with `relativeTo`, tracking with it.
-private struct ActivityFont: ViewModifier {
-    @ScaledMetric private var size: CGFloat
-    let base: CGFloat
-    let weight: Font.Weight
-    let design: Font.Design
-    let tracking: CGFloat
-
-    init(size: CGFloat, weight: Font.Weight, design: Font.Design, tracking: CGFloat, relativeTo: Font.TextStyle) {
-        _size = ScaledMetric(wrappedValue: size, relativeTo: relativeTo)
-        base = size
-        self.weight = weight
-        self.design = design
-        self.tracking = tracking
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .font(.system(size: size, weight: weight, design: design))
-            .tracking(tracking * size / base)
-    }
-}
-
+/// Figma sizes that still follow Dynamic Type (shared `FigmaFont`: the SF Pro Display widths Figma uses).
 extension View {
     func activityFont(
         _ size: CGFloat, _ weight: Font.Weight = .regular, rounded: Bool = false, tracking: CGFloat = 0
@@ -74,9 +54,7 @@ extension View {
         case ..<24: .title2
         default: .title
         }
-        return modifier(ActivityFont(
-            size: size, weight: weight, design: rounded ? .rounded : .default, tracking: tracking, relativeTo: style
-        ))
+        return figmaFont(size, weight: weight, design: rounded ? .rounded : .default, tracking: tracking, relativeTo: style)
     }
 
     /// Figma "Liquid Glass – Regular": the real glass on iOS 26, a material before it.
@@ -164,7 +142,8 @@ struct ActivityBadge: View {
         .padding(.vertical, 4)
         .frame(minHeight: 23)
         .background(colors.fill, in: Capsule())
-        .overlay(Capsule().stroke(colors.stroke))
+        // Figma: 0.75 pt inside stroke.
+        .overlay(Capsule().strokeBorder(colors.stroke, lineWidth: 0.75))
         .fixedSize()
     }
 }
@@ -197,7 +176,7 @@ struct ActivityAvatar: View {
     var body: some View {
         Text(verbatim: Self.initial(of: name))
             // Figma: 9.5 pt on 24, 6.33 pt on 16.
-            .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
+            .font(FigmaFont.font(size: size * 0.4, weight: .semibold, design: .rounded))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
             .background(

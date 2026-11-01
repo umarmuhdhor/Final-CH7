@@ -13,7 +13,8 @@ struct MainTabView: View {
                     .id(screenIdentity)
                     .navigationDestination(for: Route.self, destination: destination)
             }
-            .tabItem { Label("Shield", systemImage: "shield.lefthalf.filled") }
+            // Figma tab bar: "Shield" bolt-shield and "Activity" list circle.
+            .tabItem { Label("Shield", systemImage: "bolt.shield.fill") }
             .tag(AppTab.shield)
 
             NavigationStack(path: $router.activityPath) {
@@ -25,7 +26,7 @@ struct MainTabView: View {
                     }
                     .navigationDestination(for: Route.self, destination: destination)
             }
-            .tabItem { Label("Activity", systemImage: "list.bullet.rectangle") }
+            .tabItem { Label("Activity", systemImage: "list.bullet.circle.fill") }
             .tag(AppTab.activity)
         }
         .sheet(isPresented: $router.isConnectPresented) {

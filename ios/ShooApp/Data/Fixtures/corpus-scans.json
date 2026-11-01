@@ -214,23 +214,9 @@
       "domain": "cusbsi.com",
       "pageTitle": "BSI Cash Management",
       "faviconUrl": null,
-      "score": 70,
+      "score": 60,
       "status": "warning",
       "signals": [
-        {
-          "id": "unreasonable_request",
-          "layer": 4,
-          "weight": 30,
-          "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
-          },
-          "labelSimple": {
-            "en": "A real page of this kind would not ask for this",
-            "id": "Halaman asli seperti ini tidak akan meminta ini"
-          },
-          "evidence": "BSI Cash Management"
-        },
         {
           "id": "brand_logo_offsite",
           "layer": 3,
@@ -244,6 +230,19 @@
             "id": "Berpura-pura menjadi BSI"
           },
           "evidence": "BSI"
+        },
+        {
+          "id": "new_domain",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Domain age 26 days",
+            "id": "Umur domain 26 hari"
+          },
+          "labelSimple": {
+            "en": "This site was made 26 days ago",
+            "id": "Situs ini baru dibuat 26 hari lalu"
+          }
         },
         {
           "id": "asks_password",
@@ -764,8 +763,8 @@
       "domain": "bca-blokir-kartu.shop",
       "pageTitle": "Kartu Anda Diblokir",
       "faviconUrl": null,
-      "score": 89,
-      "status": "blocked",
+      "score": 59,
+      "status": "warning",
       "signals": [
         {
           "id": "brand_plus_keyword",
@@ -780,19 +779,6 @@
             "id": "Alamat ini menggabungkan BCA dengan kata \"blokir\""
           },
           "evidence": "bca · level 2 · blokir"
-        },
-        {
-          "id": "unreasonable_request",
-          "layer": 4,
-          "weight": 30,
-          "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
-          },
-          "labelSimple": {
-            "en": "A real page of this kind would not ask for this",
-            "id": "Halaman asli seperti ini tidak akan meminta ini"
-          }
         },
         {
           "id": "brand_logo_offsite",
@@ -1111,19 +1097,6 @@
             "id": "Meminta PIN rahasia kamu"
           },
           "evidence": "pin"
-        },
-        {
-          "id": "unreasonable_request",
-          "layer": 4,
-          "weight": 30,
-          "label": {
-            "en": "The data requested does not fit this kind of page",
-            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
-          },
-          "labelSimple": {
-            "en": "A real page of this kind would not ask for this",
-            "id": "Halaman asli seperti ini tidak akan meminta ini"
-          }
         },
         {
           "id": "asks_ktp",

@@ -16,7 +16,7 @@
         "scam": {
           "n": 11,
           "atLeast50": 9,
-          "atLeast80": 8
+          "atLeast80": 7
         },
         "legit": {
           "n": 0,
@@ -60,7 +60,7 @@
         "scam": {
           "n": 8,
           "atLeast50": 4,
-          "atLeast80": 3
+          "atLeast80": 2
         },
         "legit": {
           "n": 0,
@@ -71,7 +71,7 @@
         "scam": {
           "n": 8,
           "atLeast50": 4,
-          "atLeast80": 3
+          "atLeast80": 2
         },
         "legit": {
           "n": 0,
@@ -337,7 +337,7 @@
         "scam": {
           "n": 13,
           "atLeast50": 7,
-          "atLeast80": 4
+          "atLeast80": 3
         },
         "legit": {
           "n": 15,
@@ -371,7 +371,7 @@
       "scam": {
         "n": 49,
         "atLeast50": 31,
-        "atLeast80": 16
+        "atLeast80": 15
       },
       "legit": {
         "n": 17,
@@ -389,7 +389,7 @@
     "scam": {
       "atLeast30": 37,
       "atLeast50": 32,
-      "atLeast80": 16
+      "atLeast80": 15
     },
     "legit": {
       "atLeast30": 4,
@@ -416,7 +416,7 @@
         "target": 0.9
       },
       "scamAtLeast80": {
-        "value": 0.3076923076923077,
+        "value": 0.28846153846153844,
         "target": 0.7
       },
       "legitAtLeast30": {
@@ -462,9 +462,9 @@
       "level 0 asks_otp": 1
     },
     "timing": {
-      "analyzeLocalAvgMs": 0.8369987962962298,
-      "analyzeLocalMaxMs": 10.730458000005456,
-      "analyzeRemoteP95Ms": 6010.577833000003
+      "analyzeLocalAvgMs": 0.7034151388889769,
+      "analyzeLocalMaxMs": 3.527125000000524,
+      "analyzeRemoteP95Ms": 6012.109209
     },
     "holdoutRowsHidden": 0
   },
@@ -1194,12 +1194,12 @@
       "holdout": true,
       "url": "https://cusbsi.com/",
       "localScore": 0,
-      "score": 70,
+      "score": 60,
       "status": "warning 2",
       "remoteOk": true,
       "signals": [
-        "unreasonable_request:L4:30",
         "brand_logo_offsite:L3:25",
+        "new_domain:L3:20",
         "asks_password:L3:15"
       ]
     },
@@ -1387,12 +1387,11 @@
       "holdout": true,
       "url": "https://bca-blokir-kartu.shop/",
       "localScore": 14,
-      "score": 89,
-      "status": "blocked",
+      "score": 59,
+      "status": "warning 2",
       "remoteOk": true,
       "signals": [
         "brand_plus_keyword:L2:14",
-        "unreasonable_request:L4:30",
         "brand_logo_offsite:L3:25",
         "asks_card:L3:20"
       ]
@@ -1463,7 +1462,6 @@
         "lookalike_domain:L2:10",
         "cheap_tld:L2:15",
         "asks_pin:L3:35",
-        "unreasonable_request:L4:30",
         "asks_ktp:L3:25",
         "brand_logo_offsite:L3:25"
       ]

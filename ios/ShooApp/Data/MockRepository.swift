@@ -11,6 +11,8 @@ actor MockRepository: ShooRepository {
         case standard
         /// No scans, no members — for empty states.
         case empty
+        /// Like `empty`, and a Protected phone has no guardian yet: joining a family works (Figma "Berhasil Terhubung").
+        case unpaired
         /// Fixture data with only the first member (UI gate GD-03: 1 person).
         case oneMember
         /// Fixture data plus a third, connected member without risky sites (UI gate GD-03: 3 people).
@@ -117,13 +119,14 @@ actor MockRepository: ShooRepository {
             case .threeMembers: members = (fixture + [Self.extraMember]).map(Self.withDetails)
             default: members = fixture.map(Self.withDetails)
             }
-        case .empty:
+        case .empty, .unpaired:
             allScans = []
             members = []
         case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus:
             allScans = dataset?.scans ?? []
             members = dataset?.members ?? []
         }
+        if scenario == .unpaired { profile.guardian = nil }
     }
 
     // MARK: Devices

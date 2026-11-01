@@ -1,464 +1,689 @@
-# QA — Figma parity, iOS app (2026-10-31)
+# QA report: does the iOS app match Figma, and does scam detection work?
 
-Every iOS frame marked **Ready for dev** on the Figma page *High Fidelity*, plus HOME and *AI vs Guardian — Eksplorasi* (not marked, shown as they are), next to the app as it is on `main` today. Safari extension and web frames are out of scope.
+Run on 2026-11-01 (first run 2026-10-31). Branch `feat/GD-01-home-figma`, PR #228.
+
+## Short version
+
+- **Screens vs Figma:** 73 Figma frames checked. 37 the same, 30 with small differences, 6 clearly different. Many small differences come from iOS itself (top bar position, glass buttons).
+- **Test 1, unusual fake data:** the screens still work. 2 small issues: a 39% warning says "Risiko Tinggi", and big counters don't shorten to "999+".
+- **Test 2a, scam detector on saved pages:** misses its targets. It blocks only 15 of 52 scam pages (29%, target 70%) and wrongly flags 4 of 56 normal pages (target 0).
+- **Test 2b/2c, real websites on two phones:** one of the 2 live scam pages got a 76% warning and reached the Guardian's app. The Guardian only sees it after turning Family mode on by hand. Push can't be tested on a laptop setup.
+- **Test 3, Imelda's link lists (`ai/test-layer2`):** offline, from the link alone, only 3 of 25 scam links are blocked. Live, with the real page, the extension blocks or warns on most scam pages that still exist. But it **wrongly blocks `mit.edu`** because that domain is on the public scam list.
+
+## How to read this report
+
+**Screen status:**
+
+| Mark | Meaning |
+|---|---|
+| ✅ same | Looks like the Figma frame. |
+| 🟡 small diff | Small visual difference, often caused by iOS itself. |
+| 🟠 clear diff | Clearly different. Needs a design or product decision. |
+| 🔴 missing | The screen is not built. |
+| ⚪ not shot | No app screenshot for this frame. |
+
+**Scam score** (from `contracts/README.md`):
+
+| Score | What the user sees |
+|---|---|
+| 0 to 29 | Nothing. The page is treated as normal. |
+| 30 to 79 | A warning. |
+| 80 to 100 | The page is blocked. |
+
+**The 4 detection layers** (from `contracts/detector-interface.md`):
+
+| Layer | What it checks | Where it runs |
+|---|---|---|
+| L1 | Known scam sites list | On the phone |
+| L2 | The link name (fake brand names, odd hosts) | On the phone |
+| L3 | Page text and forms (asks for OTP, PIN, ID card) | Server |
+| L4 | Reality check by an AI model (does this request make sense for this kind of page?) | Server |
+
+## What was tested
+
+| Test | What it checks | How |
+|---|---|---|
+| Screens | Every app screen next to its Figma frame. | Figma page *High Fidelity*: every iOS frame marked Ready for dev, plus HOME and the *AI vs Guardian* exploration. Fake data (scenario `figma`). |
+| Test 1 | The same screens with unusual fake data. | 6 data sets from `Data/MockScenarios.swift`. No server. |
+| Test 2a | Does the detector give the right score? | 108 saved web pages from Imelda's test set, sent through all 4 layers. No real website opened. |
+| Test 2b/2c | Does it work end to end on real websites? | Two paired phones (Guardian + Protected). Safari opens the test-set pages that still exist. |
 
 | | |
 |---|---|
-| Device | iPhone 17 simulator, iOS 26.3, Bahasa Indonesia, light, `TZ=Asia/Jakarta` (WIB) |
-| App | `main` @ 2720b13 + this branch's QA additions (no screen changed) |
-| Test 1 | `MockRepository` scenarios `figma`, `mixedVerdicts`, `heavy`, `edge`, `allSafe`, `allBlocked` (`Data/MockScenarios.swift`) |
-| Test 2a | Imelda's eval corpus (`ai/eval/data`, 108 samples, holdout included) through layers 1–4 on a local `shoo-ai` Worker → scenario `corpus` |
-| Test 2b/2c | Two paired simulators on a local stack built like prod; the Protected Safari opens every corpus URL that still resolves |
-| Figma | [High Fidelity](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=18-2), exported at 1x through the TalkToFigma plugin |
+| Devices | Screens and Test 1: iPhone 17 Pro simulator, iOS 26.4. Test 2b/2c: "QA Guardian iPhone 17" (iOS 26.5) and "QA Protected iPhone 17" (iOS 26.4). |
+| Settings | Bahasa Indonesia, light mode, Jakarta time (WIB). |
+| App | `feat/GD-01-home-figma` @ f93e660 (with `main` merged in). |
+| Figma | [High Fidelity](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=18-2), exported at 1x with the TalkToFigma plugin. |
 
-Result: **73 frames** — ✅ match 28 · 🟡 minor 19 · 🟠 gap 12 · 🔴 missing 2 · ⚪ not shot 12.
+## Problems found
 
-Figma frames are full height; the app shot is one screen (later screens of the same state are in `img/figma-parity/app/<shot>-2.jpg`, `-3.jpg`).
+Found outside the screen-by-screen tables. First seen on 2026-10-31, checked again on 2026-11-01.
 
-## Findings
+### Still open
 
-Bugs and gaps the run found outside the frame-by-frame view:
+| # | Problem | Where to see it | How bad |
+|---|---|---|---|
+| 12 | **`mit.edu` is blocked** (100%, "This site is known to cheat people"). The domain is on the public scam list the AI server builds, so the extension blocks the whole real MIT site, and the Guardian gets it as a blocked site. The list needs an allowlist check for big real sites. | Test 3, `legit-12`; `live-l2/safari-legit-12.jpg`, `guardian-1-home.jpg` | 🔴 Team AI / lead |
+| 6 | The Guardian sees nothing from the family after pairing. Family mode must be switched on by hand on Home first. Figma always shows the family. | `live/guardian-activity.jpg` (off) vs `guardian-activity-family.jpg` (on) | 🟠 |
+| 7 | Push can't be tested on the laptop setup. The local server can't use HTTP/2, which Apple's push service needs, so every push logs `failed:network`. Production uses the deployed server, so this is only a test setup limit. A cloud staging server is needed for a full push test. | Test 2b/2c, step 4 | 🟠 |
+| 11 | The scam detector misses its targets: 4 normal pages flagged (target 0), 15 scam pages missed, only 29% of scams blocked (target 70%). | Test 2a | ⚪ Team AI |
+| 4 | A 39% warning says "Risiko Tinggi", the same label as 72%. | `corpus-dt-real-lphone` | 🟡 |
+| 5 | Counters don't shorten: Guardian Profile shows "3.000 Situs diblokir" (no "999+"). It fits, but the tile gets wider than in Figma. | `heavy-pf-guardian` | 🟡 |
+| 9 | The Safari extension popup is in English while the app is in Bahasa Indonesia. It follows the phone's language. The extension is out of scope here; noted for the lead. | `live/safari-regs-apps14-code-php.jpg` | 🟡 |
+| 10 | On a live scan, the page copy in Detail ("Salinan halaman") stays grey and the site icon circle is empty. | `live/guardian-detail-regnows.jpg` | 🟡 |
 
-1. 🔴 **Emoji in a name shows as ⍰ boxes** (scenario `edge`, `Bayu 🧑‍💻`) on Guardian Home and Profile: the custom font has no emoji fallback for ZWJ sequences. `edge-home-guardian`, `edge-pf-guardian`.
-2. 🟠 **Code expired shows the generic error**: joining with the mock's `code_expired` code shows "Ada yang salah. Coba lagi." (`on-connect-expired`), not Figma's "Kode kadaluarsa…" (205:1182).
-3. 🟡 **"Notifikasi mati" popup on every Home / Activity launch** in the mock run although `-UITestNotifications granted` is passed; the popup covers the hero in the Home shots.
-4. 🟡 **Gauge label for 30–49**: a 39% warning (`corpus-dt-real-lphone`) reads "Risiko Tinggi", the same as 72%.
-5. 🟡 **Counters** do not cap: Guardian Profile shows "3.000 Situs diblokir" in `heavy` (no "999+"); fits, but wider than Figma's tile.
-6. 🟠 **Live: Guardian sees nothing after pairing** until Family mode is switched on by hand on Home (`live/guardian-activity.jpg` vs `guardian-activity-family.jpg`). Figma's Guardian Home/Activity always show the family.
-7. 🟠 **Live: push cannot be tested on the local stack**: `wrangler dev` has no HTTP/2, APNs answers nothing (`push_log` `failed:network`). Prod path is the deployed Worker; a local relay or a cloud staging Worker is needed for an end-to-end push test.
-8. 🟡 **Live: same page twice = two scans** in Activity (`regnows-dfg.com` 22.40 and 22.41).
-9. 🟡 **Live: the extension banner is English** ("46% · Be careful") while the app is set to Bahasa Indonesia; the extension follows the system language (extension is out of scope for this report, noted for the lead).
-10. 🟡 **Live: Detail "Salinan halaman" stays grey** for the live scan (no page copy drawn) and the favicon circle is empty.
-11. ⚪ **Detector, 2a**: 4 legit pages ≥ 30 (target 0) and 20 scam pages < 30; 62 % of scams ≥ 50 (target 90 %). Details in Test 2a.
+### Fixed since 2026-10-31
 
-Per frame (most severe first):
-
-| | Frame | Note |
+| # | Problem | Now |
 |---|---|---|
-| 🔴 missing | [Guardian/Home · Keluarga butuh konfirmasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20899) | No "Keluarga Butuh Konfirmasi" hero with the 72% gauge, page summary and Bahaya / Aman buttons on Home (mixedVerdicts has an unanswered warning). |
-| 🔴 missing | [Guardian/Detail Aktivitas, sebelum di cek](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-4221) | No "Virellia belum melihat link ini" banner on the Detail header (no "seen" field in contracts/). |
-| 🟠 gap | [Pribadi/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20058) | Home Pribadi is the old layout: dim shield + last-blocked card. Figma: shield hero "Anda Terlindungi!", "Status Keamanan: Bagus!" bar, 4 stat tiles (Ancaman diblokir, Resiko keamanan, Host mencurigakan, Scan terakhir), Aktivitas Terakhir list. HOME is not marked Ready for dev. |
-| 🟠 gap | [Guardian/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20373) | Guardian Home is the old "Keluarga" card list. Figma: "Keluarga Terlindungi!" hero, "Status Keluarga: Semua Aman!" bar, member avatar row with Aktif, Aktivitas Terakhir with owner name. |
-| 🟠 gap | [Guardian/Home · Belum ada orang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20630) | Empty Guardian Home shows "Belum ada yang kamu jaga" + Undang keluargamu. Figma: "Lindungi Orang Terdekat" hero, inline invite code + QR with Bagikan / Salin, and the 3-step "Cara Kerja". |
-| 🟠 gap | [protected/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-2736) | Protected Home is "Perisai" (Perlindungan aktif, Dilindungi oleh Virellia, Terakhir diblokir). Figma: "Anda Terlindungi!" hero, "Terhubung dengan Virellia" pill, stat tiles, Aktivitas Terakhir. |
-| 🟠 gap | [protected/Home · Lihat semua di atas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3063) | Same as 441:2736; Figma adds Diblokir 4 / Waspada 7 tiles with "3 diverifikasi oleh Virellia". |
-| 🟠 gap | [protected/Home · Kartu diblokir 92%](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3800) | No blocked card with gauge and "Virellia akan mengecek kembali" note on Protected Home. |
-| 🟠 gap | [protected/Home · Kartu diblokir 92% (bawah)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-4414) | Same as 441:3800 (scrolled). |
-| 🟠 gap | [Kode Kadaluarsa · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1182) | Code 999999 (mock code_expired) shows the generic "Ada yang salah. Coba lagi." instead of "Kode kadaluarsa, minta kode baru dan coba lagi.". |
-| 🟠 gap | [Profile/Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10338) | Perlindungan shows "Ekstensi Safari · Aktif" as text; Figma has two switches: Ekstensi Safari and "Blokir situs berbahaya". |
-| 🟠 gap | [Pengaturan/Kelola profil](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12854) | Missing "Akun · Perangkat terhubung (2 perangkat)" row. |
-| 🟠 gap | [Protected/Detail · Dibuka Guardian · Opsi 1](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-7897) | Exploration Opsi 1 (Protected sees "Virellia menandai situs ini aman · Blokir dibuka", AI first score 92, "Tetap hati-hati"). The app shows the gauge with "Ditandai aman oleh Virellia" and the verified card. |
-| 🟠 gap | [Protected/Detail · Dibuka Guardian · Opsi 2](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-8620) | Exploration Opsi 2: same as 487:7897. |
-| 🟡 minor | [Splash Screen](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3585) | App opens straight on slide 1; the Figma splash frame is a plain gradient with the logo (the launch screen covers it). |
-| 🟡 minor | [Choose Mode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4345) | App adds "Pilihan ini tidak bisa diganti nanti." under the cards; Guardian is preselected in the screenshot mode. |
-| 🟡 minor | [Connect with Guardian · Pindai QR](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=140-5762) | App opens on the Kode tab; Figma opens on Pindai QR. |
-| 🟡 minor | [Connect with Guardian · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=141-5887) | App has 6 code boxes (contract) + a privacy note + Nanti saja; Figma draws 5 boxes. |
-| 🟡 minor | [Aktivitas - Profil Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8541) | Matches; status pills are filled red in the app, outlined in Figma. |
-| 🟡 minor | [Aktivitas - Profil Pribadi : Filtered (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8657) | Figma greys the Diblokir pill once the Guardian decided; the app keeps it red. |
-| 🟡 minor | [Guardian/Detail Aktivitas (Bahaya)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9255) | Matches the gauge, chip, link and evidence cards. The verdict footer floats over the cards in the app; in Figma it sits after them. |
-| 🟡 minor | [Profile/Pribadi (v2, terhubung Virellia)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10275) | Matches. "Ekstensi Safari · Aktif" is green without a chevron (Figma: grey with chevron). |
-| 🟡 minor | [Profile/Pribadi (v2, layar pertama)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10571) | Same as 455:10275. |
-| 🟡 minor | [Guardian/Detail Orang Dilindungi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10574) | Matches. Copy: "Aktivitas Terakhir · Lihat Semua" vs Figma "Aktivitas terbaru · Lihat semua". |
-| 🟡 minor | [Pengaturan/Notifikasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12916) | Matches, plus a "Notifikasi mati · Nyalakan" banner on top while the system permission is off. |
-| 🟡 minor | [Pengaturan/Bahasa (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9697) | Same options; the app lists English first, Figma lists Bahasa Indonesia first. |
-| 🟡 minor | [Pengaturan/Bahasa](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12986) | Same as 455:9697. |
-| 🟡 minor | [Pengaturan/Tema (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9718) | Matches. "Kurangi efek kaca" subtitle differs (app: "Latar polos yang juga menghemat baterai"). |
-| 🟡 minor | [Pengaturan/Tema](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13007) | Same as 455:9718. |
-| 🟡 minor | [Pengaturan/Aksesibilitas (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9785) | Matches. Subtitles differ: Kurangi gerakan ("Matikan animasi di Shoo" vs "Matikan animasi gauge dan swipe kartu"), Bacakan peringatan. |
-| 🟡 minor | [Pengaturan/Aksesibilitas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13074) | Same as 455:9785. |
-| 🟡 minor | [Pengaturan/Tentang Shoo (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9858) | Matches. Version "Versi 1.0 (1)" vs "Versi 1.0.0 (42)" (build number), tagline "dirimu" vs "diri". |
-| 🟡 minor | [Pengaturan/Tentang Shoo](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13147) | Same as 455:9858. |
+| 1 | Emoji in a name showed as ⍰ boxes. | `Bayu 🧑‍💻` shows the emoji (`edge-home-guardian`, `edge-pf-guardian`). |
+| 2 | An expired code showed a general error. | Shows "Kode kedaluwarsa, minta kode baru dan coba lagi." like Figma 205:1182. |
+| 3 | A "Notifikasi mati" popup covered Home and Activity in every test run. | Gone in all Home and Activity screenshots. |
 
-## HOME
+### Not checked again
 
-| Frame | App now | Figma | Status | Note |
+| # | Problem | Why |
+|---|---|---|
+| 8 | Opening the same page twice made two rows in Activity (`regnows-dfg.com` at 22.40 and 22.41). | This run opened each page only once, and Activity showed one row. |
+
+### Screens that differ from Figma
+
+Worst first. Pictures are in the screen tables below.
+
+| Status | Frame | What is different |
+|---|---|---|
+| 🟠 clear diff | [protected/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-2736) | Different design: an older option for the Protected Home (status strip, Terblokir / Perlu Waspada tiles). The app builds frame 441:3800 instead. The designer has to say which one is final. |
+| 🟠 clear diff | [protected/Home · Lihat semua di atas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3063) | Different design: another option for the Protected Home (wider card). The app builds frame 441:3800 instead. The designer has to say which one is final. |
+| 🟠 clear diff | [Profile/Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10338) | Different: the Perlindungan section shows "Ekstensi Safari · Aktif" as text. Figma has two switches (Ekstensi Safari, Blokir situs berbahaya). Needs a feature decision. |
+| 🟠 clear diff | [Pengaturan/Kelola profil](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12854) | Different: the "Akun · Perangkat terhubung" row is missing (not built yet). "Ubah foto" is extra in the app. The username has no arrow because it cannot be changed. |
+| 🟠 clear diff | [Protected/Detail · Dibuka Guardian · Opsi 1](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-7897) | Different (design exploration, option 1): Figma shows the Protected person "Virellia menandai situs ini aman · Blokir dibuka", the AI's first score 92, and "Tetap hati-hati". The app shows the gauge with "Ditandai aman oleh Virellia" and the verified card. |
+| 🟠 clear diff | [Protected/Detail · Dibuka Guardian · Opsi 2](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-8620) | Different (design exploration, option 2): same as 487:7897. |
+| 🟡 small diff | [Pribadi/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20058) | Same: hero, status strip, tiles and list (within 1 pt), hero gradient, dashed rings. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. The switch button uses iOS 26 glass, so it is brighter than Figma's grey. The app spells RISIKO right (Figma has RESIKO). |
+| 🟡 small diff | [Guardian/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20373) | Same layout (screenshot `home-guardian-members`). Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. |
+| 🟡 small diff | [Guardian/Home · Keluarga butuh konfirmasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20899) | Same: the "DIBUKA SYAHNAZ · HARI INI, 10.42" line, title, chip, gauge, and the Bahaya / Aman buttons with Figma's shadow. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. |
+| 🟡 small diff | [Guardian/Home · Belum ada orang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20630) | Same: blue-teal hero, no rings, invite card, QR, code spacing. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. The mock data gives a 6-digit code. |
+| 🟡 small diff | [protected/Home · Kartu diblokir 92%](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3800) | Same: glow-only hero (no shield, like Figma), spacing, blocked card with gauge and two-line note, count tiles. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. |
+| 🟡 small diff | [protected/Home · Kartu diblokir 92% (bawah)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-4414) | Same as 441:3800, scrolled down. |
+| 🟡 small diff | [Splash Screen](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3585) | Different: the Figma frame is empty white. The app shows its splash screen with the logo. |
+| 🟡 small diff | [Atur Nama · nama terlalu panjang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4271) | Same text. Different: the Selanjutnya button stays off until the name is 1 to 20 characters. Figma shows it on. |
+| 🟡 small diff | [Choose Mode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4345) | Same layout and colours. Different: the app adds "Pilihan ini tidak bisa diganti nanti." Figma makes the chosen card 2 pt bigger; the app keeps both cards the same size. |
+| 🟡 small diff | [Connect with Guardian · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=141-5887) | Same: code box size, gaps, tab shadow. Different: the app has 6 boxes because the server sends 6 digits (Figma has 5). Figma's code font Geist needs a `project.yml` change, which only the lead can make. The 14-day note and the "Nanti saja" button are extra in the app. |
+| 🟡 small diff | [Kode Kadaluarsa · QR](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1081) | Same code-box differences as 141:5887. |
+| 🟡 small diff | [Kode Kadaluarsa · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1182) | Fixed: now shows "Kode kedaluwarsa, minta kode baru dan coba lagi." like Figma. Same code-box differences as 141:5887. |
+| 🟡 small diff | [Aktifkan Ekstensi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4440) | Screenshot with the extension off. Same: "Aktifkan Ekstensi" and "Terkendala? Tonton Tutorial". Extra in the app: step text that changes per iOS version, and the "Shoo dimatikan" hint. |
+| 🟡 small diff | [Kirim Undangan (sheet)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4817) | Same: spacing and QR size. Different: share buttons are WhatsApp / Pesan / Lainnya (Figma: Messages / Mail / Notes). The countdown is extra in the app. Figma's code has 4 digits; the app has 6. |
+| 🟡 small diff | [Aktivitas - Profil Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8541) | Older Figma version with an outlined Diblokir pill. The app follows the newer frame 450:8443 (solid pill). |
+| 🟡 small diff | [Aktivitas - Profil Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8768) | Same layout. Different: the person button uses real iOS 26 glass, so it is whiter than in Figma. |
+| 🟡 small diff | [Guardian/Detail Aktivitas (Bahaya)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9255) | Same: score card, chips, contribution bar, footer. Different: the header is about 26 pt lower because the Figma frame has no status bar. The "Salinan halaman" caption belongs to the page-copy feature, which Figma does not have. |
+| 🟡 small diff | [Guardian/Detail Aktivitas, sebelum di cek](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-4221) | Same: the "Virellia belum melihat link ini" banner (screenshot `dt-protected`, the Protected person's view). Same header offset as 416:9255. |
+| 🟡 small diff | [Guardian/Detail Aktivitas Setelah Validasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9362) | Same verified card. Different: here Figma puts "Kontribusi" over the photo; the app puts it under the photo, like the newer frames. |
+| 🟡 small diff | [Guardian/Detail Aktivitas Waspada](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9469) | Same as 416:9362. |
+| 🟡 small diff | [Guardian/Detail Aktivitas Waspada (v2, tanpa pemilik)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-5990) | Screenshot `dt-protected-warning` (no owner chip, no buttons). Same Kontribusi difference as 416:9362. If this frame shows a Guardian's own scan, hiding Aman / Bahaya there is a product decision (#190). |
+| 🟡 small diff | [Profile/Pribadi (v2, terhubung Virellia)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10275) | Same: pill, stats, Terhubung card. Different: Figma shows a letter avatar "U" for the Protected person; the app shows a memoji. The "Ekstensi Safari" row has no arrow because it does nothing. Figma's Akun spacing is not the same in its two versions of this screen. |
+| 🟡 small diff | [Profile/Pribadi (v2, layar pertama)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10571) | Same as 455:10275. |
+| 🟡 small diff | [Pengaturan/Mode akun](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9515) | This frame is the Protected "Akun Tertaut" page (screenshot `pf-protected-connection`). Different: the switches say "Segera hadir" because they are behind feature flag #183. Figma uses the English word "You" in the Indonesian screen. |
+| 🟡 small diff | [Pengaturan/Mode akun (pilihan lain)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=457-10896) | Same as 455:9515. |
+| 🟡 small diff | [Pengaturan/Kelola profil (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=462-11043) | Screenshot `pf-protected-manage`. Same, except the letter-avatar question from 455:10275. |
+| 🟡 small diff | [Pengaturan/Notifikasi (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9627) | Screenshot `pf-protected-notifications`. Different: "Akun Terhubung" is behind feature flag #183. |
+| 🟡 small diff | [Pengaturan/Notifikasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12916) | Same layout. The "Notifikasi mati" banner shows because the test does not answer the notification question. |
+| 🟡 small diff | [Pengaturan/Tentang Shoo (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9858) | Same layout. The version number comes from the build, so it differs from Figma. |
+| 🟡 small diff | [Pengaturan/Tentang Shoo](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13147) | Same as 455:9858. |
+
+## Screen by screen
+
+Left: the app now. Right: the Figma frame. Figma frames show the whole scroll height; the app screenshot shows one screen. More screens of the same state are in `img/figma-parity/app/<name>-2.jpg` and `-3.jpg`.
+
+### Screens: Home
+
+| Frame | App now | Figma | Status | Notes |
 |---|---|---|---|---|
-| [Pribadi/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20058)<br>`435:20058` | <img src="img/figma-parity/app/home-pribadi.jpg" width="160"><br>`home-pribadi` | <img src="img/figma-parity/figma/435-20058.jpg" width="160"> | 🟠 gap | Home Pribadi is the old layout: dim shield + last-blocked card. Figma: shield hero "Anda Terlindungi!", "Status Keamanan: Bagus!" bar, 4 stat tiles (Ancaman diblokir, Resiko keamanan, Host mencurigakan, Scan terakhir), Aktivitas Terakhir list. HOME is not marked Ready for dev. |
-| [Guardian/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20373)<br>`435:20373` | <img src="img/figma-parity/app/home-guardian.jpg" width="160"><br>`home-guardian` | <img src="img/figma-parity/figma/435-20373.jpg" width="160"> | 🟠 gap | Guardian Home is the old "Keluarga" card list. Figma: "Keluarga Terlindungi!" hero, "Status Keluarga: Semua Aman!" bar, member avatar row with Aktif, Aktivitas Terakhir with owner name. |
-| [Guardian/Home · Keluarga butuh konfirmasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20899)<br>`435:20899` | <img src="img/figma-parity/app/home-guardian-pending.jpg" width="160"><br>`home-guardian-pending` | <img src="img/figma-parity/figma/435-20899.jpg" width="160"> | 🔴 missing | No "Keluarga Butuh Konfirmasi" hero with the 72% gauge, page summary and Bahaya / Aman buttons on Home (mixedVerdicts has an unanswered warning). |
-| [Guardian/Home · Belum ada orang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20630)<br>`435:20630` | <img src="img/figma-parity/app/home-guardian-empty.jpg" width="160"><br>`home-guardian-empty` | <img src="img/figma-parity/figma/435-20630.jpg" width="160"> | 🟠 gap | Empty Guardian Home shows "Belum ada yang kamu jaga" + Undang keluargamu. Figma: "Lindungi Orang Terdekat" hero, inline invite code + QR with Bagikan / Salin, and the 3-step "Cara Kerja". |
-| [protected/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-2736)<br>`441:2736` | <img src="img/figma-parity/app/home-protected.jpg" width="160"><br>`home-protected` | <img src="img/figma-parity/figma/441-2736.jpg" width="160"> | 🟠 gap | Protected Home is "Perisai" (Perlindungan aktif, Dilindungi oleh Virellia, Terakhir diblokir). Figma: "Anda Terlindungi!" hero, "Terhubung dengan Virellia" pill, stat tiles, Aktivitas Terakhir. |
-| [protected/Home · Lihat semua di atas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3063)<br>`441:3063` | <img src="img/figma-parity/app/home-protected.jpg" width="160"><br>`home-protected` | <img src="img/figma-parity/figma/441-3063.jpg" width="160"> | 🟠 gap | Same as 441:2736; Figma adds Diblokir 4 / Waspada 7 tiles with "3 diverifikasi oleh Virellia". |
-| [protected/Home · Kartu diblokir 92%](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3800)<br>`441:3800` | <img src="img/figma-parity/app/home-protected.jpg" width="160"><br>`home-protected` | <img src="img/figma-parity/figma/441-3800.jpg" width="160"> | 🟠 gap | No blocked card with gauge and "Virellia akan mengecek kembali" note on Protected Home. |
-| [protected/Home · Kartu diblokir 92% (bawah)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-4414)<br>`441:4414` | <img src="img/figma-parity/app/home-protected-2.jpg" width="160"><br>`home-protected-2` | <img src="img/figma-parity/figma/441-4414.jpg" width="160"> | 🟠 gap | Same as 441:3800 (scrolled). |
+| [Pribadi/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20058)<br>`435:20058` | <img src="img/figma-parity/app/home-pribadi.jpg" width="160"><br>`home-pribadi` | <img src="img/figma-parity/figma/435-20058.jpg" width="160"> | 🟡 small diff | Same: hero, status strip, tiles and list (within 1 pt), hero gradient, dashed rings. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. The switch button uses iOS 26 glass, so it is brighter than Figma's grey. The app spells RISIKO right (Figma has RESIKO). |
+| [Guardian/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20373)<br>`435:20373` | <img src="img/figma-parity/app/home-guardian-members.jpg" width="160"><br>`home-guardian-members` | <img src="img/figma-parity/figma/435-20373.jpg" width="160"> | 🟡 small diff | Same layout (screenshot `home-guardian-members`). Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. |
+| [Guardian/Home · Keluarga butuh konfirmasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20899)<br>`435:20899` | <img src="img/figma-parity/app/home-guardian-pending.jpg" width="160"><br>`home-guardian-pending` | <img src="img/figma-parity/figma/435-20899.jpg" width="160"> | 🟡 small diff | Same: the "DIBUKA SYAHNAZ · HARI INI, 10.42" line, title, chip, gauge, and the Bahaya / Aman buttons with Figma's shadow. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. |
+| [Guardian/Home · Belum ada orang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=435-20630)<br>`435:20630` | <img src="img/figma-parity/app/home-guardian-empty.jpg" width="160"><br>`home-guardian-empty` | <img src="img/figma-parity/figma/435-20630.jpg" width="160"> | 🟡 small diff | Same: blue-teal hero, no rings, invite card, QR, code spacing. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. The mock data gives a 6-digit code. |
+| [protected/Home](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-2736)<br>`441:2736` | <img src="img/figma-parity/app/home-protected.jpg" width="160"><br>`home-protected` | <img src="img/figma-parity/figma/441-2736.jpg" width="160"> | 🟠 clear diff | Different design: an older option for the Protected Home (status strip, Terblokir / Perlu Waspada tiles). The app builds frame 441:3800 instead. The designer has to say which one is final. |
+| [protected/Home · Lihat semua di atas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3063)<br>`441:3063` | <img src="img/figma-parity/app/home-protected.jpg" width="160"><br>`home-protected` | <img src="img/figma-parity/figma/441-3063.jpg" width="160"> | 🟠 clear diff | Different design: another option for the Protected Home (wider card). The app builds frame 441:3800 instead. The designer has to say which one is final. |
+| [protected/Home · Kartu diblokir 92%](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-3800)<br>`441:3800` | <img src="img/figma-parity/app/home-protected.jpg" width="160"><br>`home-protected` | <img src="img/figma-parity/figma/441-3800.jpg" width="160"> | 🟡 small diff | Same: glow-only hero (no shield, like Figma), spacing, blocked card with gauge and two-line note, count tiles. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. |
+| [protected/Home · Kartu diblokir 92% (bawah)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=441-4414)<br>`441:4414` | <img src="img/figma-parity/app/home-protected-2.jpg" width="160"><br>`home-protected-2` | <img src="img/figma-parity/figma/441-4414.jpg" width="160"> | 🟡 small diff | Same as 441:3800, scrolled down. |
 
-## ONBOARDING
+### Screens: Onboarding and pairing
 
-| Frame | App now | Figma | Status | Note |
+| Frame | App now | Figma | Status | Notes |
 |---|---|---|---|---|
-| [Splash Screen](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3585)<br>`110:3585` | <img src="img/figma-parity/app/on-splash-1.jpg" width="160"><br>`on-splash-1` | <img src="img/figma-parity/figma/110-3585.jpg" width="160"> | 🟡 minor | App opens straight on slide 1; the Figma splash frame is a plain gradient with the logo (the launch screen covers it). |
-| [Onboarding 1](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3692)<br>`110:3692` | <img src="img/figma-parity/app/on-splash-2.jpg" width="160"><br>`on-splash-2` | <img src="img/figma-parity/figma/110-3692.jpg" width="160"> | ✅ match | Copy and layout match. The app shot was taken mid-swipe. |
-| [Onboarding 2](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3786)<br>`110:3786` | <img src="img/figma-parity/app/on-splash-3.jpg" width="160"><br>`on-splash-3` | <img src="img/figma-parity/figma/110-3786.jpg" width="160"> | ✅ match | Copy and layout match. |
-| [Atur Nama · kosong](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3912)<br>`110:3912` | <img src="img/figma-parity/app/on-name.jpg" width="160"><br>`on-name` | <img src="img/figma-parity/figma/110-3912.jpg" width="160"> | ✅ match | Matches. |
-| [Atur Nama · mengetik](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4023)<br>`110:4023` | <img src="img/figma-parity/app/on-name-typed.jpg" width="160"><br>`on-name-typed` | <img src="img/figma-parity/figma/110-4023.jpg" width="160"> | ✅ match | Matches (the shot types after the screenshot name "Rina", hence "RinaAdhella"). |
-| [Atur Nama · nama terlalu panjang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4271)<br>`110:4271` | —<br>`—` | <img src="img/figma-parity/figma/110-4271.jpg" width="160"> | ⚪ not shot | Not shot: the 20-character error state. The app shows the 20-character hint under the field at all times. |
-| [Choose Mode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4345)<br>`110:4345` | <img src="img/figma-parity/app/on-mode.jpg" width="160"><br>`on-mode` | <img src="img/figma-parity/figma/110-4345.jpg" width="160"> | 🟡 minor | App adds "Pilihan ini tidak bisa diganti nanti." under the cards; Guardian is preselected in the screenshot mode. |
-| [Choose Mode - Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4558)<br>`110:4558` | <img src="img/figma-parity/app/on-mode-guardian.jpg" width="160"><br>`on-mode-guardian` | <img src="img/figma-parity/figma/110-4558.jpg" width="160"> | ✅ match | Matches. |
-| [Choose Mode - Protected](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4605)<br>`110:4605` | —<br>`—` | <img src="img/figma-parity/figma/110-4605.jpg" width="160"> | ⚪ not shot | Not shot (Protected selected). Same layout as 110:4558. |
-| [Connect with Guardian · Pindai QR](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=140-5762)<br>`140:5762` | <img src="img/figma-parity/app/on-connect.jpg" width="160"><br>`on-connect` | <img src="img/figma-parity/figma/140-5762.jpg" width="160"> | 🟡 minor | App opens on the Kode tab; Figma opens on Pindai QR. |
-| [Connect with Guardian · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=141-5887)<br>`141:5887` | <img src="img/figma-parity/app/on-connect.jpg" width="160"><br>`on-connect` | <img src="img/figma-parity/figma/141-5887.jpg" width="160"> | 🟡 minor | App has 6 code boxes (contract) + a privacy note + Nanti saja; Figma draws 5 boxes. |
-| [Kode Kadaluarsa · QR](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1081)<br>`205:1081` | —<br>`—` | <img src="img/figma-parity/figma/205-1081.jpg" width="160"> | ⚪ not shot | Not shot (expired on the QR tab). |
-| [Kode Kadaluarsa · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1182)<br>`205:1182` | <img src="img/figma-parity/app/on-connect-expired.jpg" width="160"><br>`on-connect-expired` | <img src="img/figma-parity/figma/205-1182.jpg" width="160"> | 🟠 gap | Code 999999 (mock code_expired) shows the generic "Ada yang salah. Coba lagi." instead of "Kode kadaluarsa, minta kode baru dan coba lagi.". |
-| [Aktifkan Ekstensi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4440)<br>`110:4440` | <img src="img/figma-parity/app/on-turnOnExtension.jpg" width="160"><br>`on-turnOnExtension` | <img src="img/figma-parity/figma/110-4440.jpg" width="160"> | ⚪ not shot | The run passes -UITestExtensionActive, so the step skips to the success screen. Live run 2b shows the real step: copy matches Figma. |
-| [Ekstensi aktif](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=126-5678)<br>`126:5678` | <img src="img/figma-parity/app/on-extensionOn.jpg" width="160"><br>`on-extensionOn` | <img src="img/figma-parity/figma/126-5678.jpg" width="160"> | ✅ match | Matches. |
-| [Berhasil Terhubung](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=141-5945)<br>`141:5945` | —<br>`—` | <img src="img/figma-parity/figma/141-5945.jpg" width="160"> | ⚪ not shot | Not shot in the mock run; reached in the live run (protectedBy). |
-| [Undang keluarga](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4779)<br>`110:4779` | <img src="img/figma-parity/app/on-invite.jpg" width="160"><br>`on-invite` | <img src="img/figma-parity/figma/110-4779.jpg" width="160"> | ✅ match | Matches. |
-| [Kirim Undangan (sheet)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4817)<br>`110:4817` | —<br>`—` | <img src="img/figma-parity/figma/110-4817.jpg" width="160"> | ⚪ not shot | Not shot (share sheet). Figma code has 4 digits; the app uses 6. |
+| [Splash Screen](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3585)<br>`110:3585` | no screenshot<br>`none` | <img src="img/figma-parity/figma/110-3585.jpg" width="160"> | 🟡 small diff | Different: the Figma frame is empty white. The app shows its splash screen with the logo. |
+| [Onboarding 1](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3692)<br>`110:3692` | <img src="img/figma-parity/app/on-splash-1.jpg" width="160"><br>`on-splash-1` | <img src="img/figma-parity/figma/110-3692.jpg" width="160"> | ✅ same | Same as Figma: arrow size, button position, no button shadow. |
+| [Onboarding 2](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3786)<br>`110:3786` | <img src="img/figma-parity/app/on-splash-2.jpg" width="160"><br>`on-splash-2` | <img src="img/figma-parity/figma/110-3786.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Atur Nama · kosong](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-3912)<br>`110:3912` | <img src="img/figma-parity/app/on-name.jpg" width="160"><br>`on-name` | <img src="img/figma-parity/figma/110-3912.jpg" width="160"> | ✅ same | Same as Figma: headline position, line heights, body text colour. |
+| [Atur Nama · mengetik](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4023)<br>`110:4023` | <img src="img/figma-parity/app/on-name-typed.jpg" width="160"><br>`on-name-typed` | <img src="img/figma-parity/figma/110-4023.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Atur Nama · nama terlalu panjang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4271)<br>`110:4271` | <img src="img/figma-parity/app/on-name-tooLong.jpg" width="160"><br>`on-name-tooLong` | <img src="img/figma-parity/figma/110-4271.jpg" width="160"> | 🟡 small diff | Same text. Different: the Selanjutnya button stays off until the name is 1 to 20 characters. Figma shows it on. |
+| [Choose Mode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4345)<br>`110:4345` | <img src="img/figma-parity/app/on-mode.jpg" width="160"><br>`on-mode` | <img src="img/figma-parity/figma/110-4345.jpg" width="160"> | 🟡 small diff | Same layout and colours. Different: the app adds "Pilihan ini tidak bisa diganti nanti." Figma makes the chosen card 2 pt bigger; the app keeps both cards the same size. |
+| [Choose Mode - Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4558)<br>`110:4558` | <img src="img/figma-parity/app/on-mode-guardian.jpg" width="160"><br>`on-mode-guardian` | <img src="img/figma-parity/figma/110-4558.jpg" width="160"> | ✅ same | Same as Figma (2 pt blue border). |
+| [Choose Mode - Protected](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4605)<br>`110:4605` | <img src="img/figma-parity/app/on-mode-protected.jpg" width="160"><br>`on-mode-protected` | <img src="img/figma-parity/figma/110-4605.jpg" width="160"> | ✅ same | Same as Figma (2 pt teal border). |
+| [Connect with Guardian · Pindai QR](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=140-5762)<br>`140:5762` | <img src="img/figma-parity/app/on-connect-qr.jpg" width="160"><br>`on-connect-qr` | <img src="img/figma-parity/figma/140-5762.jpg" width="160"> | ✅ same | Same as Figma (QR tab). |
+| [Connect with Guardian · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=141-5887)<br>`141:5887` | <img src="img/figma-parity/app/on-connect-typed.jpg" width="160"><br>`on-connect-typed` | <img src="img/figma-parity/figma/141-5887.jpg" width="160"> | 🟡 small diff | Same: code box size, gaps, tab shadow. Different: the app has 6 boxes because the server sends 6 digits (Figma has 5). Figma's code font Geist needs a `project.yml` change, which only the lead can make. The 14-day note and the "Nanti saja" button are extra in the app. |
+| [Kode Kadaluarsa · QR](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1081)<br>`205:1081` | <img src="img/figma-parity/app/on-connect-expired-qr.jpg" width="160"><br>`on-connect-expired-qr` | <img src="img/figma-parity/figma/205-1081.jpg" width="160"> | 🟡 small diff | Same code-box differences as 141:5887. |
+| [Kode Kadaluarsa · Kode](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=205-1182)<br>`205:1182` | <img src="img/figma-parity/app/on-connect-expired.jpg" width="160"><br>`on-connect-expired` | <img src="img/figma-parity/figma/205-1182.jpg" width="160"> | 🟡 small diff | Fixed: now shows "Kode kedaluwarsa, minta kode baru dan coba lagi." like Figma. Same code-box differences as 141:5887. |
+| [Aktifkan Ekstensi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4440)<br>`110:4440` | <img src="img/figma-parity/app/on-turnOnExtension.jpg" width="160"><br>`on-turnOnExtension` | <img src="img/figma-parity/figma/110-4440.jpg" width="160"> | 🟡 small diff | Screenshot with the extension off. Same: "Aktifkan Ekstensi" and "Terkendala? Tonton Tutorial". Extra in the app: step text that changes per iOS version, and the "Shoo dimatikan" hint. |
+| [Ekstensi aktif](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=126-5678)<br>`126:5678` | <img src="img/figma-parity/app/on-extensionOn.jpg" width="160"><br>`on-extensionOn` | <img src="img/figma-parity/figma/126-5678.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Berhasil Terhubung](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=141-5945)<br>`141:5945` | <img src="img/figma-parity/app/on-connected.jpg" width="160"><br>`on-connected` | <img src="img/figma-parity/figma/141-5945.jpg" width="160"> | ✅ same | Same as Figma (scenario `unpaired`). |
+| [Undang keluarga](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4779)<br>`110:4779` | <img src="img/figma-parity/app/on-invite.jpg" width="160"><br>`on-invite` | <img src="img/figma-parity/figma/110-4779.jpg" width="160"> | ✅ same | Same as Figma (80 pt avatars, rings). |
+| [Kirim Undangan (sheet)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=110-4817)<br>`110:4817` | <img src="img/figma-parity/app/on-invite-sheet.jpg" width="160"><br>`on-invite-sheet` | <img src="img/figma-parity/figma/110-4817.jpg" width="160"> | 🟡 small diff | Same: spacing and QR size. Different: share buttons are WhatsApp / Pesan / Lainnya (Figma: Messages / Mail / Notes). The countdown is extra in the app. Figma's code has 4 digits; the app has 6. |
 
-## Activity
+### Screens: Activity and Detail
 
-| Frame | App now | Figma | Status | Note |
+| Frame | App now | Figma | Status | Notes |
 |---|---|---|---|---|
-| [Aktivitas - Profil Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8541)<br>`416:8541` | <img src="img/figma-parity/app/act-pribadi.jpg" width="160"><br>`act-pribadi` | <img src="img/figma-parity/figma/416-8541.jpg" width="160"> | 🟡 minor | Matches; status pills are filled red in the app, outlined in Figma. |
-| [Aktivitas - Profil Pribadi : Filtered](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8669)<br>`416:8669` | <img src="img/figma-parity/app/act-pribadi-warning.jpg" width="160"><br>`act-pribadi-warning` | <img src="img/figma-parity/figma/416-8669.jpg" width="160"> | ✅ match | Matches. |
-| [Aktivitas - Profil Pribadi (v2, catatan Guardian)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8443)<br>`450:8443` | <img src="img/figma-parity/app/act-protected.jpg" width="160"><br>`act-protected` | <img src="img/figma-parity/figma/450-8443.jpg" width="160"> | ✅ match | Matches: "Virellia belum melihat website ini" / "Menurut Virellia website ini berbahaya!" notes under rows. |
-| [Aktivitas - Profil Pribadi : Filtered (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8574)<br>`450:8574` | <img src="img/figma-parity/app/act-protected-2.jpg" width="160"><br>`act-protected-2` | <img src="img/figma-parity/figma/450-8574.jpg" width="160"> | ✅ match | Matches. |
-| [Aktivitas - Profil Pribadi : Filtered (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8657)<br>`450:8657` | <img src="img/figma-parity/app/act-protected-2.jpg" width="160"><br>`act-protected-2` | <img src="img/figma-parity/figma/450-8657.jpg" width="160"> | 🟡 minor | Figma greys the Diblokir pill once the Guardian decided; the app keeps it red. |
-| [Aktivitas - Profil Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8768)<br>`416:8768` | <img src="img/figma-parity/app/act-guardian.jpg" width="160"><br>`act-guardian` | <img src="img/figma-parity/figma/416-8768.jpg" width="160"> | ✅ match | Matches: owner chip, Semua / Waspada / Bahaya, person picker. |
-| [Aktivitas - Profil Guardian / Only one selected](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8989)<br>`416:8989` | —<br>`act-guardian-one` | <img src="img/figma-parity/figma/416-8989.jpg" width="160"> | ⚪ not shot | Not shot: the person menu did not open by its identifier in the UI test. |
-| [Picker](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9208)<br>`416:9208` | —<br>`act-guardian-picker` | <img src="img/figma-parity/figma/416-9208.jpg" width="160"> | ⚪ not shot | Not shot (same reason as 416:8989). |
-| [Aktivitas · Semua · Belum ada aktivitas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5490)<br>`480:5490` | <img src="img/figma-parity/app/act-empty-all.jpg" width="160"><br>`act-empty-all` | <img src="img/figma-parity/figma/480-5490.jpg" width="160"> | ✅ match | Matches. |
-| [Aktivitas · Waspada · Kosong](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5520)<br>`480:5520` | <img src="img/figma-parity/app/act-empty-warning.jpg" width="160"><br>`act-empty-warning` | <img src="img/figma-parity/figma/480-5520.jpg" width="160"> | ✅ match | Matches. |
-| [Aktivitas · Diblokir · Kosong](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5550)<br>`480:5550` | <img src="img/figma-parity/app/act-empty-blocked.jpg" width="160"><br>`act-empty-blocked` | <img src="img/figma-parity/figma/480-5550.jpg" width="160"> | ✅ match | Matches. |
-| [Aktivitas · Semua · Perlindungan mati](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5580)<br>`480:5580` | <img src="img/figma-parity/app/act-off.jpg" width="160"><br>`act-off` | <img src="img/figma-parity/figma/480-5580.jpg" width="160"> | ✅ match | Matches. |
-| [Guardian/Detail Aktivitas (Bahaya)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9255)<br>`416:9255` | <img src="img/figma-parity/app/dt-blocked.jpg" width="160"><br>`dt-blocked` | <img src="img/figma-parity/figma/416-9255.jpg" width="160"> | 🟡 minor | Matches the gauge, chip, link and evidence cards. The verdict footer floats over the cards in the app; in Figma it sits after them. |
-| [Guardian/Detail Aktivitas, sebelum di cek](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-4221)<br>`487:4221` | <img src="img/figma-parity/app/dt-unchecked.jpg" width="160"><br>`dt-unchecked` | <img src="img/figma-parity/figma/487-4221.jpg" width="160"> | 🔴 missing | No "Virellia belum melihat link ini" banner on the Detail header (no "seen" field in contracts/). |
-| [Guardian/Detail Aktivitas Setelah Validasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9362)<br>`416:9362` | <img src="img/figma-parity/app/dt-validated.jpg" width="160"><br>`dt-validated` | <img src="img/figma-parity/figma/416-9362.jpg" width="160"> | ✅ match | Matches: "Diverifikasi sebagai penipuan oleh Anda". |
-| [Guardian/Detail Aktivitas Waspada](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9469)<br>`416:9469` | <img src="img/figma-parity/app/dt-warning.jpg" width="160"><br>`dt-warning` | <img src="img/figma-parity/figma/416-9469.jpg" width="160"> | ✅ match | Matches. |
-| [Guardian/Detail Aktivitas Waspada (v2, tanpa pemilik)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-5990)<br>`487:5990` | <img src="img/figma-parity/app/dt-pribadi.jpg" width="160"><br>`dt-pribadi` | <img src="img/figma-parity/figma/487-5990.jpg" width="160"> | ✅ match | Matches. |
-| [Guardian/Detail Aktivitas · Ditandai Aman](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5768)<br>`480:5768` | <img src="img/figma-parity/app/dt-safe.jpg" width="160"><br>`dt-safe` | <img src="img/figma-parity/figma/480-5768.jpg" width="160"> | ✅ match | Matches: "Anda menandai ini aman" chip, verified card with Ubah, owner note. |
-| [Catatan/Guardian memilih Aman](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5924)<br>`480:5924` | <img src="img/figma-parity/app/dt-protected-safe.jpg" width="160"><br>`dt-protected-safe` | <img src="img/figma-parity/figma/480-5924.jpg" width="160"> | ✅ match | Design note (greyed AI score after a safe verdict): done. |
-| [Bukti Foto — Highlight](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10831)<br>`416:10831` | <img src="img/figma-parity/app/dt-blocked-2.jpg" width="160"><br>`dt-blocked-2` | <img src="img/figma-parity/figma/416-10831.jpg" width="160"> | ✅ match | Spotlight with label on the page copy: done. |
-| [Catatan · sudah dicek, bahaya](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8734)<br>`450:8734` | <img src="img/figma-parity/app/act-protected.jpg" width="160"><br>`act-protected` | <img src="img/figma-parity/figma/450-8734.jpg" width="160"> | ✅ match | Note component: done. |
-| [Catatan · belum dicek](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8739)<br>`450:8739` | <img src="img/figma-parity/app/act-protected.jpg" width="160"><br>`act-protected` | <img src="img/figma-parity/figma/450-8739.jpg" width="160"> | ✅ match | Note component: done. |
-| [Catatan · sudah dicek, aman](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8744)<br>`450:8744` | <img src="img/figma-parity/app/act-protected-2.jpg" width="160"><br>`act-protected-2` | <img src="img/figma-parity/figma/450-8744.jpg" width="160"> | ✅ match | Note component: done. |
+| [Aktivitas - Profil Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8541)<br>`416:8541` | <img src="img/figma-parity/app/act-pribadi.jpg" width="160"><br>`act-pribadi` | <img src="img/figma-parity/figma/416-8541.jpg" width="160"> | 🟡 small diff | Older Figma version with an outlined Diblokir pill. The app follows the newer frame 450:8443 (solid pill). |
+| [Aktivitas - Profil Pribadi : Filtered](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8669)<br>`416:8669` | <img src="img/figma-parity/app/act-pribadi-warning.jpg" width="160"><br>`act-pribadi-warning` | <img src="img/figma-parity/figma/416-8669.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Aktivitas - Profil Pribadi (v2, catatan Guardian)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8443)<br>`450:8443` | <img src="img/figma-parity/app/act-protected.jpg" width="160"><br>`act-protected` | <img src="img/figma-parity/figma/450-8443.jpg" width="160"> | ✅ same | Same as Figma: solid Diblokir pill without icon, note card. |
+| [Aktivitas - Profil Pribadi : Filtered (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8574)<br>`450:8574` | <img src="img/figma-parity/app/act-protected-warning.jpg" width="160"><br>`act-protected-warning` | <img src="img/figma-parity/figma/450-8574.jpg" width="160"> | ✅ same | Same as Figma (screenshot `act-protected-warning`). |
+| [Aktivitas - Profil Pribadi : Filtered (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8657)<br>`450:8657` | <img src="img/figma-parity/app/act-protected-blocked.jpg" width="160"><br>`act-protected-blocked` | <img src="img/figma-parity/figma/450-8657.jpg" width="160"> | ✅ same | Same as Figma (screenshot `act-protected-blocked`). |
+| [Aktivitas - Profil Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8768)<br>`416:8768` | <img src="img/figma-parity/app/act-guardian.jpg" width="160"><br>`act-guardian` | <img src="img/figma-parity/figma/416-8768.jpg" width="160"> | 🟡 small diff | Same layout. Different: the person button uses real iOS 26 glass, so it is whiter than in Figma. |
+| [Aktivitas - Profil Guardian / Only one selected](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-8989)<br>`416:8989` | <img src="img/figma-parity/app/act-guardian-one.jpg" width="160"><br>`act-guardian-one` | <img src="img/figma-parity/figma/416-8989.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Picker](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9208)<br>`416:9208` | <img src="img/figma-parity/app/act-guardian-picker.jpg" width="160"><br>`act-guardian-picker` | <img src="img/figma-parity/figma/416-9208.jpg" width="160"> | ✅ same | Same as Figma, including the menu padding and shadow. |
+| [Aktivitas · Semua · Belum ada aktivitas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5490)<br>`480:5490` | <img src="img/figma-parity/app/act-empty-all.jpg" width="160"><br>`act-empty-all` | <img src="img/figma-parity/figma/480-5490.jpg" width="160"> | ✅ same | Same as Figma (text spacing, width). |
+| [Aktivitas · Waspada · Kosong](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5520)<br>`480:5520` | <img src="img/figma-parity/app/act-empty-warning.jpg" width="160"><br>`act-empty-warning` | <img src="img/figma-parity/figma/480-5520.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Aktivitas · Diblokir · Kosong](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5550)<br>`480:5550` | <img src="img/figma-parity/app/act-empty-blocked.jpg" width="160"><br>`act-empty-blocked` | <img src="img/figma-parity/figma/480-5550.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Aktivitas · Semua · Perlindungan mati](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5580)<br>`480:5580` | <img src="img/figma-parity/app/act-off.jpg" width="160"><br>`act-off` | <img src="img/figma-parity/figma/480-5580.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Guardian/Detail Aktivitas (Bahaya)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9255)<br>`416:9255` | <img src="img/figma-parity/app/dt-blocked.jpg" width="160"><br>`dt-blocked` | <img src="img/figma-parity/figma/416-9255.jpg" width="160"> | 🟡 small diff | Same: score card, chips, contribution bar, footer. Different: the header is about 26 pt lower because the Figma frame has no status bar. The "Salinan halaman" caption belongs to the page-copy feature, which Figma does not have. |
+| [Guardian/Detail Aktivitas, sebelum di cek](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-4221)<br>`487:4221` | <img src="img/figma-parity/app/dt-protected.jpg" width="160"><br>`dt-protected` | <img src="img/figma-parity/figma/487-4221.jpg" width="160"> | 🟡 small diff | Same: the "Virellia belum melihat link ini" banner (screenshot `dt-protected`, the Protected person's view). Same header offset as 416:9255. |
+| [Guardian/Detail Aktivitas Setelah Validasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9362)<br>`416:9362` | <img src="img/figma-parity/app/dt-validated.jpg" width="160"><br>`dt-validated` | <img src="img/figma-parity/figma/416-9362.jpg" width="160"> | 🟡 small diff | Same verified card. Different: here Figma puts "Kontribusi" over the photo; the app puts it under the photo, like the newer frames. |
+| [Guardian/Detail Aktivitas Waspada](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-9469)<br>`416:9469` | <img src="img/figma-parity/app/dt-warning.jpg" width="160"><br>`dt-warning` | <img src="img/figma-parity/figma/416-9469.jpg" width="160"> | 🟡 small diff | Same as 416:9362. |
+| [Guardian/Detail Aktivitas Waspada (v2, tanpa pemilik)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-5990)<br>`487:5990` | <img src="img/figma-parity/app/dt-protected-warning.jpg" width="160"><br>`dt-protected-warning` | <img src="img/figma-parity/figma/487-5990.jpg" width="160"> | 🟡 small diff | Screenshot `dt-protected-warning` (no owner chip, no buttons). Same Kontribusi difference as 416:9362. If this frame shows a Guardian's own scan, hiding Aman / Bahaya there is a product decision (#190). |
+| [Guardian/Detail Aktivitas · Ditandai Aman](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5768)<br>`480:5768` | <img src="img/figma-parity/app/dt-safe.jpg" width="160"><br>`dt-safe` | <img src="img/figma-parity/figma/480-5768.jpg" width="160"> | ✅ same | Same as Figma: chip spacing, blue chip, centred owner note. |
+| [Catatan/Guardian memilih Aman](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5924)<br>`480:5924` | <img src="img/figma-parity/app/dt-protected-safe.jpg" width="160"><br>`dt-protected-safe` | <img src="img/figma-parity/figma/480-5924.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Bukti Foto — Highlight](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10831)<br>`416:10831` | <img src="img/figma-parity/app/dt-blocked-2.jpg" width="160"><br>`dt-blocked-2` | <img src="img/figma-parity/figma/416-10831.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Catatan · sudah dicek, bahaya](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8734)<br>`450:8734` | <img src="img/figma-parity/app/act-protected.jpg" width="160"><br>`act-protected` | <img src="img/figma-parity/figma/450-8734.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Catatan · belum dicek](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8739)<br>`450:8739` | <img src="img/figma-parity/app/act-protected.jpg" width="160"><br>`act-protected` | <img src="img/figma-parity/figma/450-8739.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Catatan · sudah dicek, aman](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=450-8744)<br>`450:8744` | <img src="img/figma-parity/app/act-protected-2.jpg" width="160"><br>`act-protected-2` | <img src="img/figma-parity/figma/450-8744.jpg" width="160"> | ✅ same | Same as Figma. |
 
-## Profile
+### Screens: Profile
 
-| Frame | App now | Figma | Status | Note |
+| Frame | App now | Figma | Status | Notes |
 |---|---|---|---|---|
-| [Profile/Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10447)<br>`416:10447` | <img src="img/figma-parity/app/pf-guardian.jpg" width="160"><br>`pf-guardian` | <img src="img/figma-parity/figma/416-10447.jpg" width="160"> | ✅ match | Matches (stats come from the mock). |
-| [Profile/Guardian · Belum ada orang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5353)<br>`480:5353` | <img src="img/figma-parity/app/pf-guardian-empty.jpg" width="160"><br>`pf-guardian-empty` | <img src="img/figma-parity/figma/480-5353.jpg" width="160"> | ✅ match | Matches. |
-| [Profile/Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10338)<br>`416:10338` | <img src="img/figma-parity/app/pf-pribadi.jpg" width="160"><br>`pf-pribadi` | <img src="img/figma-parity/figma/416-10338.jpg" width="160"> | 🟠 gap | Perlindungan shows "Ekstensi Safari · Aktif" as text; Figma has two switches: Ekstensi Safari and "Blokir situs berbahaya". |
-| [Profile/Pribadi · Ajak jadi Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5227)<br>`480:5227` | <img src="img/figma-parity/app/pf-pribadi-2.jpg" width="160"><br>`pf-pribadi-2` | <img src="img/figma-parity/figma/480-5227.jpg" width="160"> | ✅ match | Ajak jadi Guardian card matches. |
-| [Profile/Pribadi (v2, terhubung Virellia)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10275)<br>`455:10275` | <img src="img/figma-parity/app/pf-protected.jpg" width="160"><br>`pf-protected` | <img src="img/figma-parity/figma/455-10275.jpg" width="160"> | 🟡 minor | Matches. "Ekstensi Safari · Aktif" is green without a chevron (Figma: grey with chevron). |
-| [Profile/Pribadi (v2, layar pertama)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10571)<br>`455:10571` | <img src="img/figma-parity/app/pf-protected.jpg" width="160"><br>`pf-protected` | <img src="img/figma-parity/figma/455-10571.jpg" width="160"> | 🟡 minor | Same as 455:10275. |
-| [Guardian/Detail Orang Dilindungi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10574)<br>`416:10574` | <img src="img/figma-parity/app/pf-member.jpg" width="160"><br>`pf-member` | <img src="img/figma-parity/figma/416-10574.jpg" width="160"> | 🟡 minor | Matches. Copy: "Aktivitas Terakhir · Lihat Semua" vs Figma "Aktivitas terbaru · Lihat semua". |
-| [Guardian/Detail Orang Dilindungi · Putuskan](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10676)<br>`416:10676` | <img src="img/figma-parity/app/pf-member-disconnect.jpg" width="160"><br>`pf-member-disconnect` | <img src="img/figma-parity/figma/416-10676.jpg" width="160"> | ✅ match | Matches. |
-| [Pengaturan/Mode akun](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9515)<br>`455:9515` | <img src="img/figma-parity/app/pf-mode.jpg" width="160"><br>`pf-mode` | <img src="img/figma-parity/figma/455-9515.jpg" width="160"> | ⚪ not shot | This Figma frame is the Protected "Akun Tertaut" page (Terhubung row), not Mode akun. The app has it (linked.autoSend / linked.shareWarnings) but the run opened Guardian Mode akun instead. |
-| [Pengaturan/Mode akun (pilihan lain)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=457-10896)<br>`457:10896` | <img src="img/figma-parity/app/pf-mode.jpg" width="160"><br>`pf-mode` | <img src="img/figma-parity/figma/457-10896.jpg" width="160"> | ⚪ not shot | Same as 455:9515 (Kirim link otomatis off). |
-| [Pengaturan/Kelola profil (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=462-11043)<br>`462:11043` | <img src="img/figma-parity/app/pf-manage.jpg" width="160"><br>`pf-manage` | <img src="img/figma-parity/figma/462-11043.jpg" width="160"> | ⚪ not shot | Protected Kelola profil (letter avatar, "Aktif sejak", Nama only): the run shot the Guardian version. |
-| [Pengaturan/Kelola profil](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12854)<br>`416:12854` | <img src="img/figma-parity/app/pf-manage.jpg" width="160"><br>`pf-manage` | <img src="img/figma-parity/figma/416-12854.jpg" width="160"> | 🟠 gap | Missing "Akun · Perangkat terhubung (2 perangkat)" row. |
-| [Pengaturan/Notifikasi (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9627)<br>`455:9627` | <img src="img/figma-parity/app/pf-notifications.jpg" width="160"><br>`pf-notifications` | <img src="img/figma-parity/figma/455-9627.jpg" width="160"> | ⚪ not shot | Protected Notifikasi (Peringatan + Akun Terhubung · Link terblokir): the run shot the Guardian version. |
-| [Pengaturan/Notifikasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12916)<br>`416:12916` | <img src="img/figma-parity/app/pf-notifications.jpg" width="160"><br>`pf-notifications` | <img src="img/figma-parity/figma/416-12916.jpg" width="160"> | 🟡 minor | Matches, plus a "Notifikasi mati · Nyalakan" banner on top while the system permission is off. |
-| [Pengaturan/Bahasa (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9697)<br>`455:9697` | <img src="img/figma-parity/app/pf-language.jpg" width="160"><br>`pf-language` | <img src="img/figma-parity/figma/455-9697.jpg" width="160"> | 🟡 minor | Same options; the app lists English first, Figma lists Bahasa Indonesia first. |
-| [Pengaturan/Bahasa](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12986)<br>`416:12986` | <img src="img/figma-parity/app/pf-language.jpg" width="160"><br>`pf-language` | <img src="img/figma-parity/figma/416-12986.jpg" width="160"> | 🟡 minor | Same as 455:9697. |
-| [Pengaturan/Tema (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9718)<br>`455:9718` | <img src="img/figma-parity/app/pf-theme.jpg" width="160"><br>`pf-theme` | <img src="img/figma-parity/figma/455-9718.jpg" width="160"> | 🟡 minor | Matches. "Kurangi efek kaca" subtitle differs (app: "Latar polos yang juga menghemat baterai"). |
-| [Pengaturan/Tema](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13007)<br>`416:13007` | <img src="img/figma-parity/app/pf-theme.jpg" width="160"><br>`pf-theme` | <img src="img/figma-parity/figma/416-13007.jpg" width="160"> | 🟡 minor | Same as 455:9718. |
-| [Pengaturan/Aksesibilitas (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9785)<br>`455:9785` | <img src="img/figma-parity/app/pf-accessibility.jpg" width="160"><br>`pf-accessibility` | <img src="img/figma-parity/figma/455-9785.jpg" width="160"> | 🟡 minor | Matches. Subtitles differ: Kurangi gerakan ("Matikan animasi di Shoo" vs "Matikan animasi gauge dan swipe kartu"), Bacakan peringatan. |
-| [Pengaturan/Aksesibilitas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13074)<br>`416:13074` | <img src="img/figma-parity/app/pf-accessibility.jpg" width="160"><br>`pf-accessibility` | <img src="img/figma-parity/figma/416-13074.jpg" width="160"> | 🟡 minor | Same as 455:9785. |
-| [Pengaturan/Tentang Shoo (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9858)<br>`455:9858` | <img src="img/figma-parity/app/pf-about.jpg" width="160"><br>`pf-about` | <img src="img/figma-parity/figma/455-9858.jpg" width="160"> | 🟡 minor | Matches. Version "Versi 1.0 (1)" vs "Versi 1.0.0 (42)" (build number), tagline "dirimu" vs "diri". |
-| [Pengaturan/Tentang Shoo](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13147)<br>`416:13147` | <img src="img/figma-parity/app/pf-about.jpg" width="160"><br>`pf-about` | <img src="img/figma-parity/figma/416-13147.jpg" width="160"> | 🟡 minor | Same as 455:9858. |
+| [Profile/Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10447)<br>`416:10447` | <img src="img/figma-parity/app/pf-guardian.jpg" width="160"><br>`pf-guardian` | <img src="img/figma-parity/figma/416-10447.jpg" width="160"> | ✅ same | Same as Figma: spacing under the header card, pills, Renatta faded when her extension is off. |
+| [Profile/Guardian · Belum ada orang](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5353)<br>`480:5353` | <img src="img/figma-parity/app/pf-guardian-empty.jpg" width="160"><br>`pf-guardian-empty` | <img src="img/figma-parity/figma/480-5353.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Profile/Pribadi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10338)<br>`416:10338` | <img src="img/figma-parity/app/pf-pribadi.jpg" width="160"><br>`pf-pribadi` | <img src="img/figma-parity/figma/416-10338.jpg" width="160"> | 🟠 clear diff | Different: the Perlindungan section shows "Ekstensi Safari · Aktif" as text. Figma has two switches (Ekstensi Safari, Blokir situs berbahaya). Needs a feature decision. |
+| [Profile/Pribadi · Ajak jadi Guardian](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=480-5227)<br>`480:5227` | <img src="img/figma-parity/app/pf-pribadi-2.jpg" width="160"><br>`pf-pribadi-2` | <img src="img/figma-parity/figma/480-5227.jpg" width="160"> | ✅ same | Same as Figma (card shadow added). |
+| [Profile/Pribadi (v2, terhubung Virellia)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10275)<br>`455:10275` | <img src="img/figma-parity/app/pf-protected.jpg" width="160"><br>`pf-protected` | <img src="img/figma-parity/figma/455-10275.jpg" width="160"> | 🟡 small diff | Same: pill, stats, Terhubung card. Different: Figma shows a letter avatar "U" for the Protected person; the app shows a memoji. The "Ekstensi Safari" row has no arrow because it does nothing. Figma's Akun spacing is not the same in its two versions of this screen. |
+| [Profile/Pribadi (v2, layar pertama)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-10571)<br>`455:10571` | <img src="img/figma-parity/app/pf-protected.jpg" width="160"><br>`pf-protected` | <img src="img/figma-parity/figma/455-10571.jpg" width="160"> | 🟡 small diff | Same as 455:10275. |
+| [Guardian/Detail Orang Dilindungi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10574)<br>`416:10574` | <img src="img/figma-parity/app/pf-member.jpg" width="160"><br>`pf-member` | <img src="img/figma-parity/figma/416-10574.jpg" width="160"> | ✅ same | Same as Figma: no avatar shadow, status pill, chips, "Aktivitas terbaru · Lihat semua". |
+| [Guardian/Detail Orang Dilindungi · Putuskan](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-10676)<br>`416:10676` | <img src="img/figma-parity/app/pf-member-disconnect.jpg" width="160"><br>`pf-member-disconnect` | <img src="img/figma-parity/figma/416-10676.jpg" width="160"> | ✅ same | Same as Figma (the floating sheet is drawn by iOS). |
+| [Pengaturan/Mode akun](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9515)<br>`455:9515` | <img src="img/figma-parity/app/pf-protected-connection.jpg" width="160"><br>`pf-protected-connection` | <img src="img/figma-parity/figma/455-9515.jpg" width="160"> | 🟡 small diff | This frame is the Protected "Akun Tertaut" page (screenshot `pf-protected-connection`). Different: the switches say "Segera hadir" because they are behind feature flag #183. Figma uses the English word "You" in the Indonesian screen. |
+| [Pengaturan/Mode akun (pilihan lain)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=457-10896)<br>`457:10896` | <img src="img/figma-parity/app/pf-protected-connection.jpg" width="160"><br>`pf-protected-connection` | <img src="img/figma-parity/figma/457-10896.jpg" width="160"> | 🟡 small diff | Same as 455:9515. |
+| [Pengaturan/Kelola profil (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=462-11043)<br>`462:11043` | <img src="img/figma-parity/app/pf-protected-manage.jpg" width="160"><br>`pf-protected-manage` | <img src="img/figma-parity/figma/462-11043.jpg" width="160"> | 🟡 small diff | Screenshot `pf-protected-manage`. Same, except the letter-avatar question from 455:10275. |
+| [Pengaturan/Kelola profil](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12854)<br>`416:12854` | <img src="img/figma-parity/app/pf-manage.jpg" width="160"><br>`pf-manage` | <img src="img/figma-parity/figma/416-12854.jpg" width="160"> | 🟠 clear diff | Different: the "Akun · Perangkat terhubung" row is missing (not built yet). "Ubah foto" is extra in the app. The username has no arrow because it cannot be changed. |
+| [Pengaturan/Notifikasi (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9627)<br>`455:9627` | <img src="img/figma-parity/app/pf-protected-notifications.jpg" width="160"><br>`pf-protected-notifications` | <img src="img/figma-parity/figma/455-9627.jpg" width="160"> | 🟡 small diff | Screenshot `pf-protected-notifications`. Different: "Akun Terhubung" is behind feature flag #183. |
+| [Pengaturan/Notifikasi](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12916)<br>`416:12916` | <img src="img/figma-parity/app/pf-notifications.jpg" width="160"><br>`pf-notifications` | <img src="img/figma-parity/figma/416-12916.jpg" width="160"> | 🟡 small diff | Same layout. The "Notifikasi mati" banner shows because the test does not answer the notification question. |
+| [Pengaturan/Bahasa (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9697)<br>`455:9697` | <img src="img/figma-parity/app/pf-language.jpg" width="160"><br>`pf-language` | <img src="img/figma-parity/figma/455-9697.jpg" width="160"> | ✅ same | Same as Figma (Bahasa Indonesia listed first). |
+| [Pengaturan/Bahasa](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-12986)<br>`416:12986` | <img src="img/figma-parity/app/pf-language.jpg" width="160"><br>`pf-language` | <img src="img/figma-parity/figma/416-12986.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Pengaturan/Tema (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9718)<br>`455:9718` | <img src="img/figma-parity/app/pf-theme.jpg" width="160"><br>`pf-theme` | <img src="img/figma-parity/figma/455-9718.jpg" width="160"> | ✅ same | Same as Figma: theme previews, Efek section. |
+| [Pengaturan/Tema](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13007)<br>`416:13007` | <img src="img/figma-parity/app/pf-theme.jpg" width="160"><br>`pf-theme` | <img src="img/figma-parity/figma/416-13007.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Pengaturan/Aksesibilitas (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9785)<br>`455:9785` | <img src="img/figma-parity/app/pf-accessibility.jpg" width="160"><br>`pf-accessibility` | <img src="img/figma-parity/figma/455-9785.jpg" width="160"> | ✅ same | Same as Figma: slider and settings rows. |
+| [Pengaturan/Aksesibilitas](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13074)<br>`416:13074` | <img src="img/figma-parity/app/pf-accessibility.jpg" width="160"><br>`pf-accessibility` | <img src="img/figma-parity/figma/416-13074.jpg" width="160"> | ✅ same | Same as Figma. |
+| [Pengaturan/Tentang Shoo (v2)](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=455-9858)<br>`455:9858` | <img src="img/figma-parity/app/pf-about.jpg" width="160"><br>`pf-about` | <img src="img/figma-parity/figma/455-9858.jpg" width="160"> | 🟡 small diff | Same layout. The version number comes from the build, so it differs from Figma. |
+| [Pengaturan/Tentang Shoo](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=416-13147)<br>`416:13147` | <img src="img/figma-parity/app/pf-about.jpg" width="160"><br>`pf-about` | <img src="img/figma-parity/figma/416-13147.jpg" width="160"> | 🟡 small diff | Same as 455:9858. |
 
-## AI vs GUARDIAN - EKSPLORASI
+### Screens: AI vs Guardian (design exploration)
 
-| Frame | App now | Figma | Status | Note |
+| Frame | App now | Figma | Status | Notes |
 |---|---|---|---|---|
-| [Protected/Detail · Dibuka Guardian · Opsi 1](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-7897)<br>`487:7897` | <img src="img/figma-parity/app/dt-protected-safe.jpg" width="160"><br>`dt-protected-safe` | <img src="img/figma-parity/figma/487-7897.jpg" width="160"> | 🟠 gap | Exploration Opsi 1 (Protected sees "Virellia menandai situs ini aman · Blokir dibuka", AI first score 92, "Tetap hati-hati"). The app shows the gauge with "Ditandai aman oleh Virellia" and the verified card. |
-| [Protected/Detail · Dibuka Guardian · Opsi 2](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-8620)<br>`487:8620` | <img src="img/figma-parity/app/dt-protected-safe.jpg" width="160"><br>`dt-protected-safe` | <img src="img/figma-parity/figma/487-8620.jpg" width="160"> | 🟠 gap | Exploration Opsi 2: same as 487:7897. |
+| [Protected/Detail · Dibuka Guardian · Opsi 1](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-7897)<br>`487:7897` | <img src="img/figma-parity/app/dt-protected-safe.jpg" width="160"><br>`dt-protected-safe` | <img src="img/figma-parity/figma/487-7897.jpg" width="160"> | 🟠 clear diff | Different (design exploration, option 1): Figma shows the Protected person "Virellia menandai situs ini aman · Blokir dibuka", the AI's first score 92, and "Tetap hati-hati". The app shows the gauge with "Ditandai aman oleh Virellia" and the verified card. |
+| [Protected/Detail · Dibuka Guardian · Opsi 2](https://www.figma.com/design/6PgxbrY0LSkcdaJ5u4YBJP/-CH7--Shoo-Scam-App?node-id=487-8620)<br>`487:8620` | <img src="img/figma-parity/app/dt-protected-safe.jpg" width="160"><br>`dt-protected-safe` | <img src="img/figma-parity/figma/487-8620.jpg" width="160"> | 🟠 clear diff | Different (design exploration, option 2): same as 487:7897. |
 
-## Test 1 — mock variants
+## Test 1: the same screens with unusual fake data
 
-Same screens with other data. Run: `TEST_RUNNER_QA_SCENARIO=<name> TEST_RUNNER_QA_SHOT_DIR=… xcodebuild test -only-testing:ShooAppUITests/FigmaParityUITests`.
+**What it checks:** the screens still look right when the data is extreme: long names, emoji, many scans, only safe, only blocked. The data is fake (`MockRepository`), so no server is involved.
 
-### `mixedVerdicts` — Every verdict state: blocked/warning × none / safe / not safe
+**Result:** the screens hold up. Problems 4 and 5 above come from this test.
+
+**How to read it:** one row of screenshots per data set. The label above each picture is the screen: `home` = Home, `act` = Activity, `pf` = Profile, `dt` = Detail; `guardian` / `protected` = whose phone.
+
+### `mixedVerdicts`: every kind of result: blocked or warning, and not reviewed, marked safe, or marked not safe by the Guardian
 
 | `home-guardian` | `home-protected` | `act-guardian` | `act-protected` | `pf-guardian` |
 |---|---|---|---|---|
 | <img src="img/figma-parity/app/mixedVerdicts-home-guardian.jpg" width="140"> | <img src="img/figma-parity/app/mixedVerdicts-home-protected.jpg" width="140"> | <img src="img/figma-parity/app/mixedVerdicts-act-guardian.jpg" width="140"> | <img src="img/figma-parity/app/mixedVerdicts-act-protected.jpg" width="140"> | <img src="img/figma-parity/app/mixedVerdicts-pf-guardian.jpg" width="140"> |
 
-### `heavy` — 3 members, 60 scans over 30 days, counters past 999
+### `heavy`: a lot of data: 3 family members, 60 scans over 30 days, counters over 999
 
 | `home-guardian` | `home-protected` | `act-guardian` | `act-protected` | `pf-guardian` | `dt-first` |
 |---|---|---|---|---|---|
 | <img src="img/figma-parity/app/heavy-home-guardian.jpg" width="140"> | <img src="img/figma-parity/app/heavy-home-protected.jpg" width="140"> | <img src="img/figma-parity/app/heavy-act-guardian.jpg" width="140"> | <img src="img/figma-parity/app/heavy-act-protected.jpg" width="140"> | <img src="img/figma-parity/app/heavy-pf-guardian.jpg" width="140"> | <img src="img/figma-parity/app/heavy-dt-first.jpg" width="140"> |
 
-### `edge` — 20-character names, emoji, an 87-character domain, no title / favicon / screenshot, one signal
+### `edge`: awkward data: 20-character names, emoji, an 87-character web address, no title, icon or screenshot, only one reason
 
 | `home-guardian` | `home-protected` | `act-guardian` | `act-protected` | `pf-guardian` | `dt-long` | `dt-one-signal` |
 |---|---|---|---|---|---|---|
 | <img src="img/figma-parity/app/edge-home-guardian.jpg" width="140"> | <img src="img/figma-parity/app/edge-home-protected.jpg" width="140"> | <img src="img/figma-parity/app/edge-act-guardian.jpg" width="140"> | <img src="img/figma-parity/app/edge-act-protected.jpg" width="140"> | <img src="img/figma-parity/app/edge-pf-guardian.jpg" width="140"> | <img src="img/figma-parity/app/edge-dt-long.jpg" width="140"> | <img src="img/figma-parity/app/edge-dt-one-signal.jpg" width="140"> |
 
-### `allSafe` — Every scan marked safe by the Guardian
+### `allSafe`: every scan marked safe by the Guardian
 
 | `home-guardian` | `home-protected` | `act-guardian` | `act-protected` | `pf-guardian` | `dt-safe` |
 |---|---|---|---|---|---|
 | <img src="img/figma-parity/app/allSafe-home-guardian.jpg" width="140"> | <img src="img/figma-parity/app/allSafe-home-protected.jpg" width="140"> | <img src="img/figma-parity/app/allSafe-act-guardian.jpg" width="140"> | <img src="img/figma-parity/app/allSafe-act-protected.jpg" width="140"> | <img src="img/figma-parity/app/allSafe-pf-guardian.jpg" width="140"> | <img src="img/figma-parity/app/allSafe-dt-safe.jpg" width="140"> |
 
-### `allBlocked` — Only blocked scans
+### `allBlocked`: only blocked scans
 
 | `home-guardian` | `home-protected` | `act-guardian` | `act-protected` | `pf-guardian` |
 |---|---|---|---|---|
 | <img src="img/figma-parity/app/allBlocked-home-guardian.jpg" width="140"> | <img src="img/figma-parity/app/allBlocked-home-protected.jpg" width="140"> | <img src="img/figma-parity/app/allBlocked-act-guardian.jpg" width="140"> | <img src="img/figma-parity/app/allBlocked-act-protected.jpg" width="140"> | <img src="img/figma-parity/app/allBlocked-pf-guardian.jpg" width="140"> |
 
-### `corpus` — Imelda's corpus with the detector's real scores and signals (41 scans ≥ 30)
+### `corpus`: the scores and reasons the real detector gave in Test 2a (41 scans of 30 or more)
 
 | `home-guardian` | `home-protected` | `act-guardian` | `act-protected` | `pf-guardian` | `dt-top` | `dt-real-bsi` | `dt-real-lphone` | `dt-false-positive` |
 |---|---|---|---|---|---|---|---|---|
 | <img src="img/figma-parity/app/corpus-home-guardian.jpg" width="140"> | <img src="img/figma-parity/app/corpus-home-protected.jpg" width="140"> | <img src="img/figma-parity/app/corpus-act-guardian.jpg" width="140"> | <img src="img/figma-parity/app/corpus-act-protected.jpg" width="140"> | <img src="img/figma-parity/app/corpus-pf-guardian.jpg" width="140"> | <img src="img/figma-parity/app/corpus-dt-top.jpg" width="140"> | <img src="img/figma-parity/app/corpus-dt-real-bsi.jpg" width="140"> | <img src="img/figma-parity/app/corpus-dt-real-lphone.jpg" width="140"> | <img src="img/figma-parity/app/corpus-dt-false-positive.jpg" width="140"> |
 
-## Test 2a — Imelda's corpus through layers 1–4 (offline)
+## Test 2a: does the detector score saved pages right?
 
-`node ai/eval/run.mjs --analyze-url http://127.0.0.1:8788 --json --show-holdout` against `wrangler dev` of `ai/` with the LLM key in `ai/.dev.vars` and the prebuilt public blocklist (190 000 domains, `ai/scripts/build-blocklist.mjs`) in local KV. `plan/alief/qa/corpus-to-scans.mjs` turns the rows into the `corpus` scenario. No live page was opened for this test.
+**What it checks:** Imelda's test set has 108 saved web pages: 52 scam and 56 normal. Each page goes through all 4 layers, and its score is compared with what it should be. No real website is opened.
 
-| | Samples | ≥ 30 (warning) | ≥ 50 | ≥ 80 (blocked) |
-|---|---|---|---|---|
-| Scam | 52 | 37 | 32 | 16 |
-| Legit | 56 | 4 | 1 | 1 |
+**Result: targets not met.** Too few scams are blocked, and 4 normal pages are wrongly flagged.
 
-Targets (docs/mandates/imelda.md): 0 legit ≥ 30 — **4 found**; ≥ 90 % scam ≥ 50 — **62 %**; ≥ 70 % scam ≥ 80 — **31 %**. `/analyze` p95 6011 ms, remote failures 0. 9 samples got a layer-4 signal.
+| Check | Target | Result | |
+|---|---|---|---|
+| Scam pages blocked (score 80 or more) | at least 70% | 15 of 52 = 29% | ❌ fail |
+| Scam pages scoring 50 or more | at least 90% | 32 of 52 = 62% | ❌ fail |
+| Scam pages that got any warning (30 or more) | no target | 37 of 52 = 71% | |
+| Scam pages missed (under 30) | no target | 15 of 52 | |
+| Normal pages wrongly flagged (30 or more) | 0 | 4 of 56 | ❌ fail |
+| Server time for one page (95th percentile) | under 8 s | 6.0 s | ✅ pass |
+| Server errors | 0 | 0 | ✅ pass |
 
-### Detector mismatches
+**Keep in mind:** only 3 of the 52 scam pages are real captured scams. The rest were written by Team AI for testing ("made up"). 39 of the 56 normal pages are real sites. So these numbers show how the detector does on the test set, not yet on the real web. "Held back" pages are kept aside and never used to tune the detector.
 
-| Sample | Label | Real? | Score | Signals |
-|---|---|---|---|---|
-| `trap-blog-cek-saldo-bca` | legit flagged | synthetic | 49 | suspicious_link:L2:24, brand_logo_offsite:L3:25 |
-| `trap-github-pages-dokumentasi` | legit flagged | synthetic · holdout | 34 | suspicious_link:L2:19, asks_password:L3:15 |
-| `trap-fintech-kyc-sah` | legit flagged | synthetic | 95 | suspicious_link:L2:10, asks_selfie_ktp:L3:35, asks_ktp:L3:25, asks_otp:L3:25 |
-| `trap-asuransi-klaim-resmi` | legit flagged | synthetic · holdout | 35 | suspicious_link:L2:10, asks_ktp:L3:25 |
-| `regs-apps14-code-php` | scam missed | real | 21 | suspicious_link:L2:21 |
-| `fixture-bca-verifikasi` | scam missed | synthetic | 29 | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
-| `fixture-promo-shopee` | scam missed | synthetic | 29 | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
-| `fixture-bansos-kemensos` | scam missed | synthetic | 29 | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
-| `synthetic-p0stindonesia` | scam missed | synthetic | 25 | lookalike_domain:L2:25 |
-| `syn-cimb-octo-limit` | scam missed | synthetic · holdout | 0 | — |
-| `syn-sicepat-apk` | scam missed | synthetic | 5 | cheap_tld:L2:5 |
-| `syn-anteraja-alamat` | scam missed | synthetic | 20 | asks_card:L3:20 |
-| `syn-telkomsel-poin` | scam missed | synthetic | 25 | asks_otp:L3:25 |
-| `syn-etilang-denda` | scam missed | synthetic · holdout | 20 | asks_card:L3:20 |
-| `syn-samsat-pajak-kendaraan` | scam missed | synthetic · holdout | 5 | cheap_tld:L2:5 |
-| `syn-find-my-iphone-hilang` | scam missed | synthetic | 25 | lookalike_domain:L2:10, cheap_tld:L2:15 |
-| `syn-apple-pay-tagihan` | scam missed | synthetic | 25 | cheap_tld:L2:5, asks_card:L3:20 |
-| `syn-loker-admin-online` | scam missed | synthetic | 0 | — |
-| `syn-investasi-kripto-profit` | scam missed | synthetic | 0 | — |
+Targets: `docs/mandates/imelda.md`. Command: `node ai/eval/run.mjs --analyze-url http://127.0.0.1:8788 --json --show-holdout`, against a local copy of the AI server (`ai/`) with the same AI model as production and the public scam list (190 000 sites) loaded. `corpus-to-scans.mjs` turns the results into the `corpus` data set for Test 1.
 
-<details><summary>All 108 samples</summary>
+**See every test page:** each page name below links to its source in `ai/eval/data` (the code Imelda wrote or captured). The *view* link is a local HTML page that draws what the detector saw (URL, title, text, form fields, images as their alt text) next to its score and the live Safari screenshot. GitHub shows those as code, so open them on your Mac:
 
-| Sample | Label | Real? | L1–2 | Total | Status | Signals |
-|---|---|---|---|---|---|---|
-| `bank-login-bri` | legit | real | 0 | 0 | normal |  |
-| `bank-login-btn` | legit | real | 0 | 0 | normal |  |
-| `bank-login-danamon` | legit | real | 0 | 0 | normal |  |
-| `bank-login-klikbca` | legit | real | 0 | 0 | normal |  |
-| `bank-login-mega` | legit | real · H | 0 | 0 | normal |  |
-| `bank-login-permata` | legit | real | 0 | 0 | normal |  |
-| `checkout-bukalapak` | legit | real | 0 | 0 | normal |  |
-| `checkout-lazada` | legit | real | 0 | 0 | normal |  |
-| `checkout-orami` | legit | real · H | 0 | 0 | normal |  |
-| `checkout-ruparupa` | legit | real | 0 | 0 | normal |  |
-| `checkout-shopee-cart` | legit | real · H | 0 | 0 | normal |  |
-| `checkout-sociolla` | legit | real | 0 | 0 | normal |  |
-| `checkout-tokopedia-cart` | legit | real | 0 | 0 | normal |  |
-| `checkout-traveloka` | legit | real · H | 0 | 0 | normal |  |
-| `checkout-zalora` | legit | real | 0 | 0 | normal |  |
-| `gov-bi` | legit | real | 0 | 0 | normal |  |
-| `gov-bpjs-kesehatan` | legit | real | 0 | 0 | normal |  |
-| `gov-dukcapil` | legit | real | 0 | 0 | normal |  |
-| `gov-kemensos` | legit | real | 0 | 0 | normal |  |
-| `gov-komdigi` | legit | real | 0 | 0 | normal |  |
-| `gov-ojk` | legit | real | 0 | 0 | normal |  |
-| `gov-pajak` | legit | real | 0 | 0 | normal |  |
-| `popular-cnnindonesia` | legit | real | 0 | 0 | normal |  |
-| `popular-detik` | legit | real | 0 | 0 | normal |  |
-| `popular-idntimes` | legit | real | 0 | 0 | normal |  |
-| `popular-kompas` | legit | real · H | 0 | 0 | normal |  |
-| `popular-kumparan` | legit | real | 0 | 0 | normal |  |
-| `popular-liputan6` | legit | real · H | 0 | 0 | normal |  |
-| `popular-tribunnews` | legit | real · H | 0 | 0 | normal |  |
-| `popular-wikipedia-id` | legit | real | 0 | 0 | normal |  |
-| `bank-login-bni-web` | legit | real · H | 0 | 0 | normal |  |
-| `bank-login-mandiri-web` | legit | real | 0 | 0 | normal |  |
-| `checkout-bhinneka` | legit | real · H | 0 | 0 | normal |  |
-| `gov-kemenkeu` | legit | real | 0 | 0 | normal |  |
-| `popular-merdeka` | legit | real · H | 0 | 0 | normal |  |
-| `official-tokopedia-home` | legit | real | 0 | 0 | normal |  |
-| `official-bca-home` | legit | real | 0 | 0 | normal |  |
-| `official-shopee-home` | legit | real | 0 | 0 | normal |  |
-| `popular-wikipedia` | legit | real | 0 | 0 | normal |  |
-| `trap-dana-sosial` | legit | syn | 0 | 0 | normal |  |
-| `trap-mandiri-jaya` | legit | syn | 0 | 0 | normal |  |
-| `trap-toko-iphone-bekas` | legit | syn · H | 10 | 10 | normal | lookalike_domain:L2:10 |
-| `trap-cloud-storage` | legit | syn | 0 | 0 | normal |  |
-| `trap-toko-logo-bank-checkout` | legit | syn · H | 0 | 20 | normal | brand_logo_offsite:L3:12, urgent_language:L3:8 |
-| `trap-blog-cek-saldo-bca` | legit | syn | 24 | 49 | warning 1 | suspicious_link:L2:24, brand_logo_offsite:L3:25 |
-| `trap-github-pages-dokumentasi` | legit | syn · H | 19 | 34 | warning 1 | suspicious_link:L2:19, asks_password:L3:15 |
-| `trap-sign-in-google-facebook` | legit | syn | 10 | 25 | normal | suspicious_link:L2:10, asks_password:L3:15 |
-| `trap-fintech-kyc-sah` | legit | syn | 10 | 95 | blocked | suspicious_link:L2:10, asks_selfie_ktp:L3:35, asks_ktp:L3:25, asks_otp:L3:25 |
-| `trap-berita-waspada-penipuan` | legit | syn | 0 | 20 | normal | brand_logo_offsite:L3:12, urgent_language:L3:8 |
-| `trap-portal-orang-tua-sekolah` | legit | syn | 0 | 15 | normal | asks_password:L3:15 |
-| `trap-asuransi-klaim-resmi` | legit | syn · H | 10 | 35 | warning 1 | suspicious_link:L2:10, asks_ktp:L3:25 |
-| `trap-toko-kopi-kartu-native` | legit | syn | 0 | 20 | normal | asks_card:L3:20 |
-| `trap-batik-card-checkout-en` | legit | syn | 5 | 25 | normal | cheap_tld:L2:5, asks_card:L3:20 |
-| `syn-sekolah-portal2` | legit | syn · H | 0 | 0 | normal |  |
-| `syn-toko-app3-index-php` | legit | syn | 0 | 0 | normal |  |
-| `syn-kampus-code-path` | legit | syn | 0 | 0 | normal |  |
-| `regs-apps14-code-php` | scam | real | 21 | 21 | normal | suspicious_link:L2:21 |
-| `cusbsi-bsi-cash-management` | scam | real · H | 0 | 70 | warning 2 | unreasonable_request:L4:30, brand_logo_offsite:L3:25, asks_password:L3:15 |
-| `lphone-login` | scam | real | 39 | 39 | warning 1 | lookalike_domain:L2:25, brand_plus_keyword:L2:14 |
-| `fixture-bca-verifikasi` | scam | syn | 29 | 29 | normal | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
-| `fixture-promo-shopee` | scam | syn | 29 | 29 | normal | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
-| `fixture-bansos-kemensos` | scam | syn | 29 | 29 | normal | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
-| `synthetic-p0stindonesia` | scam | syn | 25 | 25 | normal | lookalike_domain:L2:25 |
-| `syn-bri-token-expired` | scam | syn | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, asks_pin:L3:35, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-mandiri-livin-upgrade` | scam | syn · H | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, unreasonable_request:L4:30, brand_logo_offsite:L3:25, asks_password:L3:15, urgent_language:L3:15 |
-| `syn-bni-mobile-banking` | scam | syn · H | 25 | 100 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, unreasonable_request:L4:30, brand_logo_offsite:L3:25, asks_card:L3:20, asks_password:L3:15 |
-| `syn-bsi-sharia-bonus` | scam | syn | 25 | 100 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, unreasonable_request:L4:30, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-bca-klikbca-clean` | scam | syn | 0 | 80 | blocked | unreasonable_request:L4:30, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-cimb-octo-limit` | scam | syn · H | 0 | 0 | normal |  |
-| `syn-bca-blokir-kartu` | scam | syn · H | 14 | 89 | blocked | brand_plus_keyword:L2:14, unreasonable_request:L4:30, brand_logo_offsite:L3:25, asks_card:L3:20 |
-| `syn-bri-cashback-survey` | scam | syn | 25 | 85 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, brand_logo_offsite:L3:25 |
-| `syn-mandiri-kyc-update` | scam | syn | 0 | 100 | blocked | asks_selfie_ktp:L3:35, unreasonable_request:L4:30, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-dana-kaget-bonus` | scam | syn | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, unreasonable_request:L4:30, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-ovo-upgrade-premier` | scam | syn | 25 | 100 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, unreasonable_request:L4:30, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-gopay-driver-refund` | scam | syn | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, asks_pin:L3:35, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-shopeepay-limit` | scam | syn | 29 | 69 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_password:L3:15 |
-| `syn-linkaja-hadiah` | scam | syn · H | 0 | 35 | warning 1 | asks_pin:L3:35 |
-| `syn-dana-premium-pin` | scam | syn · H | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, asks_pin:L3:35, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-ovo-undian-grab` | scam | syn | 29 | 54 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25 |
-| `syn-gopay-later-pinjam` | scam | syn | 5 | 90 | blocked | cheap_tld:L2:5, asks_selfie_ktp:L3:35, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-jne-paket-tertahan` | scam | syn | 25 | 70 | warning 2 | lookalike_domain:L2:10, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_card:L3:20 |
-| `syn-jnt-tarif-selisih` | scam | syn | 25 | 50 | warning 2 | lookalike_domain:L2:10, cheap_tld:L2:15, brand_logo_offsite:L3:25 |
-| `syn-sicepat-apk` | scam | syn | 5 | 5 | normal | cheap_tld:L2:5 |
-| `syn-anteraja-alamat` | scam | syn | 0 | 20 | normal | asks_card:L3:20 |
-| `syn-pos-kiriman-luar-negeri` | scam | syn | 25 | 50 | warning 2 | lookalike_domain:L2:25, brand_logo_offsite:L3:25 |
-| `syn-tiki-nomor-resi` | scam | syn | 5 | 30 | warning 1 | cheap_tld:L2:5, asks_otp:L3:25 |
-| `syn-ninja-ganti-rugi` | scam | syn · H | 5 | 40 | warning 1 | cheap_tld:L2:5, asks_pin:L3:35 |
-| `syn-tokopedia-undian` | scam | syn · H | 29 | 69 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_password:L3:15 |
-| `syn-telkomsel-poin` | scam | syn | 0 | 25 | normal | asks_otp:L3:25 |
-| `syn-lazada-giveaway` | scam | syn | 25 | 70 | warning 2 | lookalike_domain:L2:10, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_card:L3:20 |
-| `syn-shopee-flash-undian` | scam | syn | 29 | 54 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25 |
-| `syn-bpjs-bonus-iuran` | scam | syn | 29 | 74 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_card:L3:20 |
-| `syn-pertamina-subsidi` | scam | syn | 0 | 60 | warning 2 | asks_selfie_ktp:L3:35, asks_ktp:L3:25 |
-| `syn-bukalapak-voucher` | scam | syn | 29 | 79 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-bpjs-kesehatan-nonaktif` | scam | syn · H | 25 | 75 | warning 2 | lookalike_domain:L2:10, cheap_tld:L2:15, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-pajak-djp-sptp` | scam | syn | 29 | 69 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_password:L3:15 |
-| `syn-etilang-denda` | scam | syn · H | 0 | 20 | normal | asks_card:L3:20 |
-| `syn-samsat-pajak-kendaraan` | scam | syn · H | 5 | 5 | normal | cheap_tld:L2:5 |
-| `syn-prakerja-gelombang` | scam | syn | 0 | 85 | blocked | asks_selfie_ktp:L3:35, asks_ktp:L3:25, asks_otp:L3:25 |
-| `syn-dukcapil-ktp-digital` | scam | syn | 0 | 85 | blocked | asks_selfie_ktp:L3:35, asks_ktp:L3:25, asks_otp:L3:25 |
-| `syn-kemensos-bansos-pkh` | scam | syn | 14 | 99 | blocked | brand_plus_keyword:L2:14, asks_pin:L3:35, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-icloud-terkunci` | scam | syn | 29 | 69 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, asks_otp:L3:25, asks_password:L3:15 |
-| `syn-find-my-iphone-hilang` | scam | syn | 25 | 25 | normal | lookalike_domain:L2:10, cheap_tld:L2:15 |
-| `syn-apple-pay-tagihan` | scam | syn | 5 | 25 | normal | cheap_tld:L2:5, asks_card:L3:20 |
-| `syn-loker-admin-online` | scam | syn | 0 | 0 | normal |  |
-| `syn-pinjol-cair-cepat` | scam | syn | 5 | 65 | warning 2 | cheap_tld:L2:5, asks_selfie_ktp:L3:35, asks_ktp:L3:25 |
-| `syn-investasi-kripto-profit` | scam | syn | 0 | 0 | normal |  |
-| `syn-olx-pembeli-cod` | scam | syn · H | 0 | 45 | warning 1 | asks_otp:L3:25, asks_card:L3:20 |
+```bash
+node plan/alief/qa/corpus-view.mjs        # rebuild after the corpus or results change
+open plan/alief/qa/corpus-view/index.html  # list of all pages, scored-wrong ones first
+```
+
+The corpus keeps a snapshot of each page, not the full website, so the view is a simple drawing of that snapshot. Scam addresses are shown as text, never as links.
+
+### Pages scored wrong
+
+**How to read it:** "Should get" is the target for that kind of page. "Got" is the detector's score. "Why" lists the reasons that fired: name, layer, and points added.
+
+| Page | Problem | Source | Should get | Got | Why |
+|---|---|---|---|---|---|
+| [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal page flagged | made up | < 30 % · not scam, show nothing | 49 % | suspicious_link (L2, +24), brand_logo_offsite (L3, +25) |
+| [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal page flagged | made up, held back | < 30 % · not scam, show nothing | 34 % | suspicious_link (L2, +19), asks_password (L3, +15) |
+| [`trap-fintech-kyc-sah`](../../../ai/eval/data/legit/traps.json#L199)<br>[view](corpus-view/trap-fintech-kyc-sah.html) | normal page flagged | made up | < 30 % · not scam, show nothing | 95 % | suspicious_link (L2, +10), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`trap-asuransi-klaim-resmi`](../../../ai/eval/data/legit/traps.json#L322)<br>[view](corpus-view/trap-asuransi-klaim-resmi.html) | normal page flagged | made up, held back | < 30 % · not scam, show nothing | 35 % | suspicious_link (L2, +10), asks_ktp (L3, +25) |
+| [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam missed | real | ≥ 80 % · scam, block it | 21 % | suspicious_link (L2, +21) |
+| [`fixture-bca-verifikasi`](../../../ai/eval/data/scam/seed.json#L34)<br>[view](corpus-view/fixture-bca-verifikasi.html) | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-promo-shopee`](../../../ai/eval/data/scam/seed.json#L50)<br>[view](corpus-view/fixture-promo-shopee.html) | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-bansos-kemensos`](../../../ai/eval/data/scam/seed.json#L66)<br>[view](corpus-view/fixture-bansos-kemensos.html) | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`synthetic-p0stindonesia`](../../../ai/eval/data/scam/seed.json#L82)<br>[view](corpus-view/synthetic-p0stindonesia.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | lookalike_domain (L2, +25) |
+| [`syn-cimb-octo-limit`](../../../ai/eval/data/scam/synthetic.json#L258)<br>[view](corpus-view/syn-cimb-octo-limit.html) | scam missed | made up, held back | ≥ 80 % · scam, block it | 0 % | none |
+| [`syn-sicepat-apk`](../../../ai/eval/data/scam/synthetic.json#L912)<br>[view](corpus-view/syn-sicepat-apk.html) | scam missed | made up | ≥ 80 % · scam, block it | 5 % | cheap_tld (L2, +5) |
+| [`syn-anteraja-alamat`](../../../ai/eval/data/scam/synthetic.json#L936)<br>[view](corpus-view/syn-anteraja-alamat.html) | scam missed | made up | ≥ 80 % · scam, block it | 20 % | asks_card (L3, +20) |
+| [`syn-telkomsel-poin`](../../../ai/eval/data/scam/synthetic.json#L1151)<br>[view](corpus-view/syn-telkomsel-poin.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | asks_otp (L3, +25) |
+| [`syn-etilang-denda`](../../../ai/eval/data/scam/synthetic.json#L1554)<br>[view](corpus-view/syn-etilang-denda.html) | scam missed | made up, held back | ≥ 80 % · scam, block it | 20 % | asks_card (L3, +20) |
+| [`syn-samsat-pajak-kendaraan`](../../../ai/eval/data/scam/synthetic.json#L1600)<br>[view](corpus-view/syn-samsat-pajak-kendaraan.html) | scam missed | made up, held back | ≥ 80 % · scam, block it | 5 % | cheap_tld (L2, +5) |
+| [`syn-find-my-iphone-hilang`](../../../ai/eval/data/scam/synthetic.json#L1845)<br>[view](corpus-view/syn-find-my-iphone-hilang.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | lookalike_domain (L2, +10), cheap_tld (L2, +15) |
+| [`syn-apple-pay-tagihan`](../../../ai/eval/data/scam/synthetic.json#L1870)<br>[view](corpus-view/syn-apple-pay-tagihan.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | cheap_tld (L2, +5), asks_card (L3, +20) |
+| [`syn-loker-admin-online`](../../../ai/eval/data/scam/synthetic.json#L1916)<br>[view](corpus-view/syn-loker-admin-online.html) | scam missed | made up | ≥ 80 % · scam, block it | 0 % | none |
+| [`syn-investasi-kripto-profit`](../../../ai/eval/data/scam/synthetic.json#L2014)<br>[view](corpus-view/syn-investasi-kripto-profit.html) | scam missed | made up | ≥ 80 % · scam, block it | 0 % | none |
+
+<details><summary>All 108 pages</summary>
+
+"L1-2" is the score from the phone alone; "Final" adds the server layers.
+
+| Page | Type | Source | Should get | L1-2 | Final | Right? | Why |
+|---|---|---|---|---|---|---|---|
+| [`bank-login-bri`](../../../ai/eval/data/legit/real.json#L3)<br>[view](corpus-view/bank-login-bri.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-btn`](../../../ai/eval/data/legit/real.json#L29)<br>[view](corpus-view/bank-login-btn.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-danamon`](../../../ai/eval/data/legit/real.json#L55)<br>[view](corpus-view/bank-login-danamon.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-klikbca`](../../../ai/eval/data/legit/real.json#L526)<br>[view](corpus-view/bank-login-klikbca.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-mega`](../../../ai/eval/data/legit/real.json#L578)<br>[view](corpus-view/bank-login-mega.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-permata`](../../../ai/eval/data/legit/real.json#L630)<br>[view](corpus-view/bank-login-permata.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-bukalapak`](../../../ai/eval/data/legit/real.json#L687)<br>[view](corpus-view/checkout-bukalapak.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-lazada`](../../../ai/eval/data/legit/real.json#L716)<br>[view](corpus-view/checkout-lazada.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-orami`](../../../ai/eval/data/legit/real.json#L762)<br>[view](corpus-view/checkout-orami.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-ruparupa`](../../../ai/eval/data/legit/real.json#L816)<br>[view](corpus-view/checkout-ruparupa.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-shopee-cart`](../../../ai/eval/data/legit/real.json#L869)<br>[view](corpus-view/checkout-shopee-cart.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-sociolla`](../../../ai/eval/data/legit/real.json#L898)<br>[view](corpus-view/checkout-sociolla.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-tokopedia-cart`](../../../ai/eval/data/legit/real.json#L937)<br>[view](corpus-view/checkout-tokopedia-cart.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-traveloka`](../../../ai/eval/data/legit/real.json#L979)<br>[view](corpus-view/checkout-traveloka.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-zalora`](../../../ai/eval/data/legit/real.json#L1017)<br>[view](corpus-view/checkout-zalora.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-bi`](../../../ai/eval/data/legit/real.json#L1056)<br>[view](corpus-view/gov-bi.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-bpjs-kesehatan`](../../../ai/eval/data/legit/real.json#L1093)<br>[view](corpus-view/gov-bpjs-kesehatan.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-dukcapil`](../../../ai/eval/data/legit/real.json#L1119)<br>[view](corpus-view/gov-dukcapil.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-kemensos`](../../../ai/eval/data/legit/real.json#L1161)<br>[view](corpus-view/gov-kemensos.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-komdigi`](../../../ai/eval/data/legit/real.json#L1195)<br>[view](corpus-view/gov-komdigi.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-ojk`](../../../ai/eval/data/legit/real.json#L1228)<br>[view](corpus-view/gov-ojk.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-pajak`](../../../ai/eval/data/legit/real.json#L1271)<br>[view](corpus-view/gov-pajak.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-cnnindonesia`](../../../ai/eval/data/legit/real.json#L1420)<br>[view](corpus-view/popular-cnnindonesia.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-detik`](../../../ai/eval/data/legit/real.json#L1475)<br>[view](corpus-view/popular-detik.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-idntimes`](../../../ai/eval/data/legit/real.json#L1550)<br>[view](corpus-view/popular-idntimes.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-kompas`](../../../ai/eval/data/legit/real.json#L1589)<br>[view](corpus-view/popular-kompas.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-kumparan`](../../../ai/eval/data/legit/real.json#L1659)<br>[view](corpus-view/popular-kumparan.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-liputan6`](../../../ai/eval/data/legit/real.json#L1710)<br>[view](corpus-view/popular-liputan6.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-tribunnews`](../../../ai/eval/data/legit/real.json#L1765)<br>[view](corpus-view/popular-tribunnews.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-wikipedia-id`](../../../ai/eval/data/legit/real.json#L1819)<br>[view](corpus-view/popular-wikipedia-id.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-bni-web`](../../../ai/eval/data/legit/real.json#L1899)<br>[view](corpus-view/bank-login-bni-web.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-mandiri-web`](../../../ai/eval/data/legit/real.json#L1926)<br>[view](corpus-view/bank-login-mandiri-web.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-bhinneka`](../../../ai/eval/data/legit/real.json#L1994)<br>[view](corpus-view/checkout-bhinneka.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-kemenkeu`](../../../ai/eval/data/legit/real.json#L2093)<br>[view](corpus-view/gov-kemenkeu.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-merdeka`](../../../ai/eval/data/legit/real.json#L2119)<br>[view](corpus-view/popular-merdeka.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`official-tokopedia-home`](../../../ai/eval/data/legit/seed.json#L3)<br>[view](corpus-view/official-tokopedia-home.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`official-bca-home`](../../../ai/eval/data/legit/seed.json#L19)<br>[view](corpus-view/official-bca-home.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`official-shopee-home`](../../../ai/eval/data/legit/seed.json#L35)<br>[view](corpus-view/official-shopee-home.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-wikipedia`](../../../ai/eval/data/legit/seed.json#L51)<br>[view](corpus-view/popular-wikipedia.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-dana-sosial`](../../../ai/eval/data/legit/seed.json#L66)<br>[view](corpus-view/trap-dana-sosial.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-mandiri-jaya`](../../../ai/eval/data/legit/seed.json#L81)<br>[view](corpus-view/trap-mandiri-jaya.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-toko-iphone-bekas`](../../../ai/eval/data/legit/seed.json#L96)<br>[view](corpus-view/trap-toko-iphone-bekas.html) | normal | made up, held back | < 30 % · not scam, show nothing | 10 | 10 | ✅ left alone | lookalike_domain (L2, +10) |
+| [`trap-cloud-storage`](../../../ai/eval/data/legit/seed.json#L112)<br>[view](corpus-view/trap-cloud-storage.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-toko-logo-bank-checkout`](../../../ai/eval/data/legit/traps.json#L3)<br>[view](corpus-view/trap-toko-logo-bank-checkout.html) | normal | made up, held back | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | brand_logo_offsite (L3, +12), urgent_language (L3, +8) |
+| [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal | made up | < 30 % · not scam, show nothing | 24 | 49 | ❌ wrongly flagged | suspicious_link (L2, +24), brand_logo_offsite (L3, +25) |
+| [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal | made up, held back | < 30 % · not scam, show nothing | 19 | 34 | ❌ wrongly flagged | suspicious_link (L2, +19), asks_password (L3, +15) |
+| [`trap-sign-in-google-facebook`](../../../ai/eval/data/legit/traps.json#L151)<br>[view](corpus-view/trap-sign-in-google-facebook.html) | normal | made up | < 30 % · not scam, show nothing | 10 | 25 | ✅ left alone | suspicious_link (L2, +10), asks_password (L3, +15) |
+| [`trap-fintech-kyc-sah`](../../../ai/eval/data/legit/traps.json#L199)<br>[view](corpus-view/trap-fintech-kyc-sah.html) | normal | made up | < 30 % · not scam, show nothing | 10 | 95 | ❌ wrongly flagged | suspicious_link (L2, +10), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`trap-berita-waspada-penipuan`](../../../ai/eval/data/legit/traps.json#L253)<br>[view](corpus-view/trap-berita-waspada-penipuan.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | brand_logo_offsite (L3, +12), urgent_language (L3, +8) |
+| [`trap-portal-orang-tua-sekolah`](../../../ai/eval/data/legit/traps.json#L277)<br>[view](corpus-view/trap-portal-orang-tua-sekolah.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 15 | ✅ left alone | asks_password (L3, +15) |
+| [`trap-asuransi-klaim-resmi`](../../../ai/eval/data/legit/traps.json#L322)<br>[view](corpus-view/trap-asuransi-klaim-resmi.html) | normal | made up, held back | < 30 % · not scam, show nothing | 10 | 35 | ❌ wrongly flagged | suspicious_link (L2, +10), asks_ktp (L3, +25) |
+| [`trap-toko-kopi-kartu-native`](../../../ai/eval/data/legit/traps.json#L376)<br>[view](corpus-view/trap-toko-kopi-kartu-native.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | asks_card (L3, +20) |
+| [`trap-batik-card-checkout-en`](../../../ai/eval/data/legit/traps.json#L447)<br>[view](corpus-view/trap-batik-card-checkout-en.html) | normal | made up | < 30 % · not scam, show nothing | 5 | 25 | ✅ left alone | cheap_tld (L2, +5), asks_card (L3, +20) |
+| [`syn-sekolah-portal2`](../../../ai/eval/data/legit/url-shapes.json#L3)<br>[view](corpus-view/syn-sekolah-portal2.html) | normal | made up, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`syn-toko-app3-index-php`](../../../ai/eval/data/legit/url-shapes.json#L25)<br>[view](corpus-view/syn-toko-app3-index-php.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`syn-kampus-code-path`](../../../ai/eval/data/legit/url-shapes.json#L46)<br>[view](corpus-view/syn-kampus-code-path.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam | real | ≥ 80 % · scam, block it | 21 | 21 | ❌ missed | suspicious_link (L2, +21) |
+| [`cusbsi-bsi-cash-management`](../../../ai/eval/data/scam/real.json#L24)<br>[view](corpus-view/cusbsi-bsi-cash-management.html) | scam | real, held back | ≥ 80 % · scam, block it | 0 | 60 | ⚠️ only warned | brand_logo_offsite (L3, +25), new_domain (L3, +20), asks_password (L3, +15) |
+| [`lphone-login`](../../../ai/eval/data/scam/seed.json#L3)<br>[view](corpus-view/lphone-login.html) | scam | real | ≥ 80 % · scam, block it | 39 | 39 | ⚠️ only warned | lookalike_domain (L2, +25), brand_plus_keyword (L2, +14) |
+| [`fixture-bca-verifikasi`](../../../ai/eval/data/scam/seed.json#L34)<br>[view](corpus-view/fixture-bca-verifikasi.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-promo-shopee`](../../../ai/eval/data/scam/seed.json#L50)<br>[view](corpus-view/fixture-promo-shopee.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-bansos-kemensos`](../../../ai/eval/data/scam/seed.json#L66)<br>[view](corpus-view/fixture-bansos-kemensos.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`synthetic-p0stindonesia`](../../../ai/eval/data/scam/seed.json#L82)<br>[view](corpus-view/synthetic-p0stindonesia.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 25 | ❌ missed | lookalike_domain (L2, +25) |
+| [`syn-bri-token-expired`](../../../ai/eval/data/scam/synthetic.json#L3)<br>[view](corpus-view/syn-bri-token-expired.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-mandiri-livin-upgrade`](../../../ai/eval/data/scam/synthetic.json#L57)<br>[view](corpus-view/syn-mandiri-livin-upgrade.html) | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), unreasonable_request (L4, +30), brand_logo_offsite (L3, +25), asks_password (L3, +15), urgent_language (L3, +15) |
+| [`syn-bni-mobile-banking`](../../../ai/eval/data/scam/synthetic.json#L103)<br>[view](corpus-view/syn-bni-mobile-banking.html) | scam | made up, held back | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), unreasonable_request (L4, +30), brand_logo_offsite (L3, +25), asks_card (L3, +20), asks_password (L3, +15) |
+| [`syn-bsi-sharia-bonus`](../../../ai/eval/data/scam/synthetic.json#L159)<br>[view](corpus-view/syn-bsi-sharia-bonus.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), unreasonable_request (L4, +30), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-bca-klikbca-clean`](../../../ai/eval/data/scam/synthetic.json#L212)<br>[view](corpus-view/syn-bca-klikbca-clean.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 80 | ✅ blocked | unreasonable_request (L4, +30), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-cimb-octo-limit`](../../../ai/eval/data/scam/synthetic.json#L258)<br>[view](corpus-view/syn-cimb-octo-limit.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
+| [`syn-bca-blokir-kartu`](../../../ai/eval/data/scam/synthetic.json#L282)<br>[view](corpus-view/syn-bca-blokir-kartu.html) | scam | made up, held back | ≥ 80 % · scam, block it | 14 | 59 | ⚠️ only warned | brand_plus_keyword (L2, +14), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-bri-cashback-survey`](../../../ai/eval/data/scam/synthetic.json#L338)<br>[view](corpus-view/syn-bri-cashback-survey.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 85 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), brand_logo_offsite (L3, +25) |
+| [`syn-mandiri-kyc-update`](../../../ai/eval/data/scam/synthetic.json#L384)<br>[view](corpus-view/syn-mandiri-kyc-update.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 100 | ✅ blocked | asks_selfie_ktp (L3, +35), unreasonable_request (L4, +30), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-dana-kaget-bonus`](../../../ai/eval/data/scam/synthetic.json#L438)<br>[view](corpus-view/syn-dana-kaget-bonus.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), unreasonable_request (L4, +30), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-ovo-upgrade-premier`](../../../ai/eval/data/scam/synthetic.json#L484)<br>[view](corpus-view/syn-ovo-upgrade-premier.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-gopay-driver-refund`](../../../ai/eval/data/scam/synthetic.json#L537)<br>[view](corpus-view/syn-gopay-driver-refund.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-shopeepay-limit`](../../../ai/eval/data/scam/synthetic.json#L590)<br>[view](corpus-view/syn-shopeepay-limit.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
+| [`syn-linkaja-hadiah`](../../../ai/eval/data/scam/synthetic.json#L636)<br>[view](corpus-view/syn-linkaja-hadiah.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 35 | ⚠️ only warned | asks_pin (L3, +35) |
+| [`syn-dana-premium-pin`](../../../ai/eval/data/scam/synthetic.json#L682)<br>[view](corpus-view/syn-dana-premium-pin.html) | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-ovo-undian-grab`](../../../ai/eval/data/scam/synthetic.json#L737)<br>[view](corpus-view/syn-ovo-undian-grab.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 54 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
+| [`syn-gopay-later-pinjam`](../../../ai/eval/data/scam/synthetic.json#L761)<br>[view](corpus-view/syn-gopay-later-pinjam.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 90 | ✅ blocked | cheap_tld (L2, +5), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-jne-paket-tertahan`](../../../ai/eval/data/scam/synthetic.json#L814)<br>[view](corpus-view/syn-jne-paket-tertahan.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 70 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-jnt-tarif-selisih`](../../../ai/eval/data/scam/synthetic.json#L867)<br>[view](corpus-view/syn-jnt-tarif-selisih.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 50 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
+| [`syn-sicepat-apk`](../../../ai/eval/data/scam/synthetic.json#L912)<br>[view](corpus-view/syn-sicepat-apk.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 5 | ❌ missed | cheap_tld (L2, +5) |
+| [`syn-anteraja-alamat`](../../../ai/eval/data/scam/synthetic.json#L936)<br>[view](corpus-view/syn-anteraja-alamat.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 20 | ❌ missed | asks_card (L3, +20) |
+| [`syn-pos-kiriman-luar-negeri`](../../../ai/eval/data/scam/synthetic.json#L981)<br>[view](corpus-view/syn-pos-kiriman-luar-negeri.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 50 | ⚠️ only warned | lookalike_domain (L2, +25), brand_logo_offsite (L3, +25) |
+| [`syn-tiki-nomor-resi`](../../../ai/eval/data/scam/synthetic.json#L1004)<br>[view](corpus-view/syn-tiki-nomor-resi.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 30 | ⚠️ only warned | cheap_tld (L2, +5), asks_otp (L3, +25) |
+| [`syn-ninja-ganti-rugi`](../../../ai/eval/data/scam/synthetic.json#L1058)<br>[view](corpus-view/syn-ninja-ganti-rugi.html) | scam | made up, held back | ≥ 80 % · scam, block it | 5 | 40 | ⚠️ only warned | cheap_tld (L2, +5), asks_pin (L3, +35) |
+| [`syn-tokopedia-undian`](../../../ai/eval/data/scam/synthetic.json#L1104)<br>[view](corpus-view/syn-tokopedia-undian.html) | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
+| [`syn-telkomsel-poin`](../../../ai/eval/data/scam/synthetic.json#L1151)<br>[view](corpus-view/syn-telkomsel-poin.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 25 | ❌ missed | asks_otp (L3, +25) |
+| [`syn-lazada-giveaway`](../../../ai/eval/data/scam/synthetic.json#L1196)<br>[view](corpus-view/syn-lazada-giveaway.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 70 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-shopee-flash-undian`](../../../ai/eval/data/scam/synthetic.json#L1250)<br>[view](corpus-view/syn-shopee-flash-undian.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 54 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
+| [`syn-bpjs-bonus-iuran`](../../../ai/eval/data/scam/synthetic.json#L1304)<br>[view](corpus-view/syn-bpjs-bonus-iuran.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 74 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-pertamina-subsidi`](../../../ai/eval/data/scam/synthetic.json#L1349)<br>[view](corpus-view/syn-pertamina-subsidi.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 60 | ⚠️ only warned | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25) |
+| [`syn-bukalapak-voucher`](../../../ai/eval/data/scam/synthetic.json#L1402)<br>[view](corpus-view/syn-bukalapak-voucher.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 79 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-bpjs-kesehatan-nonaktif`](../../../ai/eval/data/scam/synthetic.json#L1447)<br>[view](corpus-view/syn-bpjs-kesehatan-nonaktif.html) | scam | made up, held back | ≥ 80 % · scam, block it | 25 | 75 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-pajak-djp-sptp`](../../../ai/eval/data/scam/synthetic.json#L1501)<br>[view](corpus-view/syn-pajak-djp-sptp.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
+| [`syn-etilang-denda`](../../../ai/eval/data/scam/synthetic.json#L1554)<br>[view](corpus-view/syn-etilang-denda.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 20 | ❌ missed | asks_card (L3, +20) |
+| [`syn-samsat-pajak-kendaraan`](../../../ai/eval/data/scam/synthetic.json#L1600)<br>[view](corpus-view/syn-samsat-pajak-kendaraan.html) | scam | made up, held back | ≥ 80 % · scam, block it | 5 | 5 | ❌ missed | cheap_tld (L2, +5) |
+| [`syn-prakerja-gelombang`](../../../ai/eval/data/scam/synthetic.json#L1624)<br>[view](corpus-view/syn-prakerja-gelombang.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 85 | ✅ blocked | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`syn-dukcapil-ktp-digital`](../../../ai/eval/data/scam/synthetic.json#L1685)<br>[view](corpus-view/syn-dukcapil-ktp-digital.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 85 | ✅ blocked | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`syn-kemensos-bansos-pkh`](../../../ai/eval/data/scam/synthetic.json#L1738)<br>[view](corpus-view/syn-kemensos-bansos-pkh.html) | scam | made up | ≥ 80 % · scam, block it | 14 | 99 | ✅ blocked | brand_plus_keyword (L2, +14), asks_pin (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-icloud-terkunci`](../../../ai/eval/data/scam/synthetic.json#L1791)<br>[view](corpus-view/syn-icloud-terkunci.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_otp (L3, +25), asks_password (L3, +15) |
+| [`syn-find-my-iphone-hilang`](../../../ai/eval/data/scam/synthetic.json#L1845)<br>[view](corpus-view/syn-find-my-iphone-hilang.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 25 | ❌ missed | lookalike_domain (L2, +10), cheap_tld (L2, +15) |
+| [`syn-apple-pay-tagihan`](../../../ai/eval/data/scam/synthetic.json#L1870)<br>[view](corpus-view/syn-apple-pay-tagihan.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 25 | ❌ missed | cheap_tld (L2, +5), asks_card (L3, +20) |
+| [`syn-loker-admin-online`](../../../ai/eval/data/scam/synthetic.json#L1916)<br>[view](corpus-view/syn-loker-admin-online.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
+| [`syn-pinjol-cair-cepat`](../../../ai/eval/data/scam/synthetic.json#L1961)<br>[view](corpus-view/syn-pinjol-cair-cepat.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 65 | ⚠️ only warned | cheap_tld (L2, +5), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25) |
+| [`syn-investasi-kripto-profit`](../../../ai/eval/data/scam/synthetic.json#L2014)<br>[view](corpus-view/syn-investasi-kripto-profit.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
+| [`syn-olx-pembeli-cod`](../../../ai/eval/data/scam/synthetic.json#L2059)<br>[view](corpus-view/syn-olx-pembeli-cod.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 45 | ⚠️ only warned | asks_otp (L3, +25), asks_card (L3, +20) |
 
 </details>
 
-## Test 2b/2c — live, two simulators on a local stack built like prod
+## Test 2b/2c: real websites on two paired phones
 
-| Part | Local | Prod |
+**What it checks:** the whole chain on real pages: Safari extension, then server, then the Guardian's app and notification.
+
+**Setup:** two simulators. Adhella is the Guardian (the one who watches). Maria is Protected (the one being watched). They paired with a code, like real users. Maria's Safari opened the test-set pages one by one. Page load only: no typing, no tapping on the page, no downloads.
+
+- **2b:** the 45 pages that still exist online (43 normal, 2 scam).
+- **2c:** the 63 pages that no longer exist, including 50 scam pages. These only have the offline result from Test 2a.
+
+### Result
+
+| What | Result | |
 |---|---|---|
-| API | `wrangler dev` of `backend/api` on :8787, `--test-scheduled` | Worker `shoo-api` |
-| Database + Storage | `supabase start` + `supabase db reset` (all migrations, RLS) | Supabase project |
-| Replicas | local R2 (Miniflare) | R2 `shoo-replicas` |
-| AI layers 3–4 | `wrangler dev` of `ai/` on :8788, same LLM provider as prod, prebuilt blocklist in local KV | Worker `shoo-ai` |
-| Push | APNs **sandbox**, new team key (AK7HLX5ZX5), topic `com.aliefauzan.shoo` | APNs |
-| App | Debug build, `-debug.aiBaseURL http://localhost:8788` (new, Debug only) | Release |
+| Normal pages | All showed 0%, except one old blog post at 24% (still under 30). None were sent to the server. | ✅ |
+| Real scam `regs-apps14.regnows-dfg.com/code.php` | Popup with a 76% warning. Sent to the server and shown in the Guardian's app. | ✅ |
+| Real scam `lphone-login.com` | Now forwards to the real iCloud page, so 0%. The scam hides itself from this visit. | ⚪ expected |
+| Guardian sees Maria's scan | Only after Family mode is switched on by hand (problem 6). | ❌ |
+| Push to the Guardian | The server tried, but the laptop setup can't send it (problem 7). The app shows the notification when it is sent by hand. | ⚠️ |
+| Scheduled cleanup jobs | Ran fine when started by hand. | ✅ |
 
-Pairing (`LiveQAUITests`): Adhella (Guardian, "QA Guardian iPhone 17") and Maria (Protected, "QA Protected iPhone 17") onboard in Bahasa Indonesia, Maria joins with the code on Adhella's screen, both answer the real notification prompt. The Protected Safari has Shoo on with *All Websites: Allow*.
+Raw count: 45 pages opened (43 legit, 2 scam). 1 reached the server as a scan (score ≥ 30), 1 Guardian push attempt(s) in push_log.
 
-Guardrails: only corpus URLs, simulator only, page load only (no typing, no taps on the page, no downloads). Hosts were checked by DNS first: **45 of 108 resolve** (43 legit, 2 scam). The 50 scam hosts that don't resolve (all synthetic + one real) are covered by 2a only (2c).
+### Scam pages
 
-45 pages opened (43 legit, 2 scam). 1 reached the server as a scan (score ≥ 30), 1 Guardian push attempt(s) in push_log.
-
-| Sample | Label | 2a score | What the Safari shot shows | Scan on server | Guardian push |
+| Page | Type | Offline score (2a) | What Safari showed | Sent to server | Push |
 |---|---|---|---|---|---|
-| `regs-apps14-code-php` | scam | 21 | **46% Waspada banner** ("Asks for the code sent to your phone"), copy in English | 46 warning | failed:network |
-| `lphone-login` | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (cloaked kit) | none | — |
+| [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam | 21 | **76% High risk popup** ("This site looks suspicious", "Link sent to Adhella", Leave this page / Continue anyway), copy in English | 76 warning | failed:network |
+| [`lphone-login`](../../../ai/eval/data/scam/seed.json#L3)<br>[view](corpus-view/lphone-login.html) | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (the scam hides itself from this visit) | none | n/a |
 
-<details><summary>43 legit pages</summary>
+<details><summary>43 normal pages</summary>
 
-| Sample | Label | 2a score | What the Safari shot shows | Scan on server | Guardian push |
+| Page | Type | Offline score (2a) | What Safari showed | Sent to server | Push |
 |---|---|---|---|---|---|
-| `bank-login-bri` | legit | 0 | 0% badge | none | — |
-| `bank-login-btn` | legit | 0 | 0% badge | none | — |
-| `bank-login-danamon` | legit | 0 | page still blank at 15 s, no badge yet | none | — |
-| `bank-login-klikbca` | legit | 0 | 0% badge | none | — |
-| `bank-login-mega` | legit | 0 | 0% badge | none | — |
-| `bank-login-permata` | legit | 0 | 0% badge | none | — |
-| `checkout-bukalapak` | legit | 0 | 0% badge | none | — |
-| `checkout-lazada` | legit | 0 | 0% badge | none | — |
-| `checkout-orami` | legit | 0 | 0% badge | none | — |
-| `checkout-ruparupa` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-shopee-cart` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-sociolla` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-tokopedia-cart` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-traveloka` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-zalora` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-bi` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-bpjs-kesehatan` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-dukcapil` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-kemensos` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-komdigi` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-ojk` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-pajak` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-cnnindonesia` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-detik` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-idntimes` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-kompas` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-kumparan` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-liputan6` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-tribunnews` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-wikipedia-id` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `bank-login-bni-web` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `bank-login-mandiri-web` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-bhinneka` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-kemenkeu` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-merdeka` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `official-tokopedia-home` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `official-bca-home` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `official-shopee-home` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-wikipedia` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `trap-cloud-storage` | legit | 0 | redirects to a sedo.com parking page; small 0% badge | none | — |
-| `trap-blog-cek-saldo-bca` | legit | 49 | blog post now 404; 0% badge | none | — |
-| `trap-github-pages-dokumentasi` | legit | 34 | GitHub Pages 404; small 0% badge | none | — |
-| `trap-berita-waspada-penipuan` | legit | 20 | "Safari can’t open the page" (no server); badge dot only | none | — |
+| [`bank-login-bri`](../../../ai/eval/data/legit/real.json#L3)<br>[view](corpus-view/bank-login-bri.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-btn`](../../../ai/eval/data/legit/real.json#L29)<br>[view](corpus-view/bank-login-btn.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-danamon`](../../../ai/eval/data/legit/real.json#L55)<br>[view](corpus-view/bank-login-danamon.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-klikbca`](../../../ai/eval/data/legit/real.json#L526)<br>[view](corpus-view/bank-login-klikbca.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-mega`](../../../ai/eval/data/legit/real.json#L578)<br>[view](corpus-view/bank-login-mega.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-permata`](../../../ai/eval/data/legit/real.json#L630)<br>[view](corpus-view/bank-login-permata.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-bukalapak`](../../../ai/eval/data/legit/real.json#L687)<br>[view](corpus-view/checkout-bukalapak.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-lazada`](../../../ai/eval/data/legit/real.json#L716)<br>[view](corpus-view/checkout-lazada.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-orami`](../../../ai/eval/data/legit/real.json#L762)<br>[view](corpus-view/checkout-orami.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-ruparupa`](../../../ai/eval/data/legit/real.json#L816)<br>[view](corpus-view/checkout-ruparupa.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-shopee-cart`](../../../ai/eval/data/legit/real.json#L869)<br>[view](corpus-view/checkout-shopee-cart.html) | normal | 0 | Shopee language picker; 0% badge | none | n/a |
+| [`checkout-sociolla`](../../../ai/eval/data/legit/real.json#L898)<br>[view](corpus-view/checkout-sociolla.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-tokopedia-cart`](../../../ai/eval/data/legit/real.json#L937)<br>[view](corpus-view/checkout-tokopedia-cart.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-traveloka`](../../../ai/eval/data/legit/real.json#L979)<br>[view](corpus-view/checkout-traveloka.html) | normal | 0 | app-download sheet on top; 0% badge | none | n/a |
+| [`checkout-zalora`](../../../ai/eval/data/legit/real.json#L1017)<br>[view](corpus-view/checkout-zalora.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-bi`](../../../ai/eval/data/legit/real.json#L1056)<br>[view](corpus-view/gov-bi.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-bpjs-kesehatan`](../../../ai/eval/data/legit/real.json#L1093)<br>[view](corpus-view/gov-bpjs-kesehatan.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-dukcapil`](../../../ai/eval/data/legit/real.json#L1119)<br>[view](corpus-view/gov-dukcapil.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-kemensos`](../../../ai/eval/data/legit/real.json#L1161)<br>[view](corpus-view/gov-kemensos.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-komdigi`](../../../ai/eval/data/legit/real.json#L1195)<br>[view](corpus-view/gov-komdigi.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-ojk`](../../../ai/eval/data/legit/real.json#L1228)<br>[view](corpus-view/gov-ojk.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-pajak`](../../../ai/eval/data/legit/real.json#L1271)<br>[view](corpus-view/gov-pajak.html) | normal | 0 | PSA popup on top; 0% badge | none | n/a |
+| [`popular-cnnindonesia`](../../../ai/eval/data/legit/real.json#L1420)<br>[view](corpus-view/popular-cnnindonesia.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-detik`](../../../ai/eval/data/legit/real.json#L1475)<br>[view](corpus-view/popular-detik.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-idntimes`](../../../ai/eval/data/legit/real.json#L1550)<br>[view](corpus-view/popular-idntimes.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`popular-kompas`](../../../ai/eval/data/legit/real.json#L1589)<br>[view](corpus-view/popular-kompas.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`popular-kumparan`](../../../ai/eval/data/legit/real.json#L1659)<br>[view](corpus-view/popular-kumparan.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-liputan6`](../../../ai/eval/data/legit/real.json#L1710)<br>[view](corpus-view/popular-liputan6.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`popular-tribunnews`](../../../ai/eval/data/legit/real.json#L1765)<br>[view](corpus-view/popular-tribunnews.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-wikipedia-id`](../../../ai/eval/data/legit/real.json#L1819)<br>[view](corpus-view/popular-wikipedia-id.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-bni-web`](../../../ai/eval/data/legit/real.json#L1899)<br>[view](corpus-view/bank-login-bni-web.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-mandiri-web`](../../../ai/eval/data/legit/real.json#L1926)<br>[view](corpus-view/bank-login-mandiri-web.html) | normal | 0 | cookie notice on top; 0% badge | none | n/a |
+| [`checkout-bhinneka`](../../../ai/eval/data/legit/real.json#L1994)<br>[view](corpus-view/checkout-bhinneka.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-kemenkeu`](../../../ai/eval/data/legit/real.json#L2093)<br>[view](corpus-view/gov-kemenkeu.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-merdeka`](../../../ai/eval/data/legit/real.json#L2119)<br>[view](corpus-view/popular-merdeka.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`official-tokopedia-home`](../../../ai/eval/data/legit/seed.json#L3)<br>[view](corpus-view/official-tokopedia-home.html) | normal | 0 | 0% badge | none | n/a |
+| [`official-bca-home`](../../../ai/eval/data/legit/seed.json#L19)<br>[view](corpus-view/official-bca-home.html) | normal | 0 | 0% badge | none | n/a |
+| [`official-shopee-home`](../../../ai/eval/data/legit/seed.json#L35)<br>[view](corpus-view/official-shopee-home.html) | normal | 0 | Shopee language picker; 0% badge | none | n/a |
+| [`popular-wikipedia`](../../../ai/eval/data/legit/seed.json#L51)<br>[view](corpus-view/popular-wikipedia.html) | normal | 0 | 0% badge | none | n/a |
+| [`trap-cloud-storage`](../../../ai/eval/data/legit/seed.json#L112)<br>[view](corpus-view/trap-cloud-storage.html) | normal | 0 | redirects to a sedo.com parking page (cookie dialog); 0% badge | none | n/a |
+| [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal | 49 | blog post now 404; **24% badge** (under 30, nothing sent) | none | n/a |
+| [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal | 34 | GitHub Pages 404; badge collapsed to a dot | none | n/a |
+| [`trap-berita-waspada-penipuan`](../../../ai/eval/data/legit/traps.json#L253)<br>[view](corpus-view/trap-berita-waspada-penipuan.html) | normal | 20 | Safari "This Connection Is Not Private" (the certificate is for another site); no badge | none | n/a |
 
 </details>
 
-What happened, in order:
+### Step by step
 
-1. **Legit pages**: every page that loaded shows the green **0%** badge; none reached the server (only scores ≥ 30 are posted). The 4 legit traps that 2a flagged no longer serve their page (404, parking page, no server), so live they score 0.
-2. **`regs-apps14.regnows-dfg.com/code.php`** (real scam, still up): the extension shows the **46% Waspada** banner, and the scan reaches the server with `asks_otp` (layer 3) + `suspicious_link` (layer 2). Offline it scored 21: the live page asks for an OTP, the corpus copy does not.
-3. **`lphone-login.com`** (real scam, 39 offline): the host now redirects to the real `icloud.com` Find Devices page, so live it is a clean Apple page at 0%. A cloaked kit: only the offline copy shows the phishing form.
-4. **No Guardian push on the first visit**: both devices were in *Jam tenang* (22:00–06:00, device zone Asia/Makassar, visit at 22:40). Warnings are muted then by design (PF-01, `notify.ts allowed()`); only blocked sites still push. After turning `quiet_hours` off in the local DB and reloading the page once, the Worker tried both pushes (Guardian + Maria's own) and logged **`failed:network`**: `wrangler dev` (workerd on the Mac) cannot speak HTTP/2, and APNs only takes HTTP/2. Production sends straight from the deployed Worker (spike passed in fase 07, D-alief-B01), so this is a limit of the local stack, not of prod. The app side of the push was checked with `xcrun simctl push` and the same payload the Worker builds (`pushText`, `scanId`).
-5. **Guardian Activity is empty after pairing**: Adhella paired with Maria, but Family mode stays off until the Guardian switches it on from Home, so Activity shows only her own (empty) list. With `-settings.familyModeOn YES` both of Maria's scans show with her name, and Detail opens with the 46% gauge.
-6. **Two rows for one page**: the second load of the same page made a second scan 1 min later; Activity lists both.
-7. A Safari *Allow location?* prompt (from `ruparupa.com`) stayed on screen for the rest of the run; it was left unanswered during the visit and answered **Don't Allow** at the end. It covers part of the later shots but not the badge logic.
-8. **Crons** fired by hand (`/cdn-cgi/handler/scheduled?cron=0+19+*+*+*` and `cron=5+*+*+*+*`): both 200, `ops_heartbeat` row written; nothing older than 14 days to delete on a fresh database.
+1. **Normal pages.** Every page that loaded showed the green 0% badge. One old blog post showed 24%; that is under 30, so nothing happens. Pages under 30 are never sent to the server. The 4 normal pages that Test 2a flagged no longer show their old content (error page, parked domain, or no server), so here they scored 0. `beritakota` stopped at Safari's "This Connection Is Not Private" page, so there was no badge.
+2. **The live scam, `regs-apps14.regnows-dfg.com/code.php`.** The extension showed a popup: 76%, "Link sent to Adhella", with *Leave this page* and *Continue anyway*. The server got the scan at 76 (warning) with 3 reasons: the page asks for things that don't fit it (L4, it quotes "PENDAFTARAN VIA TELEGRAM"), it asks for an OTP (L3), and the link looks suspicious (L2). The saved copy in Test 2a scored only 21 because it has no OTP field. On 2026-10-31 this page scored 46, without the L4 reason.
+3. **`lphone-login.com`.** It scored 39 offline. Live, it forwards to the real `icloud.com` Find Devices page, so it scored 0%. Only the saved copy shows the fake login form.
+4. **Push.** The visit was at 21.29 WITA, before quiet hours (22:00 to 06:00), so the server sent a push to Adhella and one to Maria right away. Both failed with `failed:network`. The reason: the local server can't use HTTP/2, and Apple's push service only accepts HTTP/2. Production sends from the deployed server, which passed this check before (fase 07, D-alief-B01). To test the app side, the same push was sent by hand with `xcrun simctl push` ("Maria membuka situs mencurigakan · 76%", real scan id). The notification showed on Adhella's Home screen.
+5. **Guardian's app.** Right after pairing, Activity is empty: Family mode is off until Adhella switches it on from Home. After the switch, Home shows "Keluarga Butuh Konfirmasi" with Maria's 76% card. Activity lists the scan with Maria's name, and Detail opens with the 76% gauge.
+6. **Maria's app.** Home shows "Anda Terlindungi!", "Terhubung dengan Adhella", 0 Diblokir and 1 Waspada, and the regnows row. Her Activity lists the same scan.
+7. **No location popup** this time. On 2026-10-31 a Safari location question from `ruparupa.com` covered the later screenshots.
+8. **Cleanup jobs.** Both scheduled jobs were started by hand and answered 200. The health row was written. There was nothing older than 14 days to delete, since the database was new.
+
+### Screenshots
 
 | Safari · regs-apps14-code-php | Safari · lphone-login | Safari · bank-login-klikbca | Guardian Activity, Family mode off | Guardian Activity, Family mode on | Guardian Home | Guardian Detail | Guardian push (simctl) | Protected Activity | Protected Home |
 |---|---|---|---|---|---|---|---|---|---|
 | <img src="img/figma-parity/live/safari-regs-apps14-code-php.jpg" width="140"> | <img src="img/figma-parity/live/safari-lphone-login.jpg" width="140"> | <img src="img/figma-parity/live/safari-bank-login-klikbca.jpg" width="140"> | <img src="img/figma-parity/live/guardian-activity.jpg" width="140"> | <img src="img/figma-parity/live/guardian-activity-family.jpg" width="140"> | <img src="img/figma-parity/live/guardian-home-family.jpg" width="140"> | <img src="img/figma-parity/live/guardian-detail-regnows.jpg" width="140"> | <img src="img/figma-parity/live/guardian-push.jpg" width="140"> | <img src="img/figma-parity/live/protected-activity.jpg" width="140"> | <img src="img/figma-parity/live/protected-home.jpg" width="140"> |
 
-## Re-run
+<details><summary>Laptop setup vs production</summary>
+
+| Part | On the laptop | In production |
+|---|---|---|
+| API | `wrangler dev` of `backend/api` on :8787, `--test-scheduled` | Worker `shoo-api` |
+| Database and storage | `supabase start` + `supabase db reset` (all migrations, row security on) | Supabase project |
+| Page copies | local R2 (Miniflare) | R2 `shoo-replicas` |
+| AI layers 3 and 4 | `wrangler dev` of `ai/` on :8788, same AI model as production, public scam list loaded | Worker `shoo-ai` |
+| Push | Apple push **sandbox**, team key AK7HLX5ZX5, topic `com.aliefauzan.shoo` | Apple push |
+| App | Debug build, `-debug.aiBaseURL http://localhost:8788` (Debug only) | Release |
+
+Pairing (`LiveQAUITests`): both phones go through onboarding in Bahasa Indonesia. Maria types the code shown on Adhella's screen. Both answer the real notification question. Maria's Safari has Shoo on for all websites.
+
+</details>
+
+## Test 3: Imelda's link datasets (`ai/test-layer2`)
+
+**What it checks:** the link lists in `ai/test-layer2/dataset.md` (25 scam links) and `dataset-legit.md` (23 normal links). These are links only, with no saved page. Two parts:
+
+- **3a, offline:** each link goes through all 4 layers like Test 2a. L1 = the public scam list, matched the same way as the extension. L2 = the real detector. L3–4 = the server, which only gets the link (no page text).
+- **3b, live:** Maria's Safari opens every link that still exists (44 of 48), with the extension on. Each screenshot shows what the extension showed on that page.
+
+**Result:**
+
+| Check | Target | Result | |
+|---|---|---|---|
+| Scam links blocked (80 or more) | at least 70% | 3 of 25 = 12% | ❌ fail |
+| Scam links scoring 50 or more | at least 90% | 3 of 25 = 12% | ❌ fail |
+| Scam links that got any warning (30 or more) | no target | 11 of 25 = 44% | |
+| Scam links on the public scam list (L1) | no target | 3 of 25 | |
+| Normal links wrongly flagged (30 or more) | 0 | 1 of 23 | ❌ fail |
+| Server errors | 0 | 0 | ✅ pass |
+
+**Live result (3b),** on the pages that still exist:
+
+| What | Result | |
+|---|---|---|
+| Scam pages blocked by the extension | 7 of 21 = 33% (target 70%) | ❌ fail |
+| Scam pages with a warning (30 to 79) | 6 of 21 | ⚠️ |
+| Scam pages with no warning | 8 of 21: 5 missed (under 30), 2 blank pages, 1 stopped by Safari's own warning first | ❌ |
+| Normal pages blocked or warned | 1 of 23 (`mit.edu`, problem 12) | ❌ |
+| Scans in the Guardian's app | Every scan of 30 or more shows in Adhella's Home and Activity with Maria's name | ✅ |
+| Push to the Guardian | The first 10 were tried and failed with `failed:network` (laptop setup, problem 7). The last 4 got none: the server sends at most 10 pushes per 10 minutes to one Guardian (`PUSH_CAP` in `backend/api/src/services/push/notify.ts`), by design. | ⚠️ |
+
+**Live is much better than offline** because the real page adds layers 3 and 4: the server reads the page text and forms (OTP, PIN, "code sent to your phone"). Offline, the server only gets the link.
+
+**Missed live:** a fake KlikBCA login on `sites.google.com` (0%), a Blogger page (0%), two Telegram sign-up forms on Blogger (13% and 24%), and a page behind Cloudflare's own phishing warning (24%). `m-pajak.top` and `apply.wozspace.site` showed a blank page, so there was nothing to check.
+
+Raw count: 44 pages opened (23 legit, 21 scam). 14 reached the server as a scan (score ≥ 30), 10 Guardian push attempt(s) in push_log. Quiet hours were switched off for this run, like on 2026-10-31.
+
+**How to read the table:** "Offline" is the 3a score. "Extension showed" is what the Safari screenshot shows (3b). Click a screenshot to see it full size. The link name goes to its line in the dataset file.
+
+### Scam links
+
+| Link | Should get | Offline | Why | Extension showed (3b) | Screenshot | Sent to server | Push |
+|---|---|---|---|---|---|---|---|
+| [`scam-01`](../../../ai/test-layer2/dataset.md#L12)<br><code>bni-diirect.com</code><br>BNI Direct — login perusahaan palsu | ≥ 80 % · scam, block it | **30** ⚠️ only warned | lookalike_domain (L2, +10), new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-02`](../../../ai/test-layer2/dataset.md#L13)<br><code>bni-directbni.com</code><br>BNI Direct — login perusahaan palsu | ≥ 80 % · scam, block it | **30** ⚠️ only warned | lookalike_domain (L2, +10), new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-03`](../../../ai/test-layer2/dataset.md#L14)<br><code>qlolla-bybri.com</code><br>BRI QLola — login palsu | ≥ 80 % · scam, block it | **34** ⚠️ only warned | brand_plus_keyword (L2, +14), new_domain (L3, +20) | **Blocked page, 100%** ("Pretends to be BRI", "This site was made 11 days ago", "Link sent to Adhella") | <a href="img/figma-parity/live-l2/safari-scam-03.jpg"><img src="img/figma-parity/live-l2/safari-scam-03.jpg" width="120"></a> | 100 blocked | failed:network |
+| [`scam-04`](../../../ai/test-layer2/dataset.md#L15)<br><code>cusbsi.com</code><br>BSI Cash Management — login palsu | ≥ 80 % · scam, block it | **20** ❌ missed | new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-05`](../../../ai/test-layer2/dataset.md#L16)<br><code>kodepembatalanbybni.pages.dev</code><br>BNI — pembatalan transaksi palsu | ≥ 80 % · scam, block it | **33** ⚠️ only warned | brand_plus_keyword (L2, +14), suspicious_link (L2, +19) | **Blocked page, 88%** ("Pretends to be BNI", address looks like scammers' ones) | <a href="img/figma-parity/live-l2/safari-scam-05.jpg"><img src="img/figma-parity/live-l2/safari-scam-05.jpg" width="120"></a> | 88 blocked | failed:network |
+| [`scam-06`](../../../ai/test-layer2/dataset.md#L17)<br><code>sites.google.com</code><br>BCA — pengembalian dana palsu | ≥ 80 % · scam, block it | **0** ❌ missed | none | fake KlikBCA login (User ID + PIN) loads; **0% badge** (missed: the page is on sites.google.com) | <a href="img/figma-parity/live-l2/safari-scam-06.jpg"><img src="img/figma-parity/live-l2/safari-scam-06.jpg" width="120"></a> | none | n/a |
+| [`scam-07`](../../../ai/test-layer2/dataset.md#L18)<br><code>yaigsjv.1238bll.my.id</code><br>GoPay — aktivasi/pemulihan akun palsu | ≥ 80 % · scam, block it | **33** ⚠️ only warned | suspicious_link (L2, +13), new_domain (L3, +20) | n/a | not opened (site gone) | n/a | n/a |
+| [`scam-08`](../../../ai/test-layer2/dataset.md#L19)<br><code>m-pajak.top</code><br>DJP/M-Pajak — login pajak palsu | ≥ 80 % · scam, block it | **25** ❌ missed | cheap_tld (L2, +5), new_domain (L3, +20) | blank white page, nothing loaded; no badge | <a href="img/figma-parity/live-l2/safari-scam-08.jpg"><img src="img/figma-parity/live-l2/safari-scam-08.jpg" width="120"></a> | none | n/a |
+| [`scam-09`](../../../ai/test-layer2/dataset.md#L20)<br><code>storee-dp9hsk1cxr2y.edgeone.dev</code><br>Agoda Indonesia — bantuan/login palsu | ≥ 80 % · scam, block it | **100** ✅ blocked | db_match (L1, +100), suspicious_link (L2, +11) | **Blocked page, 100%** ("This site is known to cheat people": edgeone.dev is on the public scam list) | <a href="img/figma-parity/live-l2/safari-scam-09.jpg"><img src="img/figma-parity/live-l2/safari-scam-09.jpg" width="120"></a> | 100 blocked | failed:network |
+| [`scam-10`](../../../ai/test-layer2/dataset.md#L21)<br><code>storee-dp8iiud7biuu.edgeone.dev</code><br>Agoda Indonesia — verifikasi palsu | ≥ 80 % · scam, block it | **100** ✅ blocked | db_match (L1, +100) | **Blocked page, 100%** (same as scam-09, public scam list) | <a href="img/figma-parity/live-l2/safari-scam-10.jpg"><img src="img/figma-parity/live-l2/safari-scam-10.jpg" width="120"></a> | 100 blocked | failed:network |
+| [`scam-11`](../../../ai/test-layer2/dataset.md#L22)<br><code>deddydanchika.blogspot.com</code><br>Facebook — login untuk menonton video | ≥ 80 % · scam, block it | **0** ❌ missed | none | Blogger page "Video Mesum Deddy Dan Chika", no posts; **0% badge** (missed) | <a href="img/figma-parity/live-l2/safari-scam-11.jpg"><img src="img/figma-parity/live-l2/safari-scam-11.jpg" width="120"></a> | none | n/a |
+| [`scam-12`](../../../ai/test-layer2/dataset.md#L23)<br><code>registers-app15.fkregs-on.com</code><br>Bantuan laptop sekolah palsu → Telegram | ≥ 80 % · scam, block it | **31** ⚠️ only warned | suspicious_link (L2, +21), new_domain (L3, +10) | **Blocked page, 86%** ("Asks for the code sent to your phone") | <a href="img/figma-parity/live-l2/safari-scam-12.jpg"><img src="img/figma-parity/live-l2/safari-scam-12.jpg" width="120"></a> | 86 blocked | failed:network |
+| [`scam-13`](../../../ai/test-layer2/dataset.md#L24)<br><code>regs-apps14.regnows-dfg.com</code><br>Bantuan laptop/ponsel mahasiswa palsu → Telegram | ≥ 80 % · scam, block it | **21** ❌ missed | suspicious_link (L2, +21) | **76% popup** "This site looks suspicious" (Leave this page / Continue anyway) | <a href="img/figma-parity/live-l2/safari-scam-13.jpg"><img src="img/figma-parity/live-l2/safari-scam-13.jpg" width="120"></a> | 76 warning | failed:network |
+| [`scam-14`](../../../ai/test-layer2/dataset.md#L25)<br><code>pendaftaran-umum04.thems.blog</code><br>Bantuan bibit ikan palsu → Telegram | ≥ 80 % · scam, block it | **12** ❌ missed | suspicious_link (L2, +12) | **67% popup** "This site looks suspicious" | <a href="img/figma-parity/live-l2/safari-scam-14.jpg"><img src="img/figma-parity/live-l2/safari-scam-14.jpg" width="120"></a> | 67 warning | failed:network |
+| [`scam-15`](../../../ai/test-layer2/dataset.md#L26)<br><code>apply.wozspace.site</code><br>Sembako Ramadhan Pertamina palsu → Telegram | ≥ 80 % · scam, block it | **5** ❌ missed | cheap_tld (L2, +5) | blank white page, nothing loaded; no badge | <a href="img/figma-parity/live-l2/safari-scam-15.jpg"><img src="img/figma-parity/live-l2/safari-scam-15.jpg" width="120"></a> | none | n/a |
+| [`scam-16`](../../../ai/test-layer2/dataset.md#L27)<br><code>registersw-app17.fkregs-on.com</code><br>Pendaftaran/BSU palsu → Telegram | ≥ 80 % · scam, block it | **31** ⚠️ only warned | suspicious_link (L2, +21), new_domain (L3, +10) | **Blocked page, 86%** (same kit as scam-12) | <a href="img/figma-parity/live-l2/safari-scam-16.jpg"><img src="img/figma-parity/live-l2/safari-scam-16.jpg" width="120"></a> | 86 blocked | failed:network |
+| [`scam-17`](../../../ai/test-layer2/dataset.md#L28)<br><code>login-mybca-bisnis.ibcbank-aceh.com</code><br>myBCA Bisnis — login perusahaan palsu | ≥ 80 % · scam, block it | **24** ❌ missed | brand_plus_keyword (L2, +14), new_domain (L3, +10) | Cloudflare's own "Suspected Phishing" page in front of the site; **24% badge** | <a href="img/figma-parity/live-l2/safari-scam-17.jpg"><img src="img/figma-parity/live-l2/safari-scam-17.jpg" width="120"></a> | none | n/a |
+| [`scam-18`](../../../ai/test-layer2/dataset.md#L29)<br><code>www.cuz-bankkbsi.com</code><br>CUZ by BSI — login perusahaan palsu | ≥ 80 % · scam, block it | **45** ⚠️ only warned | lookalike_domain (L2, +25), new_domain (L3, +20) | parked page with loan ads; **45% banner** "Be careful: this address looks like BSI's" | <a href="img/figma-parity/live-l2/safari-scam-18.jpg"><img src="img/figma-parity/live-l2/safari-scam-18.jpg" width="120"></a> | 45 warning | failed:network |
+| [`scam-19`](../../../ai/test-layer2/dataset.md#L30)<br><code>shopeeofficial-refund.vercel.app</code><br>Shopee — pengembalian dana palsu | ≥ 80 % · scam, block it | **24** ❌ missed | suspicious_link (L2, +24) | Safari's own red "Deceptive Website Warning" (page not loaded); no Shoo badge | <a href="img/figma-parity/live-l2/safari-scam-19.jpg"><img src="img/figma-parity/live-l2/safari-scam-19.jpg" width="120"></a> | none | n/a |
+| [`scam-20`](../../../ai/test-layer2/dataset.md#L31)<br><code>viinwkwk-dot.github.io</code><br>Instagram — login palsu berbahasa Indonesia | ≥ 80 % · scam, block it | **0** ❌ missed | none | fake Instagram login; **45% banner** "Be careful" | <a href="img/figma-parity/live-l2/safari-scam-20.jpg"><img src="img/figma-parity/live-l2/safari-scam-20.jpg" width="120"></a> | 45 warning | failed:network |
+| [`scam-21`](../../../ai/test-layer2/dataset.md#L32)<br><code>helpnets.info</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **100** ✅ blocked | db_match (L1, +100), suspicious_link (L2, +34) | **Blocked page, 100%** (public scam list) | <a href="img/figma-parity/live-l2/safari-scam-21.jpg"><img src="img/figma-parity/live-l2/safari-scam-21.jpg" width="120"></a> | 100 blocked | none |
+| [`scam-22`](../../../ai/test-layer2/dataset.md#L33)<br><code>d33wubrfki0l68.cloudfront.net</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **18** ❌ missed | suspicious_link (L2, +18) | **63% popup** "This site looks suspicious" | <a href="img/figma-parity/live-l2/safari-scam-22.jpg"><img src="img/figma-parity/live-l2/safari-scam-22.jpg" width="120"></a> | 63 warning | none |
+| [`scam-23`](../../../ai/test-layer2/dataset.md#L8)<br><code>simgratisonine.blogspot.com</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **13** ❌ missed | suspicious_link (L2, +13) | fake SIM A/B/C/D sign-up via Telegram; **13% badge** (missed) | <a href="img/figma-parity/live-l2/safari-scam-23.jpg"><img src="img/figma-parity/live-l2/safari-scam-23.jpg" width="120"></a> | none | n/a |
+| [`scam-24`](../../../ai/test-layer2/dataset.md#L35)<br><code>bantuannbansos2026.blogspot.com</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **24** ❌ missed | suspicious_link (L2, +24) | "Register now" form asking name, province and phone for Telegram; **24% badge** (missed) | <a href="img/figma-parity/live-l2/safari-scam-24.jpg"><img src="img/figma-parity/live-l2/safari-scam-24.jpg" width="120"></a> | none | n/a |
+| [`scam-25`](../../../ai/test-layer2/dataset.md#L36)<br><code>gratiskuota60gb.blogspot.com</code><br>dari Imelda, modus belum dicatat | ≥ 80 % · scam, block it | **24** ❌ missed | suspicious_link (L2, +24) | free 60 GB data form asking name and Telegram number; **39% banner** "Be careful" | <a href="img/figma-parity/live-l2/safari-scam-25.jpg"><img src="img/figma-parity/live-l2/safari-scam-25.jpg" width="120"></a> | 39 warning | none |
+
+### Normal links
+
+| Link | Should get | Offline | Why | Extension showed (3b) | Screenshot | Sent to server | Push |
+|---|---|---|---|---|---|---|---|
+| [`legit-01`](../../../ai/test-layer2/dataset-legit.md#L12)<br><code>github.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-01.jpg"><img src="img/figma-parity/live-l2/safari-legit-01.jpg" width="120"></a> | none | n/a |
+| [`legit-02`](../../../ai/test-layer2/dataset-legit.md#L13)<br><code>www.wikipedia.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-02.jpg"><img src="img/figma-parity/live-l2/safari-legit-02.jpg" width="120"></a> | none | n/a |
+| [`legit-03`](../../../ai/test-layer2/dataset-legit.md#L14)<br><code>www.rfc-editor.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-03.jpg"><img src="img/figma-parity/live-l2/safari-legit-03.jpg" width="120"></a> | none | n/a |
+| [`legit-04`](../../../ai/test-layer2/dataset-legit.md#L15)<br><code>www.python.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-04.jpg"><img src="img/figma-parity/live-l2/safari-legit-04.jpg" width="120"></a> | none | n/a |
+| [`legit-05`](../../../ai/test-layer2/dataset-legit.md#L16)<br><code>www.debian.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-05.jpg"><img src="img/figma-parity/live-l2/safari-legit-05.jpg" width="120"></a> | none | n/a |
+| [`legit-06`](../../../ai/test-layer2/dataset-legit.md#L17)<br><code>www.kernel.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-06.jpg"><img src="img/figma-parity/live-l2/safari-legit-06.jpg" width="120"></a> | none | n/a |
+| [`legit-07`](../../../ai/test-layer2/dataset-legit.md#L18)<br><code>www.mozilla.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-07.jpg"><img src="img/figma-parity/live-l2/safari-legit-07.jpg" width="120"></a> | none | n/a |
+| [`legit-08`](../../../ai/test-layer2/dataset-legit.md#L19)<br><code>www.eff.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-08.jpg"><img src="img/figma-parity/live-l2/safari-legit-08.jpg" width="120"></a> | none | n/a |
+| [`legit-09`](../../../ai/test-layer2/dataset-legit.md#L20)<br><code>www.archive.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-09.jpg"><img src="img/figma-parity/live-l2/safari-legit-09.jpg" width="120"></a> | none | n/a |
+| [`legit-10`](../../../ai/test-layer2/dataset-legit.md#L21)<br><code>www.nasa.gov</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-10.jpg"><img src="img/figma-parity/live-l2/safari-legit-10.jpg" width="120"></a> | none | n/a |
+| [`legit-11`](../../../ai/test-layer2/dataset-legit.md#L22)<br><code>www.loc.gov</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-11.jpg"><img src="img/figma-parity/live-l2/safari-legit-11.jpg" width="120"></a> | none | n/a |
+| [`legit-12`](../../../ai/test-layer2/dataset-legit.md#L23)<br><code>www.mit.edu</code><br>dari Imelda | < 30 % · not scam, show nothing | **100** ❌ wrongly flagged | db_match (L1, +100) | **Blocked page, 100%** ("This site is known to cheat people"): mit.edu is on the public scam list. Wrong block. | <a href="img/figma-parity/live-l2/safari-legit-12.jpg"><img src="img/figma-parity/live-l2/safari-legit-12.jpg" width="120"></a> | 100 blocked | none |
+| [`legit-13`](../../../ai/test-layer2/dataset-legit.md#L24)<br><code>www.berkeley.edu</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-13.jpg"><img src="img/figma-parity/live-l2/safari-legit-13.jpg" width="120"></a> | none | n/a |
+| [`legit-14`](../../../ai/test-layer2/dataset-legit.md#L25)<br><code>www.cloudflare.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-14.jpg"><img src="img/figma-parity/live-l2/safari-legit-14.jpg" width="120"></a> | none | n/a |
+| [`legit-15`](../../../ai/test-layer2/dataset-legit.md#L26)<br><code>developer.apple.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-15.jpg"><img src="img/figma-parity/live-l2/safari-legit-15.jpg" width="120"></a> | none | n/a |
+| [`legit-16`](../../../ai/test-layer2/dataset-legit.md#L27)<br><code>docs.python.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-16.jpg"><img src="img/figma-parity/live-l2/safari-legit-16.jpg" width="120"></a> | none | n/a |
+| [`legit-17`](../../../ai/test-layer2/dataset-legit.md#L28)<br><code>medium.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-17.jpg"><img src="img/figma-parity/live-l2/safari-legit-17.jpg" width="120"></a> | none | n/a |
+| [`legit-18`](../../../ai/test-layer2/dataset-legit.md#L29)<br><code>blog.google</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-18.jpg"><img src="img/figma-parity/live-l2/safari-legit-18.jpg" width="120"></a> | none | n/a |
+| [`legit-19`](../../../ai/test-layer2/dataset-legit.md#L30)<br><code>vercel.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | cookie notice on top; 0% badge | <a href="img/figma-parity/live-l2/safari-legit-19.jpg"><img src="img/figma-parity/live-l2/safari-legit-19.jpg" width="120"></a> | none | n/a |
+| [`legit-20`](../../../ai/test-layer2/dataset-legit.md#L31)<br><code>deno.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-20.jpg"><img src="img/figma-parity/live-l2/safari-legit-20.jpg" width="120"></a> | none | n/a |
+| [`legit-21`](../../../ai/test-layer2/dataset-legit.md#L32)<br><code>developer.apple.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-21.jpg"><img src="img/figma-parity/live-l2/safari-legit-21.jpg" width="120"></a> | none | n/a |
+| [`legit-22`](../../../ai/test-layer2/dataset-legit.md#L33)<br><code>docs.github.com</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | 0% badge | <a href="img/figma-parity/live-l2/safari-legit-22.jpg"><img src="img/figma-parity/live-l2/safari-legit-22.jpg" width="120"></a> | none | n/a |
+| [`legit-23`](../../../ai/test-layer2/dataset-legit.md#L34)<br><code>developer.mozilla.org</code><br>dari Imelda | < 30 % · not scam, show nothing | **0** ✅ left alone | none | page now shows 404 Not Found; 0% badge | <a href="img/figma-parity/live-l2/safari-legit-23.jpg"><img src="img/figma-parity/live-l2/safari-legit-23.jpg" width="120"></a> | none | n/a |
+
+### What our app showed after the visit
+
+| Guardian: home | Guardian: activity | Guardian: activity more | Guardian: detail fkregs | Guardian: push simctl | Protected: home | Protected: activity |
+|---|---|---|---|---|---|---|
+| <img src="img/figma-parity/live-l2/guardian-1-home.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-2-activity.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-3-activity-more.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-4-detail-fkregs.jpg" width="140"> | <img src="img/figma-parity/live-l2/guardian-5-push-simctl.jpg" width="140"> | <img src="img/figma-parity/live-l2/protected-1-home.jpg" width="140"> | <img src="img/figma-parity/live-l2/protected-2-activity.jpg" width="140"> |
+
+## How to run it again
 
 ```bash
 # Figma frames (TalkToFigma plugin open in the file, channel joined)
 node plan/alief/qa/figma-export.mjs plan/alief/qa/img/figma-parity/figma <channel>
-# Test 1 + 2a screenshots
-TEST_RUNNER_QA_SCENARIO=figma TEST_RUNNER_QA_SHOT_DIR=$PWD/plan/alief/qa/img/figma-parity/app xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:ShooAppUITests/FigmaParityUITests
-# Test 2a data
+# Screens + Test 1 screenshots (set TEST_RUNNER_QA_SCENARIO to figma, mixedVerdicts, heavy, edge, allSafe, allBlocked or corpus)
+TEST_RUNNER_QA_SCENARIO=figma TEST_RUNNER_QA_SHOT_DIR=$PWD/plan/alief/qa/img/figma-parity/app xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ShooAppUITests/FigmaParityUITests
+# Test 2a data, then the local page viewer
 npx --prefix ai wrangler dev --cwd ai --port 8788 &
 node ai/eval/run.mjs --analyze-url http://127.0.0.1:8788 --json --show-holdout > /tmp/corpus-eval.json && node plan/alief/qa/corpus-to-scans.mjs /tmp/corpus-eval.json
+node plan/alief/qa/corpus-view.mjs && open plan/alief/qa/corpus-view/index.html
+# Test 2b: which hosts still exist
+node plan/alief/qa/corpus-dns.mjs plan/alief/qa/img/figma-parity/corpus-results.json plan/alief/qa/img/figma-parity/corpus-dns.json
 # Test 2b: pair, then visit
 TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -only-testing:ShooAppUITests/LiveQAUITests/testGuardianPairs   # Guardian sim
 TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -only-testing:ShooAppUITests/LiveQAUITests/testProtectedJoins  # Protected sim
 bash plan/alief/qa/live-visit.sh <protected-udid>
 # then write live/observations.json from the shots, and
-node plan/alief/qa/live-results.mjs
+node plan/alief/qa/live-results.mjs live corpus-results.json <run start> <run end>
+xcrun simctl push <guardian-udid> com.aliefauzan.shoo plan/alief/qa/push-live-warning.apns   # app side of the push
+# Test 3: ai/test-layer2 links (3a offline, then 3b live; the AI server allows 300 /analyze calls per 10 min)
+node plan/alief/qa/layer2-dataset-test.mjs
+node plan/alief/qa/corpus-dns.mjs plan/alief/qa/img/figma-parity/layer2-dataset-results.json plan/alief/qa/img/figma-parity/layer2-dataset-dns.json
+bash plan/alief/qa/live-visit.sh <protected-udid> 15 img/figma-parity/layer2-dataset-dns.json img/figma-parity/live-l2
+# then write live-l2/observations.json from the shots, and
+node plan/alief/qa/live-results.mjs live-l2 layer2-dataset-results.json <run start> <run end>
 node plan/alief/qa/figma-parity-report.mjs
 ```

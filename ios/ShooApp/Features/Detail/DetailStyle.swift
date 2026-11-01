@@ -11,7 +11,6 @@ enum DetailStyle {
     static let tick = hex(0x3F4D5A)
     static let needle = hex(0x383D43)
     static let cardTop = hex(0xFEFEFF)
-    static let cardShadow = hex(0xE7F2F6)
     static let photoFill = hex(0xEAF1F8)
     static let photoStroke = hex(0xE2E8F0)
     static let pageShadow = hex(0x1A1C2E)
@@ -37,6 +36,9 @@ enum DetailStyle {
     static let markedText = hex(0x1E78BE)
     static let greyBadgeFill = hex(0xF2F4F7)
     static let greyBadgeStroke = hex(0xDFE3E8)
+    // "Virellia belum melihat link ini" banner on the Score Card (487:4221).
+    static let unseenFill = hex(0xC7C7CE)
+    static let unseenText = hex(0x727272)
     /// "Spotlight + kuning": several areas in one photo.
     static let marker = hex(0xFFD60A)
 

@@ -25,8 +25,8 @@ struct TurnOnExtensionView: View {
             message: "Turn it on in Safari to get protection right away.",
             onBack: onBack
         ) {
-            OnboardingHeroImage(name: "ExtensionIllustration")
-                .padding(.top, 14)
+            // Figma "image 1" at y 72.5, the headline right under it at 373.
+            OnboardingHeroImage(name: "ExtensionIllustration", top: 10.5, bottom: 0.5)
         } content: {
             VStack(alignment: .leading, spacing: 14) {
                 // The reason first, above the steps, so it is seen without scrolling (#135).
@@ -52,7 +52,7 @@ struct TurnOnExtensionView: View {
         } footer: {
             // One main button that fits the reason (#135); the other half of the fix stays one tap away.
             let step = nextStep ?? .switchOn
-            Button(step.opensSafariFirst ? "Open Safari" : "Turn on extension") {
+            Button(step.opensSafariFirst ? "Open Safari" : "Turn on the extension") {
                 Task { step.opensSafariFirst ? await ExtensionSetup.openSafari() : await ExtensionSetup.openSettings() }
             }
             .buttonStyle(OnboardingCapsuleButtonStyle())
@@ -69,10 +69,16 @@ struct TurnOnExtensionView: View {
                     .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.secondaryInk, weight: .regular))
                     .accessibilityIdentifier("extension.skipCheck")
             }
-            Button("Having trouble? Watch the tutorial") { isVideoPresented = true }
-                .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
+            // Figma: "Terkendala? " regular ink + "Tonton Tutorial" semibold blue.
+            Button { isVideoPresented = true } label: {
+                Text("Having trouble?") + Text(verbatim: " ")
+                    + Text("Watch the tutorial").fontWeight(.semibold).foregroundStyle(OnboardingTheme.link)
+            }
+            .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
                 .accessibilityIdentifier("extension.video")
         }
+        .footerEndsWithLink()
+        .messageSpacing(9)
         // On appear and every time the user is back from Settings or Safari: read now, then a few more
         // times in case the heartbeat from Safari is still on its way (no app restart needed, #135).
         .task(id: scenePhase) {
@@ -108,10 +114,14 @@ private struct StepRow: View {
                 .foregroundStyle(Color.dynamic(0x136CB7, dark: 0x5EAAF0))
                 .frame(width: badgeSize, height: badgeSize)
                 .background(OnboardingTheme.card, in: Circle())
+                // Figma "Button": black 20%, y 2.7, blur 4.5 (its -2.7 spread has no SwiftUI equivalent).
+                .shadow(color: .black.opacity(0.2), radius: 2.3, y: 2.7)
                 .accessibilityLabel(Text("Step \(number)"))
             Text(text)
                 .onboardingFont(17, design: .rounded, relativeTo: .body)
-                .lineSpacing(6.8)
+                // Figma: 140 % (23.8).
+                .figmaLineHeight(23.8, relativeTo: .body)
+                .lineSpacing(3.5)
                 .foregroundStyle(OnboardingTheme.ink)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, minHeight: badgeSize, alignment: .leading)
@@ -135,7 +145,9 @@ struct ExtensionOnView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 286, height: 285)
+                // Figma: the illustration at y 102, the headline at 402.
                 .padding(.top, 40)
+                .padding(.bottom, 15)
                 .accessibilityHidden(true)
         }
     }

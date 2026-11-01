@@ -18,12 +18,12 @@ enum MockScenarios {
 
     static let meId = "dev_me"
     static let mariaId = "dev_maria"
-    static let virellia = GuardianInfo(deviceId: "dev_virellia", name: "Virellia", avatarId: "avatar_09")
+    static let virellia = GuardianInfo(deviceId: "dev_virellia", name: "Virellia", avatarId: "avatar_01")
 
     /// The data for a QA scenario, or `nil` for the fixture scenarios (`standard`, `empty`, …).
     static func dataset(for scenario: MockRepository.Scenario, now: Date, bundle: Bundle) -> MockDataset? {
         switch scenario {
-        case .standard, .empty, .oneMember, .threeMembers: nil
+        case .standard, .empty, .unpaired, .oneMember, .threeMembers: nil
         case .figma: figma(now: now)
         case .mixedVerdicts: mixedVerdicts(now: now)
         case .heavy: heavy(now: now)
@@ -89,19 +89,19 @@ enum MockScenarios {
         let since = day(2026, 9, 14, 9, 0)
         return [
             FamilyMember(
-                deviceId: "dev_syahnaz", name: "Syahnaz", avatarId: "avatar_02", extensionActive: true,
+                deviceId: "dev_syahnaz", name: "Syahnaz", avatarId: "avatar_01", extensionActive: true,
                 lastScan: .init(status: .blocked, score: 92, url: Site.bcaBlocked.url, detectedAt: today(10, 42, now)),
                 connectedAt: since, lastSeenAt: now.addingTimeInterval(-2 * 60), deviceModel: "iPhone 15", osVersion: "26",
                 notify: true, stats: .init(blocked: 3, warnings: 5)
             ),
             FamilyMember(
-                deviceId: "dev_bayu", name: "Bayu", avatarId: "avatar_07", extensionActive: true,
+                deviceId: "dev_bayu", name: "Bayu", avatarId: "avatar_02", extensionActive: true,
                 lastScan: .init(status: .blocked, score: 88, url: Site.shopee.url, detectedAt: today(10, 41, now)),
                 connectedAt: since, lastSeenAt: now.addingTimeInterval(-3600), deviceModel: "iPad", osVersion: "26",
                 notify: true, stats: .init(blocked: 1, warnings: 2)
             ),
             FamilyMember(
-                deviceId: "dev_renatta", name: "Renatta", avatarId: "avatar_05", extensionActive: false,
+                deviceId: "dev_renatta", name: "Renatta", avatarId: "avatar_03", extensionActive: false,
                 lastScan: .init(status: .warning, score: 72, url: Site.bcaWarning.url, detectedAt: day(2026, 10, 25, 10, 42)),
                 connectedAt: since, lastSeenAt: now.addingTimeInterval(-2 * 86_400), deviceModel: "iPhone 13", osVersion: "26",
                 notify: true, stats: .init(blocked: 1, warnings: 1)

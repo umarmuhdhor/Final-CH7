@@ -13,7 +13,8 @@ struct InviteFamilyView: View {
             message: "Share an invite with a QR code or an invite link.",
             onBack: nil
         ) {
-            OnboardingHeroImage(name: "ConnectedIllustration")
+            // Figma "image 1" at y 58.5, the headline at 373.
+            OnboardingHeroImage(name: "ConnectedIllustration", top: -3.5, bottom: 14.5)
         } content: {
             EmptyView()
         } footer: {
@@ -24,6 +25,10 @@ struct InviteFamilyView: View {
                 .buttonStyle(OnboardingLinkButtonStyle(weight: .semibold))
                 .accessibilityIdentifier("invite.skip")
         }
+        .footerEndsWithLink()
+        .largeMessage()
+        // Figma breaks the message after "QR" although its 311 pt box would fit "atau"; 280 pt does the same.
+        .headlineInset(61)
         .sheet(isPresented: $isInvitePresented) {
             InviteSheet(repository: env.repository) {
                 isInvitePresented = false

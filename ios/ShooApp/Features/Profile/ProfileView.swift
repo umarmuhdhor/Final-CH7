@@ -72,6 +72,8 @@ struct ProfileView: View {
     @ViewBuilder private var loaded: some View {
         ProfileHeaderCard(
             banner: "ProfileBanner",
+            avatarShadow: model.variant == .protected ? .glow : .none,
+            badgeBottom: model.variant == .protected ? -26 : 5,
             name: model.profile?.name ?? "",
             handle: model.handle(language: language),
             stats: model.stats(language: language)
@@ -87,7 +89,7 @@ struct ProfileView: View {
             if model.variant == .protected {
                 if model.profile?.guardian != nil {
                     Button { env.router.show(.profilePage(.connection)) } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 5.5) {
                             Image(systemName: ConnectedPillButtonStyle.symbol)
                                 .font(.system(size: 15))
                                 .accessibilityHidden(true)
@@ -97,6 +99,8 @@ struct ProfileView: View {
                     .buttonStyle(ConnectedPillButtonStyle())
                     .accessibilityHint(Text("Shows your linked account"))
                     .accessibilityIdentifier("profile.connectedPill")
+                    // Figma: 17 pt from the card's inner edge, not 12 like "Bagikan undangan".
+                    .padding(.trailing, 5)
                 }
             } else {
                 Button { isInvitePresented = true } label: {
@@ -105,7 +109,7 @@ struct ProfileView: View {
                         Text("Share invite")
                     }
                 }
-                .buttonStyle(ProfilePillButtonStyle())
+                .buttonStyle(ProfilePillButtonStyle(padding: ProfilePillButtonStyle.invitePadding))
                 .accessibilityIdentifier("profile.invite")
             }
         }
@@ -124,13 +128,15 @@ struct ProfileView: View {
         preferencesSection
 
         Button { isDeleteConfirming = true } label: {
-            Text("Delete account")
+            // Figma "Hapus Akun" (title case here, unlike the Kelola profil row).
+            Text("Delete Account")
                 .profileFont(17, .medium, tracking: -0.17)
                 .foregroundStyle(ProfileStyle.red)
                 .frame(minWidth: 44, minHeight: 44)
         }
         .disabled(model.isWorking)
-        .padding(.top, 20)
+        // Figma: the text starts 28 pt under the last card; the 44 pt tap area adds 12 above it.
+        .padding(.top, 16)
         .accessibilityIdentifier("profile.delete")
     }
 
@@ -142,10 +148,10 @@ struct ProfileView: View {
     /// Protected: "Terhubung", the guardian who gets the warnings.
     @ViewBuilder private var guardianSection: some View {
         if let guardian = model.profile?.guardian {
-            ProfileSection(title: "Connected") {
+            ProfileSection(title: "Connected", spacing: 24) {
                 Button { env.router.show(.profilePage(.connection)) } label: {
                     HStack(spacing: 12) {
-                        InitialsAvatar(name: guardian.name, avatarId: guardian.avatarId, size: 36)
+                        InitialsAvatar(name: guardian.name, avatarId: guardian.avatarId, size: 33)
                         Text(verbatim: guardian.name)
                             .profileFont(17, tracking: -0.17)
                             .foregroundStyle(ProfileStyle.ink)
@@ -169,7 +175,7 @@ struct ProfileView: View {
     /// Pribadi and Protected: "Perlindungan" with the extension status (the switch lives in Safari).
     @ViewBuilder private var protectionSection: some View {
         if model.variant != .guardian {
-            ProfileSection(title: "Protection", top: model.variant == .protected && model.profile?.guardian != nil ? sectionTop : 28) {
+            ProfileSection(title: "Protection", top: protectionTop) {
                 extensionRow
             }
         }
@@ -180,8 +186,9 @@ struct ProfileView: View {
             ProfileRow(
                 symbol: ProfileStyle.extensionSymbol,
                 title: Text("Safari extension"),
+                // Figma v2 (455:10275): "Aktif" in grey. Its chevron is left out: the row does nothing while on.
                 accessory: extensionStatus.isActive
-                    ? .value(L10n.string("Active", language: language), color: ProfileStyle.greenText, chevron: false)
+                    ? .value(L10n.string("Active", language: language), chevron: false)
                     : .value(L10n.string("Off", language: language), color: ProfileStyle.red)
             )
         }
@@ -190,8 +197,15 @@ struct ProfileView: View {
         .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
     }
 
+    /// Figma: 32 pt under the profile card, 28 under the "Mode Guardian" card, 15 on the Protected profile.
+    private var protectionTop: CGFloat {
+        if model.variant == .protected { return model.profile?.guardian != nil ? sectionTop : 28 }
+        return model.showsGuardianCard ? 28 : 32
+    }
+
     private var familySection: some View {
-        ProfileSection(title: "People you protect") {
+        // Figma: 32 pt under the profile card (416:10447, 480:5353).
+        ProfileSection(title: "People you protect", top: 32) {
             if model.membersFailed {
                 VStack(spacing: 8) {
                     Text("Couldn't load your family").profileFont(15).foregroundStyle(ProfileStyle.secondary)
@@ -216,7 +230,9 @@ struct ProfileView: View {
         HStack(spacing: 12) {
             Button { env.router.show(.member(deviceId: member.deviceId)) } label: {
                 HStack(spacing: 12) {
+                    // Figma: a member whose extension is off has a half-faded avatar.
                     InitialsAvatar(name: member.name, avatarId: member.avatarId)
+                        .opacity(member.extensionActive ? 1 : 0.5)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: member.name)
                             .profileFont(17, .medium, tracking: -0.17)

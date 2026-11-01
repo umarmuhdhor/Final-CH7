@@ -108,7 +108,7 @@ struct GuardianHomeView: View {
                 title: isActive ? "You're protected!" : "You're not protected yet",
                 titleIdentifier: isActive ? "home.status.active" : "home.status.off",
                 shieldOn: isActive,
-                bottomPadding: isActive ? 38 : 20
+                bottomPadding: isActive ? nil : 20
             ) {
                 if !isActive {
                     Button { env.router.isTurnOnPresented = true } label: {
@@ -125,13 +125,14 @@ struct GuardianHomeView: View {
                 }
             }
         } else if model.hasNoFamily {
-            HomeHero(style: .blue, title: "Protect your loved ones", titleIdentifier: "home.family.empty",
-                     subtitle: "No one to protect yet", shieldTint: .teal)
+            HomeHero(style: .empty, title: "Protect your loved ones", titleIdentifier: "home.family.empty",
+                     subtitle: "No one to protect yet", shieldTint: .teal, layout: .familyEmpty)
         } else if model.pendingScan != nil {
-            HomeHero(style: .teal, title: "Family needs confirmation", titleIdentifier: "home.family.pending", shieldTint: .orange)
+            HomeHero(style: .teal, title: "Family needs confirmation", titleIdentifier: "home.family.pending", shieldTint: .orange,
+                     layout: .familyPending)
         } else {
             HomeHero(style: .teal, title: "Family protected!", titleColor: Color(red: 0x00 / 255, green: 0x38 / 255, blue: 0x3C / 255),
-                     titleIdentifier: "home.family.protected", shieldTint: .teal)
+                     titleIdentifier: "home.family.protected", shieldTint: .teal, layout: .family)
         }
     }
 
@@ -140,7 +141,8 @@ struct GuardianHomeView: View {
         if !isFamily {
             StatusStrip(title: "Security status:", value: model.extensionStatus.isActive ? "Good!" : "Danger!", fill: StatusStrip.personal)
         } else if model.hasNoFamily {
-            StatusStrip(title: "Family status:", value: "No members yet", fill: HomeTheme.navy)
+            StatusStrip(title: "Family status:", value: "No members yet", fill: HomeTheme.navy,
+                        valueWeight: .regular, valueColor: StatusStrip.mutedValue)
         } else {
             StatusStrip(title: "Family status:", value: model.pendingScan != nil ? "needs confirmation" : "All safe!", fill: StatusStrip.family)
         }
@@ -169,8 +171,11 @@ struct GuardianHomeView: View {
             if !isFamily {
                 StatsGrid(stats: model.stats)
             } else if model.hasNoFamily {
+                // Figma "Konten" 435:20630: the card 16 under the sheet's top, 24 from its sides, 20 above its bottom.
                 InviteCodeCard(repository: env.repository) { Task { await model.refresh() } }
-                    .padding(24)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
             } else if let scan = model.pendingScan {
                 PendingSiteCard(
                     scan: scan,
@@ -216,12 +221,15 @@ private struct StatsGrid: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        let columns = dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 0), GridItem(.flexible(), spacing: 0)]
-        LazyVGrid(columns: columns, spacing: 0) {
+        // Figma: 191 × 98 tiles, 4 apart, 8 in from the sheet's edges.
+        let columns = dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)]
+        LazyVGrid(columns: columns, spacing: 4) {
             StatTile(systemImage: "network.badge.shield.half.filled", value: stats.blocked, title: "Threats blocked")
-            StatTile(systemImage: "lock.open.fill", value: stats.warnings, title: "Security risks")
+            StatTile(systemImage: "lock.open.trianglebadge.exclamationmark.fill", value: stats.warnings, title: "Security risks")
             StatTile(systemImage: "hand.raised.fill", value: stats.suspiciousHosts, title: "Suspicious hosts")
-            StatTile(systemImage: "tray.full.fill", value: stats.recentScans, title: "Recent scans")
+            // Figma glyph U+103477 is `macwindow.stack` (iOS 26).
+            StatTile(systemImage: UIImage(systemName: "macwindow.stack") != nil ? "macwindow.stack" : "rectangle.stack",
+                     value: stats.recentScans, title: "Recent scans")
         }
         .overlay {
             if !dynamicTypeSize.isAccessibilitySize {
@@ -229,6 +237,8 @@ private struct StatsGrid: View {
                 ZStack {
                     LinearGradient(colors: [HomeTheme.divider, HomeTheme.divider.opacity(0)], startPoint: .top, endPoint: .bottom)
                         .frame(width: 1)
+                        // Figma Line 13 sits at x 199, 2 pt left of the gap's centre.
+                        .offset(x: -2)
                     FadingDivider()
                         .padding(.horizontal, 16)
                 }
@@ -250,10 +260,10 @@ private struct StatTile: View {
         VStack(alignment: .leading, spacing: 22) {
             HStack {
                 Image(systemName: systemImage)
-                    .font(.system(size: 14))
+                    .font(.system(size: 13.6))
                     .foregroundStyle(HomeTheme.tileIcon)
                     .frame(width: 30, height: 30)
-                    .background(HomeTheme.tileIconBackground, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .background(HomeTheme.tileIconBackground, in: RoundedRectangle(cornerRadius: 9.1, style: .continuous))
                     .accessibilityHidden(true)
                 Spacer()
                 Text(verbatim: "\(value)")
@@ -267,7 +277,9 @@ private struct StatTile: View {
                 .foregroundStyle(HomeTheme.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        // Figma: 16 all round on a 98 pt tile; SwiftUI's taller 13 pt line takes the last 1.6.
+        .padding([.horizontal, .top], 16)
+        .padding(.bottom, 14.4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(title))
@@ -284,12 +296,24 @@ private struct MembersRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(alignment: .top, spacing: 0))
         layout {
             ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
                 if index > 0 {
-                    FadingDivider(axis: dynamicTypeSize.isAccessibilitySize ? .horizontal : .vertical)
-                        .padding(.vertical, 8)
+                    if dynamicTypeSize.isAccessibilitySize {
+                        FadingDivider()
+                    } else {
+                        // Figma Line 13 / 14: 100 pt, solid for the top half, fading out below, 7 pt under the row top;
+                        // 16 pt either side.
+                        LinearGradient(stops: [.init(color: HomeTheme.divider, location: 0), .init(color: HomeTheme.divider, location: 0.5),
+                                               .init(color: HomeTheme.divider.opacity(0), location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                            .frame(width: 1, height: 100)
+                            .frame(maxHeight: .infinity, alignment: .top)
+                            .padding(.top, 7)
+                            .padding(.horizontal, 16)
+                            .accessibilityHidden(true)
+                    }
                 }
                 Button { onOpen(member) } label: {
                     MemberCell(member: member, gradient: InitialAvatar.gradient(at: index))
@@ -298,6 +322,7 @@ private struct MembersRow: View {
                 .accessibilityIdentifier("family.member.\(member.deviceId)")
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
         .accessibilityElement(children: .contain)
@@ -313,11 +338,11 @@ private struct MemberCell: View {
         VStack(spacing: 8) {
             InitialAvatar(name: member.name, size: 44, gradient: gradient, fontSize: 18)
                 .overlay(alignment: .bottomTrailing) {
+                    // Figma: 12 pt dot, 1 pt white ring outside, flush with the avatar's bottom right.
                     Circle()
                         .fill(member.isConnected ? HomeTheme.success : HomeTheme.offline)
                         .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(.white, lineWidth: 1))
-                        .offset(x: 2, y: 2)
+                        .background(Circle().fill(.white).padding(-1))
                 }
             VStack(spacing: 2) {
                 Text(verbatim: member.name)
@@ -360,31 +385,35 @@ private struct PendingSiteCard: View {
         Evidence.top(scan.signals, mode: .guardian, language: language, limit: 1).first?.text
     }
     private var eyebrow: String {
+        // Figma: "DIBUKA SYAHNAZ · HARI INI, 10.42".
         let opened = L10n.string("Opened by \(scan.ownerName)", language: language)
-        return "\(opened) · \(Formatters.dateTime(scan.detectedAt, language: language))".uppercased(with: language.locale)
+        return "\(opened) · \(Formatters.dayAndTime(scan.detectedAt, language: language, compact: true))".uppercased(with: language.locale)
     }
 
     private var titleText: some View {
         Text(verbatim: title)
-            .onboardingFont(17, weight: .semibold, relativeTo: .headline)
+            .onboardingFont(18, weight: .semibold, relativeTo: .headline)
+            .tracking(-0.18)
             .foregroundStyle(HomeTheme.bodyInk)
     }
 
     private var domainChip: some View {
+        // Figma "Tag": 11 pt, 9 × 3 padding, #E6E8EC.
         Text(verbatim: scan.domain)
-            .onboardingFont(13, relativeTo: .footnote)
+            .onboardingFont(11, relativeTo: .caption)
             .foregroundStyle(HomeTheme.bodyInk)
             .lineLimit(1)
             .truncationMode(.middle)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 9)
             .padding(.vertical, 3)
-            .background(Color(red: 0xE4 / 255, green: 0xE9 / 255, blue: 0xED / 255), in: Capsule())
+            .background(HomeTheme.quietFill, in: Capsule())
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        // Figma "Konten" (435:20899): the card 5 pt under the sheet's top, 8 from its sides; the buttons 12 under it.
+        VStack(spacing: 12) {
             Button(action: onOpen) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(verbatim: eyebrow)
                             .onboardingFont(11, relativeTo: .caption)
@@ -404,14 +433,16 @@ private struct PendingSiteCard: View {
                     }
                     .padding(.trailing, 44)
                     .padding(.horizontal, 16)
-                    FittedScoreGauge(scan: scan)
+                    // Figma: the gauge (370 × 237) right under the header, the reason 8 under it, 150 % lines.
+                    FittedScoreGauge(scan: scan, reservesBlockedHeight: true)
                         .frame(maxWidth: .infinity)
                     if let reason {
                         Text(verbatim: reason)
                             .onboardingFont(15, relativeTo: .subheadline)
-                            .lineSpacing(7)
+                            .lineSpacing(4.6)
                             .foregroundStyle(HomeTheme.secondaryInk)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 8)
                             .padding(.horizontal, 16)
                     }
                 }
@@ -433,7 +464,7 @@ private struct PendingSiteCard: View {
             .overlay(alignment: .topTrailing) {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 14.4, weight: .semibold))
                         .foregroundStyle(HomeTheme.bodyInk)
                         .frame(width: 32, height: 32)
                         .background(HomeTheme.tileIconBackground, in: Circle())
@@ -442,7 +473,8 @@ private struct PendingSiteCard: View {
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .padding(.top, 14)
+                // Figma: the 32 pt circle 24 pt in from the card's top and right.
+                .padding(.top, 18)
                 .padding(.trailing, 18)
                 .accessibilityLabel(Text("Close"))
                 .accessibilityHint(Text("Hides this site from Home"))
@@ -474,8 +506,9 @@ private struct PendingSiteCard: View {
                     .accessibilityIdentifier("home.verdictNotAllowed")
             }
         }
-        .padding(8)
-        .padding(.bottom, 16)
+        .padding(.horizontal, 8)
+        .padding(.top, 5)
+        .padding(.bottom, 20)
     }
 }
 
@@ -495,7 +528,7 @@ private struct DecisionButton: View {
                 .frame(maxWidth: .infinity, minHeight: 46)
                 .background(.white, in: Capsule())
                 .overlay(Capsule().stroke(Color(red: 0xE3 / 255, green: 0xE3 / 255, blue: 0xE3 / 255), lineWidth: 1))
-                .shadow(color: .black.opacity(0.12), radius: 2.5, y: 3)
+                .figmaButtonShadow()
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -528,6 +561,7 @@ private struct InviteCodeCard: View {
         }
         .padding(17)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .figmaCardShadow()
         .task { await model.run() }
         // Someone joined while the code was on screen: Home shows the family.
         .onChange(of: model.members.count) { _, count in
@@ -551,10 +585,11 @@ private struct InviteCodeCard: View {
                 ProgressView().opacity(model.codeState == .loading ? 1 : 0)
             }
         }
-        .padding(7)
+        // Figma "QR": 110 pt, 6 pt padding, 14 pt corners, 1 pt inside stroke.
+        .padding(6)
         .frame(width: 110, height: 110)
-        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(HomeTheme.rowStroke, lineWidth: 1))
+        .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(HomeTheme.rowStroke, lineWidth: 1))
     }
 
     @ViewBuilder
@@ -566,13 +601,15 @@ private struct InviteCodeCard: View {
                 .foregroundStyle(HomeTheme.secondaryInk)
         case .ready(let code):
             Text("Invite code · valid for \(model.timeLeft)")
-                .onboardingFont(13, relativeTo: .footnote)
+                .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                 .monospacedDigit()
+                // Figma: a 20 pt line (153.8 %).
+                .padding(.vertical, 2.25)
                 .foregroundStyle(HomeTheme.secondaryInk)
                 .accessibilityIdentifier("familyCode.countdown")
             Text(verbatim: FamilyCodeModel.display(code.code))
-                .font(.system(size: 30, weight: .semibold, design: .default))
-                .tracking(3)
+                .font(FigmaFont.font(size: 30, weight: .semibold))
+                .tracking(1.2)
                 .monospacedDigit()
                 .foregroundStyle(HomeTheme.ink)
                 .minimumScaleFactor(0.6)
@@ -584,12 +621,13 @@ private struct InviteCodeCard: View {
                     ShareLink(item: FamilyCodeModel.inviteText(for: code, language: language)) {
                         Text("Share")
                             .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
+                            .tracking(-0.14)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 22)
                             .frame(minHeight: 34)
                             .background(HomeTheme.action, in: Capsule())
-                            .frame(minHeight: 44)
-                            .contentShape(Capsule())
+                            // 34 pt pill (Figma "Aksi"); the touch area still reaches 44.
+                            .contentShape(Rectangle().inset(by: -5))
                     }
                     .accessibilityIdentifier("family.invite")
                     Button {
@@ -599,12 +637,12 @@ private struct InviteCodeCard: View {
                     } label: {
                         Text(model.copied ? "Copied" : "Copy")
                             .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
+                            .tracking(-0.14)
                             .foregroundStyle(HomeTheme.bodyInk)
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, 19.5)
                             .frame(minHeight: 34)
                             .background(HomeTheme.quietFill, in: Capsule())
-                            .frame(minHeight: 44)
-                            .contentShape(Capsule())
+                            .contentShape(Rectangle().inset(by: -5))
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("familyCode.copy")
@@ -644,7 +682,7 @@ private struct HowItWorks: View {
             VStack(spacing: 0) {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     if index > 0 {
-                        Rectangle().fill(HomeTheme.divider).frame(height: 1).accessibilityHidden(true)
+                        Rectangle().fill(HomeTheme.stepDivider).frame(height: 1).accessibilityHidden(true)
                     }
                     HStack(spacing: 12) {
                         Text(verbatim: "\(index + 1)")
@@ -656,7 +694,8 @@ private struct HowItWorks: View {
                         Text(step)
                             .onboardingFont(15, relativeTo: .subheadline)
                             .tracking(-0.15)
-                            .lineSpacing(5)
+                            // Figma: 135 % line height.
+                            .lineSpacing(2.35)
                             .foregroundStyle(HomeTheme.navy)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .fixedSize(horizontal: false, vertical: true)

@@ -9,6 +9,10 @@ enum ProfileStyle {
     static let topWash = Color.dynamic(0xDCECFB, dark: 0x132639)
     /// Cards, the back button, pills.
     static let card = Color.dynamic(0xFFFFFF, dark: 0x1B1F26)
+    /// Figma "Profil Card", "Back" and member "Avatar" drop shadow (#1A1C2E 12%, y 6, blur 16).
+    static let cardShadow = Color(hex: 0x1A1C2E, opacity: 0.12)
+    /// Figma "Profile" avatar on the own profile card (#1F78BF 18%, y 7.68, blur 23).
+    static let avatarGlow = Color(hex: 0x1F78BF, opacity: 0.18)
     static let ink = Color.dynamic(0x191D2F, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     static let nameInk = Color.dynamic(0x151617, dark: 0xF7F8FA, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     static let secondary = Color.dynamic(0x6A717E, dark: 0x9EA6B4, contrastLight: 0x474D58, contrastDark: 0xC9CED8)
@@ -25,9 +29,11 @@ enum ProfileStyle {
     static let greenPill = Color.dynamic(0xE8F8EE, dark: 0x153322)
     static let offDot = Color(hex: 0x8E8E93)
     static let grabber = Color.dynamic(0xD6DAE1, dark: 0x4A515C)
-    /// The radio's ring and the Mode akun card's selected border.
-    static let radioOff = Color.dynamic(0xC4C9D1, dark: 0x5B616C, contrastLight: 0x80858F, contrastDark: 0x9EA6B4)
+    /// The radio's ring (Figma "Radio" #C7C7CE) and the Mode akun card's selected border.
+    static let radioOff = Color.dynamic(0xC7C7CE, dark: 0x5B616C, contrastLight: 0x80858F, contrastDark: 0x9EA6B4)
     /// Disabled button fill (Kelola profil "Simpan nama").
+    /// Aksesibilitas text-size slider rail (Figma "Rail").
+    static let sliderRail = Color.dynamic(0xE6E8EC, dark: 0x343B46, contrastLight: 0xC6CDD7, contrastDark: 0x4B5361)
     static let disabledFill = Color.dynamic(0xB8C0CC, dark: 0x3A414D)
     /// Primary dark capsule ("Ganti ke Guardian"): ink on light, a light capsule on dark.
     static let primaryFill = Color.dynamic(0x191D2F, dark: 0xF2F4F8)
@@ -71,29 +77,7 @@ extension Color {
 
 // MARK: Type
 
-/// Figma sizes that still follow Dynamic Type: the size scales with `relativeTo`, tracking with it.
-private struct ProfileFont: ViewModifier {
-    @ScaledMetric private var size: CGFloat
-    let base: CGFloat
-    let weight: Font.Weight
-    let design: Font.Design
-    let tracking: CGFloat
-
-    init(size: CGFloat, weight: Font.Weight, design: Font.Design, tracking: CGFloat, relativeTo: Font.TextStyle) {
-        _size = ScaledMetric(wrappedValue: size, relativeTo: relativeTo)
-        base = size
-        self.weight = weight
-        self.design = design
-        self.tracking = tracking
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .font(.system(size: size, weight: weight, design: design))
-            .tracking(tracking * size / base)
-    }
-}
-
+/// Figma sizes that still follow Dynamic Type (shared `FigmaFont`: the SF Pro Display widths Figma uses).
 extension View {
     func profileFont(
         _ size: CGFloat, _ weight: Font.Weight = .regular, rounded: Bool = false, tracking: CGFloat = 0
@@ -106,9 +90,7 @@ extension View {
         case ..<23: .title2
         default: .title
         }
-        return modifier(ProfileFont(
-            size: size, weight: weight, design: rounded ? .rounded : .default, tracking: tracking, relativeTo: style
-        ))
+        return figmaFont(size, weight: weight, design: rounded ? .rounded : .default, tracking: tracking, relativeTo: style)
     }
 }
 
@@ -164,6 +146,7 @@ struct ProfileScreen<Content: View>: View {
                         .foregroundStyle(ProfileStyle.ink)
                         .frame(width: 44, height: 44)
                         .background(ProfileStyle.card, in: Circle())
+                        .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
                 }
                 .accessibilityLabel(Text("Back"))
                 .accessibilityIdentifier("profile.back")
@@ -203,10 +186,12 @@ struct ProfileSection<Content: View>: View {
     var trailing: AnyView?
     /// Space above the title: 28 on most screens, 15 between the Protected profile's sections (Figma).
     var top: CGFloat = 28
+    /// Title to card: 12, 24 above the Protected profile's "Terhubung" card (Figma 455:10275).
+    var spacing: CGFloat = 12
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: spacing) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .profileFont(17, .medium, tracking: -0.17)
@@ -232,6 +217,7 @@ struct ProfileCard<Content: View>: View {
             .frame(maxWidth: .infinity)
             .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
+            .figmaCardShadow()
     }
 }
 
@@ -287,26 +273,39 @@ struct ProfileRow: View {
     var titleWeight: Font.Weight = .regular
     var iconTint: Color = ProfileStyle.ink
     var iconFill: Color = ProfileStyle.iconFill
+    /// 58 for icon rows; 44 for the plain text rows of "Tentang Shoo" (Figma 455:9858).
+    var minHeight: CGFloat = 58
+    /// `.settings`: the Pengaturan pages' look (12 pt padding, SF Pro 13 pt subtitle at 135 %).
+    var style: ProfileToggleRow.Style = .profile
 
     var body: some View {
         HStack(spacing: 12) {
             if let symbol { ProfileIcon(symbol: symbol, tint: iconTint, fill: iconFill) }
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: style == .settings ? 2 : 1) {
                 title
                     .profileFont(17, titleWeight, tracking: -0.17)
                     .foregroundStyle(titleColor)
                 if let subtitle {
-                    subtitle
-                        .profileFont(13, rounded: true)
-                        .foregroundStyle(ProfileStyle.secondary)
+                    switch style {
+                    case .profile:
+                        subtitle
+                            .profileFont(13, rounded: true)
+                            .foregroundStyle(ProfileStyle.secondary)
+                    case .settings:
+                        subtitle
+                            .profileFont(13)
+                            .foregroundStyle(ProfileStyle.secondary)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             accessoryView
         }
         .padding(.horizontal, 17)
-        .padding(.vertical, 11)
-        .frame(minHeight: 58)
+        .padding(.vertical, minHeight < 58 || style == .settings ? 12 : 11)
+        .frame(minHeight: minHeight)
         .contentShape(Rectangle())
     }
 
@@ -337,31 +336,50 @@ struct ProfileRow: View {
 
 /// A row with a switch (Figma "Toggle", green #34C759). No icon when `symbol` is nil.
 struct ProfileToggleRow: View {
+    /// Figma draws two kinds: the Profile cards' rows (58 pt, rounded 13 pt subtitle on a 20 pt line,
+    /// e.g. "Kabari saya") and the Pengaturan pages' rows (60 pt, SF Pro 13 pt subtitle at 135 %).
+    enum Style {
+        case profile
+        case settings
+    }
+
     let symbol: String?
     let title: Text
     var subtitle: Text?
+    var style: Style = .profile
     @Binding var isOn: Bool
 
     var body: some View {
         Toggle(isOn: $isOn) {
             HStack(spacing: 12) {
                 if let symbol { ProfileIcon(symbol: symbol) }
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: style == .settings ? 2 : 1) {
                     title
                         .profileFont(17, tracking: -0.17)
                         .foregroundStyle(ProfileStyle.ink)
                     if let subtitle {
-                        subtitle
-                            .profileFont(13, rounded: true)
-                            .foregroundStyle(ProfileStyle.secondary)
+                        switch style {
+                        case .profile:
+                            subtitle
+                                .profileFont(13, rounded: true)
+                                .foregroundStyle(ProfileStyle.secondary)
+                                .padding(.vertical, 2)
+                        case .settings:
+                            subtitle
+                                .profileFont(13)
+                                .foregroundStyle(ProfileStyle.secondary)
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
             }
         }
         .tint(ProfileStyle.green)
         .padding(.horizontal, 17)
-        .padding(.vertical, 11)
-        .frame(minHeight: 58)
+        .padding(.vertical, style == .settings ? 12 : 11)
+        // Figma: 60 with an icon, 55 without ("Jam tenang").
+        .frame(minHeight: style == .settings ? (symbol == nil ? 55 : 60) : 58)
     }
 }
 
@@ -404,8 +422,19 @@ struct ProfileStatsStrip: View {
 
 /// The white card with banner, avatar, name, handle and stats (Figma "Profil Card", r 32, 12 pt inset).
 struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
+    /// The avatar's drop shadow. Figma: none on the Guardian / Pribadi memoji and on the member
+    /// detail; a blue glow on the Protected profile ("Profile", #1F78BF 18 %, y 7.68, blur 23).
+    enum AvatarShadow {
+        case none
+        case glow
+    }
+
     let banner: String
     var bannerHeight: CGFloat = 128
+    var avatarShadow: AvatarShadow = .none
+    /// The badge's bottom edge against the avatar's: 5 pt below for "Bagikan undangan", 26 pt above for
+    /// the Protected "Terhubung" pill, 1 pt above for a member's "Perlindungan aktif" (Figma).
+    var badgeBottom: CGFloat = 5
     let name: String
     let handle: String
     let stats: [ProfileStat]
@@ -426,10 +455,11 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
                     .frame(width: 88, height: 88)
                     .padding(4)
                     .background(ProfileStyle.card, in: Circle())
+                    .shadow(color: avatarShadow == .glow ? ProfileStyle.avatarGlow : .clear, radius: 11.5, y: 7.7)
                     .accessibilityHidden(true)
                 Spacer(minLength: 8)
                 badge
-                    .padding(.bottom, -5)
+                    .padding(.bottom, -badgeBottom)
             }
             .padding(.horizontal, 12)
             .padding(.top, -52)
@@ -447,12 +477,19 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
             .padding(.horizontal, 12)
             .padding(.top, 12)
             if !stats.isEmpty {
+                // Figma: 17 under the handle; 12 under the name when there is no handle (Protected).
                 ProfileStatsStrip(stats: stats)
-                    .padding(.top, 17)
+                    .padding(.top, handle.isEmpty ? 12 : 17)
             }
         }
         .padding(12)
-        .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        // Without stats Figma keeps 17 pt under the handle (480:5353), not the 12 pt inset.
+        .padding(.bottom, stats.isEmpty ? 5 : 0)
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(ProfileStyle.card)
+                .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
+        )
         .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
         .padding(.horizontal, 16)
     }
@@ -461,15 +498,19 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
 /// White capsule with a grey border ("Bagikan undangan", "Ingatkan").
 struct ProfilePillButtonStyle: ButtonStyle {
     var tint: Color = ProfileStyle.ink
+    /// Figma "Ingatkan": 6 / 12 inside its 1 pt border (78 × 31). "Bagikan Undangan": 9 top and bottom,
+    /// 12 leading, 16 trailing inside the border (165 × 37). Figma counts the border in the layout.
+    var padding = EdgeInsets(top: 7, leading: 13, bottom: 7, trailing: 13)
+
+    static let invitePadding = EdgeInsets(top: 10, leading: 13, bottom: 10, trailing: 17)
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .profileFont(14, .medium, tracking: -0.14)
             .foregroundStyle(tint)
-            .padding(.horizontal, 13)
-            .padding(.vertical, 10)
+            .padding(padding)
             .background(ProfileStyle.card, in: Capsule())
-            .overlay(Capsule().stroke(ProfileStyle.pillStroke))
+            .overlay(Capsule().strokeBorder(ProfileStyle.pillStroke))
             .opacity(configuration.isPressed ? 0.6 : 1)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
@@ -482,8 +523,8 @@ struct QRGlyph: View {
         Canvas { context, size in
             let s = size.width / 16
             for origin in [CGPoint(x: 0, y: 0), CGPoint(x: 10, y: 0), CGPoint(x: 0, y: 10)] {
-                let rect = CGRect(x: origin.x * s + 0.75, y: origin.y * s + 0.75, width: 6 * s - 1.5, height: 6 * s - 1.5)
-                context.stroke(Path(roundedRect: rect, cornerRadius: 1.5 * s), with: .color(ProfileStyle.ink), lineWidth: 1.5)
+                let rect = CGRect(x: origin.x * s + 0.8, y: origin.y * s + 0.8, width: 6 * s - 1.6, height: 6 * s - 1.6)
+                context.stroke(Path(roundedRect: rect, cornerRadius: 1.5 * s), with: .color(ProfileStyle.ink), lineWidth: 1.6)
             }
             for (x, y) in [(10.0, 10.0), (13.5, 13.5), (13.5, 10.0), (10.0, 13.5)] {
                 let rect = CGRect(x: x * s, y: y * s, width: 2.5 * s, height: 2.5 * s)
@@ -503,7 +544,7 @@ struct InitialsAvatar: View {
 
     var body: some View {
         Text(verbatim: String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
-            .font(.system(size: size * 0.41, weight: .semibold, design: .rounded))
+            .font(FigmaFont.font(size: size * 0.41, weight: .semibold, design: .rounded))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
             .background(ProfileStyle.initialsGradient(avatarId: avatarId), in: Circle())
@@ -525,16 +566,22 @@ struct ProfileScanChip: View {
     var body: some View {
         let blocked = status == .blocked
         HStack(spacing: 4) {
-            Circle().fill(blocked ? Self.blockedInk : Color(hex: 0xD67D00)).frame(width: 6, height: 6)
+            // Figma: an 11 pt frame holding an 8.9 pt filled "!" circle.
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(blocked ? Self.blockedInk : Color(hex: 0xD67D00))
+                .frame(width: 11, height: 11)
+                .accessibilityHidden(true)
             Text(blocked ? "Blocked" : "Caution")
                 .profileFont(13, tracking: -0.16)
                 // Figma's #D67D00 is about 3:1 on its tint; this darker orange keeps the text readable (4.5:1).
                 .foregroundStyle(blocked ? Self.blockedInk : Self.cautionInk)
         }
+        // Figma: 6 / 8 around an 11 pt line (23 pt tall); SwiftUI's 13 pt line is ~16 pt.
         .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.vertical, 3.5)
         .background(blocked ? Self.blockedFill : Self.cautionFill, in: Capsule())
-        .overlay(Capsule().stroke(blocked ? Self.blockedStroke : Self.cautionStroke))
+        .overlay(Capsule().strokeBorder(blocked ? Self.blockedStroke : Self.cautionStroke, lineWidth: 0.75))
     }
 }
 
@@ -553,6 +600,12 @@ struct ProfileConfirmSheet<Avatar: View>: View {
     @Environment(\.dismiss) private var dismiss
     @State private var height: CGFloat = 420
 
+    /// Figma "Putuskan": #FF4F4F near the top to #BB1616 three quarters down (its gradient runs vertically).
+    private var dangerGradient: LinearGradient { LinearGradient(
+        stops: [.init(color: Color(hex: 0xFF4F4F), location: 0.05), .init(color: Color(hex: 0xBB1616), location: 0.75)],
+        startPoint: .top, endPoint: .bottom
+    ) }
+
     var body: some View {
         VStack(spacing: 0) {
             Capsule().fill(ProfileStyle.grabber).frame(width: 36, height: 5)
@@ -560,12 +613,13 @@ struct ProfileConfirmSheet<Avatar: View>: View {
                 .accessibilityHidden(true)
             ZStack(alignment: .bottomTrailing) {
                 avatar.frame(width: 64, height: 64)
-                Image(systemName: "minus")
-                    .font(.system(size: 11, weight: .heavy))
-                    .foregroundStyle(.white)
+                // Figma "Minus": 24 pt red circle, 2.5 pt white ring, a 10 × 3 white bar.
+                RoundedRectangle(cornerRadius: 1.25)
+                    .fill(.white)
+                    .frame(width: 10, height: 3)
                     .frame(width: 24, height: 24)
                     .background(ProfileStyle.red, in: Circle())
-                    .overlay(Circle().stroke(ProfileStyle.card, lineWidth: 2))
+                    .overlay(Circle().strokeBorder(ProfileStyle.card, lineWidth: 2.5))
                     .offset(x: 4, y: 4)
             }
             .accessibilityHidden(true)
@@ -577,7 +631,7 @@ struct ProfileConfirmSheet<Avatar: View>: View {
                 .accessibilityAddTraits(.isHeader)
                 .padding(.top, 18)
             Text(verbatim: message)
-                .profileFont(15)
+                .profileFont(15, tracking: -0.15)
                 .foregroundStyle(ProfileStyle.secondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(4)
@@ -588,18 +642,18 @@ struct ProfileConfirmSheet<Avatar: View>: View {
                         if isWorking {
                             ProgressView().tint(.white)
                         } else {
-                            Image(systemName: "exclamationmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                            Image(systemName: "exclamationmark.circle.fill").font(.system(size: 19, weight: .semibold))
+                                .frame(width: 22, height: 22)
                                 .accessibilityHidden(true)
                         }
                         Text(verbatim: confirmTitle).profileFont(17, .semibold, tracking: -0.21)
                     }
                     .foregroundStyle(.white)
+                    // Figma: icon and label cast black 20 %, y 4, blur 4.
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 4)
                     .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(
-                        LinearGradient(colors: [Color(hex: 0xBB1616), Color(hex: 0xFF4F4F)], startPoint: .leading, endPoint: .trailing),
-                        in: Capsule()
-                    )
-                    .overlay(Capsule().stroke(Color(hex: 0xBB1616)))
+                    .background(dangerGradient, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color(hex: 0xBB1616), lineWidth: 1.5))
                 }
                 .disabled(isWorking)
                 .accessibilityIdentifier(confirmIdentifier)

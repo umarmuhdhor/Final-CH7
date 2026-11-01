@@ -49,6 +49,7 @@ struct ModeView: View {
                     .accessibilityIdentifier("mode.error")
                 }
             }
+            // Figma: cards at y 280.
             .padding(.top, 99)
         } footer: {
             Button {
@@ -64,6 +65,7 @@ struct ModeView: View {
             .disabled(model.selectedMode == nil)
             .accessibilityIdentifier("mode.continue")
         }
+        .messageLineHeight(24)
         .onChange(of: model.registrationFailed) { _, failed in
             if failed {
                 AccessibilityNotification.Announcement(L10n.string("Couldn't save. Check your connection and try again.", language: language)).post()
@@ -81,11 +83,16 @@ private struct ModeCard: View {
     @Binding var selection: UserMode?
 
     private var isSelected: Bool { selection == mode }
+    private var selectedStroke: Color {
+        mode == .protected ? OnboardingTheme.selectedStrokeProtected : OnboardingTheme.selectedStroke
+    }
 
     var body: some View {
         Button {
             withAnimation(.snappy(duration: 0.25)) { selection = mode }
         } label: {
+            // Figma "Frame 5": 72 pt icon, 20, title row 28 (20 pt), 4, message rows of 20 (15 pt).
+            // The icon image carries its own shadow: 1.8 pt above the tile, 10.8 below.
             VStack(spacing: 0) {
                 Image(image)
                     .accessibilityHidden(true)
@@ -93,17 +100,19 @@ private struct ModeCard: View {
                     .onboardingFont(20, relativeTo: .title3)
                     .tracking(-0.2)
                     .foregroundStyle(OnboardingTheme.ink)
-                    .padding(.top, 7)
+                    .frame(minHeight: 28)
+                    .padding(.top, 9.2)
                 Text(message)
                     .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
-                    .foregroundStyle(OnboardingTheme.secondaryInk)
+                    .lineSpacing(2)
+                    .foregroundStyle(OnboardingTheme.bodyInk)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 4)
+                    .padding(.top, 5)
             }
-            .padding(.horizontal, 17)
-            .padding(.top, 17)
-            .padding(.bottom, 24)
+            .padding(.horizontal, 16)
+            .padding(.top, 15.2)
+            .padding(.bottom, 17)
             .frame(maxWidth: .infinity, minHeight: 198, alignment: .top)
             .background {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -112,10 +121,14 @@ private struct ModeCard: View {
                         startPoint: .top,
                         endPoint: .bottom
                     ))
+                    // Figma "Build progress": #784650 5% y 1 blur 2, #965A5F 6% y 6 blur 16.
+                    .shadow(color: Color(hex: 0x784650, opacity: 0.05), radius: 1, y: 1)
+                    .shadow(color: Color(hex: 0x965A5F, opacity: 0.06), radius: 8, y: 6)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(isSelected ? OnboardingTheme.selectedStroke : OnboardingTheme.cardStroke, lineWidth: isSelected ? 1.5 : 1)
+                    // Figma: 2 pt inside when chosen, blue for Guardian, teal for Protected.
+                    .strokeBorder(isSelected ? selectedStroke : OnboardingTheme.cardStroke, lineWidth: isSelected ? 2 : 1)
             }
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
