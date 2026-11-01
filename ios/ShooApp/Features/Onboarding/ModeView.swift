@@ -112,6 +112,9 @@ private struct ModeCard: View {
                         startPoint: .top,
                         endPoint: .bottom
                     ))
+                    // Figma "Build progress": #784650 5% y 1 blur 2, #965A5F 6% y 6 blur 16.
+                    .shadow(color: Color(hex: 0x784650, opacity: 0.05), radius: 1, y: 1)
+                    .shadow(color: Color(hex: 0x965A5F, opacity: 0.06), radius: 8, y: 6)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)

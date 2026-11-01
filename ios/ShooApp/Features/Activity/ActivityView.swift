@@ -288,7 +288,7 @@ struct ActivitySegments: View {
                             if isSelected {
                                 Capsule()
                                     .fill(.white)
-                                    .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
+                                    .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
                                     .matchedGeometryEffect(id: "thumb", in: thumb)
                             }
                         }
@@ -453,6 +453,7 @@ struct ActivityRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.9)))
+        .figmaCardShadow()
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         // One stop: site, status, (who), when.
         .accessibilityElement(children: .ignore)

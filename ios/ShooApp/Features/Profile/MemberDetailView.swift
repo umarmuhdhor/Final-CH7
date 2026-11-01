@@ -73,6 +73,7 @@ struct MemberDetailView: View {
         ProfileHeaderCard(
             banner: "MemberBanner",
             bannerHeight: 112,
+            avatarGlow: false,
             name: member.name,
             handle: handle(member),
             stats: stats(member)

@@ -172,5 +172,6 @@ private struct VerifiedCard: View {
         .padding(.trailing, 16)
         .padding(.vertical, 14)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .figmaCardShadow()
     }
 }

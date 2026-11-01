@@ -11,7 +11,6 @@ enum DetailStyle {
     static let tick = hex(0x3F4D5A)
     static let needle = hex(0x383D43)
     static let cardTop = hex(0xFEFEFF)
-    static let cardShadow = hex(0xE7F2F6)
     static let photoFill = hex(0xEAF1F8)
     static let photoStroke = hex(0xE2E8F0)
     static let pageShadow = hex(0x1A1C2E)

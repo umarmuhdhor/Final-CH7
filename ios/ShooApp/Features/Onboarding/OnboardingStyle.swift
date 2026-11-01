@@ -80,7 +80,8 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
             .background {
                 Capsule().fill(isEnabled ? AnyShapeStyle(OnboardingTheme.buttonGradient) : AnyShapeStyle(OnboardingTheme.disabledFill))
             }
-            .shadow(color: .black.opacity(isEnabled ? 0.18 : 0), radius: 12, y: 6)
+            // Figma "Button": #121112 20%, y 8, blur 18.
+            .shadow(color: Color(hex: 0x121112, opacity: isEnabled ? 0.2 : 0), radius: 9, y: 8)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)

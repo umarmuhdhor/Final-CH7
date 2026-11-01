@@ -9,6 +9,10 @@ enum ProfileStyle {
     static let topWash = Color.dynamic(0xDCECFB, dark: 0x132639)
     /// Cards, the back button, pills.
     static let card = Color.dynamic(0xFFFFFF, dark: 0x1B1F26)
+    /// Figma "Profil Card", "Back" and member "Avatar" drop shadow (#1A1C2E 12%, y 6, blur 16).
+    static let cardShadow = Color(hex: 0x1A1C2E, opacity: 0.12)
+    /// Figma "Profile" avatar on the own profile card (#1F78BF 18%, y 7.68, blur 23).
+    static let avatarGlow = Color(hex: 0x1F78BF, opacity: 0.18)
     static let ink = Color.dynamic(0x191D2F, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     static let nameInk = Color.dynamic(0x151617, dark: 0xF7F8FA, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     static let secondary = Color.dynamic(0x6A717E, dark: 0x9EA6B4, contrastLight: 0x474D58, contrastDark: 0xC9CED8)
@@ -164,6 +168,7 @@ struct ProfileScreen<Content: View>: View {
                         .foregroundStyle(ProfileStyle.ink)
                         .frame(width: 44, height: 44)
                         .background(ProfileStyle.card, in: Circle())
+                        .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
                 }
                 .accessibilityLabel(Text("Back"))
                 .accessibilityIdentifier("profile.back")
@@ -232,6 +237,7 @@ struct ProfileCard<Content: View>: View {
             .frame(maxWidth: .infinity)
             .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
+            .figmaCardShadow()
     }
 }
 
@@ -406,6 +412,8 @@ struct ProfileStatsStrip: View {
 struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
     let banner: String
     var bannerHeight: CGFloat = 128
+    /// Blue glow on the own profile (Figma "Profile"); grey on a member's card (Figma "Avatar").
+    var avatarGlow = true
     let name: String
     let handle: String
     let stats: [ProfileStat]
@@ -426,6 +434,11 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
                     .frame(width: 88, height: 88)
                     .padding(4)
                     .background(ProfileStyle.card, in: Circle())
+                    .shadow(
+                        color: avatarGlow ? ProfileStyle.avatarGlow : ProfileStyle.cardShadow,
+                        radius: avatarGlow ? 11.5 : 8,
+                        y: avatarGlow ? 7.7 : 6
+                    )
                     .accessibilityHidden(true)
                 Spacer(minLength: 8)
                 badge
@@ -452,7 +465,11 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
             }
         }
         .padding(12)
-        .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(ProfileStyle.card)
+                .shadow(color: ProfileStyle.cardShadow, radius: 8, y: 6)
+        )
         .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
         .padding(.horizontal, 16)
     }

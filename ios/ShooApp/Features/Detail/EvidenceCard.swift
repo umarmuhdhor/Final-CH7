@@ -320,6 +320,6 @@ struct EvidenceCard: View {
         .padding(.bottom, 16)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.9)))
-        .shadow(color: DetailStyle.cardShadow.opacity(0.06), radius: 8, y: 6)
+        .figmaCardShadow()
     }
 }

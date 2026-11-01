@@ -108,6 +108,8 @@ private struct StepRow: View {
                 .foregroundStyle(Color.dynamic(0x136CB7, dark: 0x5EAAF0))
                 .frame(width: badgeSize, height: badgeSize)
                 .background(OnboardingTheme.card, in: Circle())
+                // Figma "Button": black 20%, y 2.7, blur 4.5 (its -2.7 spread has no SwiftUI equivalent).
+                .shadow(color: .black.opacity(0.2), radius: 2.3, y: 2.7)
                 .accessibilityLabel(Text("Step \(number)"))
             Text(text)
                 .onboardingFont(17, design: .rounded, relativeTo: .body)

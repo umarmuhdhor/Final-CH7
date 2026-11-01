@@ -186,6 +186,7 @@ struct DetailView: View {
                 .padding(.vertical, 8)
                 .background(.white.opacity(0.7), in: Capsule())
                 .overlay(Capsule().stroke(.white.opacity(0.9)))
+                .figmaCardShadow()
                 .padding(.horizontal, 84)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Opened by \(owner)"))

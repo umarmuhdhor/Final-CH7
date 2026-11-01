@@ -339,7 +339,7 @@ extension View {
     func homeCard(cornerRadius: CGFloat = 20) -> some View {
         background(.white, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).stroke(.white.opacity(0.9), lineWidth: 1))
-            .shadow(color: Color(red: 0xE7 / 255, green: 0xF2 / 255, blue: 0xF6 / 255).opacity(0.6), radius: 8, y: 6)
+            .figmaCardShadow()
     }
 }
 

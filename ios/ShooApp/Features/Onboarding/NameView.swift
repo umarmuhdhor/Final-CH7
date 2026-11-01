@@ -116,6 +116,8 @@ struct NameView: View {
             .padding(.trailing, 6)
             .frame(minHeight: 56)
             .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            // Figma "row": #784650 4%, y 1, blur 2.
+            .shadow(color: Color(hex: 0x784650, opacity: 0.04), radius: 1, y: 1)
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(visibleProblem == nil ? OnboardingTheme.ink.opacity(0.25) : Color.red, lineWidth: 1)

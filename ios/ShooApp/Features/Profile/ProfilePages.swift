@@ -1266,7 +1266,7 @@ private struct TextSizeSlider: View {
                     }
                     Circle()
                         .fill(.white)
-                        .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                        .shadow(color: .black.opacity(0.18), radius: 3, y: 2)
                         .frame(width: 28, height: 28)
                         .offset(x: x(level.rawValue) - 14)
                 }

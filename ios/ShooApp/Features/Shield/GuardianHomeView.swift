@@ -528,6 +528,7 @@ private struct InviteCodeCard: View {
         }
         .padding(17)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .figmaCardShadow()
         .task { await model.run() }
         // Someone joined while the code was on screen: Home shows the family.
         .onChange(of: model.members.count) { _, count in
