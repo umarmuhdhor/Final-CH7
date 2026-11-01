@@ -1,16 +1,16 @@
 // Owner: lead. Live score bubble (EX-03). Plain content script, loaded after pipeline.js.
 // The extension can't drive the Dynamic Island (docs/spikes/dynamic-island.md), so the running
-// score floats on the page instead: a round button the user can drag to either edge (like a chat
-// head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
-// Rules: always on screen while a page is open, whatever the score · the number follows every
-// (re)scan live (content.js re-checks the page when it changes) · hidden when blocked (block screen
+// score floats on the page instead: the Shoo logo as a round button the user can drag to either edge
+// (like a chat head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
+// Rules: always on screen while a page is open, whatever the score · the score lives in the card and the
+// aria label, updated on every (re)scan (content.js re-checks the page when it changes) · hidden when blocked (block screen
 // owns the page, EX-06) · tap opens a small card (status, score, top reasons, See detail, Hide) ·
 // Hide hides it for the rest of this page · the dragged position is remembered across pages.
 
 (() => {
     const { THRESHOLD } = globalThis.ShooPipeline;
     const MAX_REASONS = 2;
-    const SIZE = 56; // bubble diameter, px (≥ 44 pt tap target)
+    const SIZE = 44; // bubble diameter, px (44 pt tap target; same logo button as the warning sheet)
     const MARGIN = 10; // gap between bubble and screen edge, px
     const DEFAULT_POS = { side: "right", y: 0.38 }; // clear of the EX-04 warning card, even on an iPhone SE
 
@@ -94,23 +94,17 @@
         .bubble {
             position: fixed; top: 0; left: 0; z-index: 2147483647;
             box-sizing: border-box; width: ${SIZE}px; height: ${SIZE}px; padding: 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-            border: 3px solid var(--tone); border-radius: 50%; background: #000; color: #fff;
-            box-shadow: 0 4px 14px rgba(0,0,0,.35); cursor: grab; touch-action: none; user-select: none;
+            border: 0; border-radius: 50%; background: none; overflow: visible;
+            box-shadow: 0 4px 12px rgba(31,42,55,.22); cursor: grab; touch-action: none; user-select: none;
             -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
-            font: 700 15px/1 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-            transition: opacity .3s ease, transform .3s cubic-bezier(.2,.8,.2,1), border-color .3s ease;
+            transition: opacity .3s ease, transform .3s cubic-bezier(.2,.8,.2,1);
         }
-        .bubble[data-tone="safe"] { --tone: #30d158; }
-        .bubble[data-tone="warning"] { --tone: #ffb340; }
-        .bubble[data-tone="danger"] { --tone: #ff453a; }
         .bubble.dragging { transition: opacity .3s ease; cursor: grabbing; }
         .bubble.placing { transition: opacity .3s ease; }
         .bubble.out { opacity: 0; pointer-events: none; }
         .bubble[data-analyzing] { animation: ring 1.2s ease-in-out infinite; }
-        @keyframes ring { 50% { box-shadow: 0 4px 14px rgba(0,0,0,.35), 0 0 0 5px color-mix(in srgb, var(--tone) 35%, transparent); } }
-        .logo { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; pointer-events: none; }
-        .score { font-variant-numeric: tabular-nums; color: var(--tone); letter-spacing: -.02em; }
+        @keyframes ring { 50% { box-shadow: 0 4px 12px rgba(31,42,55,.22), 0 0 0 5px rgba(64,156,255,.3); } }
+        .logo { display: block; width: ${SIZE}px; height: ${SIZE}px; border-radius: 50%; pointer-events: none; }
 
         .card {
             position: fixed; z-index: 2147483647; box-sizing: border-box; width: min(280px, calc(100vw - 24px));
@@ -146,8 +140,6 @@
     let host = null;
     let release = () => {}; // stops guarding host
     let refs = null;
-    let shown = 0; // the number on screen, counts toward the real score
-    let tween = null;
     let pos = { ...DEFAULT_POS };
     let simple = false; // Protected → plain reason wording
     let last = null; // newest pipeline state + view, for the card
@@ -196,7 +188,7 @@
         bubble.type = "button";
         bubble.setAttribute("aria-haspopup", "dialog");
         bubble.setAttribute("aria-expanded", "false");
-        bubble.innerHTML = `<img class="logo" alt=""><span class="score"></span>`;
+        bubble.innerHTML = `<img class="logo" alt="">`;
         bubble.querySelector(".logo").src = browser.runtime.getURL("images/icon-96.png");
 
         const card = el("div", "card");
@@ -226,9 +218,8 @@
         Object.assign(live.style, { position: "fixed", width: "1px", height: "1px", overflow: "hidden", clip: "rect(0 0 0 0)" });
         root.append(style, probe, live, bubble, card);
 
-        refs = { bubble, score: bubble.querySelector(".score"), card, chip, big, list, note, detail, probe, live };
+        refs = { bubble, card, chip, big, list, note, detail, probe, live };
         release = dom.guard(host, dom.root(document)); // appends it, and puts it back if the page hides it
-        shown = 0;
         jumpTo(place(pos, area()));
         drag(bubble);
         requestAnimationFrame(() => refs?.bubble.classList.remove("out"));
@@ -355,37 +346,15 @@
         card.style.right = pos.side === "right" ? `${MARGIN}px` : "auto";
     }
 
-    /** Counts the number on screen up (or down) to the new score so each layer visibly moves it. */
-    function countTo(target) {
-        cancelAnimationFrame(tween);
-        const from = shown;
-        if (reduceMotion || from === target) return paint(target);
-        const begin = performance.now();
-        const duration = 500;
-        const step = (now) => {
-            const p = Math.min(1, (now - begin) / duration);
-            paint(Math.round(from + (target - from) * (1 - (1 - p) ** 3)));
-            if (p < 1) tween = requestAnimationFrame(step);
-        };
-        tween = requestAnimationFrame(step);
-    }
-
-    function paint(value) {
-        shown = value;
-        if (refs) refs.score.textContent = `${value}%`;
-    }
-
     function show(state, view) {
         last = { state, view };
         mount();
         const { bubble, live, card } = refs;
         bubble.classList.remove("out");
-        bubble.dataset.tone = view.tone;
         bubble.toggleAttribute("data-analyzing", view.analyzing && !reduceMotion);
         const label = view.analyzing ? t("pill_checking", [String(view.score)]) : t("pill_score", [String(view.score)]);
         bubble.setAttribute("aria-label", `${label}. ${t("pill_open")}`);
         live.textContent = label;
-        countTo(view.score);
         if (!card.hidden) {
             fillCard();
             positionCard();
@@ -393,7 +362,6 @@
     }
 
     function hide() {
-        cancelAnimationFrame(tween);
         if (!refs) return;
         closeCard();
         const gone = host;
