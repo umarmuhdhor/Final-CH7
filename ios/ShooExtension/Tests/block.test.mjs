@@ -34,24 +34,23 @@ test("tampered or missing fragment → null (stays blocked, never reopens)", () 
 
 const payload = payloadFor(state);
 
-test("Protected: plain wording, waits for the guardian, no decision button", () => {
+test("Protected: plain wording, link sent to the guardian, Review in Shoo, reopens once marked safe", () => {
     const v = viewFor({ onboarded: true, mode: "protected", guardianName: "Adhella" }, payload, "id");
     assert.equal(v.reasons[0], "Situs ini baru dibuat 3 hari lalu");
-    assert.equal(v.showWaiting, true);
-    assert.equal(v.waitingFor, "Adhella");
-    assert.equal(v.button, null);
+    assert.equal(v.sentTo, "Adhella");
+    assert.deepEqual(v.button, { textKey: "block_review", href: "shoo://activity" });
     assert.equal(v.poll, true);
 });
 
-test("Protected without a connected guardian → generic waiting text", () => {
+test("Protected without a connected guardian → no Link sent pill", () => {
     const v = viewFor({ onboarded: true, mode: "protected", guardianName: null }, payload, "en");
-    assert.equal(v.waitingFor, null);
+    assert.equal(v.sentTo, null);
 });
 
 test("Guardian: full wording, Review in Shoo, reopens after own Safe", () => {
     const v = viewFor({ onboarded: true, mode: "guardian" }, payload, "en");
     assert.equal(v.reasons[0], "Domain age 3 days");
-    assert.equal(v.showWaiting, false);
+    assert.equal(v.sentTo, null);
     assert.deepEqual(v.button, { textKey: "block_review", href: "shoo://activity" });
     assert.equal(v.poll, true);
 });
@@ -65,7 +64,7 @@ test("App not set up → Open Shoo, nothing to poll", () => {
     const v = viewFor({ onboarded: false }, payload, "en");
     assert.deepEqual(v.button, { textKey: "block_open_app", href: "shoo://activity" });
     assert.equal(v.poll, false);
-    assert.equal(v.showWaiting, false);
+    assert.equal(v.sentTo, null);
 });
 
 test("block screen polls every 5 s, and waits out a 429's Retry-After instead of hammering", () => {

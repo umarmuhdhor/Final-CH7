@@ -21,13 +21,14 @@
     },
 
     "content_scripts": [{
-        "js": [ "dom.js", "lists-client.js", "detector.js", "pipeline.js", "pill.js", "popup.js", "marks.js", "replica.js", "report.js", "block.js", "snapshot.js", "content.js" ],
+        "js": [ "dom.js", "lists-client.js", "detector.js", "pipeline.js", "pill.js", "gauge.js", "popup.js", "marks.js", "replica.js", "report.js", "block.js", "snapshot.js", "content.js" ],
         "matches": [ "<all_urls>" ],
         "run_at": "document_idle"
     }],
 
     "web_accessible_resources": [{
-        "resources": [ "blocked.html", "blocked.css", "block.js", "blocked-page.js", "images/icon-96.png" ],
+        "resources": [ "blocked.html", "blocked.css", "block.js", "blocked-page.js", "gauge.js", "images/icon-96.png", "images/shoo-shield-red.svg",
+                       "images/shoo-shield-yellow.svg", "images/lock.svg" ],
         "matches": [ "<all_urls>" ]
     }],
 

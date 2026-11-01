@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Owner: lead. Block screen (EX-06). Extension page: websites can't script it, so there's no bypass.
-     Look: Figma "Safari / Blocked / Protected" and "Safari / Blocked / Guardian or pribadi". -->
+     Look: Figma "Safari / Blocked / Protected" (UI Pop Up Safari). -->
 <html>
 <head>
     <meta charset="utf-8">
@@ -10,26 +10,30 @@
 </head>
 <body>
     <main class="screen" hidden>
+        <div class="brand">
+            <img src="images/shoo-shield-red.svg" alt="" width="16" height="16">
+            <span>Shoo!</span>
+        </div>
+
         <div class="top">
-            <div class="brand">
-                <img src="images/icon-96.png" alt="">
-                <span>Shoo!</span>
+            <div class="gauge">
+                <div class="gauge-art" aria-hidden="true"></div>
+                <p class="score-value"></p>
+                <p class="score-label" data-text="level"></p>
             </div>
-            <div class="ring" aria-hidden="true"><span class="score-value"></span></div>
 
             <div class="copy">
                 <span class="chip link"></span>
                 <h1 data-text="title"></h1>
                 <p class="reasons"></p>
             </div>
+        </div>
 
-            <section class="waiting" hidden>
-                <div class="spinner" aria-hidden="true"></div>
-                <p class="waiting-text"></p>
-                <p class="hint" data-text="autoOpen"></p>
-            </section>
+        <p class="verified" hidden></p>
 
-            <p class="verified" hidden></p>
+        <div class="sent" hidden>
+            <span class="avatar" aria-hidden="true"></span>
+            <span class="sent-text"></span>
         </div>
 
         <div class="actions">
@@ -37,6 +41,7 @@
             <button class="back" type="button" data-text="back"></button>
         </div>
     </main>
+    <script src="gauge.js"></script>
     <script src="block.js"></script>
     <script src="blocked-page.js"></script>
 </body>
