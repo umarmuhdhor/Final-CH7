@@ -41,7 +41,7 @@
   "trap-cloud-storage": "redirects to a sedo.com parking page (cookie dialog); 0% badge",
   "trap-blog-cek-saldo-bca": "blog post now 404; **24% badge** (under 30, nothing sent)",
   "trap-github-pages-dokumentasi": "GitHub Pages 404; badge collapsed to a dot",
-  "trap-berita-waspada-penipuan": "Safari \"This Connection Is Not Private\" (certificate for another host); no badge",
+  "trap-berita-waspada-penipuan": "Safari \"This Connection Is Not Private\" (the certificate is for another site); no badge",
   "regs-apps14-code-php": "**76% High risk popup** (\"This site looks suspicious\", \"Link sent to Adhella\", Leave this page / Continue anyway), copy in English",
-  "lphone-login": "redirects to the real icloud.com Find Devices; 0% badge (cloaked kit)"
+  "lphone-login": "redirects to the real icloud.com Find Devices; 0% badge (the scam hides itself from this visit)"
 }

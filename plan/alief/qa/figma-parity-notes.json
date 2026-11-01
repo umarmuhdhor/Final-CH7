@@ -1,295 +1,76 @@
 {
   "_note": "Gap per Figma frame after the 2026-11-01 parity pass (scenario figma, iPhone 17 Pro, id). Status: match | minor | gap | missing | test (not a product gap: what the run could not show).",
-  "435:20058": [
-    "minor",
-    "Hero, strip, tiles and list at Figma positions (±1 pt), real Figma hero gradient, dashed rings. Top bar sits ~19 pt lower than Figma (iOS navigation bar places it); tab labels Perisai/Aktivitas vs Figma Shield/Activity (product). Switch button is iOS 26 Liquid Glass (brighter cyan than Figma's grey). \"RISIKO\" spelled correctly (Figma: RESIKO)."
-  ],
-  "435:20373": [
-    "minor",
-    "Matches (shot `home-guardian-members`; the old map paired the waiting-site shot). Top bar sits ~19 pt lower than Figma (iOS navigation bar places it); tab labels Perisai/Aktivitas vs Figma Shield/Activity (product)."
-  ],
-  "435:20899": [
-    "minor",
-    "Matches: eyebrow \"DIBUKA SYAHNAZ · HARI INI, 10.42\", 18 pt title, chip, 237 pt gauge, Bahaya/Aman with Figma's spread −3 shadow. Top bar sits ~19 pt lower than Figma (iOS navigation bar places it); tab labels Perisai/Aktivitas vs Figma Shield/Activity (product)."
-  ],
-  "435:20630": [
-    "minor",
-    "Matches: blue-teal hero, no rings, invite card, QR, code spacing. Top bar sits ~19 pt lower than Figma (iOS navigation bar places it); tab labels Perisai/Aktivitas vs Figma Shield/Activity (product). Mock gives a 6-digit code."
-  ],
-  "441:2736": [
-    "gap",
-    "Alternative protected Home (status strip, Terblokir / Perlu Waspada tiles). The app builds 441:3800; designer to say which one is final."
-  ],
-  "441:3063": [
-    "gap",
-    "Alternative protected Home (wider card, 11 pt gap). The app builds 441:3800; designer to say which one is final."
-  ],
-  "441:3800": [
-    "minor",
-    "Matches: hero glow only (no shield, as Figma), 26 pt column spacing, blocked card with 242 pt gauge and two-line note, count tiles. Top bar sits ~19 pt lower than Figma (iOS navigation bar places it); tab labels Perisai/Aktivitas vs Figma Shield/Activity (product)."
-  ],
-  "441:4414": [
-    "minor",
-    "Same as 441:3800 (scrolled)."
-  ],
-  "110:3585": [
-    "minor",
-    "Figma frame is an empty white frame; the app keeps its brand splash."
-  ],
-  "110:3692": [
-    "match",
-    "Matches (arrow size, button position, no button shadow)."
-  ],
-  "110:3786": [
-    "match",
-    "Matches."
-  ],
-  "110:3912": [
-    "match",
-    "Matches: headline y 120, Figma line heights (iOS 26+), body #6A717E."
-  ],
-  "110:4023": [
-    "match",
-    "Matches."
-  ],
-  "110:4271": [
-    "minor",
-    "Shot added. Note text matches; the app keeps Selanjutnya disabled per the 1–20 rule (Figma shows it enabled)."
-  ],
-  "110:4345": [
-    "minor",
-    "Matches layout and colours. App adds \"Pilihan ini tidak bisa diganti nanti.\"; Figma's chosen card is 2 pt bigger, the app keeps both the same size."
-  ],
-  "110:4558": [
-    "match",
-    "Matches (2 pt blue border)."
-  ],
-  "110:4605": [
-    "match",
-    "Shot added; matches (2 pt teal border)."
-  ],
-  "140:5762": [
-    "match",
-    "Shot added on the QR tab; matches."
-  ],
-  "141:5887": [
-    "minor",
-    "72 pt code boxes, 8 pt gaps, tab shadow match. 6 boxes (API code) vs Figma 5; Figma's code font Geist needs `project.yml` (lead); the 14-day note and Nanti saja are app extras."
-  ],
-  "205:1081": [
-    "minor",
-    "Shot added; same code-box notes as 141:5887."
-  ],
-  "205:1182": [
-    "minor",
-    "Now shows \"Kode kedaluwarsa, minta kode baru dan coba lagi.\" Same code-box notes as 141:5887."
-  ],
-  "110:4440": [
-    "minor",
-    "Shot with the extension off. \"Aktifkan Ekstensi\" copy, \"Terkendala? Tonton Tutorial\" match; step text per iOS version and the \"Shoo dimatikan\" hint are app extras."
-  ],
-  "126:5678": [
-    "match",
-    "Matches."
-  ],
-  "141:5945": [
-    "match",
-    "Shot added (scenario `unpaired`); matches."
-  ],
-  "110:4779": [
-    "match",
-    "Matches (80 pt avatars, 2.67 pt rings)."
-  ],
-  "110:4817": [
-    "minor",
-    "Shot added. Spacing and QR size match; share row is WhatsApp / Pesan / Lainnya (Figma: Messages / Mail / Notes) and the countdown is an app extra. Figma code has 4 digits; the app uses 6."
-  ],
-  "416:8541": [
-    "minor",
-    "v1 frame: outlined Diblokir pill. The app follows the newer 450:8443 (solid pill)."
-  ],
-  "416:8669": [
-    "match",
-    "Matches."
-  ],
-  "450:8443": [
-    "match",
-    "Matches: solid Diblokir pill without icon, note card 118 pt."
-  ],
-  "450:8574": [
-    "match",
-    "Matches (shot `act-protected-warning`; the old map used the scrolled Semua list)."
-  ],
-  "450:8657": [
-    "match",
-    "Matches (shot `act-protected-blocked`)."
-  ],
-  "416:8768": [
-    "minor",
-    "Matches. The person button is real iOS 26 glass, whiter than Figma's."
-  ],
-  "416:8989": [
-    "match",
-    "Shot added; matches."
-  ],
-  "416:9208": [
-    "match",
-    "Shot added; matches (menu padding 10, shadow black 25 % y 8 blur 48)."
-  ],
-  "480:5490": [
-    "match",
-    "Matches (140 % text half-leading, 296 pt width)."
-  ],
-  "480:5520": [
-    "match",
-    "Matches."
-  ],
-  "480:5550": [
-    "match",
-    "Matches."
-  ],
-  "480:5580": [
-    "match",
-    "Matches."
-  ],
-  "416:9255": [
-    "minor",
-    "Score Card, chips, contribution bar and footer match. Header sits ~26 pt lower (the Figma frame has no status bar); the \"Salinan halaman\" caption is the page-copy feature, not in Figma."
-  ],
-  "487:4221": [
-    "minor",
-    "\"Virellia belum melihat link ini\" banner built; shot `dt-protected` (Protected owner view). Same header offset as 416:9255."
-  ],
-  "416:9362": [
-    "minor",
-    "Verified card matches. Figma puts \"Kontribusi\" over the photo here; the app follows the newer frames (under the photo)."
-  ],
-  "416:9469": [
-    "minor",
-    "Same as 416:9362."
-  ],
-  "487:5990": [
-    "minor",
-    "Shot `dt-protected-warning` (no owner chip, no buttons). Same Kontribusi note as 416:9362. If the frame means a guardian's own scan, hiding Aman/Bahaya is a product decision (#190)."
-  ],
-  "480:5768": [
-    "match",
-    "Matches: chips 6 pt apart, 30 pt blue chip, centred owner note."
-  ],
-  "480:5924": [
-    "match",
-    "Matches."
-  ],
-  "416:10831": [
-    "match",
-    "Matches."
-  ],
-  "450:8734": [
-    "match",
-    "Matches."
-  ],
-  "450:8739": [
-    "match",
-    "Matches."
-  ],
-  "450:8744": [
-    "match",
-    "Matches."
-  ],
-  "416:10447": [
-    "match",
-    "Matches: 32 pt under the header card, pills, Renatta at 50 % when off."
-  ],
-  "480:5353": [
-    "match",
-    "Matches."
-  ],
-  "416:10338": [
-    "gap",
-    "Perlindungan shows \"Ekstensi Safari · Aktif\" as text; Figma has two switches (Ekstensi Safari, Blokir situs berbahaya). Feature decision."
-  ],
-  "480:5227": [
-    "match",
-    "Matches (card shadow added)."
-  ],
-  "455:10275": [
-    "minor",
-    "Matches pill, stats and Terhubung card. Figma shows a letter \"U\" avatar for Protected (app: memoji); \"Ekstensi Safari\" chevron left off (row does nothing); Figma's Akun spacing differs between the two v2 frames."
-  ],
-  "455:10571": [
-    "minor",
-    "Same as 455:10275."
-  ],
-  "416:10574": [
-    "match",
-    "Matches: no avatar shadow, status pill, chips, \"Aktivitas terbaru · Lihat semua\"."
-  ],
-  "416:10676": [
-    "match",
-    "Matches (the floating sheet is iOS chrome)."
-  ],
-  "455:9515": [
-    "minor",
-    "This frame is the Protected \"Akun Tertaut\" page, now shot as `pf-protected-connection`. Switches show \"Segera hadir\" (behind flag #183); Figma says \"You\" in the Indonesian UI."
-  ],
-  "457:10896": [
-    "minor",
-    "Same as 455:9515."
-  ],
-  "462:11043": [
-    "minor",
-    "Shot `pf-protected-manage`; matches except the letter-avatar question in 455:10275."
-  ],
-  "416:12854": [
-    "gap",
-    "Missing \"Akun · Perangkat terhubung\" row (feature). \"Ubah foto\" is app-only; username has no chevron (not editable)."
-  ],
-  "455:9627": [
-    "minor",
-    "Shot `pf-protected-notifications`. \"Akun Terhubung\" is behind flag #183."
-  ],
-  "416:12916": [
-    "minor",
-    "Matches; the \"Notifikasi mati\" banner shows because the test leaves permission undecided."
-  ],
-  "455:9697": [
-    "match",
-    "Matches (Bahasa Indonesia first)."
-  ],
-  "416:12986": [
-    "match",
-    "Matches."
-  ],
-  "455:9718": [
-    "match",
-    "Matches: theme previews, Efek section."
-  ],
-  "416:13007": [
-    "match",
-    "Matches."
-  ],
-  "455:9785": [
-    "match",
-    "Matches: slider rail and settings rows."
-  ],
-  "416:13074": [
-    "match",
-    "Matches."
-  ],
-  "455:9858": [
-    "minor",
-    "Matches; the version number comes from the build."
-  ],
-  "416:13147": [
-    "minor",
-    "Same as 455:9858."
-  ],
-  "487:7897": [
-    "gap",
-    "Exploration Opsi 1 (Protected sees \"Virellia menandai situs ini aman · Blokir dibuka\", AI first score 92, \"Tetap hati-hati\"). The app shows the gauge with \"Ditandai aman oleh Virellia\" and the verified card."
-  ],
-  "487:8620": [
-    "gap",
-    "Exploration Opsi 2: same as 487:7897."
-  ]
+  "435:20058": ["minor", "Same: hero, status strip, tiles and list (within 1 pt), hero gradient, dashed rings. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. The switch button uses iOS 26 glass, so it is brighter than Figma's grey. The app spells RISIKO right (Figma has RESIKO)."],
+  "435:20373": ["minor", "Same layout (screenshot `home-guardian-members`). Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity."],
+  "435:20899": ["minor", "Same: the \"DIBUKA SYAHNAZ · HARI INI, 10.42\" line, title, chip, gauge, and the Bahaya / Aman buttons with Figma's shadow. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity."],
+  "435:20630": ["minor", "Same: blue-teal hero, no rings, invite card, QR, code spacing. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity. The mock data gives a 6-digit code."],
+  "441:2736": ["gap", "Different design: an older option for the Protected Home (status strip, Terblokir / Perlu Waspada tiles). The app builds frame 441:3800 instead. The designer has to say which one is final."],
+  "441:3063": ["gap", "Different design: another option for the Protected Home (wider card). The app builds frame 441:3800 instead. The designer has to say which one is final."],
+  "441:3800": ["minor", "Same: glow-only hero (no shield, like Figma), spacing, blocked card with gauge and two-line note, count tiles. Different: the top bar is about 19 pt lower (iOS places it), and the tabs say Perisai / Aktivitas where Figma says Shield / Activity."],
+  "441:4414": ["minor", "Same as 441:3800, scrolled down."],
+  "110:3585": ["minor", "Different: the Figma frame is empty white. The app shows its splash screen with the logo."],
+  "110:3692": ["match", "Same as Figma: arrow size, button position, no button shadow."],
+  "110:3786": ["match", "Same as Figma."],
+  "110:3912": ["match", "Same as Figma: headline position, line heights, body text colour."],
+  "110:4023": ["match", "Same as Figma."],
+  "110:4271": ["minor", "Same text. Different: the Selanjutnya button stays off until the name is 1 to 20 characters. Figma shows it on."],
+  "110:4345": ["minor", "Same layout and colours. Different: the app adds \"Pilihan ini tidak bisa diganti nanti.\" Figma makes the chosen card 2 pt bigger; the app keeps both cards the same size."],
+  "110:4558": ["match", "Same as Figma (2 pt blue border)."],
+  "110:4605": ["match", "Same as Figma (2 pt teal border)."],
+  "140:5762": ["match", "Same as Figma (QR tab)."],
+  "141:5887": ["minor", "Same: code box size, gaps, tab shadow. Different: the app has 6 boxes because the server sends 6 digits (Figma has 5). Figma's code font Geist needs a `project.yml` change, which only the lead can make. The 14-day note and the \"Nanti saja\" button are extra in the app."],
+  "205:1081": ["minor", "Same code-box differences as 141:5887."],
+  "205:1182": ["minor", "Fixed: now shows \"Kode kedaluwarsa, minta kode baru dan coba lagi.\" like Figma. Same code-box differences as 141:5887."],
+  "110:4440": ["minor", "Screenshot with the extension off. Same: \"Aktifkan Ekstensi\" and \"Terkendala? Tonton Tutorial\". Extra in the app: step text that changes per iOS version, and the \"Shoo dimatikan\" hint."],
+  "126:5678": ["match", "Same as Figma."],
+  "141:5945": ["match", "Same as Figma (scenario `unpaired`)."],
+  "110:4779": ["match", "Same as Figma (80 pt avatars, rings)."],
+  "110:4817": ["minor", "Same: spacing and QR size. Different: share buttons are WhatsApp / Pesan / Lainnya (Figma: Messages / Mail / Notes). The countdown is extra in the app. Figma's code has 4 digits; the app has 6."],
+  "416:8541": ["minor", "Older Figma version with an outlined Diblokir pill. The app follows the newer frame 450:8443 (solid pill)."],
+  "416:8669": ["match", "Same as Figma."],
+  "450:8443": ["match", "Same as Figma: solid Diblokir pill without icon, note card."],
+  "450:8574": ["match", "Same as Figma (screenshot `act-protected-warning`)."],
+  "450:8657": ["match", "Same as Figma (screenshot `act-protected-blocked`)."],
+  "416:8768": ["minor", "Same layout. Different: the person button uses real iOS 26 glass, so it is whiter than in Figma."],
+  "416:8989": ["match", "Same as Figma."],
+  "416:9208": ["match", "Same as Figma, including the menu padding and shadow."],
+  "480:5490": ["match", "Same as Figma (text spacing, width)."],
+  "480:5520": ["match", "Same as Figma."],
+  "480:5550": ["match", "Same as Figma."],
+  "480:5580": ["match", "Same as Figma."],
+  "416:9255": ["minor", "Same: score card, chips, contribution bar, footer. Different: the header is about 26 pt lower because the Figma frame has no status bar. The \"Salinan halaman\" caption belongs to the page-copy feature, which Figma does not have."],
+  "487:4221": ["minor", "Same: the \"Virellia belum melihat link ini\" banner (screenshot `dt-protected`, the Protected person's view). Same header offset as 416:9255."],
+  "416:9362": ["minor", "Same verified card. Different: here Figma puts \"Kontribusi\" over the photo; the app puts it under the photo, like the newer frames."],
+  "416:9469": ["minor", "Same as 416:9362."],
+  "487:5990": ["minor", "Screenshot `dt-protected-warning` (no owner chip, no buttons). Same Kontribusi difference as 416:9362. If this frame shows a Guardian's own scan, hiding Aman / Bahaya there is a product decision (#190)."],
+  "480:5768": ["match", "Same as Figma: chip spacing, blue chip, centred owner note."],
+  "480:5924": ["match", "Same as Figma."],
+  "416:10831": ["match", "Same as Figma."],
+  "450:8734": ["match", "Same as Figma."],
+  "450:8739": ["match", "Same as Figma."],
+  "450:8744": ["match", "Same as Figma."],
+  "416:10447": ["match", "Same as Figma: spacing under the header card, pills, Renatta faded when her extension is off."],
+  "480:5353": ["match", "Same as Figma."],
+  "416:10338": ["gap", "Different: the Perlindungan section shows \"Ekstensi Safari · Aktif\" as text. Figma has two switches (Ekstensi Safari, Blokir situs berbahaya). Needs a feature decision."],
+  "480:5227": ["match", "Same as Figma (card shadow added)."],
+  "455:10275": ["minor", "Same: pill, stats, Terhubung card. Different: Figma shows a letter avatar \"U\" for the Protected person; the app shows a memoji. The \"Ekstensi Safari\" row has no arrow because it does nothing. Figma's Akun spacing is not the same in its two versions of this screen."],
+  "455:10571": ["minor", "Same as 455:10275."],
+  "416:10574": ["match", "Same as Figma: no avatar shadow, status pill, chips, \"Aktivitas terbaru · Lihat semua\"."],
+  "416:10676": ["match", "Same as Figma (the floating sheet is drawn by iOS)."],
+  "455:9515": ["minor", "This frame is the Protected \"Akun Tertaut\" page (screenshot `pf-protected-connection`). Different: the switches say \"Segera hadir\" because they are behind feature flag #183. Figma uses the English word \"You\" in the Indonesian screen."],
+  "457:10896": ["minor", "Same as 455:9515."],
+  "462:11043": ["minor", "Screenshot `pf-protected-manage`. Same, except the letter-avatar question from 455:10275."],
+  "416:12854": ["gap", "Different: the \"Akun · Perangkat terhubung\" row is missing (not built yet). \"Ubah foto\" is extra in the app. The username has no arrow because it cannot be changed."],
+  "455:9627": ["minor", "Screenshot `pf-protected-notifications`. Different: \"Akun Terhubung\" is behind feature flag #183."],
+  "416:12916": ["minor", "Same layout. The \"Notifikasi mati\" banner shows because the test does not answer the notification question."],
+  "455:9697": ["match", "Same as Figma (Bahasa Indonesia listed first)."],
+  "416:12986": ["match", "Same as Figma."],
+  "455:9718": ["match", "Same as Figma: theme previews, Efek section."],
+  "416:13007": ["match", "Same as Figma."],
+  "455:9785": ["match", "Same as Figma: slider and settings rows."],
+  "416:13074": ["match", "Same as Figma."],
+  "455:9858": ["minor", "Same layout. The version number comes from the build, so it differs from Figma."],
+  "416:13147": ["minor", "Same as 455:9858."],
+  "487:7897": ["gap", "Different (design exploration, option 1): Figma shows the Protected person \"Virellia menandai situs ini aman · Blokir dibuka\", the AI's first score 92, and \"Tetap hati-hati\". The app shows the gauge with \"Ditandai aman oleh Virellia\" and the verified card."],
+  "487:8620": ["gap", "Different (design exploration, option 2): same as 487:7897."]
 }
