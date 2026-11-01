@@ -63,6 +63,8 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     await call(new URL(detail.pageReplicaUrl!).pathname + new URL(detail.pageReplicaUrl!).search);
     await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "not_safe" } });
     await call("/verdicts?domain=very-private-domain.example", { token: p.token });
+    // EX-06 fase 25 K7: the fresh verdict above is logged as verdict_seen (numbers + value only).
+    expect(lines.some((l) => l.includes('"verdict_seen"'))).toBe(true);
     await call("/devices/me", { token: "shoo_wrongwrongwrong", ip });
     await call(`/scans/${id}`, { token: "shoo_wrongwrongwrong2" });
     // waitUntil push work: done once its push_log row exists.

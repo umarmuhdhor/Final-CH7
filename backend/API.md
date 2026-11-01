@@ -756,6 +756,11 @@ confirmation step.
 `verdict` is `null` when there is no decision for (this device, this domain). When a member
 disconnects or is removed, the old Guardian's verdicts for that member are deleted.
 
+**Log (fase 25 K7):** when the verdict was decided at most 120 s ago, the Worker logs one line
+`{"event":"verdict_seen","ageMs":…,"value":"safe"}`: the time from the Guardian's tap to this poll,
+measured on the server (without the last round trip and the page load). No domain, ids or names. It is
+read by hand with `wrangler tail` to measure the block-screen latency (`plan/alief/log/fase-25.md`).
+
 ## Blocklist
 
 ### `GET /blocklist?since=`
