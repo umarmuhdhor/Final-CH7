@@ -1,6 +1,6 @@
 // Owner: lead. Marks dangerous parts of a page (EX-05). Plain content script, loaded after popup.js.
 // ≥30%: suspicious text gets a thick highlighter stroke (PRD §5).
-// ≥50%: PIN/OTP/card/KTP/password fields are struck through + "Don't enter your PIN here"; they stay typeable.
+// ≥50%: PIN/OTP/card/KTP/password fields are struck through + "Shoo: don't enter your PIN here"; they stay typeable.
 // Protected can't remove the marks; Guardian (or a not-yet-set-up phone) can hide them.
 // EX-08: tapping a highlighted phrase or a struck field's label shows one short reason.
 
@@ -165,17 +165,19 @@
     }
 
     // --- Struck fields: an overlay that ignores touches, so the input stays usable.
+    // Look: Figma "Field / PIN m-banking" (yellow outline, lock, struck placeholder) + "Shoo hint" under it.
     const CSS_TEXT = `
         :host { all: initial; }
         .layer { position: fixed; inset: 0; pointer-events: none; z-index: 2147483646; }
-        .strike { position: fixed; box-sizing: border-box; border: 2px solid #e5484d; border-radius: 6px;
-                  background: repeating-linear-gradient(-45deg, rgba(229,72,77,.18) 0 6px, transparent 6px 12px); }
-        .strike::after { content: ""; position: absolute; left: -2px; right: -2px; top: 50%;
-                         border-top: 3px solid #e5484d; transform: rotate(-4deg); }
-        .label { position: fixed; margin: 0; padding: 3px 8px; border: 0; border-radius: 6px; background: #e5484d; color: #fff;
-                 font: 600 13px/1.3 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; white-space: nowrap;
-                 pointer-events: auto; cursor: pointer; }
-        .label::after { content: "ⓘ"; margin-left: 6px; font-weight: 400; }
+        .strike { position: fixed; box-sizing: border-box; border: 1.5px solid #fc0; border-radius: 12px;
+                  background: rgba(255,204,0,.075); }
+        .strike img { position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; margin-top: -9px; }
+        .through { position: fixed; height: 1px; background: rgba(128,102,0,.6); }
+        .label { position: fixed; display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0;
+                 background: none; color: #806600; white-space: nowrap; pointer-events: auto; cursor: pointer;
+                 font: 600 13px/16px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+                 -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+        .label img { flex: none; width: 16px; height: 16px; }
         .reason { position: fixed; box-sizing: border-box; max-width: min(280px, calc(100vw - 20px)); padding: 10px 14px;
                   border-radius: 14px; background: #1c1c1e; color: #fff; pointer-events: auto; cursor: pointer;
                   font: 500 15px/1.35 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
@@ -196,7 +198,7 @@
     let host = null;
     let release = () => {}; // stops guarding host
     let layer = null;
-    let struck = []; // [{ input, box, label }]
+    let struck = []; // [{ input, box, through, label }]
     let marked = []; // highlighted text: [{ range, phrase }]
     let signals = [];
     let canHide = true;
@@ -246,30 +248,52 @@
             const kind = classifyField({ type: input.type, hints: fieldHints(input) });
             if (!kind) continue;
             const box = make("div", { className: "strike" });
-            const label = make("button", { className: "label", type: "button", textContent: t(`mark_dont_${kind}`) });
+            box.append(make("img", { src: browser.runtime.getURL("images/lock.svg"), alt: "" }));
+            const through = make("div", { className: "through" });
+            const label = make("button", { className: "label", type: "button" });
+            label.append(make("img", { src: browser.runtime.getURL("images/shoo-shield-yellow.svg"), alt: "" }), t(`mark_dont_${kind}`));
             label.setAttribute("aria-description", t("mark_why_hint"));
             // EX-08: the label explains itself; the struck box still ignores touches so the field stays typeable.
-            // Bubble goes above the label when it fits, so the field itself stays in view.
+            // Bubble goes below the hint when it fits, so the field itself stays in view.
             label.addEventListener("click", () => {
                 if (reasonOwner === label) return hideReason(); // second tap on the same mark closes it
                 const r = label.getBoundingClientRect();
                 const field = { kind, name: input.name, id: input.id };
                 const text = reasonFor(signals, { field }, { simple, lang }) || t(`mark_why_${kind}`);
-                showReason(text, { x: r.left + r.width / 2, top: r.top, bottom: r.bottom }, { owner: label, prefer: "above" });
+                showReason(text, { x: r.left + r.width / 2, top: r.top, bottom: r.bottom }, { owner: label });
             });
-            layer.append(box, label);
-            struck.push({ input, box, label });
+            layer.append(box, through, label);
+            struck.push({ input, box, through, label });
         }
     }
 
+    let ruler = null; // canvas context that measures placeholder text
+    /** Width of the field's placeholder in its own font, or 0 when there's nothing to strike through. */
+    function placeholderWidth(input, style) {
+        if (input.tagName !== "INPUT" || !input.placeholder || input.value !== "") return 0; // emptiness only, never the value
+        ruler ??= dom.create(document, "canvas").getContext("2d");
+        if (!ruler) return 0;
+        ruler.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        return ruler.measureText(input.placeholder).width;
+    }
+
     function place() {
-        for (const { input, box, label } of struck) {
+        for (const { input, box, through, label } of struck) {
             const r = input.getBoundingClientRect();
             const visible = r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight;
-            box.hidden = label.hidden = !visible;
+            box.hidden = through.hidden = label.hidden = !visible;
             if (!visible) continue;
-            Object.assign(box.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-            Object.assign(label.style, { left: `${r.left}px`, top: `${Math.max(0, r.top - 24)}px` });
+            const style = getComputedStyle(input);
+            Object.assign(box.style, {
+                left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`,
+                borderRadius: style.borderRadius,
+            });
+            const start = parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) || 0;
+            const room = r.width - start - (parseFloat(style.paddingRight) || 0) - 32; // keep clear of the lock
+            const width = Math.min(placeholderWidth(input, style), Math.max(0, room));
+            through.hidden = width <= 0;
+            Object.assign(through.style, { left: `${r.left + start}px`, top: `${r.top + r.height / 2}px`, width: `${width}px` });
+            Object.assign(label.style, { left: `${r.left}px`, top: `${r.bottom + 6}px` });
         }
     }
 
@@ -283,6 +307,7 @@
     };
     addEventListener("scroll", schedulePlace, { passive: true, capture: true });
     addEventListener("resize", schedulePlace, { passive: true });
+    addEventListener("input", (event) => event.isTrusted && schedulePlace(), { passive: true, capture: true }); // strike line follows typing
     setInterval(schedulePlace, 1000); // layout shifts nobody tells us about
 
     // --- EX-08: tap a mark → one short reason bubble. Closes on the next tap, a scroll, or after 6 s.

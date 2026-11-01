@@ -1,6 +1,7 @@
 // Owner: lead. Block screen behaviour (EX-06), runs inside blocked.html.
-// Protected: "Waiting for [guardian] to check", reopens by itself once the domain is marked safe.
-// Guardian: "Review in Shoo" → Detail; also reopens after marking it safe for themselves (PRD §5 Validasi).
+// Protected: "Link sent to [guardian]" once the scan is reported (EX-07); reopens by itself once the domain
+// is marked safe. Guardian and Protected: "Review in Shoo" → Detail (reviewing, not deciding: PRD 8.2);
+// a Guardian's page also reopens after marking it safe for themselves (PRD §5 Validasi).
 
 (() => {
     const POLL_MS = 5000; // contracts/api.md: poll GET /verdicts every 5 s while blocked
@@ -18,14 +19,11 @@
             reasons: payload.reasons
                 .map((r) => (simple ? r.labelSimple : r.label)?.[lang])
                 .filter(Boolean),
-            waitingFor: mode === "protected" ? (profile.guardianName || null) : undefined,
-            showWaiting: mode === "protected",
+            sentTo: mode === "protected" ? profile.guardianName || null : null,
             button:
-                mode === "guardian"
-                    ? { textKey: "block_review", href: detailUrl(payload) }
-                    : mode === null
-                      ? { textKey: "block_open_app", href: "shoo://activity" }
-                      : null, // Protected never decides (PRD 8.2)
+                mode === null
+                    ? { textKey: "block_open_app", href: "shoo://activity" }
+                    : { textKey: "block_review", href: detailUrl(payload) },
             poll: mode !== null,
         };
     }
@@ -51,7 +49,7 @@
     const send = (message) => browser.runtime.sendMessage(message);
 
     document.documentElement.lang = lang;
-    const keys = { title: "block_title", autoOpen: "block_auto_open", back: "block_back" };
+    const keys = { title: "block_title", level: "popup_status_2", back: "block_back" };
     for (const node of document.querySelectorAll("[data-text]")) node.textContent = t(keys[node.dataset.text]);
     document.title = t("block_title");
 
@@ -65,15 +63,17 @@
     $(".screen").hidden = false;
     if (!payload) {
         // Fragment missing or edited: still blocked, just without details. Never reopen anything.
-        for (const selector of [".ring", ".link", ".reasons"]) $(selector).hidden = true;
+        for (const selector of [".gauge", ".link", ".reasons"]) $(selector).hidden = true;
         return;
     }
 
-    $(".ring").style.setProperty("--p", String(payload.score));
+    $(".gauge-art").innerHTML = globalThis.ShooGauge.gauge(payload.score, "bahaya"); // our markup from a number
     $(".score-value").textContent = `${payload.score}%`;
     $(".link").textContent = payload.domain || payload.url;
 
     let mode = null;
+    let view = null;
+    let recordId = payload.recordId || null;
     async function start() {
         let profile = null;
         try {
@@ -81,26 +81,21 @@
         } catch {
             profile = null;
         }
-        const view = viewFor(profile, payload, lang);
+        view = viewFor(profile, payload, lang);
         mode = profile?.onboarded ? profile.mode : null;
 
         const reasons = $(".reasons");
         reasons.replaceChildren(...view.reasons.map((text) => Object.assign(document.createElement("span"), { textContent: text })));
         reasons.hidden = view.reasons.length === 0;
 
-        if (view.showWaiting) {
-            $(".waiting").hidden = false;
-            $(".waiting-text").textContent = view.waitingFor
-                ? t("block_waiting", [view.waitingFor])
-                : t("block_waiting_family");
-        }
         if (view.button) {
             const button = $(".button");
             button.textContent = t(view.button.textKey);
             button.href = view.button.href;
             button.hidden = false;
-            linkToRecord(button);
         }
+        showRecord();
+        findRecord();
         // Only reopen the page this block is really about: a crafted link can't pair a scam URL
         // with some other domain that happens to be marked safe.
         let domainMatches = false;
@@ -113,11 +108,24 @@
         if (view.poll && domainMatches) poll();
     }
 
-    // EX-07: the POST may still be running when this page opens; point "Review in Shoo" at the record once it exists.
-    async function linkToRecord(button) {
-        if (payload.recordId || !payload.reportKey || mode !== "guardian") return;
+    // EX-07: the POST may still be running when this page opens. Asked again on every poll until it exists.
+    async function findRecord() {
+        if (recordId || !payload.reportKey || mode === null) return;
         const reply = await send({ type: "recordId", key: payload.reportKey }).catch(() => null);
-        if (reply?.recordId) button.href = detailUrl({ recordId: reply.recordId });
+        if (!reply?.recordId) return;
+        recordId = reply.recordId;
+        showRecord();
+    }
+
+    /** Once the scan is stored: "Review in Shoo" opens it, and Protected sees who it went to. */
+    function showRecord() {
+        if (!recordId || !view) return;
+        if (view.button && mode !== null) $(".button").href = detailUrl({ recordId });
+        if (!view.sentTo) return;
+        $(".avatar").textContent = Array.from(view.sentTo)[0].toUpperCase();
+        const [before = "", after = ""] = t("popup_sent_to", ["\u0000"]).split("\u0000");
+        $(".sent-text").replaceChildren(before, Object.assign(document.createElement("b"), { textContent: view.sentTo }), after);
+        $(".sent").hidden = false;
     }
 
     let timer = null;
@@ -136,12 +144,12 @@
             return;
         }
         if (verdict?.value === "not_safe") {
-            $(".waiting").hidden = true;
             const note = $(".verified");
             note.textContent = t("block_verified_scam", [verdict.byName || "Shoo"]);
             note.hidden = false;
             return; // decided — stays blocked for good
         }
+        findRecord();
         timer = setTimeout(poll, nextPollMs(reply));
     }
 

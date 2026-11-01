@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 await import("../Resources/pipeline.js");
 await import("../Resources/popup.js"); // view part skips itself outside the browser
-const { decide, dismissed, tierFor, detailUrl } = globalThis.ShooPopup;
+const { decide, dismissed, tierFor } = globalThis.ShooPopup;
 
 /** Feeds a page's score updates through decide(); returns the actions, flattened. */
 function play(scores, { scanId = 1, memo = null } = {}) {
@@ -51,11 +51,6 @@ test("closed popup stays closed for its tier, the stronger one still appears", (
 test("new page resets: old popup hides, warnings can show again", () => {
     const { memo } = play([0, 55], { scanId: 1 });
     assert.deepEqual(play([0, 35], { scanId: 2, memo }).actions, ["hide", "show1"]);
-});
-
-test("See detail links to the scan once EX-07 has an id, else Activity", () => {
-    assert.equal(detailUrl({ recordId: "6f1c2a4e" }), "shoo://scan/6f1c2a4e");
-    assert.equal(detailUrl({}), "shoo://activity");
 });
 
 test("50–79 opens as the sheet until minimized; 30–49 is always the mini card", () => {

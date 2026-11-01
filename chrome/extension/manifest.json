@@ -25,7 +25,8 @@
     }],
 
     "web_accessible_resources": [{
-        "resources": [ "blocked.html", "blocked.css", "browser-shim.js", "block.js", "blocked-page.js", "images/icon-96.png" ],
+        "resources": [ "blocked.html", "blocked.css", "browser-shim.js", "block.js", "blocked-page.js", "images/icon-96.png",
+                       "images/shoo-shield-yellow.svg", "images/lock.svg" ],
         "matches": [ "http://*/*", "https://*/*" ]
     }],
 
