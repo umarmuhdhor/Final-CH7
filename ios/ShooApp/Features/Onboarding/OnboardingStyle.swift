@@ -8,12 +8,17 @@ enum OnboardingTheme {
     static let card = Color.dynamic(0xFFFFFF, dark: 0x1B1F26)
     static let ink = Color.dynamic(0x161618, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     static let secondaryInk = Color.dynamic(0x67696C, dark: 0xA3A9B3, contrastLight: 0x45474A, contrastDark: 0xCDD1D8)
+    /// Figma's small notes under a field ("*Nama harus terdiri dari maksimal 20 karakter").
+    static let noteInk = Color.dynamic(0x191C25, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
+    /// Figma "Body" under every onboarding headline.
+    static let bodyInk = Color.dynamic(0x6A717E, dark: 0xA3A9B3, contrastLight: 0x4A505B, contrastDark: 0xCDD1D8)
     static let cardStroke = Color.dynamic(0xD8DFE2, dark: 0x343B46, contrastLight: 0x9AA1AC, contrastDark: 0x6B7380)
     static let selectedStroke = Color.dynamic(0x0EA1DE, dark: 0x3DB8EE)
+    static let selectedStrokeProtected = Color.dynamic(0x11D0DA, dark: 0x3FDDE5)
     static let disabledFill = Color.dynamic(0xDBE2E7, dark: 0x2A303A)
     static let placeholder = Color.dynamic(0x939393, dark: 0x7C828C)
     static let error = Color.dynamic(0xC81414, dark: 0xFF6B6B)
-    static let link = Color.dynamic(0x0A6CB4, dark: 0x5EAAF0)
+    static let link = Color.dynamic(0x0367B6, dark: 0x5EAAF0)
     /// Text on the dark capsule; the capsule turns light in dark mode.
     static let onButton = Color.dynamic(0xFFFFFF, dark: 0x0E1116)
     static let buttonGradient = LinearGradient(
@@ -29,41 +34,33 @@ enum OnboardingTheme {
 }
 
 /// Figma point sizes that still follow Dynamic Type (persona: parents 45–65, PRD §3).
-private struct ScaledSystemFont: ViewModifier {
-    @ScaledMetric private var size: CGFloat
-    private let weight: Font.Weight
-    private let design: Font.Design
-
-    init(size: CGFloat, weight: Font.Weight, design: Font.Design, relativeTo style: Font.TextStyle) {
-        _size = ScaledMetric(wrappedValue: size, relativeTo: style)
-        self.weight = weight
-        self.design = design
-    }
-
-    func body(content: Content) -> some View {
-        content.font(.system(size: size, weight: weight, design: design))
-    }
-}
-
 extension View {
-    func onboardingFont(_ size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default, relativeTo style: Font.TextStyle) -> some View {
-        modifier(ScaledSystemFont(size: size, weight: weight, design: design, relativeTo: style))
+    func onboardingFont(
+        _ size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default,
+        tracking: CGFloat? = nil, family: FigmaFont.Family = .display, relativeTo style: Font.TextStyle
+    ) -> some View {
+        figmaFont(size, weight: weight, design: design, tracking: tracking, family: family, relativeTo: style)
     }
 
     /// Headline 30 medium + body 15 rounded, centred (every onboarding title in Figma).
     func onboardingTitleStyle() -> some View {
         onboardingFont(30, weight: .medium, relativeTo: .title)
             .tracking(-0.3)
+            // Figma "Headline": 110 %.
+            .figmaLineHeight(33, glyphOffset: -3, relativeTo: .title)
             .multilineTextAlignment(.center)
             .foregroundStyle(OnboardingTheme.ink)
             .accessibilityAddTraits(.isHeader)
     }
 
-    func onboardingBodyStyle() -> some View {
+    /// `lineHeight`: Figma's 140 % (21) on most screens, 160 % (24) on Pilih Mode and Hubungkan Akun.
+    func onboardingBodyStyle(lineHeight: CGFloat = 21) -> some View {
         onboardingFont(15, design: .rounded, relativeTo: .subheadline)
+            // iOS sets the glyphs higher in a tall line than Figma, which centres them.
+            .figmaLineHeight(lineHeight, glyphOffset: (lineHeight - 19) / 2, relativeTo: .subheadline)
             .lineSpacing(3)
             .multilineTextAlignment(.center)
-            .foregroundStyle(OnboardingTheme.ink)
+            .foregroundStyle(OnboardingTheme.bodyInk)
     }
 }
 
@@ -74,7 +71,8 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .onboardingFont(17, weight: .medium, relativeTo: .body)
-            .foregroundStyle(isEnabled ? OnboardingTheme.onButton : OnboardingTheme.ink.opacity(0.3))
+            // Figma disabled "Button": #DBE2E7 with #000 25 % text, the whole button at 75 %.
+            .foregroundStyle(isEnabled ? OnboardingTheme.onButton : OnboardingTheme.ink.opacity(0.25))
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.horizontal, 16)
             .background {
@@ -82,7 +80,7 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
             }
             // Figma "Button": #121112 20%, y 8, blur 18.
             .shadow(color: Color(hex: 0x121112, opacity: isEnabled ? 0.2 : 0), radius: 9, y: 8)
-            .opacity(configuration.isPressed ? 0.85 : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.75)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
@@ -95,8 +93,11 @@ struct OnboardingBackButton: View {
 
     var body: some View {
         Button(action: action) {
+            // Figma sets the symbol as SF Pro Semibold 19 text ("􀄪"), which draws at the large symbol scale
+            // (≈ 23 pt wide), not the default medium one (≈ 18 pt).
             Image(systemName: "arrow.left")
                 .font(.system(size: 19, weight: .semibold))
+                .imageScale(.large)
                 .foregroundStyle(OnboardingTheme.ink)
                 .frame(width: 50, height: 50)
                 .modifier(GlassCircle())
@@ -154,6 +155,14 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
     @State private var footerHeight: CGFloat = 92
+    /// Figma "Footer": a lone button ends 68 pt above the screen bottom (34 over the home indicator inset);
+    /// a button + text link ends 40 pt above it. See `footerEndsWithLink()`.
+    private var footerBottom: CGFloat = 34
+    /// Figma "Frame 2" side inset: 20 on Atur Nama / Pilih Mode, 24 on Hubungkan Akun, 46 under a hero.
+    private var headlineInset: CGFloat = Hero.self == EmptyView.self ? 20 : 46
+    private var largeMessage = false
+    private var messageLineHeight: CGFloat = 21
+    private var messageSpacing: CGFloat?
 
     init(
         title: LocalizedStringKey,
@@ -179,7 +188,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                 VStack(spacing: 0) {
                     ZStack(alignment: .top) {
                         hero
-                            .padding(.top, Hero.self == EmptyView.self ? 0 : 18)
+                            // The hero sets its own Figma offsets (`OnboardingHeroImage(top:bottom:)`).
                         HStack {
                             if let onBack {
                                 OnboardingBackButton(action: onBack)
@@ -191,12 +200,22 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                         .padding(.horizontal, 24)
                     }
 
-                    VStack(spacing: 4) {
+                    VStack(spacing: messageSpacing ?? (largeMessage ? 12 : 4)) {
                         Text(title).onboardingTitleStyle()
-                        Text(message).onboardingBodyStyle()
+                        if largeMessage {
+                            // Figma "Lindungi dirimu…": body 17 pt rounded, 120 % line height.
+                            Text(message)
+                                .onboardingFont(17, design: .rounded, relativeTo: .body)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(OnboardingTheme.bodyInk)
+                        } else {
+                            Text(message).onboardingBodyStyle(lineHeight: messageLineHeight)
+                        }
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, Hero.self == EmptyView.self ? 30 : 14)
+                    .padding(.horizontal, headlineInset)
+                    // Figma puts the headline at y 120 with the back button at y 40; the button stays under
+                    // the status bar here (62 on a 402 × 874 iPhone), so only 8 pt are left to keep y 120.
+                    .padding(.top, Hero.self == EmptyView.self ? 8 : 0)
 
                     content
                         .padding(.horizontal, 24)
@@ -223,10 +242,11 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
         }
         .background(OnboardingTheme.background.ignoresSafeArea())
         .overlay(alignment: .bottom) {
-            VStack(spacing: 12) { footer }
+            // Figma "Footer": 16 between the button and the text link under it.
+            VStack(spacing: 16) { footer }
                 .padding(.horizontal, 24)
                 .padding(.top, 24)
-                .padding(.bottom, 12)
+                .padding(.bottom, footerBottom)
                 .background {
                     LinearGradient(
                         stops: [
@@ -251,6 +271,45 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     }
 }
 
+extension OnboardingFormPage {
+    /// The footer ends with a text link ("Lewati", "Terkendala? Tonton Tutorial"): Figma keeps it 40 pt
+    /// above the screen bottom, 6 over the home indicator inset.
+    /// Figma's side inset for the headline and message (see `headlineInset`).
+    func headlineInset(_ inset: CGFloat) -> Self {
+        var page = self
+        page.headlineInset = inset
+        return page
+    }
+
+    /// Figma's message line height when it isn't 140 % (Pilih Mode, Hubungkan Akun: 160 % = 24).
+    func messageLineHeight(_ points: CGFloat) -> Self {
+        var page = self
+        page.messageLineHeight = points
+        return page
+    }
+
+    /// Headline to message. Figma's headline boxes are taller than their lines on some frames ("Aktifkan
+    /// Ekstensi": 38 for one 33 pt line), so the message sits lower there.
+    func messageSpacing(_ spacing: CGFloat) -> Self {
+        var page = self
+        page.messageSpacing = spacing
+        return page
+    }
+
+    /// The 17 pt message of "Lindungi dirimu dan orang terdekat", 8 under its 70 pt headline box (12 here).
+    func largeMessage(_ large: Bool = true) -> Self {
+        var page = self
+        page.largeMessage = large
+        return page
+    }
+
+    func footerEndsWithLink(_ endsWithLink: Bool = true) -> Self {
+        var page = self
+        page.footerBottom = endsWithLink ? 6 : 34
+        return page
+    }
+}
+
 extension OnboardingFormPage where Hero == EmptyView {
     init(
         title: LocalizedStringKey,
@@ -267,12 +326,18 @@ extension OnboardingFormPage where Hero == EmptyView {
 /// 300 pt illustration at the top of an onboarding page (Figma "image 1").
 struct OnboardingHeroImage: View {
     let name: String
+    /// From the top safe area (62 on the 402 × 874 Figma iPhone) to the image.
+    var top: CGFloat = 0
+    /// From the image to the headline.
+    var bottom: CGFloat = 0
 
     var body: some View {
         Image(name)
             .resizable()
             .scaledToFit()
             .frame(width: 300, height: 300)
+            .padding(.top, top)
+            .padding(.bottom, bottom)
             .accessibilityHidden(true)
     }
 }
@@ -295,14 +360,22 @@ struct OnboardingErrorLabel: View {
 struct OnboardingLinkButtonStyle: ButtonStyle {
     var color = OnboardingTheme.link
     var weight = Font.Weight.medium
+    /// Figma's text links ("Lewati", "Terkendala? Tonton Tutorial") are SF Pro Text 15, -2 %.
+    var family = FigmaFont.Family.text
+    var tracking: CGFloat = -0.3
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .onboardingFont(15, weight: weight, relativeTo: .subheadline)
+            .onboardingFont(15, weight: weight, tracking: tracking, family: family, relativeTo: .subheadline)
+            // Figma: a 20 pt row.
+            .figmaLineHeight(20, relativeTo: .subheadline)
             .foregroundStyle(color)
             .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            // A 44 pt tall hit area that lays out as the text's own height (Figma's 20 pt row).
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            .padding(.vertical, -12)
             .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }
@@ -314,6 +387,9 @@ struct OnboardingSuccessPage<Hero: View>: View {
     let message: Text
     let idPrefix: String
     let onContinue: () -> Void
+    /// Figma: 100 % under "Yeay, kamu berhasil", 70 % under "Berhasil Terhubung".
+    var messageOpacity = 1.0
+    /// Brings the headline to Figma's y 402 under the hero.
     @ViewBuilder let hero: Hero
 
     var body: some View {
@@ -321,21 +397,24 @@ struct OnboardingSuccessPage<Hero: View>: View {
             VStack(spacing: 0) {
                 hero
 
-                VStack(spacing: 4) {
+                // Figma: the 2-line headline box is 74 tall (66 here), then 4.
+                VStack(spacing: 12) {
                     title
                         .onboardingFont(30, weight: .medium, relativeTo: .title)
                         .tracking(-0.3)
+                        .figmaLineHeight(33, glyphOffset: -3, relativeTo: .title)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("\(idPrefix).title")
                     message
                         .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
+                        .figmaLineHeight(21, glyphOffset: 1, relativeTo: .subheadline)
                         .lineSpacing(3)
-                        .opacity(0.9)
+                        .foregroundStyle(Color(hex: 0xFAF9FB))
+                        .opacity(messageOpacity)
                 }
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 24)
-                .padding(.top, 44)
             }
             .frame(maxWidth: .infinity)
         }
@@ -353,7 +432,8 @@ struct OnboardingSuccessPage<Hero: View>: View {
                 .buttonStyle(OnboardingCapsuleButtonStyle())
                 .accessibilityIdentifier("\(idPrefix).continue")
                 .padding(.horizontal, 24)
-                .padding(.bottom, 12)
+                // Figma "Footer": the button ends 68 pt above the screen bottom.
+                .padding(.bottom, 34)
         }
         .environment(\.colorScheme, .light)
     }

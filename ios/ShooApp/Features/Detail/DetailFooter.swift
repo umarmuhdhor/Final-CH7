@@ -15,6 +15,8 @@ struct DetailFooter: View {
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isChanging = false
+    /// Home indicator area under the footer; Figma's 34 pt bottom padding includes it.
+    @State private var bottomInset: CGFloat = 0
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
@@ -39,8 +41,11 @@ struct DetailFooter: View {
                     Text("\(ownerName) still sees Shoo's warning when opening this site.")
                         .activityFont(13, rounded: true)
                         .foregroundStyle(DetailStyle.secondary)
+                        // Figma: centred, 140 % line height.
+                        .lineSpacing(2.7)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 4)
                 }
             }
             if failed {
@@ -54,19 +59,21 @@ struct DetailFooter: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 28)
-        .padding(.bottom, 34)
+        // Figma: 34 pt from the screen's bottom edge, i.e. right on the home indicator area.
+        .padding(.bottom, max(0, 34 - bottomInset))
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
                 stops: [
                     .init(color: DetailStyle.footer.opacity(0), location: 0),
-                    .init(color: DetailStyle.footer.opacity(0.96), location: 0.16),
+                    .init(color: DetailStyle.footer.opacity(0.96), location: 0.3),
                     .init(color: DetailStyle.footer, location: 1),
                 ],
                 startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea(edges: .bottom)
         )
+        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
         // A saved choice from the server closes "Ubah".
         .onChange(of: verdict) { _, _ in isChanging = false }
     }
@@ -102,16 +109,18 @@ private struct VerdictButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .labelStyle(VerdictLabelStyle())
-            .activityFont(17, .semibold, tracking: -0.17)
+            .activityFont(17, .semibold, tracking: -0.2125)
             .foregroundStyle(kind == .safe ? DetailStyle.title : .white)
             .frame(maxWidth: .infinity, minHeight: 56)
             .background {
                 if kind == .safe {
-                    Capsule().fill(.white)
-                    Capsule().stroke(selected ? DetailStyle.title : DetailStyle.safeStroke, lineWidth: selected ? 2 : 1)
+                    // Figma: #E3E3E3 spread 1 (a 1 pt ring outside the capsule) over the spread −3 drop shadow.
+                    Capsule().fill(selected ? DetailStyle.title : DetailStyle.safeStroke)
+                        .padding(selected ? -2 : -1)
+                    Capsule().fill(.white).figmaButtonShadow()
                 } else {
                     Capsule().fill(LinearGradient(colors: [DetailStyle.dangerTop, DetailStyle.dangerBottom], startPoint: .bottom, endPoint: .top))
-                    Capsule().stroke(DetailStyle.dangerTop, lineWidth: selected ? 3 : 1.5)
+                    Capsule().strokeBorder(DetailStyle.dangerTop, lineWidth: selected ? 3 : 1.5)
                 }
             }
             .contentShape(Capsule())
@@ -122,7 +131,8 @@ private struct VerdictButtonStyle: ButtonStyle {
 
 private struct VerdictLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 6) {
+        // Figma: 8 pt between icon and word.
+        HStack(spacing: 8) {
             configuration.icon
             configuration.title.lineLimit(2)
         }
@@ -142,7 +152,8 @@ private struct VerifiedCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: isScam ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+            // Figma "Verified Note": the same check for both, red on pink or green on mint.
+            Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(isScam ? DetailStyle.scamIcon : DetailStyle.safeIcon)
                 .frame(width: 40, height: 40)
@@ -172,6 +183,7 @@ private struct VerifiedCard: View {
         .padding(.trailing, 16)
         .padding(.vertical, 14)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.9)))
         .figmaCardShadow()
     }
 }

@@ -368,10 +368,11 @@ struct ActivityPersonMenu: View {
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .frame(width: Self.width)
         .activityGlass(in: RoundedRectangle(cornerRadius: 34, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 30, y: 12)
+        // Figma "Picker" glass: black 25 %, y 8, blur 48.
+        .shadow(color: .black.opacity(0.25), radius: 24, y: 8)
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
         .accessibilityAction(.escape, close)
@@ -431,7 +432,9 @@ struct ActivityRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // Figma 450:8443 / 450:8657: a one-line note sits 8 pt under the row and the card stays 118 high
+        // (11 pt below the note); the two-line "safe" note is laid out 16 pt under the row, 17 pt above the edge.
+        VStack(alignment: .leading, spacing: note?.isTwoLine == true ? 16 : 8) {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 12) {
@@ -449,7 +452,9 @@ struct ActivityRow: View {
                 ActivityNoteView(note: note, language: language)
             }
         }
-        .padding(17)
+        .padding(.horizontal, 17)
+        .padding(.top, 17)
+        .padding(.bottom, note.map { $0.isTwoLine ? 17 : 11 } ?? 17)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.9)))
@@ -492,7 +497,8 @@ struct ActivityRow: View {
     private var site: some View {
         HStack(spacing: 12) {
             SiteIcon(url: scan.faviconUrl)
-            VStack(alignment: .leading, spacing: 0) {
+            // Figma "stack": 2 pt between domain and the "avatar name | time" line, none above a bare time.
+            VStack(alignment: .leading, spacing: owner == nil ? 0 : 2) {
                 Text(verbatim: scan.domain)
                     .activityFont(17, tracking: -0.17)
                     .foregroundStyle(ActivityStyle.ink)

@@ -16,14 +16,15 @@ struct ConnectedPillButtonStyle: ButtonStyle {
         startPoint: .leading, endPoint: .trailing
     )
 
+    /// Figma 131 × 35: 5 / 15 inside a 3.5 pt white ring that counts in the layout.
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .profileFont(15, .medium, tracking: -0.15)
             .foregroundStyle(.white)
-            .padding(.horizontal, 15)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 18.5)
+            .padding(.vertical, 8.5)
             .background(Self.gradient, in: Capsule())
-            .overlay(Capsule().stroke(ProfileStyle.card, lineWidth: 3.5))
+            .overlay(Capsule().strokeBorder(ProfileStyle.card, lineWidth: 3.5))
             .opacity(configuration.isPressed ? 0.7 : 1)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
@@ -127,6 +128,7 @@ struct GuardianModeCard: View {
         .background(Self.fill)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
+        .figmaCardShadow()
         .padding(.horizontal, ProfileStyle.margin)
         .padding(.top, 32)
         .accessibilityElement(children: .contain)
@@ -152,26 +154,33 @@ struct FamilyEmptyCard: View {
                 slot
                 ZStack {
                     Circle().fill(Self.tealFill)
-                    Circle().strokeBorder(Self.teal, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-                    Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Self.teal)
+                    Circle().strokeBorder(Self.teal, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                    // Figma "Plus": 16 pt, 2 pt teal stroke.
+                    Path { path in
+                        path.move(to: CGPoint(x: 8, y: 1)); path.addLine(to: CGPoint(x: 8, y: 15))
+                        path.move(to: CGPoint(x: 1, y: 8)); path.addLine(to: CGPoint(x: 15, y: 8))
+                    }
+                    .stroke(Self.teal, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .frame(width: 16, height: 16)
                 }
                 .frame(width: 60, height: 60)
                 slot
             }
+            // Figma "Slot Kosong" is 64 pt tall with the circles centred.
+            .frame(height: 64)
             .accessibilityHidden(true)
-            .padding(.top, 1)
             Text("No one protected yet")
                 .profileFont(18, .semibold, tracking: -0.18)
                 .foregroundStyle(ProfileStyle.nameInk)
                 .multilineTextAlignment(.center)
-                .padding(.top, 15)
+                .padding(.top, 14)
             Text("Send an invite to your family. Once they join, their status shows up here.")
                 .profileFont(14)
                 .foregroundStyle(ProfileStyle.secondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
+                // Figma's 140 % line height also pads above the first and below the last line.
+                .padding(.vertical, 1.5)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 280)
                 .padding(.top, 6)
@@ -179,7 +188,7 @@ struct FamilyEmptyCard: View {
                 Text("Invite family")
                     .profileFont(15, .semibold, tracking: -0.19)
                     .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 2)
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 4)
                     .padding(.horizontal, 20)
                     .frame(minHeight: 46)
                     .background(Self.button, in: Capsule())
@@ -190,9 +199,10 @@ struct FamilyEmptyCard: View {
             .accessibilityIdentifier("profile.members.invite")
         }
         .frame(maxWidth: .infinity)
+        // Figma: slot 27 pt and button 25 pt from the card's edges; ProfileCard already adds 5.
         .padding(.horizontal, 24)
-        .padding(.top, 21)
-        .padding(.bottom, 19)
+        .padding(.top, 22)
+        .padding(.bottom, 20)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("profile.members.empty")
     }
@@ -200,7 +210,7 @@ struct FamilyEmptyCard: View {
     private var slot: some View {
         ZStack {
             Circle().fill(ProfileStyle.background)
-            Circle().strokeBorder(Self.slotStroke, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+            Circle().strokeBorder(Self.slotStroke, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
             Image(systemName: "person.fill")
                 .font(.system(size: 17))
                 .foregroundStyle(Self.slotPerson)

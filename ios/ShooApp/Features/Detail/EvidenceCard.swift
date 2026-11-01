@@ -67,7 +67,8 @@ struct ContributionBar: View {
     let weights: [Int]
 
     private static let gap: CGFloat = 3
-    private static let tickWidth: CGFloat = 3
+    /// Figma "Tick": 2.5 × 16, centred on the 10 pt bar (3 pt over and under it).
+    private static let tickWidth: CGFloat = 2.5
 
     /// Fractions of the bar per segment, capped so their sum is at most 1.
     static func fractions(_ weights: [Int]) -> [Double] {
@@ -99,8 +100,10 @@ struct ContributionBar: View {
                 HatchedCapsule(fill: DetailStyle.barTrack, hatch: DetailStyle.barTrackHatch)
             }
             .frame(height: 16)
+            .offset(y: -3)
         }
-        .frame(height: 16)
+        // The bar is 10 pt in the layout (Figma "Bar"); the tick overhangs it.
+        .frame(height: 10)
         .accessibilityHidden(true)
     }
 }

@@ -36,6 +36,9 @@ enum DetailStyle {
     static let markedText = hex(0x1E78BE)
     static let greyBadgeFill = hex(0xF2F4F7)
     static let greyBadgeStroke = hex(0xDFE3E8)
+    // "Virellia belum melihat link ini" banner on the Score Card (487:4221).
+    static let unseenFill = hex(0xC7C7CE)
+    static let unseenText = hex(0x727272)
     /// "Spotlight + kuning": several areas in one photo.
     static let marker = hex(0xFFD60A)
 

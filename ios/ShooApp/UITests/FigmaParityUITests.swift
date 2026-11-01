@@ -19,36 +19,83 @@ final class FigmaParityUITests: XCTestCase {
         guard scenario == "figma" else { return }
         var app = launch(["-UITestReset", "YES"], onboarded: false)
         XCTAssertTrue(app.buttons["splash.next"].waitForExistence(timeout: 10))
+        // Figma 110:3692 "Onboarding 1" and 110:3786 "Onboarding 2"; wait for the page swipe to finish.
         shot("on-splash-1")
         app.buttons["splash.next"].tap()
+        settle()
         shot("on-splash-2")
-        app.buttons["splash.next"].tap()
-        shot("on-splash-3")
 
         for step in ["name", "mode", "greeting", "connect", "invite", "turnOnExtension", "extensionOn", "notifications"] {
-            app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step], onboarded: false)
+            // "Aktifkan Ekstensi" only shows while the extension is still off.
+            app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step], onboarded: false, extensionActive: step != "turnOnExtension")
             shot("on-\(step)")
             switch step {
             case "name":
                 let field = app.textFields["name.field"]
                 if field.waitForExistence(timeout: 5) {
                     field.tap()
-                    field.typeText("Adhella")
+                    field.typeText("Nisrina")
                     shot("on-name-typed")
+                    // Figma 110:4271 "nama terlalu panjang": over the 20-character limit.
+                    field.typeText(" Thifal Khairunnisa")
+                    _ = app.descendants(matching: .any)["name.error"].waitForExistence(timeout: 3)
+                    // Figma shows this state with the keyboard down.
+                    dismissKeyboard(app)
+                    settle()
+                    shot("on-name-tooLong")
                 }
             case "mode":
-                for mode in ["guardian", "joinFamily", "personal"] where app.buttons["mode.\(mode)"].exists {
+                for mode in ["guardian", "protected"] where app.buttons["mode.\(mode)"].exists {
                     app.buttons["mode.\(mode)"].tap()
                     shot("on-mode-\(mode)")
                 }
             case "connect":
+                // Figma 141:5887 "Connect with Guardian · Kode" (keyboard down) and 140:5762 "· Pindai QR".
+                let typed = app.textFields["connect.code"]
+                if typed.waitForExistence(timeout: 5) {
+                    typed.tap()
+                    typed.typeText("4821")
+                    dismissKeyboard(app)
+                    settle()
+                    shot("on-connect-typed")
+                    if tapIfExists(app.buttons["connect.tab.scan"]) { shot("on-connect-qr") }
+                }
+                app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step, "-settings.mode", "protected"], onboarded: false)
                 let code = app.textFields["connect.code"]
                 if code.waitForExistence(timeout: 5) {
                     code.tap()
                     code.typeText("999999")
                     if app.buttons["connect.join"].exists { app.buttons["connect.join"].tap() }
                     _ = app.descendants(matching: .any)["connect.error"].waitForExistence(timeout: 5)
+                    dismissKeyboard(app)
+                    settle()
                     shot("on-connect-expired")
+                    // Figma 205:1081 "Kode Kadaluarsa · QR": the same error under the scanner.
+                    if tapIfExists(app.buttons["connect.tab.scan"]) {
+                        settle()
+                        shot("on-connect-expired-qr")
+                    }
+                }
+                // Figma 141:5945 "Berhasil Terhubung" (PR-02).
+                // "unpaired": no guardian yet, so the join goes through.
+                app = launch(
+                    ["-UITestReset", "YES", "-debug.onboardingStep", step, "-settings.mode", "protected", "-mock.scenario", "unpaired"],
+                    onboarded: false
+                )
+                let fresh = app.textFields["connect.code"]
+                if fresh.waitForExistence(timeout: 5) {
+                    fresh.tap()
+                    fresh.typeText("123456")
+                    if app.buttons["connect.join"].exists { app.buttons["connect.join"].tap() }
+                    settle()
+                    shot("on-connected")
+                }
+            case "invite":
+                // Figma 110:4817 "Kirim Undangan (sheet)".
+                if tapIfExists(app.buttons["invite.open"]) {
+                    _ = app.buttons["invite.close"].waitForExistence(timeout: 5)
+                    settle()
+                    shot("on-invite-sheet")
                 }
             default: break
             }
@@ -90,11 +137,12 @@ final class FigmaParityUITests: XCTestCase {
         scrollShot("act-guardian-2")
         if tapIfExists(app.descendants(matching: .any)["filter.warning"].firstMatch) { shot("act-guardian-warning") }
         if tapIfExists(app.descendants(matching: .any)["filter.blocked"].firstMatch) { shot("act-guardian-blocked") }
-        _ = tapIfExists(app.descendants(matching: .any)["filter.all"].firstMatch)
-        if tapIfExists(app.descendants(matching: .any)["activity.personMenu"].firstMatch) {
-            shot("act-guardian-picker")
-            if tapText(app, "Syahnaz") { shot("act-guardian-one") }
-        }
+        // Figma "Picker" (416:9208) and "Only one selected" (416:8989): opened by the DEBUG launch flags,
+        // the menu is an overlay the UI test can't reliably open by tapping.
+        launch(guardian(family: true) + ["-debug.tab", "activity", "-debug.activityPicker", "YES"])
+        shot("act-guardian-picker")
+        launch(guardian(family: true) + ["-debug.tab", "activity", "-debug.activityPerson", "dev_syahnaz"])
+        shot("act-guardian-one")
 
         app = launch(guardian(family: false) + ["-debug.tab", "activity"])
         shot("act-pribadi")
@@ -103,6 +151,11 @@ final class FigmaParityUITests: XCTestCase {
         app = launch(protected() + ["-debug.tab", "activity"])
         shot("act-protected")
         scrollShot("act-protected-2")
+        // Figma 450:8574 / 450:8657: the v2 (guardian notes) list filtered.
+        app = launch(protected() + ["-debug.tab", "activity", "-debug.activityFilter", "warning"])
+        shot("act-protected-warning")
+        app = launch(protected() + ["-debug.tab", "activity", "-debug.activityFilter", "blocked"])
+        shot("act-protected-blocked")
 
         guard scenario == "figma" else { return }
         app = launch(guardian(family: false, scenario: "empty") + ["-debug.tab", "activity", "-UITestCheckStats", "YES"])
@@ -130,6 +183,8 @@ final class FigmaParityUITests: XCTestCase {
                 ("dt-unchecked", "mixed-blocked-none", guardian(family: true, scenario: "mixedVerdicts")),
                 ("dt-pribadi", "figma-me-1", guardian(family: false)),
                 ("dt-protected", "maria-1", protected()),
+                // Figma 487:5990 "Waspada (v2, tanpa pemilik)": own warning, no owner chip, no buttons.
+                ("dt-protected-warning", "maria-2", protected()),
                 ("dt-protected-verdict", "maria-3", protected()),
                 ("dt-protected-safe", "maria-5", protected()),
             ]
@@ -191,6 +246,16 @@ final class FigmaParityUITests: XCTestCase {
         shot("pf-protected")
         scrollShot("pf-protected-2")
 
+        // Protected pages (Figma 455:9515 "Akun Tertaut", 462:11043 Kelola profil, 455:9627 Notifikasi).
+        for (name, id) in [
+            ("pf-protected-connection", "profile.connectedPill"), ("pf-protected-manage", "Kelola profil"),
+            ("pf-protected-notifications", "Notifikasi"),
+        ] {
+            app = launch(protected() + ["-debug.profile", "YES"])
+            let opened = id.hasPrefix("profile.") ? tapIfExists(app.buttons[id]) : tapText(app, id)
+            if opened { shot(name) } else { XCTFail("no row \(id)") }
+        }
+
         launch(guardian(family: true, scenario: "empty") + ["-debug.profile", "YES"])
         shot("pf-guardian-empty")
 
@@ -244,6 +309,15 @@ final class FigmaParityUITests: XCTestCase {
     /// Mock latency is 300 ms; give lists, images and the page copy time to draw.
     private func settle() {
         Thread.sleep(forTimeInterval: 2)
+    }
+
+    /// Drags the page down past the keyboard (`scrollDismissesKeyboard(.interactively)`): the number pad
+    /// has no return key.
+    @MainActor
+    private func dismissKeyboard(_ app: XCUIApplication) {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.99))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.1)
     }
 
     @MainActor

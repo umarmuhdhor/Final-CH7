@@ -27,6 +27,7 @@ struct InviteSheet: View {
                     Text("Scan the QR code or send the link")
                         .onboardingFont(27, weight: .medium, relativeTo: .title)
                         .tracking(-0.27)
+                        .figmaLineHeight(29.7, glyphOffset: -2.7, relativeTo: .title)
                         .multilineTextAlignment(.center)
                         .foregroundStyle(OnboardingTheme.ink)
                         .accessibilityAddTraits(.isHeader)
@@ -36,15 +37,18 @@ struct InviteSheet: View {
                         .padding(.horizontal, 25)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 16)
+                // Figma: the headline 32 pt under the toolbar.
+                .padding(.top, 32)
                 .frame(maxWidth: 400)
                 .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
             .safeAreaInset(edge: .bottom) {
+                // Figma "App Icon Row": 18 above the icons; the names end 80 pt above the screen bottom.
                 shareRow
                     .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
+                    .padding(.top, 18)
+                    .padding(.bottom, 46)
                     .background(OnboardingTheme.background)
             }
             .background(OnboardingTheme.background.ignoresSafeArea())
@@ -90,14 +94,16 @@ struct InviteSheet: View {
                         .interpolation(.none)
                         .resizable()
                         .scaledToFit()
-                        .padding(28)
+                        // Figma: the code's modules span 240 pt of the 311 × 303 card.
+                        .padding(.horizontal, 25)
+                        .padding(.vertical, 21)
                         .accessibilityLabel(Text("QR code to join your family"))
                         .accessibilityIdentifier("invite.qr")
                 }
             }
             Text(verbatim: FamilyCodeModel.display(code.code))
-                .onboardingFont(20, weight: .bold, relativeTo: .title3)
-                .tracking(-0.4)
+                // Figma "SF Pro Text Bold 20", -2 %.
+                .onboardingFont(20, weight: .bold, tracking: -0.4, family: .text, relativeTo: .title3)
                 .monospacedDigit()
                 .foregroundStyle(OnboardingTheme.ink)
                 .frame(maxWidth: .infinity, minHeight: 56)
@@ -111,7 +117,8 @@ struct InviteSheet: View {
                 } label: {
                     Label("Refresh code", systemImage: "arrow.clockwise")
                 }
-                .buttonStyle(OnboardingLinkButtonStyle(color: Self.refreshBlue, weight: .semibold))
+                // Figma "Refresh Kode": SF Pro Display Semibold 15, no tracking.
+                .buttonStyle(OnboardingLinkButtonStyle(color: Self.refreshBlue, weight: .semibold, family: .display, tracking: 0))
                 .accessibilityIdentifier("invite.refresh")
                 Text("Valid for \(model.timeLeft)")
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
@@ -230,11 +237,12 @@ private struct ShareTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 7) {
                 icon
                     .frame(width: 66, height: 66)
+                // Figma "App Name": SF Pro Regular 11, the system share sheet's label.
                 Text(title)
-                    .onboardingFont(11, relativeTo: .caption2)
+                    .onboardingFont(11, family: .sfPro, relativeTo: .caption2)
                     .foregroundStyle(OnboardingTheme.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

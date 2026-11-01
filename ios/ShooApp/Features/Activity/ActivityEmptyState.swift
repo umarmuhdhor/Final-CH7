@@ -90,8 +90,10 @@ struct ActivityEmptyState: View {
                     .activityFont(15)
                     .lineSpacing(3)
                     .foregroundStyle(ActivityStyle.secondary)
-                    // Figma 296 pt in SF Pro Display; the app's SF Text runs wider, so the lines break alike at 326.
-                    .frame(maxWidth: 326)
+                    // Figma 296 pt; `activityFont` draws the Display cut, so the lines break as in Figma.
+                    .frame(maxWidth: 296)
+                    // Figma 140 % lines (21 pt): the half-leading above the first and below the last line.
+                    .padding(.vertical, 1.5)
             }
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)

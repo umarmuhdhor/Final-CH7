@@ -22,6 +22,12 @@ enum ActivityNote: Equatable {
         }
     }
 
+    /// "… link ini aman. Shoo tetap tak menyarankan …" runs on two 15 pt lines in Figma (450:8657).
+    var isTwoLine: Bool {
+        if case .safe = self { return true }
+        return false
+    }
+
     /// Figma (icon, icon circle, stroke, text).
     fileprivate var colors: (icon: Color, circle: Color, stroke: Color, text: Color) {
         switch self {
@@ -59,7 +65,7 @@ struct ActivityNoteView: View {
         let colors = note.colors
         HStack(spacing: 8) {
             Image(systemName: "info.circle")
-                .activityFont(12)
+                .activityFont(12.8)
                 .foregroundStyle(colors.icon)
                 .frame(width: 21, height: 21)
                 .background(colors.circle, in: Circle())
@@ -67,20 +73,23 @@ struct ActivityNoteView: View {
             note.text(language: language)
                 .activityFont(13, tracking: -0.1625)
                 .foregroundStyle(colors.text)
-                .lineSpacing(2)
+                // Figma: 15 pt lines, about the font's own line height.
+                .lineSpacing(0)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        // Figma: icon circle 9 pt in from the left, 7 pt from the top of the 34 pt strip.
+        .padding(.leading, 9)
+        .padding(.trailing, 8)
+        .padding(.vertical, note.isTwoLine ? 10 : 6)
         .frame(minHeight: 34)
         .background(.white, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(colors.stroke))
     }
 }
 
-/// Own list: "Diblokir" as Figma's solid red "Red Button" (white text). A blocked site the
-/// guardian marked safe keeps the word but turns grey (Figma: the same button in Luminosity).
+/// Own list: "Diblokir" as Figma's solid red "Red Button", white text only, no icon (450:8443). A blocked
+/// site the guardian marked safe keeps the word but turns grey (Figma: the same button in Luminosity).
 struct ActivityBlockedPill: View {
     let markedSafe: Bool
 
@@ -91,21 +100,16 @@ struct ActivityBlockedPill: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .activityFont(10, .semibold)
-                .accessibilityHidden(true)
-            Text("Blocked")
-                .activityFont(13, tracking: -0.1625)
-                .lineLimit(1)
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(minHeight: 23)
-        .background(LinearGradient(colors: colors, startPoint: .bottom, endPoint: .top), in: Capsule())
-        .overlay(Capsule().stroke(colors[0], lineWidth: 0.75))
-        .fixedSize()
+        Text("Blocked")
+            .activityFont(13, tracking: -0.1625)
+            .lineLimit(1)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(minHeight: 23)
+            .background(LinearGradient(colors: colors, startPoint: .bottom, endPoint: .top), in: Capsule())
+            .overlay(Capsule().strokeBorder(colors[0], lineWidth: 0.75))
+            .fixedSize()
     }
 }
 

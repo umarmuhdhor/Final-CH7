@@ -35,10 +35,10 @@ struct NameView: View {
                     .scaledToFit()
                     .frame(width: 100, height: 100)
                     .accessibilityHidden(true)
-                    .padding(.top, 34)
+                    .padding(.top, 32)
 
                 avatarPicker
-                    .padding(.top, 40)
+                    .padding(.top, 42)
 
                 nameField
                     .padding(.top, 33)
@@ -66,9 +66,9 @@ struct NameView: View {
     }
 
     private var avatarPicker: some View {
-        HStack(spacing: 0) {
+        // Figma "Frame 8": four 80 pt avatars, 12 apart, 1 pt wider than the content on each side.
+        HStack(spacing: 12) {
             ForEach(Array(OnboardingAvatar.ids.enumerated()), id: \.element) { index, id in
-                if index > 0 { Spacer(minLength: 8) }
                 AvatarChoice(
                     imageName: OnboardingAvatar.imageName(for: id),
                     number: index + 1,
@@ -79,6 +79,7 @@ struct NameView: View {
                 .accessibilityIdentifier("name.avatar.\(index + 1)")
             }
         }
+        .padding(.horizontal, -1)
     }
 
     private var nameField: some View {
@@ -87,8 +88,8 @@ struct NameView: View {
                 TextField(text: $model.name) {
                     Text("Write your name").foregroundStyle(OnboardingTheme.placeholder)
                 }
-                .onboardingFont(17, relativeTo: .body)
-                .tracking(-0.34)
+                // Figma "SF Pro Text Regular 17", -2 %.
+                .onboardingFont(17, tracking: -0.34, family: .text, relativeTo: .body)
                 .foregroundStyle(OnboardingTheme.ink)
                 .tint(OnboardingTheme.ink)
                 .textContentType(.givenName)
@@ -120,20 +121,23 @@ struct NameView: View {
             .shadow(color: Color(hex: 0x784650, opacity: 0.04), radius: 1, y: 1)
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(visibleProblem == nil ? OnboardingTheme.ink.opacity(0.25) : Color.red, lineWidth: 1)
+                    .strokeBorder(visibleProblem == .empty ? Color.red : OnboardingTheme.ink.opacity(0.25), lineWidth: 1)
             }
             .contentShape(Rectangle())
             .onTapGesture { focused = true }
 
-            if let message = problemMessage {
+            // Figma "Atur Nama · nama terlalu panjang": too long shows the limit as a plain note under the
+            // field (no red); while typing within the limit there is no note ("Atur Nama · mengetik").
+            if visibleProblem == .tooLong {
+                Text("*Your name can be up to 20 characters")
+                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .foregroundStyle(OnboardingTheme.noteInk)
+                    .accessibilityIdentifier("name.error")
+            } else if let message = problemMessage {
                 Label { Text(message) } icon: { Image(systemName: "exclamationmark.circle.fill") }
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .foregroundStyle(.red)
                     .accessibilityIdentifier("name.error")
-            } else if !model.name.isEmpty {
-                Text("*Your name can be up to 20 characters")
-                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-                    .foregroundStyle(OnboardingTheme.ink)
             }
         }
     }
@@ -152,7 +156,8 @@ struct NameView: View {
     }
 }
 
-/// One 79 pt memoji; the chosen one gets the green ring from Figma ("Main Avatar", stroke #2CBF81 → #8EE9EC).
+/// One 80 pt memoji (smaller on narrow screens); the chosen one gets the green ring from Figma ("Main Avatar",
+/// stroke #2CBF81 → #8EE9EC), the others a white one, both 2.67 pt.
 private struct AvatarChoice: View {
     let imageName: String
     let number: Int
@@ -164,13 +169,14 @@ private struct AvatarChoice: View {
             Image(imageName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 79, height: 79)
+                .frame(maxWidth: 80, maxHeight: 80)
                 .overlay {
-                    Circle()
-                        .strokeBorder(OnboardingTheme.avatarRing, lineWidth: 3)
-                        .opacity(isSelected ? 1 : 0)
+                    if isSelected {
+                        Circle().strokeBorder(OnboardingTheme.avatarRing, lineWidth: 2.67)
+                    } else {
+                        Circle().strokeBorder(OnboardingTheme.card, lineWidth: 2.67)
+                    }
                 }
-                .scaleEffect(isSelected ? 1 : 0.94)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Avatar \(number)"))
