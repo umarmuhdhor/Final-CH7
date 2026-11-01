@@ -195,17 +195,29 @@ export interface ReplicaQuota {
  * EX-07 pre-check before the IP limit and the inflate (cheap first, K5): the owner's replica of this
  * domain from the last 24 h to reuse, and whether the owner has a family link (Protected with a
  * Guardian, or Guardian with members). Without one nobody else can ever see the replica.
+ * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
+ * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
+ * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (6, 0) stays the final
+ * word, so a race costs at most one inflate, as before.
  * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
  * the same moment may keep or drop one replica.
  */
 export async function precheckReplica(
   sql: Sql,
   scan: { ownerId: string; domain: string },
-): Promise<{ reuse: string | undefined; family: boolean }> {
-  const [row] = await sql<{ reuse: string | null; family: boolean }[]>`
+  bytes: number,
+  quota: ReplicaQuota,
+): Promise<{ reuse: string | undefined; family: boolean; quota: ReplicaQuotaReason | undefined }> {
+  const [row] = await sql<({ reuse: string | null; hasFamily: boolean } & ReplicaCounts)[]>`
     select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse,
-           exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as family`;
-  return { reuse: row?.reuse ?? undefined, family: row?.family ?? false };
+           exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as "hasFamily",
+           c.*
+    from (${replicaCountsQuery(sql, scan.ownerId)}) c`;
+  // An aggregate without group by: always exactly one row. The counts also run for a reuse or a
+  // device without family, where they are not used: one index-only pass, cheaper than a second trip.
+  const r = row!;
+  const reuse = r.reuse ?? undefined;
+  return { reuse, family: r.hasFamily, quota: reuse || !r.hasFamily ? undefined : quotaFull(r, bytes, quota) };
 }
 
 /**
@@ -268,7 +280,12 @@ interface ReplicaCounts {
  * comes from family_links in SQL, never as a JS array parameter (fetch_types: false, db/client.ts).
  */
 async function replicaCounts(sql: Q, ownerId: string): Promise<ReplicaCounts> {
-  const [r] = await sql<ReplicaCounts[]>`
+  const [r] = await sql<ReplicaCounts[]>`${replicaCountsQuery(sql, ownerId)}`;
+  return r!;
+}
+
+/** The statement of replicaCounts as a fragment, so precheckReplica can run it as a subquery. */
+const replicaCountsQuery = (sql: Q, ownerId: string) => sql`
     with root as (
       select coalesce((select guardian_id from family_links where protected_id = ${ownerId}), ${ownerId}) as id
     ), members as (
@@ -283,8 +300,6 @@ async function replicaCounts(sql: Q, ownerId: string): Promise<ReplicaCounts> {
            coalesce(sum(s.replica_bytes), 0)::float8 as "allBytes"
     from scans s
     where s.replica_bytes is not null and s.created_at > now() - interval '24 hours'`;
-  return r!;
-}
 
 /** Fase 19 K4 order. The reserve (K3) is the last part of the global quota, open to light families only. */
 function quotaFull(c: ReplicaCounts, bytes: number, q: ReplicaQuota): ReplicaQuotaReason | undefined {
