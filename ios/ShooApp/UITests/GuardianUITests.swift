@@ -29,40 +29,51 @@ final class GuardianUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["home.securityStatus"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["shield.guardian"].exists)
         app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["family.header"].waitForExistence(timeout: 5), app.debugDescription)
+        // Family Home (Figma 435:20373): the fixture's sites are older than a day, so no card waits.
+        XCTAssertTrue(app.descendants(matching: .any)["home.family.protected"].waitForExistence(timeout: 5), app.debugDescription)
 
         app.terminate()
         app = launch(familyMode: nil)
-        XCTAssertTrue(app.descendants(matching: .any)["family.header"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["home.family.protected"].waitForExistence(timeout: 10), app.debugDescription)
         // Leave it off for the next run.
         app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 5))
     }
 
     @MainActor
-    func testFamilyCardOpensDetailWithVerdictButtons() {
-        let app = launch(familyMode: true)
-        let mom = app.buttons["family.member.dev_mom"]
-        XCTAssertTrue(mom.waitForExistence(timeout: 10), app.debugDescription)
-        let dad = app.descendants(matching: .any)["family.member.dev_dad"]
-        XCTAssertTrue(dad.exists)
-        XCTAssertTrue(dad.label.contains("Not connected"), dad.debugDescription)
-        XCTAssertFalse(mom.label.contains("Not connected"), mom.debugDescription)
-
-        mom.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 5))
+    func testPendingCardOpensDetailWithVerdictButtons() {
+        // A member's site from today still waits for a verdict (Figma 435:20899).
+        let app = launch(familyMode: true, extra: ["-mock.scenario", "mixedVerdicts"])
+        let card = app.buttons["home.pending"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10), app.debugDescription)
+        app.dismissNotificationsReminder()
+        XCTAssertTrue(app.buttons["home.verdict.notSafe"].exists)
+        XCTAssertTrue(app.buttons["home.verdict.safe"].exists)
+        app.tap(card, until: app.descendants(matching: .any)["detail.header"])
         // Guardian validates family items from Detail (GD-07, fase 03).
         XCTAssertTrue(app.buttons["detail.verdict.notSafe"].waitForExistence(timeout: 5))
     }
 
     @MainActor
+    func testFamilyRowShowsWhoIsConnected() {
+        // Every site decided: no card, so the people row shows (Figma 435:20373).
+        let app = launch(familyMode: true, extra: ["-mock.scenario", "allSafe"])
+        XCTAssertTrue(app.descendants(matching: .any)["home.family.protected"].waitForExistence(timeout: 10), app.debugDescription)
+        app.dismissNotificationsReminder()
+        let row = app.descendants(matching: .any)["family.header"]
+        XCTAssertTrue(row.exists, app.debugDescription)
+        let people = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'family.member.'"))
+        XCTAssertGreaterThan(people.count, 0, app.debugDescription)
+        XCTAssertTrue(people.firstMatch.label.contains("Active") || people.firstMatch.label.contains("Not connected"), people.firstMatch.label)
+    }
+
+    @MainActor
     func testEmptyFamilyOffersInvite() {
         let app = launch(familyMode: true, extra: ["-mock.scenario", "empty"])
-        let invite = app.buttons["family.invite"]
-        XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
-        invite.tap()
-        // GD-04 (fase 14): the family code sheet.
-        XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 5), app.debugDescription)
+        // GD-04 inline on Home (Figma 435:20630): code, QR, Share / Copy, how it works.
+        XCTAssertTrue(app.staticTexts["familyCode.code"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["family.invite"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["home.family.empty"].exists)
     }
 
     @MainActor
@@ -93,17 +104,6 @@ final class GuardianUITests: XCTestCase {
         picker.tap()
         app.buttons["person.everyone"].tap()
         XCTAssertEqual(picker.value as? String, "Everyone")
-    }
-
-    @MainActor
-    func testHomeDisconnectShowsTheSwitchOffGuide() {
-        let app = launch(familyMode: false)
-        let disconnect = app.buttons["home.disconnect"]
-        XCTAssertTrue(disconnect.waitForExistence(timeout: 10), app.debugDescription)
-        disconnect.tap()
-        XCTAssertTrue(app.buttons["turnOff.openSettings"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["turnOff.close"].tap()
-        XCTAssertTrue(disconnect.waitForExistence(timeout: 5))
     }
 
     @MainActor

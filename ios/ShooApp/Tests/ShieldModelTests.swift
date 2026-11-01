@@ -51,14 +51,30 @@ struct ShieldModelTests {
         #expect(card.ownerDeviceId == "dev_mom")
     }
 
-    @Test func reasonUsesTheStrongestSimpleSignals() async throws {
-        let model = model()
+    @Test func countsAndRecentComeFromOwnScans() async throws {
+        let repository = MockRepository(mode: .protected, latency: .zero)
+        let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
         await model.refresh()
-        let card = try #require(model.lastBlocked)
-        let reasons = model.reasons(for: card, language: .english)
-        let expected = card.signals.sorted { $0.weight > $1.weight }.prefix(2).map { $0.labelSimple.en }
-        #expect(reasons == Array(expected))
-        #expect(model.reasons(for: card, language: .indonesian).first == card.signals.max { $0.weight < $1.weight }?.labelSimple.id)
+        let own = try await repository.scans(owner: .me, status: nil, cursor: nil).items
+        #expect(model.counts.blocked == own.filter { $0.status == .blocked }.count)
+        #expect(model.counts.warnings == own.filter { $0.status == .warning }.count)
+        #expect(model.counts.blockedVerified <= model.counts.blocked)
+        #expect(model.recent.count == min(own.count, ShieldModel.recentCount))
+        #expect(model.recent.map(\.detectedAt) == model.recent.map(\.detectedAt).sorted(by: >))
+    }
+
+    @Test func blockedCardOnlyForTheLastDay() async throws {
+        let repository = MockRepository(mode: .protected, latency: .zero)
+        let probe = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
+        await probe.refresh()
+        let blocked = try #require(probe.lastBlocked)
+        let soon = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) }, now: { blocked.detectedAt.addingTimeInterval(60) })
+        await soon.refresh()
+        #expect(soon.recentBlocked?.id == blocked.id)
+        let later = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) },
+                                now: { blocked.detectedAt.addingTimeInterval(ShieldModel.blockedCardWindow + 60) })
+        await later.refresh()
+        #expect(later.recentBlocked == nil)
     }
 
     @Test func nothingBlockedYet() async {

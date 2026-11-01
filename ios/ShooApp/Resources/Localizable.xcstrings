@@ -4930,6 +4930,196 @@
           }
         }
       }
+    },
+    "Protect your loved ones" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi Orang Terdekat"
+          }
+        }
+      }
+    },
+    "No one to protect yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada yang kamu lindungi"
+          }
+        }
+      }
+    },
+    "Family needs confirmation" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga Butuh Konfirmasi"
+          }
+        }
+      }
+    },
+    "Family protected!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga Terlindungi!"
+          }
+        }
+      }
+    },
+    "Family status:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status Keluarga :"
+          }
+        }
+      }
+    },
+    "No members yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum ada anggota"
+          }
+        }
+      }
+    },
+    "needs confirmation" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "perlu konfirmasi"
+          }
+        }
+      }
+    },
+    "All safe!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua Aman!"
+          }
+        }
+      }
+    },
+    "Recent scans" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan terakhir"
+          }
+        }
+      }
+    },
+    "Opens their activity" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Membuka aktivitasnya"
+          }
+        }
+      }
+    },
+    "Invite code · valid for %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode undangan · berlaku %@"
+          }
+        }
+      }
+    },
+    "Share" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan"
+          }
+        }
+      }
+    },
+    "How it works" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cara Kerja"
+          }
+        }
+      }
+    },
+    "Share the code or QR with your family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bagikan kode atau QR ke keluarga"
+          }
+        }
+      }
+    },
+    "They install Shoo and enter the code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mereka pasang Shoo dan masukkan kode"
+          }
+        }
+      }
+    },
+    "You hear about it when they open a dangerous site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu dapat kabar saat mereka membuka situs berbahaya"
+          }
+        }
+      }
+    },
+    "Connected with %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung dengan %@"
+          }
+        }
+      }
+    },
+    "will check it again, but you still shouldn't open this link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "akan mengecek kembali, tetapi Anda tetap tidak disarankan untuk membuka link ini"
+          }
+        }
+      }
+    },
+    "%lld verified by %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld diverifikasi oleh %2$@"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

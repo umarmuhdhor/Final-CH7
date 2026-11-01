@@ -5,7 +5,15 @@ import SwiftUI
 /// the glass. Off ("Perlindungan sedang mati", node 480:5592): grey with a power symbol in the dots, still.
 /// Reduce Motion keeps the On look without movement.
 struct HalftoneShield: View {
+    /// Core colours per screen: blue (Activity, own Home), teal (Family Home), orange (a family site waits).
+    enum Tint {
+        case blue
+        case teal
+        case orange
+    }
+
     var isOn = true
+    var tint: Tint = .blue
 
     @Environment(\.shooReduceMotion) private var reduceMotion
 
@@ -15,7 +23,7 @@ struct HalftoneShield: View {
     var body: some View {
         TimelineView(.animation(paused: !isOn || reduceMotion)) { context in
             let time = isOn && !reduceMotion ? context.date.timeIntervalSinceReferenceDate : nil
-            ShieldLayers(palette: isOn ? .on : .off, time: time)
+            ShieldLayers(palette: isOn ? ShieldPalette.palette(for: tint) : .off, time: time)
         }
         .frame(width: Self.size.width, height: Self.size.height)
         .accessibilityHidden(true)
@@ -218,6 +226,26 @@ private struct ShieldPalette {
         coreBottom: ActivityStyle.hex(0x0F55B0), coreStroke: ActivityStyle.hex(0x1E6CB0),
         dots: decode(onDots)
     )
+    /// Figma "Guardian/Home" 435:20469 (teal) and "Keluarga butuh konfirmasi" 435:21081 (orange).
+    static let teal = ShieldPalette(
+        glow: ActivityStyle.hex(0x058C99), coreTop: ActivityStyle.hex(0x3ED6D2),
+        coreBottom: ActivityStyle.hex(0x05737C), coreStroke: ActivityStyle.hex(0x0D8F93),
+        dots: on.dots
+    )
+    static let orange = ShieldPalette(
+        glow: ActivityStyle.hex(0xFF8C00), coreTop: ActivityStyle.hex(0xFFD27A),
+        coreBottom: ActivityStyle.hex(0xE07800), coreStroke: ActivityStyle.hex(0xC46700),
+        dots: on.dots
+    )
+
+    static func palette(for tint: HalftoneShield.Tint) -> ShieldPalette {
+        switch tint {
+        case .blue: on
+        case .teal: teal
+        case .orange: orange
+        }
+    }
+
     static let off = ShieldPalette(
         glow: ActivityStyle.hex(0x54667D), coreTop: ActivityStyle.hex(0xB4BFCC),
         coreBottom: ActivityStyle.hex(0x56677B), coreStroke: ActivityStyle.hex(0x55677D),

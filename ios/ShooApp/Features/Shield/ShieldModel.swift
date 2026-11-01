@@ -1,7 +1,8 @@
 import Foundation
 import Observation
 
-/// Protected Home (PR-04): extension status, the guardian, and the last blocked site.
+/// Protected Home (PR-04, Figma "protected/Home" 441:3800): extension status, the guardian, the site blocked
+/// in the last 24 h, the counts, and recent activity. All from `GET /scans?owner=me`.
 @MainActor
 @Observable
 final class ShieldModel {
@@ -15,17 +16,66 @@ final class ShieldModel {
     private(set) var extensionStatus: ExtensionStatus = .off(lastSeen: nil)
     /// `GET /devices/me` → `guardian`; `nil` when not (or no longer) connected.
     private(set) var guardian: GuardianInfo?
-    /// Newest `blocked` scan of this device.
-    private(set) var lastBlocked: ScanResult?
+    /// For the profile initial top right.
+    private(set) var profileName: String?
+    /// This device's scans the server still keeps (14-day retention), newest first.
+    private(set) var scans: [ScanResult] = []
+
+    /// The two Figma tiles; `verified` = how many of them the guardian already looked at.
+    struct Counts: Equatable {
+        var blocked = 0
+        var blockedVerified = 0
+        var warnings = 0
+        var warningsVerified = 0
+    }
+
+    /// The blocked card shows a site for this long after it was blocked.
+    static let blockedCardWindow: TimeInterval = 24 * 60 * 60
+    /// Enough for 14 days of one person; stops a runaway cursor.
+    static let maxPages = 10
+    static let recentCount = 3
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let readExtensionStatus: () async -> ExtensionStatus
     @ObservationIgnored private var generation = 0
 
-    init(repository: any ShooRepository, extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() }) {
+    @ObservationIgnored private let now: () -> Date
+
+    init(
+        repository: any ShooRepository,
+        extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
+        now: @escaping () -> Date = Date.init
+    ) {
         self.repository = repository
         readExtensionStatus = extensionStatus
+        self.now = now
     }
+
+    // MARK: Derived
+
+    /// Newest `blocked` scan of this device.
+    var lastBlocked: ScanResult? {
+        scans.filter { $0.status == .blocked }.max { $0.detectedAt < $1.detectedAt }
+    }
+
+    /// The big card: the newest blocked site of the last 24 h.
+    var recentBlocked: ScanResult? {
+        guard let scan = lastBlocked, scan.detectedAt >= now().addingTimeInterval(-Self.blockedCardWindow) else { return nil }
+        return scan
+    }
+
+    var counts: Counts {
+        let blocked = scans.filter { $0.status == .blocked }
+        let warnings = scans.filter { $0.status == .warning }
+        return Counts(
+            blocked: blocked.count,
+            blockedVerified: blocked.filter { $0.verdict != nil }.count,
+            warnings: warnings.count,
+            warningsVerified: warnings.filter { $0.verdict != nil }.count
+        )
+    }
+
+    var recent: [ScanResult] { Array(scans.prefix(Self.recentCount)) }
 
     /// On appear and every time the app comes back to the foreground.
     /// Overlapping calls: only the newest one is applied.
@@ -37,11 +87,12 @@ final class ShieldModel {
         guard request == generation else { return }
         do {
             async let profile = repository.me()
-            async let blocked = repository.scans(owner: .me, status: .blocked, cursor: nil)
-            let (me, page) = try await (profile, blocked)
+            async let all = allScans()
+            let (me, loaded) = try await (profile, all)
             guard request == generation else { return }
             guardian = me.guardian
-            lastBlocked = page.items.first
+            profileName = me.name
+            scans = loaded.sorted { $0.detectedAt > $1.detectedAt }
             state = .loaded
         } catch {
             guard request == generation, !error.isCancellation else { return }
@@ -57,11 +108,15 @@ final class ShieldModel {
         await refresh()
     }
 
-    /// "Why blocked" on the card: the one or two strongest signals in simple words.
-    func reasons(for scan: ScanResult, language: AppLanguage) -> [String] {
-        scan.signals
-            .sorted { $0.weight > $1.weight }
-            .prefix(2)
-            .map { $0.labelSimple.text(for: language.code) }
+    private func allScans() async throws -> [ScanResult] {
+        var items: [ScanResult] = []
+        var cursor: String?
+        for _ in 0..<Self.maxPages {
+            let page = try await repository.scans(owner: .me, status: nil, cursor: cursor)
+            items += page.items
+            guard let next = page.nextCursor else { break }
+            cursor = next
+        }
+        return items
     }
 }

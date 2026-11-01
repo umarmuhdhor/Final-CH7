@@ -76,6 +76,9 @@ final class FigmaParityUITests: XCTestCase {
         shot("home-guardian-pending")
         launch(guardian(family: true, scenario: "empty") + ["-debug.tab", "shield"])
         shot("home-guardian-empty")
+        // Every family site decided: no card, the people row shows (435:20373).
+        launch(guardian(family: true, scenario: "allSafe") + ["-debug.tab", "shield"])
+        shot("home-guardian-members")
     }
 
     // MARK: Activity
@@ -229,7 +232,8 @@ final class FigmaParityUITests: XCTestCase {
         app.launch()
         settle()
         // GD-01 "Notifikasi mati" popup covers Home and Activity once per launch.
-        let notNow = app.buttons["reminder.notNow"]
+        // An alert button keeps the alert's identifier, not its own: find it by its title too.
+        let notNow = app.alerts.buttons["Nanti saja"].exists ? app.alerts.buttons["Nanti saja"] : app.buttons["reminder.notNow"]
         if notNow.exists {
             notNow.tap()
             settle()
