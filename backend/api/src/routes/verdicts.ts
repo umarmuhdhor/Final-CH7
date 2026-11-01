@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import postgres from "postgres";
-import { z } from "zod";
+import * as z from "zod";
 import type { AppEnv } from "../env";
 import { decideVerdict, findVerdict, type VerdictResult } from "../db/repo/verdicts";
 import { requireDevice, requireMode } from "../http/auth";
