@@ -7,10 +7,10 @@
 
 | Sub-fase | Branch | PR | Status |
 |---|---|---|---|
-| d1 / U6 (tempel link ke kolom kode) | `fix/PR-03-invite-paste` | lihat PR | [r] PR terbuka |
-| 26-0 spike | – | – | [ ] |
-| 26a app | `feat/PR-03-deferred-invite-app` | – | [ ] |
-| 26b backend | `feat/PR-03-deferred-invite-page` | – | bukan track app |
+| d1 / U6 (tempel link ke kolom kode) | `fix/PR-03-invite-paste` | #208 | dibatalkan (ditutup 1 Nov 2026) |
+| 26-0 spike | – | – | dibatalkan |
+| 26a app | `feat/PR-03-deferred-invite-app` | #220 | dibatalkan (ditutup 1 Nov 2026) |
+| 26b backend | `feat/PR-03-deferred-invite-page` | #216 | merged; teks petunjuk dikembalikan di `fix/PR-03-install-hint` |
 
 ## d1 / U6 — `fix/PR-03-invite-paste` (1 Nov 2026)
 
@@ -83,3 +83,7 @@ Dari `origin/main` aa976af (+ cherry-pick `b9987db` dari #210 supaya CI hijau). 
 
 - [ ] 1. **(Umar)** Jawab Q1/Q2 di PR 26b (`## Questions for Umar`). Kalau Q1 = link publik TestFlight: Alief mengisi `APP_STORE_URL` di `backend/api/wrangler.jsonc` (var publik, bukan secret) lewat PR kecil; deploy hanya lewat CI.
 - [ ] 2. **(Alief, setelah merge + CI deploy)** `curl -s https://shoo-api.afindo-mi01.workers.dev/j/482193 | grep -o 'class="hint">[^<]*'` → teks baru; `curl -s https://shoo-api.afindo-mi01.workers.dev/j/482193 | grep -o 'id="install" href="[^"]*"'` dan `curl -sI https://shoo-api.afindo-mi01.workers.dev/get | grep -i '^location'` → link store sama.
+
+## Pembatalan 26a (1 Nov 2026)
+
+Alief menutup #220 (kartu "Tempel undangan" setelah install) dan #208 (U6) yang jadi dasarnya. Tanpa tombol Tempel di app, petunjuk 26b di halaman `/j/<kode>` ("open Shoo and tap Paste") menyuruh orang mengetuk tombol yang tidak ada. `fix/PR-03-install-hint` mengganti petunjuk itu: link undangan tetap disalin saat ketuk Install, lalu orang membuka link itu lagi setelah install (EN + ID). Tes Q1 TestFlight dari 26b tetap.
