@@ -188,14 +188,15 @@ extension WebKitTests {
         @Test func windowKeepsLeadInAboveTheFocus() {
             let kept = ReplicaSnapshot.window(focusY: 5000, zoom: 1, contentHeight: 20_000)
             #expect(kept.top == 4400)
-            #expect(kept.height == 3000)
+            // fase 22 K7 (a): 1800 pt at the full 390 pt width, the same pixels as 3000 pt at 200 pt.
+            #expect(kept.height == 1800)
         }
 
         @Test func windowStaysInsideThePage() {
             let short = ReplicaSnapshot.window(focusY: 900, zoom: 1, contentHeight: 1200)
             #expect(short == (top: 0, height: 1200))
             let end = ReplicaSnapshot.window(focusY: 19_900, zoom: 1, contentHeight: 20_000)
-            #expect(end == (top: 17_000, height: 3000))
+            #expect(end == (top: 18_200, height: 1800))
             let nan = ReplicaSnapshot.window(focusY: .nan, zoom: 1, contentHeight: 20_000)
             #expect(nan.top == 0)
         }
@@ -236,6 +237,32 @@ extension WebKitTests {
             #expect(bottom.red > 0.9 && bottom.green < 0.1)
             let top = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.1)))
             #expect(top.red > 0.9 && top.green > 0.9)
+        }
+
+        /// fase 22 K7 (a): a long page is kept at full width, `windowHeight` tall, from `leadIn` above the focus.
+        @Test func longPageIsKeptAtFullWidthAroundTheFocus() async throws {
+            let html = """
+                <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>\
+                <body style="margin:0"><div style="height:2500px;background:#ffffff"></div>\
+                <div style="height:2500px;background:#ff0000"></div></body></html>
+                """
+            let locked = try #require(ReplicaHTML.locked(html))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let meta = ReplicaMeta(
+                url: nil, capturedAt: Date(), focusY: 2500, truncated: false,
+                marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 2500, width: 390, height: 100))]
+            )
+            let copy = try #require(await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window))
+            #expect(ReplicaSnapshot.imageWidth == ReplicaSnapshot.renderWidth)
+            #expect(abs(copy.image.size.width - 390) < 1)
+            #expect(abs(copy.image.size.height - ReplicaSnapshot.windowHeight) < 2)
+            // The picture starts 600 pt above the focus: the mark sits at `leadIn`.
+            #expect(copy.marks.first?.rect.minY == ReplicaSnapshot.leadIn)
+            let above = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.2)))
+            #expect(above.red > 0.9 && above.green > 0.9)
+            let below = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.5)))
+            #expect(below.red > 0.9 && below.green < 0.1)
         }
 
         /// A cancelled render stops at once, says why, and leaves no web view behind.

@@ -340,6 +340,15 @@ struct DetailView: View {
 
     // MARK: Page copy and screenshot
 
+    /// Up to 3 MB of device-written text, locked and read off the main actor (nonisolated async runs on the
+    /// global executor, SE-0338; mark it `@concurrent` under Swift 6.2 `NonisolatedNonsendingByDefault`).
+    /// Unlike the old `Task.detached`, closing Detail cancels it: no meta scan after the lock, and `nil`
+    /// means no render (fase 22 C14).
+    nonisolated static func prepare(_ html: String) async -> (locked: String?, meta: ReplicaMeta?) {
+        guard !Task.isCancelled, let locked = ReplicaHTML.locked(html), !Task.isCancelled else { return (nil, nil) }
+        return (locked, ReplicaMeta.read(from: html))
+    }
+
     private var pageImage: UIImage? { pageCopy?.image ?? screenshot }
 
     /// fase 18b: fetch, lock, draw once, keep the picture. A failed link may only have expired: the model
@@ -357,10 +366,7 @@ struct DetailView: View {
         copyState = .loading
         do {
             let html = try await pageLoader.html(at: url)
-            // Up to 3 MB of device-written text: checked off the main thread.
-            let (locked, meta) = await Task.detached(priority: .userInitiated) {
-                (ReplicaHTML.locked(html), ReplicaMeta.read(from: html))
-            }.value
+            let (locked, meta) = await Self.prepare(html)
             guard let locked,
                   let ruleList = await ReplicaRules.compiled(),
                   let window = ReplicaSnapshot.keyWindow,

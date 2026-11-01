@@ -19,13 +19,14 @@ struct PageCopy {
 enum ReplicaSnapshot {
     /// Same width as the iPhone the extension copied from, so the page lays out as it did there.
     static let renderWidth: CGFloat = 390
-    /// Most of the page we keep, in view points, around the focus.
-    static let windowHeight: CGFloat = 3000
+    /// Most of the page we keep, in view points, around the focus (fase 22 K7 a).
+    static let windowHeight: CGFloat = 1800
     /// How much of the page above the focus stays in the picture.
     static let leadIn: CGFloat = 600
-    /// Picture width in points (× screen scale in pixels): sharp on the 270 pt card. At 3× a full
-    /// 3000 pt window is about 600 × 4600 px (≈ 11 MB), held only while Detail is open.
-    static let imageWidth: CGFloat = 200
+    /// Picture width in points (× screen scale in pixels): the full `renderWidth`, so the 270 pt card and
+    /// the full screen view (up to 440 pt) are sharp. At 3× a full window is 1170 × 5400 px (≈ 25 MB),
+    /// held only while Detail is open (fase 22 K7 a).
+    static let imageWidth: CGFloat = renderWidth
     /// `didFinish` never came: show the placeholder instead of waiting forever.
     static let loadTimeout: Duration = .seconds(10)
     /// A page that stalls the content process must not keep the hidden view in the window.
@@ -64,8 +65,7 @@ enum ReplicaSnapshot {
     static func attempt(
         _ lockedHTML: String, meta: ReplicaMeta?, ruleList: WKContentRuleList, in window: UIWindow
     ) async -> Result<PageCopy, RenderFailure> {
-        let controller = ReplicaWebController(ruleList: ruleList, focusY: meta?.focusY ?? 0)
-        controller.scrollsToFocusOnFinish = false
+        let controller = ReplicaWebController(ruleList: ruleList)
         let webView = controller.webView
         // In the window (WebKit only paints views in one), outside its bounds, never seen or read out.
         webView.frame = CGRect(x: -renderWidth * 2, y: 0, width: renderWidth, height: 844)
@@ -164,7 +164,7 @@ enum ReplicaSnapshot {
 
     /// The first answer `start` gives, or `fallback` after `timeout` or when the task is cancelled.
     /// Later answers are ignored, and the timer stops with the first one.
-    private static func first<T>(
+    private static func first<T: Sendable>(
         within timeout: Duration, otherwise fallback: T, _ start: (@escaping (T) -> Void) -> Void
     ) async -> T {
         let race = Race(fallback: fallback)
@@ -180,7 +180,7 @@ enum ReplicaSnapshot {
 
 /// One answer for `ReplicaSnapshot.first`: whichever of the callback, the timer or cancellation comes first.
 @MainActor
-private final class Race<T> {
+private final class Race<T: Sendable> {
     private let fallback: T
     private var continuation: CheckedContinuation<T, Never>?
     private var timer: Task<Void, Never>?

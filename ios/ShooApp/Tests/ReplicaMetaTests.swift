@@ -150,3 +150,24 @@ struct ReplicaMetaTests {
         #expect(copied("ftp://klikbca-login.site/otp") == nil)
     }
 }
+
+/// fase 22 C14: `DetailView.prepare` locks and reads the copy off the main actor and stops when Detail closes.
+struct DetailPrepareTests {
+    @Test func preparesTheLockedPageAndItsMeta() async throws {
+        let html = ReplicaMetaTests.page(content: ReplicaMetaTests.escaped(ReplicaMetaTests.valid))
+        let (locked, meta) = await DetailView.prepare(html)
+        #expect(locked == ReplicaHTML.locked(html))
+        #expect(locked != nil)
+        #expect(meta?.focusY == 1284)
+    }
+
+    @Test func cancelledPrepareGivesNothingToRender() async {
+        let html = ReplicaMetaTests.page(content: ReplicaMetaTests.escaped(ReplicaMetaTests.valid))
+        let result = await Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await DetailView.prepare(html)
+        }.value
+        #expect(result.locked == nil)
+        #expect(result.meta == nil)
+    }
+}
