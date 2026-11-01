@@ -1,4 +1,5 @@
 import Foundation
+import os
 import Testing
 @testable import Shoo
 
@@ -103,6 +104,24 @@ struct ApiRepositoryTests {
         #expect(bodies.count == 2)
         #expect(bodies[0] == nil)
         #expect(bodies[1]?["refresh"] as? Bool == true)
+    }
+
+    /// Home, Profile and onboarding share the code: a second screen asks the server nothing while it
+    /// has more than 5 min left (the server's 6-a-minute limit), and "Refresh code" always asks.
+    @Test func familyCodeIsSharedWhileItHasTimeLeft() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(200, #"{"code":"482193","expiresAt":"2026-10-22T03:30:00Z","inviteUrl":"https://api.shoo.test/j/482193"}"#) }
+        let start = ISO8601DateFormatter().date(from: "2026-10-22T03:00:00Z")!
+        let clock = OSAllocatedUnfairLock(initialState: start)
+        let repository = ApiRepository(client: server.client(), session: server.session, now: { clock.withLock { $0 } })
+        _ = try await repository.createFamilyCode(refresh: false)
+        _ = try await repository.createFamilyCode(refresh: false)
+        #expect(server.requests.filter { $0.path == "/family/code" }.count == 1)
+        clock.withLock { $0 = start.addingTimeInterval(25 * 60) }
+        _ = try await repository.createFamilyCode(refresh: false)
+        #expect(server.requests.filter { $0.path == "/family/code" }.count == 2)
+        _ = try await repository.createFamilyCode(refresh: true)
+        #expect(server.requests.filter { $0.path == "/family/code" }.count == 3)
     }
 
     // MARK: Session follows the server

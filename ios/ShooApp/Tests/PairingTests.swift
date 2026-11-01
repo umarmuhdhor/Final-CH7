@@ -213,15 +213,57 @@ struct FamilyCodeModelTests {
         #expect(await repository.refreshes == [false, false])
     }
 
-    /// "Refresh code" replaces the code; the old one stops working on the server.
+    /// "Refresh code" replaces the code in its last 5 min; the old one stops working on the server.
     @Test func refreshReplacesTheCode() async {
         let clock = Clock()
         let repository = CodeRepository(clock: clock)
         let model = FamilyCodeModel(repository: repository, now: { clock.now })
         await model.refreshCode()
+        clock.now += 25 * 60
+        model.tick()
+        #expect(model.canReplace)
         await model.refreshCode(replace: true)
         #expect(model.code?.code == "100002")
         #expect(await repository.refreshes == [false, true])
+    }
+
+    /// While the code has more than 5 min left, "Refresh code" is locked and asks the server nothing.
+    @Test func refreshIsLockedWhileTheCodeHasTimeLeft() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now })
+        await model.refreshCode()
+        #expect(!model.canReplace)
+        #expect(model.replaceUnlocksIn == "25:00")
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100001")
+        #expect(await repository.codeCalls == 1)
+        clock.now += 25 * 60 - 1
+        model.tick()
+        #expect(!model.canReplace)
+        #expect(model.replaceUnlocksIn == "0:01")
+        clock.now += 1
+        model.tick()
+        #expect(model.canReplace)
+    }
+
+    /// rate_limited (or no connection) on a refresh keeps the code on screen: it still works.
+    @Test func failedRefreshKeepsALiveCode() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now })
+        await model.refreshCode()
+        clock.now += 26 * 60
+        model.tick()
+        await repository.failCodes(with: .api(.rateLimited, message: "Too many requests"))
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100001")
+        #expect(model.secondsLeft == 4 * 60)
+        // Ran out: nothing left to show, so "Try again".
+        clock.now += 4 * 60
+        #expect(model.tick())
+        await model.refreshCode()
+        #expect(model.codeState == .unavailable)
     }
 
     /// A phone clock far off from the server's never stalls at 0 or asks for codes in a loop.
@@ -289,7 +331,9 @@ struct FamilyCodeModelTests {
         #expect(text.contains("https://shoo-api.afindo-mi01.workers.dev/j/100001"))
         #expect(text.contains("100001"))
         #expect(model.copied)
-        // A new code means nothing copied for it yet.
+        // A new code means nothing copied for it yet ("Refresh code" unlocks in the last 5 min).
+        clock.now += 25 * 60
+        model.tick()
         await model.refreshCode(replace: true)
         #expect(!model.copied)
     }
