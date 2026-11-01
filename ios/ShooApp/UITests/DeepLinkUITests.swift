@@ -11,9 +11,7 @@ final class DeepLinkUITests: XCTestCase {
 
     @MainActor
     private func launch(mode: String) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        let app = XCUIApplication.mock([
             "-settings.onboardingCompleted", "YES",
             "-settings.onboardingConnectPassed", "YES",
             "-settings.mode", mode,
@@ -21,9 +19,8 @@ final class DeepLinkUITests: XCTestCase {
             "-settings.familyModeOn", "YES",
             "-UITestExtensionActive", "YES",
             "-UITestNotifications", "granted",
-        ]
-        app.launch()
-        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10), app.debugDescription)
+        ])
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         return app
     }
 
@@ -38,8 +35,8 @@ final class DeepLinkUITests: XCTestCase {
     @MainActor
     func testScanLinkOpensDetailWithVerdictButtonsForTheGuardian() {
         let app = launch(mode: "guardian")
-        app.buttons["profileButton"].tap()
-        XCTAssertTrue(app.buttons["profile.back"].firstMatch.waitForExistence(timeout: 5))
+        // F4: tapped as soon as Shield exists, the tap could land before the mock had loaded.
+        app.tap(app.buttons["profileButton"], until: app.buttons["profile.back"].firstMatch)
         // Profile is pushed on Shield: the link still lands on Detail.
         openLink("shoo://scan/\(Self.blocked)", in: app)
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)

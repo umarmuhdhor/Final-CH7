@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { errorInfo } from "../http/logError";
+import { opsWriter, type OpsWriter } from "../db/repo/ops";
 import { addTombstones, dueTombstones } from "../db/repo/tombstones";
 import {
   byStore, r2Store, removeTombstoned, type ScreenshotStore, screenshotStore, type StoreKind, type Stores,
@@ -65,6 +66,8 @@ export interface RetentionOptions {
   plainChunk?: number;
   shotChunk?: number;
   lockTimeoutMs?: number;
+  /** Overrides the ops_jobs writer (fase 21a); tests only. */
+  ops?: OpsWriter;
 }
 
 /**
@@ -90,6 +93,9 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
   await step("heartbeat", async () => {
     await sql`insert into ops_heartbeat (source, at) values ('cron', now()) on conflict (source) do update set at = now()`;
   });
+  // Run status for GET /ops/status (fase 21a). A failed write is one failed step like any other.
+  const ops = opts.ops ?? opsWriter;
+  await step("ops_start", () => ops.start(sql, "retention"));
   // The R2 store needs only the binding: the REPLICAS_ENABLED kill-switch never stops deletes (K21).
   const stores: Stores = { supabase: opts.store ?? screenshotStore(env), r2: opts.r2Store ?? r2Store(env) };
   // Calls left per store. Supabase: the scans step only (the tombstone step has its own TOMBSTONES cap).
@@ -138,6 +144,8 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
     }
   });
 
+  // failed = the steps that failed before this one (fase 21 K2); its own failure is logged and rethrown.
+  await step("ops_finish", () => ops.finish(sql, "retention", { failed: errors.length, backlog: result.backlog }));
   console.log(JSON.stringify({ event: "retention", ...result, failed: errors.length }));
   if (errors.length) throw errors[0];
   return result;

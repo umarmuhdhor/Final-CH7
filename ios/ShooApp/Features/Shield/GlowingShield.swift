@@ -25,7 +25,7 @@ struct GlowingShield: View {
     var isActive = true
     var width: CGFloat = 140
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var breathing = false
 
     private static let glow = Color(red: 0x8F / 255, green: 0xE9 / 255, blue: 0xEC / 255)

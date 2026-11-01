@@ -8,9 +8,7 @@ final class ProfileUITests: XCTestCase {
 
     @MainActor
     private func openProfile(mode: String, familyMode: Bool = false, language: String = "en", extra: [String] = []) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        let app = XCUIApplication.mock([
             "-settings.onboardingCompleted", "YES",
             "-settings.onboardingConnectPassed", "YES",
             "-settings.mode", mode,
@@ -20,22 +18,16 @@ final class ProfileUITests: XCTestCase {
             "-settings.theme", "light",
             "-settings.guardianCardDismissed", "NO",
             "-UITestExtensionActive", "YES",
-        ] + extra
-        app.launch()
+        ] + extra)
         let button = app.buttons["profileButton"]
-        XCTAssertTrue(button.waitForExistence(timeout: 10), app.debugDescription)
-        button.tap()
         let manage = app.buttons["profile.manage"]
-        if !manage.waitForExistence(timeout: 3) {
+        button.tapWhenHittable()
+        if !manage.waitForExistence(timeout: UITestTimeout.optional) {
             // GD-01: with notifications denied (a fresh CI simulator) the Guardian gets a "Notifications are off"
             // popup once per launch, which can swallow the tap. Close it and tap again.
-            let notNow = app.alerts.buttons["Not now"].firstMatch
-            if notNow.waitForExistence(timeout: 2) {
-                notNow.tap()
-                button.tap()
-            }
+            app.dismissNotificationsReminder()
+            app.tap(button, until: manage)
         }
-        XCTAssertTrue(manage.waitForExistence(timeout: 5), app.debugDescription)
         return app
     }
 
