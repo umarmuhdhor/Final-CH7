@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { z } from "zod";
+import * as z from "zod";
 import type { AppEnv } from "../env";
 import { claimReminder, deleteGuardianLink, deleteMember, listMembers, setMemberNotify } from "../db/repo/families";
 import { requireDevice, requireMode } from "../http/auth";

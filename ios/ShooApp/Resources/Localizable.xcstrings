@@ -2416,6 +2416,16 @@
         }
       }
     },
+    "New code in %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode baru dalam %@"
+          }
+        }
+      }
+    },
     "New code in %@ s" : {
       "comment" : "A countdown timer that counts down from 60 seconds to a new code being generated. The argument is the number of seconds remaining.",
       "extractionState" : "stale",

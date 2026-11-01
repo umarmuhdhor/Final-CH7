@@ -115,10 +115,17 @@ struct InviteSheet: View {
                     // A new code: the old one stops working, also in links already sent.
                     Task { await model.refreshCode(replace: true) }
                 } label: {
-                    Label("Refresh code", systemImage: "arrow.clockwise")
+                    if model.canReplace {
+                        Label("Refresh code", systemImage: "arrow.clockwise")
+                    } else {
+                        // Locked while the code has time left: it keeps working, so a new one isn't needed yet.
+                        Label("New code in \(model.replaceUnlocksIn)", systemImage: "lock.fill")
+                            .monospacedDigit()
+                    }
                 }
                 // Figma "Refresh Kode": SF Pro Display Semibold 15, no tracking.
-                .buttonStyle(OnboardingLinkButtonStyle(color: Self.refreshBlue, weight: .semibold, family: .display, tracking: 0))
+                .buttonStyle(OnboardingLinkButtonStyle(color: model.canReplace ? Self.refreshBlue : OnboardingTheme.secondaryInk, weight: .semibold, family: .display, tracking: 0))
+                .disabled(!model.canReplace)
                 .accessibilityIdentifier("invite.refresh")
                 Text("Valid for \(model.timeLeft)")
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)

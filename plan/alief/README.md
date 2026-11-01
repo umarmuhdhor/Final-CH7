@@ -79,8 +79,16 @@ Track **app** dan **be** jalan paralel di worktree terpisah. Track **c** (sambun
 | 16 | QA-E2E | c | `fix/QA-*` per bug | `qa/QA-E2E-<tanggal>.md`, retest | semua P0 | Sonnet 5.5 (Opus untuk fix keamanan) |
 | 17 | Ditahan | – | nanti | Live Activity lewat push | EX-03 | – |
 | 18 | Page replica | c | `feat/EX-07-replica-backend` (dari `main`, sekarang) → `fix/EX-07-app-fixtures` (ke #177, setelah #175) → `feat/DT-04-page-replica` (D-alief-C24) | `pageReplicaBase64` di `POST /scans`, R2 `shoo-replicas`, `GET /replicas/{id}`, Detail merender salinan halaman (issue #176) | EX-07, DT-04 | Opus 5.5 |
+| 19 | Kuota salinan halaman per keluarga + log alert | be | `feat/EX-07-replica-family-quota` | kuota 24 jam per keluarga (Guardian + Protected), cadangan global, gauge `replica_quota_usage` | TODO E8, SECURITY P13 | Opus 5.5 |
+| 20 | Sunset screenshot (18c) + cabut service_role | c | `fix/EX-07-ignore-screenshot-upload` → `feat/EX-07-screenshot-sunset` → `feat/EX-07-drop-screenshot-columns` + `feat/DT-04-screenshot-sunset` | backend berhenti menerima/menyimpan screenshot, kolom + bucket dihapus, kunci `SUPABASE_SERVICE_ROLE_KEY` dicabut | TODO E1, D-alief-C23/C27 | Opus 5.5 |
+| 21 | Monitoring, alert, ops | be | `feat/B9-ops-status` → `feat/EX-07-ops-replica` → `feat/B9-ops-watch` | `GET /ops/status` (token), workflow terjadwal `ops-watch`, issue `ops-alert`, runbook | TODO B9, D9, D10, D11 | Opus 5.5 |
+| 22 | Performa Worker + snapshot Detail | c | `fix/BE-worker-cpu`, `fix/EX-07-replica-inflate`, `fix/DT-04-snapshot-perf` | bundle zod lebih kecil, cache kunci HMAC, inflate lebih murah, snapshot tajam + hemat memori | log/fase-18.md:92 (CPU cloud) | Opus 5.5 |
+| 23 | Keandalan CI + UI test live salinan | app | `fix/C2-test-flakes`, `test/DT-04-live-replica-ui` | helper UITest, reduce motion, suite WebKit serial, usulan CI iOS ke Umar, UI test live opt-in | TODO C2, fase 18 DoD | Sonnet 5.5 (Opus untuk review) |
+| 24 | Privasi & siklus data | c | `feat/E7-inactive-devices`(`-on`), `feat/C22-shared-keychain`, sisa 24c | hapus device tidak aktif (dry-run dulu), token di Keychain bersama, kontak + App Privacy | TODO E6, E7, C22 | Opus 5.5 |
+| 25 | Verdict realtime | be | `feat/EX-06-verdict-latency-log` → spike DO | polling adaptif (Umar) + spike WebSocket Durable Object di balik flag | TODO E3 | Opus 5.5 |
+| 26 | Undangan setelah install | c | `feat/PR-03-deferred-invite-app`, `feat/PR-03-deferred-invite-page` | tombol Tempel undangan di splash + Connect, parser link ketat | TODO E4, PR-03 | Opus 5.5 |
 
-**Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6–B8).
+**Gate:** Fondasi app (01) dan fondasi backend (07) boleh mulai bersamaan · Track c mulai setelah semua PR 01–06Q dan 07–12 **di-merge** (`[x]` = merged, PROGRESS legenda) · Deploy cloud pertama di akhir fase 07 supaya Imelda bisa memakai `GET /blocklist` · QA-E2E butuh TestFlight (TODO B6–B8). · Fase 19–26 (ditulis + diverifikasi 31 Okt–1 Nov 2026): urutan dan issue ke Umar di [`ref/R8-fase-19-26-lintas.md`](ref/R8-fase-19-26-lintas.md); jalur kritis G2 → 20a → 15 hari → 20b (±16 Nov) → 20c.
 
 ---
 

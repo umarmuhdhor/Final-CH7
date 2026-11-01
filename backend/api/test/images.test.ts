@@ -42,3 +42,55 @@ describe("decodeBase64", () => {
     expect(decodeBase64(s, 1000)).toBeUndefined();
   });
 });
+
+describe("decodeBase64: native fromBase64 and the fallback agree (fase 22 O4)", () => {
+  type WithNative = typeof Uint8Array & { fromBase64?: unknown };
+  const U8 = Uint8Array as WithNative;
+
+  it("this workerd has Uint8Array.fromBase64 (else the cases below compare the fallback with itself)", () => {
+    expect(typeof U8.fromBase64).toBe("function");
+  });
+
+  const bytes = (n: number) => Uint8Array.from({ length: n }, (_, i) => (i * 37 + 11) & 0xff);
+  const cases: [string, string, number][] = [
+    ["empty", "", 10],
+    ["padding 0", b64(bytes(3)), 10],
+    ["padding 1", b64(bytes(2)), 10],
+    ["padding 2", b64(bytes(1)), 10],
+    ["exactly maxBytes", b64(bytes(300)), 300],
+    ["maxBytes + 1", b64(bytes(301)), 300],
+    ["wrong character", "AA-A", 10],
+    ["url-safe underscore", "AA_A", 10],
+    ["length not a multiple of 4", "AAAAA", 10],
+    ["padding in the middle", "AA==AAAA", 10],
+    ["three padding characters", "A===", 10],
+    ["four padding characters", "====", 10],
+    ["non-canonical last character", "AB==", 10],
+    ["whitespace inside a 4-multiple", "AA A", 10],
+    ["tab inside", "AAA\tAAAA", 10],
+    ["padding first", "=AAA", 10],
+    ["data: prefix", "data:image/png;base64,AAAA", 100],
+    ["whitespace before padding", "AA\n=", 10],
+    ["whitespace with one padding", "A A=", 10],
+    ["trailing space", "AAA ", 10],
+  ];
+
+  it.each(cases)("%s", (_name, text, max) => {
+    const native = decodeBase64(text, max);
+    const saved = Object.getOwnPropertyDescriptor(Uint8Array, "fromBase64");
+    Object.defineProperty(Uint8Array, "fromBase64", { value: undefined, configurable: true, writable: true });
+    let fallback: Uint8Array | undefined;
+    try {
+      fallback = decodeBase64(text, max);
+    } finally {
+      if (saved) Object.defineProperty(Uint8Array, "fromBase64", saved);
+      else delete U8.fromBase64;
+    }
+    expect(native).toEqual(fallback);
+  });
+
+  it("decodes the exact bytes", () => {
+    const b = bytes(1000);
+    expect(decodeBase64(b64(b), 1000)).toEqual(b);
+  });
+});

@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// `ShooRepository` against the real backend (contracts/api.md). Replaces `MockRepository` in Fase C;
 /// views don't change. Keeps `SessionStore` in step with the server, so the extension sees the same
@@ -6,10 +7,16 @@ import Foundation
 final class ApiRepository: ShooRepository {
     private let client: APIClient
     private let session: SessionStore
+    /// The last family code, in memory only, for the device that got it. Home, Profile and onboarding
+    /// each open their own code screen; they share this one instead of each asking the server, which
+    /// allows 6 asks a minute (contracts/api.md).
+    private let lastCode = OSAllocatedUnfairLock<(deviceId: String, code: FamilyCode)?>(initialState: nil)
+    private let now: @Sendable () -> Date
 
-    init(client: APIClient, session: SessionStore) {
+    init(client: APIClient, session: SessionStore, now: @escaping @Sendable () -> Date = Date.init) {
         self.client = client
         self.session = session
+        self.now = now
     }
 
     // MARK: Devices
@@ -43,10 +50,12 @@ final class ApiRepository: ShooRepository {
     func becomeProtected(code: String) async throws -> ProtectedSwitch {
         struct Body: Encodable, Sendable { var code: String }
         // The caller saves the new session (`AppEnvironment.becomeProtected`), then the guardian.
+        lastCode.withLock { $0 = nil }
         return try await client.send(.init(method: .post, path: ["devices", "me", "protected"], body: Body(code: code)))
     }
 
     func deleteMe() async throws {
+        lastCode.withLock { $0 = nil }
         do {
             let _: OkResponse = try await client.send(.init(
                 method: .delete, path: ["devices", "me"], reportsUnauthorized: false
@@ -63,9 +72,20 @@ final class ApiRepository: ShooRepository {
 
     func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
         struct Body: Encodable, Sendable { var refresh: Bool }
+        let deviceId = session.deviceId
+        // The server would hand back this same code while more than 5 min is left (contracts/api.md).
+        if !refresh, let deviceId, let cached = lastCode.withLock({ $0 }), cached.deviceId == deviceId,
+           cached.code.expiresAt.timeIntervalSince(now()) > Self.codeReuseSeconds {
+            return cached.code
+        }
         // No body for the usual case (allowed by the contract): the server hands out the active code.
-        return try await client.send(.init(method: .post, path: ["family", "code"], body: refresh ? Body(refresh: true) : nil))
+        let code: FamilyCode = try await client.send(.init(method: .post, path: ["family", "code"], body: refresh ? Body(refresh: true) : nil))
+        lastCode.withLock { $0 = deviceId.map { ($0, code) } }
+        return code
     }
+
+    /// Same as the server's `REUSE_MIN_SECONDS`.
+    static let codeReuseSeconds: TimeInterval = 5 * 60
 
     func joinFamily(code: String) async throws -> GuardianInfo {
         struct Body: Encodable, Sendable { var code: String }
