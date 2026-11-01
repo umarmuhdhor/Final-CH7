@@ -49,12 +49,13 @@ describe("GET /j/:code", () => {
     expect(a).not.toBe(b);
   });
 
-  it("the install hint says to open Shoo and tap Paste (fase 26 26b), in English and Indonesian", async () => {
+  it("the install hint says to open the link again, not to tap Paste (26a cancelled), in English and Indonesian", async () => {
     const { html: en } = await page("/j/482193");
-    expect(en).toContain("We copy the invite for you. After installing, open Shoo and tap Paste.");
+    expect(en).toContain("We copy the invite link. After installing, open it again to join.");
+    expect(en).not.toContain("tap Paste");
     const { html: id } = await page("/j/482193", "id-ID,id;q=0.9");
-    expect(id).toContain("Undangan sudah kami salin. Setelah install, buka Shoo lalu ketuk Tempel.");
-    expect(en).not.toContain("so Shoo can paste it after you install");
+    expect(id).toContain("Link undangan sudah kami salin. Setelah install, buka lagi link itu untuk bergabung.");
+    expect(id).not.toContain("Tempel");
   });
 
   it("Install goes to APP_STORE_URL when it is a TestFlight link (fase 26 Q1, var not set yet)", async () => {
