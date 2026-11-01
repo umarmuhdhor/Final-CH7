@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
 import { runRetention } from "../src/cron/retention";
+import { opsWriter, type OpsWriter } from "../src/db/repo/ops";
 import { screenshotStore } from "../src/services/screenshots";
 import { jpeg } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -207,6 +208,60 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     const all = lines.join("\n");
     expect(all).toContain('"event":"retention"');
     for (const leak of ["dev_p", "s_old", "x.example", "http"]) expect(all).not.toContain(leak);
+  });
+
+  it("ops_jobs (fase 21a): a clean run sets failed 0, ok_at and backlog; a failed step keeps ok_at and still throws", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const job = async () => (await sql<{ failed: number; backlog: boolean; okFresh: boolean | null; finishedFresh: boolean; started: boolean }[]>`
+      select failed, backlog, ok_at > now() - interval '1 minute' as "okFresh",
+             finished_at > now() - interval '1 minute' as "finishedFresh", started_at is not null as started
+      from ops_jobs where job = 'retention'`)[0];
+
+    await device("dev_p");
+    await scan("s_a", "dev_p", 15);
+    await scan("s_b", "dev_p", 15);
+    await runRetention(sql, env, { plainChunk: 1 });
+    expect(await job()).toEqual({ failed: 0, backlog: false, okFresh: true, finishedFresh: true, started: true });
+
+    await sql`update ops_jobs set ok_at = now() - interval '2 days', finished_at = now() - interval '2 days'`;
+    await scan("s_c", "dev_p", 15, "dev_p/c.jpg");
+    const failing = { ...store, remove: async () => { throw new Error("storage remove 503"); } };
+    await expect(runRetention(sql, env, { store: failing })).rejects.toThrow("storage remove 503");
+    // Two steps fail: the scans step and the tombstone step both call the broken store.
+    expect(await job()).toEqual({ failed: 2, backlog: false, okFresh: false, finishedFresh: true, started: true });
+  });
+
+  it("ops_jobs: a run with leftover rows records backlog", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    await device("dev_p");
+    await sql`insert into scans (owner_id, url, domain, score, status, detected_at, created_at)
+      select 'dev_p', 'https://x.example/', 'x.example', 92, 'blocked', now(), now() - interval '15 days' from generate_series(1, 30)`;
+    await runRetention(sql, env, { plainChunk: 1 });
+    expect((await sql`select backlog from ops_jobs where job = 'retention'`)[0]).toEqual({ backlog: true });
+  });
+
+  it("ops_jobs: a failing status write is one failed step; every other step still runs and the error is rethrown", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorsLogged: string[] = [];
+    vi.spyOn(console, "error").mockImplementation((...a: unknown[]) => void errorsLogged.push(a.map(String).join(" ")));
+    const broken: OpsWriter = { ...opsWriter, finish: async () => { throw Object.assign(new Error("ops down"), { code: "57014" }); } };
+    await device("dev_p");
+    await scan("s_old", "dev_p", 15);
+    await sql`insert into family_codes (code, guardian_id, expires_at) values ('123456', 'dev_p', now() - interval '2 hours')`;
+
+    await expect(runRetention(sql, env, { ops: broken })).rejects.toThrow("ops down");
+    expect(await scanIds()).toEqual([]);
+    expect((await sql`select 1 from family_codes`).length).toBe(0);
+    expect(errorsLogged.join("\n")).toContain('"step":"ops_finish"');
+    expect(errorsLogged.join("\n")).not.toContain("ops down");
+
+    const startBroken: OpsWriter = { ...opsWriter, start: async () => { throw new Error("ops down"); } };
+    errorsLogged.length = 0;
+    await expect(runRetention(sql, env, { ops: startBroken })).rejects.toThrow("ops down");
+    expect(errorsLogged.join("\n")).toContain('"step":"ops_start"');
+    // The finish write still ran and counts the failed start.
+    expect((await sql`select failed from ops_jobs where job = 'retention'`)[0]).toEqual({ failed: 1 });
   });
 
   it("the Worker's scheduled() handler runs retention", async () => {

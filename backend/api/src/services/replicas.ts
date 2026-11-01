@@ -1,6 +1,8 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
-import { clearReplicaPath, precheckReplica, type ReplicaQuota, reserveReplica, scanExists } from "../db/repo/scans";
+import {
+  clearReplicaPath, precheckReplica, type ReplicaQuota, type ReplicaQuotaReason, replicaUsage, reserveReplica, scanExists,
+} from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
@@ -26,22 +28,47 @@ export const INFLATE_SLICE = 4096;
  * D-alief-C26, R2 instead of Supabase: 500 MB/day × 16 days of object life = 8 GB < 10 GB R2 free;
  * 3000 × 30 = 90 000 puts/month ≪ 1 M Class A; 3000 < the cron's 4000 R2 deletes per run. Per device
  * 50 (anti-abuse; a reuse covers the same domain). Past a quota the scan is stored without a replica.
+ * Fase 19 (TODO E8, review security 18a M1, D-alief-B14): per family 60 uploads + 10 MB, so one family
+ * holds at most ±34 full-size replicas (a normal page is tens of KB gzip: 60 × 50 KB = 3 MB); the last
+ * 20 % of the global quota is kept for families with fewer than 10 uploads (K3). Without device
+ * attestation many IPs still beat it; this raises the attacker's cost ±2.3–4× (fase 19 K2) and makes it visible.
  */
-export const REPLICA_QUOTA: ReplicaQuota = { owner: 50, global: 3000, globalBytes: 500 * 1024 * 1024 };
+export const REPLICA_QUOTA: ReplicaQuota = {
+  owner: 50, family: 60, familyBytes: 10 * 1024 * 1024, global: 3000, globalBytes: 500 * 1024 * 1024,
+  reserveUploads: 600, reserveBytes: 100 * 1024 * 1024, lightFamily: 10,
+};
 
 export type ReplicaDrop = "invalid" | "too_large" | "not_gzip";
 
 type Drop =
   | ReplicaDrop
-  | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
+  | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "family_quota" | "family_bytes" | "reserve"
+  | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
 
 // Reason only: never the scan id, URL, path or device (SECURITY §3 P6). One level for every drop,
 // so a log filter on the event sees them all.
 const dropped = (reason: Drop) => console.error(JSON.stringify({ event: "replica_dropped", reason }));
 
-const QUOTA_DROP = { owner: "quota", global: "global_quota", global_bytes: "global_bytes" } as const;
+// Event names are an interface (fase 19 K5.1, read by fase 21): never rename them.
+const QUOTA_DROP: Record<ReplicaQuotaReason, Drop> = {
+  owner: "quota", family: "family_quota", family_bytes: "family_bytes", reserve: "reserve",
+  global: "global_quota", global_bytes: "global_bytes",
+};
 
 export const replicasEnabled = (env: Env) => env.REPLICAS_ENABLED === "true";
+
+/**
+ * Hourly gauge (fase 19 K5.2, cron `5 * * * *`): one line `replica_quota_usage` with aggregates only.
+ * `level` is the quota state now, not a drop (drops are `replica_dropped`). log for ok, warn for
+ * reserve, error for full, so a log filter on the level sees trouble.
+ */
+export async function logReplicaUsage(sql: Sql): Promise<void> {
+  const usage = await replicaUsage(sql, REPLICA_QUOTA, MAX_REPLICA_BYTES);
+  const line = JSON.stringify({ event: "replica_quota_usage", ...usage });
+  if (usage.level === "full") console.error(line);
+  else if (usage.level === "reserve") console.warn(line);
+  else console.log(line);
+}
 
 /**
  * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse
