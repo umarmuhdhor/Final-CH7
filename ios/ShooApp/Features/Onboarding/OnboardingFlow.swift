@@ -168,7 +168,7 @@ private struct OnboardingConnectStep: View {
         }
         .onAppear {
             guard connect == nil else { return }
-            connect = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode())
+            connect = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode(), clipboard: env.inviteClipboard)
         }
         // An invite link opened while this screen is showing.
         .onChange(of: env.router.pendingJoinCode) { _, code in

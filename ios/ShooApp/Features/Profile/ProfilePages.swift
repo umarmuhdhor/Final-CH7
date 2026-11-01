@@ -350,7 +350,8 @@ private struct JoinAnotherFamilySheet: View {
         }
         .onAppear {
             guard model == nil else { return }
-            model = ConnectModel(repository: env.repository) { [env, name] code in
+            // K9: a Guardian who chose "Have an invite code?" may paste the link too.
+            model = ConnectModel(repository: env.repository, clipboard: env.inviteClipboard) { [env, name] code in
                 try await env.becomeProtected(code: code, name: name)
             }
         }

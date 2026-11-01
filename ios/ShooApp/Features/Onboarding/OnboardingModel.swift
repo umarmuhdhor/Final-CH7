@@ -97,6 +97,20 @@ final class OnboardingModel {
         step = .name
     }
 
+    /// U3 (fase 26): the splash Paste card. Our invite link becomes the pending code, as if the link had
+    /// opened the app, and onboarding moves on to the name. `false` (U4) for anything else; nothing is sent.
+    func acceptPastedInvite(_ items: [String]) -> Bool {
+        guard step == .splash, mode == nil, let code = environment.inviteClipboard.accept(items) else { return false }
+        environment.router.pendingJoinCode = code
+        skipSplash()
+        return true
+    }
+
+    /// The splash Paste card (U1): before a mode exists and without an invite link already waiting.
+    var offersInvitePaste: Bool { mode == nil && !opensWithInvite }
+
+    var inviteClipboard: InviteClipboard { environment.inviteClipboard }
+
     /// Opened from an invite link (PR-03, WhatsApp/QR): only a Protected joins with a code, so ON-03 and
     /// the greeting are skipped and Connect opens with the code filled in.
     var opensWithInvite: Bool { environment.router.pendingJoinCode != nil }

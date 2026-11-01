@@ -316,6 +316,26 @@ struct OnboardingModelTests {
     func reminderOnlyForGuardianWithoutPermission(status: NotificationAuthorization, mode: UserMode, shown: Bool) {
         #expect(NotificationReminder.isShown(status: status, mode: mode) == shown)
     }
+
+    /// U3 (fase 26): the splash Paste card makes the pasted code the pending invite and moves to ON-02.
+    @Test func pastedInviteOnTheSplashGoesToTheName() throws {
+        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
+        let env = AppEnvironment(
+            repository: MockRepository(mode: .protected, latency: .zero),
+            settings: AppSettings(defaults: defaults, preferredLanguages: ["en"]),
+            inviteClipboard: InviteClipboard(pasteboard: FakeInvitePasteboard())
+        )
+        let model = OnboardingModel(environment: env)
+        #expect(model.offersInvitePaste)
+        #expect(!model.acceptPastedInvite(["https://evil.example/j/482193"]))
+        #expect(model.step == .splash)
+        #expect(env.router.pendingJoinCode == nil)
+        #expect(model.acceptPastedInvite(["https://shoo-api.afindo-mi01.workers.dev/j/482193"]))
+        #expect(model.step == .name)
+        #expect(env.router.pendingJoinCode == "482193")
+        #expect(model.opensWithInvite)
+        #expect(!model.offersInvitePaste)
+    }
 }
 
 struct ExtensionSetupTests {

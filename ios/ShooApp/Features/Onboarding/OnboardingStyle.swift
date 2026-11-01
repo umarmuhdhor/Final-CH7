@@ -153,6 +153,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
     @State private var footerHeight: CGFloat = 92
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     init(
         title: LocalizedStringKey,
@@ -215,6 +216,11 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                     try? await Task.sleep(for: .milliseconds(350))
                     withAnimation(.smooth) { proxy.scrollTo(target, anchor: .bottom) }
                 }
+            }
+            // The footer grew or shrank (Connect's Paste row comes and goes): keep the target above it.
+            .onChange(of: footerHeight) {
+                guard let scrollTarget else { return }
+                withAnimation(reduceMotion ? nil : .smooth) { proxy.scrollTo(scrollTarget, anchor: .bottom) }
             }
         }
         .background(alignment: .top) {

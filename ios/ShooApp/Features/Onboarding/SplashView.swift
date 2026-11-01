@@ -5,7 +5,12 @@ struct SplashView: View {
     let model: OnboardingModel
     @State private var showsBrand: Bool
     @State private var page = 0
+    @State private var pasteRejected = false
+    /// The Paste card plus the space under it: the picture gives up that much so the slide text stays in view.
+    @State private var cardHeight: CGFloat = 0
+    @Environment(\.locale) private var locale
     @Environment(\.shooReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private struct Slide: Identifiable {
         let id: Int
@@ -58,8 +63,11 @@ struct SplashView: View {
     private var slidesView: some View {
         GeometryReader { proxy in
             // Figma: 463 of 874 pt is illustration; scales with the screen so small iPhones keep room for text.
+            // With the Paste card (fase 26) the picture shrinks by the card, down to a quarter of the screen
+            // (no floor at accessibility text sizes: the text matters more than the picture).
             let fullHeight = proxy.size.height + proxy.safeAreaInsets.top + proxy.safeAreaInsets.bottom
-            let headerHeight = (fullHeight * 463 / 874).rounded()
+            let floor = dynamicTypeSize.isAccessibilitySize ? 0 : (fullHeight / 4).rounded()
+            let headerHeight = max((fullHeight * 463 / 874).rounded() - cardHeight, floor)
 
             TabView(selection: $page) {
                 ForEach(slides) { slide in
@@ -76,6 +84,30 @@ struct SplashView: View {
     }
 
     private var controls: some View {
+        VStack(spacing: 0) {
+            if model.offersInvitePaste {
+                InvitePasteCard(
+                    style: .splash,
+                    clipboard: model.inviteClipboard,
+                    problem: pasteRejected ? Text(verbatim: L10n.string(ConnectModel.Problem.notAnInvite.message, language: AppLanguage(locale: locale))) : nil
+                ) { items in
+                    pasteRejected = !model.acceptPastedInvite(items)
+                    let announcement: String.LocalizationValue = pasteRejected ? ConnectModel.Problem.notAnInvite.message : "Invite added."
+                    AccessibilityNotification.Announcement(L10n.string(announcement, language: AppLanguage(locale: locale))).post()
+                }
+                .padding(.horizontal, 24)
+                // Space under the card only while it shows: no card, same layout as before fase 26.
+                .padding(.bottom, model.inviteClipboard.offersPaste || pasteRejected ? 16 : 0)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardHeight = $0 }
+                .onDisappear { cardHeight = 0 }
+                // Something new was copied: the last "not an invite" no longer applies.
+                .onChange(of: model.inviteClipboard.checkedChangeCount) { pasteRejected = false }
+            }
+            splashButtons
+        }
+    }
+
+    private var splashButtons: some View {
         HStack {
             Button { model.skipSplash() } label: {
                 Text("Skip")

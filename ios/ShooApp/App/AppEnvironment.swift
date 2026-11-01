@@ -10,6 +10,8 @@ final class AppEnvironment {
     let settings: AppSettings
     let router: Router
     let notifications: any NotificationPermission
+    /// PR-03 (fase 26): the Paste card for an invite copied before installing.
+    let inviteClipboard: InviteClipboard
     /// Keychain token + App Group keys. `nil` with `MockRepository` (previews, UI tests): fixtures never
     /// touch the real App Group.
     @ObservationIgnored let session: SessionStore?
@@ -38,9 +40,11 @@ final class AppEnvironment {
         notifications: any NotificationPermission = SystemNotificationPermission(),
         session: SessionStore? = nil,
         extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
+        inviteClipboard: InviteClipboard = InviteClipboard(pasteboard: UIPasteboard.general),
         registerForPush: @escaping @MainActor () -> Void = {}
     ) {
         self.registerForPush = registerForPush
+        self.inviteClipboard = inviteClipboard
         self.repository = repository
         self.settings = settings
         self.router = router

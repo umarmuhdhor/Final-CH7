@@ -161,7 +161,7 @@ private struct ConnectSheet: View {
         .interactiveDismissDisabled(model?.state == .joining)
         .onAppear {
             guard model == nil else { return }
-            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode())
+            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode(), clipboard: env.inviteClipboard)
         }
         .onChange(of: env.router.pendingJoinCode) { _, code in
             guard code != nil, let pending = env.router.takePendingJoinCode() else { return }

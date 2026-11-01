@@ -95,7 +95,9 @@ struct ConnectModelTests {
         ("666666", .alreadyConnected),
     ])
     func everyJoinErrorHasItsMessage(code: String, problem: ConnectModel.Problem) async {
-        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: code)
+        // Typed: a code from a link that fails reads "invite expired" (`linkedCodeThatFailsIsAStaleInvite`).
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
+        model.code = code
         await model.join()
         #expect(model.state == .entering)
         #expect(model.problem == problem)
@@ -110,7 +112,7 @@ struct ConnectModelTests {
         #expect(model.problem == .offline)
     }
 
-    @Test(arguments: [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .alreadyConnected, .offline, .other])
+    @Test(arguments: [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .alreadyConnected, .offline, .other, .notAnInvite, .staleInvite])
     func messagesExistInBothLanguages(problem: ConnectModel.Problem) {
         let english = L10n.string(problem.message, language: .english)
         let indonesian = L10n.string(problem.message, language: .indonesian)
@@ -144,6 +146,51 @@ struct ConnectModelTests {
         let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
         model.code = "https://evil.example/j/111111 482193"
         #expect(model.code == "111111")
+    }
+
+    /// Fase 26 K5: a code from a link, QR or paste that fails says "invite expired", a typed one doesn't.
+    @Test(arguments: ["000000", "999999"])
+    func linkedCodeThatFailsIsAStaleInvite(code: String) async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: code)
+        await model.join()
+        #expect(model.problem == .staleInvite)
+    }
+
+    @Test func typedCodeThatFailsStaysInvalid() async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "000000")
+        model.code = "00000"
+        model.code = "000000"
+        await model.join()
+        #expect(model.problem == .invalid)
+    }
+
+    @Test func pastedCodeEditedByHandThatFailsIsInvalid() async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero))
+        model.pasted(["https://shoo-api.afindo-mi01.workers.dev/j/000001"])
+        #expect(model.code == "000001")
+        model.code = "000000"
+        await model.join()
+        #expect(model.problem == .invalid)
+    }
+
+    /// U2/U4: a paste fills the code (never joins, T11); anything else says so and joins nothing.
+    @Test func pasteFillsTheCodeOrSaysItIsNotAnInvite() async throws {
+        let repository = MockRepository(mode: .protected, latency: .zero)
+        _ = try await repository.leaveGuardian()
+        let pasteboard = FakeInvitePasteboard()
+        let model = ConnectModel(repository: repository, clipboard: InviteClipboard(pasteboard: pasteboard))
+        model.pasted(["bukan link"])
+        #expect(model.problem == .notAnInvite)
+        #expect(model.code.isEmpty)
+        model.pasted(["https://shoo-api.afindo-mi01.workers.dev/j/482193"])
+        #expect(model.code == "482193")
+        #expect(model.problem == nil)
+        #expect(model.state == .entering)
+        #expect(try await repository.me().guardian == nil)
+        #expect(pasteboard.clears.isEmpty)
+        await model.join()
+        #expect(model.state == .joined(MockRepository.fixtureGuardian))
+        #expect(pasteboard.clears == [1])
     }
 
     @Test func scannedInviteFillsTheCode() {

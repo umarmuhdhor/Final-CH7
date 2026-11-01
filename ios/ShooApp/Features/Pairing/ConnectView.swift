@@ -30,6 +30,7 @@ struct ConnectView: View {
     }
 
     private static let codeFieldID = "connect.codeField"
+    private static let problemID = "connect.problem"
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
@@ -38,7 +39,8 @@ struct ConnectView: View {
             title: "Connect your account",
             message: "Scan the QR or enter the invite code from your Guardian.",
             onBack: onBack.map { back in { if model.state != .joining { back() } } },
-            scrollTarget: codeFocused || model.problem != nil ? Self.codeFieldID : nil
+            // The problem has its own id: when it shows up, the target changes and the form scrolls it into view.
+            scrollTarget: model.problem != nil ? Self.problemID : codeFocused ? Self.codeFieldID : nil
         ) {
             VStack(spacing: 0) {
                 ConnectTabs(tab: $tab)
@@ -78,6 +80,24 @@ struct ConnectView: View {
                 }
             }
         } footer: {
+            // U2 (fase 26): an invite link copied before installing; hidden once 6 digits are in. In the pinned
+            // footer, not the scrolling form: with the keyboard up the form scrolls under the footer, and iOS
+            // ignores taps on a Paste button that is covered.
+            if tab == .code, let clipboard = model.clipboard, model.state == .entering,
+               model.code.count < ConnectModel.codeLength {
+                InvitePasteCard(style: .connect, clipboard: clipboard) { items in
+                    let before = model.problem
+                    model.pasted(items)
+                    if let problem = model.problem {
+                        // A new problem is read out by `onChange(of: model.problem)`; the same one again is not.
+                        if problem == before {
+                            AccessibilityNotification.Announcement(L10n.string(problem.message, language: language)).post()
+                        }
+                    } else {
+                        AccessibilityNotification.Announcement(L10n.string("Invite added.", language: language)).post()
+                    }
+                }
+            }
             // fase 18 K17: said before joining, since copies are only made while connected.
             Label {
                 Text("Shoo keeps a copy of pages it blocks or warns you about for 14 days, so your Guardian can see the evidence.")
@@ -131,6 +151,7 @@ struct ConnectView: View {
                 systemImage: problem == .expired ? "clock.arrow.circlepath" : "exclamationmark.circle"
             )
             .accessibilityIdentifier("connect.error")
+            .id(Self.problemID)
         }
     }
 }

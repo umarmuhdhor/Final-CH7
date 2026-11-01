@@ -24,6 +24,11 @@ final class ConnectModel {
         case hasMembers
         case offline
         case other
+        /// U4 (fase 26): the pasted text is not a Shoo invite link. Nothing was sent.
+        case notAnInvite
+        /// U5 (fase 26, K5): a code from a link, QR or paste that the server no longer knows or that
+        /// expired. "Check the 6 digits" would mislead: the user never typed them.
+        case staleInvite
 
         init(_ error: any Error) {
             switch (error as? RepositoryError)?.apiCode {
@@ -48,6 +53,8 @@ final class ConnectModel {
             case .hasMembers: "You still protect someone. Disconnect them in Profile first."
             case .offline: "No connection. Check your internet and try again."
             case .other: "Something went wrong. Try again."
+            case .notAnInvite: "That isn't a Shoo invite link. Ask your family to send it again, or type the 6-digit code."
+            case .staleInvite: "This invite has expired. Ask your family for a new link."
             }
         }
     }
@@ -64,14 +71,23 @@ final class ConnectModel {
             let digits = linked ?? String(code.unicodeScalars.filter { ("0"..."9").contains($0) }.map(Character.init).prefix(Self.codeLength))
             if digits != code { code = digits }
             if code != oldValue { problem = nil }
+            if code != linkedCode { linkedCode = nil }
         }
     }
 
+    /// The code as it came from a link, a QR or a paste, until the user edits it (K5).
+    @ObservationIgnored private var linkedCode: String?
     @ObservationIgnored private let joinWithCode: (String) async throws -> GuardianInfo
+    /// The app's pasteboard watcher (fase 26); `nil` in previews.
+    let clipboard: InviteClipboard?
 
     /// `join` replaces `POST /family/join`, e.g. a guardian joining as protected (PF-01).
-    init(repository: any ShooRepository, code: String? = nil, join: ((String) async throws -> GuardianInfo)? = nil) {
+    init(
+        repository: any ShooRepository, code: String? = nil, clipboard: InviteClipboard? = nil,
+        join: ((String) async throws -> GuardianInfo)? = nil
+    ) {
         joinWithCode = join ?? { try await repository.joinFamily(code: $0) }
+        self.clipboard = clipboard
         if let code { prefill(code) }
     }
 
@@ -81,6 +97,20 @@ final class ConnectModel {
     func prefill(_ code: String) {
         guard state == .entering, DeepLink.isCode(code) else { return }
         self.code = code
+        linkedCode = code
+    }
+
+    /// U2: the text the system Paste button gave. Our invite link fills the code (never joins, T11);
+    /// anything else says so and sends nothing.
+    func pasted(_ items: [String]) {
+        guard state == .entering else { return }
+        let code = if let clipboard { clipboard.accept(items) } else { InvitePaste.code(from: items) }
+        guard let code else {
+            problem = .notAnInvite
+            return
+        }
+        prefill(code)
+        problem = nil
     }
 
     /// A scanned QR: our invite link fills the code; anything else is refused (`false`).
@@ -101,11 +131,13 @@ final class ConnectModel {
             // `ApiRepository` keeps `guardian.name` in the App Group for the extension (EX-06).
             let guardian = try await joinWithCode(code)
             state = .joined(guardian)
+            clipboard?.joined(code: code)
         } catch {
             state = .entering
             guard !error.isCancellation else { return }
             Log.ui.error("Join failed", error)
-            problem = Problem(error)
+            let problem = Problem(error)
+            self.problem = linkedCode == code && (problem == .invalid || problem == .expired) ? .staleInvite : problem
         }
     }
 }

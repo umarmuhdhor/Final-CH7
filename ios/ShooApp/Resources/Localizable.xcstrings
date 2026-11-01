@@ -4930,6 +4930,66 @@
           }
         }
       }
+    },
+    "Got a family invite?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Punya undangan keluarga?"
+          }
+        }
+      }
+    },
+    "Paste the invite link you copied before installing. Shoo only looks at it when you tap Paste." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempel link undangan yang kamu salin sebelum install. Shoo hanya membacanya saat kamu ketuk Tempel."
+          }
+        }
+      }
+    },
+    "Copied an invite link?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah menyalin link undangan?"
+          }
+        }
+      }
+    },
+    "Invite added." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undangan ditambahkan."
+          }
+        }
+      }
+    },
+    "That isn't a Shoo invite link. Ask your family to send it again, or type the 6-digit code." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Itu bukan link undangan Shoo. Minta keluargamu mengirim ulang, atau ketik 6 digit kodenya."
+          }
+        }
+      }
+    },
+    "This invite has expired. Ask your family for a new link." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undangan ini sudah kedaluwarsa. Minta link baru ke keluargamu."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
