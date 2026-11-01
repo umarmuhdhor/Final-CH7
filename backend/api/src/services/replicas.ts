@@ -1,6 +1,8 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
-import { clearReplicaPath, precheckReplica, type ReplicaQuota, reserveReplica, scanExists } from "../db/repo/scans";
+import {
+  clearReplicaPath, precheckReplica, type ReplicaQuota, type ReplicaQuotaReason, replicaUsage, reserveReplica, scanExists,
+} from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
@@ -17,36 +19,65 @@ export const MAX_REPLICA_BYTES = 307_200;
 export const MAX_REPLICA_HTML = 3_145_728;
 /**
  * gzip input per DecompressionStream write (K2, D-alief-C25 e). One write inflates its whole input
- * before the output can be counted, and zero-gzip inflates ±1000:1, so a 300 KB write could expand
- * to ±300 MB. 4 KB slices bound one step to ±4 MB.
+ * before the output can be counted, and deflate inflates at most ±1032:1, so a 300 KB write could
+ * expand to ±300 MB. 8 KB slices bound one step to ±8.5 MB and cut the write + yield rounds for a
+ * 300 KB replica from ±75 to ±38 (fase 22 K4 a). Not 16 KB as planned: concurrent bombs share one
+ * isolate's 128 MB, and the peak is per request (security review 22a-2). The yield after each write
+ * stays a macrotask: a microtask yield let a whole bomb through in workerd (fase 22 C4).
  */
-export const INFLATE_SLICE = 4096;
+export const INFLATE_SLICE = 8192;
 
 /**
  * D-alief-C26, R2 instead of Supabase: 500 MB/day × 16 days of object life = 8 GB < 10 GB R2 free;
  * 3000 × 30 = 90 000 puts/month ≪ 1 M Class A; 3000 < the cron's 4000 R2 deletes per run. Per device
  * 50 (anti-abuse; a reuse covers the same domain). Past a quota the scan is stored without a replica.
+ * Fase 19 (TODO E8, review security 18a M1, D-alief-B14): per family 60 uploads + 10 MB, so one family
+ * holds at most ±34 full-size replicas (a normal page is tens of KB gzip: 60 × 50 KB = 3 MB); the last
+ * 20 % of the global quota is kept for families with fewer than 10 uploads (K3). Without device
+ * attestation many IPs still beat it; this raises the attacker's cost ±2.3–4× (fase 19 K2) and makes it visible.
  */
-export const REPLICA_QUOTA: ReplicaQuota = { owner: 50, global: 3000, globalBytes: 500 * 1024 * 1024 };
+export const REPLICA_QUOTA: ReplicaQuota = {
+  owner: 50, family: 60, familyBytes: 10 * 1024 * 1024, global: 3000, globalBytes: 500 * 1024 * 1024,
+  reserveUploads: 600, reserveBytes: 100 * 1024 * 1024, lightFamily: 10,
+};
 
 export type ReplicaDrop = "invalid" | "too_large" | "not_gzip";
 
 type Drop =
   | ReplicaDrop
-  | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
+  | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "family_quota" | "family_bytes" | "reserve"
+  | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
 
 // Reason only: never the scan id, URL, path or device (SECURITY §3 P6). One level for every drop,
 // so a log filter on the event sees them all.
 const dropped = (reason: Drop) => console.error(JSON.stringify({ event: "replica_dropped", reason }));
 
-const QUOTA_DROP = { owner: "quota", global: "global_quota", global_bytes: "global_bytes" } as const;
+// Event names are an interface (fase 19 K5.1, read by fase 21): never rename them.
+const QUOTA_DROP: Record<ReplicaQuotaReason, Drop> = {
+  owner: "quota", family: "family_quota", family_bytes: "family_bytes", reserve: "reserve",
+  global: "global_quota", global_bytes: "global_bytes",
+};
 
 export const replicasEnabled = (env: Env) => env.REPLICAS_ENABLED === "true";
 
 /**
- * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse
- * or a scan without family burns neither the IP slot nor inflate CPU. Kill-switch → reuse/no-family
- * pre-check → per-IP limit → decode → reserve (per-owner lock, quotas, tombstone) → R2 put.
+ * Hourly gauge (fase 19 K5.2, cron `5 * * * *`): one line `replica_quota_usage` with aggregates only.
+ * `level` is the quota state now, not a drop (drops are `replica_dropped`). log for ok, warn for
+ * reserve, error for full, so a log filter on the level sees trouble.
+ */
+export async function logReplicaUsage(sql: Sql): Promise<void> {
+  const usage = await replicaUsage(sql, REPLICA_QUOTA, MAX_REPLICA_BYTES);
+  const line = JSON.stringify({ event: "replica_quota_usage", ...usage });
+  if (usage.level === "full") console.error(line);
+  else if (usage.level === "reserve") console.warn(line);
+  else console.log(line);
+}
+
+/**
+ * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse,
+ * a scan without family or a full quota burns neither the IP slot nor inflate CPU. Kill-switch →
+ * reuse/no-family/quota pre-check (fase 22 K12) → per-IP limit → decode → reserve (per-owner lock,
+ * quotas again as the final word, tombstone) → R2 put.
  * Any failure drops the replica only; the scan is already stored and answered.
  */
 export async function attachReplica(
@@ -60,7 +91,7 @@ export async function attachReplica(
   const store = r2Store(env);
   if (!store) return dropped("no_storage");
 
-  const pre = await precheckReplica(sql, scan);
+  const pre = await precheckReplica(sql, scan, estimatedBytes(base64), REPLICA_QUOTA);
   if (pre.reuse) {
     const slot = await reserveReplica(sql, scan, null, REPLICA_QUOTA);
     if ("gone" in slot) return dropped("scan_gone");
@@ -68,6 +99,8 @@ export async function attachReplica(
     if (!("none" in slot)) return;
   }
   if (!pre.family) return dropped("no_family");
+  // Fase 22 K12: a full quota drops here, before the IP slot and the inflate.
+  if (pre.quota) return dropped(QUOTA_DROP[pre.quota]);
 
   try {
     await hit(sql, limits.replicaIp, ip);
@@ -97,6 +130,18 @@ export async function attachReplica(
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
   if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
+}
+
+/**
+ * The gzip size the base64 decodes to, from its length alone (no regex pass over 400 KB, fase 22
+ * K12): 0 for a string the decoder will refuse anyway by its shape (length), so then only the upload
+ * counts are checked early and decodeReplica drops it as before.
+ */
+export function estimatedBytes(base64: string): number {
+  const n = base64.length;
+  if (n === 0 || n % 4 !== 0 || n > MAX_REPLICA_BASE64) return 0;
+  const pad = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return (n / 4) * 3 - pad;
 }
 
 /**

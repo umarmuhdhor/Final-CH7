@@ -1,0 +1,2753 @@
+{
+  "items": [
+    {
+      "id": "corpus-trap-blog-cek-saldo-bca",
+      "url": "https://tipskeuanganku.blogspot.com/2026/10/cara-cek-saldo-bca.html",
+      "domain": "tipskeuanganku.blogspot.com",
+      "pageTitle": "Cara Cek Saldo BCA lewat HP",
+      "faviconUrl": null,
+      "score": 49,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 24,
+          "label": {
+            "en": "The link looks suspicious (bait word in path, bait word in the file name)",
+            "id": "Tautan terlihat mencurigakan (kata umpan di path, kata umpan di nama file)"
+          },
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          },
+          "evidence": "file_ext,path_bait,free_host,free_file_bait"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BCA logo on an unofficial site",
+            "id": "Logo BCA di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BCA",
+            "id": "Berpura-pura menjadi BCA"
+          },
+          "evidence": "BCA"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-29T17:14:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-trap-github-pages-dokumentasi",
+      "url": "https://andi-dev.github.io/panduan-login/",
+      "domain": "andi-dev.github.io",
+      "pageTitle": "Panduan Login Aplikasi",
+      "faviconUrl": null,
+      "score": 34,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 19,
+          "label": {
+            "en": "The link looks suspicious (bait word in path, bait word in the file name)",
+            "id": "Tautan terlihat mencurigakan (kata umpan di path, kata umpan di nama file)"
+          },
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          },
+          "evidence": "path_bait,free_host,free_file_bait"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "password"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-29T16:27:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-trap-fintech-kyc-sah",
+      "url": "https://koinku-aset.co.id/verifikasi",
+      "domain": "koinku-aset.co.id",
+      "pageTitle": "Verifikasi Identitas - KoinKu",
+      "faviconUrl": null,
+      "score": 95,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "The link looks suspicious (hyphen in the site name, bait word in path)",
+            "id": "Tautan terlihat mencurigakan (tanda hubung di nama situs, kata umpan di path)"
+          },
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          },
+          "evidence": "hyphen_registrable,path_bait"
+        },
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-29T14:53:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-trap-asuransi-klaim-resmi",
+      "url": "https://asuransi-sehat.co.id/klaim",
+      "domain": "asuransi-sehat.co.id",
+      "pageTitle": "Klaim Asuransi - Asuransi Sehat",
+      "faviconUrl": null,
+      "score": 35,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "The link looks suspicious (hyphen in the site name, bait word in path)",
+            "id": "Tautan terlihat mencurigakan (tanda hubung di nama situs, kata umpan di path)"
+          },
+          "labelSimple": {
+            "en": "The address of this page looks like the ones scammers use",
+            "id": "Alamat halaman ini mirip alamat yang biasa dipakai penipu"
+          },
+          "evidence": "hyphen_registrable,path_bait"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-29T12:32:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-cusbsi-bsi-cash-management",
+      "url": "https://cusbsi.com/",
+      "domain": "cusbsi.com",
+      "pageTitle": "BSI Cash Management",
+      "faviconUrl": null,
+      "score": 70,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          },
+          "evidence": "BSI Cash Management"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BSI logo on an unofficial site",
+            "id": "Logo BSI di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BSI",
+            "id": "Berpura-pura menjadi BSI"
+          },
+          "evidence": "BSI"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "passwordField"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-29T07:03:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-lphone-login",
+      "url": "https://lphone-login.com/tRrQ",
+      "domain": "lphone-login.com",
+      "pageTitle": "Find Devices - Apple iCloud",
+      "faviconUrl": null,
+      "score": 39,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 25,
+          "label": {
+            "en": "Domain spelled like Apple",
+            "id": "Nama domain meniru Apple"
+          },
+          "labelSimple": {
+            "en": "This address looks like Apple's, but it is not the real one",
+            "id": "Alamat ini mirip alamat Apple, tapi bukan yang asli"
+          },
+          "evidence": "apple · level 3 · typo"
+        },
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Apple + login)",
+            "id": "Nama brand ditambah kata lain (Apple + login)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Apple with the word \"login\"",
+            "id": "Alamat ini menggabungkan Apple dengan kata \"login\""
+          },
+          "evidence": "apple · level 2 · login"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-29T06:16:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bri-token-expired",
+      "url": "https://brimo-verifikasi.top/aktivasi",
+      "domain": "brimo-verifikasi.top",
+      "pageTitle": "BRImo - Aktivasi Token",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (BRI + verifikasi)",
+            "id": "Nama brand ditambah kata lain (BRI + verifikasi)"
+          },
+          "labelSimple": {
+            "en": "This address mixes BRI with the word \"verifikasi\"",
+            "id": "Alamat ini menggabungkan BRI dengan kata \"verifikasi\""
+          },
+          "evidence": "bri · level 2 · verifikasi"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BRI logo on an unofficial site",
+            "id": "Logo BRI di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BRI",
+            "id": "Berpura-pura menjadi BRI"
+          },
+          "evidence": "BRI"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-29T02:21:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-mandiri-livin-upgrade",
+      "url": "https://livin-mandiri-update.site/",
+      "domain": "livin-mandiri-update.site",
+      "pageTitle": "Livin' by Mandiri - Pembaruan Aplikasi",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Bank Mandiri + update)",
+            "id": "Nama brand ditambah kata lain (Bank Mandiri + update)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Bank Mandiri with the word \"update\"",
+            "id": "Alamat ini menggabungkan Bank Mandiri dengan kata \"update\""
+          },
+          "evidence": "mandiri · level 2 · update"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .site",
+            "id": "Akhiran domain murah .site"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".site · level 2"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Bank Mandiri logo on an unofficial site",
+            "id": "Logo Bank Mandiri di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Bank Mandiri",
+            "id": "Berpura-pura menjadi Bank Mandiri"
+          },
+          "evidence": "Bank Mandiri"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "pw"
+        },
+        {
+          "id": "urgent_language",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Urgent language: \"dalam 24 jam\"",
+            "id": "Kalimat mendesak: \"dalam 24 jam\""
+          },
+          "labelSimple": {
+            "en": "Rushes you to act fast",
+            "id": "Memaksa kamu cepat-cepat bertindak"
+          },
+          "evidence": "dalam 24 jam"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-29T01:34:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bni-mobile-banking",
+      "url": "https://bni-mobile-banking.click/login",
+      "domain": "bni-mobile-banking.click",
+      "pageTitle": "BNI Mobile Banking",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name BNI but is not an official BNI domain",
+            "id": "Memakai nama BNI tapi bukan domain resmi BNI"
+          },
+          "labelSimple": {
+            "en": "This site uses the name BNI. It may not be the real one",
+            "id": "Situs ini memakai nama BNI. Bisa jadi bukan yang asli"
+          },
+          "evidence": "bni · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .click",
+            "id": "Akhiran domain murah .click"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".click · level 2"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          },
+          "evidence": "BNI Mobile Banking"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BNI logo on an unofficial site",
+            "id": "Logo BNI di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BNI",
+            "id": "Berpura-pura menjadi BNI"
+          },
+          "evidence": "BNI"
+        },
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Form asks for a card number",
+            "id": "Form meminta nomor kartu"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank card number",
+            "id": "Meminta nomor kartu bank kamu"
+          },
+          "evidence": "kartu"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "password"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-29T00:47:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bsi-sharia-bonus",
+      "url": "https://bsi-syariah-reward.xyz/klaim",
+      "domain": "bsi-syariah-reward.xyz",
+      "pageTitle": "BSI Reward Ramadhan",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name BSI but is not an official BSI domain",
+            "id": "Memakai nama BSI tapi bukan domain resmi BSI"
+          },
+          "labelSimple": {
+            "en": "This site uses the name BSI. It may not be the real one",
+            "id": "Situs ini memakai nama BSI. Bisa jadi bukan yang asli"
+          },
+          "evidence": "bsi · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .xyz",
+            "id": "Akhiran domain murah .xyz"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".xyz · level 2"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BSI logo on an unofficial site",
+            "id": "Logo BSI di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BSI",
+            "id": "Berpura-pura menjadi BSI"
+          },
+          "evidence": "BSI"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-29T00:00:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bca-klikbca-clean",
+      "url": "https://layanan-nasabah-online.com/akses",
+      "domain": "layanan-nasabah-online.com",
+      "pageTitle": "Akses Layanan Perbankan",
+      "faviconUrl": null,
+      "score": 80,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BCA logo on an unofficial site",
+            "id": "Logo BCA di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BCA",
+            "id": "Berpura-pura menjadi BCA"
+          },
+          "evidence": "BCA"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-28T23:13:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bca-blokir-kartu",
+      "url": "https://bca-blokir-kartu.shop/",
+      "domain": "bca-blokir-kartu.shop",
+      "pageTitle": "Kartu Anda Diblokir",
+      "faviconUrl": null,
+      "score": 89,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (BCA + blokir)",
+            "id": "Nama brand ditambah kata lain (BCA + blokir)"
+          },
+          "labelSimple": {
+            "en": "This address mixes BCA with the word \"blokir\"",
+            "id": "Alamat ini menggabungkan BCA dengan kata \"blokir\""
+          },
+          "evidence": "bca · level 2 · blokir"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BCA logo on an unofficial site",
+            "id": "Logo BCA di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BCA",
+            "id": "Berpura-pura menjadi BCA"
+          },
+          "evidence": "BCA"
+        },
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Form asks for a card number",
+            "id": "Form meminta nomor kartu"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank card number",
+            "id": "Meminta nomor kartu bank kamu"
+          },
+          "evidence": "cardno"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-28T21:39:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bri-cashback-survey",
+      "url": "https://survey-bri-cashback.top/mulai",
+      "domain": "survey-bri-cashback.top",
+      "pageTitle": "Survei Kepuasan Nasabah BRI",
+      "faviconUrl": null,
+      "score": 85,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name BRI but is not an official BRI domain",
+            "id": "Memakai nama BRI tapi bukan domain resmi BRI"
+          },
+          "labelSimple": {
+            "en": "This site uses the name BRI. It may not be the real one",
+            "id": "Situs ini memakai nama BRI. Bisa jadi bukan yang asli"
+          },
+          "evidence": "bri · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BRI logo on an unofficial site",
+            "id": "Logo BRI di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BRI",
+            "id": "Berpura-pura menjadi BRI"
+          },
+          "evidence": "BRI"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-28T20:52:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-mandiri-kyc-update",
+      "url": "https://data-nasabah-update.net/mandiri",
+      "domain": "data-nasabah-update.net",
+      "pageTitle": "Update Data Nasabah",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "nik"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Bank Mandiri logo on an unofficial site",
+            "id": "Logo Bank Mandiri di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Bank Mandiri",
+            "id": "Berpura-pura menjadi Bank Mandiri"
+          },
+          "evidence": "Bank Mandiri"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-28T20:05:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-dana-kaget-bonus",
+      "url": "https://dana-kaget-bonus.xyz/",
+      "domain": "dana-kaget-bonus.xyz",
+      "pageTitle": "DANA Kaget - Bonus Saldo",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (DANA + bonus)",
+            "id": "Nama brand ditambah kata lain (DANA + bonus)"
+          },
+          "labelSimple": {
+            "en": "This address mixes DANA with the word \"bonus\"",
+            "id": "Alamat ini menggabungkan DANA dengan kata \"bonus\""
+          },
+          "evidence": "dana · level 2 · bonus"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .xyz",
+            "id": "Akhiran domain murah .xyz"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".xyz · level 2"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "DANA logo on an unofficial site",
+            "id": "Logo DANA di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be DANA",
+            "id": "Berpura-pura menjadi DANA"
+          },
+          "evidence": "DANA"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-28T19:18:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-ovo-upgrade-premier",
+      "url": "https://ovo-premier-upgrade.top/",
+      "domain": "ovo-premier-upgrade.top",
+      "pageTitle": "Upgrade OVO Premier",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name OVO but is not an official OVO domain",
+            "id": "Memakai nama OVO tapi bukan domain resmi OVO"
+          },
+          "labelSimple": {
+            "en": "This site uses the name OVO. It may not be the real one",
+            "id": "Situs ini memakai nama OVO. Bisa jadi bukan yang asli"
+          },
+          "evidence": "ovo · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30,
+          "label": {
+            "en": "The data requested does not fit this kind of page",
+            "id": "Data yang diminta tidak wajar untuk jenis halaman ini"
+          },
+          "labelSimple": {
+            "en": "A real page of this kind would not ask for this",
+            "id": "Halaman asli seperti ini tidak akan meminta ini"
+          }
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "OVO logo on an unofficial site",
+            "id": "Logo OVO di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be OVO",
+            "id": "Berpura-pura menjadi OVO"
+          },
+          "evidence": "OVO"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-28T18:31:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-gopay-driver-refund",
+      "url": "https://gopay-refund-center.site/klaim",
+      "domain": "gopay-refund-center.site",
+      "pageTitle": "Refund GoPay",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (GoPay + refund)",
+            "id": "Nama brand ditambah kata lain (GoPay + refund)"
+          },
+          "labelSimple": {
+            "en": "This address mixes GoPay with the word \"refund\"",
+            "id": "Alamat ini menggabungkan GoPay dengan kata \"refund\""
+          },
+          "evidence": "gopay · level 2 · refund"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .site",
+            "id": "Akhiran domain murah .site"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".site · level 2"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "GoPay logo on an unofficial site",
+            "id": "Logo GoPay di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be GoPay",
+            "id": "Berpura-pura menjadi GoPay"
+          },
+          "evidence": "GoPay"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-28T17:44:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-shopeepay-limit",
+      "url": "https://shopeepay-verifikasi.click/",
+      "domain": "shopeepay-verifikasi.click",
+      "pageTitle": "ShopeePay - Verifikasi Akun",
+      "faviconUrl": null,
+      "score": 69,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Shopee + verifikasi)",
+            "id": "Nama brand ditambah kata lain (Shopee + verifikasi)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Shopee with the word \"verifikasi\"",
+            "id": "Alamat ini menggabungkan Shopee dengan kata \"verifikasi\""
+          },
+          "evidence": "shopee · level 2 · verifikasi"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .click",
+            "id": "Akhiran domain murah .click"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".click · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Shopee logo on an unofficial site",
+            "id": "Logo Shopee di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Shopee",
+            "id": "Berpura-pura menjadi Shopee"
+          },
+          "evidence": "ShopeePay"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "password"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-28T16:57:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-linkaja-hadiah",
+      "url": "https://promo-saldo-gratis.id/linkaja",
+      "domain": "promo-saldo-gratis.id",
+      "pageTitle": "Saldo LinkAja Gratis",
+      "faviconUrl": null,
+      "score": 35,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-28T16:10:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-dana-premium-pin",
+      "url": "https://dana-premium-login.cfd/",
+      "domain": "dana-premium-login.cfd",
+      "pageTitle": "Masuk DANA Premium",
+      "faviconUrl": null,
+      "score": 100,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (DANA + login)",
+            "id": "Nama brand ditambah kata lain (DANA + login)"
+          },
+          "labelSimple": {
+            "en": "This address mixes DANA with the word \"login\"",
+            "id": "Alamat ini menggabungkan DANA dengan kata \"login\""
+          },
+          "evidence": "dana · level 2 · login"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .cfd",
+            "id": "Akhiran domain murah .cfd"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".cfd · level 2"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "DANA logo on an unofficial site",
+            "id": "Logo DANA di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be DANA",
+            "id": "Berpura-pura menjadi DANA"
+          },
+          "evidence": "DANA"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-28T15:23:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-ovo-undian-grab",
+      "url": "https://ovo-undian-2026.top/pemenang",
+      "domain": "ovo-undian-2026.top",
+      "pageTitle": "Selamat! Anda Pemenang Undian OVO",
+      "faviconUrl": null,
+      "score": 54,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (OVO + undian)",
+            "id": "Nama brand ditambah kata lain (OVO + undian)"
+          },
+          "labelSimple": {
+            "en": "This address mixes OVO with the word \"undian\"",
+            "id": "Alamat ini menggabungkan OVO dengan kata \"undian\""
+          },
+          "evidence": "ovo · level 2 · undian"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "OVO logo on an unofficial site",
+            "id": "Logo OVO di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be OVO",
+            "id": "Berpura-pura menjadi OVO"
+          },
+          "evidence": "OVO"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-28T14:36:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-gopay-later-pinjam",
+      "url": "https://gopaylater-cair.site/ajukan",
+      "domain": "gopaylater-cair.site",
+      "pageTitle": "GoPayLater - Pencairan Dana",
+      "faviconUrl": null,
+      "score": 90,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 5,
+          "label": {
+            "en": "Cheap domain ending .site",
+            "id": "Akhiran domain murah .site"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".site · level 1"
+        },
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "GoPay logo on an unofficial site",
+            "id": "Logo GoPay di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be GoPay",
+            "id": "Berpura-pura menjadi GoPay"
+          },
+          "evidence": "GoPay"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-28T13:49:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-jne-paket-tertahan",
+      "url": "https://jne-paket-tertahan.top/cek",
+      "domain": "jne-paket-tertahan.top",
+      "pageTitle": "JNE - Paket Tertahan",
+      "faviconUrl": null,
+      "score": 70,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name JNE but is not an official JNE domain",
+            "id": "Memakai nama JNE tapi bukan domain resmi JNE"
+          },
+          "labelSimple": {
+            "en": "This site uses the name JNE. It may not be the real one",
+            "id": "Situs ini memakai nama JNE. Bisa jadi bukan yang asli"
+          },
+          "evidence": "jne · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "JNE logo on an unofficial site",
+            "id": "Logo JNE di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be JNE",
+            "id": "Berpura-pura menjadi JNE"
+          },
+          "evidence": "JNE"
+        },
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Form asks for a card number",
+            "id": "Form meminta nomor kartu"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank card number",
+            "id": "Meminta nomor kartu bank kamu"
+          },
+          "evidence": "kartu"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-28T13:02:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-jnt-tarif-selisih",
+      "url": "https://jnt-selisih-ongkir.site/",
+      "domain": "jnt-selisih-ongkir.site",
+      "pageTitle": "J&T Express - Selisih Ongkir",
+      "faviconUrl": null,
+      "score": 50,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name J&T Express but is not an official J&T Express domain",
+            "id": "Memakai nama J&T Express tapi bukan domain resmi J&T Express"
+          },
+          "labelSimple": {
+            "en": "This site uses the name J&T Express. It may not be the real one",
+            "id": "Situs ini memakai nama J&T Express. Bisa jadi bukan yang asli"
+          },
+          "evidence": "jnt · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .site",
+            "id": "Akhiran domain murah .site"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".site · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "J&T Express logo on an unofficial site",
+            "id": "Logo J&T Express di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be J&T Express",
+            "id": "Berpura-pura menjadi J&T Express"
+          },
+          "evidence": "J&T Express"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-28T12:15:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-pos-kiriman-luar-negeri",
+      "url": "https://pos-indonesla.com/bea-cukai",
+      "domain": "pos-indonesla.com",
+      "pageTitle": "Pos Indonesia - Bea Cukai",
+      "faviconUrl": null,
+      "score": 50,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 25,
+          "label": {
+            "en": "Domain spelled like Pos Indonesia",
+            "id": "Nama domain meniru Pos Indonesia"
+          },
+          "labelSimple": {
+            "en": "This address looks like Pos Indonesia's, but it is not the real one",
+            "id": "Alamat ini mirip alamat Pos Indonesia, tapi bukan yang asli"
+          },
+          "evidence": "posindonesia · level 3 · typo"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Pos Indonesia logo on an unofficial site",
+            "id": "Logo Pos Indonesia di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Pos Indonesia",
+            "id": "Berpura-pura menjadi Pos Indonesia"
+          },
+          "evidence": "Pos Indonesia"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-28T09:54:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-tiki-nomor-resi",
+      "url": "https://tiki-cek-resi.top/",
+      "domain": "tiki-cek-resi.top",
+      "pageTitle": "TIKI Cek Resi",
+      "faviconUrl": null,
+      "score": 30,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 5,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 1"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-28T09:07:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-ninja-ganti-rugi",
+      "url": "https://klaim-ganti-rugi-paket.xyz/",
+      "domain": "klaim-ganti-rugi-paket.xyz",
+      "pageTitle": "Klaim Ganti Rugi Paket",
+      "faviconUrl": null,
+      "score": 40,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 5,
+          "label": {
+            "en": "Cheap domain ending .xyz",
+            "id": "Akhiran domain murah .xyz"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".xyz · level 1"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-28T08:20:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-tokopedia-undian",
+      "url": "https://tokopedia-undian-hut.top/menang",
+      "domain": "tokopedia-undian-hut.top",
+      "pageTitle": "Undian HUT Tokopedia",
+      "faviconUrl": null,
+      "score": 69,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Tokopedia + undian)",
+            "id": "Nama brand ditambah kata lain (Tokopedia + undian)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Tokopedia with the word \"undian\"",
+            "id": "Alamat ini menggabungkan Tokopedia dengan kata \"undian\""
+          },
+          "evidence": "tokopedia · level 2 · undian"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Tokopedia logo on an unofficial site",
+            "id": "Logo Tokopedia di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Tokopedia",
+            "id": "Berpura-pura menjadi Tokopedia"
+          },
+          "evidence": "Tokopedia"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "password"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-28T07:33:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-lazada-giveaway",
+      "url": "https://lazada-giveaway-iphone.click/",
+      "domain": "lazada-giveaway-iphone.click",
+      "pageTitle": "Giveaway iPhone 16 Lazada",
+      "faviconUrl": null,
+      "score": 70,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name Lazada but is not an official Lazada domain",
+            "id": "Memakai nama Lazada tapi bukan domain resmi Lazada"
+          },
+          "labelSimple": {
+            "en": "This site uses the name Lazada. It may not be the real one",
+            "id": "Situs ini memakai nama Lazada. Bisa jadi bukan yang asli"
+          },
+          "evidence": "lazada · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .click",
+            "id": "Akhiran domain murah .click"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".click · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Lazada logo on an unofficial site",
+            "id": "Logo Lazada di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Lazada",
+            "id": "Berpura-pura menjadi Lazada"
+          },
+          "evidence": "Lazada"
+        },
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Form asks for a card number",
+            "id": "Form meminta nomor kartu"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank card number",
+            "id": "Meminta nomor kartu bank kamu"
+          },
+          "evidence": "kartu"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-28T05:59:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-shopee-flash-undian",
+      "url": "https://shopee-flash-undian.site/ambil",
+      "domain": "shopee-flash-undian.site",
+      "pageTitle": "Shopee Flash Hadiah",
+      "faviconUrl": null,
+      "score": 54,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Shopee + undian)",
+            "id": "Nama brand ditambah kata lain (Shopee + undian)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Shopee with the word \"undian\"",
+            "id": "Alamat ini menggabungkan Shopee dengan kata \"undian\""
+          },
+          "evidence": "shopee · level 2 · undian"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .site",
+            "id": "Akhiran domain murah .site"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".site · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Shopee logo on an unofficial site",
+            "id": "Logo Shopee di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Shopee",
+            "id": "Berpura-pura menjadi Shopee"
+          },
+          "evidence": "Shopee"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-28T05:12:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bpjs-bonus-iuran",
+      "url": "https://bpjs-bonus-iuran.top/",
+      "domain": "bpjs-bonus-iuran.top",
+      "pageTitle": "Bonus Iuran BPJS",
+      "faviconUrl": null,
+      "score": 74,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (BPJS + bonus)",
+            "id": "Nama brand ditambah kata lain (BPJS + bonus)"
+          },
+          "labelSimple": {
+            "en": "This address mixes BPJS with the word \"bonus\"",
+            "id": "Alamat ini menggabungkan BPJS dengan kata \"bonus\""
+          },
+          "evidence": "bpjs · level 2 · bonus"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BPJS logo on an unofficial site",
+            "id": "Logo BPJS di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BPJS",
+            "id": "Berpura-pura menjadi BPJS"
+          },
+          "evidence": "BPJS"
+        },
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Form asks for a card number",
+            "id": "Form meminta nomor kartu"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank card number",
+            "id": "Meminta nomor kartu bank kamu"
+          },
+          "evidence": "bpjs"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-28T04:25:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-pertamina-subsidi",
+      "url": "https://subsidi-bbm-2026.com/daftar",
+      "domain": "subsidi-bbm-2026.com",
+      "pageTitle": "Pendaftaran Subsidi BBM",
+      "faviconUrl": null,
+      "score": 60,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-28T03:38:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bukalapak-voucher",
+      "url": "https://bukalapak-voucher-gratis.xyz/",
+      "domain": "bukalapak-voucher-gratis.xyz",
+      "pageTitle": "Voucher Gratis Bukalapak",
+      "faviconUrl": null,
+      "score": 79,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Bukalapak + voucher)",
+            "id": "Nama brand ditambah kata lain (Bukalapak + voucher)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Bukalapak with the word \"voucher\"",
+            "id": "Alamat ini menggabungkan Bukalapak dengan kata \"voucher\""
+          },
+          "evidence": "bukalapak · level 2 · voucher"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .xyz",
+            "id": "Akhiran domain murah .xyz"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".xyz · level 2"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Bukalapak logo on an unofficial site",
+            "id": "Logo Bukalapak di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Bukalapak",
+            "id": "Berpura-pura menjadi Bukalapak"
+          },
+          "evidence": "Bukalapak"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-28T02:51:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-bpjs-kesehatan-nonaktif",
+      "url": "https://bpjs-kesehatan-aktivasi.site/",
+      "domain": "bpjs-kesehatan-aktivasi.site",
+      "pageTitle": "BPJS Kesehatan - Aktivasi Kepesertaan",
+      "faviconUrl": null,
+      "score": 75,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 10,
+          "label": {
+            "en": "Uses the name BPJS but is not an official BPJS domain",
+            "id": "Memakai nama BPJS tapi bukan domain resmi BPJS"
+          },
+          "labelSimple": {
+            "en": "This site uses the name BPJS. It may not be the real one",
+            "id": "Situs ini memakai nama BPJS. Bisa jadi bukan yang asli"
+          },
+          "evidence": "bpjs · level 1 · name on unlisted domain"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .site",
+            "id": "Akhiran domain murah .site"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".site · level 2"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "nik"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "BPJS logo on an unofficial site",
+            "id": "Logo BPJS di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be BPJS",
+            "id": "Berpura-pura menjadi BPJS"
+          },
+          "evidence": "BPJS"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-28T02:04:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-pajak-djp-sptp",
+      "url": "https://djp-pajak-refund.top/",
+      "domain": "djp-pajak-refund.top",
+      "pageTitle": "DJP Online - Restitusi Pajak",
+      "faviconUrl": null,
+      "score": 69,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (DJP (Pajak) + refund)",
+            "id": "Nama brand ditambah kata lain (DJP (Pajak) + refund)"
+          },
+          "labelSimple": {
+            "en": "This address mixes DJP (Pajak) with the word \"refund\"",
+            "id": "Alamat ini menggabungkan DJP (Pajak) dengan kata \"refund\""
+          },
+          "evidence": "djp · level 2 · refund"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "DJP (Pajak) logo on an unofficial site",
+            "id": "Logo DJP (Pajak) di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be DJP (Pajak)",
+            "id": "Berpura-pura menjadi DJP (Pajak)"
+          },
+          "evidence": "DJP"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "password"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-28T01:17:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-prakerja-gelombang",
+      "url": "https://prakerja-gelombang-baru.id/daftar",
+      "domain": "prakerja-gelombang-baru.id",
+      "pageTitle": "Kartu Prakerja Gelombang Baru",
+      "faviconUrl": null,
+      "score": 85,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "nik"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-27T22:56:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-dukcapil-ktp-digital",
+      "url": "https://ktp-digital-aktivasi.com/",
+      "domain": "ktp-digital-aktivasi.com",
+      "pageTitle": "Aktivasi KTP Digital",
+      "faviconUrl": null,
+      "score": 85,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "nik"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_bayu",
+      "ownerName": "Bayu",
+      "detectedAt": "2026-10-27T22:09:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-kemensos-bansos-pkh",
+      "url": "https://kemensos-bansos-pkh.shop/cek",
+      "domain": "kemensos-bansos-pkh.shop",
+      "pageTitle": "Cek Penerima Bansos PKH",
+      "faviconUrl": null,
+      "score": 99,
+      "status": "blocked",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Kemensos + bansos)",
+            "id": "Nama brand ditambah kata lain (Kemensos + bansos)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Kemensos with the word \"bansos\"",
+            "id": "Alamat ini menggabungkan Kemensos dengan kata \"bansos\""
+          },
+          "evidence": "kemensos · level 2 · bansos"
+        },
+        {
+          "id": "asks_pin",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a PIN or passcode",
+            "id": "Form meminta PIN atau kode sandi"
+          },
+          "labelSimple": {
+            "en": "Asks for your secret PIN",
+            "id": "Meminta PIN rahasia kamu"
+          },
+          "evidence": "pin"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "nik"
+        },
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Kemensos logo on an unofficial site",
+            "id": "Logo Kemensos di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Pretends to be Kemensos",
+            "id": "Berpura-pura menjadi Kemensos"
+          },
+          "evidence": "Kemensos"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_renatta",
+      "ownerName": "Renatta",
+      "detectedAt": "2026-10-27T21:22:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-icloud-terkunci",
+      "url": "https://icloud-unlock-support.top/",
+      "domain": "icloud-unlock-support.top",
+      "pageTitle": "iCloud - Akun Terkunci",
+      "faviconUrl": null,
+      "score": 69,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14,
+          "label": {
+            "en": "Brand name plus extra word (Apple + unlock)",
+            "id": "Nama brand ditambah kata lain (Apple + unlock)"
+          },
+          "labelSimple": {
+            "en": "This address mixes Apple with the word \"unlock\"",
+            "id": "Alamat ini menggabungkan Apple dengan kata \"unlock\""
+          },
+          "evidence": "apple · level 2 · unlock"
+        },
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 15,
+          "label": {
+            "en": "Cheap domain ending .top",
+            "id": "Akhiran domain murah .top"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".top · level 2"
+        },
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "code"
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15,
+          "label": {
+            "en": "Form asks for a password on an unofficial site",
+            "id": "Form meminta kata sandi di situs tidak resmi"
+          },
+          "labelSimple": {
+            "en": "Asks for your password on a site that is not official",
+            "id": "Meminta kata sandi kamu di situs yang tidak resmi"
+          },
+          "evidence": "password"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_me",
+      "ownerName": "Adhella",
+      "detectedAt": "2026-10-27T20:35:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-pinjol-cair-cepat",
+      "url": "https://pinjaman-cair-cepat.xyz/",
+      "domain": "pinjaman-cair-cepat.xyz",
+      "pageTitle": "Pinjaman Cair Cepat Tanpa Jaminan",
+      "faviconUrl": null,
+      "score": 65,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 5,
+          "label": {
+            "en": "Cheap domain ending .xyz",
+            "id": "Akhiran domain murah .xyz"
+          },
+          "labelSimple": {
+            "en": "This site uses a cheap address ending that scammers often use",
+            "id": "Situs ini memakai akhiran alamat murah yang sering dipakai penipu"
+          },
+          "evidence": ".xyz · level 1"
+        },
+        {
+          "id": "asks_selfie_ktp",
+          "layer": 3,
+          "weight": 35,
+          "label": {
+            "en": "Form asks for a selfie with KTP",
+            "id": "Form meminta selfie dengan KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for a photo of you holding your ID card",
+            "id": "Meminta foto kamu sambil memegang KTP"
+          },
+          "evidence": "selfie"
+        },
+        {
+          "id": "asks_ktp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a KTP number",
+            "id": "Form meminta nomor KTP"
+          },
+          "labelSimple": {
+            "en": "Asks for your ID card number",
+            "id": "Meminta nomor KTP kamu"
+          },
+          "evidence": "ktp"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_maria",
+      "ownerName": "Maria",
+      "detectedAt": "2026-10-27T17:27:00.000Z",
+      "verdict": null
+    },
+    {
+      "id": "corpus-syn-olx-pembeli-cod",
+      "url": "https://pembayaran-aman-marketplace.com/terima",
+      "domain": "pembayaran-aman-marketplace.com",
+      "pageTitle": "Terima Pembayaran Aman",
+      "faviconUrl": null,
+      "score": 45,
+      "status": "warning",
+      "signals": [
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25,
+          "label": {
+            "en": "Form asks for a one-time code (OTP)",
+            "id": "Form meminta kode sekali pakai (OTP)"
+          },
+          "labelSimple": {
+            "en": "Asks for the code sent to your phone",
+            "id": "Meminta kode yang dikirim ke HP kamu"
+          },
+          "evidence": "otp"
+        },
+        {
+          "id": "asks_card",
+          "layer": 3,
+          "weight": 20,
+          "label": {
+            "en": "Form asks for a card number",
+            "id": "Form meminta nomor kartu"
+          },
+          "labelSimple": {
+            "en": "Asks for your bank card number",
+            "id": "Meminta nomor kartu bank kamu"
+          },
+          "evidence": "kartu"
+        }
+      ],
+      "screenshotUrl": null,
+      "pageReplicaUrl": null,
+      "ownerDeviceId": "dev_syahnaz",
+      "ownerName": "Syahnaz",
+      "detectedAt": "2026-10-27T15:53:00.000Z",
+      "verdict": null
+    }
+  ],
+  "nextCursor": null
+}

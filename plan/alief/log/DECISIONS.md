@@ -794,3 +794,11 @@ Format:
 - Alasan: rekomendasi fase 26 K1 (c), K4 ketat, K5, K7 (R8 §c, D-alief-C29). QR juga bukan kode yang diketik, jadi "cek 6 digit" sama menyesatkannya.
 - File: `Features/Pairing/{InvitePaste,InvitePasteCard,ConnectModel,ConnectView}.swift`, `Features/Onboarding/{OnboardingModel,SplashView,OnboardingStyle}.swift`, `App/AppEnvironment.swift`.
 - Status: diterapkan di PR 26a (`feat/PR-03-deferred-invite-app`).
+
+## D-alief-A46 · 1 Nov 2026 · app (fase 22b, DT-04) · Salinan halaman 390 pt × 1800 pt, `prepare` ikut batal, kode replika mati dihapus
+
+- Keputusan: `ReplicaSnapshot.imageWidth = renderWidth` (390 pt) dan `windowHeight = 1800` (K7 a); satu frame tetap (K8 a); hapus `ReplicaWebView` SwiftUI + scroll-ke-fokus yang tidak dipakai (K9 a). Persiapan HTML (`ReplicaHTML.locked` + `ReplicaMeta.read`) pindah dari `Task.detached` ke `nonisolated static func prepare(_:) async` di `DetailView`, jadi pembatalan Detail ikut sampai ke pindai (C14, bug d6). Loader membuat `String` langsung dari buffer. Tiga peringatan strict concurrency di `Features/Detail` diperbaiki (`Regex` konstan `nonisolated(unsafe)`, `Race<T: Sendable>`).
+- Alasan: gambar 200 pt diperbesar ke 390 pt buram saat zoom; puncak memori app di iPhone SE simulator naik +0,2 MB (gerbang K7 ≤ +60 MB); jendela 1800 pt menahan bitmap ≈ 11 MB @2x. `Task.detached` tidak mewarisi pembatalan.
+- Alternatif yang ditolak: dua frame (K8 b, belum ada bukti tekanan memori WebContent); loader per potongan dengan delegate (109 ms vs ambang 100 ms hanya di simulator; ditunda sampai ukur iPhone fisik).
+- File: `Features/Detail/{ReplicaSnapshot,ReplicaWebView,DetailView,ReplicaLoader,ReplicaMeta}.swift`, `Tests/{PageCopyTests,ReplicaViewTests,ReplicaMetaTests,DetailPerfTests}.swift`.
+- Status: diterapkan di PR 22b (`fix/DT-04-snapshot-perf`).
