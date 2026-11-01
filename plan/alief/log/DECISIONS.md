@@ -800,3 +800,10 @@ Format:
 - Alternatif yang ditolak: dua frame (K8 b, belum ada bukti tekanan memori WebContent); loader per potongan dengan delegate (109 ms vs ambang 100 ms hanya di simulator; ditunda sampai ukur iPhone fisik).
 - File: `Features/Detail/{ReplicaSnapshot,ReplicaWebView,DetailView,ReplicaLoader,ReplicaMeta}.swift`, `Tests/{PageCopyTests,ReplicaViewTests,ReplicaMetaTests,DetailPerfTests}.swift`.
 - Status: diterapkan di PR 22b (`fix/DT-04-snapshot-perf`).
+
+## D-alief-A45 · 1 Nov 2026 · app (fase 24c-2, E6) · Manifest privasi app mendeklarasikan lebih
+
+- Keputusan: `PrivacyInfo.xcprivacy` app menambah User ID (id device acak = akun, Shoo tanpa login), Product Interaction (terakhir aktif, hitungan blokir/peringatan), Coarse Location (zona waktu) dan Other Data Types (model iPhone + versi iOS, bahasa, pengaturan notifikasi), semua Linked, App Functionality, tidak Tracking. Manifest extension tetap kosong (milik Umar, pertanyaan E6). `supportEmail` belum diganti: mailbox K10 belum ada (LANGKAH MANUAL di `log/fase-24-app.md`).
+- Alasan: fase 24 K12 (R8 §c, D-alief-C29): label yang kurang = alasan penolakan review; lebih aman mendeklarasikan lebih. Zona waktu tidak dari Location Services, jadi Coarse Location = pilihan hati-hati.
+- File: `ios/ShooApp/PrivacyInfo.xcprivacy`, `Tests/PrivacyManifestTests.swift`.
+- Status: diterapkan di PR 24c-2 (`fix/E6-app-privacy`).
