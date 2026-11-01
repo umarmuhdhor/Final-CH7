@@ -10,7 +10,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 ## Contents
 
 - [General rules](#general-rules): auth, request format, errors, rate limits, caching
-- [Health](#health): `GET /healthz`, `GET /healthz/db`
+- [Health](#health): `GET /healthz`, `GET /healthz/db`, `GET /ops/status`
 - [Devices](#devices): `POST /devices`, `GET /devices/me`, `PATCH /devices/me`, `POST /devices/me/protected`, `DELETE /devices/me`
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
@@ -19,7 +19,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
-- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /terms`, `GET /get`
+- [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
 - [Scheduled pushes](#scheduled-pushes): protection off, weekly summary (hourly cron)
 
@@ -112,6 +112,46 @@ Free project from pausing.
 - **Auth:** none
 - **Rate limit:** 1 per minute per IP
 - **Response 200:** `{ "ok": true }`
+
+### `GET /ops/status`
+
+**For:** the ops-watch workflow and the backend owner (fase 21a, B9). Internal: not part of
+`contracts/api.md`, no client calls it.
+
+- **Auth:** `Authorization: Bearer <OPS_STATUS_TOKEN>` (Worker secret, at least 32 characters). Without
+  the right token, with a short or unset secret, or with the token in any other place, the answer is
+  the same `404 not_found` as an unknown path, and no table is touched.
+- **Rate limit:** 30 per hour for all callers together, counted only after the token matched (wrong
+  tokens cannot use it up).
+- **Response 200:** aggregate numbers only, never an id, domain, path or name. Ages are hours (one
+  decimal, database clock); `null` = never happened.
+
+  ```json
+  {
+    "ok": true,
+    "failing": [{ "code": "retention_backlog", "level": "warn" }],
+    "jobs": {
+      "retention": { "ageHours": 9.2, "okAgeHours": 9.2, "failed": 0, "backlog": true },
+      "notifications": { "ageHours": 0.4, "okAgeHours": 0.4 }
+    },
+    "dbBytes": 52428800,
+    "blocklistQueue": 0,
+    "blocklistOldestHours": null,
+    "tombstonesStuck": 0,
+    "healthzAgeHours": 13.1,
+    "replica": {
+      "level": "ok", "uploads": 412, "bytes": 9830400, "uploadsMax": 3000, "bytesMax": 524288000,
+      "families": 37, "familiesAtCap": 0, "topFamilyUploads": 41, "topFamilyBytes": 1048576
+    }
+  }
+  ```
+
+  `ok` is `false` only when a code with level `alert` fails. `ageHours` = since the job last finished,
+  `okAgeHours` = since it last finished with `failed: 0`. `replica` (fase 21c) = the page-replica
+  quota of the last 24 h, the same numbers as the hourly `replica_quota_usage` log line (fase 19):
+  totals, family count and the largest family's share, never which family; `null` when that query
+  failed (code `replica_unknown`, the rest still answers). Codes and thresholds:
+  [README, Monitoring and alerts](README.md#monitoring-and-alerts).
 
 ## Devices
 
@@ -488,9 +528,12 @@ response. It is dropped when it is not strict base64, is over 400 KB as base64 (
 is not gzip, is cut short or has data after the gzip stream, or is over 3 MB once decompressed
 (3 145 728 bytes, counted while decompressing). It is also dropped when the device has no family
 link (no Guardian, or a Guardian without members: nobody else could ever see it), when the device
-already stored 50 in the last 24 h, when everyone together stored 3000 or 500 MB in the last 24 h, or
-when the sending IP already sent 300 in the last 24 h. A second scan of the same domain within 24 h
-reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
+already stored 50 in the last 24 h, when its family (the Guardian and up to 3 members) stored 60 or
+10 MB in the last 24 h, when everyone together stored 3000 or 500 MB in the last 24 h, or when the
+sending IP already sent 300 in the last 24 h. The last 600 uploads and 100 MB of the global quota are
+kept for families with fewer than 10 uploads in the last 24 h. A full device, family or global quota
+is checked before the replica is decompressed and before it counts against the IP's 300. A second
+scan of the same domain within 24 h reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
 
 **Screenshot rules.** The screenshot is optional, and a bad screenshot never fails the scan: the scan
 is still stored and the answer is still 201. It is dropped when it is not JPEG/PNG, is over 150 KB or
@@ -713,6 +756,11 @@ confirmation step.
 `verdict` is `null` when there is no decision for (this device, this domain). When a member
 disconnects or is removed, the old Guardian's verdicts for that member are deleted.
 
+**Log (fase 25 K7):** when the verdict was decided at most 120 s ago, the Worker logs one line
+`{"event":"verdict_seen","ageMs":…,"value":"safe"}`: the time from the Guardian's tap to this poll,
+measured on the server (without the last round trip and the page load). No domain, ids or names. It is
+read by hand with `wrangler tail` to measure the block-screen latency (`plan/alief/log/fase-25.md`).
+
 ## Blocklist
 
 ### `GET /blocklist?since=`
@@ -795,6 +843,14 @@ stored, who can see it, the 14-day deletion, and how "Delete my data" works.
 - **Auth:** none. No database.
 - Language: `lang` first, then `Accept-Language`, else English.
 - *PF-01 proposed:* also says which notification choices, quiet hours and time zone are stored.
+
+### `GET /support?lang=en|id`
+
+**For:** the Support URL in App Store Connect (fase 24c-1, E6): how to reach the team, how to leave a
+family, how "Delete account" removes everything, links to `/privacy` and `/terms`. The contact line is
+the same constant as on `/privacy` (a placeholder until the team mailbox exists).
+
+- **Auth:** none. No database. Language as for `/privacy`.
 
 ### `GET /terms?lang=en|id`
 

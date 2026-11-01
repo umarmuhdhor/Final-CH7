@@ -181,96 +181,141 @@ struct PageCopyCaptionTests {
     }
 }
 
-/// The picture the cards draw (fase 18b steps 3, 6).
-@MainActor
-struct ReplicaSnapshotTests {
-    @Test func windowKeepsLeadInAboveTheFocus() {
-        let kept = ReplicaSnapshot.window(focusY: 5000, zoom: 1, contentHeight: 20_000)
-        #expect(kept.top == 4400)
-        #expect(kept.height == 3000)
-    }
-
-    @Test func windowStaysInsideThePage() {
-        let short = ReplicaSnapshot.window(focusY: 900, zoom: 1, contentHeight: 1200)
-        #expect(short == (top: 0, height: 1200))
-        let end = ReplicaSnapshot.window(focusY: 19_900, zoom: 1, contentHeight: 20_000)
-        #expect(end == (top: 17_000, height: 3000))
-        let nan = ReplicaSnapshot.window(focusY: .nan, zoom: 1, contentHeight: 20_000)
-        #expect(nan.top == 0)
-    }
-
-    @Test func marksMoveWithTheWindowAndOutsideOnesDrop() {
-        let marks = [
-            ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 10, y: 4500, width: 100, height: 40)),
-            ReplicaMark(signalId: "asks_otp", rect: CGRect(x: 10, y: 100, width: 100, height: 40)),
-            ReplicaMark(signalId: "brand_logo_offsite", rect: CGRect(x: 10, y: 4390, width: 100, height: 20)),
-        ]
-        let shifted = ReplicaSnapshot.shifted(marks, topCSS: 4400, heightCSS: 3000)
-        #expect(shifted.map(\.signalId) == ["asks_pin", "brand_logo_offsite"])
-        #expect(shifted[0].rect.minY == 100)
-        #expect(shifted[1].rect.minY == -10)
-    }
-
-    /// Draws a real locked replica: white page with a red block at the bottom.
-    @Test func rendersTheLockedPage() async throws {
-        let html = """
-            <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>\
-            <body style="margin:0"><div style="height:1000px;background:#ffffff"></div>\
-            <div style="height:200px;background:#ff0000"></div></body></html>
-            """
-        let locked = try #require(ReplicaHTML.locked(html))
-        let ruleList = try #require(await ReplicaRules.compiled())
-        let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
-        let meta = ReplicaMeta(
-            url: nil, capturedAt: Date(), focusY: 1000, truncated: false,
-            marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 1000, width: 390, height: 200))]
-        )
-        let copy = try #require(await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window))
-        #expect(copy.cssWidth == 390)
-        #expect(abs(copy.image.size.width - ReplicaSnapshot.imageWidth) < 1)
-        #expect(abs(copy.image.size.height - 1200 * ReplicaSnapshot.imageWidth / 390) < 2)
-        #expect(copy.marks.first?.rect.minY == 1000)
-        #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
-        let bottom = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.95)))
-        #expect(bottom.red > 0.9 && bottom.green < 0.1)
-        let top = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.1)))
-        #expect(top.red > 0.9 && top.green > 0.9)
-    }
-
-    /// A cancelled render returns nil at once and leaves no web view behind.
-    @Test func cancelledRenderLeavesNothing() async throws {
-        let locked = try #require(ReplicaHTML.locked("<!doctype html><html><body>x</body></html>"))
-        let ruleList = try #require(await ReplicaRules.compiled())
-        let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
-        let task = Task { @MainActor in
-            await ReplicaSnapshot.render(locked, meta: nil, ruleList: ruleList, in: window)
+extension WebKitTests {
+    /// The picture the cards draw (fase 18b steps 3, 6).
+    @MainActor
+    struct ReplicaSnapshotTests {
+        @Test func windowKeepsLeadInAboveTheFocus() {
+            let kept = ReplicaSnapshot.window(focusY: 5000, zoom: 1, contentHeight: 20_000)
+            #expect(kept.top == 4400)
+            // fase 22 K7 (a): 1800 pt at the full 390 pt width, the same pixels as 3000 pt at 200 pt.
+            #expect(kept.height == 1800)
         }
-        task.cancel()
-        let clock = ContinuousClock()
-        let started = clock.now
-        let copy = await task.value
-        #expect(copy == nil)
-        #expect(clock.now - started < .seconds(2))
-        #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
-    }
 
-    /// Test host without a key window: one of our own.
-    private static func hostWindow() -> UIWindow {
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
-        window.makeKeyAndVisible()
-        return window
-    }
+        @Test func windowStaysInsideThePage() {
+            let short = ReplicaSnapshot.window(focusY: 900, zoom: 1, contentHeight: 1200)
+            #expect(short == (top: 0, height: 1200))
+            let end = ReplicaSnapshot.window(focusY: 19_900, zoom: 1, contentHeight: 20_000)
+            #expect(end == (top: 18_200, height: 1800))
+            let nan = ReplicaSnapshot.window(focusY: .nan, zoom: 1, contentHeight: 20_000)
+            #expect(nan.top == 0)
+        }
 
-    private static func color(_ image: UIImage, atFraction point: CGPoint) -> (red: CGFloat, green: CGFloat)? {
-        guard let cgImage = image.cgImage else { return nil }
-        var pixel = [UInt8](repeating: 0, count: 4)
-        guard let context = CGContext(
-            data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else { return nil }
-        let x = CGFloat(cgImage.width) * point.x
-        let y = CGFloat(cgImage.height) * (1 - point.y)
-        context.draw(cgImage, in: CGRect(x: -x, y: -y, width: CGFloat(cgImage.width), height: CGFloat(cgImage.height)))
-        return (CGFloat(pixel[0]) / 255, CGFloat(pixel[1]) / 255)
+        @Test func marksMoveWithTheWindowAndOutsideOnesDrop() {
+            let marks = [
+                ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 10, y: 4500, width: 100, height: 40)),
+                ReplicaMark(signalId: "asks_otp", rect: CGRect(x: 10, y: 100, width: 100, height: 40)),
+                ReplicaMark(signalId: "brand_logo_offsite", rect: CGRect(x: 10, y: 4390, width: 100, height: 20)),
+            ]
+            let shifted = ReplicaSnapshot.shifted(marks, topCSS: 4400, heightCSS: 3000)
+            #expect(shifted.map(\.signalId) == ["asks_pin", "brand_logo_offsite"])
+            #expect(shifted[0].rect.minY == 100)
+            #expect(shifted[1].rect.minY == -10)
+        }
+
+        /// Draws a real locked replica: white page with a red block at the bottom.
+        @Test func rendersTheLockedPage() async throws {
+            let html = """
+                <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>\
+                <body style="margin:0"><div style="height:1000px;background:#ffffff"></div>\
+                <div style="height:200px;background:#ff0000"></div></body></html>
+                """
+            let locked = try #require(ReplicaHTML.locked(html))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let meta = ReplicaMeta(
+                url: nil, capturedAt: Date(), focusY: 1000, truncated: false,
+                marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 1000, width: 390, height: 200))]
+            )
+            let copy = try #require(await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window))
+            #expect(copy.cssWidth == 390)
+            #expect(abs(copy.image.size.width - ReplicaSnapshot.imageWidth) < 1)
+            #expect(abs(copy.image.size.height - 1200 * ReplicaSnapshot.imageWidth / 390) < 2)
+            #expect(copy.marks.first?.rect.minY == 1000)
+            #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
+            let bottom = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.95)))
+            #expect(bottom.red > 0.9 && bottom.green < 0.1)
+            let top = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.1)))
+            #expect(top.red > 0.9 && top.green > 0.9)
+        }
+
+        /// fase 22 K7 (a): a long page is kept at full width, `windowHeight` tall, from `leadIn` above the focus.
+        @Test func longPageIsKeptAtFullWidthAroundTheFocus() async throws {
+            let html = """
+                <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>\
+                <body style="margin:0"><div style="height:2500px;background:#ffffff"></div>\
+                <div style="height:2500px;background:#ff0000"></div></body></html>
+                """
+            let locked = try #require(ReplicaHTML.locked(html))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let meta = ReplicaMeta(
+                url: nil, capturedAt: Date(), focusY: 2500, truncated: false,
+                marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 2500, width: 390, height: 100))]
+            )
+            let copy = try #require(await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window))
+            #expect(ReplicaSnapshot.imageWidth == ReplicaSnapshot.renderWidth)
+            #expect(abs(copy.image.size.width - 390) < 1)
+            #expect(abs(copy.image.size.height - ReplicaSnapshot.windowHeight) < 2)
+            // The picture starts 600 pt above the focus: the mark sits at `leadIn`.
+            #expect(copy.marks.first?.rect.minY == ReplicaSnapshot.leadIn)
+            let above = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.2)))
+            #expect(above.red > 0.9 && above.green > 0.9)
+            let below = try #require(Self.color(copy.image, atFraction: CGPoint(x: 0.5, y: 0.5)))
+            #expect(below.red > 0.9 && below.green < 0.1)
+        }
+
+        /// A cancelled render stops at once, says why, and leaves no web view behind.
+        @Test func cancelledRenderLeavesNothing() async throws {
+            let locked = try #require(ReplicaHTML.locked("<!doctype html><html><body>x</body></html>"))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let task = Task { @MainActor in
+                await ReplicaSnapshot.attempt(locked, meta: nil, ruleList: ruleList, in: window)
+            }
+            task.cancel()
+            let clock = ContinuousClock()
+            let started = clock.now
+            let result = await task.value
+            #expect(throws: ReplicaSnapshot.RenderFailure.cancelled) { try result.get() }
+            // Not `loadTimeout` (10 s); 5 s leaves room for a slow CI runner (fase 23a K3).
+            #expect(clock.now - started < .seconds(5))
+            #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
+        }
+
+        /// Cancelled while WebKit is loading or placing the page (not before it starts): still `.cancelled`.
+        @Test func renderCancelledMidwayStopsAsCancelled() async throws {
+            let locked = try #require(ReplicaHTML.locked("<!doctype html><html><body><div style=\"height:2000px\">x</div></body></html>"))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let task = Task { @MainActor in
+                await ReplicaSnapshot.attempt(locked, meta: nil, ruleList: ruleList, in: window)
+            }
+            try await Task.sleep(for: .milliseconds(50))
+            task.cancel()
+            let result = await task.value
+            #expect(throws: ReplicaSnapshot.RenderFailure.cancelled) { try result.get() }
+            #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
+        }
+
+        /// Test host without a key window: one of our own.
+        private static func hostWindow() -> UIWindow {
+            let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+            window.makeKeyAndVisible()
+            return window
+        }
+
+        private static func color(_ image: UIImage, atFraction point: CGPoint) -> (red: CGFloat, green: CGFloat)? {
+            guard let cgImage = image.cgImage else { return nil }
+            var pixel = [UInt8](repeating: 0, count: 4)
+            guard let context = CGContext(
+                data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return nil }
+            let x = CGFloat(cgImage.width) * point.x
+            let y = CGFloat(cgImage.height) * (1 - point.y)
+            context.draw(cgImage, in: CGRect(x: -x, y: -y, width: CGFloat(cgImage.width), height: CGFloat(cgImage.height)))
+            return (CGFloat(pixel[0]) / 255, CGFloat(pixel[1]) / 255)
+        }
     }
 }

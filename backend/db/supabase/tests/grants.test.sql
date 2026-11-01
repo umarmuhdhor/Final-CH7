@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(34);
+select plan(37);
 
 select has_role('shoo_api', 'role shoo_api exists');
 select ok(not rolbypassrls and not rolsuper and rolcanlogin, 'shoo_api: login, no superuser, no bypassrls')
@@ -18,12 +18,15 @@ from unnest(array[
 -- blocklist_entries: table-wide SELECT + DELETE, INSERT/UPDATE per column (fase 12, hardening.test.sql)
 select table_privs_are('public', 'blocklist_entries', 'shoo_api',
   array['SELECT', 'DELETE'], 'shoo_api SELECT + DELETE on blocklist_entries (column grants for the rest)');
+-- ops_jobs (fase 21a): cron status, never deleted by the Worker
+select table_privs_are('public', 'ops_jobs', 'shoo_api',
+  array['SELECT', 'INSERT', 'UPDATE'], 'shoo_api SELECT/INSERT/UPDATE on ops_jobs');
 
 -- I7: PostgREST roles have nothing
 select table_privs_are('public', t, r, array[]::text[], r || ' has no privileges on ' || t)
 from unnest(array[
   'devices', 'family_links', 'family_codes', 'join_attempts', 'scans', 'verdicts',
-  'blocklist_entries', 'ops_heartbeat', 'push_log', 'rate_limit_hits'
+  'blocklist_entries', 'ops_heartbeat', 'push_log', 'rate_limit_hits', 'ops_jobs'
 ]) as t
 cross join unnest(array['anon', 'authenticated']) as r;
 

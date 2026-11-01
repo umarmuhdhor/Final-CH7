@@ -19,13 +19,14 @@ struct PageCopy {
 enum ReplicaSnapshot {
     /// Same width as the iPhone the extension copied from, so the page lays out as it did there.
     static let renderWidth: CGFloat = 390
-    /// Most of the page we keep, in view points, around the focus.
-    static let windowHeight: CGFloat = 3000
+    /// Most of the page we keep, in view points, around the focus (fase 22 K7 a).
+    static let windowHeight: CGFloat = 1800
     /// How much of the page above the focus stays in the picture.
     static let leadIn: CGFloat = 600
-    /// Picture width in points (× screen scale in pixels): sharp on the 270 pt card. At 3× a full
-    /// 3000 pt window is about 600 × 4600 px (≈ 11 MB), held only while Detail is open.
-    static let imageWidth: CGFloat = 200
+    /// Picture width in points (× screen scale in pixels): the full `renderWidth`, so the 270 pt card and
+    /// the full screen view (up to 440 pt) are sharp. At 3× a full window is 1170 × 5400 px (≈ 25 MB),
+    /// held only while Detail is open (fase 22 K7 a).
+    static let imageWidth: CGFloat = renderWidth
     /// `didFinish` never came: show the placeholder instead of waiting forever.
     static let loadTimeout: Duration = .seconds(10)
     /// A page that stalls the content process must not keep the hidden view in the window.
@@ -33,13 +34,38 @@ enum ReplicaSnapshot {
     /// Time for the newly shown tiles after the frame grows.
     static let paintDelay: Duration = .milliseconds(300)
 
+    /// Why `render` gave `nil` (fase 23a, flake F2): the stage, never the page or its address.
+    enum RenderFailure: Error, Equatable {
+        /// Detail closed or a new link: normal.
+        case cancelled
+        /// No `didFinish` within `loadTimeout`, a load error, or a dead content process.
+        case load
+        /// The page has no size to place the window on.
+        case place
+        /// No picture within `snapshotTimeout`.
+        case snapshot
+    }
+
     /// `lockedHTML` must come from `ReplicaHTML.locked(_:)`. `nil` when WebKit can't draw it, or when the
     /// task is cancelled (Detail closed, new link): the hidden view leaves the window at once then.
     static func render(
         _ lockedHTML: String, meta: ReplicaMeta?, ruleList: WKContentRuleList, in window: UIWindow
     ) async -> PageCopy? {
-        let controller = ReplicaWebController(ruleList: ruleList, focusY: meta?.focusY ?? 0)
-        controller.scrollsToFocusOnFinish = false
+        switch await attempt(lockedHTML, meta: meta, ruleList: ruleList, in: window) {
+        case .success(let copy): return copy
+        case .failure(.cancelled): Log.replica.info("Replica snapshot nil: cancelled")
+        case .failure(.load): Log.replica.error("Replica snapshot nil: load")
+        case .failure(.place): Log.replica.error("Replica snapshot nil: place")
+        case .failure(.snapshot): Log.replica.error("Replica snapshot nil: snapshot")
+        }
+        return nil
+    }
+
+    /// `render`, with the stage that failed.
+    static func attempt(
+        _ lockedHTML: String, meta: ReplicaMeta?, ruleList: WKContentRuleList, in window: UIWindow
+    ) async -> Result<PageCopy, RenderFailure> {
+        let controller = ReplicaWebController(ruleList: ruleList)
         let webView = controller.webView
         // In the window (WebKit only paints views in one), outside its bounds, never seen or read out.
         webView.frame = CGRect(x: -renderWidth * 2, y: 0, width: renderWidth, height: 844)
@@ -54,15 +80,19 @@ enum ReplicaSnapshot {
             webView.removeFromSuperview()
         }
 
-        guard await finished(controller, html: lockedHTML), !Task.isCancelled else { return nil }
+        let loaded = await finished(controller, html: lockedHTML)
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard loaded else { return .failure(.load) }
         await controller.waitForLayout()
-        guard !Task.isCancelled, place(webView, focusY: meta?.focusY ?? 0) else { return nil }
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard place(webView, focusY: meta?.focusY ?? 0) else { return .failure(.place) }
         // The taller frame shows page parts WebKit has not painted yet; there is no paint-done event
         // without JS, so let the new size lay out and give the tiles a moment. Pages sized with `vh`
         // change height with the frame: place once more on the final size.
         await controller.waitForLayout()
-        guard !Task.isCancelled, place(webView, focusY: meta?.focusY ?? 0) else { return nil }
-        do { try await Task.sleep(for: paintDelay) } catch { return nil }
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard place(webView, focusY: meta?.focusY ?? 0) else { return .failure(.place) }
+        do { try await Task.sleep(for: paintDelay) } catch { return .failure(.cancelled) }
 
         let configuration = WKSnapshotConfiguration()
         configuration.rect = CGRect(origin: .zero, size: webView.bounds.size)
@@ -71,17 +101,18 @@ enum ReplicaSnapshot {
         let image: UIImage? = await first(within: snapshotTimeout, otherwise: nil) { done in
             webView.takeSnapshot(with: configuration) { image, _ in done(image) }
         }
-        guard let image, !Task.isCancelled else { return nil }
+        guard !Task.isCancelled else { return .failure(.cancelled) }
+        guard let image else { return .failure(.snapshot) }
 
         // Marks follow where the picture really starts, after WebKit clamped the offset.
         let zoom = max(webView.scrollView.zoomScale, 0.01)
         let topCSS = webView.scrollView.contentOffset.y / zoom
-        return PageCopy(
+        return .success(PageCopy(
             image: image,
             meta: meta,
             cssWidth: renderWidth / zoom,
             marks: shifted(meta?.marks ?? [], topCSS: topCSS, heightCSS: webView.bounds.height / zoom)
-        )
+        ))
     }
 
     /// Sizes the view to the kept part and scrolls to it. `false` for an empty page.
@@ -133,7 +164,7 @@ enum ReplicaSnapshot {
 
     /// The first answer `start` gives, or `fallback` after `timeout` or when the task is cancelled.
     /// Later answers are ignored, and the timer stops with the first one.
-    private static func first<T>(
+    private static func first<T: Sendable>(
         within timeout: Duration, otherwise fallback: T, _ start: (@escaping (T) -> Void) -> Void
     ) async -> T {
         let race = Race(fallback: fallback)
@@ -149,7 +180,7 @@ enum ReplicaSnapshot {
 
 /// One answer for `ReplicaSnapshot.first`: whichever of the callback, the timer or cancellation comes first.
 @MainActor
-private final class Race<T> {
+private final class Race<T: Sendable> {
     private let fallback: T
     private var continuation: CheckedContinuation<T, Never>?
     private var timer: Task<Void, Never>?

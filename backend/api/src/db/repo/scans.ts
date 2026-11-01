@@ -164,49 +164,79 @@ export async function recentFavicon(sql: Q, ownerId: string, domain: string): Pr
   return row?.path;
 }
 
+export type ReplicaQuotaReason = "owner" | "family" | "family_bytes" | "global" | "global_bytes" | "reserve";
+
 export type ReplicaSlot =
   | { reuse: string }
   | { upload: string }
-  | { quota: "owner" | "global" | "global_bytes" }
+  | { quota: ReplicaQuotaReason }
   | { gone: true }
   | { none: true };
 
 export interface ReplicaQuota {
   /** Uploads per owner per 24 h. */
   owner: number;
+  /** Uploads per family (Guardian + members, fase 19 C1) per 24 h. */
+  family: number;
+  /** sum(replica_bytes) per family per 24 h. */
+  familyBytes: number;
   /** Uploads by everyone per 24 h. */
   global: number;
   /** sum(replica_bytes) of everyone's uploads per 24 h. */
   globalBytes: number;
+  /** The last part of `global` / `globalBytes`, kept for light families (fase 19 K3). */
+  reserveUploads: number;
+  reserveBytes: number;
+  /** A family with fewer uploads than this in 24 h is light. */
+  lightFamily: number;
 }
 
 /**
  * EX-07 pre-check before the IP limit and the inflate (cheap first, K5): the owner's replica of this
  * domain from the last 24 h to reuse, and whether the owner has a family link (Protected with a
  * Guardian, or Guardian with members). Without one nobody else can ever see the replica.
+ * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
+ * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
+ * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (6, 0) stays the final
+ * word, so a race costs at most one inflate, as before.
  * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
  * the same moment may keep or drop one replica.
  */
 export async function precheckReplica(
   sql: Sql,
   scan: { ownerId: string; domain: string },
-): Promise<{ reuse: string | undefined; family: boolean }> {
-  const [row] = await sql<{ reuse: string | null; family: boolean }[]>`
+  bytes: number,
+  quota: ReplicaQuota,
+): Promise<{ reuse: string | undefined; family: boolean; quota: ReplicaQuotaReason | undefined }> {
+  const [row] = await sql<({ reuse: string | null; hasFamily: boolean } & ReplicaCounts)[]>`
     select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse,
-           exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as family`;
-  return { reuse: row?.reuse ?? undefined, family: row?.family ?? false };
+           exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as "hasFamily",
+           c.*
+    from (${replicaCountsQuery(sql, scan.ownerId)}) c`;
+  // An aggregate without group by: always exactly one row. The counts also run for a reuse or a
+  // device without family, where they are not used: one index-only pass, cheaper than a second trip.
+  const r = row!;
+  const reuse = r.reuse ?? undefined;
+  return { reuse, family: r.hasFamily, quota: reuse || !r.hasFamily ? undefined : quotaFull(r, bytes, quota) };
 }
 
 /**
  * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
  * class 6; 3–5 are taken), reuse the owner's replica of this domain from the last 24 h, else reserve
- * `upload.path` when the owner uploaded fewer than `quota.owner` and everyone fewer than `quota.global`
- * objects and `quota.globalBytes` bytes in 24 h (original rows only, index scans_original_replica).
- * A new upload also takes the global key (6, 0) around the counts, so parallel owners cannot overshoot
- * them; held for milliseconds, the R2 put runs after commit. The counts are rows: deleting a device
- * frees its share at once while the objects wait for the tombstone cron (bounded by POST /devices
- * 10/hour and replicaIp 300/day per IP, and the bucket's 17-day lifecycle). replica_bytes is
- * written on the uploading row only. The path is tombstoned before the upload (D-alief-B12).
+ * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
+ * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
+ * key (6, 0). Every new upload takes that key, so uploads by different members of one family cannot
+ * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
+ * so the family may still change by one member in between); held for milliseconds, the R2 put runs
+ * after commit. Order of the checks (fase 19 K4): owner → family → family_bytes → global →
+ * global_bytes → reserve; the first that applies is the reason.
+ *
+ * The family is the current one: the owner's Guardian (or the owner itself) plus that Guardian's
+ * members, from family_links at this moment, with no column that remembers it (fase 19 K1, P13).
+ * A member that leaves takes its uploads along, and deleting a device frees its share at once while
+ * the objects wait for the tombstone cron (C4, accepted: bounded by the owner quota, replicaIp 300/day
+ * per IP, POST /devices 10/hour per IP and the bucket's 17-day lifecycle). replica_bytes is written on
+ * the uploading row only. The path is tombstoned before the upload (D-alief-B12).
  * `upload` null only looks for a reuse ({ none } when there is nothing to reuse).
  */
 export async function reserveReplica(
@@ -221,16 +251,9 @@ export async function reserveReplica(
     const reuse = found?.path ?? undefined;
     if (!reuse && !upload) return { none: true };
     if (!reuse) {
-      const [mine] = await tx<{ n: number }[]>`
-        select count(*)::int as n from scans
-        where replica_bytes is not null and created_at > now() - interval '24 hours' and owner_id = ${scan.ownerId}`;
-      if (mine!.n >= quota.owner) return { quota: "owner" };
       await tx`select pg_advisory_xact_lock(6, 0)`;
-      const [all] = await tx<{ n: number; bytes: number }[]>`
-        select count(*)::int as n, coalesce(sum(replica_bytes), 0)::bigint::float8 as bytes from scans
-        where replica_bytes is not null and created_at > now() - interval '24 hours'`;
-      if (all!.n >= quota.global) return { quota: "global" };
-      if (all!.bytes + upload!.bytes > quota.globalBytes) return { quota: "global_bytes" };
+      const full = quotaFull(await replicaCounts(tx, scan.ownerId), upload!.bytes, quota);
+      if (full) return { quota: full };
     }
     // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
     const updated = reuse
@@ -241,6 +264,98 @@ export async function reserveReplica(
     await addTombstones(tx, [upload!.path]);
     return { upload: upload!.path };
   });
+}
+
+interface ReplicaCounts {
+  mine: number;
+  family: number;
+  familyBytes: number;
+  all: number;
+  allBytes: number;
+}
+
+/**
+ * Original uploads of the last 24 h for one owner, its family and everyone, in one pass over
+ * scans_original_replica (owner_id and replica_bytes are included columns, so index-only). The family
+ * comes from family_links in SQL, never as a JS array parameter (fetch_types: false, db/client.ts).
+ */
+async function replicaCounts(sql: Q, ownerId: string): Promise<ReplicaCounts> {
+  const [r] = await sql<ReplicaCounts[]>`${replicaCountsQuery(sql, ownerId)}`;
+  return r!;
+}
+
+/** The statement of replicaCounts as a fragment, so precheckReplica can run it as a subquery. */
+const replicaCountsQuery = (sql: Q, ownerId: string) => sql`
+    with root as (
+      select coalesce((select guardian_id from family_links where protected_id = ${ownerId}), ${ownerId}) as id
+    ), members as (
+      select id from root
+      union
+      select protected_id from family_links where guardian_id = (select id from root)
+    )
+    select count(*) filter (where s.owner_id = ${ownerId})::int as mine,
+           count(*) filter (where s.owner_id in (select id from members))::int as family,
+           coalesce(sum(s.replica_bytes) filter (where s.owner_id in (select id from members)), 0)::float8 as "familyBytes",
+           count(*)::int as "all",
+           coalesce(sum(s.replica_bytes), 0)::float8 as "allBytes"
+    from scans s
+    where s.replica_bytes is not null and s.created_at > now() - interval '24 hours'`;
+
+/** Fase 19 K4 order. The reserve (K3) is the last part of the global quota, open to light families only. */
+function quotaFull(c: ReplicaCounts, bytes: number, q: ReplicaQuota): ReplicaQuotaReason | undefined {
+  if (c.mine >= q.owner) return "owner";
+  if (c.family >= q.family) return "family";
+  if (c.familyBytes + bytes > q.familyBytes) return "family_bytes";
+  if (c.all >= q.global) return "global";
+  if (c.allBytes + bytes > q.globalBytes) return "global_bytes";
+  const inReserve = c.all >= q.global - q.reserveUploads || c.allBytes + bytes > q.globalBytes - q.reserveBytes;
+  if (inReserve && c.family >= q.lightFamily) return "reserve";
+  return undefined;
+}
+
+/** Fase 19 K5.2: aggregate state of the replica quotas over the last 24 h. Numbers only, no id (P6). */
+export interface ReplicaUsage {
+  /** full = a full-size replica no longer fits the global quota; reserve = in the last 20 %; else ok. A state, not a drop. */
+  level: "ok" | "reserve" | "full";
+  uploads: number;
+  bytes: number;
+  uploadsMax: number;
+  bytesMax: number;
+  /** Family roots with at least one upload. */
+  families: number;
+  /** Families where the next full-size replica no longer fits. */
+  familiesAtCap: number;
+  topFamilyUploads: number;
+  topFamilyBytes: number;
+}
+
+/** One query for the hourly gauge (fase 19 K5.2) and GET /ops/status (fase 21c). `maxBytes` = largest replica. */
+export async function replicaUsage(sql: Sql, q: ReplicaQuota, maxBytes: number): Promise<ReplicaUsage> {
+  const [r] = await sql<Omit<ReplicaUsage, "level" | "uploadsMax" | "bytesMax">[]>`
+    with up as (
+      select coalesce(f.guardian_id, s.owner_id) as root, s.replica_bytes as b
+      from scans s left join family_links f on f.protected_id = s.owner_id
+      where s.replica_bytes is not null and s.created_at > now() - interval '24 hours'
+    ), fam as (
+      select count(*)::int as n, sum(b)::float8 as b from up group by root
+    )
+    select coalesce(sum(n), 0)::int as uploads, coalesce(sum(b), 0)::float8 as bytes,
+           count(*)::int as families,
+           count(*) filter (where n >= ${q.family} or b + ${maxBytes} > ${q.familyBytes})::int as "familiesAtCap",
+           coalesce(max(n), 0)::int as "topFamilyUploads", coalesce(max(b), 0)::float8 as "topFamilyBytes"
+    from fam`;
+  const u = r!;
+  // `reserve` = usage has entered the reserve zone (K5.2). quotaFull also adds the size of the upload
+  // at hand, so a full-size upload from a heavy family is refused slightly before the gauge says
+  // `reserve` (at most MAX_REPLICA_BYTES early). Deliberate: the gauge reports usage, not one upload.
+  const level = u.uploads >= q.global || u.bytes + maxBytes > q.globalBytes ? "full"
+    : u.uploads >= q.global - q.reserveUploads || u.bytes > q.globalBytes - q.reserveBytes ? "reserve"
+    : "ok";
+  // Field order = the log line of fase 19 K5.2.
+  return {
+    level, uploads: u.uploads, bytes: u.bytes, uploadsMax: q.global, bytesMax: q.globalBytes, families: u.families,
+    familiesAtCap: u.familiesAtCap, topFamilyUploads: u.topFamilyUploads, topFamilyBytes: u.topFamilyBytes,
+  };
 }
 
 /**

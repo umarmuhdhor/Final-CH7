@@ -51,11 +51,28 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   throw errors.verdictNotAllowed(403, "Not the owner's guardian");
 });
 
+/** Fase 25 K7: verdicts seen within this many ms of the decision are logged, to measure EX-06 latency. */
+const VERDICT_SEEN_WINDOW_MS = 120_000;
+
 /** EX-06: polled by the extension of either mode while a block screen is open. */
 verdicts.get("/verdicts", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hitLight(sql, limits.getVerdict, principal.deviceId);
   const { domain } = parse(lookupQuery, { domain: c.req.query("domain") });
-  return c.json({ verdict: await findVerdict(sql, principal.deviceId, domain) });
+  const verdict = await findVerdict(sql, principal.deviceId, domain);
+  if (verdict) logFreshVerdict(verdict);
+  return c.json({ verdict });
 });
+
+/**
+ * One `verdict_seen` line with the server-side latency from the Guardian's tap to this poll. Numbers and
+ * the value only (no domain, ids or names, SECURITY §3 P6). Block screens stop polling after the first
+ * verdict, so this is about one line per decision. Clock skew between Postgres and the Worker is
+ * clamped to 0.
+ */
+function logFreshVerdict(verdict: { value: string; decidedAt: string }): void {
+  const ageMs = Math.max(0, Date.now() - Date.parse(verdict.decidedAt));
+  if (!(ageMs <= VERDICT_SEEN_WINDOW_MS)) return;
+  console.log(JSON.stringify({ event: "verdict_seen", ageMs, value: verdict.value }));
+}

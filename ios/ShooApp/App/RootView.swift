@@ -22,7 +22,7 @@ struct RootView: View {
             }
         }
         .environment(\.locale, env.settings.language.locale)
-        .environment(\.shooReduceMotion, env.settings.reduceMotion || systemReduceMotion)
+        .environment(\.shooReduceMotion, env.settings.reduceMotion || systemReduceMotion || env.reducesMotionForUITests)
         .environment(\.shooReduceGlass, env.settings.reduceGlass || systemReduceTransparency)
         // PF-01 Tema and Aksesibilitas: theme, text size, bold text and contrast for every window.
         .background(AppearanceOverrides(

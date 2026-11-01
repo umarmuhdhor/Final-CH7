@@ -10,17 +10,10 @@ final class OnboardingUITests: XCTestCase {
 
     @MainActor
     private func launch(extensionActive: Bool = true, extensionStatus: String? = nil, notifications: String = "denied") -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
-            "-UITestReset", "YES",
-            "-settings.language", "en",
-            "-UITestNotifications", notifications,
-        ]
-        if extensionActive { app.launchArguments += ["-UITestExtensionActive", "YES"] }
-        if let extensionStatus { app.launchArguments += ["-UITestExtensionStatus", extensionStatus] }
-        app.launch()
-        return app
+        var arguments = ["-settings.language", "en", "-UITestNotifications", notifications]
+        if extensionActive { arguments += ["-UITestExtensionActive", "YES"] }
+        if let extensionStatus { arguments += ["-UITestExtensionStatus", extensionStatus] }
+        return XCUIApplication.mock(arguments)
     }
 
     @MainActor
@@ -63,9 +56,9 @@ final class OnboardingUITests: XCTestCase {
         app.buttons["invite.open"].tap()
         XCTAssertTrue(app.buttons["invite.done"].waitForExistence(timeout: 5))
         app.buttons["invite.done"].tap()
-        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["onboarding.back"].tap()
-        XCTAssertTrue(app.buttons["invite.open"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        // F3: a Back tap while the push still runs can be lost on a slow runner.
+        app.tap(app.buttons["onboarding.back"], until: app.buttons["invite.open"])
     }
 
     @MainActor
@@ -147,9 +140,7 @@ final class OnboardingUITests: XCTestCase {
 
         // Relaunch without reset: the saved mode skips straight back to ON-04.
         app.terminate()
-        let again = XCUIApplication()
-        again.launchArguments += ["-UITestMock", "YES", "-settings.language", "en", "-UITestNotifications", "denied"]
-        again.launch()
+        let again = XCUIApplication.mock(["-settings.language", "en", "-UITestNotifications", "denied"], reset: false)
         XCTAssertTrue(again.buttons["extension.turnOn"].waitForExistence(timeout: 10))
         XCTAssertFalse(again.buttons["mode.continue"].exists)
     }
