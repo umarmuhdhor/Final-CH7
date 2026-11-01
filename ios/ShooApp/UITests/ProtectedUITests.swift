@@ -20,18 +20,24 @@ final class ProtectedUITests: XCTestCase {
     }
 
     @MainActor
-    func testShieldShowsGuardianAndOpensLastBlocked() {
+    func testShieldShowsGuardian() {
         let app = launch()
         XCTAssertTrue(app.descendants(matching: .any)["shield.status.active"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.buttons["shield.turnOn"].exists)
         let guardian = app.descendants(matching: .any)["shield.guardian"]
         XCTAssertTrue(guardian.waitForExistence(timeout: 5))
         XCTAssertTrue(guardian.label.contains("Adhella"), guardian.debugDescription)
+        XCTAssertTrue(guardian.label.contains("Connected with"), guardian.debugDescription)
+    }
 
+    @MainActor
+    func testBlockedCardOpensDetailWithoutVerdictButtons() {
+        // A site blocked in the last 24 h gets the big card (Figma 441:3800).
+        let app = launch(extra: ["-mock.scenario", "figma"])
         let card = app.buttons["shield.lastBlocked"]
-        XCTAssertTrue(card.waitForExistence(timeout: 5), app.debugDescription)
-        card.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 5))
+        XCTAssertTrue(card.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["shield.stats"].exists)
+        app.tap(card, until: app.descendants(matching: .any)["detail.header"])
         // Protected users never see the guardian's verdict buttons (GD-07).
         XCTAssertFalse(app.buttons["detail.verdict.safe"].exists)
         XCTAssertFalse(app.buttons["detail.verdict.notSafe"].exists)

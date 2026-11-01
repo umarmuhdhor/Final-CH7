@@ -1,11 +1,18 @@
 import Foundation
 import Observation
 
-/// Guardian Home (GD-01, Figma "Guardian/Home"): extension status, the family's numbers, the newest site that
-/// still waits for a verdict, and recent activity. Everything comes from `GET /scans?owner=family`.
+/// Guardian Home (GD-01/GD-03, Figma HOME page). `personal` (Family mode off, "Pribadi/Home"): extension
+/// status, the guardian's own numbers and recent sites, from `GET /scans?owner=me`. `family` ("Guardian/Home"):
+/// the people looked after, the newest site that still waits for a verdict, and the family's recent sites,
+/// from `GET /scans?owner=family`.
 @MainActor
 @Observable
 final class GuardianHomeModel {
+    enum Scope: Equatable {
+        case personal
+        case family
+    }
+
     enum State: Equatable {
         case loading
         case loaded
@@ -24,7 +31,8 @@ final class GuardianHomeModel {
         var blocked = 0
         var warnings = 0
         var suspiciousHosts = 0
-        var scansToday = 0
+        /// Figma "Scan terakhir": scans of the last 24 h.
+        var recentScans = 0
     }
 
     /// A pending site gets a card for this long after it was detected.
@@ -46,6 +54,7 @@ final class GuardianHomeModel {
     /// The server refused this verdict (`verdict_not_allowed`), e.g. a warning site while the contract allows blocked only.
     private(set) var verdictNotAllowed = false
 
+    let scope: Scope
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let readExtensionStatus: () async -> ExtensionStatus
     @ObservationIgnored private let settings: AppSettings
@@ -55,11 +64,13 @@ final class GuardianHomeModel {
     init(
         repository: any ShooRepository,
         settings: AppSettings,
+        scope: Scope = .family,
         extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
         now: @escaping () -> Date = Date.init
     ) {
         self.repository = repository
         self.settings = settings
+        self.scope = scope
         readExtensionStatus = extensionStatus
         self.now = now
     }
@@ -68,6 +79,7 @@ final class GuardianHomeModel {
 
     /// Newest family member's scan from the last 24 h with no verdict, unless its card was closed.
     var pendingScan: ScanResult? {
+        guard scope == .family else { return nil }
         let since = now().addingTimeInterval(-Self.pendingWindow)
         let dismissed = Set(settings.dismissedHomeScanIds)
         return scans.first { scan in
@@ -92,23 +104,26 @@ final class GuardianHomeModel {
     }
 
     var stats: Stats {
-        let calendar = Calendar.current
-        let today = now()
+        let since = now().addingTimeInterval(-Self.pendingWindow)
         return Stats(
             blocked: scans.filter { $0.status == .blocked }.count,
             warnings: scans.filter { $0.status == .warning }.count,
             suspiciousHosts: Set(scans.map { $0.domain.lowercased() }).count,
-            scansToday: scans.filter { calendar.isDate($0.detectedAt, inSameDayAs: today) }.count
+            recentScans: scans.filter { $0.detectedAt >= since }.count
         )
     }
 
-    var recent: [ScanResult] { Array(scans.prefix(Self.recentCount)) }
-
-    /// Avatar for a scan's owner: a member's, or the guardian's own.
-    func avatarId(for scan: ScanResult) -> String? {
-        if scan.ownerDeviceId == profile?.deviceId { return profile?.avatarId }
-        return members.first { $0.deviceId == scan.ownerDeviceId }?.avatarId
+    /// Family Home lists the members' sites only, like Family Activity (GD-05).
+    var recent: [ScanResult] {
+        let shown = scope == .family ? scans.filter { $0.ownerDeviceId != profile?.deviceId } : scans
+        return Array(shown.prefix(Self.recentCount))
     }
+
+    /// At most 3 people are shown (PRD GD-03).
+    var shownMembers: [FamilyMember] { Array(members.prefix(FamilyShieldModel.maxMembers)) }
+
+    /// Family Home with no one to look after: the invite takes the sheet.
+    var hasNoFamily: Bool { scope == .family && state == .loaded && members.isEmpty }
 
     // MARK: Actions
 
@@ -121,8 +136,8 @@ final class GuardianHomeModel {
         guard request == generation else { return }
         do {
             async let me = repository.me()
-            async let family = repository.familyMembers()
-            async let all = allFamilyScans()
+            async let family: [FamilyMember] = scope == .family ? repository.familyMembers() : []
+            async let all = allScans()
             let (loadedProfile, loadedMembers, loadedScans) = try await (me, family, all)
             guard request == generation else { return }
             profile = loadedProfile
@@ -171,11 +186,12 @@ final class GuardianHomeModel {
         }
     }
 
-    private func allFamilyScans() async throws -> [ScanResult] {
+    private func allScans() async throws -> [ScanResult] {
+        let owner: ScanOwnerFilter = scope == .family ? .family : .me
         var items: [ScanResult] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {
-            let page = try await repository.scans(owner: .family, status: nil, cursor: cursor)
+            let page = try await repository.scans(owner: owner, status: nil, cursor: cursor)
             items += page.items
             guard let next = page.nextCursor else { break }
             cursor = next

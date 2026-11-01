@@ -1,85 +1,58 @@
 import SwiftUI
 
-/// Colours from Figma "Guardian/Home" (node 232:6093). Light only, like the onboarding screens.
-enum HomeTheme {
-    static let background = Color(red: 0xF3 / 255, green: 0xF6 / 255, blue: 0xF8 / 255)
-    static let heroDark = Color(red: 0x1E / 255, green: 0x78 / 255, blue: 0xBE / 255)
-    static let heroLight = Color(red: 0x68 / 255, green: 0xCD / 255, blue: 0xFA / 255)
-    static let heroGlow = Color(red: 0x8F / 255, green: 0xE9 / 255, blue: 0xEC / 255)
-    static let navy = Color(red: 0x19 / 255, green: 0x1D / 255, blue: 0x2F / 255)
-    static let ink = Color(red: 0x15 / 255, green: 0x16 / 255, blue: 0x17 / 255)
-    /// Figma #6A717E is 4.6:1 on white.
-    static let secondaryInk = Color(red: 0x6A / 255, green: 0x71 / 255, blue: 0x7E / 255)
-    static let tileIcon = Color(red: 0xE5 / 255, green: 0x48 / 255, blue: 0x3B / 255)
-    static let tileIconBackground = Color(red: 0xF3 / 255, green: 0xF6 / 255, blue: 0xF8 / 255)
-    static let rowStroke = Color(red: 0xE2 / 255, green: 0xE8 / 255, blue: 0xF0 / 255)
-    /// Figma #D67D00 is 2.9:1 on its chip; darkened to 4.6:1 for 13 pt text.
-    static let warningText = Color(red: 0xA8 / 255, green: 0x5A / 255, blue: 0x00 / 255)
-    static let warningFill = Color(red: 0xFF / 255, green: 0xF8 / 255, blue: 0xEF / 255)
-    static let warningStroke = Color(red: 0xFF / 255, green: 0xE1 / 255, blue: 0xB6 / 255)
-    static let warningRing = Color(red: 0xFF / 255, green: 0x9F / 255, blue: 0x0A / 255)
-    static let dangerText = Color(red: 0xBB / 255, green: 0x16 / 255, blue: 0x16 / 255)
-    static let dangerFill = Color(red: 0xFF / 255, green: 0xF4 / 255, blue: 0xF4 / 255)
-    static let dangerStroke = Color(red: 0xFF / 255, green: 0xCD / 255, blue: 0xCD / 255)
-    /// Red that keeps 4.5:1 on the navy status strip.
-    static let dangerOnNavy = Color(red: 0xFF / 255, green: 0x7A / 255, blue: 0x70 / 255)
-}
-
-/// Guardian Home (GD-01): hero with the glowing shield, security status, the family's numbers or the site
-/// that waits for a verdict, and recent activity. Family mode off; the pill switches to the family (GD-02/03).
+/// Guardian Home, both sides of the ⇆ switch (GD-01/02/03, Figma HOME page).
+/// `personal` (Family mode off, "Pribadi/Home" 435:20058): blue hero, security status, four tiles, own recent sites.
+/// `family` ("Guardian/Home" 435:20373): teal hero, the people looked after, the site that waits for a verdict
+/// (435:20899), the family's recent sites; nobody yet → the invite code and how it works (435:20630).
 struct GuardianHomeView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
     @State private var model: GuardianHomeModel
-    @State private var isTurnOffPresented = false
     /// The hero is scrolled out from under the bar: the top scrim takes over as the dark backdrop.
     @State private var isHeroHidden = false
 
     init(
         repository: any ShooRepository,
         settings: AppSettings,
+        scope: GuardianHomeModel.Scope,
         extensionStatus: @escaping () async -> ExtensionStatus
     ) {
-        _model = State(initialValue: GuardianHomeModel(repository: repository, settings: settings, extensionStatus: extensionStatus))
+        _model = State(initialValue: GuardianHomeModel(repository: repository, settings: settings, scope: scope, extensionStatus: extensionStatus))
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
+    private var isFamily: Bool { model.scope == .family }
+    /// Dark headline on the teal hero ("Keluarga Terlindungi!"), white everywhere else.
+    private var hasDarkHero: Bool { isFamily && !model.hasNoFamily && model.pendingScan == nil }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                HomeHero(
-                    isActive: model.extensionStatus.isActive,
-                    onLink: {
-                        if model.extensionStatus.isActive { isTurnOffPresented = true } else { env.router.isTurnOnPresented = true }
-                    }
-                )
-                .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
+                hero
+                    .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
                 VStack(spacing: 0) {
-                    StatusStrip(level: model.level)
-                    VStack(spacing: 24) {
-                        content
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 32)
-                    .background(HomeTheme.background, in: UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
-                    .padding(.top, -22)
+                    strip
+                    sheet.homeSheet()
                 }
-                .padding(.top, -44)
+                VStack(spacing: 24) {
+                    below
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 32)
+                .padding(.bottom, 32)
             }
             // Light only, like the Figma; scoped to the page so the bars keep their own scheme.
             .environment(\.colorScheme, .light)
         }
         .scrollIndicators(.hidden)
         .background(HomeTheme.background)
-        // Pill and profile live in the (see-through) navigation bar, so the status bar turns white on the hero.
+        // Switch and profile live in the (see-through) navigation bar.
         .toolbar {
-            FamilySwitchToolbarItem(members: model.members, action: switchToFamily)
+            HomeSwitchToolbarItem(isFamilyShown: isFamily, action: switchSide)
             HomeProfileToolbarItem(name: model.profile?.name) { env.router.openProfile() }
         }
-        // Once the hero is gone, a navy scrim keeps the white status bar and pill readable over light content.
+        // Once the hero is gone, a navy scrim keeps the white status bar readable over light content.
         .overlay(alignment: .top) {
             LinearGradient(colors: [HomeTheme.navy, HomeTheme.navy.opacity(0.85), HomeTheme.navy.opacity(0)],
                            startPoint: .top, endPoint: .bottom)
@@ -91,7 +64,7 @@ struct GuardianHomeView: View {
                 .accessibilityHidden(true)
         }
         .toolbarBackground(.hidden, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(hasDarkHero && !isHeroHidden ? .light : .dark, for: .navigationBar)
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
@@ -100,7 +73,7 @@ struct GuardianHomeView: View {
             await model.refresh()
         }
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
-            guard model.state == .loaded else { return }
+            guard model.state == .loaded, !isFamily else { return }
             AccessibilityNotification.Announcement(
                 L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
             ).post()
@@ -114,21 +87,69 @@ struct GuardianHomeView: View {
         ) {
             TurnOnExtensionSheet()
         }
-        .sheet(isPresented: $isTurnOffPresented, onDismiss: { Task { await model.refresh() } }) {
-            TurnOffExtensionSheet()
-                .environment(\.locale, locale)
-        }
     }
 
-    private func switchToFamily() {
-        env.settings.familyModeOn = true
+    private func switchSide() {
+        env.settings.familyModeOn = !isFamily
         AccessibilityNotification.Announcement(
-            L10n.string("Family mode on. Showing your family.", language: env.settings.language)
+            L10n.string(isFamily ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
+                        language: env.settings.language)
         ).post()
     }
 
+    // MARK: Hero and status
+
     @ViewBuilder
-    private var content: some View {
+    private var hero: some View {
+        if !isFamily {
+            let isActive = model.extensionStatus.isActive
+            HomeHero(
+                style: .blue,
+                title: isActive ? "You're protected!" : "You're not protected yet",
+                titleIdentifier: isActive ? "home.status.active" : "home.status.off",
+                shieldOn: isActive,
+                bottomPadding: isActive ? 38 : 20
+            ) {
+                if !isActive {
+                    Button { env.router.isTurnOnPresented = true } label: {
+                        Text("Turn on now")
+                            .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
+                            .underline()
+                            .foregroundStyle(.white)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
+                    .accessibilityIdentifier("home.turnOn")
+                }
+            }
+        } else if model.hasNoFamily {
+            HomeHero(style: .blue, title: "Protect your loved ones", titleIdentifier: "home.family.empty",
+                     subtitle: "No one to protect yet", shieldTint: .teal)
+        } else if model.pendingScan != nil {
+            HomeHero(style: .teal, title: "Family needs confirmation", titleIdentifier: "home.family.pending", shieldTint: .orange)
+        } else {
+            HomeHero(style: .teal, title: "Family protected!", titleColor: Color(red: 0x00 / 255, green: 0x38 / 255, blue: 0x3C / 255),
+                     titleIdentifier: "home.family.protected", shieldTint: .teal)
+        }
+    }
+
+    @ViewBuilder
+    private var strip: some View {
+        if !isFamily {
+            StatusStrip(title: "Security status:", value: model.extensionStatus.isActive ? "Good!" : "Danger!", fill: StatusStrip.personal)
+        } else if model.hasNoFamily {
+            StatusStrip(title: "Family status:", value: "No members yet", fill: HomeTheme.navy)
+        } else {
+            StatusStrip(title: "Family status:", value: model.pendingScan != nil ? "needs confirmation" : "All safe!", fill: StatusStrip.family)
+        }
+    }
+
+    // MARK: Sheet
+
+    @ViewBuilder
+    private var sheet: some View {
         switch model.state {
         case .loading:
             ProgressView()
@@ -143,8 +164,14 @@ struct GuardianHomeView: View {
             }
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 216)
+            .padding(16)
         case .loaded:
-            if let scan = model.pendingScan {
+            if !isFamily {
+                StatsGrid(stats: model.stats)
+            } else if model.hasNoFamily {
+                InviteCodeCard(repository: env.repository) { Task { await model.refresh() } }
+                    .padding(24)
+            } else if let scan = model.pendingScan {
                 PendingSiteCard(
                     scan: scan,
                     level: model.level,
@@ -159,238 +186,30 @@ struct GuardianHomeView: View {
                 .id(scan.id)
                 .transition(.opacity.combined(with: .scale(scale: 0.97)))
             } else {
-                StatsGrid(stats: model.stats)
+                MembersRow(members: model.shownMembers) { env.router.show(.member(deviceId: $0.deviceId)) }
             }
-            RecentActivity(
-                scans: model.recent,
-                language: language,
-                avatarId: model.avatarId(for:),
-                onOpen: { env.router.showDetail(scanId: $0.id) },
-                onSeeAll: { env.router.selectedTab = .activity }
-            )
         }
     }
-}
 
-// MARK: - Hero
-
-private struct HomeHero: View {
-    let isActive: Bool
-    let onLink: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            GlowingShield(isActive: isActive)
-                .padding(.top, 24)
-
-            VStack(spacing: 12) {
-                Text(isActive ? "You're protected!" : "You're not protected yet")
-                    .onboardingFont(27, weight: .bold, relativeTo: .title)
-                    .tracking(-0.27)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .shadow(color: HomeTheme.heroDark.opacity(0.35), radius: 6, y: 2)
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier(isActive ? "home.status.active" : "home.status.off")
-                Button(action: onLink) {
-                    Text(isActive ? "Disconnect?" : "Turn on now")
-                        .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
-                        .tracking(-0.15)
-                        .underline()
-                        .foregroundStyle(HomeTheme.navy)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint(Text(isActive ? "Shows how to switch Shoo off in Safari" : "Shows how to switch Shoo on in Safari"))
-                .accessibilityIdentifier(isActive ? "home.disconnect" : "home.turnOn")
+    @ViewBuilder
+    private var below: some View {
+        if model.state == .loaded {
+            if model.hasNoFamily {
+                HowItWorks()
+            } else {
+                RecentActivity(
+                    scans: model.recent,
+                    language: language,
+                    showsOwner: isFamily,
+                    onOpen: { env.router.showDetail(scanId: $0.id) },
+                    onSeeAll: { env.router.selectedTab = .activity }
+                )
             }
-            .padding(.top, 28)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 64)
-        }
-        .frame(maxWidth: .infinity)
-        // Reaches up under the navigation bar, the status bar and the pull-to-refresh overscroll.
-        .background { HeroBackground().padding(.top, -400) }
-    }
-}
-
-/// Figma "Gradient-classic-2 lighter": deep blue top left, light cyan bottom right, film grain.
-private struct HeroBackground: View {
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                LinearGradient(colors: [HomeTheme.heroDark, HomeTheme.heroLight, HomeTheme.heroGlow.opacity(0.9)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                Ellipse()
-                    .fill(HomeTheme.heroDark)
-                    .frame(width: proxy.size.width * 1.7, height: proxy.size.height * 0.9)
-                    .offset(x: -proxy.size.width * 0.3, y: -proxy.size.height * 0.3)
-                    .blur(radius: 70)
-                Image("HeroTexture")
-                    .resizable(resizingMode: .tile)
-                    .blendMode(.multiply)
-                    .opacity(0.35)
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .clipped()
-        }
-        .accessibilityHidden(true)
-    }
-}
-
-/// Top-left glass pill: up to 3 family avatars and ⇆ (GD-02). Also shown in Family view to come back.
-struct FamilySwitchPill: View {
-    let members: [FamilyMember]
-    let action: () -> Void
-    var isFamilyShown = false
-    /// White symbols over the hero, dark ones over light content.
-    var onDarkBackground = true
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if members.isEmpty {
-                    Image(systemName: "person.2.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                } else {
-                    HStack(spacing: -12) {
-                        ForEach(members.prefix(FamilyShieldModel.maxMembers)) { member in
-                            AvatarView(id: member.avatarId, size: 24)
-                                .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 1))
-                        }
-                    }
-                }
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundStyle(onDarkBackground ? Color.white : Color.primary)
-            .padding(.horizontal, 14)
-            .frame(minWidth: 88, minHeight: 44)
-            .modifier(GlassCapsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Family mode"))
-        .accessibilityValue(Text(isFamilyShown ? "On" : "Off"))
-        .accessibilityAddTraits(.isToggle)
-        .accessibilityHint(Text("Switches between your own Shield and your family's"))
-        .accessibilityIdentifier("familyModeToggle")
-    }
-}
-
-/// The pill as a navigation bar item. On iOS 26 the bar's own glass is turned off: the pill brings its own.
-struct FamilySwitchToolbarItem: ToolbarContent {
-    let members: [FamilyMember]
-    let action: () -> Void
-    var isFamilyShown = false
-    var onDarkBackground = true
-
-    var body: some ToolbarContent {
-        if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .topBarLeading) { pill }
-                .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .topBarLeading) { pill }
-        }
-    }
-
-    private var pill: some View {
-        FamilySwitchPill(members: members, action: action, isFamilyShown: isFamilyShown, onDarkBackground: onDarkBackground)
-    }
-}
-
-private struct HomeProfileToolbarItem: ToolbarContent {
-    let name: String?
-    let action: () -> Void
-
-    var body: some ToolbarContent {
-        if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .topBarTrailing) { ProfileInitialButton(name: name, action: action) }
-                .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .topBarTrailing) { ProfileInitialButton(name: name, action: action) }
         }
     }
 }
 
-/// Liquid Glass on iOS 26, frosted material before.
-private struct GlassCapsule: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: Capsule())
-        } else {
-            content.background(.ultraThinMaterial, in: Capsule())
-        }
-    }
-}
-
-/// Top-right circle with the guardian's initial; opens Profile (PF-01).
-private struct ProfileInitialButton: View {
-    let name: String?
-    let action: () -> Void
-
-    private var initial: String {
-        name?.trimmingCharacters(in: .whitespaces).first.map { String($0).uppercased() } ?? ""
-    }
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle().fill(LinearGradient(colors: [HomeTheme.heroLight, HomeTheme.heroDark],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                if initial.isEmpty {
-                    Image(systemName: "person.fill").font(.system(size: 20, weight: .semibold))
-                } else {
-                    Text(verbatim: initial).font(.system(size: 20, weight: .semibold, design: .rounded))
-                }
-            }
-            .foregroundStyle(.white)
-            .frame(width: 44, height: 44)
-            .overlay(Circle().stroke(.white, lineWidth: 1.5))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Profile"))
-        .accessibilityIdentifier("profileButton")
-    }
-}
-
-// MARK: - Status
-
-private struct StatusStrip: View {
-    let level: GuardianHomeModel.Level
-
-    private var value: LocalizedStringKey {
-        switch level {
-        case .normal: "Good!"
-        case .warning: "Under watch!"
-        case .danger: "Danger!"
-        }
-    }
-
-    private var valueColor: Color {
-        level == .danger ? HomeTheme.dangerOnNavy : HomeTheme.heroGlow
-    }
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "circle.grid.3x3.fill")
-                .font(.system(size: 13))
-                .accessibilityHidden(true)
-            (Text("Security status:") + Text(verbatim: " ") + Text(value).foregroundStyle(valueColor))
-                .onboardingFont(15, relativeTo: .subheadline)
-                .tracking(-0.15)
-        }
-        .foregroundStyle(Color(red: 0xFA / 255, green: 0xF9 / 255, blue: 0xFB / 255))
-        .frame(maxWidth: .infinity)
-        .padding(.top, 12)
-        .padding(.bottom, 34)
-        .background(HomeTheme.navy, in: UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("home.securityStatus")
-    }
-}
-
-// MARK: - Normal: four tiles
+// MARK: - Personal: four tiles
 
 private struct StatsGrid: View {
     let stats: GuardianHomeModel.Stats
@@ -402,24 +221,22 @@ private struct StatsGrid: View {
             StatTile(systemImage: "network.badge.shield.half.filled", value: stats.blocked, title: "Threats blocked")
             StatTile(systemImage: "lock.open.fill", value: stats.warnings, title: "Security risks")
             StatTile(systemImage: "hand.raised.fill", value: stats.suspiciousHosts, title: "Suspicious hosts")
-            StatTile(systemImage: "tray.full.fill", value: stats.scansToday, title: "Scans today")
+            StatTile(systemImage: "tray.full.fill", value: stats.recentScans, title: "Recent scans")
         }
         .overlay {
             if !dynamicTypeSize.isAccessibilitySize {
                 // Figma dividers: a vertical and a horizontal hairline that fade at the ends.
                 ZStack {
-                    LinearGradient(colors: [HomeTheme.rowStroke, HomeTheme.rowStroke.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(colors: [HomeTheme.divider, HomeTheme.divider.opacity(0)], startPoint: .top, endPoint: .bottom)
                         .frame(width: 1)
-                    LinearGradient(colors: [HomeTheme.rowStroke.opacity(0), HomeTheme.rowStroke, HomeTheme.rowStroke.opacity(0)],
-                                   startPoint: .leading, endPoint: .trailing)
-                        .frame(height: 1)
+                    FadingDivider()
+                        .padding(.horizontal, 16)
                 }
                 .padding(.vertical, 8)
                 .accessibilityHidden(true)
             }
         }
-        .padding(.vertical, 8)
-        .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(8)
         .accessibilityIdentifier("home.stats")
     }
 }
@@ -458,8 +275,73 @@ private struct StatTile: View {
     }
 }
 
-// MARK: - Warning / Danger: the site that waits
+// MARK: - Family: the people looked after
 
+/// Figma "Frame 1618872221": up to three people side by side, a dot for whether Shoo is on for them.
+private struct MembersRow: View {
+    let members: [FamilyMember]
+    let onOpen: (FamilyMember) -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        layout {
+            ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
+                if index > 0 {
+                    FadingDivider(axis: dynamicTypeSize.isAccessibilitySize ? .horizontal : .vertical)
+                        .padding(.vertical, 8)
+                }
+                Button { onOpen(member) } label: {
+                    MemberCell(member: member, gradient: InitialAvatar.gradient(at: index))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("family.member.\(member.deviceId)")
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("family.header")
+    }
+}
+
+private struct MemberCell: View {
+    let member: FamilyMember
+    let gradient: [Color]
+
+    var body: some View {
+        VStack(spacing: 8) {
+            InitialAvatar(name: member.name, size: 44, gradient: gradient, fontSize: 18)
+                .overlay(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(member.isConnected ? HomeTheme.success : HomeTheme.offline)
+                        .frame(width: 12, height: 12)
+                        .overlay(Circle().stroke(.white, lineWidth: 1))
+                        .offset(x: 2, y: 2)
+                }
+            VStack(spacing: 2) {
+                Text(verbatim: member.name)
+                    .onboardingFont(17, weight: .medium, relativeTo: .headline)
+                    .tracking(-0.17)
+                    .foregroundStyle(HomeTheme.ink)
+                    .lineLimit(1)
+                Text(member.isConnected ? "Active" : "Not connected")
+                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .foregroundStyle(HomeTheme.secondaryInk)
+            }
+        }
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Opens their activity"))
+    }
+}
+
+// MARK: - Family: the site that waits
+
+/// Figma "Kartu Situs" (435:21036): who opened it and when, the site, the risk gauge, the reason in plain words,
+/// then Bahaya / Aman under the card.
 private struct PendingSiteCard: View {
     let scan: ScanResult
     let level: GuardianHomeModel.Level
@@ -473,24 +355,25 @@ private struct PendingSiteCard: View {
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var isDanger: Bool { level == .danger }
-    private var accent: Color { isDanger ? HomeTheme.tileIcon : HomeTheme.warningRing }
-    private var riskTitle: LocalizedStringKey { isDanger ? "Very high risk" : "High risk" }
     private var title: String { scan.pageTitle?.isEmpty == false ? scan.pageTitle! : scan.domain }
     private var reason: String? {
         Evidence.top(scan.signals, mode: .guardian, language: language, limit: 1).first?.text
     }
+    private var eyebrow: String {
+        let opened = L10n.string("Opened by \(scan.ownerName)", language: language)
+        return "\(opened) · \(Formatters.dateTime(scan.detectedAt, language: language))".uppercased(with: language.locale)
+    }
 
     private var titleText: some View {
         Text(verbatim: title)
-            .onboardingFont(20, weight: .medium, relativeTo: .title3)
-            .foregroundStyle(HomeTheme.navy)
+            .onboardingFont(17, weight: .semibold, relativeTo: .headline)
+            .foregroundStyle(HomeTheme.bodyInk)
     }
 
     private var domainChip: some View {
         Text(verbatim: scan.domain)
             .onboardingFont(13, relativeTo: .footnote)
-            .foregroundStyle(HomeTheme.navy)
+            .foregroundStyle(HomeTheme.bodyInk)
             .lineLimit(1)
             .truncationMode(.middle)
             .padding(.horizontal, 10)
@@ -501,15 +384,15 @@ private struct PendingSiteCard: View {
     var body: some View {
         VStack(spacing: 16) {
             Button(action: onOpen) {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(verbatim: Formatters.dateTime(scan.detectedAt, language: language).uppercased(with: language.locale))
-                            .onboardingFont(13, relativeTo: .footnote)
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(verbatim: eyebrow)
+                            .onboardingFont(11, relativeTo: .caption)
                             .tracking(1.3)
-                            .foregroundStyle(HomeTheme.secondaryInk)
+                            .foregroundStyle(Color(red: 0x6B / 255, green: 0x70 / 255, blue: 0x78 / 255))
                         // Title and site side by side when both fit; otherwise the site goes under the title.
                         ViewThatFits(in: .horizontal) {
-                            HStack(spacing: 10) {
+                            HStack(spacing: 8) {
                                 titleText.fixedSize()
                                 domainChip
                             }
@@ -518,28 +401,29 @@ private struct PendingSiteCard: View {
                                 domainChip
                             }
                         }
-                        .padding(.trailing, 48)
                     }
-                    VStack(spacing: 20) {
-                        RiskRing(score: scan.score, color: accent, language: language)
-                        Text(riskTitle)
-                            .textCase(.uppercase)
-                            .onboardingFont(19, weight: .semibold, relativeTo: .headline)
-                            .tracking(2)
-                            .foregroundStyle(isDanger ? HomeTheme.dangerText : HomeTheme.warningText)
-                    }
-                    .frame(maxWidth: .infinity)
+                    .padding(.trailing, 44)
+                    .padding(.horizontal, 16)
+                    FittedScoreGauge(scan: scan)
+                        .frame(maxWidth: .infinity)
                     if let reason {
                         Text(verbatim: reason)
                             .onboardingFont(15, relativeTo: .subheadline)
-                            .lineSpacing(6)
+                            .lineSpacing(7)
                             .foregroundStyle(HomeTheme.secondaryInk)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 16)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(24)
-                .background(HomeTheme.background, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .padding(.vertical, 24)
+                .padding(.horizontal, 8)
+                .background(
+                    LinearGradient(colors: [Color(red: 0xFE / 255, green: 0xFE / 255, blue: 1), Color(red: 0xF9 / 255, green: 0xFA / 255, blue: 0xFC / 255)],
+                                   startPoint: .top, endPoint: .bottom),
+                    in: RoundedRectangle(cornerRadius: 32, style: .continuous)
+                )
+                .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).stroke(.white, lineWidth: 1))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -549,30 +433,31 @@ private struct PendingSiteCard: View {
             .overlay(alignment: .topTrailing) {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(HomeTheme.navy)
-                        .frame(width: 40, height: 40)
-                        .background(.white, in: Circle())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(HomeTheme.bodyInk)
+                        .frame(width: 32, height: 32)
+                        .background(HomeTheme.tileIconBackground, in: Circle())
+                        .overlay(Circle().stroke(HomeTheme.rowStroke, lineWidth: 0.86))
                         .frame(width: 44, height: 44)
                         .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .padding(14)
+                .padding(.top, 14)
+                .padding(.trailing, 18)
                 .accessibilityLabel(Text("Close"))
                 .accessibilityHint(Text("Hides this site from Home"))
                 .accessibilityIdentifier("home.pending.close")
             }
 
             if canDecide {
-                let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
+                let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
                 layout {
-                    DecisionButton(title: "Danger", systemImage: "exclamationmark.circle.fill", tint: HomeTheme.tileIcon,
-                                   textColor: HomeTheme.dangerText) { onDecide(.notSafe) }
+                    DecisionButton(title: "Danger", systemImage: "exclamationmark.circle.fill", color: HomeTheme.dangerButton) { onDecide(.notSafe) }
                         .accessibilityIdentifier("home.verdict.notSafe")
-                    DecisionButton(title: "Safe", systemImage: "checkmark.circle.fill", tint: HomeTheme.navy,
-                                   textColor: HomeTheme.navy) { onDecide(.safe) }
+                    DecisionButton(title: "Safe", systemImage: "checkmark.circle.fill", color: HomeTheme.navy) { onDecide(.safe) }
                         .accessibilityIdentifier("home.verdict.safe")
                 }
+                .padding(.horizontal, 16)
             }
             if failed {
                 Label("Couldn't save. Check your connection and try again.", systemImage: "exclamationmark.triangle.fill")
@@ -589,200 +474,223 @@ private struct PendingSiteCard: View {
                     .accessibilityIdentifier("home.verdictNotAllowed")
             }
         }
-        .padding(10)
-        .padding(.bottom, canDecide ? 6 : 0)
-        .background(.white, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .padding(8)
+        .padding(.bottom, 16)
     }
 }
 
-/// Figma ring: thick arc in the risk colour on a pale track, soft glow, big number in the middle.
-private struct RiskRing: View {
-    let score: Int
-    let color: Color
-    let language: AppLanguage
-    @ScaledMetric(relativeTo: .largeTitle) private var size: CGFloat = 200
-
-    private var side: CGFloat { min(size, 260) }
-    private var progress: CGFloat { CGFloat(min(max(score, 0), 100)) / 100 }
-
-    var body: some View {
-        ZStack {
-            Circle().fill(.white).shadow(color: .black.opacity(0.06), radius: 12, y: 4)
-            Circle()
-                .stroke(Color(red: 0xEC / 255, green: 0xEE / 255, blue: 0xF0 / 255), lineWidth: side * 0.12)
-                .padding(side * 0.06)
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(color, style: StrokeStyle(lineWidth: side * 0.12, lineCap: .butt))
-                .rotationEffect(.degrees(-90))
-                .padding(side * 0.06)
-                .shadow(color: color.opacity(0.55), radius: 10)
-            Circle()
-                .fill(.white)
-                .padding(side * 0.17)
-                .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
-            Text(verbatim: Formatters.percent(score, language: language))
-                .font(.system(size: side * 0.22, weight: .regular))
-                .monospacedDigit()
-                .foregroundStyle(HomeTheme.ink)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-        }
-        .frame(width: side, height: side)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Risk score"))
-        .accessibilityValue(Text(verbatim: Formatters.percent(score, language: language)))
-    }
-}
-
+/// Figma "Button" Red / Secondary: white capsule, 1 pt ring and a small shadow.
 private struct DecisionButton: View {
     let title: LocalizedStringKey
     let systemImage: String
-    let tint: Color
-    let textColor: Color
+    let color: Color
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Label {
-                Text(title).foregroundStyle(textColor)
-            } icon: {
-                Image(systemName: systemImage).foregroundStyle(tint)
-            }
-            .onboardingFont(19, weight: .medium, relativeTo: .headline)
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .background(.white, in: Capsule())
-            .overlay(Capsule().stroke(HomeTheme.rowStroke, lineWidth: 1))
-            .contentShape(Capsule())
+            Label { Text(title) } icon: { Image(systemName: systemImage) }
+                .onboardingFont(17, weight: .semibold, relativeTo: .headline)
+                .tracking(-0.2)
+                .foregroundStyle(color)
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(.white, in: Capsule())
+                .overlay(Capsule().stroke(Color(red: 0xE3 / 255, green: 0xE3 / 255, blue: 0xE3 / 255), lineWidth: 1))
+                .shadow(color: .black.opacity(0.12), radius: 2.5, y: 3)
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityHint(Text("Applies right away. You can change it later."))
     }
 }
 
-// MARK: - Recent activity
+// MARK: - Family: nobody yet
 
-private struct RecentActivity: View {
-    let scans: [ScanResult]
-    let language: AppLanguage
-    let avatarId: (ScanResult) -> String?
-    let onOpen: (ScanResult) -> Void
-    let onSeeAll: () -> Void
+/// Figma "Kode Undangan" (435:20669): QR, the code with how long it lasts, Bagikan / Salin (GD-04).
+private struct InviteCodeCard: View {
+    let onJoined: () -> Void
+    @Environment(\.locale) private var locale
+    @State private var model: FamilyCodeModel
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Recent activity")
-                .onboardingFont(17, weight: .medium, relativeTo: .headline)
-                .foregroundStyle(HomeTheme.secondaryInk)
-                .accessibilityAddTraits(.isHeader)
-            if scans.isEmpty {
-                EmptyStateView(
-                    systemImage: "checkmark.shield",
-                    title: "No risky sites yet",
-                    message: "When Shoo warns about or blocks a site, you'll see it here."
-                )
-                .frame(maxWidth: .infinity, minHeight: 180)
-                .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            } else {
-                VStack(spacing: 12) {
-                    ForEach(scans) { scan in
-                        Button { onOpen(scan) } label: {
-                            RecentRow(scan: scan, avatarId: avatarId(scan), language: language)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("home.recent.\(scan.id)")
-                    }
-                }
-                Button(action: onSeeAll) {
-                    Text("See all")
-                        .onboardingFont(17, weight: .medium, relativeTo: .headline)
-                        .foregroundStyle(Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255))
-                        .padding(.horizontal, 20)
-                        .frame(minWidth: 130, minHeight: 50)
-                        .modifier(GlassCapsule())
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-                .accessibilityIdentifier("home.seeAll")
-            }
-        }
+    init(repository: any ShooRepository, onJoined: @escaping () -> Void) {
+        _model = State(initialValue: FamilyCodeModel(repository: repository))
+        self.onJoined = onJoined
     }
-}
 
-private struct RecentRow: View {
-    let scan: ScanResult
-    let avatarId: String?
-    let language: AppLanguage
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Group {
-                if let avatarId {
-                    AvatarView(id: avatarId, size: 48)
-                } else {
-                    Circle().fill(HomeTheme.tileIconBackground).overlay(Circle().stroke(HomeTheme.rowStroke, lineWidth: 1))
-                        .frame(width: 48, height: 48)
-                }
-            }
-            .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: scan.domain)
-                    .onboardingFont(17, relativeTo: .body)
-                    .tracking(-0.17)
-                    .foregroundStyle(HomeTheme.navy)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
-                    .truncationMode(.middle)
-                Text(verbatim: Formatters.dayAndTime(scan.detectedAt, language: language))
-                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-                    .foregroundStyle(HomeTheme.secondaryInk)
+        HStack(alignment: .center, spacing: 16) {
+            qr
+            VStack(alignment: .leading, spacing: 6) {
+                content
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            HomeStatusChip(badge: ScanBadge(scan: scan))
         }
         .padding(17)
         .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(Text("Opens the details"))
+        .task { await model.run() }
+        // Someone joined while the code was on screen: Home shows the family.
+        .onChange(of: model.members.count) { _, count in
+            if count > 0 { onJoined() }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.invite")
+    }
+
+    @ViewBuilder
+    private var qr: some View {
+        Group {
+            if let url = model.inviteURL, let image = QRCode.image(for: url.absoluteString) {
+                Image(uiImage: image)
+                    .interpolation(.none)
+                    .resizable()
+                    .scaledToFit()
+                    .accessibilityLabel(Text("QR code to join your family"))
+                    .accessibilityIdentifier("familyCode.qr")
+            } else {
+                ProgressView().opacity(model.codeState == .loading ? 1 : 0)
+            }
+        }
+        .padding(7)
+        .frame(width: 110, height: 110)
+        .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(HomeTheme.rowStroke, lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch model.codeState {
+        case .loading:
+            Text("Getting a code")
+                .onboardingFont(15, relativeTo: .subheadline)
+                .foregroundStyle(HomeTheme.secondaryInk)
+        case .ready(let code):
+            Text("Invite code · valid for \(model.timeLeft)")
+                .onboardingFont(13, relativeTo: .footnote)
+                .monospacedDigit()
+                .foregroundStyle(HomeTheme.secondaryInk)
+                .accessibilityIdentifier("familyCode.countdown")
+            Text(verbatim: FamilyCodeModel.display(code.code))
+                .font(.system(size: 30, weight: .semibold, design: .default))
+                .tracking(3)
+                .monospacedDigit()
+                .foregroundStyle(HomeTheme.ink)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .accessibilityLabel(Text("Code \(code.code.map(String.init).joined(separator: " "))"))
+                .accessibilityIdentifier("familyCode.code")
+            if model.inviteURL != nil {
+                HStack(spacing: 8) {
+                    ShareLink(item: FamilyCodeModel.inviteText(for: code, language: language)) {
+                        Text("Share")
+                            .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 22)
+                            .frame(minHeight: 34)
+                            .background(HomeTheme.action, in: Capsule())
+                            .frame(minHeight: 44)
+                            .contentShape(Capsule())
+                    }
+                    .accessibilityIdentifier("family.invite")
+                    Button {
+                        if model.copyInvite(language: language) {
+                            AccessibilityNotification.Announcement(L10n.string("Invite link copied", language: language)).post()
+                        }
+                    } label: {
+                        Text(model.copied ? "Copied" : "Copy")
+                            .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
+                            .foregroundStyle(HomeTheme.bodyInk)
+                            .padding(.horizontal, 20)
+                            .frame(minHeight: 34)
+                            .background(HomeTheme.quietFill, in: Capsule())
+                            .frame(minHeight: 44)
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("familyCode.copy")
+                }
+            }
+        case .unavailable:
+            Text("Couldn't get a code")
+                .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
+                .foregroundStyle(HomeTheme.ink)
+            Button { Task { await model.refreshCode() } } label: {
+                Text("Try again")
+                    .onboardingFont(14, weight: .medium, relativeTo: .subheadline)
+                    .foregroundStyle(HomeTheme.action)
+                    .frame(minHeight: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("familyCode.retry")
+        case .full:
+            Text("Your family is full (3 people). Remove someone to invite another person.")
+                .onboardingFont(15, relativeTo: .subheadline)
+                .foregroundStyle(HomeTheme.secondaryInk)
+        }
     }
 }
 
-/// Figma chip: pale fill, thin border, coloured text. Words always there, never colour only.
-private struct HomeStatusChip: View {
-    let badge: ScanBadge
-
-    private var colors: (text: Color, fill: Color, stroke: Color) {
-        switch badge {
-        case .warning: (HomeTheme.warningText, HomeTheme.warningFill, HomeTheme.warningStroke)
-        case .blocked, .verifiedScam: (HomeTheme.dangerText, HomeTheme.dangerFill, HomeTheme.dangerStroke)
-        case .markedSafe: (Color(red: 0x1B / 255, green: 0x6E / 255, blue: 0x35 / 255), Color(red: 0xEF / 255, green: 0xFA / 255, blue: 0xF2 / 255),
-                           Color(red: 0xC4 / 255, green: 0xEB / 255, blue: 0xCF / 255))
-        }
-    }
-
-    private var title: LocalizedStringKey { badge == .warning ? "Caution" : badge.title }
+/// Figma "Cara Kerja" (435:20681): three numbered steps in one card.
+private struct HowItWorks: View {
+    private let steps: [LocalizedStringKey] = [
+        "Share the code or QR with your family",
+        "They install Shoo and enter the code",
+        "You hear about it when they open a dangerous site",
+    ]
 
     var body: some View {
-        let colors = colors
-        HStack(spacing: 4) {
-            Image(systemName: "exclamationmark.circle.fill").font(.system(size: 11)).accessibilityHidden(true)
-            Text(title).onboardingFont(13, relativeTo: .footnote).lineLimit(1)
+        VStack(alignment: .leading, spacing: 16) {
+            HomeSectionTitle("How it works")
+            VStack(spacing: 0) {
+                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                    if index > 0 {
+                        Rectangle().fill(HomeTheme.divider).frame(height: 1).accessibilityHidden(true)
+                    }
+                    HStack(spacing: 12) {
+                        Text(verbatim: "\(index + 1)")
+                            .onboardingFont(13, weight: .semibold, relativeTo: .footnote)
+                            .foregroundStyle(HomeTheme.action)
+                            .frame(width: 28, height: 28)
+                            .background(HomeTheme.actionFill, in: Circle())
+                            .accessibilityHidden(true)
+                        Text(step)
+                            .onboardingFont(15, relativeTo: .subheadline)
+                            .tracking(-0.15)
+                            .lineSpacing(5)
+                            .foregroundStyle(HomeTheme.navy)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 12)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(.horizontal, 17)
+            .padding(.vertical, 7)
+            .homeCard()
+            .accessibilityIdentifier("home.howItWorks")
         }
-        .foregroundStyle(colors.text)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(colors.fill, in: Capsule())
-        .overlay(Capsule().stroke(colors.stroke, lineWidth: 1))
-        .fixedSize()
     }
 }
 
-#Preview {
+#Preview("Personal") {
     NavigationStack {
         GuardianHomeView(
             repository: MockRepository(mode: .guardian, latency: .zero),
             settings: AppSettings(defaults: UserDefaults(suiteName: "preview.home")!),
+            scope: .personal,
+            extensionStatus: { .active(lastSeen: Date()) }
+        )
+    }
+    .environment(AppEnvironment.preview())
+}
+
+#Preview("Family") {
+    NavigationStack {
+        GuardianHomeView(
+            repository: MockRepository(mode: .guardian, latency: .zero),
+            settings: AppSettings(defaults: UserDefaults(suiteName: "preview.home")!),
+            scope: .family,
             extensionStatus: { .active(lastSeen: Date()) }
         )
     }

@@ -145,14 +145,13 @@ final class PairingUITests: XCTestCase {
 
     @MainActor
     func testFamilyCodeShowsQRCodeAndCountdown() {
-        // "Invite your family" shows while no one is connected yet (GD-03).
+        // Nobody connected yet: Family Home shows the code inline (Figma 435:20630, GD-03/04).
         let app = launch(mode: "guardian", extra: ["-mock.scenario", "empty"])
-        let invite = app.buttons["family.invite"]
-        XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
-        invite.tap()
         let code = app.staticTexts["familyCode.code"]
-        XCTAssertTrue(code.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(code.waitForExistence(timeout: 10), app.debugDescription)
+        app.dismissNotificationsReminder(timeout: UITestTimeout.screen)
         XCTAssertTrue(app.images["familyCode.qr"].exists)
+        XCTAssertTrue(app.buttons["family.invite"].exists)
         let countdown = app.staticTexts["familyCode.countdown"]
         XCTAssertTrue(countdown.exists)
         let first = countdown.label
@@ -160,9 +159,7 @@ final class PairingUITests: XCTestCase {
         wait(for: [expectation(for: ticked, evaluatedWith: countdown)], timeout: 5)
         app.buttons["familyCode.copy"].tap()
         XCTAssertTrue(app.buttons["familyCode.copy"].label.contains("Copied"), app.buttons["familyCode.copy"].label)
-        XCTAssertTrue(app.descendants(matching: .any)["familyCode.members"].firstMatch.label.contains("0 of 3"))
-        app.buttons["familyCode.done"].tap()
-        XCTAssertTrue(invite.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["home.howItWorks"].exists)
     }
 
     @MainActor

@@ -15,9 +15,10 @@ struct GuardianHomeModelTests {
         repository: any ShooRepository = MockRepository(mode: .guardian, latency: .zero),
         settings: AppSettings,
         now: Date = fixtureNow,
+        scope: GuardianHomeModel.Scope = .family,
         extensionStatus: ExtensionStatus = .active(lastSeen: nil)
     ) -> GuardianHomeModel {
-        GuardianHomeModel(repository: repository, settings: settings, extensionStatus: { extensionStatus }, now: { now })
+        GuardianHomeModel(repository: repository, settings: settings, scope: scope, extensionStatus: { extensionStatus }, now: { now })
     }
 
     @Test func newestUndecidedFamilySiteDrivesTheState() async throws {
@@ -57,18 +58,32 @@ struct GuardianHomeModelTests {
     @Test func statsCountTheFamilyScans() async throws {
         let model = model(settings: try settings())
         await model.refresh()
-        let today = model.scans.filter { Calendar.current.isDate($0.detectedAt, inSameDayAs: Self.fixtureNow) }.count
-        #expect(model.stats == .init(blocked: 3, warnings: 2, suspiciousHosts: 5, scansToday: today))
-        #expect(model.recent.map(\.domain) == ["bca-verifikasi.site", "bansos-kemensos.site", "promo-undian-shopee.click"])
+        let lastDay = model.scans.filter { $0.detectedAt >= Self.fixtureNow.addingTimeInterval(-24 * 60 * 60) }.count
+        #expect(model.stats == .init(blocked: 3, warnings: 2, suspiciousHosts: 5, recentScans: lastDay))
+        // Members' sites only, newest first (GD-05): the guardian's own scans stay on the personal side.
+        let members = model.scans.filter { $0.ownerDeviceId != MockRepository.guardianProfile.deviceId }
+        #expect(model.recent.map(\.id) == Array(members.prefix(GuardianHomeModel.recentCount)).map(\.id))
     }
 
-    @Test func avatarComesFromTheOwner() async throws {
-        let model = model(settings: try settings())
+    @Test func personalHomeShowsOnlyOwnScansAndNoCard() async throws {
+        let model = model(settings: try settings(), scope: .personal)
         await model.refresh()
-        let own = try #require(model.scans.first { $0.ownerDeviceId == MockRepository.guardianProfile.deviceId })
-        let moms = try #require(model.scans.first { $0.ownerDeviceId == "dev_mom" })
-        #expect(model.avatarId(for: own) == MockRepository.guardianProfile.avatarId)
-        #expect(model.avatarId(for: moms) == model.members.first { $0.deviceId == "dev_mom" }?.avatarId)
+        #expect(model.state == .loaded)
+        #expect(!model.scans.isEmpty)
+        #expect(model.scans.allSatisfy { $0.ownerDeviceId == MockRepository.guardianProfile.deviceId })
+        #expect(model.pendingScan == nil)
+        #expect(model.members.isEmpty)
+        #expect(!model.hasNoFamily)
+    }
+
+    @Test func familyHomeShowsAtMostThreePeople() async throws {
+        let model = model(repository: MockRepository(mode: .guardian, scenario: .threeMembers, latency: .zero), settings: try settings())
+        await model.refresh()
+        #expect(model.shownMembers.count <= FamilyShieldModel.maxMembers)
+        #expect(!model.hasNoFamily)
+        let empty = self.model(repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero), settings: try settings())
+        await empty.refresh()
+        #expect(empty.hasNoFamily)
     }
 
     @Test func verdictOnABlockedSiteClearsTheCard() async throws {

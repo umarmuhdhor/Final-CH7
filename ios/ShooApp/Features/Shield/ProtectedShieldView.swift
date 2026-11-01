@@ -1,50 +1,53 @@
 import SwiftUI
 
-/// Whose own Shield this is: the protected parent (PR-04) or the guardian with Family mode off (GD-01).
-enum ShieldPerspective {
-    case protected
-    case guardian
-
-    func statusTitle(isActive: Bool) -> String.LocalizationValue {
-        switch self {
-        case .protected: isActive ? "Protection is on" : "Protection is off"
-        case .guardian: isActive ? "You're protected" : "You're not protected"
-        }
-    }
-}
-
-/// Own Shield: is protection on, who looks after me (Protected only), what was blocked last.
+/// Protected Home (PR-04, Figma "protected/Home" 441:3063 / 441:3800): blue hero with the shield, who looks
+/// after me, the site blocked in the last 24 h with its gauge, Diblokir / Waspada counts, and recent activity.
 struct ProtectedShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
     @State private var model: ShieldModel
-    let perspective: ShieldPerspective
+    /// The hero is scrolled out from under the bar: the top scrim takes over as the dark backdrop.
+    @State private var isHeroHidden = false
 
-    init(
-        repository: any ShooRepository,
-        extensionStatus: @escaping () async -> ExtensionStatus,
-        perspective: ShieldPerspective = .protected
-    ) {
+    init(repository: any ShooRepository, extensionStatus: @escaping () async -> ExtensionStatus) {
         _model = State(initialValue: ShieldModel(repository: repository, extensionStatus: extensionStatus))
-        self.perspective = perspective
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                ExtensionStatusCard(status: model.extensionStatus, perspective: perspective)
-                if perspective == .protected {
-                    guardianRow
+            VStack(spacing: 0) {
+                hero
+                    .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
+                VStack(spacing: 24) {
+                    content
                 }
-                lastBlockedSection
+                .padding(.horizontal, 21)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
-            .padding(16)
+            // Light only, like the Figma; scoped to the page so the bars keep their own scheme.
+            .environment(\.colorScheme, .light)
         }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle(localized: "Shield")
+        .scrollIndicators(.hidden)
+        .background(HomeTheme.background)
+        .toolbar {
+            HomeProfileToolbarItem(name: model.profileName) { env.router.openProfile() }
+        }
+        .overlay(alignment: .top) {
+            LinearGradient(colors: [HomeTheme.navy, HomeTheme.navy.opacity(0.85), HomeTheme.navy.opacity(0)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 110)
+                .ignoresSafeArea(edges: .top)
+                .opacity(isHeroHidden ? 1 : 0)
+                .animation(.easeOut(duration: 0.2), value: isHeroHidden)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
@@ -52,7 +55,7 @@ struct ProtectedShieldView: View {
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded else { return }
             AccessibilityNotification.Announcement(
-                L10n.string(perspective.statusTitle(isActive: isActive), language: language)
+                L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
             ).post()
         }
         // Back from Connect (PR-01): show the new guardian.
@@ -65,43 +68,55 @@ struct ProtectedShieldView: View {
             guard scenePhase == .active else { return }
             await model.refresh()
         }
-    }
-
-    @ViewBuilder
-    private var guardianRow: some View {
-        if model.state == .loaded {
-            HStack(spacing: 16) {
-                if let guardian = model.guardian {
-                    AvatarView(id: guardian.avatarId, size: 52)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Protected by").font(.subheadline).foregroundStyle(.readableSecondary)
-                        Text(verbatim: guardian.name).font(.title3.bold())
-                    }
-                } else {
-                    Image(systemName: "person.crop.circle.badge.questionmark")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                    Text("Not connected to a guardian yet").font(.headline)
-                }
-                Spacer(minLength: 0)
+        .sheet(
+            isPresented: Binding(get: { env.router.isTurnOnPresented }, set: { env.router.isTurnOnPresented = $0 }),
+            onDismiss: {
+                env.router.sheetDismissed()
+                Task { await model.refresh() }
             }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("shield.guardian")
-            if model.guardian == nil {
-                Button { env.router.isConnectPresented = true } label: {
-                    Text("Connect to your guardian").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityIdentifier("shield.connect")
-            }
+        ) {
+            TurnOnExtensionSheet()
         }
     }
 
+    // MARK: Hero
+
+    private var hero: some View {
+        let isActive = model.extensionStatus.isActive
+        return HomeHero(
+            style: .blue,
+            title: isActive ? "You're protected!" : "You're not protected yet",
+            titleIdentifier: isActive ? "shield.status.active" : "shield.status.off",
+            shieldOn: isActive,
+            bottomPadding: 16
+        ) {
+            VStack(spacing: 16) {
+                if model.extensionStatus.nextStep != nil {
+                    Button { env.router.isTurnOnPresented = true } label: {
+                        Text(isActive ? "Finish setup" : "Turn on now")
+                            .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
+                            .underline()
+                            .foregroundStyle(.white)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
+                    .accessibilityIdentifier("shield.turnOn")
+                }
+                if model.state == .loaded {
+                    GuardianPill(guardian: model.guardian) { env.router.isConnectPresented = true }
+                        .padding(.horizontal, 21)
+                }
+            }
+            .padding(.top, model.extensionStatus.nextStep != nil ? 4 : 21)
+        }
+    }
+
+    // MARK: Below the hero
+
     @ViewBuilder
-    private var lastBlockedSection: some View {
+    private var content: some View {
         switch model.state {
         case .loading:
             ProgressView()
@@ -118,159 +133,228 @@ struct ProtectedShieldView: View {
             .frame(maxWidth: .infinity)
             .padding(16)
         case .loaded:
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Last blocked")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-                if let scan = model.lastBlocked {
-                    Button {
-                        env.router.showDetail(scanId: scan.id)
-                    } label: {
-                        LastBlockedCard(scan: scan, reasons: model.reasons(for: scan, language: language), language: language)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("shield.lastBlocked")
-                } else {
-                    EmptyStateView(
-                        systemImage: "checkmark.shield",
-                        title: "Nothing blocked yet",
-                        message: "When Shoo blocks a scam site, you'll see it here."
-                    )
-                    .frame(minHeight: 220)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .accessibilityIdentifier("shield.nothingBlocked")
+            if let scan = model.recentBlocked {
+                BlockedCard(scan: scan, guardian: model.guardian, language: language) {
+                    env.router.showDetail(scanId: scan.id)
                 }
             }
+            CountTiles(counts: model.counts, guardianName: model.guardian?.name)
+            RecentActivity(
+                scans: model.recent,
+                language: language,
+                seeAllStyle: .trailingLink,
+                onOpen: { env.router.showDetail(scanId: $0.id) },
+                onSeeAll: { env.router.selectedTab = .activity }
+            )
+            .padding(.horizontal, 3)
         }
     }
 }
 
-/// Big Active / Off circle (PR-04). Off offers the way to switch the extension on.
-private struct ExtensionStatusCard: View {
-    let status: ExtensionStatus
-    let perspective: ShieldPerspective
-    @Environment(AppEnvironment.self) private var env
-    @Environment(\.locale) private var locale
-    @ScaledMetric(relativeTo: .largeTitle) private var circle: CGFloat = 96
+// MARK: - Guardian
 
-    /// Capped so "Turn on" stays on screen at accessibility sizes.
-    private var side: CGFloat { min(circle, 160) }
-    /// Dark enough for the white icon to keep 3:1 (WCAG 1.4.11).
-    private var fill: Color {
-        status.isActive ? Color(red: 0.10, green: 0.47, blue: 0.24) : Color(red: 0.42, green: 0.42, blue: 0.44)
-    }
-
-    /// The reason in a few words (#135); the Turn on sheet holds the full steps.
-    private var subtitle: LocalizedStringKey {
-        switch status.nextStep {
-        case nil: "Shoo checks the sites you open in Safari."
-        case .openAWebsite: "Open any website in Safari to finish setup."
-        case .switchOn: "Shoo is switched off in Safari."
-        case .allowEveryWebsite: "Shoo can't check every website yet."
-        case .switchOnThenOpenAWebsite: "Switch on Shoo in Safari to stay safe."
-        }
-    }
+/// Figma "Card Perlindungan": "Terhubung dengan Virellia"; no guardian → a way to connect (PR-01).
+private struct GuardianPill: View {
+    let guardian: GuardianInfo?
+    let onConnect: () -> Void
 
     var body: some View {
-        VStack(spacing: 14) {
-            Image(systemName: status.isActive ? "checkmark.shield.fill" : "shield.slash.fill")
-                .font(.system(size: side * 0.5))
-                .foregroundStyle(.white)
-                .frame(width: side, height: side)
-                .background(fill, in: Circle())
-                .accessibilityHidden(true)
-            VStack(spacing: 6) {
-                Text(verbatim: L10n.string(perspective.statusTitle(isActive: status.isActive), language: AppLanguage(locale: locale)))
-                    .font(.title2.bold())
-                    .accessibilityAddTraits(.isHeader)
-                Text(subtitle)
-                    .font(.body)
-                    .foregroundStyle(.readableSecondary)
-            }
-            .multilineTextAlignment(.center)
-            .accessibilityElement(children: .combine)
-            if status.nextStep != nil {
-                Button {
-                    env.router.isTurnOnPresented = true
-                } label: {
-                    Text(status.isActive ? "Finish setup" : "Turn on").font(.headline).frame(maxWidth: .infinity, minHeight: 50)
+        Group {
+            if let guardian {
+                HStack(spacing: 12) {
+                    InitialAvatar(name: guardian.name, size: 33, fontSize: 13.5)
+                    Text("Connected with \(guardian.name)")
+                        .onboardingFont(17, relativeTo: .body)
+                        .tracking(-0.17)
+                        .foregroundStyle(HomeTheme.navy)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.borderedProminent)
-                .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
-                .accessibilityIdentifier("shield.turnOn")
+                .accessibilityElement(children: .combine)
+            } else {
+                Button(action: onConnect) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .font(.system(size: 22))
+                            .foregroundStyle(HomeTheme.action)
+                            .frame(width: 33, height: 33)
+                            .accessibilityHidden(true)
+                        Text("Connect to your guardian")
+                            .onboardingFont(17, weight: .medium, relativeTo: .body)
+                            .foregroundStyle(HomeTheme.action)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(HomeTheme.secondaryInk)
+                            .accessibilityHidden(true)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("shield.connect")
             }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(status.isActive ? "shield.status.active" : "shield.status.off")
-        .sheet(
-            isPresented: Binding(get: { env.router.isTurnOnPresented }, set: { env.router.isTurnOnPresented = $0 }),
-            onDismiss: env.router.sheetDismissed
-        ) {
-            TurnOnExtensionSheet()
-        }
+        .padding(.horizontal, 17)
+        .padding(.vertical, 15)
+        .frame(minHeight: 65)
+        .homeCard()
+        .accessibilityIdentifier("shield.guardian")
     }
 }
 
-/// "Blocked!" card: score, site, why, when. Tap opens Detail.
-private struct LastBlockedCard: View {
+// MARK: - Blocked card
+
+/// Figma 441:4059: the site, ↗ to Detail, a "Diblokir" chip over the gauge, and the guardian's note.
+private struct BlockedCard: View {
     let scan: ScanResult
-    let reasons: [String]
+    let guardian: GuardianInfo?
     let language: AppLanguage
+    let onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            VStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 16) {
+                    SiteIcon(url: scan.faviconUrl)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: scan.domain)
+                            .onboardingFont(17, relativeTo: .body)
+                            .tracking(-0.17)
+                            .foregroundStyle(HomeTheme.navy)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                        Text(verbatim: Formatters.dayAndTime(scan.detectedAt, language: language))
+                            .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                            .foregroundStyle(HomeTheme.secondaryInk)
+                    }
+                    .padding(.top, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(HomeTheme.ink)
+                        .frame(width: 40, height: 40)
+                        .background(.white, in: Circle())
+                        .accessibilityHidden(true)
+                }
+                .padding(.horizontal, 5)
+
+                VStack(spacing: 4) {
+                    HomeStatusChip(badge: .blocked, large: true)
+                    FittedScoreGauge(scan: scan, maxWidth: 278)
+                }
+                .padding(.vertical, 18)
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity)
+                .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 23, style: .continuous))
+
+                if let guardian, scan.verdict == nil {
+                    HStack(spacing: 6) {
+                        InitialAvatar(name: guardian.name, size: 29, fontSize: 12)
+                        (Text(verbatim: guardian.name).fontWeight(.semibold) + Text(verbatim: " ")
+                            + Text("will check it again, but you still shouldn't open this link"))
+                            .onboardingFont(12, relativeTo: .caption)
+                            .tracking(-0.12)
+                            .foregroundStyle(HomeTheme.bodyInk)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 17)
+                    .padding(.vertical, 16)
+                    .background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 21, style: .continuous))
+                }
+            }
+            .padding(12)
+            .padding(.top, 2)
+            .background {
+                // Glass grey card that blushes red towards the bottom (Figma "Rectangle 9652").
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(Color(red: 0xED / 255, green: 0xED / 255, blue: 0xED / 255).opacity(0.5))
+                    .overlay(
+                        LinearGradient(colors: [Color(red: 0xF2 / 255, green: 0x8D / 255, blue: 0x83 / 255).opacity(0),
+                                                Color(red: 0xF2 / 255, green: 0x61 / 255, blue: 0x53 / 255).opacity(0.2)],
+                                       startPoint: .init(x: 0.5, y: 0.65), endPoint: .bottom)
+                            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                    )
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Opens the details"))
+        .accessibilityIdentifier("shield.lastBlocked")
+    }
+}
+
+// MARK: - Counts
+
+/// Figma 441:4021: "4 Diblokir" and "7 Waspada", each with how many the guardian verified.
+private struct CountTiles: View {
+    let counts: ShieldModel.Counts
+    let guardianName: String?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var time: String { Formatters.relative(scan.detectedAt, language: language) }
+    var body: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 16)) : AnyLayout(HStackLayout(spacing: 18))
+        layout {
+            CountTile(value: counts.blocked, title: "Blocked", color: HomeTheme.tileIcon,
+                      verified: counts.blockedVerified, guardianName: guardianName)
+            CountTile(value: counts.warnings, title: "Caution", color: HomeTheme.warningNumber,
+                      verified: counts.warningsVerified, guardianName: guardianName)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("shield.stats")
+    }
+}
+
+private struct CountTile: View {
+    let value: Int
+    let title: LocalizedStringKey
+    let color: Color
+    let verified: Int
+    let guardianName: String?
 
     var body: some View {
-        // Ring above the text at accessibility sizes, so the text keeps the full width.
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-            : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
-        layout {
-            ScoreRing(score: scan.score, size: 64, lineWidth: 7)
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(verbatim: "\(value)")
+                .onboardingFont(28, weight: .bold, relativeTo: .title)
+                .monospacedDigit()
+                .foregroundStyle(color)
+            Text(title)
+                .onboardingFont(16, relativeTo: .callout)
+                .foregroundStyle(.black)
+            if let guardianName {
                 Label {
-                    Text("Blocked!").foregroundStyle(.primary)
+                    Text("\(verified) verified by \(guardianName)")
+                        .onboardingFont(11, relativeTo: .caption2)
+                        .foregroundStyle(HomeTheme.successText)
+                        .lineLimit(2)
                 } icon: {
-                    Image(systemName: "hand.raised.fill").foregroundStyle(.red)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(HomeTheme.success)
                 }
-                .font(.headline)
-                Text(verbatim: scan.domain)
-                    .font(.title3.bold())
-                    .foregroundStyle(.primary)
-                ForEach(reasons, id: \.self) { reason in
-                    Text(verbatim: reason).font(.body).foregroundStyle(.primary)
-                }
-                Text(verbatim: time)
-                    .font(.subheadline)
-                    .foregroundStyle(.readableSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if !dynamicTypeSize.isAccessibilitySize {
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
+                .labelStyle(TightLabelStyle())
+                .padding(.top, 6)
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .contentShape(Rectangle())
-        // What, where, how risky, why, when — in that order.
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            Text("Blocked!") + Text(verbatim: " \(scan.domain). ") + Text("Risk score")
-                + Text(verbatim: " \(Formatters.percent(scan.score, language: language)). "
-                    + reasons.map { $0 + ". " }.joined() + time)
-        )
-        .accessibilityHint(Text("Opens the details"))
+        .frame(maxWidth: .infinity, minHeight: 98, alignment: .topLeading)
+        .background(.white, in: RoundedRectangle(cornerRadius: 23.5, style: .continuous))
+        .shadow(color: .black.opacity(0.18), radius: 4.6, y: 4.7)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct TightLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.icon
+            configuration.title
+        }
     }
 }
 
 #Preview {
     NavigationStack {
-        ProtectedShieldView(repository: MockRepository(mode: .protected, latency: .zero), extensionStatus: { .off(lastSeen: nil) })
+        ProtectedShieldView(repository: MockRepository(mode: .protected, latency: .zero), extensionStatus: { .active(lastSeen: Date()) })
     }
-        .environment(AppEnvironment.preview(mode: .protected))
+    .environment(AppEnvironment.preview(mode: .protected))
 }
