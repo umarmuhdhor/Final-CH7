@@ -293,31 +293,40 @@ Left: the app now. Right: the Figma frame. Figma frames show the whole scroll he
 
 Targets: `docs/mandates/imelda.md`. Command: `node ai/eval/run.mjs --analyze-url http://127.0.0.1:8788 --json --show-holdout`, against a local copy of the AI server (`ai/`) with the same AI model as production and the public scam list (190 000 sites) loaded. `corpus-to-scans.mjs` turns the results into the `corpus` data set for Test 1.
 
+**See every test page:** each page name below links to its source in `ai/eval/data` (the code Imelda wrote or captured). The *view* link is a local HTML page that draws what the detector saw (URL, title, text, form fields, images as their alt text) next to its score and the live Safari screenshot. GitHub shows those as code, so open them on your Mac:
+
+```bash
+node plan/alief/qa/corpus-view.mjs        # rebuild after the corpus or results change
+open plan/alief/qa/corpus-view/index.html  # list of all pages, scored-wrong ones first
+```
+
+The corpus keeps a snapshot of each page, not the full website, so the view is a simple drawing of that snapshot. Scam addresses are shown as text, never as links.
+
 ### Pages scored wrong
 
 **How to read it:** "Should get" is the target for that kind of page. "Got" is the detector's score. "Why" lists the reasons that fired: name, layer, and points added.
 
 | Page | Problem | Source | Should get | Got | Why |
 |---|---|---|---|---|---|
-| `trap-blog-cek-saldo-bca` | normal page flagged | made up | < 30 % · not scam, show nothing | 49 % | suspicious_link (L2, +24), brand_logo_offsite (L3, +25) |
-| `trap-github-pages-dokumentasi` | normal page flagged | made up, held back | < 30 % · not scam, show nothing | 34 % | suspicious_link (L2, +19), asks_password (L3, +15) |
-| `trap-fintech-kyc-sah` | normal page flagged | made up | < 30 % · not scam, show nothing | 95 % | suspicious_link (L2, +10), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
-| `trap-asuransi-klaim-resmi` | normal page flagged | made up, held back | < 30 % · not scam, show nothing | 35 % | suspicious_link (L2, +10), asks_ktp (L3, +25) |
-| `regs-apps14-code-php` | scam missed | real | ≥ 80 % · scam, block it | 21 % | suspicious_link (L2, +21) |
-| `fixture-bca-verifikasi` | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
-| `fixture-promo-shopee` | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
-| `fixture-bansos-kemensos` | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
-| `synthetic-p0stindonesia` | scam missed | made up | ≥ 80 % · scam, block it | 25 % | lookalike_domain (L2, +25) |
-| `syn-cimb-octo-limit` | scam missed | made up, held back | ≥ 80 % · scam, block it | 0 % | none |
-| `syn-sicepat-apk` | scam missed | made up | ≥ 80 % · scam, block it | 5 % | cheap_tld (L2, +5) |
-| `syn-anteraja-alamat` | scam missed | made up | ≥ 80 % · scam, block it | 20 % | asks_card (L3, +20) |
-| `syn-telkomsel-poin` | scam missed | made up | ≥ 80 % · scam, block it | 25 % | asks_otp (L3, +25) |
-| `syn-etilang-denda` | scam missed | made up, held back | ≥ 80 % · scam, block it | 20 % | asks_card (L3, +20) |
-| `syn-samsat-pajak-kendaraan` | scam missed | made up, held back | ≥ 80 % · scam, block it | 5 % | cheap_tld (L2, +5) |
-| `syn-find-my-iphone-hilang` | scam missed | made up | ≥ 80 % · scam, block it | 25 % | lookalike_domain (L2, +10), cheap_tld (L2, +15) |
-| `syn-apple-pay-tagihan` | scam missed | made up | ≥ 80 % · scam, block it | 25 % | cheap_tld (L2, +5), asks_card (L3, +20) |
-| `syn-loker-admin-online` | scam missed | made up | ≥ 80 % · scam, block it | 0 % | none |
-| `syn-investasi-kripto-profit` | scam missed | made up | ≥ 80 % · scam, block it | 0 % | none |
+| [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal page flagged | made up | < 30 % · not scam, show nothing | 49 % | suspicious_link (L2, +24), brand_logo_offsite (L3, +25) |
+| [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal page flagged | made up, held back | < 30 % · not scam, show nothing | 34 % | suspicious_link (L2, +19), asks_password (L3, +15) |
+| [`trap-fintech-kyc-sah`](../../../ai/eval/data/legit/traps.json#L199)<br>[view](corpus-view/trap-fintech-kyc-sah.html) | normal page flagged | made up | < 30 % · not scam, show nothing | 95 % | suspicious_link (L2, +10), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`trap-asuransi-klaim-resmi`](../../../ai/eval/data/legit/traps.json#L322)<br>[view](corpus-view/trap-asuransi-klaim-resmi.html) | normal page flagged | made up, held back | < 30 % · not scam, show nothing | 35 % | suspicious_link (L2, +10), asks_ktp (L3, +25) |
+| [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam missed | real | ≥ 80 % · scam, block it | 21 % | suspicious_link (L2, +21) |
+| [`fixture-bca-verifikasi`](../../../ai/eval/data/scam/seed.json#L34)<br>[view](corpus-view/fixture-bca-verifikasi.html) | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-promo-shopee`](../../../ai/eval/data/scam/seed.json#L50)<br>[view](corpus-view/fixture-promo-shopee.html) | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-bansos-kemensos`](../../../ai/eval/data/scam/seed.json#L66)<br>[view](corpus-view/fixture-bansos-kemensos.html) | scam missed | made up | ≥ 80 % · scam, block it | 29 % | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`synthetic-p0stindonesia`](../../../ai/eval/data/scam/seed.json#L82)<br>[view](corpus-view/synthetic-p0stindonesia.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | lookalike_domain (L2, +25) |
+| [`syn-cimb-octo-limit`](../../../ai/eval/data/scam/synthetic.json#L258)<br>[view](corpus-view/syn-cimb-octo-limit.html) | scam missed | made up, held back | ≥ 80 % · scam, block it | 0 % | none |
+| [`syn-sicepat-apk`](../../../ai/eval/data/scam/synthetic.json#L912)<br>[view](corpus-view/syn-sicepat-apk.html) | scam missed | made up | ≥ 80 % · scam, block it | 5 % | cheap_tld (L2, +5) |
+| [`syn-anteraja-alamat`](../../../ai/eval/data/scam/synthetic.json#L936)<br>[view](corpus-view/syn-anteraja-alamat.html) | scam missed | made up | ≥ 80 % · scam, block it | 20 % | asks_card (L3, +20) |
+| [`syn-telkomsel-poin`](../../../ai/eval/data/scam/synthetic.json#L1151)<br>[view](corpus-view/syn-telkomsel-poin.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | asks_otp (L3, +25) |
+| [`syn-etilang-denda`](../../../ai/eval/data/scam/synthetic.json#L1554)<br>[view](corpus-view/syn-etilang-denda.html) | scam missed | made up, held back | ≥ 80 % · scam, block it | 20 % | asks_card (L3, +20) |
+| [`syn-samsat-pajak-kendaraan`](../../../ai/eval/data/scam/synthetic.json#L1600)<br>[view](corpus-view/syn-samsat-pajak-kendaraan.html) | scam missed | made up, held back | ≥ 80 % · scam, block it | 5 % | cheap_tld (L2, +5) |
+| [`syn-find-my-iphone-hilang`](../../../ai/eval/data/scam/synthetic.json#L1845)<br>[view](corpus-view/syn-find-my-iphone-hilang.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | lookalike_domain (L2, +10), cheap_tld (L2, +15) |
+| [`syn-apple-pay-tagihan`](../../../ai/eval/data/scam/synthetic.json#L1870)<br>[view](corpus-view/syn-apple-pay-tagihan.html) | scam missed | made up | ≥ 80 % · scam, block it | 25 % | cheap_tld (L2, +5), asks_card (L3, +20) |
+| [`syn-loker-admin-online`](../../../ai/eval/data/scam/synthetic.json#L1916)<br>[view](corpus-view/syn-loker-admin-online.html) | scam missed | made up | ≥ 80 % · scam, block it | 0 % | none |
+| [`syn-investasi-kripto-profit`](../../../ai/eval/data/scam/synthetic.json#L2014)<br>[view](corpus-view/syn-investasi-kripto-profit.html) | scam missed | made up | ≥ 80 % · scam, block it | 0 % | none |
 
 <details><summary>All 108 pages</summary>
 
@@ -325,114 +334,114 @@ Targets: `docs/mandates/imelda.md`. Command: `node ai/eval/run.mjs --analyze-url
 
 | Page | Type | Source | Should get | L1-2 | Final | Right? | Why |
 |---|---|---|---|---|---|---|---|
-| `bank-login-bri` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-btn` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-danamon` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-klikbca` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-mega` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-permata` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-bukalapak` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-lazada` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-orami` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-ruparupa` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-shopee-cart` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-sociolla` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-tokopedia-cart` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-traveloka` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-zalora` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-bi` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-bpjs-kesehatan` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-dukcapil` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-kemensos` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-komdigi` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-ojk` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-pajak` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-cnnindonesia` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-detik` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-idntimes` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-kompas` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-kumparan` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-liputan6` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-tribunnews` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-wikipedia-id` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-bni-web` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `bank-login-mandiri-web` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `checkout-bhinneka` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `gov-kemenkeu` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-merdeka` | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `official-tokopedia-home` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `official-bca-home` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `official-shopee-home` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `popular-wikipedia` | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `trap-dana-sosial` | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `trap-mandiri-jaya` | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `trap-toko-iphone-bekas` | normal | made up, held back | < 30 % · not scam, show nothing | 10 | 10 | ✅ left alone | lookalike_domain (L2, +10) |
-| `trap-cloud-storage` | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `trap-toko-logo-bank-checkout` | normal | made up, held back | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | brand_logo_offsite (L3, +12), urgent_language (L3, +8) |
-| `trap-blog-cek-saldo-bca` | normal | made up | < 30 % · not scam, show nothing | 24 | 49 | ❌ wrongly flagged | suspicious_link (L2, +24), brand_logo_offsite (L3, +25) |
-| `trap-github-pages-dokumentasi` | normal | made up, held back | < 30 % · not scam, show nothing | 19 | 34 | ❌ wrongly flagged | suspicious_link (L2, +19), asks_password (L3, +15) |
-| `trap-sign-in-google-facebook` | normal | made up | < 30 % · not scam, show nothing | 10 | 25 | ✅ left alone | suspicious_link (L2, +10), asks_password (L3, +15) |
-| `trap-fintech-kyc-sah` | normal | made up | < 30 % · not scam, show nothing | 10 | 95 | ❌ wrongly flagged | suspicious_link (L2, +10), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
-| `trap-berita-waspada-penipuan` | normal | made up | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | brand_logo_offsite (L3, +12), urgent_language (L3, +8) |
-| `trap-portal-orang-tua-sekolah` | normal | made up | < 30 % · not scam, show nothing | 0 | 15 | ✅ left alone | asks_password (L3, +15) |
-| `trap-asuransi-klaim-resmi` | normal | made up, held back | < 30 % · not scam, show nothing | 10 | 35 | ❌ wrongly flagged | suspicious_link (L2, +10), asks_ktp (L3, +25) |
-| `trap-toko-kopi-kartu-native` | normal | made up | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | asks_card (L3, +20) |
-| `trap-batik-card-checkout-en` | normal | made up | < 30 % · not scam, show nothing | 5 | 25 | ✅ left alone | cheap_tld (L2, +5), asks_card (L3, +20) |
-| `syn-sekolah-portal2` | normal | made up, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `syn-toko-app3-index-php` | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `syn-kampus-code-path` | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
-| `regs-apps14-code-php` | scam | real | ≥ 80 % · scam, block it | 21 | 21 | ❌ missed | suspicious_link (L2, +21) |
-| `cusbsi-bsi-cash-management` | scam | real, held back | ≥ 80 % · scam, block it | 0 | 60 | ⚠️ only warned | brand_logo_offsite (L3, +25), new_domain (L3, +20), asks_password (L3, +15) |
-| `lphone-login` | scam | real | ≥ 80 % · scam, block it | 39 | 39 | ⚠️ only warned | lookalike_domain (L2, +25), brand_plus_keyword (L2, +14) |
-| `fixture-bca-verifikasi` | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
-| `fixture-promo-shopee` | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
-| `fixture-bansos-kemensos` | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
-| `synthetic-p0stindonesia` | scam | made up | ≥ 80 % · scam, block it | 25 | 25 | ❌ missed | lookalike_domain (L2, +25) |
-| `syn-bri-token-expired` | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-mandiri-livin-upgrade` | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), unreasonable_request (L4, +30), brand_logo_offsite (L3, +25), asks_password (L3, +15), urgent_language (L3, +15) |
-| `syn-bni-mobile-banking` | scam | made up, held back | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), unreasonable_request (L4, +30), brand_logo_offsite (L3, +25), asks_card (L3, +20), asks_password (L3, +15) |
-| `syn-bsi-sharia-bonus` | scam | made up | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), unreasonable_request (L4, +30), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-bca-klikbca-clean` | scam | made up | ≥ 80 % · scam, block it | 0 | 80 | ✅ blocked | unreasonable_request (L4, +30), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-cimb-octo-limit` | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
-| `syn-bca-blokir-kartu` | scam | made up, held back | ≥ 80 % · scam, block it | 14 | 59 | ⚠️ only warned | brand_plus_keyword (L2, +14), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
-| `syn-bri-cashback-survey` | scam | made up | ≥ 80 % · scam, block it | 25 | 85 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), brand_logo_offsite (L3, +25) |
-| `syn-mandiri-kyc-update` | scam | made up | ≥ 80 % · scam, block it | 0 | 100 | ✅ blocked | asks_selfie_ktp (L3, +35), unreasonable_request (L4, +30), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-dana-kaget-bonus` | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), unreasonable_request (L4, +30), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-ovo-upgrade-premier` | scam | made up | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-gopay-driver-refund` | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-shopeepay-limit` | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
-| `syn-linkaja-hadiah` | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 35 | ⚠️ only warned | asks_pin (L3, +35) |
-| `syn-dana-premium-pin` | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-ovo-undian-grab` | scam | made up | ≥ 80 % · scam, block it | 29 | 54 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
-| `syn-gopay-later-pinjam` | scam | made up | ≥ 80 % · scam, block it | 5 | 90 | ✅ blocked | cheap_tld (L2, +5), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-jne-paket-tertahan` | scam | made up | ≥ 80 % · scam, block it | 25 | 70 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
-| `syn-jnt-tarif-selisih` | scam | made up | ≥ 80 % · scam, block it | 25 | 50 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
-| `syn-sicepat-apk` | scam | made up | ≥ 80 % · scam, block it | 5 | 5 | ❌ missed | cheap_tld (L2, +5) |
-| `syn-anteraja-alamat` | scam | made up | ≥ 80 % · scam, block it | 0 | 20 | ❌ missed | asks_card (L3, +20) |
-| `syn-pos-kiriman-luar-negeri` | scam | made up | ≥ 80 % · scam, block it | 25 | 50 | ⚠️ only warned | lookalike_domain (L2, +25), brand_logo_offsite (L3, +25) |
-| `syn-tiki-nomor-resi` | scam | made up | ≥ 80 % · scam, block it | 5 | 30 | ⚠️ only warned | cheap_tld (L2, +5), asks_otp (L3, +25) |
-| `syn-ninja-ganti-rugi` | scam | made up, held back | ≥ 80 % · scam, block it | 5 | 40 | ⚠️ only warned | cheap_tld (L2, +5), asks_pin (L3, +35) |
-| `syn-tokopedia-undian` | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
-| `syn-telkomsel-poin` | scam | made up | ≥ 80 % · scam, block it | 0 | 25 | ❌ missed | asks_otp (L3, +25) |
-| `syn-lazada-giveaway` | scam | made up | ≥ 80 % · scam, block it | 25 | 70 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
-| `syn-shopee-flash-undian` | scam | made up | ≥ 80 % · scam, block it | 29 | 54 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
-| `syn-bpjs-bonus-iuran` | scam | made up | ≥ 80 % · scam, block it | 29 | 74 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
-| `syn-pertamina-subsidi` | scam | made up | ≥ 80 % · scam, block it | 0 | 60 | ⚠️ only warned | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25) |
-| `syn-bukalapak-voucher` | scam | made up | ≥ 80 % · scam, block it | 29 | 79 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-bpjs-kesehatan-nonaktif` | scam | made up, held back | ≥ 80 % · scam, block it | 25 | 75 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-pajak-djp-sptp` | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
-| `syn-etilang-denda` | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 20 | ❌ missed | asks_card (L3, +20) |
-| `syn-samsat-pajak-kendaraan` | scam | made up, held back | ≥ 80 % · scam, block it | 5 | 5 | ❌ missed | cheap_tld (L2, +5) |
-| `syn-prakerja-gelombang` | scam | made up | ≥ 80 % · scam, block it | 0 | 85 | ✅ blocked | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
-| `syn-dukcapil-ktp-digital` | scam | made up | ≥ 80 % · scam, block it | 0 | 85 | ✅ blocked | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
-| `syn-kemensos-bansos-pkh` | scam | made up | ≥ 80 % · scam, block it | 14 | 99 | ✅ blocked | brand_plus_keyword (L2, +14), asks_pin (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
-| `syn-icloud-terkunci` | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_otp (L3, +25), asks_password (L3, +15) |
-| `syn-find-my-iphone-hilang` | scam | made up | ≥ 80 % · scam, block it | 25 | 25 | ❌ missed | lookalike_domain (L2, +10), cheap_tld (L2, +15) |
-| `syn-apple-pay-tagihan` | scam | made up | ≥ 80 % · scam, block it | 5 | 25 | ❌ missed | cheap_tld (L2, +5), asks_card (L3, +20) |
-| `syn-loker-admin-online` | scam | made up | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
-| `syn-pinjol-cair-cepat` | scam | made up | ≥ 80 % · scam, block it | 5 | 65 | ⚠️ only warned | cheap_tld (L2, +5), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25) |
-| `syn-investasi-kripto-profit` | scam | made up | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
-| `syn-olx-pembeli-cod` | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 45 | ⚠️ only warned | asks_otp (L3, +25), asks_card (L3, +20) |
+| [`bank-login-bri`](../../../ai/eval/data/legit/real.json#L3)<br>[view](corpus-view/bank-login-bri.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-btn`](../../../ai/eval/data/legit/real.json#L29)<br>[view](corpus-view/bank-login-btn.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-danamon`](../../../ai/eval/data/legit/real.json#L55)<br>[view](corpus-view/bank-login-danamon.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-klikbca`](../../../ai/eval/data/legit/real.json#L526)<br>[view](corpus-view/bank-login-klikbca.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-mega`](../../../ai/eval/data/legit/real.json#L578)<br>[view](corpus-view/bank-login-mega.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-permata`](../../../ai/eval/data/legit/real.json#L630)<br>[view](corpus-view/bank-login-permata.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-bukalapak`](../../../ai/eval/data/legit/real.json#L687)<br>[view](corpus-view/checkout-bukalapak.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-lazada`](../../../ai/eval/data/legit/real.json#L716)<br>[view](corpus-view/checkout-lazada.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-orami`](../../../ai/eval/data/legit/real.json#L762)<br>[view](corpus-view/checkout-orami.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-ruparupa`](../../../ai/eval/data/legit/real.json#L816)<br>[view](corpus-view/checkout-ruparupa.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-shopee-cart`](../../../ai/eval/data/legit/real.json#L869)<br>[view](corpus-view/checkout-shopee-cart.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-sociolla`](../../../ai/eval/data/legit/real.json#L898)<br>[view](corpus-view/checkout-sociolla.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-tokopedia-cart`](../../../ai/eval/data/legit/real.json#L937)<br>[view](corpus-view/checkout-tokopedia-cart.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-traveloka`](../../../ai/eval/data/legit/real.json#L979)<br>[view](corpus-view/checkout-traveloka.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-zalora`](../../../ai/eval/data/legit/real.json#L1017)<br>[view](corpus-view/checkout-zalora.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-bi`](../../../ai/eval/data/legit/real.json#L1056)<br>[view](corpus-view/gov-bi.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-bpjs-kesehatan`](../../../ai/eval/data/legit/real.json#L1093)<br>[view](corpus-view/gov-bpjs-kesehatan.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-dukcapil`](../../../ai/eval/data/legit/real.json#L1119)<br>[view](corpus-view/gov-dukcapil.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-kemensos`](../../../ai/eval/data/legit/real.json#L1161)<br>[view](corpus-view/gov-kemensos.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-komdigi`](../../../ai/eval/data/legit/real.json#L1195)<br>[view](corpus-view/gov-komdigi.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-ojk`](../../../ai/eval/data/legit/real.json#L1228)<br>[view](corpus-view/gov-ojk.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-pajak`](../../../ai/eval/data/legit/real.json#L1271)<br>[view](corpus-view/gov-pajak.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-cnnindonesia`](../../../ai/eval/data/legit/real.json#L1420)<br>[view](corpus-view/popular-cnnindonesia.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-detik`](../../../ai/eval/data/legit/real.json#L1475)<br>[view](corpus-view/popular-detik.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-idntimes`](../../../ai/eval/data/legit/real.json#L1550)<br>[view](corpus-view/popular-idntimes.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-kompas`](../../../ai/eval/data/legit/real.json#L1589)<br>[view](corpus-view/popular-kompas.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-kumparan`](../../../ai/eval/data/legit/real.json#L1659)<br>[view](corpus-view/popular-kumparan.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-liputan6`](../../../ai/eval/data/legit/real.json#L1710)<br>[view](corpus-view/popular-liputan6.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-tribunnews`](../../../ai/eval/data/legit/real.json#L1765)<br>[view](corpus-view/popular-tribunnews.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-wikipedia-id`](../../../ai/eval/data/legit/real.json#L1819)<br>[view](corpus-view/popular-wikipedia-id.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-bni-web`](../../../ai/eval/data/legit/real.json#L1899)<br>[view](corpus-view/bank-login-bni-web.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`bank-login-mandiri-web`](../../../ai/eval/data/legit/real.json#L1926)<br>[view](corpus-view/bank-login-mandiri-web.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`checkout-bhinneka`](../../../ai/eval/data/legit/real.json#L1994)<br>[view](corpus-view/checkout-bhinneka.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`gov-kemenkeu`](../../../ai/eval/data/legit/real.json#L2093)<br>[view](corpus-view/gov-kemenkeu.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-merdeka`](../../../ai/eval/data/legit/real.json#L2119)<br>[view](corpus-view/popular-merdeka.html) | normal | real, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`official-tokopedia-home`](../../../ai/eval/data/legit/seed.json#L3)<br>[view](corpus-view/official-tokopedia-home.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`official-bca-home`](../../../ai/eval/data/legit/seed.json#L19)<br>[view](corpus-view/official-bca-home.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`official-shopee-home`](../../../ai/eval/data/legit/seed.json#L35)<br>[view](corpus-view/official-shopee-home.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`popular-wikipedia`](../../../ai/eval/data/legit/seed.json#L51)<br>[view](corpus-view/popular-wikipedia.html) | normal | real | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-dana-sosial`](../../../ai/eval/data/legit/seed.json#L66)<br>[view](corpus-view/trap-dana-sosial.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-mandiri-jaya`](../../../ai/eval/data/legit/seed.json#L81)<br>[view](corpus-view/trap-mandiri-jaya.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-toko-iphone-bekas`](../../../ai/eval/data/legit/seed.json#L96)<br>[view](corpus-view/trap-toko-iphone-bekas.html) | normal | made up, held back | < 30 % · not scam, show nothing | 10 | 10 | ✅ left alone | lookalike_domain (L2, +10) |
+| [`trap-cloud-storage`](../../../ai/eval/data/legit/seed.json#L112)<br>[view](corpus-view/trap-cloud-storage.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`trap-toko-logo-bank-checkout`](../../../ai/eval/data/legit/traps.json#L3)<br>[view](corpus-view/trap-toko-logo-bank-checkout.html) | normal | made up, held back | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | brand_logo_offsite (L3, +12), urgent_language (L3, +8) |
+| [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal | made up | < 30 % · not scam, show nothing | 24 | 49 | ❌ wrongly flagged | suspicious_link (L2, +24), brand_logo_offsite (L3, +25) |
+| [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal | made up, held back | < 30 % · not scam, show nothing | 19 | 34 | ❌ wrongly flagged | suspicious_link (L2, +19), asks_password (L3, +15) |
+| [`trap-sign-in-google-facebook`](../../../ai/eval/data/legit/traps.json#L151)<br>[view](corpus-view/trap-sign-in-google-facebook.html) | normal | made up | < 30 % · not scam, show nothing | 10 | 25 | ✅ left alone | suspicious_link (L2, +10), asks_password (L3, +15) |
+| [`trap-fintech-kyc-sah`](../../../ai/eval/data/legit/traps.json#L199)<br>[view](corpus-view/trap-fintech-kyc-sah.html) | normal | made up | < 30 % · not scam, show nothing | 10 | 95 | ❌ wrongly flagged | suspicious_link (L2, +10), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`trap-berita-waspada-penipuan`](../../../ai/eval/data/legit/traps.json#L253)<br>[view](corpus-view/trap-berita-waspada-penipuan.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | brand_logo_offsite (L3, +12), urgent_language (L3, +8) |
+| [`trap-portal-orang-tua-sekolah`](../../../ai/eval/data/legit/traps.json#L277)<br>[view](corpus-view/trap-portal-orang-tua-sekolah.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 15 | ✅ left alone | asks_password (L3, +15) |
+| [`trap-asuransi-klaim-resmi`](../../../ai/eval/data/legit/traps.json#L322)<br>[view](corpus-view/trap-asuransi-klaim-resmi.html) | normal | made up, held back | < 30 % · not scam, show nothing | 10 | 35 | ❌ wrongly flagged | suspicious_link (L2, +10), asks_ktp (L3, +25) |
+| [`trap-toko-kopi-kartu-native`](../../../ai/eval/data/legit/traps.json#L376)<br>[view](corpus-view/trap-toko-kopi-kartu-native.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 20 | ✅ left alone | asks_card (L3, +20) |
+| [`trap-batik-card-checkout-en`](../../../ai/eval/data/legit/traps.json#L447)<br>[view](corpus-view/trap-batik-card-checkout-en.html) | normal | made up | < 30 % · not scam, show nothing | 5 | 25 | ✅ left alone | cheap_tld (L2, +5), asks_card (L3, +20) |
+| [`syn-sekolah-portal2`](../../../ai/eval/data/legit/url-shapes.json#L3)<br>[view](corpus-view/syn-sekolah-portal2.html) | normal | made up, held back | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`syn-toko-app3-index-php`](../../../ai/eval/data/legit/url-shapes.json#L25)<br>[view](corpus-view/syn-toko-app3-index-php.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`syn-kampus-code-path`](../../../ai/eval/data/legit/url-shapes.json#L46)<br>[view](corpus-view/syn-kampus-code-path.html) | normal | made up | < 30 % · not scam, show nothing | 0 | 0 | ✅ left alone | none |
+| [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam | real | ≥ 80 % · scam, block it | 21 | 21 | ❌ missed | suspicious_link (L2, +21) |
+| [`cusbsi-bsi-cash-management`](../../../ai/eval/data/scam/real.json#L24)<br>[view](corpus-view/cusbsi-bsi-cash-management.html) | scam | real, held back | ≥ 80 % · scam, block it | 0 | 60 | ⚠️ only warned | brand_logo_offsite (L3, +25), new_domain (L3, +20), asks_password (L3, +15) |
+| [`lphone-login`](../../../ai/eval/data/scam/seed.json#L3)<br>[view](corpus-view/lphone-login.html) | scam | real | ≥ 80 % · scam, block it | 39 | 39 | ⚠️ only warned | lookalike_domain (L2, +25), brand_plus_keyword (L2, +14) |
+| [`fixture-bca-verifikasi`](../../../ai/eval/data/scam/seed.json#L34)<br>[view](corpus-view/fixture-bca-verifikasi.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-promo-shopee`](../../../ai/eval/data/scam/seed.json#L50)<br>[view](corpus-view/fixture-promo-shopee.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`fixture-bansos-kemensos`](../../../ai/eval/data/scam/seed.json#L66)<br>[view](corpus-view/fixture-bansos-kemensos.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 29 | ❌ missed | brand_plus_keyword (L2, +14), cheap_tld (L2, +15) |
+| [`synthetic-p0stindonesia`](../../../ai/eval/data/scam/seed.json#L82)<br>[view](corpus-view/synthetic-p0stindonesia.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 25 | ❌ missed | lookalike_domain (L2, +25) |
+| [`syn-bri-token-expired`](../../../ai/eval/data/scam/synthetic.json#L3)<br>[view](corpus-view/syn-bri-token-expired.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-mandiri-livin-upgrade`](../../../ai/eval/data/scam/synthetic.json#L57)<br>[view](corpus-view/syn-mandiri-livin-upgrade.html) | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), unreasonable_request (L4, +30), brand_logo_offsite (L3, +25), asks_password (L3, +15), urgent_language (L3, +15) |
+| [`syn-bni-mobile-banking`](../../../ai/eval/data/scam/synthetic.json#L103)<br>[view](corpus-view/syn-bni-mobile-banking.html) | scam | made up, held back | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), unreasonable_request (L4, +30), brand_logo_offsite (L3, +25), asks_card (L3, +20), asks_password (L3, +15) |
+| [`syn-bsi-sharia-bonus`](../../../ai/eval/data/scam/synthetic.json#L159)<br>[view](corpus-view/syn-bsi-sharia-bonus.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), unreasonable_request (L4, +30), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-bca-klikbca-clean`](../../../ai/eval/data/scam/synthetic.json#L212)<br>[view](corpus-view/syn-bca-klikbca-clean.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 80 | ✅ blocked | unreasonable_request (L4, +30), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-cimb-octo-limit`](../../../ai/eval/data/scam/synthetic.json#L258)<br>[view](corpus-view/syn-cimb-octo-limit.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
+| [`syn-bca-blokir-kartu`](../../../ai/eval/data/scam/synthetic.json#L282)<br>[view](corpus-view/syn-bca-blokir-kartu.html) | scam | made up, held back | ≥ 80 % · scam, block it | 14 | 59 | ⚠️ only warned | brand_plus_keyword (L2, +14), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-bri-cashback-survey`](../../../ai/eval/data/scam/synthetic.json#L338)<br>[view](corpus-view/syn-bri-cashback-survey.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 85 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), brand_logo_offsite (L3, +25) |
+| [`syn-mandiri-kyc-update`](../../../ai/eval/data/scam/synthetic.json#L384)<br>[view](corpus-view/syn-mandiri-kyc-update.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 100 | ✅ blocked | asks_selfie_ktp (L3, +35), unreasonable_request (L4, +30), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-dana-kaget-bonus`](../../../ai/eval/data/scam/synthetic.json#L438)<br>[view](corpus-view/syn-dana-kaget-bonus.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), unreasonable_request (L4, +30), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-ovo-upgrade-premier`](../../../ai/eval/data/scam/synthetic.json#L484)<br>[view](corpus-view/syn-ovo-upgrade-premier.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 100 | ✅ blocked | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_pin (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-gopay-driver-refund`](../../../ai/eval/data/scam/synthetic.json#L537)<br>[view](corpus-view/syn-gopay-driver-refund.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-shopeepay-limit`](../../../ai/eval/data/scam/synthetic.json#L590)<br>[view](corpus-view/syn-shopeepay-limit.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
+| [`syn-linkaja-hadiah`](../../../ai/eval/data/scam/synthetic.json#L636)<br>[view](corpus-view/syn-linkaja-hadiah.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 35 | ⚠️ only warned | asks_pin (L3, +35) |
+| [`syn-dana-premium-pin`](../../../ai/eval/data/scam/synthetic.json#L682)<br>[view](corpus-view/syn-dana-premium-pin.html) | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 100 | ✅ blocked | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_pin (L3, +35), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-ovo-undian-grab`](../../../ai/eval/data/scam/synthetic.json#L737)<br>[view](corpus-view/syn-ovo-undian-grab.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 54 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
+| [`syn-gopay-later-pinjam`](../../../ai/eval/data/scam/synthetic.json#L761)<br>[view](corpus-view/syn-gopay-later-pinjam.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 90 | ✅ blocked | cheap_tld (L2, +5), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-jne-paket-tertahan`](../../../ai/eval/data/scam/synthetic.json#L814)<br>[view](corpus-view/syn-jne-paket-tertahan.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 70 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-jnt-tarif-selisih`](../../../ai/eval/data/scam/synthetic.json#L867)<br>[view](corpus-view/syn-jnt-tarif-selisih.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 50 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
+| [`syn-sicepat-apk`](../../../ai/eval/data/scam/synthetic.json#L912)<br>[view](corpus-view/syn-sicepat-apk.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 5 | ❌ missed | cheap_tld (L2, +5) |
+| [`syn-anteraja-alamat`](../../../ai/eval/data/scam/synthetic.json#L936)<br>[view](corpus-view/syn-anteraja-alamat.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 20 | ❌ missed | asks_card (L3, +20) |
+| [`syn-pos-kiriman-luar-negeri`](../../../ai/eval/data/scam/synthetic.json#L981)<br>[view](corpus-view/syn-pos-kiriman-luar-negeri.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 50 | ⚠️ only warned | lookalike_domain (L2, +25), brand_logo_offsite (L3, +25) |
+| [`syn-tiki-nomor-resi`](../../../ai/eval/data/scam/synthetic.json#L1004)<br>[view](corpus-view/syn-tiki-nomor-resi.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 30 | ⚠️ only warned | cheap_tld (L2, +5), asks_otp (L3, +25) |
+| [`syn-ninja-ganti-rugi`](../../../ai/eval/data/scam/synthetic.json#L1058)<br>[view](corpus-view/syn-ninja-ganti-rugi.html) | scam | made up, held back | ≥ 80 % · scam, block it | 5 | 40 | ⚠️ only warned | cheap_tld (L2, +5), asks_pin (L3, +35) |
+| [`syn-tokopedia-undian`](../../../ai/eval/data/scam/synthetic.json#L1104)<br>[view](corpus-view/syn-tokopedia-undian.html) | scam | made up, held back | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
+| [`syn-telkomsel-poin`](../../../ai/eval/data/scam/synthetic.json#L1151)<br>[view](corpus-view/syn-telkomsel-poin.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 25 | ❌ missed | asks_otp (L3, +25) |
+| [`syn-lazada-giveaway`](../../../ai/eval/data/scam/synthetic.json#L1196)<br>[view](corpus-view/syn-lazada-giveaway.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 70 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-shopee-flash-undian`](../../../ai/eval/data/scam/synthetic.json#L1250)<br>[view](corpus-view/syn-shopee-flash-undian.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 54 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25) |
+| [`syn-bpjs-bonus-iuran`](../../../ai/eval/data/scam/synthetic.json#L1304)<br>[view](corpus-view/syn-bpjs-bonus-iuran.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 74 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_card (L3, +20) |
+| [`syn-pertamina-subsidi`](../../../ai/eval/data/scam/synthetic.json#L1349)<br>[view](corpus-view/syn-pertamina-subsidi.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 60 | ⚠️ only warned | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25) |
+| [`syn-bukalapak-voucher`](../../../ai/eval/data/scam/synthetic.json#L1402)<br>[view](corpus-view/syn-bukalapak-voucher.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 79 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_otp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-bpjs-kesehatan-nonaktif`](../../../ai/eval/data/scam/synthetic.json#L1447)<br>[view](corpus-view/syn-bpjs-kesehatan-nonaktif.html) | scam | made up, held back | ≥ 80 % · scam, block it | 25 | 75 | ⚠️ only warned | lookalike_domain (L2, +10), cheap_tld (L2, +15), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-pajak-djp-sptp`](../../../ai/eval/data/scam/synthetic.json#L1501)<br>[view](corpus-view/syn-pajak-djp-sptp.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), brand_logo_offsite (L3, +25), asks_password (L3, +15) |
+| [`syn-etilang-denda`](../../../ai/eval/data/scam/synthetic.json#L1554)<br>[view](corpus-view/syn-etilang-denda.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 20 | ❌ missed | asks_card (L3, +20) |
+| [`syn-samsat-pajak-kendaraan`](../../../ai/eval/data/scam/synthetic.json#L1600)<br>[view](corpus-view/syn-samsat-pajak-kendaraan.html) | scam | made up, held back | ≥ 80 % · scam, block it | 5 | 5 | ❌ missed | cheap_tld (L2, +5) |
+| [`syn-prakerja-gelombang`](../../../ai/eval/data/scam/synthetic.json#L1624)<br>[view](corpus-view/syn-prakerja-gelombang.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 85 | ✅ blocked | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`syn-dukcapil-ktp-digital`](../../../ai/eval/data/scam/synthetic.json#L1685)<br>[view](corpus-view/syn-dukcapil-ktp-digital.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 85 | ✅ blocked | asks_selfie_ktp (L3, +35), asks_ktp (L3, +25), asks_otp (L3, +25) |
+| [`syn-kemensos-bansos-pkh`](../../../ai/eval/data/scam/synthetic.json#L1738)<br>[view](corpus-view/syn-kemensos-bansos-pkh.html) | scam | made up | ≥ 80 % · scam, block it | 14 | 99 | ✅ blocked | brand_plus_keyword (L2, +14), asks_pin (L3, +35), asks_ktp (L3, +25), brand_logo_offsite (L3, +25) |
+| [`syn-icloud-terkunci`](../../../ai/eval/data/scam/synthetic.json#L1791)<br>[view](corpus-view/syn-icloud-terkunci.html) | scam | made up | ≥ 80 % · scam, block it | 29 | 69 | ⚠️ only warned | brand_plus_keyword (L2, +14), cheap_tld (L2, +15), asks_otp (L3, +25), asks_password (L3, +15) |
+| [`syn-find-my-iphone-hilang`](../../../ai/eval/data/scam/synthetic.json#L1845)<br>[view](corpus-view/syn-find-my-iphone-hilang.html) | scam | made up | ≥ 80 % · scam, block it | 25 | 25 | ❌ missed | lookalike_domain (L2, +10), cheap_tld (L2, +15) |
+| [`syn-apple-pay-tagihan`](../../../ai/eval/data/scam/synthetic.json#L1870)<br>[view](corpus-view/syn-apple-pay-tagihan.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 25 | ❌ missed | cheap_tld (L2, +5), asks_card (L3, +20) |
+| [`syn-loker-admin-online`](../../../ai/eval/data/scam/synthetic.json#L1916)<br>[view](corpus-view/syn-loker-admin-online.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
+| [`syn-pinjol-cair-cepat`](../../../ai/eval/data/scam/synthetic.json#L1961)<br>[view](corpus-view/syn-pinjol-cair-cepat.html) | scam | made up | ≥ 80 % · scam, block it | 5 | 65 | ⚠️ only warned | cheap_tld (L2, +5), asks_selfie_ktp (L3, +35), asks_ktp (L3, +25) |
+| [`syn-investasi-kripto-profit`](../../../ai/eval/data/scam/synthetic.json#L2014)<br>[view](corpus-view/syn-investasi-kripto-profit.html) | scam | made up | ≥ 80 % · scam, block it | 0 | 0 | ❌ missed | none |
+| [`syn-olx-pembeli-cod`](../../../ai/eval/data/scam/synthetic.json#L2059)<br>[view](corpus-view/syn-olx-pembeli-cod.html) | scam | made up, held back | ≥ 80 % · scam, block it | 0 | 45 | ⚠️ only warned | asks_otp (L3, +25), asks_card (L3, +20) |
 
 </details>
 
@@ -462,56 +471,56 @@ Raw count: 45 pages opened (43 legit, 2 scam). 1 reached the server as a scan (s
 
 | Page | Type | Offline score (2a) | What Safari showed | Sent to server | Push |
 |---|---|---|---|---|---|
-| `regs-apps14-code-php` | scam | 21 | **76% High risk popup** ("This site looks suspicious", "Link sent to Adhella", Leave this page / Continue anyway), copy in English | 76 warning | failed:network |
-| `lphone-login` | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (cloaked kit) | none | n/a |
+| [`regs-apps14-code-php`](../../../ai/eval/data/scam/real.json#L3)<br>[view](corpus-view/regs-apps14-code-php.html) | scam | 21 | **76% High risk popup** ("This site looks suspicious", "Link sent to Adhella", Leave this page / Continue anyway), copy in English | 76 warning | failed:network |
+| [`lphone-login`](../../../ai/eval/data/scam/seed.json#L3)<br>[view](corpus-view/lphone-login.html) | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (cloaked kit) | none | n/a |
 
 <details><summary>43 normal pages</summary>
 
 | Page | Type | Offline score (2a) | What Safari showed | Sent to server | Push |
 |---|---|---|---|---|---|
-| `bank-login-bri` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-btn` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-danamon` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-klikbca` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-mega` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-permata` | normal | 0 | 0% badge | none | n/a |
-| `checkout-bukalapak` | normal | 0 | 0% badge | none | n/a |
-| `checkout-lazada` | normal | 0 | 0% badge | none | n/a |
-| `checkout-orami` | normal | 0 | 0% badge | none | n/a |
-| `checkout-ruparupa` | normal | 0 | 0% badge | none | n/a |
-| `checkout-shopee-cart` | normal | 0 | Shopee language picker; 0% badge | none | n/a |
-| `checkout-sociolla` | normal | 0 | 0% badge | none | n/a |
-| `checkout-tokopedia-cart` | normal | 0 | 0% badge | none | n/a |
-| `checkout-traveloka` | normal | 0 | app-download sheet on top; 0% badge | none | n/a |
-| `checkout-zalora` | normal | 0 | 0% badge | none | n/a |
-| `gov-bi` | normal | 0 | 0% badge | none | n/a |
-| `gov-bpjs-kesehatan` | normal | 0 | 0% badge | none | n/a |
-| `gov-dukcapil` | normal | 0 | 0% badge | none | n/a |
-| `gov-kemensos` | normal | 0 | 0% badge | none | n/a |
-| `gov-komdigi` | normal | 0 | 0% badge | none | n/a |
-| `gov-ojk` | normal | 0 | 0% badge | none | n/a |
-| `gov-pajak` | normal | 0 | PSA popup on top; 0% badge | none | n/a |
-| `popular-cnnindonesia` | normal | 0 | 0% badge | none | n/a |
-| `popular-detik` | normal | 0 | 0% badge | none | n/a |
-| `popular-idntimes` | normal | 0 | ad interstitial; 0% badge | none | n/a |
-| `popular-kompas` | normal | 0 | ad interstitial; 0% badge | none | n/a |
-| `popular-kumparan` | normal | 0 | 0% badge | none | n/a |
-| `popular-liputan6` | normal | 0 | ad interstitial; 0% badge | none | n/a |
-| `popular-tribunnews` | normal | 0 | 0% badge | none | n/a |
-| `popular-wikipedia-id` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-bni-web` | normal | 0 | 0% badge | none | n/a |
-| `bank-login-mandiri-web` | normal | 0 | cookie notice on top; 0% badge | none | n/a |
-| `checkout-bhinneka` | normal | 0 | 0% badge | none | n/a |
-| `gov-kemenkeu` | normal | 0 | 0% badge | none | n/a |
-| `popular-merdeka` | normal | 0 | ad interstitial; 0% badge | none | n/a |
-| `official-tokopedia-home` | normal | 0 | 0% badge | none | n/a |
-| `official-bca-home` | normal | 0 | 0% badge | none | n/a |
-| `official-shopee-home` | normal | 0 | Shopee language picker; 0% badge | none | n/a |
-| `popular-wikipedia` | normal | 0 | 0% badge | none | n/a |
-| `trap-cloud-storage` | normal | 0 | redirects to a sedo.com parking page (cookie dialog); 0% badge | none | n/a |
-| `trap-blog-cek-saldo-bca` | normal | 49 | blog post now 404; **24% badge** (under 30, nothing sent) | none | n/a |
-| `trap-github-pages-dokumentasi` | normal | 34 | GitHub Pages 404; badge collapsed to a dot | none | n/a |
-| `trap-berita-waspada-penipuan` | normal | 20 | Safari "This Connection Is Not Private" (certificate for another host); no badge | none | n/a |
+| [`bank-login-bri`](../../../ai/eval/data/legit/real.json#L3)<br>[view](corpus-view/bank-login-bri.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-btn`](../../../ai/eval/data/legit/real.json#L29)<br>[view](corpus-view/bank-login-btn.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-danamon`](../../../ai/eval/data/legit/real.json#L55)<br>[view](corpus-view/bank-login-danamon.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-klikbca`](../../../ai/eval/data/legit/real.json#L526)<br>[view](corpus-view/bank-login-klikbca.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-mega`](../../../ai/eval/data/legit/real.json#L578)<br>[view](corpus-view/bank-login-mega.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-permata`](../../../ai/eval/data/legit/real.json#L630)<br>[view](corpus-view/bank-login-permata.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-bukalapak`](../../../ai/eval/data/legit/real.json#L687)<br>[view](corpus-view/checkout-bukalapak.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-lazada`](../../../ai/eval/data/legit/real.json#L716)<br>[view](corpus-view/checkout-lazada.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-orami`](../../../ai/eval/data/legit/real.json#L762)<br>[view](corpus-view/checkout-orami.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-ruparupa`](../../../ai/eval/data/legit/real.json#L816)<br>[view](corpus-view/checkout-ruparupa.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-shopee-cart`](../../../ai/eval/data/legit/real.json#L869)<br>[view](corpus-view/checkout-shopee-cart.html) | normal | 0 | Shopee language picker; 0% badge | none | n/a |
+| [`checkout-sociolla`](../../../ai/eval/data/legit/real.json#L898)<br>[view](corpus-view/checkout-sociolla.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-tokopedia-cart`](../../../ai/eval/data/legit/real.json#L937)<br>[view](corpus-view/checkout-tokopedia-cart.html) | normal | 0 | 0% badge | none | n/a |
+| [`checkout-traveloka`](../../../ai/eval/data/legit/real.json#L979)<br>[view](corpus-view/checkout-traveloka.html) | normal | 0 | app-download sheet on top; 0% badge | none | n/a |
+| [`checkout-zalora`](../../../ai/eval/data/legit/real.json#L1017)<br>[view](corpus-view/checkout-zalora.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-bi`](../../../ai/eval/data/legit/real.json#L1056)<br>[view](corpus-view/gov-bi.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-bpjs-kesehatan`](../../../ai/eval/data/legit/real.json#L1093)<br>[view](corpus-view/gov-bpjs-kesehatan.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-dukcapil`](../../../ai/eval/data/legit/real.json#L1119)<br>[view](corpus-view/gov-dukcapil.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-kemensos`](../../../ai/eval/data/legit/real.json#L1161)<br>[view](corpus-view/gov-kemensos.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-komdigi`](../../../ai/eval/data/legit/real.json#L1195)<br>[view](corpus-view/gov-komdigi.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-ojk`](../../../ai/eval/data/legit/real.json#L1228)<br>[view](corpus-view/gov-ojk.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-pajak`](../../../ai/eval/data/legit/real.json#L1271)<br>[view](corpus-view/gov-pajak.html) | normal | 0 | PSA popup on top; 0% badge | none | n/a |
+| [`popular-cnnindonesia`](../../../ai/eval/data/legit/real.json#L1420)<br>[view](corpus-view/popular-cnnindonesia.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-detik`](../../../ai/eval/data/legit/real.json#L1475)<br>[view](corpus-view/popular-detik.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-idntimes`](../../../ai/eval/data/legit/real.json#L1550)<br>[view](corpus-view/popular-idntimes.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`popular-kompas`](../../../ai/eval/data/legit/real.json#L1589)<br>[view](corpus-view/popular-kompas.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`popular-kumparan`](../../../ai/eval/data/legit/real.json#L1659)<br>[view](corpus-view/popular-kumparan.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-liputan6`](../../../ai/eval/data/legit/real.json#L1710)<br>[view](corpus-view/popular-liputan6.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`popular-tribunnews`](../../../ai/eval/data/legit/real.json#L1765)<br>[view](corpus-view/popular-tribunnews.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-wikipedia-id`](../../../ai/eval/data/legit/real.json#L1819)<br>[view](corpus-view/popular-wikipedia-id.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-bni-web`](../../../ai/eval/data/legit/real.json#L1899)<br>[view](corpus-view/bank-login-bni-web.html) | normal | 0 | 0% badge | none | n/a |
+| [`bank-login-mandiri-web`](../../../ai/eval/data/legit/real.json#L1926)<br>[view](corpus-view/bank-login-mandiri-web.html) | normal | 0 | cookie notice on top; 0% badge | none | n/a |
+| [`checkout-bhinneka`](../../../ai/eval/data/legit/real.json#L1994)<br>[view](corpus-view/checkout-bhinneka.html) | normal | 0 | 0% badge | none | n/a |
+| [`gov-kemenkeu`](../../../ai/eval/data/legit/real.json#L2093)<br>[view](corpus-view/gov-kemenkeu.html) | normal | 0 | 0% badge | none | n/a |
+| [`popular-merdeka`](../../../ai/eval/data/legit/real.json#L2119)<br>[view](corpus-view/popular-merdeka.html) | normal | 0 | ad interstitial; 0% badge | none | n/a |
+| [`official-tokopedia-home`](../../../ai/eval/data/legit/seed.json#L3)<br>[view](corpus-view/official-tokopedia-home.html) | normal | 0 | 0% badge | none | n/a |
+| [`official-bca-home`](../../../ai/eval/data/legit/seed.json#L19)<br>[view](corpus-view/official-bca-home.html) | normal | 0 | 0% badge | none | n/a |
+| [`official-shopee-home`](../../../ai/eval/data/legit/seed.json#L35)<br>[view](corpus-view/official-shopee-home.html) | normal | 0 | Shopee language picker; 0% badge | none | n/a |
+| [`popular-wikipedia`](../../../ai/eval/data/legit/seed.json#L51)<br>[view](corpus-view/popular-wikipedia.html) | normal | 0 | 0% badge | none | n/a |
+| [`trap-cloud-storage`](../../../ai/eval/data/legit/seed.json#L112)<br>[view](corpus-view/trap-cloud-storage.html) | normal | 0 | redirects to a sedo.com parking page (cookie dialog); 0% badge | none | n/a |
+| [`trap-blog-cek-saldo-bca`](../../../ai/eval/data/legit/traps.json#L59)<br>[view](corpus-view/trap-blog-cek-saldo-bca.html) | normal | 49 | blog post now 404; **24% badge** (under 30, nothing sent) | none | n/a |
+| [`trap-github-pages-dokumentasi`](../../../ai/eval/data/legit/traps.json#L105)<br>[view](corpus-view/trap-github-pages-dokumentasi.html) | normal | 34 | GitHub Pages 404; badge collapsed to a dot | none | n/a |
+| [`trap-berita-waspada-penipuan`](../../../ai/eval/data/legit/traps.json#L253)<br>[view](corpus-view/trap-berita-waspada-penipuan.html) | normal | 20 | Safari "This Connection Is Not Private" (certificate for another host); no badge | none | n/a |
 
 </details>
 
@@ -554,14 +563,18 @@ Pairing (`LiveQAUITests`): both phones go through onboarding in Bahasa Indonesia
 node plan/alief/qa/figma-export.mjs plan/alief/qa/img/figma-parity/figma <channel>
 # Screens + Test 1 screenshots (set TEST_RUNNER_QA_SCENARIO to figma, mixedVerdicts, heavy, edge, allSafe, allBlocked or corpus)
 TEST_RUNNER_QA_SCENARIO=figma TEST_RUNNER_QA_SHOT_DIR=$PWD/plan/alief/qa/img/figma-parity/app xcodebuild test -project ios/Shoo.xcodeproj -scheme Shoo -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:ShooAppUITests/FigmaParityUITests
-# Test 2a data
+# Test 2a data, then the local page viewer
 npx --prefix ai wrangler dev --cwd ai --port 8788 &
 node ai/eval/run.mjs --analyze-url http://127.0.0.1:8788 --json --show-holdout > /tmp/corpus-eval.json && node plan/alief/qa/corpus-to-scans.mjs /tmp/corpus-eval.json
+node plan/alief/qa/corpus-view.mjs && open plan/alief/qa/corpus-view/index.html
+# Test 2b: which hosts still exist
+node plan/alief/qa/corpus-dns.mjs plan/alief/qa/img/figma-parity/corpus-results.json plan/alief/qa/img/figma-parity/corpus-dns.json
 # Test 2b: pair, then visit
 TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -only-testing:ShooAppUITests/LiveQAUITests/testGuardianPairs   # Guardian sim
 TEST_RUNNER_QA_LIVE=1 TEST_RUNNER_QA_PAIR_DIR=/tmp/pair xcodebuild test … -only-testing:ShooAppUITests/LiveQAUITests/testProtectedJoins  # Protected sim
 bash plan/alief/qa/live-visit.sh <protected-udid>
 # then write live/observations.json from the shots, and
 node plan/alief/qa/live-results.mjs
+xcrun simctl push <guardian-udid> com.aliefauzan.shoo plan/alief/qa/push-live-warning.apns   # app side of the push
 node plan/alief/qa/figma-parity-report.mjs
 ```

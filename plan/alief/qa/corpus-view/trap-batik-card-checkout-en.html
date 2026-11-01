@@ -1,0 +1,81 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'"><title>trap-batik-card-checkout-en</title><style>
+:root{--bg:#f5f7fa;--card:#fff;--ink:#1a1c2e;--muted:#6a717e;--line:#e3e7ee;--red:#c62828;--amber:#b26a00;--green:#1b7f4b}
+@media (prefers-color-scheme:dark){:root{--bg:#12141a;--card:#1c1f27;--ink:#eef0f4;--muted:#9aa1ad;--line:#2c313c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px}a{color:#0367b6}h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 8px}
+.muted{color:var(--muted)}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted)}code{font:13px ui-monospace,Menlo,monospace}
+.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.browser{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;color:#1a1c2e}
+.bar{background:#eceff3;padding:8px 12px;font:13px ui-monospace,Menlo,monospace;color:#444;word-break:break-all}
+.page{padding:18px}.page h3{margin:0 0 10px;font-size:20px}.page p{white-space:pre-wrap;margin:0 0 12px}
+.alt{display:inline-block;border:1px dashed #9aa1ad;border-radius:8px;padding:10px 12px;margin:4px;font-size:13px;color:#555;background:#f3f5f8}
+.form{border:1px solid #d6dbe3;border-radius:10px;padding:12px;margin:12px 0}label{display:block;font-size:13px;margin:8px 0 2px;color:#444}
+input{width:100%;padding:8px 10px;border:1px solid #c9d0da;border-radius:8px;font:inherit;background:#fafbfc}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line)}
+.scam{color:var(--red)}.legit{color:var(--green)}pre{white-space:pre-wrap;word-break:break-word;font:12px ui-monospace,Menlo,monospace;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;max-height:480px;overflow:auto}
+img.shot{width:100%;max-width:300px;border-radius:12px;border:1px solid var(--line)}
+</style></head><body><main><p><a href="index.html">← all pages</a></p><h1><code>trap-batik-card-checkout-en</code></h1><p class="muted">What the detector saw, drawn as a page. Not the real site: the corpus keeps only this snapshot.</p><div class="grid"><div class="browser"><div class="bar">https://batik-lestari.xyz/checkout</div><div class="page"><h3>Checkout - Batik Lestari</h3><p>Order summary: Batik tulis shirt, size M. Free shipping in Java. Pay by credit card.</p><span class="alt">image: Visa</span><span class="alt">image: Mastercard</span><span class="alt">image: Batik tulis shirt</span><div class="form"><div class="muted" style="font-size:12px">form → /pay</div><label>Email for the receipt <span class="muted">(email, email)</span></label><input disabled type="text" placeholder=""><label>Card number <span class="muted">(text, cc-number)</span></label><input disabled type="text" placeholder=""><label>Expiry date <span class="muted">(text, cc-exp)</span></label><input disabled type="text" placeholder=""><label>Security code (CVC) <span class="muted">(text, cc-csc)</span></label><input disabled type="text" placeholder=""></div></div></div><div><table><tr><th>Type</th><td><span class="legit">normal (legit)</span></td></tr><tr><th>Source</th><td>made up by Team AI</td></tr><tr><th>Should get</th><td>&lt; 30 % · not scam, show nothing</td></tr><tr><th>Got (Test 2a)</th><td>L1–2: 5 · final: <b>25</b> (normal) · ✅ left alone</td></tr><tr><th>Why</th><td><code>cheap_tld (L2, +5)</code><br><code>asks_card (L3, +20)</code></td></tr><tr><th>Live (Test 2b)</th><td>not opened live (host gone or not checked)</td></tr><tr><th>Tags</th><td><span class="pill">checkout</span> <span class="pill">native-card</span></td></tr><tr><th>Where it comes from</th><td>synthetic legit, hand-written: small batik shop, English card checkout on a .xyz domain (review #60)</td></tr><tr><th>Note</th><td>Must stay under 30 even with a cheap TLD: card number + expiry + security code is one card request.</td></tr><tr><th>File</th><td><code>ai/eval/data/legit/traps.json</code>, line 447</td></tr></table></div></div><h2>Raw sample (JSON)</h2><pre>{
+  &quot;id&quot;: &quot;trap-batik-card-checkout-en&quot;,
+  &quot;label&quot;: &quot;legit&quot;,
+  &quot;tags&quot;: [
+    &quot;checkout&quot;,
+    &quot;native-card&quot;
+  ],
+  &quot;synthetic&quot;: true,
+  &quot;source&quot;: &quot;synthetic legit, hand-written: small batik shop, English card checkout on a .xyz domain (review #60)&quot;,
+  &quot;collectedAt&quot;: &quot;2026-10-23T00:00:00.000Z&quot;,
+  &quot;notes&quot;: &quot;Must stay under 30 even with a cheap TLD: card number + expiry + security code is one card request.&quot;,
+  &quot;snapshot&quot;: {
+    &quot;url&quot;: &quot;https://batik-lestari.xyz/checkout&quot;,
+    &quot;title&quot;: &quot;Checkout - Batik Lestari&quot;,
+    &quot;lang&quot;: &quot;en&quot;,
+    &quot;text&quot;: &quot;Order summary: Batik tulis shirt, size M. Free shipping in Java. Pay by credit card.&quot;,
+    &quot;forms&quot;: [
+      {
+        &quot;action&quot;: &quot;/pay&quot;,
+        &quot;fields&quot;: [
+          {
+            &quot;type&quot;: &quot;email&quot;,
+            &quot;name&quot;: &quot;email&quot;,
+            &quot;id&quot;: &quot;email&quot;,
+            &quot;label&quot;: &quot;Email for the receipt&quot;,
+            &quot;placeholder&quot;: null,
+            &quot;autocomplete&quot;: &quot;email&quot;
+          },
+          {
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;name&quot;: &quot;cardnumber&quot;,
+            &quot;id&quot;: &quot;cardnumber&quot;,
+            &quot;label&quot;: &quot;Card number&quot;,
+            &quot;placeholder&quot;: null,
+            &quot;autocomplete&quot;: &quot;cc-number&quot;
+          },
+          {
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;name&quot;: &quot;expiry&quot;,
+            &quot;id&quot;: &quot;expiry&quot;,
+            &quot;label&quot;: &quot;Expiry date&quot;,
+            &quot;placeholder&quot;: null,
+            &quot;autocomplete&quot;: &quot;cc-exp&quot;
+          },
+          {
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;name&quot;: &quot;cvc&quot;,
+            &quot;id&quot;: &quot;cvc&quot;,
+            &quot;label&quot;: &quot;Security code (CVC)&quot;,
+            &quot;placeholder&quot;: null,
+            &quot;autocomplete&quot;: &quot;cc-csc&quot;
+          }
+        ]
+      }
+    ],
+    &quot;imageAlts&quot;: [
+      &quot;Visa&quot;,
+      &quot;Mastercard&quot;,
+      &quot;Batik tulis shirt&quot;
+    ],
+    &quot;capturedAt&quot;: &quot;2026-10-23T00:00:00.000Z&quot;
+  }
+}</pre></main></body></html>
