@@ -8,18 +8,15 @@ final class ProtectedUITests: XCTestCase {
 
     @MainActor
     private func launch(extensionActive: Bool = true, extra: [String] = []) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-UITestMock", "YES",
+        var arguments = [
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", "protected",
             "-settings.language", "en",
         ] + extra
         if extensionActive {
-            app.launchArguments += ["-UITestExtensionActive", "YES"]
+            arguments += ["-UITestExtensionActive", "YES"]
         }
-        app.launch()
-        return app
+        return XCUIApplication.mock(arguments)
     }
 
     @MainActor
