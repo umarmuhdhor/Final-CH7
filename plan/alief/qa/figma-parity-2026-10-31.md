@@ -1,11 +1,11 @@
-# QA — Figma parity, iOS app (2026-10-31, frames re-checked 2026-11-01)
+# QA — Figma parity, iOS app (2026-10-31, everything re-run 2026-11-01)
 
-Every iOS frame marked **Ready for dev** on the Figma page *High Fidelity*, plus HOME and *AI vs Guardian — Eksplorasi* (not marked, shown as they are), next to the app as it is on `main` today. Safari extension and web frames are out of scope.
+Every iOS frame marked **Ready for dev** on the Figma page *High Fidelity*, plus HOME and *AI vs Guardian — Eksplorasi* (not marked, shown as they are), next to the app on `feat/GD-01-home-figma` (PR #228). Safari extension and web frames are out of scope.
 
 | | |
 |---|---|
-| Device | Frame tables: iPhone 17 Pro simulator, iOS 26.4 (2026-11-01). Tests 1–2: iPhone 17 simulator, iOS 26.3 (2026-10-31). Bahasa Indonesia, light, `TZ=Asia/Jakarta` (WIB) |
-| App | Frame tables: `feat/GD-01-home-figma` after the Figma parity pass (Home, Profile, Activity, Detail, Onboarding, Pairing; one Figma font, Figma shadows). Tests 1–2: `main` @ 2720b13 |
+| Device | Frame tables and Test 1: iPhone 17 Pro simulator, iOS 26.4. Test 2b/2c: QA Guardian iPhone 17 (iOS 26.5) + QA Protected iPhone 17 (iOS 26.4). All runs 2026-11-01. Bahasa Indonesia, light, `TZ=Asia/Jakarta` (WIB) |
+| App | Frame tables: `feat/GD-01-home-figma` after the Figma parity pass (Home, Profile, Activity, Detail, Onboarding, Pairing; one Figma font, Figma shadows). Tests 1–2: the same branch @ f93e660 (`main` merged in) |
 | Test 1 | `MockRepository` scenarios `figma`, `mixedVerdicts`, `heavy`, `edge`, `allSafe`, `allBlocked` (`Data/MockScenarios.swift`) |
 | Test 2a | Imelda's eval corpus (`ai/eval/data`, 108 samples, holdout included) through layers 1–4 on a local `shoo-ai` Worker → scenario `corpus` |
 | Test 2b/2c | Two paired simulators on a local stack built like prod; the Protected Safari opens every corpus URL that still resolves |
@@ -17,19 +17,19 @@ Figma frames are full height; the app shot is one screen (later screens of the s
 
 ## Findings
 
-Bugs and gaps the 2026-10-31 run found outside the frame-by-frame view (status as of that run unless marked):
+Bugs and gaps found outside the frame-by-frame view. First seen 2026-10-31; status is the 2026-11-01 re-run:
 
-1. 🔴 **Emoji in a name shows as ⍰ boxes** (scenario `edge`, `Bayu 🧑‍💻`) on Guardian Home and Profile: the custom font has no emoji fallback for ZWJ sequences. `edge-home-guardian`, `edge-pf-guardian`.
+1. ✅ **Emoji in a name** — fixed by 2026-11-01: `Bayu 🧑‍💻` now draws the emoji on Guardian Home and Profile (`edge-home-guardian`, `edge-pf-guardian`); on 2026-10-31 it showed ⍰ boxes.
 2. ✅ **Code expired shows the generic error** — fixed by 2026-11-01: `on-connect-expired` now shows "Kode kedaluwarsa, minta kode baru dan coba lagi." as in Figma 205:1182.
-3. 🟡 **"Notifikasi mati" popup on every Home / Activity launch** in the mock run although `-UITestNotifications granted` is passed; the popup covers the hero in the Home shots.
-4. 🟡 **Gauge label for 30–49**: a 39% warning (`corpus-dt-real-lphone`) reads "Risiko Tinggi", the same as 72%.
-5. 🟡 **Counters** do not cap: Guardian Profile shows "3.000 Situs diblokir" in `heavy` (no "999+"); fits, but wider than Figma's tile.
-6. 🟠 **Live: Guardian sees nothing after pairing** until Family mode is switched on by hand on Home (`live/guardian-activity.jpg` vs `guardian-activity-family.jpg`). Figma's Guardian Home/Activity always show the family.
-7. 🟠 **Live: push cannot be tested on the local stack**: `wrangler dev` has no HTTP/2, APNs answers nothing (`push_log` `failed:network`). Prod path is the deployed Worker; a local relay or a cloud staging Worker is needed for an end-to-end push test.
-8. 🟡 **Live: same page twice = two scans** in Activity (`regnows-dfg.com` 22.40 and 22.41).
-9. 🟡 **Live: the extension banner is English** ("46% · Be careful") while the app is set to Bahasa Indonesia; the extension follows the system language (extension is out of scope for this report, noted for the lead).
-10. 🟡 **Live: Detail "Salinan halaman" stays grey** for the live scan (no page copy drawn) and the favicon circle is empty.
-11. ⚪ **Detector, 2a**: 4 legit pages ≥ 30 (target 0) and 20 scam pages < 30; 62 % of scams ≥ 50 (target 90 %). Details in Test 2a.
+3. ✅ **"Notifikasi mati" popup on every Home / Activity launch** in the mock run — not seen on 2026-11-01: the Home and Activity shots of every scenario are clear.
+4. 🟡 **Gauge label for 30–49**: a 39% warning (`corpus-dt-real-lphone`) still reads "Risiko Tinggi", the same as 72%.
+5. 🟡 **Counters** do not cap: Guardian Profile still shows "3.000 Situs diblokir" in `heavy` (no "999+"); fits, but wider than Figma's tile.
+6. 🟠 **Live: Guardian sees nothing after pairing** until Family mode is switched on by hand on Home (`live/guardian-activity.jpg` vs `guardian-activity-family.jpg`) — still reproduces. Figma's Guardian Home/Activity always show the family.
+7. 🟠 **Live: push cannot be tested on the local stack**: `wrangler dev` has no HTTP/2, APNs answers nothing (`push_log` `failed:network`, again on 2026-11-01). Prod path is the deployed Worker; a local relay or a cloud staging Worker is needed for an end-to-end push test.
+8. ⚪ **Live: same page twice = two scans** (2026-10-31, `regnows-dfg.com` 22.40 and 22.41) — not re-tested: the 2026-11-01 run loaded each page once, and Activity shows one row.
+9. 🟡 **Live: the extension copy is English** while the app is set to Bahasa Indonesia. On 2026-11-01 the regnows page got the full **76% popup** ("This site looks suspicious", "Link sent to Adhella") instead of the 46% banner; the copy still follows the system language (extension is out of scope for this report, noted for the lead).
+10. 🟡 **Live: Detail "Salinan halaman" stays grey** for the live scan (no page copy drawn) and the favicon circle is empty — still on 2026-11-01.
+11. ⚪ **Detector, 2a**: 4 legit pages ≥ 30 (target 0) and 15 scam pages < 30; 62 % of scams ≥ 50 (target 90 %), 29 % ≥ 80 (target 70 %). Details in Test 2a.
 
 Per frame (most severe first):
 
@@ -216,10 +216,10 @@ Same screens with other data. Run: `TEST_RUNNER_QA_SCENARIO=<name> TEST_RUNNER_Q
 
 | | Samples | ≥ 30 (warning) | ≥ 50 | ≥ 80 (blocked) |
 |---|---|---|---|---|
-| Scam | 52 | 37 | 32 | 16 |
+| Scam | 52 | 37 | 32 | 15 |
 | Legit | 56 | 4 | 1 | 1 |
 
-Targets (docs/mandates/imelda.md): 0 legit ≥ 30 — **4 found**; ≥ 90 % scam ≥ 50 — **62 %**; ≥ 70 % scam ≥ 80 — **31 %**. `/analyze` p95 6011 ms, remote failures 0. 9 samples got a layer-4 signal.
+Targets (docs/mandates/imelda.md): 0 legit ≥ 30 — **4 found**; ≥ 90 % scam ≥ 50 — **62 %**; ≥ 70 % scam ≥ 80 — **29 %**. `/analyze` p95 6012 ms, remote failures 0. 6 samples got a layer-4 signal.
 
 Expected per sample, from the corpus label and the thresholds in `contracts/README.md` and the targets in `docs/mandates/imelda.md`: a scam page should score **≥ 80 %** (blocked; 50 % is the floor), a legit page **< 30 %** (normal, nothing shown).
 
@@ -308,7 +308,7 @@ Expected per sample, from the corpus label and the thresholds in `contracts/READ
 | `syn-toko-app3-index-php` | legit | syn | < 30 % · Not scam (normal) | 0 | 0 | normal |  |
 | `syn-kampus-code-path` | legit | syn | < 30 % · Not scam (normal) | 0 | 0 | normal |  |
 | `regs-apps14-code-php` | scam | real | ≥ 80 % · Scam (blocked) | 21 | 21 | normal | suspicious_link:L2:21 |
-| `cusbsi-bsi-cash-management` | scam | real · H | ≥ 80 % · Scam (blocked) | 0 | 70 | warning 2 | unreasonable_request:L4:30, brand_logo_offsite:L3:25, asks_password:L3:15 |
+| `cusbsi-bsi-cash-management` | scam | real · H | ≥ 80 % · Scam (blocked) | 0 | 60 | warning 2 | brand_logo_offsite:L3:25, new_domain:L3:20, asks_password:L3:15 |
 | `lphone-login` | scam | real | ≥ 80 % · Scam (blocked) | 39 | 39 | warning 1 | lookalike_domain:L2:25, brand_plus_keyword:L2:14 |
 | `fixture-bca-verifikasi` | scam | syn | ≥ 80 % · Scam (blocked) | 29 | 29 | normal | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
 | `fixture-promo-shopee` | scam | syn | ≥ 80 % · Scam (blocked) | 29 | 29 | normal | brand_plus_keyword:L2:14, cheap_tld:L2:15 |
@@ -320,11 +320,11 @@ Expected per sample, from the corpus label and the thresholds in `contracts/READ
 | `syn-bsi-sharia-bonus` | scam | syn | ≥ 80 % · Scam (blocked) | 25 | 100 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, unreasonable_request:L4:30, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
 | `syn-bca-klikbca-clean` | scam | syn | ≥ 80 % · Scam (blocked) | 0 | 80 | blocked | unreasonable_request:L4:30, asks_otp:L3:25, brand_logo_offsite:L3:25 |
 | `syn-cimb-octo-limit` | scam | syn · H | ≥ 80 % · Scam (blocked) | 0 | 0 | normal |  |
-| `syn-bca-blokir-kartu` | scam | syn · H | ≥ 80 % · Scam (blocked) | 14 | 89 | blocked | brand_plus_keyword:L2:14, unreasonable_request:L4:30, brand_logo_offsite:L3:25, asks_card:L3:20 |
+| `syn-bca-blokir-kartu` | scam | syn · H | ≥ 80 % · Scam (blocked) | 14 | 59 | warning 2 | brand_plus_keyword:L2:14, brand_logo_offsite:L3:25, asks_card:L3:20 |
 | `syn-bri-cashback-survey` | scam | syn | ≥ 80 % · Scam (blocked) | 25 | 85 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, brand_logo_offsite:L3:25 |
 | `syn-mandiri-kyc-update` | scam | syn | ≥ 80 % · Scam (blocked) | 0 | 100 | blocked | asks_selfie_ktp:L3:35, unreasonable_request:L4:30, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
 | `syn-dana-kaget-bonus` | scam | syn | ≥ 80 % · Scam (blocked) | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, unreasonable_request:L4:30, asks_otp:L3:25, brand_logo_offsite:L3:25 |
-| `syn-ovo-upgrade-premier` | scam | syn | ≥ 80 % · Scam (blocked) | 25 | 100 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, unreasonable_request:L4:30, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
+| `syn-ovo-upgrade-premier` | scam | syn | ≥ 80 % · Scam (blocked) | 25 | 100 | blocked | lookalike_domain:L2:10, cheap_tld:L2:15, asks_pin:L3:35, asks_ktp:L3:25, brand_logo_offsite:L3:25 |
 | `syn-gopay-driver-refund` | scam | syn | ≥ 80 % · Scam (blocked) | 29 | 100 | blocked | brand_plus_keyword:L2:14, cheap_tld:L2:15, asks_pin:L3:35, asks_otp:L3:25, brand_logo_offsite:L3:25 |
 | `syn-shopeepay-limit` | scam | syn | ≥ 80 % · Scam (blocked) | 29 | 69 | warning 2 | brand_plus_keyword:L2:14, cheap_tld:L2:15, brand_logo_offsite:L3:25, asks_password:L3:15 |
 | `syn-linkaja-hadiah` | scam | syn · H | ≥ 80 % · Scam (blocked) | 0 | 35 | warning 1 | asks_pin:L3:35 |
@@ -381,7 +381,7 @@ Guardrails: only corpus URLs, simulator only, page load only (no typing, no taps
 
 | Sample | Label | 2a score | What the Safari shot shows | Scan on server | Guardian push |
 |---|---|---|---|---|---|
-| `regs-apps14-code-php` | scam | 21 | **46% Waspada banner** ("Asks for the code sent to your phone"), copy in English | 46 warning | failed:network |
+| `regs-apps14-code-php` | scam | 21 | **76% High risk popup** ("This site looks suspicious", "Link sent to Adhella", Leave this page / Continue anyway), copy in English | 76 warning | failed:network |
 | `lphone-login` | scam | 39 | redirects to the real icloud.com Find Devices; 0% badge (cloaked kit) | none | — |
 
 <details><summary>43 legit pages</summary>
@@ -390,59 +390,59 @@ Guardrails: only corpus URLs, simulator only, page load only (no typing, no taps
 |---|---|---|---|---|---|
 | `bank-login-bri` | legit | 0 | 0% badge | none | — |
 | `bank-login-btn` | legit | 0 | 0% badge | none | — |
-| `bank-login-danamon` | legit | 0 | page still blank at 15 s, no badge yet | none | — |
+| `bank-login-danamon` | legit | 0 | 0% badge | none | — |
 | `bank-login-klikbca` | legit | 0 | 0% badge | none | — |
 | `bank-login-mega` | legit | 0 | 0% badge | none | — |
 | `bank-login-permata` | legit | 0 | 0% badge | none | — |
 | `checkout-bukalapak` | legit | 0 | 0% badge | none | — |
 | `checkout-lazada` | legit | 0 | 0% badge | none | — |
 | `checkout-orami` | legit | 0 | 0% badge | none | — |
-| `checkout-ruparupa` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-shopee-cart` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-sociolla` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-tokopedia-cart` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-traveloka` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-zalora` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-bi` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-bpjs-kesehatan` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-dukcapil` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-kemensos` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-komdigi` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-ojk` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-pajak` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-cnnindonesia` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-detik` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-idntimes` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-kompas` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-kumparan` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-liputan6` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-tribunnews` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-wikipedia-id` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `bank-login-bni-web` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `bank-login-mandiri-web` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `checkout-bhinneka` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `gov-kemenkeu` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-merdeka` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `official-tokopedia-home` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `official-bca-home` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `official-shopee-home` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `popular-wikipedia` | legit | 0 | 0% badge (Safari location prompt on top, left unanswered) | none | — |
-| `trap-cloud-storage` | legit | 0 | redirects to a sedo.com parking page; small 0% badge | none | — |
-| `trap-blog-cek-saldo-bca` | legit | 49 | blog post now 404; 0% badge | none | — |
-| `trap-github-pages-dokumentasi` | legit | 34 | GitHub Pages 404; small 0% badge | none | — |
-| `trap-berita-waspada-penipuan` | legit | 20 | "Safari can’t open the page" (no server); badge dot only | none | — |
+| `checkout-ruparupa` | legit | 0 | 0% badge | none | — |
+| `checkout-shopee-cart` | legit | 0 | Shopee language picker; 0% badge | none | — |
+| `checkout-sociolla` | legit | 0 | 0% badge | none | — |
+| `checkout-tokopedia-cart` | legit | 0 | 0% badge | none | — |
+| `checkout-traveloka` | legit | 0 | app-download sheet on top; 0% badge | none | — |
+| `checkout-zalora` | legit | 0 | 0% badge | none | — |
+| `gov-bi` | legit | 0 | 0% badge | none | — |
+| `gov-bpjs-kesehatan` | legit | 0 | 0% badge | none | — |
+| `gov-dukcapil` | legit | 0 | 0% badge | none | — |
+| `gov-kemensos` | legit | 0 | 0% badge | none | — |
+| `gov-komdigi` | legit | 0 | 0% badge | none | — |
+| `gov-ojk` | legit | 0 | 0% badge | none | — |
+| `gov-pajak` | legit | 0 | PSA popup on top; 0% badge | none | — |
+| `popular-cnnindonesia` | legit | 0 | 0% badge | none | — |
+| `popular-detik` | legit | 0 | 0% badge | none | — |
+| `popular-idntimes` | legit | 0 | ad interstitial; 0% badge | none | — |
+| `popular-kompas` | legit | 0 | ad interstitial; 0% badge | none | — |
+| `popular-kumparan` | legit | 0 | 0% badge | none | — |
+| `popular-liputan6` | legit | 0 | ad interstitial; 0% badge | none | — |
+| `popular-tribunnews` | legit | 0 | 0% badge | none | — |
+| `popular-wikipedia-id` | legit | 0 | 0% badge | none | — |
+| `bank-login-bni-web` | legit | 0 | 0% badge | none | — |
+| `bank-login-mandiri-web` | legit | 0 | cookie notice on top; 0% badge | none | — |
+| `checkout-bhinneka` | legit | 0 | 0% badge | none | — |
+| `gov-kemenkeu` | legit | 0 | 0% badge | none | — |
+| `popular-merdeka` | legit | 0 | ad interstitial; 0% badge | none | — |
+| `official-tokopedia-home` | legit | 0 | 0% badge | none | — |
+| `official-bca-home` | legit | 0 | 0% badge | none | — |
+| `official-shopee-home` | legit | 0 | Shopee language picker; 0% badge | none | — |
+| `popular-wikipedia` | legit | 0 | 0% badge | none | — |
+| `trap-cloud-storage` | legit | 0 | redirects to a sedo.com parking page (cookie dialog); 0% badge | none | — |
+| `trap-blog-cek-saldo-bca` | legit | 49 | blog post now 404; **24% badge** (under 30, nothing sent) | none | — |
+| `trap-github-pages-dokumentasi` | legit | 34 | GitHub Pages 404; badge collapsed to a dot | none | — |
+| `trap-berita-waspada-penipuan` | legit | 20 | Safari "This Connection Is Not Private" (certificate for another host); no badge | none | — |
 
 </details>
 
 What happened, in order:
 
-1. **Legit pages**: every page that loaded shows the green **0%** badge; none reached the server (only scores ≥ 30 are posted). The 4 legit traps that 2a flagged no longer serve their page (404, parking page, no server), so live they score 0.
-2. **`regs-apps14.regnows-dfg.com/code.php`** (real scam, still up): the extension shows the **46% Waspada** banner, and the scan reaches the server with `asks_otp` (layer 3) + `suspicious_link` (layer 2). Offline it scored 21: the live page asks for an OTP, the corpus copy does not.
-3. **`lphone-login.com`** (real scam, 39 offline): the host now redirects to the real `icloud.com` Find Devices page, so live it is a clean Apple page at 0%. A cloaked kit: only the offline copy shows the phishing form.
-4. **No Guardian push on the first visit**: both devices were in *Jam tenang* (22:00–06:00, device zone Asia/Makassar, visit at 22:40). Warnings are muted then by design (PF-01, `notify.ts allowed()`); only blocked sites still push. After turning `quiet_hours` off in the local DB and reloading the page once, the Worker tried both pushes (Guardian + Maria's own) and logged **`failed:network`**: `wrangler dev` (workerd on the Mac) cannot speak HTTP/2, and APNs only takes HTTP/2. Production sends straight from the deployed Worker (spike passed in fase 07, D-alief-B01), so this is a limit of the local stack, not of prod. The app side of the push was checked with `xcrun simctl push` and the same payload the Worker builds (`pushText`, `scanId`).
-5. **Guardian Activity is empty after pairing**: Adhella paired with Maria, but Family mode stays off until the Guardian switches it on from Home, so Activity shows only her own (empty) list. With `-settings.familyModeOn YES` both of Maria's scans show with her name, and Detail opens with the 46% gauge.
-6. **Two rows for one page**: the second load of the same page made a second scan 1 min later; Activity lists both.
-7. A Safari *Allow location?* prompt (from `ruparupa.com`) stayed on screen for the rest of the run; it was left unanswered during the visit and answered **Don't Allow** at the end. It covers part of the later shots but not the badge logic.
+1. **Legit pages**: every page that loaded shows the green **0%** badge (one trap blog shows 24%, under the 30 floor); none reached the server (only scores ≥ 30 are posted). The 4 legit traps that 2a flagged no longer serve their page (404, parking page, no server), so live they score 0. `beritakota` stopped at Safari's *This Connection Is Not Private* page, so no badge.
+2. **`regs-apps14.regnows-dfg.com/code.php`** (real scam, still up): the extension shows the **76% High risk popup** ("Link sent to Adhella", *Leave this page* / *Continue anyway*), and the scan reaches the server at 76 `warning` with `unreasonable_request` (layer 4, evidence "PENDAFTARAN VIA TELEGRAM") + `asks_otp` (layer 3) + `suspicious_link` (layer 2). Offline it scored 21: the live page asks for an OTP, the corpus copy does not. On 2026-10-31 the same page scored 46 without the layer-4 signal.
+3. **`lphone-login.com`** (real scam, 39 offline): the host still redirects to the real `icloud.com` Find Devices page, so live it is a clean Apple page at 0%. A cloaked kit: only the offline copy shows the phishing form.
+4. **Guardian push**: the visit was at 21.29 WITA, outside *Jam tenang* (22:00–06:00), so the Worker tried both pushes at once (Guardian + Maria's own) and logged **`failed:network`** twice: `wrangler dev` (workerd on the Mac) cannot speak HTTP/2, and APNs only takes HTTP/2. Production sends straight from the deployed Worker (spike passed in fase 07, D-alief-B01), so this is a limit of the local stack, not of prod. The app side was checked with `xcrun simctl push` and the payload the Worker builds (`pushText` id: "Maria membuka situs mencurigakan · 76%", real `scanId`): the banner shows on the Guardian's Home screen.
+5. **Guardian Activity is empty after pairing** (still): Adhella paired with Maria, but Family mode stays off until the Guardian switches it on from Home, so Activity shows only her own (empty) list. After the switch, Home shows *Keluarga Butuh Konfirmasi* with Maria's 76% card, Activity lists the scan with her name, and Detail opens with the 76% gauge.
+6. **Protected side**: Maria's Home shows *Anda Terlindungi!*, "Terhubung dengan Adhella", 0 Diblokir / 1 Waspada, and the regnows row; her Activity lists the same one scan.
+7. No Safari *Allow location?* prompt this time (on 2026-10-31 one from `ruparupa.com` covered the later shots).
 8. **Crons** fired by hand (`/cdn-cgi/handler/scheduled?cron=0+19+*+*+*` and `cron=5+*+*+*+*`): both 200, `ops_heartbeat` row written; nothing older than 14 days to delete on a fresh database.
 
 | Safari · regs-apps14-code-php | Safari · lphone-login | Safari · bank-login-klikbca | Guardian Activity, Family mode off | Guardian Activity, Family mode on | Guardian Home | Guardian Detail | Guardian push (simctl) | Protected Activity | Protected Home |
