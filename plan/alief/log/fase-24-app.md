@@ -21,7 +21,13 @@
 - Test baru `Tests/PrivacyManifestTests.swift`: tracking `false`, domain tracking kosong, tepat 8 tipe, semua Linked + tidak Tracking + App Functionality.
 - Tidak ada perubahan tampilan → tanpa screenshot.
 
-VERIFIKASI_24C2
+## Verifikasi
+
+Simulator "Shoo Track App 19-26" (iPhone 17, iOS 26.5), branch `fix/E6-app-privacy` (dari `main` aa976af):
+
+| Perintah | Hasil |
+|---|---|
+| `xcodebuild test -only-testing:ShooAppTests` | 463 test di 44 suite lulus, termasuk `PrivacyManifestTests` (manifest: 4 tipe data baru, Linked, App Functionality, tanpa Tracking) |
 
 ## 24c-2 `supportEmail` — dilewati (bug d2)
 
@@ -30,7 +36,7 @@ VERIFIKASI_24C2
 ### LANGKAH MANUAL
 
 1. [ ] Alief membuat mailbox tim (K10 a, layanan email gratis, bukan alamat pribadi siapa pun) lalu mengirim + menerima satu email uji dari alamat lain. Kredensial di password manager, tidak di repo.
-2. [ ] Tulis alamatnya di `log/fase-24.md` (bagian ini). Sesi app berikutnya: `AppConfig.supportEmail` = alamat itu, hapus `TODO(sync:alief)` (`AppConfig.swift:29`), `grep -rn "halo@shoo.id" ios/ShooApp` kosong, screenshot before/after layar Tentang (EN + ID, terang + gelap), PR kecil `fix/E6-app-privacy-contact`. Alamat yang sama dipakai track be untuk `/privacy` + `/support` (24c-1).
+2. [ ] Tulis alamatnya di `log/fase-24-app.md` (bagian ini). Sesi app berikutnya: `AppConfig.supportEmail` = alamat itu, hapus `TODO(sync:alief)` (`AppConfig.swift:29`), `grep -rn "halo@shoo.id" ios/ShooApp` kosong, screenshot before/after layar Tentang (EN + ID, terang + gelap), PR kecil `fix/E6-app-privacy-contact`. Alamat yang sama dipakai track be untuk `/privacy` + `/support` (24c-1).
 
 ## 24b-1 — Keychain bersama: terblokir
 

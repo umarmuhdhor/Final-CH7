@@ -780,6 +780,6 @@ Format:
 
 ## D-alief-A45 · 1 Nov 2026 · app (fase 24c-2, E6) · Manifest privasi app mendeklarasikan lebih
 
-- Keputusan: `PrivacyInfo.xcprivacy` app menambah User ID (id device acak = akun, Shoo tanpa login), Product Interaction (terakhir aktif, hitungan blokir/peringatan), Coarse Location (zona waktu) dan Other Data Types (model iPhone + versi iOS, bahasa, pengaturan notifikasi), semua Linked, App Functionality, tidak Tracking. Manifest extension tetap kosong (milik Umar, pertanyaan E6). `supportEmail` belum diganti: mailbox K10 belum ada (LANGKAH MANUAL di `log/fase-24.md`).
+- Keputusan: `PrivacyInfo.xcprivacy` app menambah User ID (id device acak = akun, Shoo tanpa login), Product Interaction (terakhir aktif, hitungan blokir/peringatan), Coarse Location (zona waktu) dan Other Data Types (model iPhone + versi iOS, bahasa, pengaturan notifikasi), semua Linked, App Functionality, tidak Tracking. Manifest extension tetap kosong (milik Umar, pertanyaan E6). `supportEmail` belum diganti: mailbox K10 belum ada (LANGKAH MANUAL di `log/fase-24-app.md`).
 - Alasan: fase 24 K12 (R8 §c, D-alief-C29): label yang kurang = alasan penolakan review; lebih aman mendeklarasikan lebih. Zona waktu tidak dari Location Services, jadi Coarse Location = pilihan hati-hati.
 - File: `ios/ShooApp/PrivacyInfo.xcprivacy`, `Tests/PrivacyManifestTests.swift`.
