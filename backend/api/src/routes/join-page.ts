@@ -15,7 +15,7 @@ const TEXT = {
     manual: "Or type this code in Shoo:",
     noCode: "This invite link has no valid code. Ask for a new one.",
     install: "Don't have Shoo yet? Install it",
-    installHint: "We copy the invite for you. After installing, open Shoo and tap Paste.",
+    installHint: "We copy the invite link. After installing, open it again to join.",
     preview: "Tap to join and get protected from scam sites.",
     imageAlt: "Shoo logo",
   },
@@ -26,7 +26,7 @@ const TEXT = {
     manual: "Atau ketik kode ini di Shoo:",
     noCode: "Link undangan ini tidak berisi kode yang valid. Minta kode baru.",
     install: "Belum punya Shoo? Install dulu",
-    installHint: "Undangan sudah kami salin. Setelah install, buka Shoo lalu ketuk Tempel.",
+    installHint: "Link undangan sudah kami salin. Setelah install, buka lagi link itu untuk bergabung.",
     preview: "Ketuk untuk bergabung dan terlindungi dari situs penipuan.",
     imageAlt: "Logo Shoo",
   },
@@ -55,8 +55,8 @@ a.btn{display:block;padding:16px;border-radius:14px;background:#0a66ff;color:#ff
 .hint{font-size:14px;color:#666}
 @media (prefers-color-scheme:dark){body{color:#f2f2f2;background:#000}.hint{color:#999}}`;
 
-// Copies the invite link before going to the store, so the app can offer "Paste invite" on first launch
-// (UIPasteControl, PR-03). The link is the only thing copied; nothing else runs and nothing is sent.
+// Copies the invite link before going to the store, so the person can open it again after installing
+// (PR-03). The link is the only thing copied; nothing else runs and nothing is sent.
 const INSTALL_SCRIPT = `document.getElementById("install").addEventListener("click",function(e){var a=this,l=a.dataset.invite;
 if(!l||!navigator.clipboard)return;e.preventDefault();navigator.clipboard.writeText(l).finally(function(){location.href=a.href})})`;
 

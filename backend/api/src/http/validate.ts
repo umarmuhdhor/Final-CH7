@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { z } from "zod";
+import * as z from "zod";
 import { errors } from "./errors";
 
 const DEFAULT_MAX_BYTES = 16 * 1024;

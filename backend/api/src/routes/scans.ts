@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { z } from "zod";
+import * as z from "zod";
 import type { AppEnv } from "../env";
 import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/scans";
 import { requireDevice } from "../http/auth";
