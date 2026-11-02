@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(92);
+select plan(101);
 
 -- Runs one SELECT as shoo_admin and returns its first column, or 'ERR <sqlstate> <message>'.
 -- pgTAP's own temp tables belong to postgres, so the role switch stays inside this function; the
@@ -30,6 +30,10 @@ select ok((select setconfig @> array['statement_timeout=5s', 'search_path=admin'
            from pg_db_role_setting where setrole = 'shoo_admin'::regrole and setdatabase = 0),
   'shoo_admin: statement_timeout 5s, search_path admin');
 select ok(pg_has_role('postgres', 'shoo_admin', 'SET'), 'C8: postgres can set role shoo_admin');
+select ok(not rolcreatedb and not rolreplication, 'shoo_admin: nocreatedb, noreplication')
+from pg_roles where rolname = 'shoo_admin';
+select is((select count(*)::int from pg_auth_members where member = 'shoo_admin'::regrole), 0,
+  'shoo_admin is a member of no role');
 
 -- ---------------------------------------------------------------- tables (01a only)
 
@@ -60,6 +64,11 @@ insert into scans (id, owner_id, url, domain, page_title, score, status, signals
    't_p1/t_s1-replica.html.gz', 100),
   ('t_s2', 't_p2', 'https://x-two.test/b', 'x-two.test', null, 60, 'warning', '[{"id":"new_domain"}]',
    now() - interval '30 minutes', 't_p2/t_s2-replica.html.gz', 100),
+  ('t_s5', 't_p1', 'https://u:p?w@x-two.test/', 'x-two.test', null, 40, 'warning', '[]', now() - interval '2 hours', null, null),
+  ('t_s6', 't_p1', 'HTTPS://user:pw@x-two.test/a', 'x-two.test', null, 40, 'warning', '[]', now() - interval '2 hours', null, null),
+  ('t_s7', 't_p1', 'https://a:b@c@x-two.test/x', 'x-two.test', null, 40, 'warning', '[]', now() - interval '2 hours', null, null),
+  ('t_s8', 't_p1', 'https://a-very-long-subdomain-name.x-two.test/reset/AbCdEf0123456789xyz/order/12345678/u/ibu@mail.test/ok',
+   'x-two.test', null, 40, 'warning', '[]', now() - interval '2 hours', null, null),
   ('t_s3', 't_p1', 'https://x-solo.test/', 'x-solo.test', null, 50, 'warning', '[]', now(), 't_p1/t_s3-replica.html.gz', 100),
   ('t_s4', 't_p3', 'https://x-gone.test/', 'x-gone.test', null, 50, 'warning', '[]', now(), 't_p3/t_s4-replica.html.gz', 100);
 insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name, global_eligible) values
@@ -84,6 +93,13 @@ select columns_are('admin', 'v_scans',
   'v_scans columns (D-dash-07)');
 select is((select url_masked from admin.v_scans where id = 't_s1'), 'https://x-two.test/login',
   'v_scans.url_masked drops userinfo, query and fragment');
+select is((select url_masked from admin.v_scans where id = 't_s5'), 'https://x-two.test/',
+  'userinfo containing ? is removed before the query');
+select is((select url_masked from admin.v_scans where id = 't_s6'), 'HTTPS://x-two.test/a', 'userinfo removed in any case');
+select is((select url_masked from admin.v_scans where id = 't_s7'), 'https://x-two.test/x', 'userinfo with two @ removed');
+select is((select url_masked from admin.v_scans where id = 't_s8'),
+  'https://a-very-long-subdomain-name.x-two.test/reset/…/order/…/u/…/ok',
+  'path segments with tokens, long numbers or emails are masked; the host is kept');
 select is((select signal_ids from admin.v_scans where id = 't_s1'), array['new_domain', 'asks_password'],
   'v_scans.signal_ids holds ids only');
 select ok(not exists (select 1 from admin.v_scans v where v::text like '%rahasia%'),
@@ -93,7 +109,7 @@ select is((select verdict from admin.v_scans where id = 't_s1'), 'not_safe', 'v_
 select is((select families_not_safe from admin.v_review_queue where domain = 'x-two.test'),
   (select families from blocklist_entries where domain = 'x-two.test'),
   'C5: families_not_safe matches blocklist_entries.families (recountFamilies)');
-select is((select scans_14d from admin.v_review_queue where domain = 'x-two.test'), 2, 'v_review_queue.scans_14d');
+select is((select scans_14d from admin.v_review_queue where domain = 'x-two.test'), 6, 'v_review_queue.scans_14d');
 select is((select top_signals from admin.v_review_queue where domain = 'x-two.test'), array['new_domain', 'asks_password'],
   'v_review_queue.top_signals ordered by frequency');
 select ok(not exists (select 1 from admin.v_review_queue where domain = 'x-app.test'), 'approved domains are not queued');
@@ -210,6 +226,12 @@ select is(pg_temp.as_admin($$select admin.set_config('max_publish_per_day', '201
   'ERR SA009 config_invalid', 'max_publish_per_day above 200');
 select is(pg_temp.as_admin($$select admin.set_config('max_publish_per_day', 'lima', 'a@test', 'bukan angka sama sekali')$$),
   'ERR SA009 config_invalid', 'non-numeric value');
+select is(pg_temp.as_admin($$select admin.set_config('max_publish_per_day', '60', 'a@test', 'butuh lebih banyak')$$),
+  'ERR SA011 confirm_required', 'raising the publish cap needs confirm');
+select is(pg_temp.as_admin($$select admin.set_config('max_publish_per_day', '40', 'a@test', 'lebih ketat saja')$$), '',
+  'lowering the publish cap needs no confirm');
+select is(pg_temp.as_admin(format($f$select admin.vote('x-two.test', 'reject', null, %L, 'a@test')$f$, repeat('x', 1001))),
+  'ERR SA003 note_required', 'a note over 1000 characters is refused with SA003');
 
 -- ---------------------------------------------------------------- log_audit, feed, I3
 
@@ -229,10 +251,10 @@ select is(pg_temp.as_admin('with d as (delete from admin.admin_audit returning 1
 
 insert into admin.review_decisions (domain, action, category, note, actor)
 select 'x-filler-' || g || '.test', 'approve', 'judi', 'pengisi batas harian', 'seed'
-from generate_series(1, 50 - (select count(*)::int from admin.review_decisions
+from generate_series(1, 40 - (select count(*)::int from admin.review_decisions
                               where action in ('approve', 'add') and at > now() - interval '24 hours')) g;
 select is(pg_temp.as_admin($$select admin.vote('x-cap.test', 'approve', 'judi', 'catatan sepuluh+', 'a@test')$$),
-  'ERR SA013 publish_cap', 'K7: the 51st approval within 24 h is refused');
+  'ERR SA013 publish_cap', 'K7: the approval past max_publish_per_day within 24 h is refused');
 select is(pg_temp.as_admin($$select admin.add_domain('x-cap2.test', 'judi', 'laporan langsung', 'a@test')$$),
   'ERR SA013 publish_cap', 'K7: manual adds count toward the cap');
 select is(pg_temp.as_admin($$select admin.vote('x-cap.test', 'reject', null, 'bukan penipuan', 'a@test')$$), '',

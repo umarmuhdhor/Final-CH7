@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(36);
+select plan(37);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -60,12 +60,25 @@ select is(
     where n.nspname = 'admin' and p.proname like '\_%' and has_function_privilege('shoo_admin', p.oid, 'EXECUTE')),
   0, 'internal admin._* helpers are not executable by shoo_admin');
 
--- Every admin function that touches backend tables runs as its owner with a pinned search_path.
+-- Every admin function pins search_path to admin + pg_temp; backend tables are always qualified.
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'admin' and not exists (
-      select 1 from unnest(p.proconfig) c where c like 'search_path=%pg_temp%')),
-  0, 'every admin function pins search_path (… pg_temp)');
+    where n.nspname = 'admin' and not (p.proconfig @> array['search_path=admin, pg_temp'])),
+  0, 'every admin function pins search_path = admin, pg_temp (no public)');
+
+-- A role that existed before the migration may carry old grants: no ACL anywhere outside admin
+-- names shoo_admin (PUBLIC grants of Supabase extensions are listed in the PR, not here).
+select is(
+  (select count(*)::int from (
+     select c.relnamespace as ns, a.grantee from pg_class c cross join lateral aclexplode(c.relacl) a
+     union all
+     select p.pronamespace, a.grantee from pg_proc p cross join lateral aclexplode(p.proacl) a
+     union all
+     select n.oid, a.grantee from pg_namespace n cross join lateral aclexplode(n.nspacl) a
+      where n.nspname <> 'admin'
+   ) x
+   where x.grantee = 'shoo_admin'::regrole and x.ns <> 'admin'::regnamespace),
+  0, 'no table, function or schema outside admin grants anything to shoo_admin');
 
 -- Schema: usage for shoo_admin only (shoo_api gets usage in dashboard phase 05).
 select ok(has_schema_privilege('shoo_admin', 'admin', 'USAGE'), 'shoo_admin has USAGE on schema admin');

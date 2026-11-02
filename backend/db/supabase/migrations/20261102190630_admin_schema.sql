@@ -33,9 +33,24 @@ begin
   end if;
 end $$;
 
-alter role shoo_admin login noinherit nobypassrls connection limit 5;
+-- Everything a hand-made role could carry is reset or refused (security review 01a H2). SUPERUSER
+-- cannot be changed by postgres on Supabase, so it is checked instead.
+alter role shoo_admin login noinherit nobypassrls nocreatedb nocreaterole noreplication connection limit 5;
+do $$
+begin
+  if (select rolsuper from pg_roles where rolname = 'shoo_admin') then
+    raise exception 'shoo_admin must not be a superuser';
+  end if;
+  if exists (select 1 from pg_auth_members where member = 'shoo_admin'::regrole) then
+    raise exception 'shoo_admin must not be a member of any role';
+  end if;
+end $$;
+revoke all on all tables in schema public from shoo_admin;
+revoke all on all sequences in schema public from shoo_admin;
+revoke all on all functions in schema public from shoo_admin;
 -- Same idea as shoo_api (hardening): a stuck dashboard query never holds a backend lock or a
--- pooled connection for long. 5 s keeps admin reads away from POST /scans latency (A9).
+-- pooled connection for long. 5 s keeps admin reads away from POST /scans latency (A9). These are
+-- defaults the session could override; the dashboard Worker never does.
 alter role shoo_admin set statement_timeout = '5s';
 alter role shoo_admin set lock_timeout = '5s';
 alter role shoo_admin set idle_in_transaction_session_timeout = '15s';
@@ -44,9 +59,11 @@ alter role shoo_admin set search_path = admin;
 create schema admin;
 revoke all on schema admin from public;
 grant usage on schema admin to shoo_admin;
--- Functions are executable by PUBLIC by default. Close that before any function exists; each API
--- function is granted to shoo_admin alone below. A later `grant usage on schema admin to shoo_api`
--- must not let the backend call admin.vote.
+-- Functions are executable by PUBLIC by default. A schema-scoped default cannot take back that
+-- global default (kept because R2 §1 lists it), so what actually closes it is the explicit revoke
+-- at the end of this file. A later phase that adds a function must revoke it the same way;
+-- admin_grants.test.sql fails otherwise. A later `grant usage on schema admin to shoo_api` must
+-- not let the backend call admin.vote.
 alter default privileges in schema admin revoke execute on functions from public;
 
 -- ---------------------------------------------------------------- tables
@@ -67,7 +84,7 @@ create table admin.admin_config (
   min_value    int,
   max_value    int,
   internal     boolean not null default false,   -- hidden from v_config, refused by set_config
-  confirm_when text check (confirm_when in ('true', 'lower')),  -- loosening privacy needs confirm
+  confirm_when text check (confirm_when in ('true', 'lower', 'higher')),  -- loosening a guard needs confirm
   updated_at   timestamptz not null default now(),
   updated_by   text not null default 'migration',
   check ((kind = 'int') = (min_value is not null and max_value is not null)),
@@ -76,7 +93,7 @@ create table admin.admin_config (
 insert into admin.admin_config (key, value, kind, min_value, max_value, internal, confirm_when) values
   ('replica_enabled',           'false', 'bool', null, null, false, 'true'),
   ('replica_min_families',      '2',     'int',  2,    10,   false, 'lower'),
-  ('max_publish_per_day',       '50',    'int',  1,    200,  false, null),
+  ('max_publish_per_day',       '50',    'int',  1,    200,  false, 'higher'),
   ('require_admin_note_locked', 'true',  'bool', null, null, true,  null),
   ('require_admin_note',        'true',  'bool', null, null, false, null);
 
@@ -138,10 +155,11 @@ language sql stable set search_path = admin, pg_temp
 as $$ select value from admin.admin_config where key = p_key $$;
 
 -- Every action needs a note of at least 10 characters while require_admin_note is on (Q29).
+-- Over 1000 characters is refused with the same code instead of a raw check violation.
 create function admin._require_note(p_note text) returns void
 language plpgsql stable set search_path = admin, pg_temp as $$
 begin
-  if p_note is not null and char_length(btrim(p_note)) >= 10 then
+  if p_note is not null and char_length(btrim(p_note)) >= 10 and char_length(p_note) <= 1000 then
     return;
   end if;
   if p_note is not null or coalesce((admin._cfg('require_admin_note'))::boolean, true) then
@@ -149,13 +167,14 @@ begin
   end if;
 end $$;
 
--- p_strict (add_domain): a hostname the admin typed. Otherwise only the backend's own check
+-- p_strict (add_domain): a hostname the admin typed, ending in a letter TLD or punycode (no IP
+-- address). Otherwise only the backend's own check
 -- (domain = lower(domain), no www.), so any domain the backend queued can still be decided.
 create function admin._check_domain(p_domain text, p_strict boolean) returns void
 language plpgsql immutable set search_path = admin, pg_temp as $$
 begin
   if p_domain is null or p_domain <> lower(p_domain) or p_domain ~ '^www\.' or char_length(p_domain) > 253
-     or (p_strict and p_domain !~ '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$') then
+     or (p_strict and p_domain !~ '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+([a-z]{2,63}|xn--[a-z0-9-]{1,59})$') then
     raise exception using errcode = 'SA014', message = 'invalid_domain';
   end if;
 end $$;
@@ -172,6 +191,16 @@ begin
   end if;
 end $$;
 
+-- The cap count is only safe under READ COMMITTED: a snapshot taken before the advisory lock
+-- (REPEATABLE READ / SERIALIZABLE opened earlier) would not see a concurrent approval.
+create function admin._require_read_committed() returns void
+language plpgsql stable set search_path = admin, pg_temp as $$
+begin
+  if current_setting('transaction_isolation') <> 'read committed' then
+    raise exception using errcode = '25001', message = 'read_committed_required';
+  end if;
+end $$;
+
 create function admin._check_category(p_category text) returns void
 language plpgsql stable set search_path = admin, pg_temp as $$
 begin
@@ -181,7 +210,7 @@ begin
 end $$;
 
 create function admin._entry_status(p_domain text) returns text
-language sql stable set search_path = admin, public, pg_temp as $$
+language sql stable set search_path = admin, pg_temp as $$
   select case
            when removed_at is not null then 'removed'
            when approved_at is not null then 'approved'
@@ -208,7 +237,7 @@ $$;
 
 create function admin.vote(p_domain text, p_action text, p_category text, p_note text, p_actor text)
 returns void
-language plpgsql security definer set search_path = admin, public, pg_temp as $$
+language plpgsql security definer set search_path = admin, pg_temp as $$
 declare
   v_category text;
 begin
@@ -221,6 +250,7 @@ begin
   if p_action = 'approve' then
     perform admin._check_category(p_category);
     v_category := p_category;
+    perform admin._require_read_committed();
     perform admin._check_publish_cap();
   end if;
 
@@ -251,7 +281,7 @@ end $$;
 -- deleted the row, so there is nothing to unreject.
 create function admin.unreject(p_domain text, p_note text, p_actor text)
 returns void
-language plpgsql security definer set search_path = admin, public, pg_temp as $$
+language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   perform pg_advisory_xact_lock(7, 1);
   perform admin._check_domain(p_domain, false);
@@ -268,7 +298,7 @@ end $$;
 -- approved → removed: extensions drop it through `removed[]` of GET /blocklist.
 create function admin.remove_domain(p_domain text, p_note text, p_actor text)
 returns void
-language plpgsql security definer set search_path = admin, public, pg_temp as $$
+language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   perform pg_advisory_xact_lock(7, 1);
   perform admin._check_domain(p_domain, false);
@@ -287,12 +317,13 @@ end $$;
 -- (transaction start) could fall behind a cursor of GET /blocklist?since=.
 create function admin.add_domain(p_domain text, p_category text, p_note text, p_actor text)
 returns void
-language plpgsql security definer set search_path = admin, public, pg_temp as $$
+language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   perform pg_advisory_xact_lock(7, 1);
   perform admin._check_domain(p_domain, true);
   perform admin._require_note(p_note);
   perform admin._check_category(p_category);
+  perform admin._require_read_committed();
   perform admin._check_publish_cap();
   insert into admin.review_decisions (domain, action, category, note, actor)
   values (p_domain, 'add', p_category, p_note, p_actor);
@@ -317,7 +348,7 @@ end $$;
 -- (D-dash-07). The path names the owner: the Worker uses it to read R2 and never returns it.
 create function admin.replica_for(p_domain text)
 returns text
-language plpgsql stable security definer set search_path = admin, public, pg_temp as $$
+language plpgsql stable security definer set search_path = admin, pg_temp as $$
 declare
   v_families int;
   v_path     text;
@@ -346,8 +377,9 @@ begin
   return v_path;
 end $$;
 
--- p_value / p_confirm are text as typed in the UI. Loosening a privacy setting (confirm_when)
--- needs p_confirm equal to the new value (I7, D-dash-07/08).
+-- p_value / p_confirm are text as typed in the UI. Loosening a privacy setting or the publish cap
+-- (confirm_when) needs p_confirm equal to the new value (I7, D-dash-07/08). The name matches R2;
+-- pg_catalog.set_config takes 3 arguments, so a 4- or 5-argument call can only resolve here.
 create function admin.set_config(p_key text, p_value text, p_actor text, p_note text, p_confirm text default null)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
@@ -384,7 +416,8 @@ begin
   end if;
 
   if (r.confirm_when = 'true' and v_new = 'true'::jsonb and r.value <> v_new)
-     or (r.confirm_when = 'lower' and (v_new)::int < (r.value)::int) then
+     or (r.confirm_when = 'lower' and (v_new)::int < (r.value)::int)
+     or (r.confirm_when = 'higher' and (v_new)::int > (r.value)::int) then
     if p_confirm is null or lower(btrim(p_confirm)) <> v_new::text then
       raise exception using errcode = 'SA011', message = 'confirm_required';
     end if;
@@ -487,7 +520,8 @@ create view admin.v_scans with (security_barrier = true) as
 select
   s.id,
   s.domain,
-  regexp_replace(regexp_replace(s.url, '[?#].*$', ''), '^(https?://)[^/@]*@', '\1') as url_masked,
+  m.origin || regexp_replace(substr(m.u, char_length(m.origin) + 1),
+                             '(?<=/)[^/]*(@|[0-9]{6,}|[A-Za-z0-9_-]{16,})[^/]*', '…', 'g') as url_masked,
   s.score,
   s.status::text as status,
   coalesce((select array_agg(e ->> 'id' order by o)
@@ -497,6 +531,16 @@ select
   s.replica_path is not null as has_replica,
   v.value::text as verdict
 from public.scans s
+-- Masking (security review 01a M1/M2): userinfo first (up to the first `/`, any case, so `u:p?w@`
+-- and `a:b@c@` cannot survive), then query and fragment; in the path only, segments that look like
+-- a personal value (an `@`, 6+ digits, or 16+ token characters) become `…`. Inline rather than a
+-- helper: a function called from a view runs with the caller's EXECUTE privilege.
+cross join lateral (
+  select regexp_replace(regexp_replace(s.url, '^([a-z][a-z0-9+.-]*://)[^/]*@', '\1', 'i'), '[?#].*$', '') as u
+) m0
+cross join lateral (
+  select m0.u, coalesce(substring(m0.u from '(?i)^[a-z][a-z0-9+.-]*://[^/]*'), '') as origin
+) m
 left join public.verdicts v on v.owner_id = s.owner_id and v.domain = s.domain
 where s.created_at > now() - interval '14 days';
 
