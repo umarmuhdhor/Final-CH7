@@ -10,6 +10,9 @@
     const MAX_ELEMENTS = 20000;
     const MAX_CHARS = 2_000_000; // HTML without stylesheets and images; past it the rest of the page is cut
     const MAX_DEPTH = 400;
+    const MAX_MARKS = 24; // the app reads no more (#176)
+    const MARK_LIMIT = 100000; // px; the app drops a mark with any number at or past it
+    const MARK_ID = /^[a-z_]{1,40}$/;
     const ELEMENT = 1;
     const TEXT = 3;
     const CDATA = 4;
@@ -108,7 +111,8 @@
     /**
      * Serializes a document into the replica draft.
      * @param doc  the page's document
-     * @param {{ url: string, focus?: {top:number}|null, scrollY?: number, viewport: {width,height}, now: string }} page
+     * @param {{ url: string, focus?: {top:number}|null, scrollY?: number, viewport: {width,height}, now: string,
+     *           marks?: Array<{signalId: string, x: number, y: number, w: number, h: number}> }} page
      * @returns {{ html: string, sheets: Array<{text?: string, href?: string, base: string, media?: string}>,
      *             resources: string[], nonce: string, truncated: boolean } | null}
      */
@@ -284,7 +288,11 @@
         // The parser always makes a <head>; a page that removed it still gets the CSP first.
         if (!headWritten) html = html.replace(/^<html[^>]*>/, (open) => `${open}<head>${headMeta(page, metaToken)}</head>`);
         const doctype = getter("Document", "doctype")(doc) ? "<!doctype html>" : ""; // none = quirks mode, as on the page
-        const meta = JSON.stringify({ v: 1, url: page.url, capturedAt: page.now, viewport: page.viewport, focusY: focusY(page), truncated });
+        const marks = cleanMarks(page.marks);
+        const meta = JSON.stringify({
+            v: 1, url: page.url, capturedAt: page.now, viewport: page.viewport, focusY: focusY(page), truncated,
+            ...(marks.length ? { marks } : {}),
+        });
         // A function, not a string: "$&" or "$'" in the page URL would otherwise splice the document into the meta.
         html = doctype + html.replace(metaToken, () => escapeAttr(meta));
         return { html, sheets, resources, nonce, truncated };
@@ -297,6 +305,30 @@
         return Math.max(0, Math.round(page.focus.top + scrollY - 16));
     }
 
+    /**
+     * Where each signal sits on the page (#176), in the shape the app accepts: whole CSS px in document
+     * coordinates (same space as focusY), clipped to x, y ≥ 0, no empty or duplicate box, at most MAX_MARKS.
+     */
+    function cleanMarks(list) {
+        const marks = [];
+        const seen = new Set();
+        for (const mark of Array.isArray(list) ? list : []) {
+            if (marks.length >= MAX_MARKS) break;
+            const { signalId, x, y, w, h } = mark ?? {};
+            if (typeof signalId !== "string" || !MARK_ID.test(signalId)) continue;
+            if (![x, y, w, h].every(Number.isFinite)) continue;
+            const left = Math.max(0, Math.round(x));
+            const top = Math.max(0, Math.round(y));
+            const box = { signalId, x: left, y: top, w: Math.round(x + w) - left, h: Math.round(y + h) - top };
+            if (box.w < 1 || box.h < 1 || [box.x, box.y, box.w, box.h].some((n) => n >= MARK_LIMIT)) continue;
+            const key = `${signalId} ${box.x} ${box.y} ${box.w} ${box.h}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            marks.push(box);
+        }
+        return marks;
+    }
+
     /** First children of <head>: charset, the CSP, the page's viewport width, our metadata. */
     function headMeta(page, metaToken) {
         return [
@@ -307,5 +339,5 @@
         ].join("");
     }
 
-    globalThis.ShooReplica = { capture, shareableLink, CSP, MAX_CHARS };
+    globalThis.ShooReplica = { capture, cleanMarks, shareableLink, CSP, MAX_CHARS, MAX_MARKS };
 })();
