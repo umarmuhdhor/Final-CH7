@@ -24,13 +24,13 @@ function fake(handler) {
 const appWith = (f, config = CONFIG, now) => createApp({ llm: createRealityCheck({ config, fetch: f.fetch, ...(now ? { now } : {}) }) });
 const PIN = () => page(SCAM_URL, [field({ name: "pin", label: "PIN" })], { title: "Cek hadiah anda" });
 
-test("unreasonable verdict -> one layer 4 signal, weight 30, bilingual labels, layer 3 kept", async () => {
+test("unreasonable verdict -> one layer 4 signal, enough weight to reach 80, bilingual labels, layer 3 kept", async () => {
     const f = fake(() => reply(verdict()));
     const body = await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json();
-    assert.deepEqual(ids(body.signals), ["asks_pin", "unreasonable_request"]);
+    assert.deepEqual(ids(body.signals), ["unreasonable_request", "asks_pin"]);
     const s = body.signals.find((x) => x.id === "unreasonable_request");
     assert.equal(s.layer, 4);
-    assert.equal(s.weight, 30);
+    assert.equal(s.weight, 45, "35 from layer 3 + 45 = 80");
     for (const k of ["label", "labelSimple"]) assert.deepEqual(Object.keys(s[k]).sort(), ["en", "id"]);
     assert.deepEqual(Object.keys(s).filter((k) => !["id", "layer", "weight", "label", "labelSimple", "evidence"].includes(k)), []);
     assert.equal(f.calls.length, 1);
@@ -77,9 +77,9 @@ test("asks: values we do not know are dropped, the known ones still count (test-
         const f = fake(() => reply(verdict({ asks })));
         return ids((await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json()).signals);
     };
-    assert.deepEqual(await ask(["email", "password"]), ["asks_pin", "unreasonable_request"], "email dropped, password kept");
-    assert.deepEqual(await ask(["pin", "format c:"]), ["asks_pin", "unreasonable_request"], "an injected value is dropped, never obeyed");
-    assert.deepEqual(await ask(["pin", 7, null, { x: 1 }]), ["asks_pin", "unreasonable_request"], "non-strings are dropped too");
+    assert.deepEqual(await ask(["email", "password"]), ["unreasonable_request", "asks_pin"], "email dropped, password kept");
+    assert.deepEqual(await ask(["pin", "format c:"]), ["unreasonable_request", "asks_pin"], "an injected value is dropped, never obeyed");
+    assert.deepEqual(await ask(["pin", 7, null, { x: 1 }]), ["unreasonable_request", "asks_pin"], "non-strings are dropped too");
     assert.deepEqual(await ask(["email"]), ["asks_pin"], "nothing known left: asks is empty, so no signal");
     assert.deepEqual(await ask(["email", "username"]), ["asks_pin"], "only unknown values: no signal");
 });
@@ -157,10 +157,36 @@ test("budget: a deadline shorter than the cap wins; nothing left -> the provider
 const local = (weight, layer = 2, id = "suspicious_link") => ({ id, layer, weight, label: { en: "x", id: "x" }, labelSimple: { en: "x", id: "x" } });
 const PASSWORD = () => page(SCAM_URL, [field({ type: "password", name: "passwd" })]); // asks_password = 15 (L3), nothing else
 
-test("gate: no form, official site, or total score < 30 -> the provider is never called", async () => {
+test("flag weight: at least 30, and always ends at 80 or above (D-imelda-48)", async () => {
+    const weightAt = async (localWeight) => {
+        const body = await (await post(appWith(fake(() => reply(verdict()))), { snapshot: PASSWORD(), localSignals: [local(localWeight)] })).json();
+        return body.signals.find((x) => x.id === "unreasonable_request").weight;
+    };
+    assert.equal(await weightAt(15), 50, "total 30 -> 80");
+    assert.equal(await weightAt(35), 30, "total 50 -> 80");
+    assert.equal(await weightAt(45), 30, "total 60 -> 90");
+    assert.equal(await weightAt(56), 30, "total 71 -> 101, the extension caps the score at 100");
+    assert.equal(await weightAt(15.5), 50, "a fractional client number still gives an integer weight");
+});
+
+test("gate: a page without a form is asked too when the total is 30..79 (D-imelda-48)", async () => {
     const f = fake(() => reply(verdict()));
     const app = appWith(f);
-    await post(app, { snapshot: page(SCAM_URL, [], { title: "Cek hadiah" }), localSignals: [local(29)] }); // no form
+    await post(app, { snapshot: page(SCAM_URL, [], { title: "Cek hadiah" }), localSignals: [local(29)] }); // total 29
+    assert.equal(f.calls.length, 0);
+    await post(app, { snapshot: page(SCAM_URL, [], { title: "Cek hadiah" }), localSignals: [local(30)] }); // total 30
+    assert.equal(f.calls.length, 1);
+});
+
+test("flag: confidence under 0.7 does not add anything (D-imelda-49)", async () => {
+    const at = async (confidence) => ids((await (await post(appWith(fake(() => reply(verdict({ confidence })))), { snapshot: PIN(), localSignals: [] })).json()).signals);
+    assert.deepEqual(await at(0.69), ["asks_pin"]);
+    assert.deepEqual(await at(0.7), ["unreasonable_request", "asks_pin"]);
+});
+
+test("gate: official site or total score < 30 -> the provider is never called", async () => {
+    const f = fake(() => reply(verdict()));
+    const app = appWith(f);
     await post(app, { snapshot: page("https://www.bca.co.id/login", [field({ name: "pin" })]), localSignals: [local(29)] }); // official
     await post(app, { snapshot: page("https://toko.example.com/", [field({ name: "alamat" })]), localSignals: [] }); // total 0
     await post(app, { snapshot: PASSWORD(), localSignals: [] }); // total 15: still below 30
@@ -333,7 +359,7 @@ test("a phrase copied from the masked title still matches: the longest unmasked 
 test("one ```json fence around the answer is accepted", async () => {
     for (const wrap of [(j) => "```json\n" + j + "\n```", (j) => "```\n" + j + "\n```", (j) => "  ```JSON\n" + j + "```  "]) {
         const f = fake(() => reply(wrap(JSON.stringify(verdict()))));
-        assert.deepEqual(ids((await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json()).signals), ["asks_pin", "unreasonable_request"]);
+        assert.deepEqual(ids((await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json()).signals), ["unreasonable_request", "asks_pin"]);
     }
     const f = fake(() => reply("Here you go: ```json\n" + JSON.stringify(verdict()) + "\n```"));
     assert.deepEqual(ids((await (await post(appWith(f), { snapshot: PIN(), localSignals: [] })).json()).signals), ["asks_pin"], "prose around the fence is still rejected");
@@ -374,7 +400,7 @@ test("outcome counters: every way a check ends is counted, with no page data", a
     const checker = createRealityCheck({ config: { ...CONFIG, timeoutMs: 50, dailyCap: 5 }, fetch: f.fetch, clientCallsPerHour: Infinity });
     const app = createApp({ llm: checker });
     for (let i = 0; i < 6; i++) await post(app, { snapshot: PIN(), localSignals: [] }); // the 6th hits the daily cap
-    await post(app, { snapshot: page(SCAM_URL, [], { title: "Cek hadiah" }), localSignals: [] }); // no form -> gated
+    await post(app, { snapshot: page(SCAM_URL, [], { title: "Cek hadiah" }), localSignals: [] }); // total 0 -> gated
     const stats = checker.stats();
     assert.deepEqual(stats.outcomes, { gated: 1, capped: 1, timeout: 1, http_error: 1, bad_schema: 1, reasonable: 1, flagged: 1 });
     assert.equal(stats.promptVersion, PROMPT_VERSION);
