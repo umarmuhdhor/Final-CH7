@@ -100,6 +100,14 @@ update blocklist_entries set removed_at = now() where domain = 'false-positive.i
 update blocklist_entries set removed_at = null where domain = 'false-positive.id';        -- put it back (new addedAt)
 ```
 
+## Admin dashboard (schema `admin`, ADM-01)
+
+Migration `20261102190630_admin_schema.sql`. The internal review dashboard (repo `aliefauzan/shoo-dashboard`, Worker `shoo-admin` behind Cloudflare Access) logs in as role `shoo_admin` through its own Hyperdrive (`shoo-admin-db`). `shoo_admin` has **no privilege in `public`**: it reads masked views (`admin.v_review_queue`, `v_blocklist`, `v_scans`, `v_ops_snapshot`, `v_audit`, `v_config`, `v_categories`, `v_feed`) and calls `security definer` functions owned by `postgres` (`admin.vote`, `unreject`, `remove_domain`, `add_domain`, `replica_for`, `set_config`, `log_audit`). Views never return `url` (only a masked one), `page_title`, `owner_id`, guardian names or ids, signal evidence or replica paths. `shoo_api` has nothing in `admin`.
+
+Approvals from the dashboard need a named admin, a category and a note (≥ 10 characters); the first vote on a queued domain wins; approvals + manual adds are capped by `max_publish_per_day` (default 50 per 24 h, all admins). Every action lands in `admin.review_decisions` and append-only `admin.admin_audit`. The SQL editor path above still works and is not audited.
+
+Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<from the password manager>';`. Local: `seed.sql` sets `shoo_admin_local`. Rollback before dashboard phase 02a: `drop schema admin cascade; drop index scans_domain_created, scans_domain_replica, verdicts_domain_cover;`.
+
 ## Env
 
 Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secret put <NAME>` (cloud) or `api/.dev.vars` (local, gitignored). Full list: `plan/alief/ref/R3-catatan-api.md` §7.

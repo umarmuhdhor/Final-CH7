@@ -800,6 +800,8 @@ Incremental refresh every hour, full refresh daily (`docs/design/blocklist.md`).
 |---|---|
 | `422 invalid_body` | `since` is not an ISO time |
 
+Entries can also be approved, rejected, removed or added from the internal admin dashboard through the `admin` schema (no new endpoint here; see `backend/README.md`, "Admin dashboard"). Its approval and removal times use `clock_timestamp()` like the SQL editor path, so `since` paging is unchanged.
+
 ## Web pages
 
 These return HTML for people, not JSON for the app.

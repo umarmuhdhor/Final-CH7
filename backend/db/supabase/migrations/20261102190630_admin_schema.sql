@@ -2,13 +2,15 @@
 -- for reviewing the global blocklist. The dashboard Worker logs in as `shoo_admin` through its own
 -- Hyperdrive and sees only masked views and validating functions; it has no privilege on any object
 -- in `public`. shoo-api behaviour does not change: no backend table, grant, policy or trigger is
--- altered. The one backend-side addition is an index on scans(domain, created_at) for the queue view.
+-- altered. The backend-side additions are three indexes for the queue view: scans by domain,
+-- replica scans by domain, verdicts by domain.
 --
 -- Publishing: the dashboard re-opens the path that hardening (T5) closed for the Worker, but only
 -- through admin.vote/admin.add_domain, as a named admin with a note, at most `max_publish_per_day`
 -- (default 50) approvals + manual adds per 24 h across all admins (K7).
 --
--- Rollback (before dashboard phase 02a): `drop schema admin cascade; drop index scans_domain_created;`
+-- Rollback (before dashboard phase 02a):
+--   drop schema admin cascade; drop index scans_domain_created, scans_domain_replica, verdicts_domain_cover;
 -- The role stays; the dashboard then fails closed because its views are gone.
 
 -- `set local`: only this migration's transaction (see 20261029100000_page_replicas.sql).
@@ -88,7 +90,12 @@ create table admin.admin_config (
   updated_at   timestamptz not null default now(),
   updated_by   text not null default 'migration',
   check ((kind = 'int') = (min_value is not null and max_value is not null)),
-  check (jsonb_typeof(value) = case kind when 'bool' then 'boolean' else 'number' end)
+  check (min_value <= max_value),
+  check (jsonb_typeof(value) = case kind when 'bool' then 'boolean' else 'number' end),
+  -- A direct write as postgres (or a later phase) cannot store a fraction or an out-of-range value.
+  check (case when kind = 'int'
+              then (value #>> '{}') ~ '^-?[0-9]{1,9}$' and (value #>> '{}')::int between min_value and max_value
+              else true end)
 );
 insert into admin.admin_config (key, value, kind, min_value, max_value, internal, confirm_when) values
   ('replica_enabled',           'false', 'bool', null, null, false, 'true'),
@@ -142,10 +149,17 @@ create index review_decisions_domain_at on admin.review_decisions (domain, at de
 -- The publish cap counts approvals + adds of the last 24 h.
 create index review_decisions_published on admin.review_decisions (at) where action in ('approve', 'add');
 
--- The queue view and the per-domain scan list look scans up by domain; the existing indexes all
--- lead with owner_id. scans is small (14-day retention), so the build takes seconds under the
--- SHARE lock this transaction holds (inserts wait; lock_timeout above bounds the wait to acquire it).
+-- The queue view and the per-domain scan list look scans and verdicts up by domain; the existing
+-- indexes lead with owner_id. Both tables are small (14-day retention), so the builds take seconds
+-- under the SHARE lock this transaction holds (writes wait; lock_timeout above bounds the wait to
+-- acquire it, and a timeout rolls the whole migration back). EXPLAIN on 200k scans / 50k verdicts /
+-- 2k queued domains: v_review_queue 3.0 s → ~1.1 s (database review 01a H1).
 create index scans_domain_created on public.scans (domain, created_at desc);
+-- Per queued domain the queue counts guardians for both verdict values; the existing partial index
+-- (not_safe + eligible only) cannot serve `safe`. Covering, so the count is an index-only scan.
+create index verdicts_domain_cover on public.verdicts (domain) include (by_device_id, value, global_eligible);
+-- has_replica / replica_for: replica scans of one domain, without reading every replica row.
+create index scans_domain_replica on public.scans (domain, owner_id) where replica_path is not null;
 
 -- ---------------------------------------------------------------- internal helpers
 -- Owned by postgres, no grant: called only from the security definer functions below.
@@ -229,8 +243,8 @@ $$;
 
 -- ---------------------------------------------------------------- API functions (shoo_admin)
 -- Errors use SQLSTATE class SA (R2 §4); the Worker maps each code to an HTTP status (R3 §3).
--- vote/unreject/remove_domain/add_domain serialize on advisory lock (7, 1) (classes 1–6 are the
--- backend's) and change blocklist_entries as their last statement: GET /blocklist?since= pages by
+-- vote/unreject/remove_domain/add_domain validate their arguments, then serialize on advisory lock
+-- (7, 1) (classes 1–6 are the backend's) and change blocklist_entries as their last statement: GET /blocklist?since= pages by
 -- approved_at/removed_at, so nothing slow may run between that write and commit.
 -- p_actor is the admin's email from the verified Access JWT. It is the audit trail, not
 -- authorization: only the dashboard Worker can log in as shoo_admin.
@@ -241,7 +255,6 @@ language plpgsql security definer set search_path = admin, pg_temp as $$
 declare
   v_category text;
 begin
-  perform pg_advisory_xact_lock(7, 1);
   if p_action is null or p_action not in ('approve', 'reject') then
     raise exception using errcode = '22023', message = 'invalid_action';
   end if;
@@ -251,6 +264,9 @@ begin
     perform admin._check_category(p_category);
     v_category := p_category;
     perform admin._require_read_committed();
+  end if;
+  perform pg_advisory_xact_lock(7, 1);
+  if p_action = 'approve' then
     perform admin._check_publish_cap();
   end if;
 
@@ -283,9 +299,9 @@ create function admin.unreject(p_domain text, p_note text, p_actor text)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
-  perform pg_advisory_xact_lock(7, 1);
   perform admin._check_domain(p_domain, false);
   perform admin._require_note(p_note);
+  perform pg_advisory_xact_lock(7, 1);
   insert into admin.review_decisions (domain, action, note, actor) values (p_domain, 'unreject', p_note, p_actor);
   perform admin._audit(p_actor, 'blocklist.unreject', p_domain, '{"status": "rejected"}', '{"status": "pending"}', p_note);
   update public.blocklist_entries set rejected_at = null, rejected_by = null
@@ -300,9 +316,9 @@ create function admin.remove_domain(p_domain text, p_note text, p_actor text)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
-  perform pg_advisory_xact_lock(7, 1);
   perform admin._check_domain(p_domain, false);
   perform admin._require_note(p_note);
+  perform pg_advisory_xact_lock(7, 1);
   insert into admin.review_decisions (domain, action, note, actor) values (p_domain, 'remove', p_note, p_actor);
   perform admin._audit(p_actor, 'blocklist.remove', p_domain, '{"status": "approved"}', '{"status": "removed"}', p_note);
   update public.blocklist_entries set removed_at = now()   -- trigger: clock_timestamp()
@@ -319,11 +335,11 @@ create function admin.add_domain(p_domain text, p_category text, p_note text, p_
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
-  perform pg_advisory_xact_lock(7, 1);
   perform admin._check_domain(p_domain, true);
   perform admin._require_note(p_note);
   perform admin._check_category(p_category);
   perform admin._require_read_committed();
+  perform pg_advisory_xact_lock(7, 1);
   perform admin._check_publish_cap();
   insert into admin.review_decisions (domain, action, category, note, actor)
   values (p_domain, 'add', p_category, p_note, p_actor);
@@ -442,13 +458,14 @@ end $$;
 
 -- ---------------------------------------------------------------- views (shoo_admin, select only)
 -- Owned by postgres without security_invoker: they read backend tables with the owner's rights,
--- so shoo_admin needs no grant in public. security_barrier keeps caller predicates from running
--- before the view's own filters. Never exposed: url, page_title, owner_id, by_device_id, by_name,
+-- so shoo_admin needs no grant in public. Only v_config is a security_barrier view (it hides internal
+-- rows); the other views hide no row a caller may not see elsewhere, and a barrier would stop LIKE
+-- and keyset predicates from reaching the indexes (database review 01a H2). Never exposed: url, page_title, owner_id, by_device_id, by_name,
 -- signal evidence, replica_path (SECURITY D1, D-dash-07, I13).
 
 -- Queue (R4 §1 pending). families_* count distinct guardians, as recountFamilies does.
 -- has_replica is true exactly when admin.replica_for would succeed.
-create view admin.v_review_queue with (security_barrier = true) as
+create view admin.v_review_queue as
 select
   b.domain,
   v.families_not_safe,
@@ -487,7 +504,7 @@ cross join lateral (
 ) t
 where b.approved_at is null and b.rejected_at is null and b.removed_at is null and b.families > 0;
 
-create view admin.v_blocklist with (security_barrier = true) as
+create view admin.v_blocklist as
 select
   b.domain,
   b.families,
@@ -516,7 +533,7 @@ left join lateral (
 
 -- Scans of the last 14 days, masked: no userinfo/query/fragment, signal ids without evidence text,
 -- the verdict value without who decided, no owner at all.
-create view admin.v_scans with (security_barrier = true) as
+create view admin.v_scans as
 select
   s.id,
   s.domain,
@@ -545,7 +562,7 @@ left join public.verdicts v on v.owner_id = s.owner_id and v.domain = s.domain
 where s.created_at > now() - interval '14 days';
 
 -- One row of operational counts (dashboard phase 03 reads it; no per-device data).
-create view admin.v_ops_snapshot with (security_barrier = true) as
+create view admin.v_ops_snapshot as
 select
   (select coalesce(jsonb_object_agg(mode, n), '{}') from
      (select mode::text, count(*)::int as n from public.devices group by mode) x) as devices_by_mode,
@@ -571,19 +588,19 @@ select
        where c.relkind in ('r', 'p') and n.nspname in ('public', 'admin', 'storage')
        order by 2 desc limit 10) x) as top_tables;
 
-create view admin.v_audit with (security_barrier = true) as
+create view admin.v_audit as
 select id, at, actor, action, target, before, after, note from admin.admin_audit;
 
 create view admin.v_config with (security_barrier = true) as
 select key, value, kind, min_value, max_value, confirm_when, updated_at, updated_by
 from admin.admin_config where not internal;
 
-create view admin.v_categories with (security_barrier = true) as
+create view admin.v_categories as
 select id, label_id, label_en, active from admin.categories;
 
 -- Activity feed: each decision once (from review_decisions) plus audit entries that are not
 -- decisions (config, replica, export). Phase 02a adds labels and analysis runs.
-create view admin.v_feed with (security_barrier = true) as
+create view admin.v_feed as
 select 'decision'::text as kind, r.id, r.at, r.actor, 'blocklist.' || r.action as action,
        r.domain as target, r.category, r.note
 from admin.review_decisions r
