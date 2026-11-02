@@ -63,9 +63,10 @@ export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "
     // each call is still capped per IP and per day). Layer 4's budget is what is left of the deadline, capped by the checker (<= 6 s).
     const days = await age;
     const domainSignal = days === null ? null : buildNewDomainSignal(days);
+    const ruleIds = signals.map((s) => s.id); // before new_domain: the model is not told the domain age, prompt v4 has no wording for it (D-imelda-50)
     if (domainSignal) signals.push(domainSignal);
     const score = localScore(localSignals) + signals.reduce((sum, s) => sum + s.weight, 0);
-    const layer4 = llm ? await llm.check(snapshot, { official, score, ruleIds: signals.map((s) => s.id), localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : null;
+    const layer4 = llm ? await llm.check(snapshot, { official, score, ruleIds, localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : null;
     if (layer4) signals.push(layer4);
     return strongestFirst(signals);
 }

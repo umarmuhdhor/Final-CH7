@@ -226,6 +226,7 @@ test("gate: new_domain (layer 3, RDAP) is part of the total, so the LLM waits fo
     const signals = await run(3, PASSWORD()); // 15 + 30 = 45
     assert.equal(f.calls.length, 1);
     assert.ok(ids(signals).includes("new_domain") && ids(signals).includes("unreasonable_request"));
+    assert.deepEqual(sentData(f.calls[0]).rules, ["asks_password"], "the model is not told the domain age (D-imelda-50)");
     await run(4000, PASSWORD()); // old domain adds nothing: total 15
     assert.equal(f.calls.length, 1, "total 15: no call");
     await run(3, PIN(), [local(20)]); // 35 + 30 + 20 = 85
