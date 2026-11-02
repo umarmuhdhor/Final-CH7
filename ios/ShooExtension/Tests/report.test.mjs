@@ -4,8 +4,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 await import("../Resources/dom.js");
+await import("../Resources/pipeline.js");
+await import("../Resources/marks.js");
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
-const { shouldReport, scanBody, shareableUrl } = globalThis.ShooReport;
+const { shouldReport, scanBody, shareableUrl, signalMarks } = globalThis.ShooReport;
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const schema = read("../../../contracts/scan-result.schema.json");
@@ -44,4 +46,50 @@ test("POST /scans url drops query, fragment and credentials; domain is untouched
     const body = scanBody(state, { title: "", faviconUrl: null, now: "2026-10-21T10:00:00.000Z" });
     assert.equal(body.url, "https://bansos-klaim.example/form");
     assert.equal(body.domain, warning63.domain);
+});
+
+test("marks (#176): text evidence → its boxes, asks_* → its field by name, else by kind; nothing for page-less signals", () => {
+    const box = (left, top, width = 100, height = 20) => ({ left, top, width, height });
+    const texts = { "diblokir dalam 24 jam": [box(10, 50), box(10, 400)], bca: [box(20, 330, 40, 20)] };
+    const images = { bca: [box(16, 4, 120, 40)] }; // the logo comes before "m-BCA" in a label
+    const fields = [
+        { rect: box(20, 300, 350, 52), name: "mpin", id: "", kind: "pin" },
+        { rect: box(20, 380, 350, 52), name: "kode", id: "otp-field", kind: "otp" },
+        { rect: box(20, 460, 350, 52), name: "cvv2", id: "", kind: "card" },
+        { rect: box(0, 0, 0, 0), name: "pin_hidden", id: "", kind: "pin" }, // not rendered
+    ];
+    const page = {
+        text: (p) => texts[p.toLowerCase()] ?? [],
+        images: (p) => images[p.toLowerCase()] ?? [],
+        fields: () => fields,
+        scroll: { x: 0, y: 1000 },
+    };
+    const signals = [
+        { id: "new_domain", weight: 20, evidence: "3" },
+        { id: "urgent_language", weight: 10, evidence: "Diblokir dalam 24 jam" },
+        { id: "brand_logo_offsite", weight: 15, evidence: "BCA" },
+        { id: "asks_pin", weight: 25, evidence: "nothing-by-that-name" },
+        { id: "asks_otp", weight: 13, evidence: "otp-field" },
+        { id: "asks_cvv", weight: 12, evidence: "" },
+        { id: "urgent_language", weight: 10, evidence: "diblokir dalam 24 jam" }, // same phrase again
+        { id: "hoax_claim", weight: 5, evidence: "not on the page" },
+    ];
+    assert.deepEqual(signalMarks(signals, page), [
+        { signalId: "asks_pin", x: 20, y: 1300, w: 350, h: 52 },
+        { signalId: "brand_logo_offsite", x: 16, y: 1004, w: 120, h: 40 },
+        { signalId: "brand_logo_offsite", x: 20, y: 1330, w: 40, h: 20 },
+        { signalId: "asks_otp", x: 20, y: 1380, w: 350, h: 52 },
+        { signalId: "asks_cvv", x: 20, y: 1460, w: 350, h: 52 },
+        { signalId: "urgent_language", x: 10, y: 1050, w: 100, h: 20 },
+        { signalId: "urgent_language", x: 10, y: 1400, w: 100, h: 20 },
+    ]);
+});
+
+test("marks stop at 24 and at 3 per signal", () => {
+    const many = Array.from({ length: 10 }, (_, i) => ({ left: 0, top: i * 30, width: 50, height: 20 }));
+    const page = { text: () => many, images: () => [], fields: () => [], scroll: { x: 0, y: 0 } };
+    const signals = Array.from({ length: 12 }, (_, i) => ({ id: "urgent_language", weight: 10, evidence: `phrase ${i}` }));
+    const marks = signalMarks(signals, page);
+    assert.equal(marks.length, 24);
+    assert.equal(marks.filter((m) => m.y === 0).length, 8); // 3 per phrase → 8 phrases fit
 });

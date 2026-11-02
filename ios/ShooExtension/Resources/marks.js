@@ -12,7 +12,7 @@
     // Only these signals quote page text (docs/mandates/imelda.md). Field signals (asks_*) carry a field name and
     // are shown as struck fields; other evidence is free-form (db_match → "shoo"/"public", new_domain → age in
     // days). A new text signal must be added here (#74).
-    const TEXT_SIGNALS = new Set(["urgent_language", "brand_logo_offsite", "unreasonable_request"]);
+    const TEXT_SIGNALS = new Set(["urgent_language", "brand_logo_offsite", "unreasonable_request", "hoax_claim"]);
     const FIELD_SIGNAL = /^asks_/;
 
     const FIELD_KINDS = [
@@ -104,7 +104,7 @@
         return { left, top, above, arrowX };
     }
 
-    globalThis.ShooMarks = { classifyField, phrasesFrom, marksFor, reasonFor, placeReason };
+    globalThis.ShooMarks = { classifyField, phrasesFrom, marksFor, reasonFor, placeReason, TEXT_SIGNALS, FIELD_SIGNAL };
 
     // ---- View (browser only) -------------------------------------------------------------
 

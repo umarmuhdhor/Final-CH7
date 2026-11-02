@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 await import("../Resources/replica.js");
 import { assemble, buildReplica, processCss } from "../Resources/replica-build.js";
-const { capture, shareableLink, CSP } = globalThis.ShooReplica;
+const { capture, cleanMarks, shareableLink, CSP, MAX_MARKS } = globalThis.ShooReplica;
 
 // Minimal DOM stand-in: replica.js only reads nodeType, childNodes, data, localName, attributes,
 // getAttribute, shadowRoot, sheet/textContent (styles), currentSrc (images) and getBoundingClientRect.
@@ -123,6 +123,36 @@ test("head starts with charset, the CSP, the viewport and our metadata", () => {
     assert.match(html, /<title>KlikBCA<\/title>/);
     const meta = JSON.parse(html.match(/name="shoo-replica" content="([^"]*)"/)[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
     assert.deepEqual(meta, { v: 1, url: page.url, capturedAt: page.now, viewport: page.viewport, focusY: 1284, truncated: false });
+});
+
+test("marks (#176) go into the meta as whole document px; no marks → no key", () => {
+    const metaOf = (html) => JSON.parse(html.match(/name="shoo-replica" content="([^"]*)"/)[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
+    const marks = [{ signalId: "asks_pin", x: 20.4, y: 1284.6, w: 350, h: 52.2 }];
+    assert.deepEqual(metaOf(capture(docOf(h("body", {}, "x")), { ...page, marks }).html).marks, [{ signalId: "asks_pin", x: 20, y: 1285, w: 350, h: 52 }]);
+    assert.ok(!("marks" in metaOf(capture(docOf(h("body", {}, "x")), { ...page, marks: [] }).html)));
+    assert.ok(!("marks" in metaOf(run(h("body", {}, "x")).html)));
+});
+
+test("marks keep only what the app accepts: [a-z_] ids, finite boxes clipped to the page, ≤ 24, no duplicates", () => {
+    const ok = { signalId: "urgent_language", x: 10, y: 20, w: 30, h: 40 };
+    assert.deepEqual(
+        cleanMarks([
+            ok,
+            { ...ok }, // duplicate
+            { ...ok, signalId: "Asks-PIN" },
+            { ...ok, signalId: "x".repeat(41) },
+            { ...ok, x: Number.NaN },
+            { ...ok, w: "30" },
+            { ...ok, w: 0 },
+            { ...ok, x: -50, w: 30 }, // fully left of the page
+            { ...ok, y: 100000 },
+            { ...ok, signalId: "asks_otp", x: -10, w: 30 }, // partly off-page: clipped
+            null,
+        ]),
+        [ok, { signalId: "asks_otp", x: 0, y: 20, w: 20, h: 40 }],
+    );
+    assert.deepEqual(cleanMarks(undefined), []);
+    assert.equal(cleanMarks(Array.from({ length: 40 }, (_, i) => ({ ...ok, y: i }))).length, MAX_MARKS);
 });
 
 test("text and attributes are escaped, so page content can't become markup", () => {
