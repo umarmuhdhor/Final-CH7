@@ -97,8 +97,8 @@ test("rdap bootstrap entries with unsafe servers are never contacted", async () 
     }
 });
 
-test("rdap timeout: a hanging server gives null after the 1.5 s budget", async () => {
-    assert.equal(TIMEOUT_MS, 1500);
+test("rdap timeout: a hanging server gives null after the 1 s budget (D-imelda-47)", async () => {
+    assert.equal(TIMEOUT_MS, 1000);
     const hang = (_u, init) => new Promise((_res, rej) => init.signal.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError"))));
     const t0 = performance.now();
     const age = await createRdapClient({ fetch: mockFetch({ rdap: hang }), cache: createMemoryCache({ now: () => NOW }), now: () => NOW, timeoutMs: 80 }).lookupAgeDays("example.com");

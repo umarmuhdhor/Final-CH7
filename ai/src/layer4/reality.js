@@ -18,7 +18,8 @@ import { parseVerdict } from "./schema.js";
 
 export const WEIGHT = 30; // plan/imelda/ref/R1: starting proposal, tuned in phase 07
 export const MIN_CONFIDENCE = 0.6;
-export const GATE_MIN_SCORE = 15; // D-imelda-05 (in force)
+export const GATE_MIN_SCORE = 30; // total of layers 1-3 (D-imelda-46): below this nothing is shown, no reason to pay for a call
+export const GATE_BLOCK_SCORE = 80; // at this total the extension blocks without asking anyone, so the LLM is skipped
 export const CLIENT_CALLS_PER_HOUR = 20; // per IP; /analyze itself gets its limit in phase 08
 /** How each check ended. Counts only: no page data (SECURITY A1). */
 export const OUTCOMES = Object.freeze(["gated", "capped", "timeout", "http_error", "bad_schema", "reasonable", "flagged"]);
@@ -38,13 +39,14 @@ const clean = (s, max) =>
         .slice(0, max);
 
 /**
- * Gate (D-imelda-05): not an official site, a form with at least one field, rule score >= 15.
- * `score` is OUR rules' score only: numbers sent by the client must not decide who costs money.
+ * Gate (D-imelda-46): not an official site, a form with at least one field, and a total score in 30..79.
+ * `score` is the total of layers 1-3: the client's layer 1-2 signals plus OUR layer 3 (rules + domain age).
+ * The LLM only settles the unclear middle: under 30 nothing is shown, from 80 the page is blocked anyway.
  */
 export function passesGate(snapshot, { official, score }) {
     if (official) return false;
     if (!snapshot.forms.some((f) => f.fields.length > 0)) return false;
-    return score >= GATE_MIN_SCORE;
+    return score >= GATE_MIN_SCORE && score < GATE_BLOCK_SCORE;
 }
 
 /**

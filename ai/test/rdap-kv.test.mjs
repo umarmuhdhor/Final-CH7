@@ -124,7 +124,7 @@ test("RDAP_KV synchronous throw or junk value: treated as a miss", async () => {
     }
 });
 
-test("RDAP_KV hanging read: falls back to RDAP inside the same 1.5 s lookup budget", async () => {
+test("RDAP_KV hanging read: falls back to RDAP inside the same 1 s lookup budget", async () => {
     const f = mockFetch();
     const kv = fakeKv({}, { get: () => new Promise(() => {}) });
     const t0 = performance.now();
@@ -132,7 +132,7 @@ test("RDAP_KV hanging read: falls back to RDAP inside the same 1.5 s lookup budg
     const ms = performance.now() - t0;
     assert.equal(res.status, 200);
     assert.equal(f.rdapCalls().length, 1);
-    assert.ok(ms < 1500, `took ${ms} ms`);
+    assert.ok(ms < 1000, `took ${ms} ms`);
 });
 
 test("RDAP_KV hanging read + hanging RDAP: the whole lookup still ends at the RDAP deadline", async () => {
