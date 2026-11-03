@@ -12,20 +12,25 @@ const fixture = (name) =>
 const snapshotFor = (result) => ({ url: result.url, domain: result.domain, title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: "" });
 
 /** Runs a scan with fakes; returns every published state and which deps were called. */
-async function run({ local = [], remote = [], verdict = null, current = () => true, snapshot, previous } = {}) {
+async function run({ local = [], remote = [], verdict = null, current = () => true, snapshot, previous, memory } = {}) {
     const states = [];
-    const calls = { remote: 0, verdict: [] };
+    const calls = { remote: 0, verdict: [], local: 0, fresh: [] };
     await P.runScan({
         snapshot: snapshot ?? { url: "https://x.test/", domain: "x.test" },
-        analyzeLocal: async () => (typeof local === "function" ? local() : local),
+        analyzeLocal: async () => {
+            calls.local++;
+            return typeof local === "function" ? local() : local;
+        },
         analyzeRemote: async () => {
             calls.remote++;
             return typeof remote === "function" ? remote() : remote;
         },
-        lookupVerdict: async (domain) => {
+        lookupVerdict: async (domain, options) => {
             calls.verdict.push(domain);
+            calls.fresh.push(Boolean(options?.fresh));
             return typeof verdict === "function" ? verdict() : verdict;
         },
+        ...(memory === undefined ? {} : { recallBlock: async () => (typeof memory === "function" ? memory() : memory) }),
         isCurrent: current,
         publish: (s) => states.push(s),
         previous,
@@ -179,4 +184,75 @@ test("re-check: a heavier copy of a known signal counts as new", async () => {
     const before = settled([sig("asks_pin", 2, 10)]);
     const { last } = await run({ previous: before, local: [sig("asks_pin", 2, 30)] });
     assert.equal(last.score, 30);
+});
+
+// ---------- block memory (#231) ----------
+const REMEMBERED = { score: 92, recordId: "scan-1", signals: [sig("asks_pin", 3, 30), sig("unreasonable_request", 4, 50)] };
+
+test("memory: a site blocked before is blocked again with no layer run (no /analyze, no LLM)", async () => {
+    const { last, calls } = await run({ memory: REMEMBERED, local: [sig("cheap_tld", 2, 5)] });
+    assert.equal(last.status, "blocked");
+    assert.equal(last.score, 92);
+    assert.equal(last.remembered, true);
+    assert.equal(last.recordId, "scan-1");
+    assert.deepEqual(last.signals.map((s) => s.id), ["asks_pin", "unreasonable_request"]);
+    assert.equal(last.done, true);
+    assert.equal(calls.local, 0);
+    assert.equal(calls.remote, 0);
+});
+
+test("memory: the verdict is asked once, fresh, even below 30", async () => {
+    const { calls } = await run({ memory: REMEMBERED });
+    assert.deepEqual(calls.verdict, ["x.test"]);
+    assert.deepEqual(calls.fresh, [true]);
+});
+
+test("memory: a safe verdict opens the page (score 0)", async () => {
+    const { last, calls } = await run({ memory: REMEMBERED, verdict: { value: "safe" } });
+    assert.equal(last.status, "normal");
+    assert.equal(last.score, 0);
+    assert.equal(last.remembered, undefined);
+    assert.equal(calls.remote, 0);
+});
+
+test("memory: not_safe stays blocked at 100, still remembered (no second report)", async () => {
+    const { last } = await run({ memory: REMEMBERED, verdict: { value: "not_safe" } });
+    assert.equal(last.status, "blocked");
+    assert.equal(last.score, 100);
+    assert.equal(last.remembered, true);
+});
+
+test("memory: server down stays blocked", async () => {
+    const { last } = await run({ memory: REMEMBERED, verdict: () => { throw new Error("offline"); } });
+    assert.equal(last.status, "blocked");
+    assert.equal(last.score, 92);
+});
+
+test("memory: nothing remembered, or the memory breaks → the usual scan", async () => {
+    for (const memory of [null, () => { throw new Error("storage"); }]) {
+        const { last, calls } = await run({ memory, local: [sig("cheap_tld", 2, 5)] });
+        assert.equal(last.status, "normal");
+        assert.equal(calls.local, 1);
+        assert.equal(calls.remote, 1);
+        assert.equal(last.remembered, undefined);
+    }
+});
+
+test("memory: a re-check (previous) never reads the memory", async () => {
+    let asked = 0;
+    const previous = { signals: [sig("cheap_tld", 2, 5)], score: 5, status: "normal", layersDone: [1, 2, 3, 4] };
+    await run({ previous, memory: () => (asked++, REMEMBERED) });
+    assert.equal(asked, 0);
+});
+
+test("memory: user navigated away while recalling → nothing published after", async () => {
+    let current = true;
+    const { states } = await run({ memory: () => ((current = false), REMEMBERED), current: () => current });
+    assert.ok(states.every((s) => s.status !== "blocked"));
+});
+
+test("memory: stored signals that fail the schema are dropped, the block stays", async () => {
+    const { last } = await run({ memory: { score: 85, recordId: null, signals: [{ id: "x" }, sig("asks_otp", 3, 30)] } });
+    assert.equal(last.status, "blocked");
+    assert.deepEqual(last.signals.map((s) => s.id), ["asks_otp"]);
 });

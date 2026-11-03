@@ -8,6 +8,7 @@ import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
 import { createHeartbeat } from "./heartbeat.js";
 import { createLastSeen } from "./last-seen.js";
+import { createBlockMemory } from "./block-memory.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -87,6 +88,23 @@ async function analyze(snapshot, localSignals) {
 
 // EX-06: GET /verdicts with a short cache; a 429 is answered from the last known verdict (verdicts.js).
 const verdicts = createVerdicts({ getSession, fetchJSON: (url, init) => fetchJSON(url, init) });
+// #231: sites blocked on this phone stay blocked without /analyze until a `safe` verdict clears them.
+const blockMemory = createBlockMemory({ storage: browser.storage.local, registrableDomain: domainFor });
+
+/** GET /verdicts; a `safe` verdict also clears the block memory of that domain before anyone reopens it. */
+async function lookupVerdict(domain, fresh) {
+    const reply = await verdicts.lookup(domain, { fresh });
+    if (reply?.verdict?.value === "safe") await blockMemory.forgetDomain(domain);
+    return reply;
+}
+
+/** Remembers a blocked page now; the backend's scan id is added once POST /scans answers. */
+function rememberBlock(message) {
+    const saved = blockMemory.remember(message.url, { domain: message.domain, score: message.score, signals: message.signals });
+    const post = message.reportKey ? reports.get(message.reportKey) : null;
+    if (post) post.then((recordId) => saved.then(() => blockMemory.setRecord(message.url, recordId)));
+    return saved.then(() => ({ ok: true }));
+}
 
 // Layer 1 (docs/design/blocklist.md): download + keep the lists here, content scripts only ask match().
 const lists = createLists({
@@ -185,7 +203,11 @@ browser.runtime.onMessage.addListener((message) => {
         case "recordId":
             return Promise.resolve(reports.get(message.key) ?? null).then((recordId) => ({ ok: true, recordId }));
         case "verdict":
-            return verdicts.lookup(message.domain, { fresh: Boolean(message.fresh) });
+            return lookupVerdict(message.domain, Boolean(message.fresh));
+        case "recallBlock":
+            return blockMemory.recall(message.url).then((memory) => ({ ok: true, memory }));
+        case "rememberBlock":
+            return rememberBlock(message);
         default:
             return Promise.resolve({ ok: false, error: "unknown_type" });
     }
