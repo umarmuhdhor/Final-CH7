@@ -1,0 +1,1698 @@
+{
+  "summary": {
+    "scamOpened": 21,
+    "scamBlocked": 10,
+    "scamOver50": 10,
+    "legitOpened": 23,
+    "legitFlagged": 0,
+    "serverErrors": 0,
+    "llmCalls": 12,
+    "llmMissingUsage": 0,
+    "gone": [
+      "scam-01",
+      "scam-02",
+      "scam-04",
+      "scam-07"
+    ],
+    "notOpenedScam": [],
+    "notOpenedLegit": [],
+    "differs": []
+  },
+  "rows": [
+    {
+      "id": "scam-01",
+      "label": "scam",
+      "host": "bni-diirect.com",
+      "url": "https://bni-diirect.com/",
+      "note": "BNI Direct — login perusahaan palsu",
+      "resolves": false,
+      "observed": null,
+      "calls": 0,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": null,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": null,
+      "rdapMs": 0,
+      "old": "-"
+    },
+    {
+      "id": "scam-02",
+      "label": "scam",
+      "host": "bni-directbni.com",
+      "url": "https://bni-directbni.com/",
+      "note": "BNI Direct — login perusahaan palsu",
+      "resolves": false,
+      "observed": null,
+      "calls": 0,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": null,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": null,
+      "rdapMs": 0,
+      "old": "-"
+    },
+    {
+      "id": "scam-03",
+      "label": "scam",
+      "host": "qlolla-bybri.com",
+      "url": "https://qlolla-bybri.com/",
+      "note": "BRI QLola — login palsu",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 100
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14
+        }
+      ],
+      "l3": [
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25
+        },
+        {
+          "id": "new_domain",
+          "layer": 3,
+          "weight": 20
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30
+        }
+      ],
+      "total": 100,
+      "llm": [
+        {
+          "ms": 2019,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 542,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1773,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2315
+          },
+          "verdict": {
+            "asks": [
+              "password"
+            ],
+            "reasonable": false,
+            "confidence": 0.9
+          },
+          "analyzeMs": 2766
+        }
+      ],
+      "llmMs": 2019,
+      "analyzeMs": 2766,
+      "rdapMs": 738,
+      "old": "Blokir 100"
+    },
+    {
+      "id": "scam-04",
+      "label": "scam",
+      "host": "cusbsi.com",
+      "url": "https://cusbsi.com/",
+      "note": "BSI Cash Management — login palsu",
+      "resolves": false,
+      "observed": null,
+      "calls": 0,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": null,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": null,
+      "rdapMs": 0,
+      "old": "-"
+    },
+    {
+      "id": "scam-05",
+      "label": "scam",
+      "host": "kodepembatalanbybni.pages.dev",
+      "url": "https://kodepembatalanbybni.pages.dev/",
+      "note": "BNI — pembatalan transaksi palsu",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 88
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 19
+        },
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14
+        }
+      ],
+      "l3": [
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30
+        }
+      ],
+      "total": 88,
+      "llm": [
+        {
+          "ms": 2176,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 543,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1740,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2283
+          },
+          "verdict": {
+            "asks": [
+              "other"
+            ],
+            "reasonable": false,
+            "confidence": 0.75
+          },
+          "analyzeMs": 2890
+        }
+      ],
+      "llmMs": 2176,
+      "analyzeMs": 2890,
+      "rdapMs": 710,
+      "old": "Blokir 88"
+    },
+    {
+      "id": "scam-06",
+      "label": "scam",
+      "host": "sites.google.com",
+      "url": "https://sites.google.com/view/pengembalian-request/halaman-muka",
+      "note": "BCA — pengembalian dana palsu",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Login KlikBCA palsu (User ID + PIN) terbuka tanpa peringatan."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 712,
+      "rdapMs": 711,
+      "old": "0"
+    },
+    {
+      "id": "scam-07",
+      "label": "scam",
+      "host": "yaigsjv.1238bll.my.id",
+      "url": "https://yaigsjv.1238bll.my.id/ca/bin/2c.html",
+      "note": "GoPay — aktivasi/pemulihan akun palsu",
+      "resolves": false,
+      "observed": null,
+      "calls": 0,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": null,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": null,
+      "rdapMs": 0,
+      "old": "-"
+    },
+    {
+      "id": "scam-08",
+      "label": "scam",
+      "host": "m-pajak.top",
+      "url": "https://m-pajak.top/",
+      "note": "DJP/M-Pajak — login pajak palsu",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 80
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 5
+        }
+      ],
+      "l3": [
+        {
+          "id": "new_domain",
+          "layer": 3,
+          "weight": 20
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 40
+        }
+      ],
+      "total": 80,
+      "llm": [
+        {
+          "ms": 964,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 548,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1719,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2267
+          },
+          "verdict": {
+            "asks": [
+              "password",
+              "personal_data"
+            ],
+            "reasonable": false,
+            "confidence": 0.85
+          },
+          "analyzeMs": 1507
+        }
+      ],
+      "llmMs": 964,
+      "analyzeMs": 1507,
+      "rdapMs": 539,
+      "old": "Kosong"
+    },
+    {
+      "id": "scam-09",
+      "label": "scam",
+      "host": "storee-dp9hsk1cxr2y.edgeone.dev",
+      "url": "https://storee-dp9hsk1cxr2y.edgeone.dev/",
+      "note": "Agoda Indonesia — bantuan/login palsu",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 80
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 11
+        }
+      ],
+      "l3": [
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 44
+        }
+      ],
+      "total": 80,
+      "llm": [
+        {
+          "ms": 1382,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 544,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1689,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2233
+          },
+          "verdict": {
+            "asks": [
+              "pin"
+            ],
+            "reasonable": false,
+            "confidence": 0.85
+          },
+          "analyzeMs": 1747
+        }
+      ],
+      "llmMs": 1382,
+      "analyzeMs": 1747,
+      "rdapMs": 360,
+      "old": "Blokir 100 ᴸ¹"
+    },
+    {
+      "id": "scam-10",
+      "label": "scam",
+      "host": "storee-dp8iiud7biuu.edgeone.dev",
+      "url": "https://storee-dp8iiud7biuu.edgeone.dev/",
+      "note": "Agoda Indonesia — verifikasi palsu",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Halaman meminta kode OTP lewat 6 kotak dan keyboard angka sudah terbuka, tapi asks_otp tidak menyala."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 12
+        }
+      ],
+      "l4": [],
+      "total": 12,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 1,
+      "rdapMs": 0,
+      "old": "Blokir 100 ᴸ¹"
+    },
+    {
+      "id": "scam-11",
+      "label": "scam",
+      "host": "deddydanchika.blogspot.com",
+      "url": "https://deddydanchika.blogspot.com/",
+      "note": "Facebook — login untuk menonton video",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Halaman Blogger tanpa postingan."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 634,
+      "rdapMs": 633,
+      "old": "0"
+    },
+    {
+      "id": "scam-12",
+      "label": "scam",
+      "host": "registers-app15.fkregs-on.com",
+      "url": "https://registers-app15.fkregs-on.com/code.php",
+      "note": "Bantuan laptop sekolah palsu → Telegram",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 86
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 21
+        }
+      ],
+      "l3": [
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25
+        },
+        {
+          "id": "new_domain",
+          "layer": 3,
+          "weight": 10
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30
+        }
+      ],
+      "total": 86,
+      "llm": [
+        {
+          "ms": 1433,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 553,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1714,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2267
+          },
+          "verdict": {
+            "asks": [
+              "otp"
+            ],
+            "reasonable": false,
+            "confidence": 0.7
+          },
+          "analyzeMs": 2072
+        }
+      ],
+      "llmMs": 1433,
+      "analyzeMs": 2072,
+      "rdapMs": 635,
+      "old": "Blokir 86"
+    },
+    {
+      "id": "scam-13",
+      "label": "scam",
+      "host": "regs-apps14.regnows-dfg.com",
+      "url": "https://regs-apps14.regnows-dfg.com/code.php",
+      "note": "Bantuan laptop/ponsel mahasiswa palsu → Telegram",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 80
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 21
+        }
+      ],
+      "l3": [
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 34
+        }
+      ],
+      "total": 80,
+      "llm": [
+        {
+          "ms": 1404,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 550,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1715,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2265
+          },
+          "verdict": {
+            "asks": [
+              "otp"
+            ],
+            "reasonable": false,
+            "confidence": 0.8
+          },
+          "analyzeMs": 2170
+        }
+      ],
+      "llmMs": 1404,
+      "analyzeMs": 2170,
+      "rdapMs": 760,
+      "old": "76"
+    },
+    {
+      "id": "scam-14",
+      "label": "scam",
+      "host": "pendaftaran-umum04.thems.blog",
+      "url": "https://pendaftaran-umum04.thems.blog/code",
+      "note": "Bantuan bibit ikan palsu → Telegram",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 80
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 12
+        }
+      ],
+      "l3": [
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 43
+        }
+      ],
+      "total": 80,
+      "llm": [
+        {
+          "ms": 4542,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 543,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1732,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2275
+          },
+          "verdict": {
+            "asks": [
+              "otp"
+            ],
+            "reasonable": false,
+            "confidence": 0.85
+          },
+          "analyzeMs": 5343
+        }
+      ],
+      "llmMs": 4542,
+      "analyzeMs": 5343,
+      "rdapMs": 793,
+      "old": "67"
+    },
+    {
+      "id": "scam-15",
+      "label": "scam",
+      "host": "apply.wozspace.site",
+      "url": "https://apply.wozspace.site/info",
+      "note": "Sembako Ramadhan Pertamina palsu → Telegram",
+      "resolves": true,
+      "observed": {
+        "status": "peringatan",
+        "percent": 30,
+        "note": "Form OTP 5 digit. LLM menjawab tidak wajar, tapi confidence 0,6 di bawah batas 0,7."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "cheap_tld",
+          "layer": 2,
+          "weight": 5
+        }
+      ],
+      "l3": [
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25
+        }
+      ],
+      "l4": [],
+      "total": 30,
+      "llm": [
+        {
+          "ms": 1227,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 545,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1731,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2276
+          },
+          "verdict": {
+            "asks": [
+              "otp"
+            ],
+            "reasonable": false,
+            "confidence": 0.6
+          },
+          "analyzeMs": 2234
+        }
+      ],
+      "llmMs": 1227,
+      "analyzeMs": 2234,
+      "rdapMs": 1005,
+      "old": "Kosong"
+    },
+    {
+      "id": "scam-16",
+      "label": "scam",
+      "host": "registersw-app17.fkregs-on.com",
+      "url": "https://registersw-app17.fkregs-on.com/code.php",
+      "note": "Pendaftaran/BSU palsu → Telegram",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 86
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 21
+        }
+      ],
+      "l3": [
+        {
+          "id": "asks_otp",
+          "layer": 3,
+          "weight": 25
+        },
+        {
+          "id": "new_domain",
+          "layer": 3,
+          "weight": 10
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30
+        }
+      ],
+      "total": 86,
+      "llm": [
+        {
+          "ms": 1214,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 550,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1714,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2264
+          },
+          "verdict": {
+            "asks": [
+              "otp"
+            ],
+            "reasonable": false,
+            "confidence": 0.7
+          },
+          "analyzeMs": 1225
+        }
+      ],
+      "llmMs": 1214,
+      "analyzeMs": 1225,
+      "rdapMs": 0,
+      "old": "Blokir 86"
+    },
+    {
+      "id": "scam-17",
+      "label": "scam",
+      "host": "login-mybca-bisnis.ibcbank-aceh.com",
+      "url": "https://login-mybca-bisnis.ibcbank-aceh.com/",
+      "note": "myBCA Bisnis — login perusahaan palsu",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Halaman peringatan phishing dari Cloudflare menutupi situsnya. Shoo tidak menandai."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "brand_plus_keyword",
+          "layer": 2,
+          "weight": 14
+        }
+      ],
+      "l3": [
+        {
+          "id": "new_domain",
+          "layer": 3,
+          "weight": 10
+        }
+      ],
+      "l4": [],
+      "total": 24,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 600,
+      "rdapMs": 597,
+      "old": "24"
+    },
+    {
+      "id": "scam-18",
+      "label": "scam",
+      "host": "www.cuz-bankkbsi.com",
+      "url": "https://www.cuz-bankkbsi.com/",
+      "note": "CUZ by BSI — login perusahaan palsu",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Halaman parkir berisi iklan pinjaman."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "lookalike_domain",
+          "layer": 2,
+          "weight": 25
+        }
+      ],
+      "l3": [],
+      "l4": [],
+      "total": 25,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 1003,
+      "rdapMs": 1001,
+      "old": "45"
+    },
+    {
+      "id": "scam-19",
+      "label": "scam",
+      "host": "shopeeofficial-refund.vercel.app",
+      "url": "https://shopeeofficial-refund.vercel.app/otp.html",
+      "note": "Shopee — pengembalian dana palsu",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Dialog JavaScript menahan halaman dan tidak ada panggilan /analyze. Dialog tidak diketuk, sesuai aturan tes."
+      },
+      "calls": 0,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": null,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": null,
+      "rdapMs": 0,
+      "old": "Diadang Safari"
+    },
+    {
+      "id": "scam-20",
+      "label": "scam",
+      "host": "viinwkwk-dot.github.io",
+      "url": "https://viinwkwk-dot.github.io/instagram./",
+      "note": "Instagram — login palsu berbahasa Indonesia",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Login Instagram palsu di github.io. Total 15, jadi LLM tidak ditanya."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15
+        }
+      ],
+      "l4": [],
+      "total": 15,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 4,
+      "rdapMs": 0,
+      "old": "45"
+    },
+    {
+      "id": "scam-21",
+      "label": "scam",
+      "host": "helpnets.info",
+      "url": "https://helpnets.info/0442827f6o7cfb43933ba59e2881cc906b7c.html/",
+      "note": "dari Imelda, modus belum dicatat",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 100
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 34
+        }
+      ],
+      "l3": [
+        {
+          "id": "brand_logo_offsite",
+          "layer": 3,
+          "weight": 25
+        },
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 30
+        }
+      ],
+      "total": 100,
+      "llm": [
+        {
+          "ms": 868,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 546,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1719,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2265
+          },
+          "verdict": {
+            "asks": [
+              "password",
+              "personal_data"
+            ],
+            "reasonable": false,
+            "confidence": 0.9
+          },
+          "analyzeMs": 1270
+        }
+      ],
+      "llmMs": 868,
+      "analyzeMs": 1270,
+      "rdapMs": 383,
+      "old": "Blokir 100 ᴸ¹"
+    },
+    {
+      "id": "scam-22",
+      "label": "scam",
+      "host": "d33wubrfki0l68.cloudfront.net",
+      "url": "https://d33wubrfki0l68.cloudfront.net/a24ce9fe-3a25-440e-923c-70c96b668dc8/dhl123.html",
+      "note": "dari Imelda, modus belum dicatat",
+      "resolves": true,
+      "observed": {
+        "status": "blokir",
+        "percent": 80
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 18
+        }
+      ],
+      "l3": [
+        {
+          "id": "asks_password",
+          "layer": 3,
+          "weight": 15
+        }
+      ],
+      "l4": [
+        {
+          "id": "unreasonable_request",
+          "layer": 4,
+          "weight": 47
+        }
+      ],
+      "total": 80,
+      "llm": [
+        {
+          "ms": 969,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 546,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1706,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2252
+          },
+          "verdict": {
+            "asks": [
+              "password",
+              "personal_data"
+            ],
+            "reasonable": false,
+            "confidence": 0.9
+          },
+          "analyzeMs": 1629
+        }
+      ],
+      "llmMs": 969,
+      "analyzeMs": 1629,
+      "rdapMs": 658,
+      "old": "63"
+    },
+    {
+      "id": "scam-23",
+      "label": "scam",
+      "host": "simgratisonine.blogspot.com",
+      "url": "https://simgratisonine.blogspot.com/",
+      "note": "dari Imelda, modus belum dicatat",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Pendaftaran SIM palsu lewat Telegram."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 13
+        }
+      ],
+      "l3": [],
+      "l4": [],
+      "total": 13,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 1,
+      "rdapMs": 0,
+      "old": "13"
+    },
+    {
+      "id": "scam-24",
+      "label": "scam",
+      "host": "bantuannbansos2026.blogspot.com",
+      "url": "https://bantuannbansos2026.blogspot.com/",
+      "note": "dari Imelda, modus belum dicatat",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Form nama, provinsi, dan telepon untuk Telegram."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 24
+        }
+      ],
+      "l3": [],
+      "l4": [],
+      "total": 24,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 1,
+      "rdapMs": 0,
+      "old": "24"
+    },
+    {
+      "id": "scam-25",
+      "label": "scam",
+      "host": "gratiskuota60gb.blogspot.com",
+      "url": "https://gratiskuota60gb.blogspot.com/",
+      "note": "dari Imelda, modus belum dicatat",
+      "resolves": true,
+      "observed": {
+        "status": "peringatan",
+        "percent": 39,
+        "note": "Form kuota gratis. LLM menjawab wajar dengan confidence 0,3."
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [
+        {
+          "id": "suspicious_link",
+          "layer": 2,
+          "weight": 24
+        }
+      ],
+      "l3": [
+        {
+          "id": "urgent_language",
+          "layer": 3,
+          "weight": 15
+        }
+      ],
+      "l4": [],
+      "total": 39,
+      "llm": [
+        {
+          "ms": 2194,
+          "status": 200,
+          "usage": {
+            "completion_tokens": 539,
+            "completion_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "prompt_tokens": 1690,
+            "prompt_tokens_details": {
+              "cached_tokens": 262
+            },
+            "total_tokens": 2229
+          },
+          "verdict": {
+            "asks": [],
+            "reasonable": true,
+            "confidence": 0.3
+          },
+          "analyzeMs": 2195
+        }
+      ],
+      "llmMs": 2194,
+      "analyzeMs": 2195,
+      "rdapMs": 0,
+      "old": "39"
+    },
+    {
+      "id": "legit-01",
+      "label": "legit",
+      "host": "github.com",
+      "url": "https://github.com/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 5,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-02",
+      "label": "legit",
+      "host": "www.wikipedia.org",
+      "url": "https://www.wikipedia.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 3,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-03",
+      "label": "legit",
+      "host": "www.rfc-editor.org",
+      "url": "https://www.rfc-editor.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 419,
+      "rdapMs": 417,
+      "old": "0"
+    },
+    {
+      "id": "legit-04",
+      "label": "legit",
+      "host": "www.python.org",
+      "url": "https://www.python.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 334,
+      "rdapMs": 320,
+      "old": "0"
+    },
+    {
+      "id": "legit-05",
+      "label": "legit",
+      "host": "www.debian.org",
+      "url": "https://www.debian.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 282,
+      "rdapMs": 280,
+      "old": "0"
+    },
+    {
+      "id": "legit-06",
+      "label": "legit",
+      "host": "www.kernel.org",
+      "url": "https://www.kernel.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 291,
+      "rdapMs": 289,
+      "old": "0"
+    },
+    {
+      "id": "legit-07",
+      "label": "legit",
+      "host": "www.mozilla.org",
+      "url": "https://www.mozilla.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 6,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-08",
+      "label": "legit",
+      "host": "www.eff.org",
+      "url": "https://www.eff.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 387,
+      "rdapMs": 382,
+      "old": "0"
+    },
+    {
+      "id": "legit-09",
+      "label": "legit",
+      "host": "www.archive.org",
+      "url": "https://www.archive.org/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 294,
+      "rdapMs": 292,
+      "old": "0"
+    },
+    {
+      "id": "legit-10",
+      "label": "legit",
+      "host": "www.nasa.gov",
+      "url": "https://www.nasa.gov/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 855,
+      "rdapMs": 847,
+      "old": "0"
+    },
+    {
+      "id": "legit-11",
+      "label": "legit",
+      "host": "www.loc.gov",
+      "url": "https://www.loc.gov/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 478,
+      "rdapMs": 459,
+      "old": "0"
+    },
+    {
+      "id": "legit-12",
+      "label": "legit",
+      "host": "www.mit.edu",
+      "url": "https://www.mit.edu/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "mit.edu tidak diblokir karena L1 mati. Masalah daftar publiknya belum terbukti selesai."
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 4,
+      "rdapMs": 0,
+      "old": "Blokir 100 ᴸ¹"
+    },
+    {
+      "id": "legit-13",
+      "label": "legit",
+      "host": "www.berkeley.edu",
+      "url": "https://www.berkeley.edu/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 3,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-14",
+      "label": "legit",
+      "host": "www.cloudflare.com",
+      "url": "https://www.cloudflare.com/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 5,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-15",
+      "label": "legit",
+      "host": "developer.apple.com",
+      "url": "https://developer.apple.com/documentation/swift",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 3,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-16",
+      "label": "legit",
+      "host": "docs.python.org",
+      "url": "https://docs.python.org/3/library/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 9,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-17",
+      "label": "legit",
+      "host": "medium.com",
+      "url": "https://medium.com/tag/cybersecurity",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 2,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-18",
+      "label": "legit",
+      "host": "blog.google",
+      "url": "https://blog.google/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 523,
+      "rdapMs": 520,
+      "old": "0"
+    },
+    {
+      "id": "legit-19",
+      "label": "legit",
+      "host": "vercel.com",
+      "url": "https://vercel.com/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 1003,
+      "rdapMs": 1002,
+      "old": "0"
+    },
+    {
+      "id": "legit-20",
+      "label": "legit",
+      "host": "deno.com",
+      "url": "https://deno.com/",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 602,
+      "rdapMs": 597,
+      "old": "0"
+    },
+    {
+      "id": "legit-21",
+      "label": "legit",
+      "host": "developer.apple.com",
+      "url": "https://developer.apple.com/documentation/swiftui/view",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 5,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-22",
+      "label": "legit",
+      "host": "docs.github.com",
+      "url": "https://docs.github.com/en/get-started/using-github-docs",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null
+      },
+      "calls": 1,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 1,
+      "rdapMs": 0,
+      "old": "0"
+    },
+    {
+      "id": "legit-23",
+      "label": "legit",
+      "host": "developer.mozilla.org",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/404",
+      "note": "dari Imelda",
+      "resolves": true,
+      "observed": {
+        "status": "tanpa-tanda",
+        "percent": null,
+        "note": "Halaman MDN tentang kode 404 terbuka."
+      },
+      "calls": 2,
+      "errors": 0,
+      "l2": [],
+      "l3": [],
+      "l4": [],
+      "total": 0,
+      "llm": [],
+      "llmMs": null,
+      "analyzeMs": 2,
+      "rdapMs": 0,
+      "old": "0"
+    }
+  ]
+}
