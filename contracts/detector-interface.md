@@ -95,7 +95,7 @@ Optional, but it drives what the extension marks on the page:
 | `lookalike_domain` | 2 | Spelling close to an official brand (p0stindonesia) |
 | `brand_plus_keyword` | 2 | Brand + extra word (bca-verifikasi) |
 | `cheap_tld` | 2 | .xyz, .site, .click, ... |
-| `suspicious_link` | 2 | Whole URL looks like a scam link (free-hosting subdomain with bait words, redirect param, random file name, ...). Weight ≤ 29, so it never reaches the popup alone (#140) |
+| `suspicious_link` | 2 | Whole URL looks like a scam link (free-hosting subdomain with bait words, redirect param, random file name, ...). Weight 10–100, the dissector's raw score: the link alone can reach the popup or the block (#140, #231) |
 | `new_domain` | 3 | Domain age in days (made by the server via RDAP) |
 | `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 | Form requests sensitive data |
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
