@@ -1,0 +1,79 @@
+# Weekly calibration report (admin dashboard 05b K5, X3): counts and ratios per signal id from the dashboard's intel
+# export, opened as a PR for Team AI. Weights are never changed here. OFF until the repo variable
+# AI_CALIBRATION_ENABLED is 'true' (that waits for the PM answer on learning from family decisions).
+# Needs: secrets CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET (Access service token, scope export:read only),
+# variable SHOO_ADMIN_URL (https://<name>.<account>.workers.dev), and "Allow GitHub Actions to create pull requests".
+# This repo is public, so its logs are too: the script prints counts only, and nothing is uploaded as an artifact.
+name: ai-calibration
+
+on:
+  schedule:
+    - cron: "41 2 * * 1" # Monday 02:41 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ai-calibration
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: vars.AI_CALIBRATION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      date: ${{ steps.build.outputs.date }}
+      report: ${{ steps.build.outputs.report }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Build the report
+        id: build
+        env:
+          SHOO_ADMIN_URL: ${{ vars.SHOO_ADMIN_URL }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          node ai/scripts/calibration-report.mjs --out "$RUNNER_TEMP/report.md"
+          {
+            echo "date=$(date -u +%F)"
+            echo "report=$(base64 -w0 "$RUNNER_TEMP/report.md")"
+          } >> "$GITHUB_OUTPUT"
+
+  # Gets only the report (no export token); the only job that can write.
+  open-pr:
+    needs: report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Open a PR with the report
+        env:
+          DATE: ${{ needs.report.outputs.date }}
+          REPORT: ${{ needs.report.outputs.report }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "bad date"; exit 1; }
+          file="ai/eval/reports/calibration-${DATE}.md"
+          branch="ai-calibration/${DATE}"
+          mkdir -p ai/eval/reports
+          printf '%s' "$REPORT" | base64 -d > "$file"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "$file"
+          git commit -m "docs(ai): calibration report ${DATE}"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title "AI calibration report ${DATE}" \
+            --body "Weekly counts per signal id from the admin dashboard's intel export (ai/scripts/calibration-report.mjs). No weight was changed. To act on it, change weights by hand and paste an eval before/after (node ai/eval/run.mjs)."

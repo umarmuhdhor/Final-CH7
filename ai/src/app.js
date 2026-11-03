@@ -15,6 +15,7 @@ import { createBlocklist } from "./blocklist/route.js";
 import { createKvBlocklist } from "./blocklist/kv.js";
 import { readConfig } from "./layer4/config.js";
 import { createRealityCheck, CLIENT_CALLS_PER_HOUR } from "./layer4/reality.js";
+import { createCasesLoader } from "./layer4/cases.js";
 import { clientKey, createRateLimiter } from "./ratelimit.js";
 import { createUsageReport, watchLlm, watchRdap, writeUsage } from "./usage.js";
 
@@ -87,12 +88,15 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  *   llm: a layer 4 checker ({ check }) for tests. Otherwise layer 4 is configured from the request's env bindings (LLM_*), using llmFetch (the Worker entry passes the real fetch).
  *   llmClientCallsPerHour: per-IP limit on layer 4 calls (default CLIENT_CALLS_PER_HOUR; Infinity = off, local eval only).
  *   devStats: serve GET /_dev/layer4 (layer 4 outcome counters, no page data). Local dev server only, never the Worker.
+ *   cases: a fixed layer 4 case set (layer4/cases.js parseCases) for the dev server (CASES_FILE) and tests. Otherwise the
+ *     set comes from the CASES_KV binding, only when the CASES_ENABLED secret is "true" (off by default).
  */
-export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false } = {}) {
+export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false, cases: fixedCases = null } = {}) {
     let envLlm = { key: "", checker: null }; // built once per distinct configuration, so the daily counter survives requests
     const memoryCache = cache ?? createMemoryCache({ now });
     const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: memoryCache, now, timeoutMs: rdapTimeoutMs }) : null;
     const kvBudget = createKvBudget({ now }); // lives with the isolate, like the memory cache
+    const loadCases = createCasesLoader({ now });
     /** The RDAP client for one request: memory only, or memory + KV when the Worker has the RDAP_KV binding. */
     function rdapFor(c) {
         const kv = c.env?.RDAP_KV;
@@ -146,10 +150,11 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const checked = validateRequest(body);
         if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         const checker = llm ?? llmFor(c.env);
-        const report = createUsageReport({ hasLayer4: !!checker });
+        const cases = checker ? (fixedCases ?? (await loadCases(c.env))) : null; // KV read at most once per 10 min per isolate
+        const report = createUsageReport({ hasLayer4: !!checker, casesVersion: cases?.version });
         const signals = await analyze(checked.snapshot, {
             rdap: watchRdap(rdapFor(c), report),
-            llm: watchLlm(checker, report),
+            llm: watchLlm(checker, report, cases),
             client,
             localSignals: checked.localSignals,
             deadline: startedAt + SERVER_DEADLINE_MS,

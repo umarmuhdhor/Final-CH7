@@ -1,13 +1,26 @@
 #!/usr/bin/env node
 // For the OWNER, after reading the sample files:  node ai/eval/tools/mark-redacted.mjs --confirm-read --ids a,b,c   (or --all)
+//   --dir <path>   another sample folder (default ai/eval/data), e.g. ai/eval/private from import-dashboard.mjs
 // Sets "redacted": true on real samples. Refuses a sample that still has a finding from check-redaction. An agent must not run this.
 import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
-import { join, extname } from "node:path";
+import { join, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
 import { findPersonalData } from "./check-redaction.mjs";
 
-const dataDir = fileURLToPath(new URL("../data", import.meta.url));
+const defaultDir = fileURLToPath(new URL("../data", import.meta.url));
+
+/** `--dir <path>` or the default folder; exits on a flag without a value. */
+export function dirArg(argv, fallback) {
+    const at = argv.indexOf("--dir");
+    if (at === -1) return fallback;
+    const v = argv[at + 1];
+    if (!v || v.startsWith("--")) {
+        console.error("--dir needs a folder");
+        process.exit(2);
+    }
+    return resolve(v);
+}
 
 /** @returns {{marked: string[], refused: string[]}} mutates the samples that qualify */
 export function markRedacted(samples, ids /* null = all */) {
@@ -45,6 +58,7 @@ function main() {
         process.exit(2);
     }
     const ids = idArg ? idArg.split(",") : null;
+    const dataDir = dirArg(argv, defaultDir);
     let total = 0;
     for (const file of jsonFiles(dataDir)) {
         const parsed = JSON.parse(readFileSync(file, "utf8"));

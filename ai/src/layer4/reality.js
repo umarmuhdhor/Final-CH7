@@ -15,6 +15,7 @@ import { registrableDomain } from "../rdap/domain.js";
 import { createRateLimiter } from "../ratelimit.js";
 import { createProvider } from "./provider.js";
 import { parseVerdict } from "./schema.js";
+import { casesForModel } from "./cases.js";
 
 export const WEIGHT = 30; // the least a flag adds; more when that is what it takes to reach GATE_BLOCK_SCORE (D-imelda-48)
 export const MIN_CONFIDENCE = 0.7; // D-imelda-49: a flag now blocks the page, and 0.7 catches as many scams as 0.6 did
@@ -66,8 +67,8 @@ function linkChecks(localSignals) {
     return [...codes].slice(0, MAX_LINK_CHECKS);
 }
 
-/** What the model sees. Exported for tests. */
-export function buildInput(snapshot, ruleIds, localSignals = []) {
+/** What the model sees. Exported for tests. `cases` (layer4/cases.js casesForModel) only when the case library is on. */
+export function buildInput(snapshot, ruleIds, localSignals = [], cases = null) {
     const fields = [];
     for (const form of snapshot.forms) {
         for (const f of form.fields) {
@@ -86,6 +87,7 @@ export function buildInput(snapshot, ruleIds, localSignals = []) {
         brands: detectBrands(snapshot),
         rules: ruleIds.slice(0, 20),
         link_checks: linkChecks(localSignals),
+        ...(cases?.length ? { cases } : {}), // absent when off: the input is then byte for byte what it was before X4
     };
 }
 
@@ -124,13 +126,14 @@ function buildSignal(evidence, score) {
  * @param {{ config: object, fetch: typeof fetch, now?: () => number, clientCallsPerHour?: number }} deps
  *   clientCallsPerHour: per-IP limit on LLM calls. `Infinity` turns it off (local eval: every request comes from one
  *   "unknown" client); the daily cap stays the breaker.
- * @returns {{ meta: object, stats(): object, check(snapshot: object, ctx: { official: boolean, score: number, ruleIds: string[], deadlineMs?: number, report?: object }): Promise<object | null> }}
+ * @returns {{ meta: object, stats(): object, check(snapshot: object, ctx: { official: boolean, score: number, ruleIds: string[], deadlineMs?: number, report?: object, cases?: object | null }): Promise<object | null> }}
  */
 export function createRealityCheck({ config, fetch, now = Date.now, clientCallsPerHour = CLIENT_CALLS_PER_HOUR }) {
     const ask = createProvider({ config, fetch });
     const perClient = Number.isFinite(clientCallsPerHour) ? createRateLimiter({ limit: clientCallsPerHour, windowMs: 60 * 60 * 1000, now }) : () => ({ ok: true });
     const outcomes = Object.fromEntries(OUTCOMES.map((k) => [k, 0]));
     const tokens = { in: 0, out: 0 }; // since this checker was built, like the outcomes
+    let casesVersion = null; // the case set the last call was given (null = none)
     const count = (outcome, result) => {
         outcomes[outcome] += 1;
         return result;
@@ -152,15 +155,19 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
     return {
         meta: { promptVersion: PROMPT_VERSION, model: config.model }, // record both with every eval run (SECURITY A13)
         /** Outcome counters since this checker was built (one Worker isolate). A wrong model or key shows up as http_error / bad_schema, not as "always reasonable". */
-        stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, outcomes: { ...outcomes }, tokens: { ...tokens } }),
-        /** `report` (optional, src/usage.js): this request's outcome, tokens and LLM ms for the ai_usage point. */
-        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs, report = null }) {
+        stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, casesVersion, outcomes: { ...outcomes }, tokens: { ...tokens } }),
+        /**
+         * `report` (optional, src/usage.js): this request's outcome, tokens and LLM ms for the ai_usage point.
+         * `cases` (optional, layer4/cases.js): the active case set, or null when the case library is off.
+         */
+        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs, report = null, cases = null }) {
+            casesVersion = cases?.version ?? null;
             const end = (outcome, result = null) => {
                 if (report) report.outcome = outcome;
                 return count(outcome, result);
             };
             if (!passesGate({ official, score })) return end("gated");
-            const input = buildInput(snapshot, ruleIds, localSignals);
+            const input = buildInput(snapshot, ruleIds, localSignals, cases ? casesForModel(cases) : null);
             if (!input.site) return end("gated"); // not a public domain: nothing sensible to judge, nothing to send
             const budget = Math.min(config.timeoutMs, deadlineMs);
             if (budget <= 0 || !perClient(client).ok || !withinCap()) return end("capped");

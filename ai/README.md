@@ -112,7 +112,7 @@ With the `AI_USAGE` binding (`wrangler.toml`, dataset `shoo_ai_usage`), each `/a
 | Field | Value |
 |---|---|
 | `blob1` | `PROMPT_VERSION` (`reality-check.vN`) |
-| `blob2` | cases version (`none` until versioned cases exist) |
+| `blob2` | version of the layer 4 case set in use (`cases.js`), or `none` |
 | `blob3` | layer 4 outcome: an `OUTCOMES` name from `src/layer4/reality.js`, or `off` when layer 4 is not configured (a checker that throws before it counts an outcome is written as `http_error`) |
 | `double1`, `double2` | tokens in / out from the provider's `usage`; 0 when it sends none, and 0 on `timeout` / `http_error` (the answer, and its count, never arrives) |
 | `double3` | layer 4 LLM time, ms (0 when no call was made) |
@@ -205,6 +205,18 @@ Other candidates, checked on the official pages on 23 Oct 2026 (not legal advice
 | URLhaus (abuse.ch) | Terms (updated 21 Oct 2026): non-profit fair use; commercial use may need a paid subscription; Auth-Key required | Malware URLs, not phishing; commercial terms unclear |
 | Phishing Army | Adds no restriction of its own but grants no upstream rights; sources include OpenPhish and PhishStats | Upstreams forbid redistribution |
 | PhishStats | Terms: no sharing or redistribution of raw feeds without written permission | Not allowed |
+
+## Learning from the admin dashboard (05b X3-X5, all off by default)
+
+Built by the admin dashboard lane; nothing here runs until the PM agrees that Shoo may learn from family decisions. The dashboard client is `scripts/dashboard.mjs` (Cloudflare Access service token in `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET`, `SHOO_ADMIN_URL` = `https://<name>.<account>.workers.dev`). Messages never quote a response body or a query string.
+
+| Piece | Where it runs | Off switch | What leaves the dashboard |
+|---|---|---|---|
+| X3 calibration report: `scripts/calibration-report.mjs` | `.github/workflows/ai-calibration.yml`, weekly, opens a PR with `ai/eval/reports/calibration-<date>.md` | repo variable `AI_CALIBRATION_ENABLED` must be `'true'` | counts and ratios per signal id only (ids that are odd or seen on fewer than 3 domains fold into `(other)`); never a domain |
+| X4 case library: `scripts/build-cases.mjs`, `src/layer4/cases.js` | build locally; the Worker reads KV | secret `CASES_ENABLED` must be `"true"`, and the `CASES_KV` binding (commented out in `wrangler.toml`) must exist | per case: id, rule ids, label, category; no domain, no admin note |
+| X5 lesson drafts: `scripts/lessons.mjs` | locally, with `ai/.env` | dry run unless `--send` | domain, rule ids, AI score and label per mismatch go to the LLM provider (a new data flow: name it in `/privacy` first) |
+
+Case sets: `build-cases.mjs` writes `ai/eval/private/cases-<sha8>.json` and prints the eval and the two `wrangler kv key put` commands (`cases:<sha8>`, then `cases:active`). With the switch on, layer 4 adds the first 20 cases to the model input as `cases` (DATA, like page words); without it the input is exactly what it was. The system prompt and `PROMPT_VERSION` do not change, so before switching on, Team AI should decide the prompt wording for `cases` (a new prompt version + eval). The version is in `stats().casesVersion` and in `ai_usage` blob2. Lessons never reach the prompt by themselves.
 
 ## Layer 4: reality check (`unreasonable_request`, M4)
 

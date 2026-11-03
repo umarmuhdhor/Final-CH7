@@ -3,7 +3,9 @@
 import { createServer } from "node:http";
 import { Readable } from "node:stream";
 import { createApp } from "./app.js";
+import { readFileSync } from "node:fs";
 import { fixtureSource } from "./blocklist/fixture.js";
+import { parseCases } from "./layer4/cases.js";
 
 // RDAP (new_domain) calls real registries, so it is off unless asked: SHOO_RDAP=1. Never point it at scam domains.
 // /public-blocklist serves invented fixture domains here (ai/data/public-blocklist.seed.json), never a real feed.
@@ -17,6 +19,14 @@ try {
     if (error?.code !== "ENOENT") throw error; // a broken .env must be loud, a missing one means layer 4 off
 }
 const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_")));
+// Layer 4 case library (layer4/cases.js) for a local eval before a set goes live: CASES_FILE=ai/eval/private/cases-<v>.json
+// (from ai/scripts/build-cases.mjs). Off when unset. A file that does not parse stops the server: an eval "with cases"
+// that silently ran without them would be a wrong before/after.
+let cases = null;
+if (process.env.CASES_FILE) {
+    cases = parseCases(readFileSync(process.env.CASES_FILE, "utf8"));
+    if (!cases) throw new Error("CASES_FILE is not a valid case set");
+}
 const clientCalls = Number(process.env.LLM_CLIENT_CALLS_PER_HOUR);
 const NO_LIMIT = { limit: Number.MAX_SAFE_INTEGER, windowMs: 60_000 };
 const devLimits = process.env.SHOO_DEV_RATE_LIMIT === "1" ? {} : { rateLimit: NO_LIMIT, analyzeRateLimit: NO_LIMIT };
@@ -26,6 +36,7 @@ const app = createApp({
     llmFetch: (...args) => fetch(...args),
     llmClientCallsPerHour: Number.isInteger(clientCalls) && clientCalls > 0 ? clientCalls : Infinity,
     devStats: true,
+    cases,
     ...(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {}),
 });
 const port = Number(process.env.PORT) || 8787;

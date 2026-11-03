@@ -2,12 +2,14 @@
 // Writes the "holdout" tag into the sample files from data/HOLDOUT.json (seed + fraction). Nobody picks by hand.
 //   node ai/eval/tools/assign-holdout.mjs --init   create HOLDOUT.json with a fresh random seed (refuses if it exists)
 //   node ai/eval/tools/assign-holdout.mjs          re-apply the recorded seed to every sample file
+//   node ai/eval/tools/assign-holdout.mjs --dir ai/eval/private   same seed (from data/HOLDOUT.json), another folder
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
 import { holdoutOf, HOLDOUT_FRACTION, HOLDOUT_TAG } from "../corpus.mjs";
+import { dirArg } from "./mark-redacted.mjs";
 
 const dataDir = fileURLToPath(new URL("../data", import.meta.url));
 const seedFile = join(dataDir, "HOLDOUT.json");
@@ -33,9 +35,9 @@ function main() {
         writeFileSync(seedFile, JSON.stringify({ seed: randomBytes(8).toString("hex"), fraction: HOLDOUT_FRACTION, createdAt: new Date().toISOString() }, null, 2) + "\n");
         console.log(`wrote ${seedFile}`);
     }
-    const seed = readSeed();
+    const seed = readSeed(); // one seed for every folder: a sample is holdout or not by its id alone
     let changed = 0;
-    for (const file of jsonFiles(dataDir)) {
+    for (const file of jsonFiles(dirArg(process.argv, dataDir))) {
         const parsed = JSON.parse(readFileSync(file, "utf8"));
         const list = Array.isArray(parsed) ? parsed : [parsed];
         let dirty = false;
