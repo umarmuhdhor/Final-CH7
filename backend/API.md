@@ -507,7 +507,7 @@ all text.
 |---|---|---|
 | none (extensions before X1) | the fence: score ≥ 30, `blocked` only from 50 | `blocked` under 50 |
 | the current version | `warning` from `warnAt`, `blocked` from `blockAt` | score < `warnAt`, or the status does not match |
-| another version (a cached older value) | the fence | `blocked` under 50 |
+| any other version (usually a cached older value) | the fence | `blocked` under 50 |
 
 Until the admins switch the stored thresholds live, `GET /config/public` returns 30/80 version 0, so
 an extension that sends version 0 is held to the old 30/80 rule.

@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(18);
+select plan(25);
 
 -- postgres cannot `set role shoo_api` on Supabase, so access is checked with has_*_privilege here;
 -- the API tests read the view as shoo_api (backend/api/test/config-public.test.ts).
@@ -59,6 +59,33 @@ select is((select count(*)::int from scans where owner_id = 't05_p' and threshol
   'thresholds_version stays null when not sent (old scans are not recomputed, Q48)');
 select is((select count(*)::int from pg_constraint where conrelid = 'scans'::regclass and conname = 'scans_check'), 0,
   'the strict 80 rule is gone from the DB');
+
+-- Edges of the fence and of the kept score range.
+select lives_ok(
+  $$insert into scans (owner_id, url, domain, score, status, detected_at, thresholds_version)
+    values ('t05_p', 'https://a.example', 'a.example', 50, 'blocked', now(), 0)$$,
+  'blocked at exactly 50, version 0 (the pre-live value) accepted');
+select throws_ok(
+  $$insert into scans (owner_id, url, domain, score, status, detected_at)
+    values ('t05_p', 'https://a.example', 'a.example', 49, 'blocked', now())$$,
+  '23514', null, 'blocked at 49 rejected');
+select lives_ok(
+  $$insert into scans (owner_id, url, domain, score, status, detected_at)
+    values ('t05_p', 'https://a.example', 'a.example', 30, 'warning', now())$$,
+  'warning at 30 accepted');
+select throws_ok(
+  $$insert into scans (owner_id, url, domain, score, status, detected_at)
+    values ('t05_p', 'https://a.example', 'a.example', 101, 'blocked', now())$$,
+  '23514', null, 'score 101 still rejected');
+
+select is((select string_agg(conname, ',' order by conname) from pg_constraint
+            where conrelid = 'scans'::regclass and conname in ('scans_blocked_floor', 'scans_thresholds_version_check')
+              and convalidated), 'scans_blocked_floor,scans_thresholds_version_check',
+  'both new checks are validated (second migration file)');
+select col_type_is('public', 'scans', 'thresholds_version', 'integer', 'thresholds_version is integer');
+select ok((select not attnotnull and not atthasdef from pg_attribute
+            where attrelid = 'scans'::regclass and attname = 'thresholds_version'),
+  'thresholds_version is nullable with no default (no table rewrite)');
 
 select * from finish();
 rollback;

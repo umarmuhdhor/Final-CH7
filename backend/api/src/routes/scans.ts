@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import * as z from "zod";
 import type { AppEnv } from "../env";
-import { publicThresholds } from "../db/repo/config";
+import { type PublicThresholds, publicThresholds } from "../db/repo/config";
 import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/scans";
 import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
@@ -121,9 +121,16 @@ scans.post("/scans", async (c) => {
   const body = await readJson(c, scanBody, maxRequestBytes(c.req.method, c.req.path));
   // K1: a scan decided with the active thresholds must match them exactly; another version (a stale
   // cache) or none (an older extension) only has to respect the fence above.
+  // The lookup reads the admin schema; if it fails, the scan is still stored under the fence (a 500
+  // would make the extension retry and could lose the scan and its push).
   if (body.thresholdsVersion !== undefined) {
-    const t = await publicThresholds(sql);
-    if (body.thresholdsVersion === t.version && (body.score < t.warnAt || body.status !== (body.score >= t.blockAt ? "blocked" : "warning"))) {
+    let t: PublicThresholds | undefined;
+    try {
+      t = await publicThresholds(sql);
+    } catch (err) {
+      console.error(JSON.stringify({ event: "thresholds_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
+    }
+    if (t && body.thresholdsVersion === t.version && (body.score < t.warnAt || body.status !== (body.score >= t.blockAt ? "blocked" : "warning"))) {
       throw errors.invalidBody(`status: does not match thresholds version ${t.version} (warning from ${t.warnAt}, blocked from ${t.blockAt})`);
     }
   }

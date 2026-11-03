@@ -2,20 +2,24 @@
 // extension used. No version: the fence only (warning >= 30, blocked >= 50), so an extension that
 // reads /config/public but sends no version is never refused. Active version: exact match. Another
 // version (a stale cache): the fence.
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
-import { DEFAULT_THRESHOLDS, setThresholds } from "./helpers/thresholds";
+import { NOT_LIVE, readThresholds, setThresholds, type Thresholds } from "./helpers/thresholds";
 
 const sql = testSql();
 let p: Created;
 beforeEach(async () => {
   await resetDb(sql);
-  await setThresholds(DEFAULT_THRESHOLDS);
+  await setThresholds(NOT_LIVE);
   p = await createDevice("Mom", "protected");
 });
-afterEach(() => setThresholds(DEFAULT_THRESHOLDS));
+let before: Thresholds;
+beforeAll(async () => {
+  before = await readThresholds();
+});
+afterAll(() => setThresholds(before));
 
 const body = (score: number, status: string, thresholdsVersion?: unknown) => ({
   url: blocked92.url, domain: blocked92.domain, pageTitle: blocked92.pageTitle, faviconUrl: null,
@@ -50,9 +54,9 @@ describe("POST /scans thresholdsVersion (K1)", () => {
     ]);
   });
 
-  it("another version (stale cache): the fence", async () => {
+  it("any other version (stale cache, or one never issued): the fence", async () => {
     await setThresholds({ live: true, warnAt: 35, blockAt: 70, version: 7 });
-    await cases([[75, "warning", 6, 201], [55, "blocked", 6, 201], [45, "blocked", 6, 422]]);
+    await cases([[75, "warning", 6, 201], [55, "blocked", 6, 201], [45, "blocked", 6, 422], [75, "warning", 9, 201]]);
   });
 
   it("thresholdsVersion must be a non-negative integer", async () => {
@@ -65,8 +69,20 @@ describe("POST /scans thresholdsVersion (K1)", () => {
     expect(rows.map((r) => r.v)).toEqual([0, null]);
   });
 
+  it("a failed thresholds lookup stores the scan under the fence instead of failing it", async () => {
+    const admin = adminSql();
+    await admin`revoke select on admin.public_config from shoo_api`;
+    try {
+      await cases([[85, "warning", 0, 201], [45, "blocked", 0, 422]]);
+    } finally {
+      await admin`grant select on admin.public_config to shoo_api`;
+    }
+  });
+
   it("422 names the field", async () => {
     const res = await post(79, "blocked", 0);
-    expect(await res.json()).toMatchObject({ error: { code: "invalid_body" } });
+    const { error } = (await res.json()) as { error: { code: string; message: string } };
+    expect(error.code).toBe("invalid_body");
+    expect(error.message).toMatch(/^status: does not match thresholds version 0 \(warning from 30, blocked from 80\)/);
   });
 });

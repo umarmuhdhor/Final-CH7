@@ -1,20 +1,24 @@
 // Dashboard phase 05 (W12, K3, I12): GET /config/public serves admin.public_config to the extension.
 // The thresholds are set in the admin dashboard; while thresholds_live is off the view publishes the
 // built-in 30/80 with version 0.
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice } from "./helpers/seed";
-import { DEFAULT_THRESHOLDS, setThresholds } from "./helpers/thresholds";
+import { NOT_LIVE, readThresholds, setThresholds, type Thresholds } from "./helpers/thresholds";
 
 const sql = testSql();
 let token: string;
 
 beforeEach(async () => {
   await resetDb(sql);
-  await setThresholds(DEFAULT_THRESHOLDS);
+  await setThresholds(NOT_LIVE);
   token = (await createDevice()).token;
 });
-afterEach(() => setThresholds(DEFAULT_THRESHOLDS));
+let before: Thresholds;
+beforeAll(async () => {
+  before = await readThresholds();
+});
+afterAll(() => setThresholds(before));
 
 type Body = { warnAt: number; blockAt: number; version: number; updatedAt: string };
 const get = async () => {
