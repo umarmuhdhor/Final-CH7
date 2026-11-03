@@ -26,8 +26,15 @@ function* jsonFiles(dir) {
     }
 }
 
-function main() {
-    if (process.argv.includes("--init")) {
+function main(argv) {
+    let dir;
+    try {
+        dir = dirArg(argv, dataDir);
+    } catch (e) {
+        console.error(e.message);
+        process.exit(2);
+    }
+    if (argv.includes("--init")) {
         if (existsSync(seedFile)) {
             console.error("HOLDOUT.json already exists: the seed is fixed once recorded (changing it would leak the holdout into tuning)");
             process.exit(2);
@@ -37,7 +44,7 @@ function main() {
     }
     const seed = readSeed(); // one seed for every folder: a sample is holdout or not by its id alone
     let changed = 0;
-    for (const file of jsonFiles(dirArg(process.argv, dataDir))) {
+    for (const file of jsonFiles(dir)) {
         const parsed = JSON.parse(readFileSync(file, "utf8"));
         const list = Array.isArray(parsed) ? parsed : [parsed];
         let dirty = false;
@@ -57,4 +64,4 @@ function main() {
     console.log(`seed ${seed}: ${changed} file(s) updated`);
 }
 
-if (isMain(import.meta.url)) main();
+if (isMain(import.meta.url)) main(process.argv.slice(2));

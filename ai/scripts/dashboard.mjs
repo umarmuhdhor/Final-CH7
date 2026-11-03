@@ -7,7 +7,7 @@
 const TIMEOUT_MS = 30_000;
 const MAX_BYTES = 32 * 1024 * 1024;
 /** intel.jsonl pages hold 1000 rows; a loop past this many pages is a broken cursor, not a big dataset. */
-const MAX_PAGES = 500;
+const MAX_PAGES = 100;
 
 /** JSON.parse with an error that never quotes the input (node puts a slice of it in the message; logs are public). */
 export function parseJson(text, what) {
@@ -51,6 +51,7 @@ export function createDashboard({ baseUrl, clientId, clientSecret, fetch: http =
         const where = url.pathname; // messages never carry the query: an intel cursor is a domain
         const res = await http(url, { ...init, headers: { ...auth, ...init.headers }, redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) });
         if (!res.ok) throw new Error(`${init.method ?? "GET"} ${where} failed: HTTP ${res.status}`);
+        if (Number(res.headers.get("content-length")) > MAX_BYTES) throw new Error(`${where}: answer larger than ${MAX_BYTES} bytes`);
         const text = await res.text();
         if (text.length > MAX_BYTES) throw new Error(`${where}: answer larger than ${MAX_BYTES} bytes`);
         return { text, headers: res.headers };

@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
 import { validateSample } from "../lib.mjs";
-import { dashboardFromEnv } from "../../scripts/dashboard.mjs";
+import { dashboardFromEnv, parseJson } from "../../scripts/dashboard.mjs";
 
 export const PRIVATE_DIR = fileURLToPath(new URL("../private", import.meta.url));
 const ID = /^dash-[0-9a-f]{12}$/;
@@ -56,7 +56,7 @@ export function knownIds(dir) {
     const ids = new Set();
     for (const name of readdirSync(dir)) {
         if (!name.endsWith(".json") || name === "HOLDOUT.json") continue;
-        const parsed = JSON.parse(readFileSync(join(dir, name), "utf8"));
+        const parsed = parseJson(readFileSync(join(dir, name), "utf8"), name); // never quotes the file (it holds domains)
         for (const s of Array.isArray(parsed) ? parsed : [parsed]) if (typeof s?.id === "string") ids.add(s.id);
     }
     return ids;

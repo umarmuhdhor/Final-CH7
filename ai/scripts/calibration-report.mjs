@@ -11,13 +11,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { isMain } from "../eval/tools/is-main.mjs";
 import { dashboardFromEnv, parseJson } from "./dashboard.mjs";
+import { isKnownSignal } from "../src/signal-ids.js";
 
 export const LABELS = Object.freeze({ scam_strong: "scam", scam_weak: "scam", safe: "safe" });
 /** Below this many domains in the denominator a ratio is shown as "–": a percent of 3 domains misleads. */
 export const MIN_DENOMINATOR = 5;
-/** A signal id is listed on its own only if it looks like one of ours and was seen on this many labelled domains. */
-export const MIN_DOMAINS_PER_ID = 3;
-const ID = /^[a-z][a-z0-9_]{1,39}$/;
 const OTHER = "(other)";
 
 /**
@@ -26,7 +24,7 @@ const OTHER = "(other)";
  */
 export function calibrate(rows) {
     const totals = { scam: 0, safe: 0, unlabelled: 0 };
-    const seen = new Map(); // id -> { scam, safe } domains that had it at least once
+    const seen = new Map(); // key -> { scam, safe }: domains that had it at least once
     for (const r of rows) {
         const side = Object.hasOwn(LABELS, r?.label) ? LABELS[r.label] : null;
         if (!side) {
@@ -35,25 +33,18 @@ export function calibrate(rows) {
         }
         totals[side] += 1;
         const signals = r.signals && typeof r.signals === "object" ? r.signals : {};
-        for (const [id, n] of Object.entries(signals)) {
-            if (!(Number(n) > 0)) continue;
-            const c = seen.get(id) ?? { scam: 0, safe: 0 };
+        // Ids come from scans, i.e. from clients: only ids Shoo emits get a row of their own, everything else is one
+        // "(other)" row, so a public report can never be used to publish a string. A domain counts once per row.
+        const keys = new Set();
+        for (const [id, n] of Object.entries(signals)) if (Number(n) > 0) keys.add(isKnownSignal(id) ? id : OTHER);
+        for (const key of keys) {
+            const c = seen.get(key) ?? { scam: 0, safe: 0 };
             c[side] += 1;
-            seen.set(id, c);
+            seen.set(key, c);
         }
     }
-    // Ids come from scans, i.e. from clients: anything that does not look like ours, or that only a couple of domains
-    // carry, is folded into one row so a public report cannot be used to publish a string.
-    const merged = new Map();
-    for (const [id, c] of seen) {
-        const key = ID.test(id) && c.scam + c.safe >= MIN_DOMAINS_PER_ID ? id : OTHER;
-        const m = merged.get(key) ?? { scam: 0, safe: 0 };
-        m.scam += c.scam;
-        m.safe += c.safe;
-        merged.set(key, m);
-    }
     const ratio = (n, d) => (d >= MIN_DENOMINATOR ? n / d : null);
-    const signals = [...merged]
+    const signals = [...seen]
         .map(([id, c]) => ({ id, scam: c.scam, safe: c.safe, precision: ratio(c.scam, c.scam + c.safe), recall: ratio(c.scam, totals.scam), safeRate: ratio(c.safe, totals.safe) }))
         .sort((a, b) => (a.id === OTHER) - (b.id === OTHER) || (a.id < b.id ? -1 : 1));
     return { ...totals, signals };
@@ -64,15 +55,18 @@ const pct = (v) => (v === null ? "–" : `${Math.round(v * 100)}%`);
 /** Markdown; numbers and signal ids only. */
 export function renderReport(result, { date, since = null }) {
     const look = result.signals.filter((s) => s.id !== OTHER && s.precision !== null && s.precision < 0.5);
+    // `(other)` sums ids that are not ours: its counts are real domains, but a ratio over a mix of ids means nothing.
+    const shown = result.signals.map((s) => (s.id === OTHER ? { ...s, precision: null, recall: null, safeRate: null } : s));
     return [
         `# Calibration report ${date}`,
         "",
         `Labelled domains${since ? ` seen since ${since}` : ""}: ${result.scam} scam (strong + weak), ${result.safe} safe; ${result.unlabelled} without a label were skipped.`,
-        `Counts are domains, not scans. Ratios need at least ${MIN_DENOMINATOR} domains, else "–".`,
+        `Counts are domains, not scans. Ratios need at least ${MIN_DENOMINATOR} domains, else "–".` +
+            (result.scam + result.safe >= MIN_DENOMINATOR ? ` Base rate: ${pct(result.scam / (result.scam + result.safe))} of labelled domains are scam, so a precision near that says the signal does not separate them.` : ""),
         "",
         "| Signal | Scam domains | Safe domains | Precision | Recall | Safe domains hit |",
         "|---|---:|---:|---:|---:|---:|",
-        ...result.signals.map((s) => `| \`${s.id}\` | ${s.scam} | ${s.safe} | ${pct(s.precision)} | ${pct(s.recall)} | ${pct(s.safeRate)} |`),
+        ...shown.map((s) => `| \`${s.id}\` | ${s.scam} | ${s.safe} | ${pct(s.precision)} | ${pct(s.recall)} | ${pct(s.safeRate)} |`),
         "",
         "Precision = scam / (scam + safe) among domains with the signal. Recall = share of scam domains with it. " +
             "Safe domains hit = share of safe domains with it.",

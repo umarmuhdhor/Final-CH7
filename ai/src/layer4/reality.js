@@ -126,14 +126,14 @@ function buildSignal(evidence, score) {
  * @param {{ config: object, fetch: typeof fetch, now?: () => number, clientCallsPerHour?: number }} deps
  *   clientCallsPerHour: per-IP limit on LLM calls. `Infinity` turns it off (local eval: every request comes from one
  *   "unknown" client); the daily cap stays the breaker.
- * @returns {{ meta: object, stats(): object, check(snapshot: object, ctx: { official: boolean, score: number, ruleIds: string[], deadlineMs?: number, report?: object, cases?: object | null }): Promise<object | null> }}
+ * @returns {{ meta: object, stats(): object, check(snapshot: object, ctx: { official: boolean, score: number, ruleIds: string[], deadlineMs?: number, report?: object, loadCases?: () => Promise<object | null> }): Promise<object | null> }}
  */
 export function createRealityCheck({ config, fetch, now = Date.now, clientCallsPerHour = CLIENT_CALLS_PER_HOUR }) {
     const ask = createProvider({ config, fetch });
     const perClient = Number.isFinite(clientCallsPerHour) ? createRateLimiter({ limit: clientCallsPerHour, windowMs: 60 * 60 * 1000, now }) : () => ({ ok: true });
     const outcomes = Object.fromEntries(OUTCOMES.map((k) => [k, 0]));
     const tokens = { in: 0, out: 0 }; // since this checker was built, like the outcomes
-    let casesVersion = null; // the case set the last call was given (null = none)
+    let casesVersion = null; // the case set of the last call that was made (null = none)
     const count = (outcome, result) => {
         outcomes[outcome] += 1;
         return result;
@@ -158,19 +158,25 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
         stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, casesVersion, outcomes: { ...outcomes }, tokens: { ...tokens } }),
         /**
          * `report` (optional, src/usage.js): this request's outcome, tokens and LLM ms for the ai_usage point.
-         * `cases` (optional, layer4/cases.js): the active case set, or null when the case library is off.
+         * `loadCases` (optional, layer4/cases.js loader): called only for a call that will be made; null or a set.
          */
-        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs, report = null, cases = null }) {
-            casesVersion = cases?.version ?? null;
+        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs, report = null, loadCases = null }) {
             const end = (outcome, result = null) => {
                 if (report) report.outcome = outcome;
                 return count(outcome, result);
             };
             if (!passesGate({ official, score })) return end("gated");
+            if (!registrableDomain(hostOf(snapshot.url))) return end("gated"); // not a public domain: nothing sensible to judge, nothing to send
+            if (Math.min(config.timeoutMs, deadlineMs) <= 0 || !perClient(client).ok || !withinCap()) return end("capped");
+            const loadStarted = now();
+            const cases = loadCases ? await loadCases().catch(() => null) : null; // cached; a cold load waits at most 300 ms
+            if (cases) {
+                casesVersion = cases.version;
+                if (report) report.casesVersion = cases.version;
+            }
             const input = buildInput(snapshot, ruleIds, localSignals, cases ? casesForModel(cases) : null);
-            if (!input.site) return end("gated"); // not a public domain: nothing sensible to judge, nothing to send
-            const budget = Math.min(config.timeoutMs, deadlineMs);
-            if (budget <= 0 || !perClient(client).ok || !withinCap()) return end("capped");
+            const budget = Math.min(config.timeoutMs, deadlineMs - (now() - loadStarted));
+            if (budget <= 0) return end("capped");
             const messages = [
                 { role: "system", content: SYSTEM_PROMPT },
                 { role: "user", content: `DATA_START\n${JSON.stringify(input)}\nDATA_END` },

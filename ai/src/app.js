@@ -150,8 +150,9 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const checked = validateRequest(body);
         if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         const checker = llm ?? llmFor(c.env);
-        const cases = checker ? (fixedCases ?? (await loadCases(c.env))) : null; // KV read at most once per 10 min per isolate
-        const report = createUsageReport({ hasLayer4: !!checker, casesVersion: cases?.version });
+        const report = createUsageReport({ hasLayer4: !!checker });
+        // Cases are loaded by the checker only once the gate passed (layer4/cases.js: cached, at most 300 ms on a cold load).
+        const cases = fixedCases ? async () => fixedCases : () => loadCases(c.env, waitUntilOf(c));
         const signals = await analyze(checked.snapshot, {
             rdap: watchRdap(rdapFor(c), report),
             llm: watchLlm(checker, report, cases),

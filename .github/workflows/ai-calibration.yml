@@ -1,8 +1,9 @@
 # Weekly calibration report (admin dashboard 05b K5, X3): counts and ratios per signal id from the dashboard's intel
 # export, opened as a PR for Team AI. Weights are never changed here. OFF until the repo variable
 # AI_CALIBRATION_ENABLED is 'true' (that waits for the PM answer on learning from family decisions).
-# Needs: secrets CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET (Access service token, scope export:read only),
-# variable SHOO_ADMIN_URL (https://<name>.<account>.workers.dev), and "Allow GitHub Actions to create pull requests".
+# Needs: a GitHub Environment "ai-calibration" limited to the main branch, holding the secrets CF_ACCESS_CLIENT_ID /
+# CF_ACCESS_CLIENT_SECRET (Access service token, scope export:read only), so a workflow pushed on another branch cannot
+# read them; the variable SHOO_ADMIN_URL (https://<name>.<account>.workers.dev); "Allow GitHub Actions to create pull requests".
 # This repo is public, so its logs are too: the script prints counts only, and nothing is uploaded as an artifact.
 name: ai-calibration
 
@@ -22,6 +23,7 @@ jobs:
     if: vars.AI_CALIBRATION_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: ai-calibration
     permissions:
       contents: read
     outputs:
@@ -69,6 +71,10 @@ jobs:
           branch="ai-calibration/${DATE}"
           mkdir -p ai/eval/reports
           printf '%s' "$REPORT" | base64 -d > "$file"
+          # Commit only what the script is meant to write: small, the expected title, plain table characters.
+          [[ "$(wc -c < "$file")" -lt 65536 ]] || { echo "report too large"; exit 1; }
+          [[ "$(head -n 1 "$file")" == "# Calibration report ${DATE}" ]] || { echo "unexpected report title"; exit 1; }
+          if LC_ALL=C grep -q '[^][A-Za-z0-9 _`|:;%.,()"#+*/=–-]' "$file"; then echo "unexpected characters in report"; exit 1; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"

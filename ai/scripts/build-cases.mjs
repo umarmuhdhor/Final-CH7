@@ -4,62 +4,63 @@
 //   node ai/scripts/build-cases.mjs                 (SHOO_ADMIN_URL + CF_ACCESS_* with scope export:read)
 //   node ai/scripts/build-cases.mjs --input cases.json
 //
-// Writes ai/eval/private/cases-<version>.json (gitignored) and prints the next steps (counts and the version only). It writes nothing to KV itself:
+// Writes ai/eval/private-out/cases-<version>.json (gitignored) and prints the next steps (counts and the version only). It writes nothing to KV itself:
 // a set goes live only after an eval with it (CASES_FILE on the dev server) and two explicit wrangler commands.
 // Kept per case: id, rule ids, label, category. Dropped: domain, admin note, counters, pins, the dashboard's lessons
 // (lessons never reach the prompt automatically, X5). The version is the first 8 hex of SHA-256 over the kept cases, so the
 // same library always gives the same version.
-import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "../eval/tools/is-main.mjs";
-import { parseCases, ACTIVE_KEY } from "../src/layer4/cases.js";
+import { verifyCases, versionOf, ACTIVE_KEY, MAX_RULES, MAX_STORED } from "../src/layer4/cases.js";
+import { isKnownSignal } from "../src/signal-ids.js";
 import { dashboardFromEnv, parseJson } from "./dashboard.mjs";
 
 const AI_DIR = fileURLToPath(new URL("..", import.meta.url));
-const PRIVATE_DIR = join(AI_DIR, "eval", "private");
-const RULE = /^[a-z][a-z0-9_]{1,39}$/;
+// Not ai/eval/private/: that folder holds only eval samples, and the eval tools rewrite every JSON file in it.
+export const OUT_DIR = join(AI_DIR, "eval", "private-out");
 const CATEGORY = /^[a-z][a-z0-9_]{0,39}$/;
 const LABELS = new Set(["scam_strong", "scam_weak", "safe"]);
-const MAX_RULES = 20;
-const MAX_CASES = 200;
 
 /**
  * @param {{ cases: object[] }} exported body of GET /api/export/cases.json
- * @returns {{ version: string, cases: { id: number, rules: string[], label: string, category: string | null }[] }}
+ * @returns {Promise<{ version: string, cases: { id: number, rules: string[], label: string, category: string | null }[] }>}
  */
-export function buildCaseSet(exported) {
+export async function buildCaseSet(exported) {
     if (!exported || !Array.isArray(exported.cases)) throw new Error("cases.json has no cases list");
     const cases = [];
+    const ids = new Set();
     for (const c of exported.cases) {
         const id = Number(c?.id);
-        if (!Number.isInteger(id) || id <= 0 || !LABELS.has(c.label)) continue;
+        if (!Number.isInteger(id) || id <= 0 || ids.has(id) || !LABELS.has(c.label)) continue;
         const counts = c.signals && typeof c.signals === "object" ? c.signals : {};
         const rules = Object.entries(counts)
-            .filter(([r, n]) => RULE.test(r) && Number(n) > 0)
+            .filter(([r, n]) => isKnownSignal(r) && Number(n) > 0) // ids come from scans: only ids Shoo emits
             .sort(([a, x], [b, y]) => Number(y) - Number(x) || (a < b ? -1 : 1))
             .slice(0, MAX_RULES)
             .map(([r]) => r)
             .sort();
         if (!rules.length) continue; // nothing to compare a page with
+        ids.add(id);
         cases.push({ id, rules, label: c.label, category: typeof c.category === "string" && CATEGORY.test(c.category) ? c.category : null });
-        if (cases.length >= MAX_CASES) break;
+        if (cases.length >= MAX_STORED) break;
     }
     // Export order is kept (pinned first, newest next): layer 4 shows the model the first MAX_CASES of them.
-    const version = createHash("sha256").update(JSON.stringify(cases)).digest("hex").slice(0, 8);
-    const set = { version, cases };
-    if (!parseCases(set)) throw new Error("built set does not pass parseCases"); // the Worker would refuse it
+    if (!cases.length) throw new Error("no usable case in cases.json");
+    const set = { version: await versionOf(cases), cases };
+    if (!(await verifyCases(set))) throw new Error("built set does not pass verifyCases"); // the Worker would refuse it
     return set;
 }
 
 async function main(argv) {
     const inputAt = argv.indexOf("--input");
+    if (inputAt !== -1 && !argv[inputAt + 1]) throw new Error("--input needs a file");
     const exported =
         inputAt === -1 ? await dashboardFromEnv().getJson("/api/export/cases.json") : parseJson(readFileSync(argv[inputAt + 1], "utf8"), "--input");
-    const set = buildCaseSet(exported);
-    mkdirSync(PRIVATE_DIR, { recursive: true });
-    const file = join(PRIVATE_DIR, `cases-${set.version}.json`);
+    const set = await buildCaseSet(exported);
+    mkdirSync(OUT_DIR, { recursive: true });
+    const file = join(OUT_DIR, `cases-${set.version}.json`);
     writeFileSync(file, JSON.stringify(set, null, 2) + "\n");
     const rel = relative(AI_DIR, file); // commands below run from ai/
     console.log(

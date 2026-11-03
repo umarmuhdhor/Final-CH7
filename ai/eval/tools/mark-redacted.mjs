@@ -2,7 +2,7 @@
 // For the OWNER, after reading the sample files:  node ai/eval/tools/mark-redacted.mjs --confirm-read --ids a,b,c   (or --all)
 //   --dir <path>   another sample folder (default ai/eval/data), e.g. ai/eval/private from import-dashboard.mjs
 // Sets "redacted": true on real samples. Refuses a sample that still has a finding from check-redaction. An agent must not run this.
-import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./is-main.mjs";
@@ -10,16 +10,15 @@ import { findPersonalData } from "./check-redaction.mjs";
 
 const defaultDir = fileURLToPath(new URL("../data", import.meta.url));
 
-/** `--dir <path>` or the default folder; exits on a flag without a value. */
+/** `--dir <path>` or the default folder. Throws on a flag without a value or a folder that does not exist. */
 export function dirArg(argv, fallback) {
     const at = argv.indexOf("--dir");
     if (at === -1) return fallback;
     const v = argv[at + 1];
-    if (!v || v.startsWith("--")) {
-        console.error("--dir needs a folder");
-        process.exit(2);
-    }
-    return resolve(v);
+    if (!v || v.startsWith("--")) throw new Error("--dir needs a folder");
+    const dir = resolve(v);
+    if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new Error(`--dir: no such folder ${v}`);
+    return dir;
 }
 
 /** @returns {{marked: string[], refused: string[]}} mutates the samples that qualify */
@@ -58,7 +57,13 @@ function main() {
         process.exit(2);
     }
     const ids = idArg ? idArg.split(",") : null;
-    const dataDir = dirArg(argv, defaultDir);
+    let dataDir;
+    try {
+        dataDir = dirArg(argv, defaultDir);
+    } catch (e) {
+        console.error(e.message);
+        process.exit(2);
+    }
     let total = 0;
     for (const file of jsonFiles(dataDir)) {
         const parsed = JSON.parse(readFileSync(file, "utf8"));
