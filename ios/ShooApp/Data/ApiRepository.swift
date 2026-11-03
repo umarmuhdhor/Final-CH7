@@ -9,8 +9,9 @@ final class ApiRepository: ShooRepository {
     private let session: SessionStore
     /// The last family code, in memory only, for the device that got it. Home, Profile and onboarding
     /// each open their own code screen; they share this one instead of each asking the server, which
-    /// allows 6 asks a minute (contracts/api.md).
-    private let lastCode = OSAllocatedUnfairLock<(deviceId: String, code: FamilyCode)?>(initialState: nil)
+    /// allows 6 asks a minute (contracts/api.md). `fetchedAt` and `endsAt` are on the phone's clock
+    /// (issue #227): the server's `expiresAt` is only trusted for how long is left, at most 30 min.
+    private let lastCode = OSAllocatedUnfairLock<CachedCode?>(initialState: nil)
     private let now: @Sendable () -> Date
 
     init(client: APIClient, session: SessionStore, now: @escaping @Sendable () -> Date = Date.init) {
@@ -75,17 +76,34 @@ final class ApiRepository: ShooRepository {
         let deviceId = session.deviceId
         // The server would hand back this same code while more than 5 min is left (contracts/api.md).
         if !refresh, let deviceId, let cached = lastCode.withLock({ $0 }), cached.deviceId == deviceId,
-           cached.code.expiresAt.timeIntervalSince(now()) > Self.codeReuseSeconds {
+           cached.isReusable(at: now()) {
             return cached.code
         }
         // No body for the usual case (allowed by the contract): the server hands out the active code.
         let code: FamilyCode = try await client.send(.init(method: .post, path: ["family", "code"], body: refresh ? Body(refresh: true) : nil))
-        lastCode.withLock { $0 = deviceId.map { ($0, code) } }
+        let cached = deviceId.map { CachedCode(deviceId: $0, code: code, fetchedAt: now()) }
+        lastCode.withLock { $0 = cached }
         return code
     }
 
     /// Same as the server's `REUSE_MIN_SECONDS`.
     static let codeReuseSeconds: TimeInterval = 5 * 60
+
+    struct CachedCode: Sendable {
+        var deviceId: String
+        var code: FamilyCode
+        var fetchedAt: Date
+        /// `fetchedAt` + what the server says is left, clamped to 0…30 min: a phone clock behind the
+        /// server's never stretches it, one ahead makes it 0 (asks the server again).
+        var endsAt: Date {
+            fetchedAt.addingTimeInterval(min(max(code.expiresAt.timeIntervalSince(fetchedAt), 0), FamilyCodeModel.codeLifetime))
+        }
+
+        /// More than 5 min left, and the clock was not set back since the code came.
+        func isReusable(at now: Date) -> Bool {
+            now >= fetchedAt && endsAt.timeIntervalSince(now) > ApiRepository.codeReuseSeconds
+        }
+    }
 
     func joinFamily(code: String) async throws -> GuardianInfo {
         struct Body: Encodable, Sendable { var code: String }
