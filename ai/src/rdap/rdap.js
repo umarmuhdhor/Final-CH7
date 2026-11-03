@@ -8,8 +8,8 @@ import { registrableDomain, isPublicHostname } from "./domain.js";
 import { SUCCESS_TTL_MS, FAIL_TTL_MS } from "./cache.js";
 
 export const BOOTSTRAP_URL = "https://data.iana.org/rdap/dns.json";
-/** D-imelda-08: RDAP timeout. Covers bootstrap + domain lookup together. */
-export const TIMEOUT_MS = 1500;
+/** D-imelda-08, shortened by D-imelda-47: RDAP timeout. Covers bootstrap + domain lookup together. Layer 4 waits for it. */
+export const TIMEOUT_MS = 1000;
 const MAX_BOOTSTRAP_BYTES = 1_500_000;
 const MAX_RDAP_BYTES = 256 * 1024;
 const BOOTSTRAP_FAIL_TTL_MS = 60_000;

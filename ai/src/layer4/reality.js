@@ -16,9 +16,10 @@ import { createRateLimiter } from "../ratelimit.js";
 import { createProvider } from "./provider.js";
 import { parseVerdict } from "./schema.js";
 
-export const WEIGHT = 30; // plan/imelda/ref/R1: starting proposal, tuned in phase 07
-export const MIN_CONFIDENCE = 0.6;
-export const GATE_MIN_SCORE = 15; // D-imelda-05 (in force)
+export const WEIGHT = 30; // the least a flag adds; more when that is what it takes to reach GATE_BLOCK_SCORE (D-imelda-48)
+export const MIN_CONFIDENCE = 0.7; // D-imelda-49: a flag now blocks the page, and 0.7 catches as many scams as 0.6 did
+export const GATE_MIN_SCORE = 30; // total of layers 1-3 (D-imelda-46): below this nothing is shown, no reason to pay for a call
+export const GATE_BLOCK_SCORE = 80; // at this total the extension blocks without asking anyone, so the LLM is skipped
 export const CLIENT_CALLS_PER_HOUR = 20; // per IP; /analyze itself gets its limit in phase 08
 /** How each check ended. Counts only: no page data (SECURITY A1). */
 export const OUTCOMES = Object.freeze(["gated", "capped", "timeout", "http_error", "bad_schema", "reasonable", "flagged"]);
@@ -38,13 +39,14 @@ const clean = (s, max) =>
         .slice(0, max);
 
 /**
- * Gate (D-imelda-05): not an official site, a form with at least one field, rule score >= 15.
- * `score` is OUR rules' score only: numbers sent by the client must not decide who costs money.
+ * Gate (D-imelda-46, D-imelda-48): not an official site and a total score in 30..79, with or without a form.
+ * `score` is the total of layers 1-3: the client's layer 1-2 signals plus OUR layer 3 (rules + domain age).
+ * The LLM only settles the unclear middle: under 30 nothing is shown, from 80 the page is blocked anyway.
+ * A page without fields has no `asks` for the model to name, so with today's prompt that call cannot flag it.
  */
-export function passesGate(snapshot, { official, score }) {
+export function passesGate({ official, score }) {
     if (official) return false;
-    if (!snapshot.forms.some((f) => f.fields.length > 0)) return false;
-    return score >= GATE_MIN_SCORE;
+    return score >= GATE_MIN_SCORE && score < GATE_BLOCK_SCORE;
 }
 
 /**
@@ -106,11 +108,12 @@ function evidenceFrom(candidate, snapshot) {
     return hit ? evidenceOf(text, hit) : undefined;
 }
 
-function buildSignal(evidence) {
+/** A flag always ends at the block line or above: +30, or the rest of the way to 80. `score` can be a client's fraction, weights are integers. */
+function buildSignal(evidence, score) {
     return {
         id: "unreasonable_request",
         layer: 4,
-        weight: WEIGHT,
+        weight: Math.max(WEIGHT, Math.ceil(GATE_BLOCK_SCORE - score)),
         label: { en: "The data requested does not fit this kind of page", id: "Data yang diminta tidak wajar untuk jenis halaman ini" },
         labelSimple: { en: "A real page of this kind would not ask for this", id: "Halaman asli seperti ini tidak akan meminta ini" },
         ...(evidence ? { evidence } : {}),
@@ -150,7 +153,7 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
         /** Outcome counters since this checker was built (one Worker isolate). A wrong model or key shows up as http_error / bad_schema, not as "always reasonable". */
         stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, outcomes: { ...outcomes } }),
         async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs }) {
-            if (!passesGate(snapshot, { official, score })) return end("gated");
+            if (!passesGate({ official, score })) return end("gated");
             const input = buildInput(snapshot, ruleIds, localSignals);
             if (!input.site) return end("gated"); // not a public domain: nothing sensible to judge, nothing to send
             const budget = Math.min(config.timeoutMs, deadlineMs);
@@ -173,7 +176,7 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
                 const verdict = parseVerdict(answer.content);
                 if (!verdict) return end("bad_schema");
                 if (verdict.reasonable || verdict.confidence < MIN_CONFIDENCE || verdict.asks.length === 0) return end("reasonable");
-                return end("flagged", buildSignal(evidenceFrom(verdict.evidence, snapshot)));
+                return end("flagged", buildSignal(evidenceFrom(verdict.evidence, snapshot), score));
             } catch {
                 return end("http_error");
             } finally {

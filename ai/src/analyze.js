@@ -21,15 +21,18 @@ function rules(snapshot, official, impersonation = false) {
     return strongestFirst([...forms, ...contentSignals(snapshot, { official, asksData: forms.length > 0 || impersonation })]);
 }
 
-/** True when the extension's own layer 1-2 signals already add up to >= 10 (D-imelda-31). Untrusted numbers: they only change how much WORDS weigh. */
-function looksLikeImpersonation(localSignals) {
-    if (!Array.isArray(localSignals)) return false;
+/** Sum of the extension's own layer 1-2 weights (untrusted numbers; layer 3/4 sent by a client are ignored, we compute those). */
+function localScore(localSignals) {
+    if (!Array.isArray(localSignals)) return 0;
     let sum = 0;
     for (const s of localSignals.slice(0, 30)) {
         if (s && typeof s === "object" && (s.layer === 1 || s.layer === 2) && Number.isFinite(s.weight) && s.weight > 0) sum += Math.min(s.weight, 100);
     }
-    return sum >= 10;
+    return sum;
 }
+
+/** True when layer 1-2 already add up to >= 10 (D-imelda-31): it only changes how much WORDS weigh. */
+const looksLikeImpersonation = (localSignals) => localScore(localSignals) >= 10;
 
 /**
  * Rules only: pure and synchronous, no network. This is the part that must stay under 100 ms CPU.
@@ -54,15 +57,16 @@ export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "
     const official = isOfficialHost(host);
     const age = rdap && !official ? rdap.lookupAgeDays(host).catch(() => null) : Promise.resolve(null);
     const signals = rules(snapshot, official, looksLikeImpersonation(localSignals));
-    // Layer 4 starts right after the rules and runs while RDAP (1.5 s) is still answering. Its budget is what is left of
-    // the deadline, capped by the checker (<= 6 s).
-    // Our rules' weights only, never the client's numbers. But localSignals can lift the WORD weights (impersonation
-    // above), so a client can move this gate score by up to +20 (D-imelda-27). Low risk: the client controls the snapshot anyway.
-    const score = signals.reduce((sum, s) => sum + s.weight, 0);
-    const reality = llm ? llm.check(snapshot, { official, score, ruleIds: signals.map((s) => s.id), localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : Promise.resolve(null);
-    const [days, layer4] = await Promise.all([age, reality]);
-    if (layer4) signals.push(layer4);
+    // D-imelda-46: the LLM only settles the middle. It waits for the domain age (<= 1 s), because new_domain is part of the
+    // layer 1-3 total that decides: total < 30 nothing is shown, total >= 80 the extension blocks, only 30..79 is asked.
+    // The total counts the client's layer 1-2 weights (untrusted, so a client can open or close the gate for its own page;
+    // each call is still capped per IP and per day). Layer 4's budget is what is left of the deadline, capped by the checker (<= 6 s).
+    const days = await age;
     const domainSignal = days === null ? null : buildNewDomainSignal(days);
+    const ruleIds = signals.map((s) => s.id); // before new_domain: the model is not told the domain age, prompt v4 has no wording for it (D-imelda-50)
     if (domainSignal) signals.push(domainSignal);
+    const score = localScore(localSignals) + signals.reduce((sum, s) => sum + s.weight, 0);
+    const layer4 = llm ? await llm.check(snapshot, { official, score, ruleIds, localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : null;
+    if (layer4) signals.push(layer4);
     return strongestFirst(signals);
 }

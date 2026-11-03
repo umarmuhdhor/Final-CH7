@@ -7,7 +7,7 @@ export const FAIL_TTL_MS = 10 * 60_000;
 export const MAX_ENTRIES = 1000;
 /** A registration date does not change, so KV keeps a success for a week: a domain seen every day costs one write a week. */
 export const KV_SUCCESS_TTL_MS = 7 * 24 * 3_600_000;
-/** KV read budget, taken out of the RDAP lookup's 1.5 s deadline (rdap.js). */
+/** KV read budget, taken out of the RDAP lookup's 1 s deadline (rdap.js). */
 export const KV_READ_TIMEOUT_MS = 200;
 /**
  * Per-isolate KV budget per UTC day (the KV Free limits reset at 00:00 UTC). The account has 1,000 writes and
