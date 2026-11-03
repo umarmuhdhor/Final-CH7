@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(103);
+select plan(117);
 
 create function pg_temp.as_admin(q text) returns text language plpgsql as $$
 declare
@@ -125,23 +125,32 @@ select is(pg_temp.as_admin($$select admin.set_config('thresholds_live', 'true', 
   'thresholds_live → true with confirm');
 select is((select warn_at || '/' || block_at || '/' || version from admin.public_config), '35/85/3',
   'public_config publishes the stored values once live');
+select is(pg_temp.as_admin($$select admin.set_thresholds(40, 85, 'a@test', 'ubah saat berlaku', null)$$), '4', 'a change while live');
+select is((select warn_at || '/' || block_at || '/' || version from admin.public_config), '40/85/4',
+  'public_config follows at once while live');
 
-select is(pg_temp.as_admin($$select admin.reset_thresholds('a@test', 'kembali ke bawaan')$$), '4',
+select is(pg_temp.as_admin($$select admin.reset_thresholds('a@test', 'kembali ke bawaan')$$), '5',
   'reset_thresholds → 30/80, version + 1, no confirm');
 select is(pg_temp.as_admin($$select warn_at || '/' || block_at || '/' || version || '/' || live from admin.v_thresholds$$),
-  '30/80/4/true', 'reset stored');
+  '30/80/5/true', 'reset stored');
+select is((select (before ->> 'warn_at') || '>' || (after ->> 'warn_at') || '/' || (after ->> 'version')
+             from admin.admin_audit where action = 'thresholds.reset'), '40>30/5', 'reset audited before/after');
 select is((select count(*)::int from admin.admin_audit where action = 'thresholds.reset' and note = 'kembali ke bawaan'), 1,
   'reset audited');
-select is(pg_temp.as_admin($$select admin.reset_thresholds('a@test', 'kembali ke bawaan')$$), '4', 'reset at the defaults: no new version');
+select is(pg_temp.as_admin($$select admin.reset_thresholds('a@test', 'kembali ke bawaan')$$), '5', 'reset at the defaults: no new version');
+select is(pg_temp.as_admin($$select admin.reset_thresholds('a@test', 'pendek')$$), 'ERR SA003 note_required', 'a no-op still needs the note');
 
 insert into verdicts (owner_id, domain, value, by_device_id, by_name) values ('t_o', 'versi2.test', 'safe', 't_g', 'G');
 select is((select (ai_score is null, thresholds_version)::text from admin.domain_labels where domain = 'versi2.test'),
-  '(t,4)', 'on_verdict v2: the published version after go-live');
+  '(t,5)', 'on_verdict v2: the published version after go-live');
 
 update admin.admin_config set value = 'false' where key = 'thresholds_live';
 delete from admin.domain_labels;
 
 -- ---------------------------------------------------------------- K1: evaluation (hand-computed)
+
+select is(pg_temp.as_admin($$select count(*) || '/' || sum(n) || '/' || coalesce(max(precision)::text, 'null') from admin.v_eval_summary$$),
+  '4/0/null', 'no labels: four period rows of zeros, precision null');
 
 select pg_temp.lab('e1.test', 'p1', 'g1', false, 90, 'blocked', p_age => '1 minute');   -- older answer of the same family: not counted
 select pg_temp.lab('e1.test', 'p1', 'g1', true, 90, 'blocked');    -- TP
@@ -161,6 +170,8 @@ select is(pg_temp.as_admin($$select n || '/' || tp || '/' || fp || '/' || fn || 
   '6/3/1/1/1/1/0.750/0.750', 'K1 all: newest answer per family, analyzed only, warning band = FN/TN');
 select is(pg_temp.as_admin($$select n || '/' || tp || '/' || precision || '/' || recall from admin.v_eval_summary where period = '7d'$$),
   '5/2/0.667/0.667', 'K1 7d: the 40-day-old label is outside');
+select is(pg_temp.as_admin($$select string_agg(period || '=' || n, ',' order by period) from admin.v_eval_summary where period in ('30d', '90d')$$),
+  '30d=5,90d=6', 'K1 30d / 90d windows');
 select is(pg_temp.as_admin($$select outcome || '/' || ai_correct from admin.v_eval_labels where domain = 'e3.test'$$),
   'fn/false', 'v_eval_labels: FN row, AI wrong');
 select is(pg_temp.as_admin($$select coalesce(outcome, 'null') || '/' || coalesce(ai_correct::text, 'null') from admin.v_eval_labels where domain = 'e6.test'$$),
@@ -176,6 +187,16 @@ select is(pg_temp.as_admin($$select tp || '/' || fp || '/' || fn || '/' || tn ||
   '3/1/1/1/0.750/0.750', 'K2: counts at 85');
 select is(pg_temp.as_admin($$select tp || '/' || fp || '/' || fn || '/' || tn from admin.v_eval_curve where period = 'all' and threshold = 95$$),
   '1/0/3/2', 'K2: counts at 95');
+select is(pg_temp.as_admin($$select fn || '/' || tn || '/' || coalesce(recall::text, 'null') from admin.v_eval_curve where period = 'all' and threshold = 30$$),
+  '0/0/null', 'K2: nothing below 30 → recall null, like the summary');
+
+-- A forgotten label (device deleted while a run held it) leaves every evaluation view at once (I11).
+select pg_temp.lab('e7.test', 'pf', 'gf', true, 90, 'blocked');
+insert into admin.label_forget (owner_ref, by_ref) values (admin.owner_ref('gf'), null);
+select is(pg_temp.as_admin($$select count(*)::text from admin.v_eval_labels where domain = 'e7.test'$$), '0', 'I11: forgotten label hidden');
+select is(pg_temp.as_admin($$select n::text from admin.v_eval_summary where period = 'all'$$), '6', 'I11: and not counted');
+delete from admin.label_forget;
+delete from admin.domain_labels where domain = 'e7.test';
 
 -- No warning-band label at all: a miss cannot be seen, so recall is null, never 100 %.
 delete from admin.domain_labels where domain in ('e3.test', 'e4.test');
@@ -272,7 +293,7 @@ select ok(pg_temp.as_admin($$select admin.case_add('kasus-ai.test', 'scam_weak',
 select is(pg_temp.as_admin($$select source || '/' || label || '/' || signal_counts::text from admin.v_cases where domain = 'kasus-ai.test'$$),
   'ai/scam_weak/{"new_domain": 1}', 'v_cases: AI case');
 select is(pg_temp.as_admin($$select admin.case_add('kasus-ai.test', 'scam_weak', null, null, '{}', 'ai:pipeline')$$),
-  'ERR SA009 config_invalid', 'one case per domain');
+  'ERR SA017 case_exists', 'one case per domain');
 select is(pg_temp.as_admin($$select admin.case_add('lain.test', 'maybe', null, null, '{}', 'ai:pipeline')$$),
   'ERR SA009 config_invalid', 'case_add: unknown label');
 select is(pg_temp.as_admin($$select admin.case_add('lain.test', 'scam_weak', 'tidak_ada', null, '{}', 'ai:pipeline')$$),
@@ -299,8 +320,11 @@ select pg_temp.lab('aman2.test', 'p1', 'g1', false, null, null, p_locked => true
 select pg_temp.lab('aman2.test', 'p2', 'g2', false, null, null, p_locked => true);
 select pg_temp.lab('balik.test', 'p1', 'g1', false, null, null, p_locked => true);
 select pg_temp.lab('balik.test', 'p2', 'g2', false, null, null, p_locked => true);
+select pg_temp.lab('pin2.test', 'p1', 'g1', false, null, null, p_locked => true);
+select pg_temp.lab('pin2.test', 'p2', 'g2', false, null, null, p_locked => true);
 
-select is((admin.run_analysis('cron', null) ->> 'ok'), 'true', 'run with step 6');
+select is((select (r ->> 'ok') || '/' || (r ->> 'cases_added') || '/' || coalesce(r ->> 'cases_error', 'null')
+             from admin.run_analysis('cron', null) as x(r)), 'true/4/null', 'run with step 6: four cases added');
 select is(pg_temp.cases('judi'), 'k1.test,k2.test', 'K3: at most case_library_size per category');
 select is(pg_temp.cases('safe'), 'aman2.test,balik.test', 'K3: safe cases from families');
 select is((select count(*)::int from admin.case_library where domain = 'konflik.test'), 0, 'K3: a conflicting label gives no case');
@@ -313,16 +337,28 @@ select is(pg_temp.as_admin(format('select admin.case_delete(%s, %L, %L)', (selec
   'case_delete');
 select is(pg_temp.as_admin($$select admin.case_pin(999999999, true, 'catatan sepuluh+', 'a@test')$$), 'ERR SA002 not_found', 'case_pin: unknown id');
 select pg_temp.admin_lab('balik.test', true, 'judi');                        -- admin now says scam against two safe families
+update admin.domain_intel set signal_counts = '{"new_domain": 5}' where domain = 'k1.test';
 
 select admin.run_analysis('cron', null);
 select is(pg_temp.cases('judi'), 'k1.test,k3.test', 'K3: pinned stays, deleted is not recreated, the free slot is refilled');
 select is((select status from admin.case_library where domain = 'k2.test'), 'deleted', 'the deleted case stays deleted');
 select is((select count(*)::int from admin.case_library where domain = 'balik.test'), 0, 'K3: a case whose label turned conflicting is dropped');
-select is(pg_temp.cases('safe'), 'aman2.test', 'safe group after balik left');
+select is(pg_temp.cases('safe'), 'aman2.test,pin2.test', 'safe group: balik left, its slot refilled');
+select is((select signals::text from admin.case_library where domain = 'k1.test'), '{"new_domain": 5}', 'step 2: signals follow the domain');
+select is(pg_temp.as_admin($$select admin.case_add('k2.test', 'scam_weak', null, null, '{}', 'ai:pipeline')$$),
+  'ERR SA017 case_exists', 'a deleted case cannot come back through case_add either');
+select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, 2, 1, 1)', 'case', (select id from admin.case_library where domain = 'k1.test'))), '',
+  'usage_record for a case');
+select is(pg_temp.as_admin($$select uses || '/' || correct || '/' || wrong from admin.v_cases where domain = 'k1.test'$$), '2/1/1', 'case usage counted');
+
+select admin.case_pin((select id from admin.case_library where domain = 'pin2.test'), true, 'tetap simpan ini', 'a@test');
+select pg_temp.admin_lab('pin2.test', true, null);                          -- pinned, then its label turns conflicting
+select admin.case_add('ai-judi.test', 'scam_weak', 'judi', null, '{}', 'ai:pipeline');
 
 update admin.admin_config set value = '1' where key = 'case_library_size';
 select admin.run_analysis('cron', null);
-select is(pg_temp.cases('judi'), 'k1.test', 'K3: a smaller size trims unpinned analysis cases, the pinned one stays');
+select is(pg_temp.cases('judi'), 'ai-judi.test,k1.test', 'K3: a smaller size trims unpinned analysis cases; pinned and AI cases stay');
+select is(pg_temp.cases('safe'), 'pin2.test', 'K3: a pinned case stays even with a conflicting label; it ranks first');
 
 -- ---------------------------------------------------------------- require_guardian_note (R4 §3 step 2)
 

@@ -20,7 +20,7 @@
 --                 admin.case_delete, admin.lesson_add, admin.lesson_pin, admin.lesson_delete,
 --                 admin.usage_record, admin._refresh_cases, admin._store_thresholds,
 --                 admin._check_text, admin._check_json, admin._check_signals, admin._check_actor;
---   drop table admin.case_library, admin.ai_lessons;
+--   drop table admin.case_library, admin.ai_lessons; drop index admin.label_forget_pair;
 --   delete from admin.admin_config where key in ('require_guardian_note', 'case_library_size',
 --     'threshold_warn_at', 'threshold_block_at', 'thresholds_version', 'thresholds_live');
 --   then re-run the 02a admin.on_verdict and admin.run_analysis definitions.
@@ -68,6 +68,9 @@ create table admin.ai_lessons (
   created_by    text not null check (char_length(created_by) between 1 and 320 and position('<' in created_by) = 0),
   created_at    timestamptz not null default now()
 );
+-- The pair half of the forget filter (the owner half uses 02a's label_forget_owner).
+create index label_forget_pair on admin.label_forget (owner_ref, by_ref) where by_ref is not null;
+
 -- A label delete (device delete, disconnect) sets from_label_id null without a scan of this table.
 create index ai_lessons_from_label on admin.ai_lessons (from_label_id) where from_label_id is not null;
 
@@ -209,7 +212,10 @@ begin
    where e.domain = c.domain and c.source = 'analysis' and c.status = 'active'
      and (c.label, c.category, c.signals) is distinct from (e.label, e.category, e.signal_counts);
 
-  delete from admin.case_library where id in (
+  -- The guard is repeated outside: a pin or delete committed after this statement's snapshot is
+  -- re-checked on the locked row (READ COMMITTED re-evaluates the outer WHERE, not the subquery).
+  delete from admin.case_library c
+   where c.status = 'active' and not c.pinned and c.source = 'analysis' and c.id in (
     select id from (
       select id, source, pinned,
              row_number() over (partition by coalesce(category, label) order by pinned desc, created_at desc, id desc) as rn
@@ -230,6 +236,7 @@ begin
     select c.domain, c.signal_counts, c.label, c.category, 'analysis'
       from cand c left join active a on a.grp = c.grp
      where c.rn <= p_size - coalesce(a.n, 0)
+     order by c.rn desc   -- best rank gets the highest id: step 3 keeps it first after a size cut
     on conflict (domain) do nothing   -- case_add of the same domain committed meanwhile
     returning 1
   )
@@ -288,6 +295,7 @@ declare
   v_domains  int := 0;
   v_backlog  int := 0;
   v_cases    int;
+  v_cases_err text;
   v_now      timestamptz := clock_timestamp();
   v_min_scam int := (admin._cfg('label_min_families_scam'))::int;
   v_min_safe int := (admin._cfg('label_min_families_safe'))::int;
@@ -369,12 +377,13 @@ begin
     )
     select count(*) into v_domains from up;
 
-    -- Step 6 must never cost the labels: a failure here is logged and the next run retries.
+    -- An error in step 6 rolls back step 6 only (savepoint): the labels stay, cases_error says why,
+    -- the next run retries. A statement timeout (57014) is not caught and cancels the whole run.
     begin
       v_cases := admin._refresh_cases(v_size);
     exception when others then
+      v_cases_err := sqlstate;
       raise warning 'admin_cases_failed % %', sqlstate, sqlerrm;
-      v_cases := null;
     end;
 
     select count(*) into v_backlog from admin.domain_labels where analyzed_at is null;
@@ -393,7 +402,7 @@ begin
       jsonb_build_object('run', v_run, 'labels', v_labels, 'domains', v_domains), left(p_note, 1000));
   end if;
   return jsonb_build_object('run', v_run, 'ok', v_err is null, 'labels_processed', v_labels,
-                            'domains_updated', v_domains, 'backlog', v_backlog, 'cases_added', v_cases,
+                            'domains_updated', v_domains, 'backlog', v_backlog, 'cases_added', v_cases, 'cases_error', v_cases_err,
                             'error_code', v_err);
 end $$;
 
@@ -411,7 +420,7 @@ begin
   perform admin._check_actor(p_actor);
   -- Key order, as reset_thresholds: two concurrent changes serialize and each adds one version.
   perform 1 from admin.admin_config
-   where key in ('threshold_block_at', 'threshold_warn_at', 'thresholds_version') order by key for update;
+   where key in ('threshold_block_at', 'threshold_warn_at', 'thresholds_version') order by key collate "C" for update;
   select * into w from admin.admin_config where key = 'threshold_warn_at';
   select * into b from admin.admin_config where key = 'threshold_block_at';
   if p_warn is null or p_block is null
@@ -437,7 +446,7 @@ language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   perform admin._check_actor(p_actor);
   perform 1 from admin.admin_config
-   where key in ('threshold_block_at', 'threshold_warn_at', 'thresholds_version') order by key for update;
+   where key in ('threshold_block_at', 'threshold_warn_at', 'thresholds_version') order by key collate "C" for update;
   perform admin._require_note(p_note);
   if (admin._cfg('threshold_warn_at'))::int = 30 and (admin._cfg('threshold_block_at'))::int = 80 then
     return (admin._cfg('thresholds_version'))::int;
@@ -446,7 +455,7 @@ begin
 end $$;
 
 -- K5 / W13: the AI team adds a case (Worker scope ai:write, 04b). One case per domain: a domain
--- that already has one, deleted or not, is refused.
+-- that already has one, deleted or not, is refused with SA017 case_exists (409).
 create function admin.case_add(p_domain text, p_label text, p_category text, p_note text, p_signals jsonb, p_actor text)
 returns bigint
 language plpgsql security definer set search_path = admin, pg_temp as $$
@@ -468,7 +477,7 @@ begin
   on conflict (domain) do nothing
   returning id into v_id;
   if v_id is null then
-    raise exception using errcode = 'SA009', message = 'config_invalid';
+    raise exception using errcode = 'SA017', message = 'case_exists';
   end if;
   perform admin._audit(p_actor, 'case.add', p_domain, null,
     jsonb_build_object('id', v_id, 'label', p_label, 'category', p_category), null);
@@ -524,12 +533,13 @@ begin
   perform admin._check_text(p_text, 500, true);
   perform admin._check_json(coalesce(p_conditions, '{}'));
   perform admin._check_actor(p_actor);
-  if p_from_label_id is not null and not exists (select 1 from admin.domain_labels where id = p_from_label_id) then
+  begin
+    insert into admin.ai_lessons (kind, text, conditions, from_label_id, created_by)
+    values (p_kind, btrim(p_text), coalesce(p_conditions, '{}'), p_from_label_id, p_actor)
+    returning id into v_id;
+  exception when foreign_key_violation then   -- unknown label, or deleted meanwhile
     raise exception using errcode = 'SA009', message = 'config_invalid';
-  end if;
-  insert into admin.ai_lessons (kind, text, conditions, from_label_id, created_by)
-  values (p_kind, btrim(p_text), coalesce(p_conditions, '{}'), p_from_label_id, p_actor)
-  returning id into v_id;
+  end;
   perform admin._audit(p_actor, 'lesson.add', v_id::text, null, jsonb_build_object('kind', p_kind), null);
   return v_id;
 end $$;
@@ -572,7 +582,8 @@ language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   if p_kind is null or p_kind not in ('case', 'lesson')
      or p_uses is null or p_correct is null or p_wrong is null
-     or p_uses < 1 or p_uses > 1000000 or p_correct < 0 or p_wrong < 0 or p_correct + p_wrong > p_uses then
+     or p_uses < 1 or p_uses > 1000000 or p_correct < 0 or p_wrong < 0
+     or p_correct > p_uses or p_wrong > p_uses or p_correct::bigint + p_wrong > p_uses then
     raise exception using errcode = 'SA009', message = 'config_invalid';
   end if;
   if p_kind = 'case' then
@@ -592,7 +603,7 @@ end $$;
 -- K1: the labels evaluation counts. Analyzed rows only, the newest answer per family per domain
 -- (admin rows: the newest per domain), forgotten labels hidden (I11). outcome among flagged pages:
 -- blocked = AI positive, warning = AI negative; no AI snapshot (scan gone before the verdict) = null.
-create view admin._eval_counted with (security_barrier = true) as
+create view admin._eval_counted as
 select distinct on (l.domain, l.source, coalesce(l.by_ref, ''))
        l.id, l.domain, l.note, l.is_scam, l.source, l.category, l.ai_score, l.ai_status,
        l.thresholds_version, l.created_at, l.analyzed_at,
@@ -600,10 +611,11 @@ select distinct on (l.domain, l.source, coalesce(l.by_ref, ''))
             when l.ai_status = 'warning' then case when l.is_scam then 'fn' else 'tn' end end as outcome
 from admin.domain_labels l
 where l.analyzed_at is not null
+  -- The forget filter of v_labels, split into two anti-joins that each use label_forget's indexes.
   and not exists (select 1 from admin.label_forget f
-                   where l.created_at <= f.at
-                     and ((f.by_ref is null and (f.owner_ref = l.owner_ref or f.owner_ref = l.by_ref))
-                          or (f.owner_ref = l.owner_ref and f.by_ref = l.by_ref)))
+                   where f.by_ref is null and f.owner_ref in (l.owner_ref, l.by_ref) and l.created_at <= f.at)
+  and not exists (select 1 from admin.label_forget f
+                   where f.owner_ref = l.owner_ref and f.by_ref = l.by_ref and l.created_at <= f.at)
 order by l.domain, l.source, coalesce(l.by_ref, ''), l.id desc;
 
 -- Evaluasi AI per period (decision time). Ratios are counts the UI hides while n < 30. Recall is
@@ -626,25 +638,30 @@ from (
    group by w.period) x;
 
 -- K2: precision and recall-among-flagged if the block threshold were t (30, 35, …, 95). Information
--- only: nothing changes the thresholds from here (Q25).
+-- only: nothing changes the thresholds from here (Q25). Counted once per (period, label, score), at
+-- most 4 × 2 × 101 rows, then summed per threshold. Recall is null when no label lies below t (as
+-- in v_eval_summary: a miss cannot be seen, 100 % would lie).
 create view admin.v_eval_curve as
-with c as materialized (   -- the counted labels once, not once per period × threshold
-  select is_scam, ai_score, created_at from admin._eval_counted where ai_score is not null
+with s as (
+  select w.period, c.is_scam, c.ai_score, count(*) as n
+    from (values ('7d', interval '7 days'), ('30d', interval '30 days'), ('90d', interval '90 days'),
+                 ('all', null::interval)) w(period, span)
+    join admin._eval_counted c on c.ai_score is not null and (w.span is null or c.created_at >= now() - w.span)
+   group by 1, 2, 3
 )
 select period, threshold, tp, fp, fn, tn,
        case when tp + fp > 0 then round(tp::numeric / (tp + fp), 3) end as precision,
-       case when tp + fn > 0 then round(tp::numeric / (tp + fn), 3) end as recall
+       case when fn + tn > 0 and tp + fn > 0 then round(tp::numeric / (tp + fn), 3) end as recall
 from (
-  select w.period, t.threshold,
-         count(*) filter (where c.is_scam and c.ai_score >= t.threshold)::int as tp,
-         count(*) filter (where not c.is_scam and c.ai_score >= t.threshold)::int as fp,
-         count(*) filter (where c.is_scam and c.ai_score < t.threshold)::int as fn,
-         count(*) filter (where not c.is_scam and c.ai_score < t.threshold)::int as tn
-    from (values ('7d', interval '7 days'), ('30d', interval '30 days'), ('90d', interval '90 days'),
-                 ('all', null::interval)) w(period, span)
+  select p.period, t.threshold,
+         coalesce(sum(s.n) filter (where s.is_scam and s.ai_score >= t.threshold), 0)::int as tp,
+         coalesce(sum(s.n) filter (where not s.is_scam and s.ai_score >= t.threshold), 0)::int as fp,
+         coalesce(sum(s.n) filter (where s.is_scam and s.ai_score < t.threshold), 0)::int as fn,
+         coalesce(sum(s.n) filter (where not s.is_scam and s.ai_score < t.threshold), 0)::int as tn
+    from (values ('7d'), ('30d'), ('90d'), ('all')) p(period)
    cross join generate_series(30, 95, 5) t(threshold)
-    left join c on w.span is null or c.created_at >= now() - w.span
-   group by w.period, t.threshold) x;
+    left join s on s.period = p.period
+   group by p.period, t.threshold) x;
 
 -- Q30 table "domain | catatan | T/F": one row per counted label.
 create view admin.v_eval_labels as
@@ -662,11 +679,12 @@ select s.key as signal,
 from admin.domain_intel i
 join admin.domain_intel_label l on l.domain = i.domain and l.label is not null
 cross join lateral jsonb_each_text(i.signal_counts) s
-where s.value ~ '^[0-9]{1,18}$'
+where s.value ~ '^[1-9][0-9]{0,17}$'
 group by s.key;
 
 -- K1b: Team AI mandate targets (docs/mandates/imelda.md) approximated on labeled domains, with
--- the newest AI score any label of the domain carries. Percent null while n < 30. The mandate's
+-- the newest AI score any label of the domain carries (locked or not: the score is the AI's, the
+-- label comes from the last analysis). Percent null while n < 30. The mandate's
 -- own eval set (official + popular sites) is not what users label safe here; the Panduan says so.
 create view admin.v_eval_targets with (security_barrier = true) as
 select scam_domains, scam_ge50, scam_ge80, scam_no_ai,
@@ -686,9 +704,9 @@ from (
              (select x.ai_score from admin.domain_labels x
                where x.domain = l.domain and x.ai_score is not null
                  and not exists (select 1 from admin.label_forget f
-                                  where x.created_at <= f.at
-                                    and ((f.by_ref is null and (f.owner_ref = x.owner_ref or f.owner_ref = x.by_ref))
-                                         or (f.owner_ref = x.owner_ref and f.by_ref = x.by_ref)))
+                                  where f.by_ref is null and f.owner_ref in (x.owner_ref, x.by_ref) and x.created_at <= f.at)
+                 and not exists (select 1 from admin.label_forget f
+                                  where f.owner_ref = x.owner_ref and f.by_ref = x.by_ref and x.created_at <= f.at)
                order by x.id desc limit 1) as score
         from admin.domain_intel_label l
        where l.label is not null) d) t;
