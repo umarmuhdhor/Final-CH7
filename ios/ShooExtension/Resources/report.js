@@ -13,6 +13,7 @@
     /** Report now? Once per page: on blocked, or on a finished warning. */
     function shouldReport(state, reportedScanIds) {
         if (reportedScanIds.has(state.scanId)) return false;
+        if (state.remembered) return false; // blocked again from memory (#231): reported the first time, no second push
         if (state.status === "blocked") return true;
         return state.status === "warning" && state.done === true;
     }

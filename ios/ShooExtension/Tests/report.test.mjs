@@ -93,3 +93,9 @@ test("marks stop at 24 and at 3 per signal", () => {
     assert.equal(marks.length, 24);
     assert.equal(marks.filter((m) => m.y === 0).length, 8); // 3 per phrase → 8 phrases fit
 });
+
+test("a page blocked again from memory (#231) is not reported again: one push per site", () => {
+    const seen = new Set();
+    assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true }, seen), false);
+    assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true }, seen), true);
+});
