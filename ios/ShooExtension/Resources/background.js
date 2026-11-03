@@ -9,6 +9,7 @@ import { createVerdicts } from "./verdicts.js";
 import { createHeartbeat } from "./heartbeat.js";
 import { createLastSeen } from "./last-seen.js";
 import { createBlockMemory } from "./block-memory.js";
+import { createThresholds } from "./thresholds.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -114,6 +115,13 @@ const lists = createLists({
     registrableDomain: domainFor,
 });
 lists.refresh();
+// Dashboard 05b X1: score thresholds from GET /config/public; content scripts get numbers only.
+const thresholds = createThresholds({
+    storage: browser.storage.local,
+    getSession,
+    fetchJSON: (url, init) => fetchJSON(url, init),
+});
+thresholds.refresh();
 // EX-01: tells the app the extension is alive and whether it still has access to every website.
 const heartbeat = createHeartbeat({
     permissions: browser.permissions,
@@ -135,6 +143,7 @@ if (browser.alarms) {
     browser.alarms.onAlarm.addListener((alarm) => {
         if (alarm.name !== "shoo-lists") return;
         lists.refresh();
+        thresholds.refresh();
         heartbeat.beat().catch(() => {}); // access can be narrowed while no page is open
         lastSeen.report();
     });
@@ -194,6 +203,8 @@ browser.runtime.onMessage.addListener((message) => {
             }));
         case "listMatch":
             return lists.match(message.hostname).then((match) => ({ ok: true, match }));
+        case "thresholds":
+            return thresholds.current().then((t) => ({ ok: true, thresholds: t }));
         case "domain":
             return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
         case "analyze":
