@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(59);
+select plan(82);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -22,18 +22,24 @@ select is(
     where n.nspname = 'public' and has_function_privilege('shoo_admin', p.oid, 'EXECUTE')),
   0, 'I1: shoo_admin cannot execute any public function');
 
--- I2: the 01a + 02a objects. Tables: nobody but postgres.
+-- I2: the 01a + 02a + 04a objects. Tables: nobody but postgres.
 select table_privs_are('admin', t, r, array[]::text[], r || ' has no privileges on admin.' || t)
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions',
                   'domain_intel', 'domain_intel_label', 'domain_labels', 'label_forget', 'domain_dirty',
-                  'stats_daily', 'analysis_runs', 'intel_state']) as t
+                  'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons']) as t
 cross join unnest(array['shoo_admin', 'shoo_api']) as r;
 
 -- Views: SELECT for shoo_admin only.
 select table_privs_are('admin', v, 'shoo_admin', array['SELECT'], 'shoo_admin SELECT only on admin.' || v)
 from unnest(array['v_review_queue', 'v_blocklist', 'v_scans', 'v_ops_snapshot',
                   'v_audit', 'v_config', 'v_categories', 'v_feed',
-                  'v_domain_intel', 'v_labels', 'v_analysis_runs', 'v_stats_daily']) as v;
+                  'v_domain_intel', 'v_labels', 'v_analysis_runs', 'v_stats_daily',
+                  'v_eval_summary', 'v_eval_curve', 'v_eval_labels', 'v_eval_signals', 'v_eval_targets',
+                  'v_cases', 'v_lessons', 'v_thresholds']) as v;
+
+-- public_config: no grant until dashboard phase 05 (then SELECT for shoo_api, I2's one exception).
+select table_privs_are('admin', 'public_config', r, array[]::text[], r || ' has no privileges on admin.public_config')
+from unnest(array['shoo_admin', 'shoo_api']) as r;
 
 -- No other role (PostgREST roles, shoo_api, PUBLIC) holds any privilege on an admin table, view or sequence.
 select is(
@@ -53,7 +59,16 @@ from (values
   ('set_config', array['text', 'text', 'text', 'text', 'text']),
   ('log_audit', array['text', 'text', 'text', 'text']),
   ('run_analysis', array['text', 'text', 'text']),
-  ('snapshot_daily', array[]::text[])
+  ('snapshot_daily', array[]::text[]),
+  ('set_thresholds', array['integer', 'integer', 'text', 'text', 'text']),
+  ('reset_thresholds', array['text', 'text']),
+  ('case_add', array['text', 'text', 'text', 'text', 'jsonb', 'text']),
+  ('case_pin', array['bigint', 'boolean', 'text']),
+  ('case_delete', array['bigint', 'text', 'text']),
+  ('lesson_add', array['text', 'text', 'jsonb', 'bigint', 'text']),
+  ('lesson_pin', array['bigint', 'boolean', 'text']),
+  ('lesson_delete', array['bigint', 'text', 'text']),
+  ('usage_record', array['text', 'bigint', 'text'])
 ) as x(f, a);
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace

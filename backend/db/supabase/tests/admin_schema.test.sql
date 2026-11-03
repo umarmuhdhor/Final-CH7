@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(98);
+select plan(97);
 
 -- Runs one SELECT as shoo_admin and returns its first column, or 'ERR <sqlstate> <message>'.
 -- pgTAP's own temp tables belong to postgres, so the role switch stays inside this function; the
@@ -39,8 +39,6 @@ select is((select count(*)::int from pg_auth_members where member = 'shoo_admin'
 
 select has_table('admin', t, 'admin.' || t || ' exists')
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions']) as t;
-select hasnt_table('admin', t, 'admin.' || t || ' belongs to a later phase')
-from unnest(array['case_library']) as t;
 select is((select count(*)::int from admin.categories where active), 8, 'eight active categories');
 select ok((select value ~ '^[0-9a-f]{64}$' from admin.secrets where key = 'owner_ref_salt'), 'owner_ref_salt is 32 random bytes');
 select is((select jsonb_object_agg(key, value) from admin.admin_config
