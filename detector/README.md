@@ -21,7 +21,7 @@ Layer 2 has two parts, run on every page that is not an official domain. Their w
 `brand_plus_keyword` fires for a brand next to a bait keyword (`bca-verifikasi`, `bcalogin`) and for a brand after a connector `by` / `via` / `from` (`qlolla-bybri`, `kodepembatalanbybni`); the connector is the keyword. Brands that are also ordinary words (dana, apple, mandiri) are skipped for the connector form, so `hobbydana.com` stays clean.
 | B. Link dissector (#140) | the **whole URL** | `suspicious_link` (10 to 100) |
 
-B scores each part of the URL on its own (max 25 per part):
+B scores each part of the URL on its own, and the parts add up (no cap per part since #231; the total is capped at 100):
 
 | Part | Trigger | + |
 |---|---|---|

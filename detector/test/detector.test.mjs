@@ -406,6 +406,12 @@ test("link: known false positive, a legit blog with a bait word in the file name
     assert.equal(s.weight, 24);
 });
 
+test("link: one URL part is not capped any more (#231): a busy host counts in full", async () => {
+    const s = await link("https://akun-bank12.xk-qz-wv-ty.login1234567.b.example.com/");
+    assert.deepEqual(s.evidence.split(","), ["many_labels", "many_hyphens", "digit_label", "word_digit_subdomain"]);
+    assert.equal(s.weight, 30, "8 + 8 + 8 + 6, all in the host part (was capped at 25)");
+});
+
 test("link: with every part lit the weight is the raw score, max 100 (no cap)", async () => {
     const s = await link("http://user@12345678-ab-cd-ef-gh.a.b.c.d.example.xyz:8080/0442827f6o7cfb43933ba59e2881cc906b7c.php/?url=https://x.com&e=a@b.c#https://y.com");
     assert.equal(s.weight, 100);
