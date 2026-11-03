@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(97);
+select plan(103);
 
 create function pg_temp.as_admin(q text) returns text language plpgsql as $$
 declare
@@ -240,7 +240,9 @@ select is(pg_temp.as_admin($$select admin.lesson_add('avoid', 'teks pelajaran', 
   'ERR SA009 config_invalid', 'K5: empty actor refused');
 select is(pg_temp.as_admin($$select count(*)::text from admin.v_lessons$$), '2', 'v_lessons: the two accepted lessons');
 
-select is(pg_temp.as_admin(format('select admin.lesson_pin(%s, true, %L)', (select min(id) from admin.ai_lessons), 'a@test')), '',
+select is(pg_temp.as_admin(format('select admin.lesson_pin(%s, true, %L, %L)', (select min(id) from admin.ai_lessons), 'pendek', 'a@test')),
+  'ERR SA003 note_required', 'lesson_pin needs a note');
+select is(pg_temp.as_admin(format('select admin.lesson_pin(%s, true, %L, %L)', (select min(id) from admin.ai_lessons), 'pelajaran penting', 'a@test')), '',
   'lesson_pin');
 select is(pg_temp.as_admin($$select string_agg(pinned::text, ',' order by id) from admin.v_lessons$$), 'true,false', 'pinned shows in v_lessons');
 select is(pg_temp.as_admin(format('select admin.lesson_delete(%s, %L, %L)', (select min(id) from admin.ai_lessons), 'pendek', 'a@test')),
@@ -252,13 +254,18 @@ select is(pg_temp.as_admin(format('select admin.lesson_delete(%s, %L, %L)', (sel
   'ERR SA002 not_found', 'deleting twice → not_found');
 select is((select count(*)::int from admin.admin_audit where action in ('lesson.add', 'lesson.pin', 'lesson.delete') and actor <> 'ai:seed'), 4,
   'lesson writes are audited');
+select is((select note from admin.admin_audit where action = 'lesson.pin'), 'pelajaran penting', 'pin audited with its note');
+select is(pg_temp.as_admin($$select admin.lesson_add('avoid', 'teks pelajaran', '{}', null, 'x<img src=x>')$$),
+  'ERR SA009 config_invalid', 'actor with < refused (rendered by the dashboard)');
+select is(pg_temp.as_admin($$select admin.set_thresholds(35, 80, '<b>', 'catatan sepuluh+', null)$$),
+  'ERR SA009 config_invalid', 'set_thresholds checks the actor too');
 
-select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, %L)', 'lesson', (select max(id) from admin.ai_lessons), 'correct')), '', 'usage_record correct');
-select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, null)', 'lesson', (select max(id) from admin.ai_lessons))), '', 'usage_record without outcome');
-select is(pg_temp.as_admin($$select uses || '/' || correct || '/' || wrong from admin.v_lessons$$), '2/1/0', 'uses and outcomes counted');
-select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, %L)', 'lesson', (select max(id) from admin.ai_lessons), 'maybe')),
-  'ERR SA009 config_invalid', 'usage_record: unknown outcome refused');
-select is(pg_temp.as_admin($$select admin.usage_record('case', 999999999, null)$$), 'ERR SA002 not_found', 'usage_record: unknown case');
+select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, 5, 3, 1)', 'lesson', (select max(id) from admin.ai_lessons))), '', 'usage_record aggregate');
+select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, 2, 0, 0)', 'lesson', (select max(id) from admin.ai_lessons))), '', 'usage_record adds up');
+select is(pg_temp.as_admin($$select uses || '/' || correct || '/' || wrong from admin.v_lessons$$), '7/3/1', 'uses and outcomes counted');
+select is(pg_temp.as_admin(format('select admin.usage_record(%L, %s, 2, 2, 1)', 'lesson', (select max(id) from admin.ai_lessons))),
+  'ERR SA009 config_invalid', 'usage_record: correct + wrong > uses refused');
+select is(pg_temp.as_admin($$select admin.usage_record('case', 999999999, 1, 0, 0)$$), 'ERR SA002 not_found', 'usage_record: unknown case');
 
 select ok(pg_temp.as_admin($$select admin.case_add('kasus-ai.test', 'scam_weak', 'pinjol_ilegal', 'pola pinjol klasik', '{"new_domain": 1}', 'ai:pipeline')$$) ~ '^[0-9]+$',
   'W13: case_add returns the new id');
@@ -274,6 +281,10 @@ select is(pg_temp.as_admin($$select admin.case_add('WWW.Lain.test', 'scam_weak',
   'ERR SA014 invalid_domain', 'case_add: domain checked');
 select is(pg_temp.as_admin($$select admin.case_add('lain.test', 'safe', null, '<i>aman</i>', '{}', 'ai:pipeline')$$),
   'ERR SA009 config_invalid', 'case_add: note with < refused');
+select is(pg_temp.as_admin($$select admin.case_add('lain.test', 'safe', null, null, '{"new_domain": "banyak"}', 'ai:pipeline')$$),
+  'ERR SA009 config_invalid', 'case_add: signals must be {id: count}');
+select is(pg_temp.as_admin($$select admin.case_add('lain.test', 'safe', null, null, '{"New-Domain": 1}', 'ai:pipeline')$$),
+  'ERR SA009 config_invalid', 'case_add: signal ids are snake_case');
 
 -- ---------------------------------------------------------------- K3: case library from analysis (R4 §3 step 6)
 
@@ -297,10 +308,10 @@ select is(pg_temp.cases('pinjol_ilegal'), 'kasus-ai.test', 'the AI case stays in
 select is(pg_temp.as_admin($$select source || '/' || label || '/' || signal_counts::text from admin.v_cases where domain = 'k1.test'$$),
   'analysis/scam_strong/{"new_domain": 2}', 'v_cases: analysis case with the domain signal counts');
 
-select is(pg_temp.as_admin(format('select admin.case_pin(%s, true, %L)', (select id from admin.case_library where domain = 'k1.test'), 'a@test')), '', 'case_pin');
+select is(pg_temp.as_admin(format('select admin.case_pin(%s, true, %L, %L)', (select id from admin.case_library where domain = 'k1.test'), 'contoh terbaik judi', 'a@test')), '', 'case_pin');
 select is(pg_temp.as_admin(format('select admin.case_delete(%s, %L, %L)', (select id from admin.case_library where domain = 'k2.test'), 'contoh kurang bagus', 'a@test')), '',
   'case_delete');
-select is(pg_temp.as_admin($$select admin.case_pin(999999999, true, 'a@test')$$), 'ERR SA002 not_found', 'case_pin: unknown id');
+select is(pg_temp.as_admin($$select admin.case_pin(999999999, true, 'catatan sepuluh+', 'a@test')$$), 'ERR SA002 not_found', 'case_pin: unknown id');
 select pg_temp.admin_lab('balik.test', true, 'judi');                        -- admin now says scam against two safe families
 
 select admin.run_analysis('cron', null);

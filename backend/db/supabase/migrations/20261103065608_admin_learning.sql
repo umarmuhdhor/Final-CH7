@@ -19,7 +19,7 @@
 --   drop function admin.set_thresholds, admin.reset_thresholds, admin.case_add, admin.case_pin,
 --                 admin.case_delete, admin.lesson_add, admin.lesson_pin, admin.lesson_delete,
 --                 admin.usage_record, admin._refresh_cases, admin._store_thresholds,
---                 admin._check_text, admin._check_json, admin._check_actor;
+--                 admin._check_text, admin._check_json, admin._check_signals, admin._check_actor;
 --   drop table admin.case_library, admin.ai_lessons;
 --   delete from admin.admin_config where key in ('require_guardian_note', 'case_library_size',
 --     'threshold_warn_at', 'threshold_block_at', 'thresholds_version', 'thresholds_live');
@@ -42,11 +42,11 @@ create table admin.case_library (
   note       text check (char_length(note) <= 500 and position('<' in note) = 0),
   pinned     boolean not null default false,
   status     text not null default 'active' check (status in ('active', 'deleted')),
-  uses       int not null default 0 check (uses >= 0),
-  correct    int not null default 0 check (correct >= 0),
-  wrong      int not null default 0 check (wrong >= 0),
+  uses       bigint not null default 0 check (uses >= 0),
+  correct    bigint not null default 0 check (correct >= 0),
+  wrong      bigint not null default 0 check (wrong >= 0),
   source     text not null check (source in ('analysis', 'ai', 'admin')),
-  created_by text check (char_length(created_by) between 1 and 320),
+  created_by text check (char_length(created_by) between 1 and 320 and position('<' in created_by) = 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -62,10 +62,10 @@ create table admin.ai_lessons (
   from_label_id bigint references admin.domain_labels (id) on delete set null,
   pinned        boolean not null default false,
   status        text not null default 'active' check (status in ('active', 'deleted')),
-  uses          int not null default 0 check (uses >= 0),
-  correct       int not null default 0 check (correct >= 0),
-  wrong         int not null default 0 check (wrong >= 0),
-  created_by    text not null check (char_length(created_by) between 1 and 320),
+  uses          bigint not null default 0 check (uses >= 0),
+  correct       bigint not null default 0 check (correct >= 0),
+  wrong         bigint not null default 0 check (wrong >= 0),
+  created_by    text not null check (char_length(created_by) between 1 and 320 and position('<' in created_by) = 0),
   created_at    timestamptz not null default now()
 );
 -- A label delete (device delete, disconnect) sets from_label_id null without a scan of this table.
@@ -133,10 +133,24 @@ begin
   end if;
 end $$;
 
+-- Case signals have the domain_intel shape: {"<signal id>": n}, at most 64 ids.
+create function admin._check_signals(p_signals jsonb) returns void
+language plpgsql immutable set search_path = admin, pg_temp as $$
+begin
+  perform admin._check_json(p_signals);
+  if (select count(*) from jsonb_object_keys(p_signals)) > 64
+     or exists (select 1 from jsonb_each(p_signals) e
+                 where e.key !~ '^[a-z0-9_]{1,40}$' or jsonb_typeof(e.value) <> 'number'
+                    or (e.value #>> '{}') !~ '^[0-9]{1,9}$') then
+    raise exception using errcode = 'SA009', message = 'config_invalid';
+  end if;
+end $$;
+
+-- The actor lands in created_by, admin_audit and updated_by, which the dashboard renders: K5 rule.
 create function admin._check_actor(p_actor text) returns void
 language plpgsql immutable set search_path = admin, pg_temp as $$
 begin
-  if p_actor is null or btrim(p_actor) = '' or char_length(p_actor) > 320 then
+  if p_actor is null or btrim(p_actor) = '' or char_length(p_actor) > 320 or position('<' in p_actor) > 0 then
     raise exception using errcode = 'SA009', message = 'config_invalid';
   end if;
 end $$;
@@ -216,6 +230,7 @@ begin
     select c.domain, c.signal_counts, c.label, c.category, 'analysis'
       from cand c left join active a on a.grp = c.grp
      where c.rn <= p_size - coalesce(a.n, 0)
+    on conflict (domain) do nothing   -- case_add of the same domain committed meanwhile
     returning 1
   )
   select count(*) into v_added from ins;
@@ -272,7 +287,7 @@ declare
   v_labels   int := 0;
   v_domains  int := 0;
   v_backlog  int := 0;
-  v_cases    int := 0;
+  v_cases    int;
   v_now      timestamptz := clock_timestamp();
   v_min_scam int := (admin._cfg('label_min_families_scam'))::int;
   v_min_safe int := (admin._cfg('label_min_families_safe'))::int;
@@ -354,7 +369,13 @@ begin
     )
     select count(*) into v_domains from up;
 
-    v_cases := admin._refresh_cases(v_size);
+    -- Step 6 must never cost the labels: a failure here is logged and the next run retries.
+    begin
+      v_cases := admin._refresh_cases(v_size);
+    exception when others then
+      raise warning 'admin_cases_failed % %', sqlstate, sqlerrm;
+      v_cases := null;
+    end;
 
     select count(*) into v_backlog from admin.domain_labels where analyzed_at is null;
     update admin.analysis_runs
@@ -365,7 +386,7 @@ begin
     v_err := sqlstate;
     raise warning 'admin_analysis_failed %', v_err;
     update admin.analysis_runs set finished_at = clock_timestamp(), ok = false, error_code = v_err where id = v_run;
-    v_labels := 0; v_domains := 0; v_cases := 0;
+    v_labels := 0; v_domains := 0; v_cases := null;
   end;
   if p_trigger = 'manual' then
     perform admin._audit(coalesce(p_actor, 'unknown'), 'analysis.run', null, null,
@@ -387,6 +408,7 @@ declare
   w admin.admin_config;
   b admin.admin_config;
 begin
+  perform admin._check_actor(p_actor);
   -- Key order, as reset_thresholds: two concurrent changes serialize and each adds one version.
   perform 1 from admin.admin_config
    where key in ('threshold_block_at', 'threshold_warn_at', 'thresholds_version') order by key for update;
@@ -413,6 +435,7 @@ create function admin.reset_thresholds(p_actor text, p_note text)
 returns int
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
+  perform admin._check_actor(p_actor);
   perform 1 from admin.admin_config
    where key in ('threshold_block_at', 'threshold_warn_at', 'thresholds_version') order by key for update;
   perform admin._require_note(p_note);
@@ -438,7 +461,7 @@ begin
     perform admin._check_category(p_category);
   end if;
   perform admin._check_text(p_note, 500, false);
-  perform admin._check_json(coalesce(p_signals, '{}'));
+  perform admin._check_signals(coalesce(p_signals, '{}'));
   perform admin._check_actor(p_actor);
   insert into admin.case_library (domain, signals, label, category, note, source, created_by)
   values (p_domain, coalesce(p_signals, '{}'), p_label, p_category, nullif(btrim(p_note), ''), 'ai', p_actor)
@@ -452,12 +475,15 @@ begin
   return v_id;
 end $$;
 
-create function admin.case_pin(p_id bigint, p_pinned boolean, p_actor text)
+-- 04b K5: pin and delete need the admin's note and are audited.
+create function admin.case_pin(p_id bigint, p_pinned boolean, p_note text, p_actor text)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 declare
   v_domain text;
 begin
+  perform admin._check_actor(p_actor);
+  perform admin._require_note(p_note);
   if p_pinned is null then
     raise exception using errcode = 'SA009', message = 'config_invalid';
   end if;
@@ -466,7 +492,7 @@ begin
   if not found then
     raise exception using errcode = 'SA002', message = 'not_found';
   end if;
-  perform admin._audit(p_actor, 'case.pin', v_domain, null, jsonb_build_object('id', p_id, 'pinned', p_pinned), null);
+  perform admin._audit(p_actor, 'case.pin', v_domain, null, jsonb_build_object('id', p_id, 'pinned', p_pinned), p_note);
 end $$;
 
 create function admin.case_delete(p_id bigint, p_note text, p_actor text)
@@ -475,6 +501,7 @@ language plpgsql security definer set search_path = admin, pg_temp as $$
 declare
   v_domain text;
 begin
+  perform admin._check_actor(p_actor);
   perform admin._require_note(p_note);
   update admin.case_library set status = 'deleted', pinned = false, updated_at = now()
    where id = p_id and status = 'active' returning domain into v_domain;
@@ -507,10 +534,12 @@ begin
   return v_id;
 end $$;
 
-create function admin.lesson_pin(p_id bigint, p_pinned boolean, p_actor text)
+create function admin.lesson_pin(p_id bigint, p_pinned boolean, p_note text, p_actor text)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
+  perform admin._check_actor(p_actor);
+  perform admin._require_note(p_note);
   if p_pinned is null then
     raise exception using errcode = 'SA009', message = 'config_invalid';
   end if;
@@ -518,13 +547,14 @@ begin
   if not found then
     raise exception using errcode = 'SA002', message = 'not_found';
   end if;
-  perform admin._audit(p_actor, 'lesson.pin', p_id::text, null, jsonb_build_object('pinned', p_pinned), null);
+  perform admin._audit(p_actor, 'lesson.pin', p_id::text, null, jsonb_build_object('pinned', p_pinned), p_note);
 end $$;
 
 create function admin.lesson_delete(p_id bigint, p_note text, p_actor text)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
+  perform admin._check_actor(p_actor);
   perform admin._require_note(p_note);
   update admin.ai_lessons set status = 'deleted', pinned = false where id = p_id and status = 'active';
   if not found then
@@ -533,25 +563,23 @@ begin
   perform admin._audit(p_actor, 'lesson.delete', p_id::text, null, null, p_note);
 end $$;
 
--- The AI pipeline reports that a case or lesson was used, and whether the result was right.
--- Not audited (one call per use); a deleted item still counts, the pipeline may hold an old copy.
-create function admin.usage_record(p_kind text, p_id bigint, p_outcome text default null)
+-- R3 / 05b K5: calibration-report.mjs reports, per case or lesson, how often it was used and how
+-- often the result was right or wrong since its last report. Not audited (a batch per report run);
+-- a deleted item still counts, the pipeline may hold an old copy.
+create function admin.usage_record(p_kind text, p_id bigint, p_uses int, p_correct int, p_wrong int)
 returns void
 language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   if p_kind is null or p_kind not in ('case', 'lesson')
-     or (p_outcome is not null and p_outcome not in ('correct', 'wrong')) then
+     or p_uses is null or p_correct is null or p_wrong is null
+     or p_uses < 1 or p_uses > 1000000 or p_correct < 0 or p_wrong < 0 or p_correct + p_wrong > p_uses then
     raise exception using errcode = 'SA009', message = 'config_invalid';
   end if;
   if p_kind = 'case' then
-    update admin.case_library
-       set uses = uses + 1, correct = correct + (p_outcome is not distinct from 'correct')::int,
-           wrong = wrong + (p_outcome is not distinct from 'wrong')::int
+    update admin.case_library set uses = uses + p_uses, correct = correct + p_correct, wrong = wrong + p_wrong
      where id = p_id;
   else
-    update admin.ai_lessons
-       set uses = uses + 1, correct = correct + (p_outcome is not distinct from 'correct')::int,
-           wrong = wrong + (p_outcome is not distinct from 'wrong')::int
+    update admin.ai_lessons set uses = uses + p_uses, correct = correct + p_correct, wrong = wrong + p_wrong
      where id = p_id;
   end if;
   if not found then
@@ -600,6 +628,9 @@ from (
 -- K2: precision and recall-among-flagged if the block threshold were t (30, 35, …, 95). Information
 -- only: nothing changes the thresholds from here (Q25).
 create view admin.v_eval_curve as
+with c as materialized (   -- the counted labels once, not once per period × threshold
+  select is_scam, ai_score, created_at from admin._eval_counted where ai_score is not null
+)
 select period, threshold, tp, fp, fn, tn,
        case when tp + fp > 0 then round(tp::numeric / (tp + fp), 3) end as precision,
        case when tp + fn > 0 then round(tp::numeric / (tp + fn), 3) end as recall
@@ -612,8 +643,7 @@ from (
     from (values ('7d', interval '7 days'), ('30d', interval '30 days'), ('90d', interval '90 days'),
                  ('all', null::interval)) w(period, span)
    cross join generate_series(30, 95, 5) t(threshold)
-    left join admin._eval_counted c
-           on c.ai_score is not null and (w.span is null or c.created_at >= now() - w.span)
+    left join c on w.span is null or c.created_at >= now() - w.span
    group by w.period, t.threshold) x;
 
 -- Q30 table "domain | catatan | T/F": one row per counted label.
@@ -632,6 +662,7 @@ select s.key as signal,
 from admin.domain_intel i
 join admin.domain_intel_label l on l.domain = i.domain and l.label is not null
 cross join lateral jsonb_each_text(i.signal_counts) s
+where s.value ~ '^[0-9]{1,18}$'
 group by s.key;
 
 -- K1b: Team AI mandate targets (docs/mandates/imelda.md) approximated on labeled domains, with
@@ -703,10 +734,10 @@ grant execute on function
   admin.set_thresholds(int, int, text, text, text),
   admin.reset_thresholds(text, text),
   admin.case_add(text, text, text, text, jsonb, text),
-  admin.case_pin(bigint, boolean, text),
+  admin.case_pin(bigint, boolean, text, text),
   admin.case_delete(bigint, text, text),
   admin.lesson_add(text, text, jsonb, bigint, text),
-  admin.lesson_pin(bigint, boolean, text),
+  admin.lesson_pin(bigint, boolean, text, text),
   admin.lesson_delete(bigint, text, text),
-  admin.usage_record(text, bigint, text)
+  admin.usage_record(text, bigint, int, int, int)
 to shoo_admin;

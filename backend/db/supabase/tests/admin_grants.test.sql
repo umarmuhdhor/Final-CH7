@@ -63,12 +63,12 @@ from (values
   ('set_thresholds', array['integer', 'integer', 'text', 'text', 'text']),
   ('reset_thresholds', array['text', 'text']),
   ('case_add', array['text', 'text', 'text', 'text', 'jsonb', 'text']),
-  ('case_pin', array['bigint', 'boolean', 'text']),
+  ('case_pin', array['bigint', 'boolean', 'text', 'text']),
   ('case_delete', array['bigint', 'text', 'text']),
   ('lesson_add', array['text', 'text', 'jsonb', 'bigint', 'text']),
-  ('lesson_pin', array['bigint', 'boolean', 'text']),
+  ('lesson_pin', array['bigint', 'boolean', 'text', 'text']),
   ('lesson_delete', array['bigint', 'text', 'text']),
-  ('usage_record', array['text', 'bigint', 'text'])
+  ('usage_record', array['text', 'bigint', 'integer', 'integer', 'integer'])
 ) as x(f, a);
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
