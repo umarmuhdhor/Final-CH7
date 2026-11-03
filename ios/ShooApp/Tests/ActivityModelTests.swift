@@ -219,6 +219,33 @@ struct ActivityModelTests {
         #expect(model.hasMore)
     }
 
+    @Test func aSiteShowsOnceAsItsNewestScanAcrossPages() async throws {
+        let base = MockRepository(mode: .protected, latency: .zero)
+        let newest = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
+        func scan(_ id: String, _ domain: String, owner: String = newest.ownerDeviceId) -> ScanResult {
+            var scan = newest
+            scan.id = id
+            scan.domain = domain
+            scan.ownerDeviceId = owner
+            return scan
+        }
+        // Rows from before the backend kept one row per site: a.example three times for one owner.
+        let repository = CountingScansRepository(base: base)
+        repository.pages = [
+            "": ScanPage(items: [scan("1", "a.example"), scan("2", "a.example"), scan("3", "b.example")], nextCursor: "p2"),
+            "p2": ScanPage(items: [scan("4", "a.example")], nextCursor: "p3"),
+            "p3": ScanPage(items: [scan("5", "a.example", owner: "dev_dad")], nextCursor: nil),
+        ]
+        let model = ActivityModel(repository: repository, owner: .me)
+        await model.load()
+        #expect(model.items.map(\.id) == ["1", "3"])
+        await model.loadMore()
+        // The page with only a.example again is skipped; another owner's visit of it still shows.
+        #expect(model.items.map(\.id) == ["1", "3", "5"])
+        #expect(repository.scanCalls == 3)
+        #expect(!model.hasMore)
+    }
+
     @Test func ownListKeepsTheGuardiansRows() async {
         let model = model(mode: .guardian, owner: .me)
         await model.load()
