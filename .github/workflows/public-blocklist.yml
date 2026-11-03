@@ -19,6 +19,8 @@ concurrency:
 jobs:
   build:
     if: vars.BLOCKLIST_KV_NAMESPACE_ID != ''
+    # CLOUDFLARE_* are environment secrets of `production` (shared with backend.yml).
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
