@@ -51,8 +51,8 @@ binding = "AI_USAGE"
 dataset = "shoo_ai_usage"
 
 # Layer 4 case library (05b K7, src/layer4/cases.js). OFF: the code reads it only when the secret CASES_ENABLED is "true".
-# To set up (Umar, own account): `npx wrangler kv namespace create shoo-ai-cases`, then uncomment with that id.
-# Keys: `cases:<sha8>` (frozen by ai/scripts/build-cases.mjs) and `cases:active` (which one is in use). The id is not a secret.
-# [[kv_namespaces]]
-# binding = "CASES_KV"
-# id = "<shoo-ai-cases namespace id>"
+# Namespace "shoo-ai-cases". Keys: `cases:<sha8>` (frozen by ai/scripts/build-cases.mjs) and `cases:active` (which one
+# is in use). The id is not a secret.
+[[kv_namespaces]]
+binding = "CASES_KV"
+id = "642846517780415cb72a1b26a79f883e"
