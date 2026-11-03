@@ -873,7 +873,7 @@ describe("retention and tombstones with replicas (K6)", () => {
     expect(r2.calls.flat().every((p) => p.endsWith("-replica.html.gz"))).toBe(true);
     expect(supabase.calls.flat().every((p) => p.endsWith(".jpg"))).toBe(true);
     expect((await sql`select count(*)::int as n from storage_tombstones`)[0]!.n).toBe(0);
-  });
+  }, 60_000); // 5000 rows take longer than the default 5 s on a CI runner
 
   it("R2 missing: its batch fails and keeps its tombstones; the Supabase batch still runs", async () => {
     await device("dev_mix");
