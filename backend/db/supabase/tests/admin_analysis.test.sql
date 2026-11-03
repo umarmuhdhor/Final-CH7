@@ -47,7 +47,7 @@ select pg_temp.guardian('aman.test', 'p3', 'g2', false);
 select pg_temp.guardian('lepas.test', 'p1', 'g1', true);
 select pg_temp.guardian('lepas.test', 'p4', 'gx', true, false);
 
-select is(pg_temp.as_admin($$select admin.run_analysis('manual', 'a@test') ->> 'labels_processed'$$), '8',
+select is(pg_temp.as_admin($$select admin.run_analysis('manual', 'a@test', 'run pertama uji') ->> 'labels_processed'$$), '8',
   'run as shoo_admin processes the 8 locked labels');
 select is(pg_temp.label('satu.test'), '-/-/1/0', 'one Guardian with two members counts as one family: no label');
 select is(pg_temp.label('dua.test'), 'scam_weak/families/2/0', 'two families reporting scam: scam_weak');
@@ -56,7 +56,7 @@ select is(pg_temp.label('lepas.test'), '-/-/1/0', 'ignore_unconnected_guardian: 
 select is((select count(*)::int from admin.domain_labels where analyzed_at is null), 0, 'all labels unlocked');
 select is((select (ok, labels_processed, domains_updated, backlog, trigger, actor)::text from admin.analysis_runs order by id desc limit 1),
   '(t,8,4,0,manual,a@test)', 'analysis_runs row');
-select is((select count(*)::int from admin.admin_audit where action = 'analysis.run' and actor = 'a@test'), 1, 'manual run is audited');
+select is((select note from admin.admin_audit where action = 'analysis.run' and actor = 'a@test'), 'run pertama uji', 'manual run is audited with its note');
 select is(pg_temp.as_admin($$select count(*)::text from admin.v_feed where kind = 'analysis' and actor = 'a@test'$$), '1', 'run appears in v_feed');
 
 -- Second run with nothing new.

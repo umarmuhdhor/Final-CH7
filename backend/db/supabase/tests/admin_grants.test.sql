@@ -52,7 +52,7 @@ from (values
   ('replica_for', array['text']),
   ('set_config', array['text', 'text', 'text', 'text', 'text']),
   ('log_audit', array['text', 'text', 'text', 'text']),
-  ('run_analysis', array['text', 'text']),
+  ('run_analysis', array['text', 'text', 'text']),
   ('snapshot_daily', array[]::text[])
 ) as x(f, a);
 select is(

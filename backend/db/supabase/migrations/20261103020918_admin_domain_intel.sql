@@ -386,8 +386,9 @@ end $$;
 -- Advisory lock (7, 0) makes runs exclusive (classes 1–6 are the backend's). The caller sets
 -- statement_timeout for the transaction (role default 5 s, R4 §3; 02b uses 50 s). A statement
 -- timeout (57014) is not caught here and rolls back the run row too, so 02b must log it itself. A failure inside the work is
--- recorded on the run row (ok = false, error_code) and the labels stay locked.
-create function admin.run_analysis(p_trigger text, p_actor text)
+-- recorded on the run row (ok = false, error_code) and the labels stay locked. A manual run is
+-- audited with the admin's note (the dashboard button requires one, 02b K2).
+create function admin.run_analysis(p_trigger text, p_actor text, p_note text default null)
 returns jsonb
 language plpgsql security definer set search_path = admin, pg_temp as $$
 declare
@@ -484,7 +485,7 @@ begin
   end;
   if p_trigger = 'manual' then
     perform admin._audit(coalesce(p_actor, 'unknown'), 'analysis.run', null, null,
-      jsonb_build_object('run', v_run, 'labels', v_labels, 'domains', v_domains), null);
+      jsonb_build_object('run', v_run, 'labels', v_labels, 'domains', v_domains), left(p_note, 1000));
   end if;
   return jsonb_build_object('run', v_run, 'ok', v_err is null, 'labels_processed', v_labels,
                             'domains_updated', v_domains, 'backlog', v_backlog, 'error_code', v_err);
@@ -663,6 +664,6 @@ grant execute on function
   admin.replica_for(text),
   admin.set_config(text, text, text, text, text),
   admin.log_audit(text, text, text, text),
-  admin.run_analysis(text, text),
+  admin.run_analysis(text, text, text),
   admin.snapshot_daily()
 to shoo_admin;
