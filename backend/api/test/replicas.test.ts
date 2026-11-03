@@ -253,10 +253,16 @@ const fill = async (limit: { bucket: string; max: number }, key: string, n = lim
   await sql`insert into rate_limit_hits (bucket, key_hash) select ${limit.bucket}, ${k} from generate_series(1, ${n})`;
 };
 /** Original uploads (replica_bytes set) of `owner` in the last 24 h, without objects: quota fodder. */
+// Fake rows only fill the quota. Without triggers: the per-row domain-intel trigger (ADM-02) makes
+// 3000 rows take seconds, past the 5 s test timeout on CI (QA-D D-1). Role postgres may skip them.
+const quotaFiller = adminSql();
 const fakeUploads = async (owner: string, n: number, bytes = 1000) => {
-  await sql`insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_bytes)
-    select ${owner}, 'https://q.example/', 'q.example', 92, 'blocked', now(), ${owner} || '/q' || g || '-replica.html.gz', ${bytes}
-    from generate_series(1, ${n}) g`;
+  await quotaFiller.begin(async (tx) => {
+    await tx`set local session_replication_role = replica`;
+    await tx`insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_bytes)
+      select ${owner}, 'https://q.example/', 'q.example', 92, 'blocked', now(), ${owner} || '/q' || g || '-replica.html.gz', ${bytes}
+      from generate_series(1, ${n}) g`;
+  });
 };
 
 describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
