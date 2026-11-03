@@ -1,6 +1,6 @@
 # ai/ — owner: Team AI
 
-Server-side detection: layer 3 (content & forms) + layer 4 (reality check, LLM). Layer 5 (hoax) is Phase 2 — do not build it in MVP.
+Server-side detection: layer 3 (content & forms) + layer 4 (reality check, LLM). Layer 5 is proposed as the Guardian feedback database in `backend/`, with `POST /review` here: do not build it until #241 is answered (plan/imelda/layer-5-feedback.md). Hoax detection is not in MVP; its layer number comes later.
 Exposes `POST /analyze` and `GET /public-blocklist` exactly as in contracts/api.md (M5 design: docs/design/blocklist.md).
 
 - Input `{ snapshot, localSignals }`, output `{ signals: Signal[] }`. Shapes from contracts/ only.
