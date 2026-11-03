@@ -52,6 +52,8 @@ Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
 The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. So one page = one Activity item = one push.
 
+`faviconUrl`: in `POST /scans` it is the site's own icon URL (or `null`); the server downloads it once. In responses (lists and `GET /scans/{id}`) it is a 1-hour signed link to the server's stored copy (`GET /favicons/{scanId}`, see `backend/API.md`), or `null`; never the site's own URL, so the app never contacts the scam host (#166).
+
 #### Page replica (evidence, EX-07)
 
 The evidence is a **copy of the page's DOM**, not a screenshot (#176). A screenshot needs the page to still be painted on screen; a page blocked at ≥ 80 is gone (block screen) before a capture is reliable, and a scam site is often taken down within hours. The extension serializes the DOM the moment it reports, and the app rebuilds the page from it later.
