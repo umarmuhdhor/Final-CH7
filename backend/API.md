@@ -19,6 +19,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
+- [Config](#config): `GET /config/public`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
 - [Scheduled pushes](#scheduled-pushes): protection off, weekly summary (hourly cron)
@@ -86,7 +87,7 @@ after the wait.
 
 ### Caching and privacy headers
 
-- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`).
+- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`) and `GET /config/public` (`private, max-age=3600`).
 - Request bodies over 256 KB get `413 too_large` before anything else runs; only `POST /scans` (exactly
   that path) takes up to 512 KB, for the page replica.
   Deleted or disconnected data must disappear at once (Apple privacy rule, `plan/alief/SECURITY.md` §3 P13).
@@ -479,7 +480,8 @@ optional page replica (and, from older builds, a screenshot).
 | `pageTitle` | string \| null | no | Trimmed and cut to 300 characters |
 | `faviconUrl` | string \| null | no | The site's icon. Kept only if it is an http(s) URL ≤ 2048 characters; the server downloads it (see Favicon rules) |
 | `score` | integer | yes | 30–100 |
-| `status` | `"warning"` \| `"blocked"` | yes | Must be `blocked` when score ≥ 80, else `warning` |
+| `status` | `"warning"` \| `"blocked"` | yes | `blocked` needs score ≥ 50. With `thresholdsVersion` equal to the current `GET /config/public` version, it must match those thresholds exactly (see Thresholds) |
+| `thresholdsVersion` | integer ≥ 0 | no | *Dashboard phase 05, proposed (X1).* The `version` from `GET /config/public` the status was decided with. Stored with the scan |
 | `signals` | array | yes | At most 20 items, see below |
 | `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
 | `pageReplicaBase64` | string \| null | no | The page as static HTML, gzip, then base64 without a `data:` prefix (see Page replica rules) |
@@ -498,6 +500,17 @@ Each signal:
 
 `ownerDeviceId` and `ownerName` are accepted but ignored. Control and bidi characters are removed from
 all text.
+
+**Thresholds** (*dashboard phase 05, proposed X1*). The extension decides `status` from the score:
+
+| `thresholdsVersion` sent | Rule | 422 when |
+|---|---|---|
+| none (extensions before X1) | the fence: score ≥ 30, `blocked` only from 50 | `blocked` under 50 |
+| the current version | `warning` from `warnAt`, `blocked` from `blockAt` | score < `warnAt`, or the status does not match |
+| another version (a cached older value) | the fence | `blocked` under 50 |
+
+Until the admins switch the stored thresholds live, `GET /config/public` returns 30/80 version 0, so
+an extension that sends version 0 is held to the old 30/80 rule.
 
 ```json
 {
@@ -801,6 +814,33 @@ Incremental refresh every hour, full refresh daily (`docs/design/blocklist.md`).
 | `422 invalid_body` | `since` is not an ISO time |
 
 Entries can also be approved, rejected, removed or added from the internal admin dashboard through the `admin` schema (no new endpoint here; see `backend/README.md`, "Admin dashboard"). Its approval and removal times use `clock_timestamp()` like the SQL editor path, so `since` paging is unchanged.
+
+## Config
+
+### `GET /config/public`
+
+*Dashboard phase 05, proposed (X1).* **For:** the extension, to decide `warning` and `blocked` with the
+score thresholds the admins set in the admin dashboard instead of the built-in 30/80.
+
+- **Auth:** Bearer, either mode
+- **Cache:** `private, max-age=3600`. A threshold change can reach a device up to an hour late; the
+  scan rule above accepts the previous version during that time.
+
+**Response 200**
+
+```json
+{ "warnAt": 30, "blockAt": 80, "version": 0, "updatedAt": "2026-11-03T08:00:00.000000Z" }
+```
+
+- `warnAt` 30–60, `blockAt` 50–95, `blockAt` at least 15 above `warnAt`.
+- `version` 0 means the built-in 30/80: the admins have not switched their thresholds live yet. It
+  goes up by one with each change after that.
+- Scores under `warnAt` are safe: no warning and no scan sent.
+- No user data. If the response is missing or invalid, keep using the last good value or 30/80.
+
+| Error | When |
+|---|---|
+| 401 `unauthorized` | No or unknown device token |
 
 ## Web pages
 

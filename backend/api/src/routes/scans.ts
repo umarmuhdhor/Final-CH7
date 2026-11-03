@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import * as z from "zod";
 import type { AppEnv } from "../env";
+import { publicThresholds } from "../db/repo/config";
 import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/scans";
 import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
@@ -58,9 +59,13 @@ const scanBody = z
     // EX-07: gzip + base64 page replica. No .max(): an oversized replica is dropped by
     // decodeReplica, while a 422 would make the extension drop the whole scan.
     pageReplicaBase64: z.string().nullish(),
+    // Dashboard phase 05 (K1): GET /config/public `version` the status was decided with.
+    thresholdsVersion: z.number().int().min(0).max(2_147_483_647).optional(),
   })
-  .refine((b) => b.status === (b.score >= 80 ? "blocked" : "warning"), {
-    message: "must be blocked for score >= 80, else warning",
+  // The fence every allowed threshold pair respects (blockAt 50–95, warnAt >= 30 via score min).
+  // The exact rule for the active version is checked in the handler; it needs the DB.
+  .refine((b) => b.status !== "blocked" || b.score >= 50, {
+    message: "must not be blocked below score 50",
     path: ["status"],
   })
   .refine(
@@ -114,6 +119,14 @@ scans.post("/scans", async (c) => {
   await hit(sql, limits.createScan, principal.deviceId);
   // 512 KB on the exact path only, like the early check in app.ts (also for chunked bodies).
   const body = await readJson(c, scanBody, maxRequestBytes(c.req.method, c.req.path));
+  // K1: a scan decided with the active thresholds must match them exactly; another version (a stale
+  // cache) or none (an older extension) only has to respect the fence above.
+  if (body.thresholdsVersion !== undefined) {
+    const t = await publicThresholds(sql);
+    if (body.thresholdsVersion === t.version && (body.score < t.warnAt || body.status !== (body.score >= t.blockAt ? "blocked" : "warning"))) {
+      throw errors.invalidBody(`status: does not match thresholds version ${t.version} (warning from ${t.warnAt}, blocked from ${t.blockAt})`);
+    }
+  }
   // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
   await hitLight(sql, limits.createScanAll, "all");
 
@@ -128,6 +141,7 @@ scans.post("/scans", async (c) => {
     status: body.status,
     signals: body.signals,
     detectedAt: body.detectedAt,
+    thresholdsVersion: body.thresholdsVersion ?? null,
   });
   if (body.screenshotBase64) {
     try {
