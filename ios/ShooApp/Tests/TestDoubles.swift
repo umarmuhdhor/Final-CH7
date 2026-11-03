@@ -88,6 +88,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
 final class CountingScansRepository: ShooRepository, @unchecked Sendable {
     private let base: any ShooRepository
     private(set) var scanCalls = 0
+    /// Scripted `scans` pages by cursor ("" for the first page); other cursors go to `base`.
+    var pages: [String: ScanPage] = [:]
 
     init(base: any ShooRepository) {
         self.base = base
@@ -95,6 +97,7 @@ final class CountingScansRepository: ShooRepository, @unchecked Sendable {
 
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         scanCalls += 1
+        if let page = pages[cursor ?? ""] { return page }
         return try await base.scans(owner: owner, status: status, cursor: cursor)
     }
 

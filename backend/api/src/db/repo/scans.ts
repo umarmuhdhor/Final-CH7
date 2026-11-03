@@ -13,8 +13,42 @@ export interface NewScan {
   detectedAt: string;
 }
 
+/**
+ * One Activity row per site: when the owner still has a scan of this domain, that row is kept
+ * (`created: false`) instead of a new one. Its time moves to the newest visit, and a higher score
+ * replaces url, title, score, status and signals; its evidence stays. Locked per owner + domain, so
+ * two parallel scans of one site cannot both insert. Every scan still counts in the owner's
+ * lifetime totals (profile stats, PF-01).
+ */
+export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean }> {
+  return sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(7, hashtext(${`${s.ownerId}|${s.domain}`}))`;
+    const [kept] = await tx<{ id: string }[]>`
+      with kept as (
+        update scans set
+          detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
+          url = case when ${s.score} > score then ${s.url} else url end,
+          page_title = case when ${s.score} > score then ${s.pageTitle} else page_title end,
+          signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
+          status = case when ${s.score} > score then ${s.status} else status end,
+          score = greatest(score, ${s.score})
+        where id = (select id from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
+                    order by created_at desc, id desc limit 1)
+        returning id
+      ), counted as (
+        update devices d set
+          blocked_total = d.blocked_total + (${s.status} = 'blocked')::int,
+          warning_total = d.warning_total + (${s.status} = 'warning')::int
+        where d.id = ${s.ownerId} and exists (select 1 from kept)
+      )
+      select id from kept`;
+    if (kept) return { id: kept.id, created: false };
+    return { id: await insertScan(tx, s), created: true };
+  });
+}
+
 /** Also counts the scan in the owner's lifetime totals (profile stats, PF-01), in the same statement. */
-export async function insertScan(sql: Sql, s: NewScan): Promise<string> {
+async function insertScan(sql: Sql | TransactionSql, s: NewScan): Promise<string> {
   const [row] = await sql<{ id: string }[]>`
     with ins as (
       insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at)
