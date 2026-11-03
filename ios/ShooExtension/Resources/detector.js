@@ -22,7 +22,6 @@
     const WEIGHT = { lookalike: 25, nameOnly: 10, brandKeyword: 14, cheapTldWithBrand: 15, cheapTldAlone: 5 };
 
     // Link dissector. Weights are starting values, not calibrated on real scams yet (D-imelda-45).
-    const LINK_PART_CAP = 25; // one URL part cannot dominate
     const LINK_MIN_EMIT = 10; // below this the link says too little to show (a free host alone is 3)
     const FILE_EXT = /\.(html?|php\d?|aspx?|jsp)$/i;
 
@@ -377,7 +376,7 @@
         }
 
         const byPart = {};
-        for (const p of parts) byPart[p.part] = Math.min(LINK_PART_CAP, (byPart[p.part] || 0) + p.weight);
+        for (const p of parts) byPart[p.part] = (byPart[p.part] || 0) + p.weight; // no per-part cap (#231): a link alone may reach the block
         const score = Math.min(100, Object.values(byPart).reduce((a, b) => a + b, 0) + free.reduce((a, p) => a + p.weight, 0));
         const reasons = [...new Set([...parts, ...free].map((p) => p.reason))];
         return { score, reasons };
