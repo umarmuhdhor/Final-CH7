@@ -124,13 +124,14 @@ function buildSignal(evidence, score) {
  * @param {{ config: object, fetch: typeof fetch, now?: () => number, clientCallsPerHour?: number }} deps
  *   clientCallsPerHour: per-IP limit on LLM calls. `Infinity` turns it off (local eval: every request comes from one
  *   "unknown" client); the daily cap stays the breaker.
- * @returns {{ meta: object, stats(): object, check(snapshot: object, ctx: { official: boolean, score: number, ruleIds: string[], deadlineMs?: number }): Promise<object | null> }}
+ * @returns {{ meta: object, stats(): object, check(snapshot: object, ctx: { official: boolean, score: number, ruleIds: string[], deadlineMs?: number, report?: object }): Promise<object | null> }}
  */
 export function createRealityCheck({ config, fetch, now = Date.now, clientCallsPerHour = CLIENT_CALLS_PER_HOUR }) {
     const ask = createProvider({ config, fetch });
     const perClient = Number.isFinite(clientCallsPerHour) ? createRateLimiter({ limit: clientCallsPerHour, windowMs: 60 * 60 * 1000, now }) : () => ({ ok: true });
     const outcomes = Object.fromEntries(OUTCOMES.map((k) => [k, 0]));
-    const end = (outcome, result = null) => {
+    const tokens = { in: 0, out: 0 }; // since this checker was built, like the outcomes
+    const count = (outcome, result) => {
         outcomes[outcome] += 1;
         return result;
     };
@@ -151,8 +152,13 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
     return {
         meta: { promptVersion: PROMPT_VERSION, model: config.model }, // record both with every eval run (SECURITY A13)
         /** Outcome counters since this checker was built (one Worker isolate). A wrong model or key shows up as http_error / bad_schema, not as "always reasonable". */
-        stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, outcomes: { ...outcomes } }),
-        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs }) {
+        stats: () => ({ promptVersion: PROMPT_VERSION, model: config.model, outcomes: { ...outcomes }, tokens: { ...tokens } }),
+        /** `report` (optional, src/usage.js): this request's outcome, tokens and LLM ms for the ai_usage point. */
+        async check(snapshot, { official, score, ruleIds, localSignals = [], client = "unknown", deadlineMs = config.timeoutMs, report = null }) {
+            const end = (outcome, result = null) => {
+                if (report) report.outcome = outcome;
+                return count(outcome, result);
+            };
             if (!passesGate({ official, score })) return end("gated");
             const input = buildInput(snapshot, ruleIds, localSignals);
             if (!input.site) return end("gated"); // not a public domain: nothing sensible to judge, nothing to send
@@ -170,8 +176,17 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
                     resolve({ ok: false, reason: "timeout" });
                 }, budget);
             });
+            const startedAt = now();
             try {
                 const answer = await Promise.race([ask(messages, controller.signal), timeout]);
+                if (answer.usage) {
+                    tokens.in += answer.usage.in;
+                    tokens.out += answer.usage.out;
+                    if (report) {
+                        report.tokensIn = answer.usage.in;
+                        report.tokensOut = answer.usage.out;
+                    }
+                }
                 if (!answer.ok) return end(controller.signal.aborted ? "timeout" : answer.reason);
                 const verdict = parseVerdict(answer.content);
                 if (!verdict) return end("bad_schema");
@@ -181,6 +196,7 @@ export function createRealityCheck({ config, fetch, now = Date.now, clientCallsP
                 return end("http_error");
             } finally {
                 clearTimeout(timer);
+                if (report) report.ms = Math.max(0, now() - startedAt);
             }
         },
     };
