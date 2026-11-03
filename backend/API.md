@@ -466,6 +466,12 @@ ever sent. Scans, screenshots, favicons and page replicas are deleted automatica
 **For:** the Safari extension (EX-07) after it blocks a page or finishes all layers on a warning
 page. One page is one scan, one Activity item and (for a Protected device) one push to the Guardian.
 
+**One row per site (PR-05):** when the owner already has a scan of the same `domain`, no new row is
+made. The response is `201 { id }` with that row's id; no push is sent and no screenshot, favicon or
+page replica is stored. The row's `detectedAt` moves to the newest visit, and a higher `score` replaces
+its `url`, `pageTitle`, `score`, `status` and `signals`. The lifetime totals (profile stats) still count
+every scan. Once retention deletes the row (14 days after the first visit), the next visit makes a new one.
+
 - **Auth:** Bearer, either mode. The owner is always the token's device.
 - **Rate limit:** 120 per hour per device
 - **Body limit:** 512 KB (this path only; everything else 256 KB or less)

@@ -2,7 +2,7 @@
 
 Stateless service behind the Safari extension. Stack: Cloudflare Worker + [Hono](https://hono.dev), plain JavaScript (ESM + JSDoc), no build step (decision D-imelda-01).
 
-Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) serves the Phishing.Database feed once the pre-built list in Workers KV is set up (see below); until then it answers an empty list. The LLM reality check (M4) is built and tested against a fake provider only; it stays off until a model and key are configured.
+Today it does layer 3 for **form fields**, **page text** (`urgent_language`, `brand_logo_offsite`) and **domain age** (`new_domain`, RDAP). `GET /public-blocklist` (M5 server) serves the Phishing.Database feed once the pre-built list in Workers KV is set up (see below); until then it answers an empty list. The LLM reality check (M4) is on in production (`shoo-ai`); locally it stays off until a model and key are configured.
 
 ## Run it locally
 
@@ -166,9 +166,9 @@ Building 200,000 entries takes ~1 s CPU; the Workers Free plan allows 10 ms per 
 Setup (once, by the lead; not done by the build script):
 1. `cd ai && npx wrangler kv namespace create shoo-public-blocklist`. Put the printed id in `wrangler.toml` (uncomment the `[[kv_namespaces]]` block, binding `BLOCKLIST_KV`).
 2. Cloudflare dashboard -> API Tokens -> custom token with **Account / Workers KV Storage / Edit** on this account only.
-3. GitHub repo -> Settings -> Secrets and variables -> Actions: secrets `BLOCKLIST_CF_API_TOKEN`, `BLOCKLIST_CF_ACCOUNT_ID`; variable `BLOCKLIST_KV_NAMESPACE_ID`. The workflow is skipped while the variable is empty.
+3. GitHub repo -> Settings -> Secrets and variables -> Actions: variable `BLOCKLIST_KV_NAMESPACE_ID`. The workflow is skipped while the variable is empty. Since 3 Nov 2026 the job uses the `production` environment secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the same as the `shoo-api` deploy; that token has Workers KV Storage Edit), so step 2 is not needed on Alief's account.
 4. Actions -> public-blocklist -> Run workflow; check the log line `public blocklist built at ...: N domains`.
-5. `npm run deploy` (the Worker picks up the binding), then `curl -s https://shoo-ai.uumaarrrrr22.workers.dev/public-blocklist | head -c 300`.
+5. `npm run deploy` (the Worker picks up the binding), then `curl -s https://shoo-ai.afindo-mi01.workers.dev/public-blocklist | head -c 300`.
 
 GitHub turns off scheduled workflows after 60 days without repository activity; re-enable it in the Actions tab if that happens.
 
@@ -193,7 +193,7 @@ Other candidates, checked on the official pages on 23 Oct 2026 (not legal advice
 
 ## Layer 4: reality check (`unreasonable_request`, M4)
 
-Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://` `LLM_BASE_URL` are set (see `.env.example`; Worker secrets in production). **No model has been chosen and the real provider was never called**: every test uses a fake `fetch`.
+Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://` `LLM_BASE_URL` are set (see `.env.example`; Worker secrets in production). Production (`shoo-ai`) has all three secrets set and runs `deepseek-v4-flash` through an OpenAI-compatible provider. Unit tests still use a fake `fetch`; `test-layer4` calls the real provider.
 
 | Rule | Detail |
 |---|---|
@@ -203,15 +203,15 @@ Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://`
 | Signal | `reasonable=false`, `confidence >= 0.7` (D-imelda-49), at least one `asks` -> `unreasonable_request`, layer 4, weight `max(30, 80 - total)` so a flag always blocks (total 30 -> +50 = 80, total 71 -> +30, the extension caps at 100; D-imelda-48), fixed bilingual labels. `evidence` only if the phrase (at least 8 characters, folded and space-collapsed like layer 3; a `[number]`/`[email]` mask splits it and the longest piece is used) is in the title AND in the page text; the evidence is the exact slice of `text`, because the extension highlights `<body>` text, never `<title>`. Else omitted |
 | Only adds | Layer 4 never lowers a score (D-imelda-06). A model that says "reasonable" changes nothing |
 | Failure | Timeout (<= 6 s and never past 6.5 s after the request arrived, D-imelda-39; hard even if the provider ignores abort), HTTP error, bad JSON, daily cap reached -> layer 3 answer, no error, provider text never forwarded |
-| Cost breaker | `LLM_DAILY_CAP` calls per UTC day per Worker isolate (in memory), so NOT a real bound in production. The real cap is the spend limit in the provider dashboard: required before deploy (phase 08 checklist) |
+| Cost breaker | `LLM_DAILY_CAP` calls per UTC day per Worker isolate (in memory), so NOT a real bound in production. No spend limit is set at the provider (decided by Umar, 24 Oct 2026); cost is held down by the gate (30 to 79 only), 20 calls per IP per hour and this cap |
 | Outcomes | Each check ends as one of `gated / capped / timeout / http_error / bad_schema / reasonable / flagged` (counts only, no page data). The dev server serves them at `GET /_dev/layer4`; `eval/run.mjs --analyze-url` prints the delta under LAYER 4 and warns when calls gave no verdict. A wrong `LLM_MODEL` shows up as `http_error`/`bad_schema`, not as "always reasonable" |
 | Determinism | `temperature: 0`; record `PROMPT_VERSION` and the model with every eval run. Requests carry `chat_template_kwargs: {thinking: false}` (no hidden reasoning pass; median 1.2 s in `test-layer4`); a provider that rejects unknown fields would turn every call into `http_error` |
 
-Privacy note for Alief/Umar (TODO C5): when layer 4 is on, the host, page title and form field labels of pages that pass the gate go to the LLM provider.
+Privacy (TODO C5, done): the host, page title and form field labels of pages that pass the gate go to the LLM provider. The backend `/privacy` page ("AI check of suspicious pages") says so (#242).
 
 ## Deploy, limits, headers (M7)
 
-- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). Nothing is deployed from this repo; secrets (`LLM_*`) are set with `wrangler secret put`.
+- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). `shoo-ai` runs on Alief's Cloudflare account (`account_id` in `wrangler.toml`, moved from Umar's on 3 Nov 2026), URL `https://shoo-ai.afindo-mi01.workers.dev`. Umar deploys it from `main` with `npm run deploy` in `ai/` as a member of that account (no auto-deploy); secrets (`LLM_*`) are set with `wrangler secret put`.
 - Per-IP rate limits, two layers; over either `429 rate_limited` with `Retry-After`, and the body is not read:
   - Workers Rate Limiting binding (`[[ratelimits]]` in `wrangler.toml`, shared across isolates, works on `workers.dev`): `/analyze` 60 per 60 s, `/public-blocklist` 10 per 60 s. This is the hard limit. A Cloudflare WAF rule would need a custom domain (zone rules do not apply to `workers.dev`).
   - In memory, per isolate: `/analyze` 300 per 10 min, `/public-blocklist` 30 per 10 min. The only limiter in tests; the dev server turns both off (`SHOO_DEV_RATE_LIMIT=1` turns them on), because every local request is one `unknown` client.

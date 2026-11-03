@@ -64,7 +64,10 @@ describe("POST /scans thresholdsVersion (K1)", () => {
   });
 
   it("stores the version sent, null when absent (old scans are not recomputed, Q48)", async () => {
-    await cases([[92, "blocked", 0, 201], [92, "blocked", undefined, 201]]);
+    // Two sites: a second scan of the same site only reuses its Activity row (PR-05).
+    expect((await post(92, "blocked", 0)).status).toBe(201);
+    const other = { ...body(92, "blocked"), url: "https://other-site.test/login", domain: "other-site.test" };
+    expect((await call("/scans", { method: "POST", token: p.token, json: other })).status).toBe(201);
     const rows = await sql<{ v: number | null }[]>`select thresholds_version as v from scans order by created_at`;
     expect(rows.map((r) => r.v)).toEqual([0, null]);
   });

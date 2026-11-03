@@ -124,6 +124,41 @@ struct ApiRepositoryTests {
         #expect(server.requests.filter { $0.path == "/family/code" }.count == 3)
     }
 
+    /// Issue #227: the reuse window runs on the phone's clock from when the code arrived, never on
+    /// the server's `expiresAt`. A phone 2 h behind would otherwise reuse a dead code for 2 h.
+    @Test func familyCodeCacheIgnoresAServerClockAhead() async throws {
+        let server = StubServer()
+        // Server time 05:00, code ends 05:30; the phone says 03:00.
+        server.reply { _ in .json(200, #"{"code":"482193","expiresAt":"2026-10-22T05:30:00Z","inviteUrl":"https://api.shoo.test/j/482193"}"#) }
+        let start = ISO8601DateFormatter().date(from: "2026-10-22T03:00:00Z")!
+        let clock = OSAllocatedUnfairLock(initialState: start)
+        let repository = ApiRepository(client: server.client(), session: server.session, now: { clock.withLock { $0 } })
+        _ = try await repository.createFamilyCode(refresh: false)
+        clock.withLock { $0 = start.addingTimeInterval(25 * 60 - 1) }
+        _ = try await repository.createFamilyCode(refresh: false)
+        #expect(server.requests.filter { $0.path == "/family/code" }.count == 1)
+        clock.withLock { $0 = start.addingTimeInterval(25 * 60) }
+        _ = try await repository.createFamilyCode(refresh: false)
+        #expect(server.requests.filter { $0.path == "/family/code" }.count == 2)
+    }
+
+    /// A phone clock ahead of the server's, or set back after the code came, never reuses it.
+    @Test(arguments: [
+        ("2026-10-22T02:30:00Z", 0.0), // phone 1 h ahead: the code looks expired already
+        ("2026-10-22T03:30:00Z", -60.0), // phone set back a minute after the code came
+    ])
+    func familyCodeCacheAsksAgainWhenTheClockIsOff(expiresAt: String, laterBy: TimeInterval) async throws {
+        let server = StubServer()
+        server.reply { _ in .json(200, #"{"code":"482193","expiresAt":"\#(expiresAt)","inviteUrl":"https://api.shoo.test/j/482193"}"#) }
+        let start = ISO8601DateFormatter().date(from: "2026-10-22T03:00:00Z")!
+        let clock = OSAllocatedUnfairLock(initialState: start)
+        let repository = ApiRepository(client: server.client(), session: server.session, now: { clock.withLock { $0 } })
+        _ = try await repository.createFamilyCode(refresh: false)
+        clock.withLock { $0 = start.addingTimeInterval(laterBy) }
+        _ = try await repository.createFamilyCode(refresh: false)
+        #expect(server.requests.filter { $0.path == "/family/code" }.count == 2)
+    }
+
     // MARK: Session follows the server
 
     @Test func renameRewritesDeviceNameInTheAppGroup() async throws {
