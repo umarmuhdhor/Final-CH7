@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import * as z from "zod";
 import type { AppEnv } from "../env";
-import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/scans";
+import { findVisibleScan, listScans, memberIds, recordScan } from "../db/repo/scans";
 import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
@@ -118,7 +118,7 @@ scans.post("/scans", async (c) => {
   await hitLight(sql, limits.createScanAll, "all");
 
   const iconUrl = favicon(body.faviconUrl);
-  const id = await insertScan(sql, {
+  const { id, created } = await recordScan(sql, {
     ownerId: principal.deviceId,
     url: body.url,
     domain: body.domain,
@@ -129,6 +129,8 @@ scans.post("/scans", async (c) => {
     signals: body.signals,
     detectedAt: body.detectedAt,
   });
+  // The site already has its Activity row: no second row, push or evidence for a repeat visit.
+  if (!created) return c.json({ id }, 201);
   if (body.screenshotBase64) {
     try {
       await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);

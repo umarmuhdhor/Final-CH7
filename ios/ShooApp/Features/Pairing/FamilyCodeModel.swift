@@ -19,15 +19,17 @@ final class FamilyCodeModel {
 
     /// Longest a code lives (contracts/api.md). A device clock far from the server's never makes
     /// the countdown longer than this or stuck at zero.
-    static let codeLifetime: TimeInterval = 30 * 60
-    /// "Refresh code" stays locked until the code has this long left, the same 5 min the server
-    /// keeps handing back the active code for. Tapping it sooner only spends `/family/code`'s rate limit.
-    static let replaceUnlocksAt = 5 * 60
+    nonisolated static let codeLifetime: TimeInterval = 30 * 60
+    /// After "Refresh code", the button waits this long (issue #227). It works at any other time, so a
+    /// code sent to the wrong person can be killed at once, and stays far under `/family/code`'s 6 a minute.
+    static let replaceCooldown = 60
     /// Members are re-read this often, so someone joining shows up while the code is on screen.
     static let membersInterval = 5
 
     private(set) var codeState: CodeState = .loading
     private(set) var secondsLeft = 0
+    /// Seconds until "Refresh code" works again; 0 = now.
+    private(set) var replaceWait = 0
     private(set) var members: [FamilyMember] = []
     private(set) var membersFailed = false
     private(set) var removingId: String?
@@ -38,6 +40,7 @@ final class FamilyCodeModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let throttle: RefreshThrottle
     /// Local end of the current code (see `codeLifetime`).
     @ObservationIgnored private var expiry: Date?
     @ObservationIgnored private var ticks = 0
@@ -45,9 +48,11 @@ final class FamilyCodeModel {
     @ObservationIgnored private var membersVersion = 0
     @ObservationIgnored private var isLoadingMembers = false
 
-    init(repository: any ShooRepository, now: @escaping () -> Date = Date.init) {
+    init(repository: any ShooRepository, now: @escaping () -> Date = Date.init, throttle: RefreshThrottle = .shared) {
         self.repository = repository
         self.now = now
+        self.throttle = throttle
+        replaceWait = throttle.wait(at: now())
     }
 
     var isFull: Bool { members.count >= FamilyShieldModel.maxMembers }
@@ -104,12 +109,12 @@ final class FamilyCodeModel {
         }
     }
 
-    /// "Refresh code" works once the code on screen is in its last 5 min (or there is none).
-    var canReplace: Bool { code == nil || secondsLeft <= Self.replaceUnlocksAt }
+    /// "Refresh code" works unless it was used in the last minute (or there is no code).
+    var canReplace: Bool { code == nil || replaceWait == 0 }
 
-    /// "24:59": how long until "Refresh code" unlocks.
+    /// "0:59": how long until "Refresh code" works again.
     var replaceUnlocksIn: String {
-        Duration.seconds(max(0, secondsLeft - Self.replaceUnlocksAt)).formatted(.time(pattern: .minuteSecond))
+        Duration.seconds(replaceWait).formatted(.time(pattern: .minuteSecond))
     }
 
     /// Asks for the guardian's code. `replace` ("Refresh code") always gets a new one, and the old one
@@ -119,8 +124,13 @@ final class FamilyCodeModel {
             codeState = .full
             return
         }
-        // Locked while the code has time left: the one on screen keeps working.
-        if replace, !canReplace { return }
+        // Waiting after the last refresh: the code on screen keeps working.
+        if replace {
+            replaceWait = throttle.wait(at: now())
+            guard canReplace else { return }
+            throttle.record(at: now())
+            replaceWait = throttle.wait(at: now())
+        }
         if code == nil { codeState = .loading }
         do {
             let fresh = try await repository.createFamilyCode(refresh: replace)
@@ -156,6 +166,7 @@ final class FamilyCodeModel {
     /// Updates the countdown; `true` when the code just ran out.
     @discardableResult
     func tick() -> Bool {
+        replaceWait = throttle.wait(at: now())
         guard case .ready = codeState, let expiry else { return false }
         let left = expiry.timeIntervalSince(now())
         // A clock set back never shows more than the code's lifetime.
@@ -208,5 +219,23 @@ final class FamilyCodeModel {
             [[UTType.plainText.identifier: text]],
             options: [.localOnly: true, .expirationDate: now.addingTimeInterval(lifetime)]
         )
+    }
+}
+
+/// When "Refresh code" was last used on this device, in memory only. Home, Profile and onboarding
+/// each have their own `FamilyCodeModel`; they share this, so the wait is per device (issue #227).
+@MainActor
+final class RefreshThrottle {
+    static let shared = RefreshThrottle()
+
+    private var lastAt: Date?
+
+    func record(at now: Date) { lastAt = now }
+
+    /// Seconds left of the wait. A clock set back since the last refresh ends it.
+    func wait(at now: Date) -> Int {
+        guard let lastAt, now >= lastAt else { return 0 }
+        let left = TimeInterval(FamilyCodeModel.replaceCooldown) - now.timeIntervalSince(lastAt)
+        return max(0, Int(left.rounded(.up)))
     }
 }

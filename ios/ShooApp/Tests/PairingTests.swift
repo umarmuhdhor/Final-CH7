@@ -213,32 +213,32 @@ struct FamilyCodeModelTests {
         #expect(await repository.refreshes == [false, false])
     }
 
-    /// "Refresh code" replaces the code in its last 5 min; the old one stops working on the server.
+    /// "Refresh code" replaces the code at any time, so a code sent to the wrong person can be
+    /// killed right away (issue #227); the old one stops working on the server.
     @Test func refreshReplacesTheCode() async {
         let clock = Clock()
         let repository = CodeRepository(clock: clock)
-        let model = FamilyCodeModel(repository: repository, now: { clock.now })
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
         await model.refreshCode()
-        clock.now += 25 * 60
-        model.tick()
         #expect(model.canReplace)
         await model.refreshCode(replace: true)
         #expect(model.code?.code == "100002")
         #expect(await repository.refreshes == [false, true])
     }
 
-    /// While the code has more than 5 min left, "Refresh code" is locked and asks the server nothing.
-    @Test func refreshIsLockedWhileTheCodeHasTimeLeft() async {
+    /// After a refresh, "Refresh code" waits a minute and asks the server nothing meanwhile.
+    @Test func refreshIsThrottledForAMinute() async {
         let clock = Clock()
         let repository = CodeRepository(clock: clock)
-        let model = FamilyCodeModel(repository: repository, now: { clock.now })
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
         await model.refreshCode()
-        #expect(!model.canReplace)
-        #expect(model.replaceUnlocksIn == "25:00")
         await model.refreshCode(replace: true)
-        #expect(model.code?.code == "100001")
-        #expect(await repository.codeCalls == 1)
-        clock.now += 25 * 60 - 1
+        #expect(!model.canReplace)
+        #expect(model.replaceUnlocksIn == "1:00")
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100002")
+        #expect(await repository.codeCalls == 2)
+        clock.now += 59
         model.tick()
         #expect(!model.canReplace)
         #expect(model.replaceUnlocksIn == "0:01")
@@ -247,11 +247,37 @@ struct FamilyCodeModelTests {
         #expect(model.canReplace)
     }
 
+    /// Home, Profile and onboarding each have their own model: the wait is per device, not per screen.
+    @Test func refreshThrottleIsSharedAcrossScreens() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let throttle = RefreshThrottle()
+        let home = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: throttle)
+        await home.refreshCode()
+        await home.refreshCode(replace: true)
+        let profile = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: throttle)
+        await profile.refreshCode()
+        #expect(!profile.canReplace)
+        await profile.refreshCode(replace: true)
+        #expect(await repository.refreshes == [false, true, false])
+    }
+
+    /// A clock set back after a refresh never keeps the button waiting.
+    @Test func refreshThrottleIgnoresAClockSetBack() async {
+        let clock = Clock()
+        let model = FamilyCodeModel(repository: CodeRepository(clock: clock), now: { clock.now }, throttle: RefreshThrottle())
+        await model.refreshCode()
+        await model.refreshCode(replace: true)
+        clock.now -= 3600
+        model.tick()
+        #expect(model.canReplace)
+    }
+
     /// rate_limited (or no connection) on a refresh keeps the code on screen: it still works.
     @Test func failedRefreshKeepsALiveCode() async {
         let clock = Clock()
         let repository = CodeRepository(clock: clock)
-        let model = FamilyCodeModel(repository: repository, now: { clock.now })
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
         await model.refreshCode()
         clock.now += 26 * 60
         model.tick()
@@ -319,7 +345,7 @@ struct FamilyCodeModelTests {
     /// SECURITY §3 P8: this device only, gone when the code expires.
     @Test func inviteCopyStaysLocalAndExpiresWithTheCode() async throws {
         let clock = Clock()
-        let model = FamilyCodeModel(repository: CodeRepository(clock: clock), now: { clock.now })
+        let model = FamilyCodeModel(repository: CodeRepository(clock: clock), now: { clock.now }, throttle: RefreshThrottle())
         await model.refreshCode()
         clock.now += 20
         let pasteboard = LinkCopyTests.FakePasteboard()
@@ -331,9 +357,7 @@ struct FamilyCodeModelTests {
         #expect(text.contains("https://shoo-api.afindo-mi01.workers.dev/j/100001"))
         #expect(text.contains("100001"))
         #expect(model.copied)
-        // A new code means nothing copied for it yet ("Refresh code" unlocks in the last 5 min).
-        clock.now += 25 * 60
-        model.tick()
+        // A new code means nothing copied for it yet.
         await model.refreshCode(replace: true)
         #expect(!model.copied)
     }
