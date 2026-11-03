@@ -27,7 +27,7 @@ const targetColumns = (sql: Sql) => sql`
   d.quiet_hours as "quietHours", d.quiet_start as "quietStart", d.quiet_end as "quietEnd", d.time_zone as "timeZone"`;
 
 /**
- * PF-01 "Jam tenang": only blocked sites (score ≥ 80) still push during the quiet window
+ * PF-01 "Jam tenang": only blocked sites (status blocked) still push during the quiet window
  * ("Peringatan Bahaya tetap dikirim saat jam tenang").
  */
 function allowed(t: Target, scan: Scan, now: Date): boolean {

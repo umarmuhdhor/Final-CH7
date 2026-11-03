@@ -1,10 +1,10 @@
 -- ADM-01 admin dashboard: privileges of schema `admin` (I1, I2; dashboard plan R2 §1, §7).
--- I2 is a list of objects per dashboard phase: a later phase adds its objects here (and 05 adds the
--- one allowed exception, `select` on admin.public_config for shoo_api).
+-- I2 is a list of objects per dashboard phase: a later phase adds its objects here. Phase 05 added the
+-- one allowed exception, `select` on admin.public_config for shoo_api.
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(82);
+select plan(83);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -37,16 +37,18 @@ from unnest(array['v_review_queue', 'v_blocklist', 'v_scans', 'v_ops_snapshot',
                   'v_eval_summary', 'v_eval_curve', 'v_eval_labels', 'v_eval_signals', 'v_eval_targets',
                   'v_cases', 'v_lessons', 'v_thresholds']) as v;
 
--- public_config: no grant until dashboard phase 05 (then SELECT for shoo_api, I2's one exception).
-select table_privs_are('admin', 'public_config', r, array[]::text[], r || ' has no privileges on admin.public_config')
-from unnest(array['shoo_admin', 'shoo_api']) as r;
+-- public_config: SELECT for shoo_api only (phase 05, GET /config/public), I2's one exception.
+select table_privs_are('admin', 'public_config', 'shoo_admin', array[]::text[], 'shoo_admin has no privileges on admin.public_config');
+select table_privs_are('admin', 'public_config', 'shoo_api', array['SELECT'], 'shoo_api SELECT only on admin.public_config');
 
--- No other role (PostgREST roles, shoo_api, PUBLIC) holds any privilege on an admin table, view or sequence.
+-- No other role (PostgREST roles, shoo_api, PUBLIC) holds any privilege on an admin table, view or
+-- sequence, apart from shoo_api on public_config.
 select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
     cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
-    where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)),
-  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs');
+    where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)
+      and not (c.relname = 'public_config' and a.grantee = 'shoo_api'::regrole)),
+  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config)');
 
 -- Functions: EXECUTE for shoo_admin on the API functions, nobody else; internal helpers for nobody.
 select function_privs_are('admin', f, a, 'shoo_admin', array['EXECUTE'], 'shoo_admin EXECUTE on admin.' || f)
@@ -100,9 +102,10 @@ select is(
    where x.grantee = 'shoo_admin'::regrole and x.ns <> 'admin'::regnamespace),
   0, 'no table, function or schema outside admin grants anything to shoo_admin');
 
--- Schema: usage for shoo_admin only (shoo_api gets usage in dashboard phase 05).
+-- Schema: usage for shoo_admin, and for shoo_api since dashboard phase 05 (to reach public_config).
 select ok(has_schema_privilege('shoo_admin', 'admin', 'USAGE'), 'shoo_admin has USAGE on schema admin');
-select ok(not has_schema_privilege('shoo_api', 'admin', 'USAGE'), 'shoo_api has no USAGE on schema admin');
+select ok(has_schema_privilege('shoo_api', 'admin', 'USAGE'), 'shoo_api has USAGE on schema admin (public_config)');
+select ok(not has_schema_privilege('shoo_api', 'admin', 'CREATE'), 'shoo_api cannot create in schema admin');
 select ok(not has_schema_privilege('anon', 'admin', 'USAGE') and not has_schema_privilege('authenticated', 'admin', 'USAGE'),
   'PostgREST roles have no USAGE on schema admin');
 

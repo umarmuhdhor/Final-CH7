@@ -96,8 +96,8 @@ describe("POST /scans", () => {
 
   it.each([
     ["score below 30", { score: 29, status: "warning" }],
-    ["status inconsistent with score", { score: 85, status: "warning" }],
-    ["blocked under 80", { score: 79, status: "blocked" }],
+    // Dashboard phase 05: without thresholdsVersion only the fence applies (scans-thresholds.test.ts).
+    ["blocked under 50", { score: 45, status: "blocked" }],
     ["non-http url", { url: "javascript:alert(1)" }],
     ["21 signals", { signals: Array.from({ length: 21 }, () => blocked92.signals[0]) }],
     ["signal without labelSimple", { signals: [{ id: "x", layer: 1, weight: 5, label: { en: "a", id: "b" } }] }],

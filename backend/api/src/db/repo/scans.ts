@@ -11,6 +11,8 @@ export interface NewScan {
   status: "warning" | "blocked";
   signals: unknown[];
   detectedAt: string;
+  /** Thresholds version the extension used (dashboard phase 05); null for older extensions. */
+  thresholdsVersion: number | null;
 }
 
 /**
@@ -51,9 +53,9 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
 async function insertScan(sql: Sql | TransactionSql, s: NewScan): Promise<string> {
   const [row] = await sql<{ id: string }[]>`
     with ins as (
-      insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at)
+      insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, thresholds_version)
       values (${s.ownerId}, ${s.url}, ${s.domain}, ${s.pageTitle}, ${s.faviconUrl}, ${s.score}, ${s.status},
-              ${sql.json(s.signals as never)}, ${s.detectedAt}::text::timestamptz)
+              ${sql.json(s.signals as never)}, ${s.detectedAt}::text::timestamptz, ${s.thresholdsVersion})
       returning id, owner_id, status
     ), counted as (
       update devices d set

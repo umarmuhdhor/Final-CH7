@@ -6,6 +6,7 @@ import { maxRequestBytes } from "./http/bodyLimit";
 import { useRateKeySecret } from "./http/keyHash";
 import { appSiteAssociation } from "./routes/app-site-association";
 import { blocklist } from "./routes/blocklist";
+import { config } from "./routes/config";
 import { devices } from "./routes/devices";
 import { family } from "./routes/family";
 import { favicons } from "./routes/favicons";
@@ -28,7 +29,7 @@ app.use("*", async (c, next) => {
   c.set("requestId", requestId);
   c.header("x-request-id", requestId);
   // SECURITY §3 P13 (D-alief-40): responses carry user data, so no client, proxy or CDN keeps a copy.
-  // A route that serves no user data may override it (GET /blocklist).
+  // A route that serves no user data may override it (GET /blocklist, GET /config/public).
   c.header("Cache-Control", "private, no-store");
 
   // postgres.js connects on the first query, so /healthz never opens a connection.
@@ -68,6 +69,7 @@ app.route("/", health);
 app.route("/", appSiteAssociation);
 app.route("/", devices);
 app.route("/", blocklist);
+app.route("/", config);
 app.route("/", family);
 app.route("/", favicons);
 app.route("/", joinPage);
