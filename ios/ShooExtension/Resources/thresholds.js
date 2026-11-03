@@ -8,6 +8,8 @@ const HOUR = 60 * 60 * 1000;
 export const REFRESH_EVERY = 1 * HOUR; // the backend caches the answer for an hour too
 export const MAX_AGE = 7 * 24 * HOUR; // older copies are ignored, like the lists
 const TIMEOUT_MS = 10 * 1000;
+export const RETRY_AFTER_FAILURE = 10 * 60 * 1000; // a server that is down is not asked on every page load
+const CLOCK_SKEW = 5 * 60 * 1000;
 const STORAGE_KEY = "thresholds.v1";
 
 /** pipeline.js THRESHOLD as built in, plus the version it stands for. */
@@ -36,6 +38,11 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
     let saved = null; // { value, fetchedAt }
     let loaded = null;
     let inFlight = null;
+    let failedAt = null;
+
+    /** Age of the saved value; a value from the future counts as expired. */
+    const age = () => (saved ? now() - saved.fetchedAt : Infinity);
+    const fresh = (limit) => age() >= -CLOCK_SKEW && age() < limit;
 
     function load() {
         loaded ??= (async () => {
@@ -43,7 +50,10 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
                 const stored = (await storage.get(STORAGE_KEY))?.[STORAGE_KEY];
                 const value = toThresholds(stored?.value ? { warnAt: stored.value.firstWarning, blockAt: stored.value.blocked,
                     version: stored.value.version } : null);
-                if (value && Number.isFinite(stored.fetchedAt)) saved = { value, fetchedAt: stored.fetchedAt };
+                // A time in the future (clock moved back, corrupt entry) would never expire: dropped.
+                if (value && Number.isFinite(stored.fetchedAt) && stored.fetchedAt <= now() + CLOCK_SKEW) {
+                    saved = { value, fetchedAt: stored.fetchedAt };
+                }
             } catch (error) {
                 console.warn("[Shoo] thresholds: storage read failed", error);
             }
@@ -67,15 +77,24 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
         const value = toThresholds(body);
         if (!value) throw new Error("invalid /config/public answer");
         saved = { value, fetchedAt: now() };
-        await storage.set({ [STORAGE_KEY]: saved });
+        try {
+            await storage.set({ [STORAGE_KEY]: saved });
+        } catch (error) {
+            console.warn("[Shoo] thresholds: storage write failed", error); // kept in memory until restart
+        }
     }
 
     /** Downloads when due. Never rejects; a failure keeps the last good value. One download at a time. */
     async function refresh() {
         await load();
-        if (saved && now() - saved.fetchedAt < REFRESH_EVERY) return;
+        if (fresh(REFRESH_EVERY)) return;
+        if (failedAt != null && now() - failedAt >= 0 && now() - failedAt < RETRY_AFTER_FAILURE) return;
         inFlight ??= download()
-            .catch((error) => console.warn("[Shoo] thresholds: refresh failed", error))
+            .then(() => (failedAt = null))
+            .catch((error) => {
+                failedAt = now();
+                console.warn("[Shoo] thresholds: refresh failed", error);
+            })
             .finally(() => (inFlight = null));
         return inFlight;
     }
@@ -84,7 +103,7 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
     async function current() {
         await load();
         refresh(); // fire and forget
-        if (!saved || now() - saved.fetchedAt > MAX_AGE) return { ...DEFAULTS };
+        if (!fresh(MAX_AGE + 1)) return { ...DEFAULTS };
         return { ...saved.value };
     }
 

@@ -3,7 +3,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createThresholds, toThresholds, DEFAULTS, REFRESH_EVERY, MAX_AGE } from "../Resources/thresholds.js";
+import vm from "node:vm";
+import { createThresholds, toThresholds, DEFAULTS, REFRESH_EVERY, MAX_AGE, RETRY_AFTER_FAILURE } from "../Resources/thresholds.js";
 
 const HOUR = 3600_000;
 const SESSION = { token: "t", apiBaseURL: "https://api.test/" };
@@ -109,16 +110,88 @@ test("the reply carries only numbers, never the token or the URL", async () => {
     assert.deepEqual(Object.keys(await w.t.current()).sort(), ["blocked", "firstWarning", "secondWarning", "version"]);
 });
 
-test("thresholds-client.js applies the background's numbers to ShooPipeline.THRESHOLD", async () => {
-    let asked = null;
-    globalThis.browser = { runtime: { sendMessage: async (m) => ((asked = m), { ok: true, thresholds: { firstWarning: 35, secondWarning: 50, blocked: 70, version: 7 } }) } };
-    await import("../Resources/pipeline.js");
-    await import("../Resources/thresholds-client.js");
-    await new Promise((r) => setTimeout(r, 0));
-    assert.deepEqual(asked, { type: "thresholds" });
-    assert.deepEqual({ ...globalThis.ShooPipeline.THRESHOLD }, { firstWarning: 35, secondWarning: 50, blocked: 70 });
-    assert.equal(globalThis.ShooPipeline.statusFor(72), "blocked");
-    assert.equal(globalThis.ShooPipeline.statusFor(34), "normal");
+test("stored value from the future or corrupt is not trusted", async () => {
+    const value = { firstWarning: 35, secondWarning: 50, blocked: 70, version: 7 };
+    const at = Date.UTC(2026, 10, 3);
+    for (const entry of [{ value, fetchedAt: at + 24 * HOUR }, { value, fetchedAt: "x" }, { value: { ...value, blocked: 99 }, fetchedAt: at },
+                         { value: "junk", fetchedAt: at }, "junk"]) {
+        const w = world({ stored: { "thresholds.v1": entry }, answer: new Error("offline") });
+        assert.deepEqual(await w.t.current(), DEFAULTS, JSON.stringify(entry));
+    }
+});
+
+test("storage that throws: no rejection, the download still counts", async () => {
+    const t = createThresholds({
+        storage: { get: async () => { throw new Error("quota"); }, set: async () => { throw new Error("quota"); } },
+        getSession: async () => SESSION,
+        fetchJSON: async () => body(35, 70, 7),
+        now: () => Date.UTC(2026, 10, 3),
+    });
+    assert.deepEqual(await t.current(), DEFAULTS);
+    await t.refresh();
+    assert.equal((await t.current()).version, 7); // kept in memory although the write failed
+});
+
+test("after a failed download, no new attempt for RETRY_AFTER_FAILURE", async () => {
+    const w = world({ answer: new Error("HTTP 429") });
+    await w.t.refresh();
+    w.tick(RETRY_AFTER_FAILURE - 1);
+    await w.t.refresh();
+    assert.equal(w.calls.length, 1);
+    w.answer(body(35, 70, 7));
+    w.tick(1);
+    await w.t.refresh();
+    assert.equal(w.calls.length, 2);
+    assert.equal((await w.t.current()).version, 7);
+});
+
+/** pipeline.js + thresholds-client.js in a fresh content-script world; `reply` is what background answers. */
+function page(reply, { withPipeline = true } = {}) {
+    const ctx = vm.createContext({ console, setTimeout, Promise });
+    ctx.globalThis = ctx;
+    const asked = [];
+    ctx.browser = { runtime: { sendMessage: async (m) => (asked.push(m), reply) } };
+    const load = (f) => vm.runInContext(readFileSync(new URL(`../Resources/${f}`, import.meta.url), "utf8"), ctx);
+    if (withPipeline) load("pipeline.js");
+    const seen = [];
+    load("thresholds-client.js");
+    if (withPipeline) ctx.ShooPipeline.subscribe((s) => seen.push(s.status));
+    return { ctx, asked, seen, settle: () => new Promise((r) => setTimeout(r, 0)) };
+}
+const T = (firstWarning, secondWarning, blocked) => ({ ok: true, thresholds: { firstWarning, secondWarning, blocked, version: 7 } });
+
+test("client: applies the background's numbers to ShooPipeline.THRESHOLD", async () => {
+    const p = page(T(35, 50, 70));
+    await p.settle();
+    assert.equal(JSON.stringify(p.asked), '[{"type":"thresholds"}]');
+    assert.deepEqual({ ...p.ctx.ShooPipeline.THRESHOLD }, { firstWarning: 35, secondWarning: 50, blocked: 70 });
+    assert.equal(p.ctx.ShooPipeline.statusFor(72), "blocked");
+    assert.equal(p.ctx.ShooPipeline.statusFor(34), "normal");
+});
+
+test("client: anything outside the fence leaves the built-in values", async () => {
+    for (const reply of [T(30, 30, 30), T(90, 90, 95), T(30, 40, 45), T(61, 61, 90), T(40, 45, 50), T(35, 30, 70), T("35", 50, 70),
+                         { ok: false, thresholds: T(35, 50, 70).thresholds }, null, { ok: true }]) {
+        const p = page(reply);
+        await p.settle();
+        assert.deepEqual({ ...p.ctx.ShooPipeline.THRESHOLD }, { firstWarning: 30, secondWarning: 50, blocked: 80 }, JSON.stringify(reply));
+    }
+});
+
+test("client: a state published before the reply is published again with the new status", async () => {
+    const p = page(T(35, 50, 50)); // blockAt 50: a 60 page settled as warning under the built-in 80 is blocked now
+    p.ctx.ShooPipeline.notify({ scanId: 1, score: 60, status: "warning", done: true });
+    await p.settle();
+    assert.deepEqual(p.seen, ["warning", "blocked"]);
+});
+
+test("client: no state yet → nothing published; no ShooPipeline (blocked.html) → no-op", async () => {
+    const p = page(T(35, 50, 70));
+    await p.settle();
+    assert.deepEqual(p.seen, []);
+    const none = page(T(35, 50, 70), { withPipeline: false });
+    await none.settle();
+    assert.deepEqual(none.asked, []);
 });
 
 test("Safari loads thresholds-client.js right after pipeline.js; Chrome does not share either new file", () => {
