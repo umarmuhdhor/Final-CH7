@@ -50,7 +50,7 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 
 Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
-The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. So one page = one Activity item = one push.
+The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. The backend keeps one row per site (`backend/API.md`, #248), so one site (owner + domain) = one Activity item. The Guardian's push goes out on the first visit, and once more if that site goes from `warning` to `blocked`.
 
 `faviconUrl`: in `POST /scans` it is the site's own icon URL (or `null`); the server downloads it once. In responses (lists and `GET /scans/{id}`) it is a 1-hour signed link to the server's stored copy (`GET /favicons/{scanId}`, see `backend/API.md`), or `null`; never the site's own URL, so the app never contacts the scam host (#166).
 
