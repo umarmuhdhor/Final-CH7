@@ -42,6 +42,8 @@ function extensionBody(f: Fixture | typeof blocked92, extra: Record<string, unkn
     ...extra,
   };
 }
+/** Another site, so a scan gets its own Activity row. */
+const site = (name: string) => ({ url: `https://${name}.example/`, domain: `${name}.example` });
 const post = (d: Created, json: unknown) => call("/scans", { method: "POST", token: d.token, json });
 const postOk = async (d: Created, json: unknown) => {
   const res = await post(d, json);
@@ -94,8 +96,8 @@ describe("POST /scans", () => {
 
   it.each([
     ["score below 30", { score: 29, status: "warning" }],
-    ["status inconsistent with score", { score: 85, status: "warning" }],
-    ["blocked under 80", { score: 79, status: "blocked" }],
+    // Dashboard phase 05: without thresholdsVersion only the fence applies (scans-thresholds.test.ts).
+    ["blocked under 50", { score: 45, status: "blocked" }],
     ["non-http url", { url: "javascript:alert(1)" }],
     ["21 signals", { signals: Array.from({ length: 21 }, () => blocked92.signals[0]) }],
     ["signal without labelSimple", { signals: [{ id: "x", layer: 1, weight: 5, label: { en: "a", id: "b" } }] }],
@@ -128,7 +130,7 @@ describe("POST /scans", () => {
   it("faviconUrl with control or bidi characters is stored as null; screenshotBase64 null is accepted", async () => {
     const p = await createDevice("Mom");
     const id = await postOk(p, extensionBody(warning41, { faviconUrl: "https://a.example/\u0000.ico", screenshotBase64: null }));
-    const id2 = await postOk(p, extensionBody(warning41, { faviconUrl: "https://a.example/\u202E.ico" }));
+    const id2 = await postOk(p, extensionBody(warning63, { faviconUrl: "https://a.example/\u202E.ico" }));
     const rows = await sql`select favicon_url from scans where id in (${id}, ${id2})`;
     expect(rows.map((r) => r.favicon_url)).toEqual([null, null]);
   });
@@ -137,6 +139,62 @@ describe("POST /scans", () => {
     const p = await createDevice("Mom");
     const signals = [{ ...(blocked92.signals[0] as object), id: "Lookalike-Domain" }];
     await postOk(p, extensionBody(blocked92, { signals }));
+  });
+});
+
+describe("POST /scans: one Activity row per site", () => {
+  const at = (minutes: number) => new Date(Date.parse("2026-11-03T04:00:00.000Z") + minutes * 60_000).toISOString();
+
+  it("a repeat visit keeps the first row and moves its time to the newest visit", async () => {
+    const p = await createDevice("Mom");
+    const first = await postOk(p, extensionBody(blocked92, { detectedAt: at(0) }));
+    for (const m of [1, 2, 3]) expect(await postOk(p, extensionBody(blocked92, { detectedAt: at(m) }))).toBe(first);
+    const { body } = await list(p);
+    expect(body.items.map((i) => i.id)).toEqual([first]);
+    expect(body.items[0]!.detectedAt).toBe(at(3));
+    // A late report of an older visit never moves the time back.
+    await postOk(p, extensionBody(blocked92, { detectedAt: at(-5) }));
+    expect((await list(p)).body.items[0]!.detectedAt).toBe(at(3));
+  });
+
+  it("another page of the same site, or a subdomain, is the same row; another site gets its own", async () => {
+    const p = await createDevice("Mom");
+    const first = await postOk(p, extensionBody(blocked92));
+    expect(await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site/x" }))).toBe(first);
+    expect(await postOk(p, extensionBody(warning63))).not.toBe(first);
+    expect((await list(p)).body.items).toHaveLength(2);
+  });
+
+  it("each device keeps its own row for a site", async () => {
+    const a = await createDevice("Mom");
+    const b = await createDevice("Dad");
+    expect(await postOk(a, extensionBody(blocked92))).not.toBe(await postOk(b, extensionBody(blocked92)));
+  });
+
+  it("a higher score replaces status, score and signals; a lower one leaves them", async () => {
+    const p = await createDevice("Mom");
+    const id = await postOk(p, extensionBody(warning63));
+    const blocked = { score: 90, status: "blocked", signals: blocked92.signals, url: "https://bansos-kemensos.site/login" };
+    expect(await postOk(p, extensionBody(warning63, blocked))).toBe(id);
+    expect(await postOk(p, extensionBody(warning63, { score: 41 }))).toBe(id);
+    const [row] = await sql`select url, score, status, signals from scans where id = ${id}`;
+    expect(row).toMatchObject({ url: blocked.url, score: 90, status: "blocked" });
+    expect(row!.signals).toEqual(blocked92.signals);
+  });
+
+  it("parallel reports of one site still make one row", async () => {
+    const p = await createDevice("Mom");
+    const ids = await Promise.all(Array.from({ length: 5 }, () => postOk(p, extensionBody(blocked92))));
+    expect(new Set(ids).size).toBe(1);
+    expect((await sql`select count(*)::int as n from scans where owner_id = ${p.deviceId}`)[0]!.n).toBe(1);
+  });
+
+  it("every report still counts in the profile totals", async () => {
+    const p = await createDevice("Mom");
+    await postOk(p, extensionBody(blocked92));
+    await postOk(p, extensionBody(blocked92));
+    const [d] = await sql`select blocked_total from devices where id = ${p.deviceId}`;
+    expect(d!.blocked_total).toBe(2);
   });
 
   it("POST /scans takes up to 512 KB (EX-07 page replica); 413 above it", async () => {
@@ -208,23 +266,21 @@ describe("POST /scans screenshot", () => {
     expect(await pathOf(id)).toBeNull();
   });
 
-  it("dedupe: same owner + domain within 24 h reuses the first screenshot", async () => {
+  it("dedupe: a repeat visit of the site keeps the first screenshot", async () => {
     const p = await createDevice("Mom");
     const first = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
-    const second = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(200, 200)) }));
-    expect(await pathOf(second)).toBe(await pathOf(first));
-    expect(await storageHas(`${p.deviceId}/${second}.jpg`)).toBe(false);
-
-    // Older than 24 h → a new upload.
-    await sql`update scans set created_at = now() - interval '25 hours' where id in (${first}, ${second})`;
-    const third = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
-    expect(await pathOf(third)).toBe(`${p.deviceId}/${third}.jpg`);
+    expect(await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(200, 200)) }))).toBe(first);
+    expect(await pathOf(first)).toBe(`${p.deviceId}/${first}.jpg`);
+    expect((await sql`select count(*)::int as n from scans where owner_id = ${p.deviceId}`)[0]!.n).toBe(1);
   });
 
   it("a failed upload clears the path on every scan that reused it (dedupe)", async () => {
     const p = await createDevice("Mom");
     const a = await postOk(p, extensionBody(blocked92));
-    const b = await postOk(p, extensionBody(blocked92));
+    // A second row of the same site from before one row per site.
+    const [{ id: b }] = await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, ${blocked92.url}, ${blocked92.domain}, 92, 'blocked', now()) returning id`;
     const path = `${p.deviceId}/${a}.jpg`;
     await sql`update scans set screenshot_path = ${path} where id in (${a}, ${b})`;
     await clearScreenshotPath(sql, p.deviceId, path);
@@ -295,8 +351,9 @@ describe("GET /scans", () => {
     const p = await createDevice("Mom");
     for (let i = 0; i < 5; i++) {
       const at = new Date(Date.UTC(2026, 9, 21, 4, 0, i)).toISOString();
-      await postOk(p, extensionBody(blocked92, { detectedAt: at }));
-      await postOk(p, extensionBody(warning41, { detectedAt: at }));
+      // One Activity row per site: each round is another site.
+      await postOk(p, extensionBody(blocked92, { detectedAt: at, ...site(`b${i}`) }));
+      await postOk(p, extensionBody(warning41, { detectedAt: at, ...site(`w${i}`) }));
     }
     const seen: string[] = [];
     let cursor: string | null = null;
@@ -315,7 +372,7 @@ describe("GET /scans", () => {
   it("paging is stable when several scans share the same detectedAt", async () => {
     const p = await createDevice("Mom");
     const at = "2026-10-21T04:00:00.123Z";
-    for (let i = 0; i < 5; i++) await postOk(p, extensionBody(blocked92, { detectedAt: at }));
+    for (let i = 0; i < 5; i++) await postOk(p, extensionBody(blocked92, { detectedAt: at, ...site(`s${i}`) }));
     const seen: string[] = [];
     let cursor: string | null = null;
     do {
@@ -388,7 +445,9 @@ describe("GET /scans", () => {
     const mom = await createDevice("Mom");
     await connect(g, mom);
     await postOk(mom, extensionBody(blocked92));
-    await postOk(mom, extensionBody(warning41, { domain: "bca-verifikasi.site", url: "https://bca-verifikasi.site/promo" }));
+    // A warning row of the same site from before one row per site.
+    await sql`insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${mom.deviceId}, 'https://bca-verifikasi.site/promo', 'bca-verifikasi.site', 41, 'warning', now())`;
     await sql`insert into verdicts (owner_id, domain, value, by_device_id, by_name, decided_at)
       values (${mom.deviceId}, 'bca-verifikasi.site', 'not_safe', ${g.deviceId}, 'Adhella', '2026-10-21T04:06:00Z')`;
     const { body } = await list(g, `?owner=${mom.deviceId}`);

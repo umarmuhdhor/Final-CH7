@@ -118,7 +118,7 @@ struct InviteSheet: View {
                     if model.canReplace {
                         Label("Refresh code", systemImage: "arrow.clockwise")
                     } else {
-                        // Locked while the code has time left: it keeps working, so a new one isn't needed yet.
+                        // Waiting a minute after the last refresh (issue #227): the code on screen keeps working.
                         Label("New code in \(model.replaceUnlocksIn)", systemImage: "lock.fill")
                             .monospacedDigit()
                     }

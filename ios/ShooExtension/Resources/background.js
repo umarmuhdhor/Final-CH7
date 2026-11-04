@@ -9,6 +9,7 @@ import { createVerdicts } from "./verdicts.js";
 import { createHeartbeat } from "./heartbeat.js";
 import { createLastSeen } from "./last-seen.js";
 import { createBlockMemory } from "./block-memory.js";
+import { mayReport } from "./share-settings.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -149,6 +150,7 @@ const reports = new Map(); // report key → Promise<backend scan id | null>
 async function startReport(message) {
     const session = await getSession();
     if (!session?.apiBaseURL) return { ok: false, skipped: "no_api_url" }; // not onboarded → nothing leaves the phone
+    if (!mayReport(message.scan?.status, session)) return { ok: false, skipped: "sharing_off" };
 
     const send = (pageReplicaBase64) =>
         fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
@@ -204,6 +206,9 @@ browser.runtime.onMessage.addListener((message) => {
             return Promise.resolve(reports.get(message.key) ?? null).then((recordId) => ({ ok: true, recordId }));
         case "verdict":
             return lookupVerdict(message.domain, Boolean(message.fresh));
+        case "pageChecked":
+            // A count for the app, no address (PF-01). Nothing depends on it, so a failure stays here.
+            return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "pageChecked" }).catch(() => ({ ok: false }));
         case "recallBlock":
             return blockMemory.recall(message.url).then((memory) => ({ ok: true, memory }));
         case "rememberBlock":

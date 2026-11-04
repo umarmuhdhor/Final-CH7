@@ -20,7 +20,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
   it("discloses the AI layer 4 summary, the RDAP domain-age lookup and cache, what is never sent, and unknown retention (#97)", async () => {
     const en = await (await call("/privacy")).text();
     for (const s of ["third-party AI provider", "the page title", "form fields", "never send the page's text", "full web address",
-      "anything you type", "your Shoo name", "can still contain what the site itself shows", "cannot guarantee how long", "29 October 2026",
+      "anything you type", "your Shoo name", "can still contain what the site itself shows", "cannot guarantee how long", "3 November 2026",
       "public domain registry (RDAP)", "registration date, for up to 7 days", "Public domain registries (RDAP) receive",
       "Apart from the short domain-age cache"]) {
       expect(en).toContain(s);
@@ -28,7 +28,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     const id = await (await call("/privacy?lang=id")).text();
     for (const s of ["penyedia AI pihak ketiga", "judul halaman", "kolom formulir", "tidak pernah mengirim isi teks halaman",
       "alamat web lengkap", "yang kamu ketik", "nama Shoo-mu", "tetap bisa berisi apa yang ditampilkan situs", "tidak bisa menjamin berapa lama",
-      "29 Oktober 2026", "registry domain publik (RDAP)", "maksimal 7 hari", "Registry domain publik (RDAP) menerima",
+      "3 November 2026", "registry domain publik (RDAP)", "maksimal 7 hari", "Registry domain publik (RDAP) menerima",
       "Selain cache umur domain singkat"]) {
       expect(id).toContain(s);
     }
@@ -74,6 +74,38 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       expect(id).toContain(s);
     }
     expect(id).not.toContain("Salinan hanya disimpan selama");
+  });
+
+  it("discloses the admin dashboard: risky domains kept for good, learning labels, masked addresses, page copy for the team (ADM-02a, D7)", async () => {
+    const en = await (await call("/privacy")).text();
+    for (const s of ["Apart from the short domain-age cache and the list of risky website domains described below, we keep no other browsing history.",
+      "Risky website domains that Shoo flagged", "kept with counts and detection signals, to improve detection",
+      "no link to you, your device or the page address, and are not deleted",
+      "A few people on the Shoo team can see the address of pages Shoo flagged, without the part after",
+      "without your device name",
+      "A person on the Shoo team may view the copy of a page reported as a scam, without knowing whose device it came from.",
+      "The copy can include text the page showed you.",
+      "A copy used to improve detection (the domain, Safe or Not safe, Shoo's risk score for the page at that time",
+      "cannot be traced back to your devices without our key", "is deleted when you disconnect or delete your data",
+      "A person on the Shoo team can also view it once at least two families have reported the same website, without seeing which device it came from (logged)."]) {
+      expect(en).toContain(s);
+    }
+    // Old R8 wording is false while learning labels keep a keyed code (owner_ref): never claim "without any link".
+    expect(en).not.toContain("without any link to you or your device");
+    expect(en).not.toContain("we keep no other browsing history, except");
+    const id = await (await call("/privacy?lang=id")).text();
+    for (const s of ["Selain cache umur domain singkat dan daftar domain situs berisiko yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
+      "Domain situs berisiko yang ditandai Shoo", "disimpan bersama jumlah dan sinyal deteksinya, untuk memperbaiki deteksi",
+      "tidak terkait denganmu, device-mu, atau alamat halaman, dan tidak dihapus",
+      "Beberapa orang di tim Shoo dapat melihat alamat halaman yang ditandai Shoo, tanpa bagian setelah",
+      "tanpa nama perangkatmu",
+      "Tim Shoo dapat melihat salinan halaman yang dilaporkan sebagai penipuan, tanpa mengetahui dari perangkat siapa salinan itu berasal.",
+      "Salinan bisa memuat teks yang ditampilkan halaman itu kepadamu.",
+      "Salinan yang dipakai untuk memperbaiki deteksi (domain, Aman atau Tidak aman, skor risiko Shoo untuk halaman itu saat itu",
+      "tidak bisa dilacak ke device kalian tanpa kunci kami", "dihapus saat kamu memutus hubungan atau menghapus datamu",
+      "Seseorang di tim Shoo juga bisa melihatnya setelah minimal dua keluarga melaporkan situs yang sama, tanpa melihat dari perangkat mana salinan itu berasal (tercatat)."]) {
+      expect(id).toContain(s);
+    }
   });
 
   it("Indonesian by ?lang=id or Accept-Language", async () => {

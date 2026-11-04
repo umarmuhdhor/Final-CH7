@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(101);
+select plan(97);
 
 -- Runs one SELECT as shoo_admin and returns its first column, or 'ERR <sqlstate> <message>'.
 -- pgTAP's own temp tables belong to postgres, so the role switch stays inside this function; the
@@ -35,15 +35,15 @@ from pg_roles where rolname = 'shoo_admin';
 select is((select count(*)::int from pg_auth_members where member = 'shoo_admin'::regrole), 0,
   'shoo_admin is a member of no role');
 
--- ---------------------------------------------------------------- tables (01a only)
+-- ---------------------------------------------------------------- tables (01a; 02a objects in admin_intel.test.sql)
 
 select has_table('admin', t, 'admin.' || t || ' exists')
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions']) as t;
-select hasnt_table('admin', t, 'admin.' || t || ' belongs to a later phase')
-from unnest(array['domain_intel', 'domain_labels', 'stats_daily', 'case_library']) as t;
 select is((select count(*)::int from admin.categories where active), 8, 'eight active categories');
 select ok((select value ~ '^[0-9a-f]{64}$' from admin.secrets where key = 'owner_ref_salt'), 'owner_ref_salt is 32 random bytes');
-select is((select jsonb_object_agg(key, value) from admin.admin_config),
+select is((select jsonb_object_agg(key, value) from admin.admin_config
+            where key in ('replica_enabled', 'replica_min_families', 'max_publish_per_day',
+                          'require_admin_note_locked', 'require_admin_note')),
   '{"replica_enabled": false, "replica_min_families": 2, "max_publish_per_day": 50,
     "require_admin_note_locked": true, "require_admin_note": true}'::jsonb,
   '01a config defaults (R2 §5)');
