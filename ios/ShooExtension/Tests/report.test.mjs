@@ -102,6 +102,21 @@ test("marks (#176): text evidence → its boxes, asks_* → its field by name, e
     ]);
 });
 
+test("marks: a brand named only in the title, or without evidence, marks the page's logo", () => {
+    const logo = { left: 140, top: 120, width: 110, height: 110 };
+    const page = { text: () => [], images: () => [], fields: () => [], logos: () => [logo], scroll: { x: 0, y: 0 } };
+    for (const evidence of ["Shopee", undefined]) {
+        assert.deepEqual(signalMarks([{ id: "brand_logo_offsite", weight: 25, evidence }], page), [
+            { signalId: "brand_logo_offsite", x: 140, y: 120, w: 110, h: 110 },
+        ]);
+    }
+    const inText = { ...page, text: () => [{ left: 20, top: 330, width: 40, height: 20 }] };
+    assert.deepEqual(signalMarks([{ id: "brand_logo_offsite", weight: 25, evidence: "BCA" }], inText), [
+        { signalId: "brand_logo_offsite", x: 20, y: 330, w: 40, h: 20 },
+    ]);
+    assert.deepEqual(signalMarks([{ id: "urgent_language", weight: 15, evidence: "segera" }], page), []);
+});
+
 test("marks stop at 24 and at 3 per signal", () => {
     const many = Array.from({ length: 10 }, (_, i) => ({ left: 0, top: i * 30, width: 50, height: 20 }));
     const page = { text: () => many, images: () => [], fields: () => [], scroll: { x: 0, y: 0 } };

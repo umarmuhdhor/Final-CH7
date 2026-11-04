@@ -64,7 +64,8 @@ test("the page's stylesheets come once, in the head, from head and body", () => 
     const { doc, form, urgent } = scamPage();
     const draft = captureFragments(doc, page, [{ element: form, signalIds: ["asks_otp"] }, { element: urgent, signalIds: ["urgent_language"] }]);
     assert.equal(draft.sheets.length, 2);
-    assert.equal((draft.head.match(/<style>/g) ?? []).length, 2);
+    assert.equal((draft.head.match(/<style>/g) ?? []).length, 3); // the page's two, then the spotlight
+    assert.match(draft.head, /<style>section\[data-shoo-fragment\][^<]*<\/style>$/);
     for (const s of draft.sections) assert.doesNotMatch(s.html, /<style/);
 });
 
@@ -83,6 +84,29 @@ test("a part inside another part is written once, with both signal ids", () => {
     assert.equal(draft.sections.length, 1);
 });
 
+test("the element holding the evidence is marked for the spotlight; the page can't fake a mark", () => {
+    // gratiskuota60gb.blogspot.com (5 Nov 2026): the part was div#step1, but nothing in it said which line was
+    // the "urgent wording", so the dashboard showed the form with no highlight.
+    const button = h("button", { onclick: "proses1()" }, "KLAIM SEKARANG");
+    const fake = h("p", { "data-shoo-mark": "asks_pin", "data-shoo-label": "trust me" }, "Nama lengkap");
+    const step = h("div", { id: "step1" }, fake, button);
+    const doc = { documentElement: h("html", {}, h("head"), h("body", {}, step)), baseURI: page.url, doctype: {} };
+    const label = 'Kalimat mendesak: "klaim sekarang"';
+    const groups = fragmentGroups([{ id: "urgent_language", weight: 15, evidence: "KLAIM SEKARANG", label: { id: label, en: "x" } }], {
+        textElements: () => [button], imageElements: () => [], fields: () => [], blockOf: () => step, fieldBlock: () => null,
+    });
+    const html = fragmentsDocument(captureFragments(doc, page, groups));
+    assert.match(html, /<div id="step1"><p>Nama lengkap<\/p><button data-shoo-mark="urgent_language" data-shoo-label="Kalimat mendesak: &quot;klaim sekarang&quot;">KLAIM SEKARANG<\/button><\/div>/);
+    assert.equal((html.match(/data-shoo-mark=/g) ?? []).length, 1);
+    assert.doesNotMatch(html, /trust me|onclick/);
+    // Two signals on one element: one mark with both ids and both labels.
+    const both = mergeGroups([
+        { element: step, signalIds: ["urgent_language"], marks: [{ element: button, signalId: "urgent_language", label: "A" }] },
+        { element: step, signalIds: ["hoax_claim"], marks: [{ element: button, signalId: "hoax_claim", label: "B" }] },
+    ]);
+    assert.match(fragmentsDocument(captureFragments(doc, page, both)), /<button data-shoo-mark="urgent_language hoax_claim" data-shoo-label="A · B">/);
+});
+
 test("the whole page is never a part: body, head and html are skipped", () => {
     const { doc, body } = scamPage();
     assert.equal(captureFragments(doc, page, [{ element: body, signalIds: ["urgent_language"] }]), null);
@@ -97,24 +121,45 @@ test("fragmentGroups: heaviest signal first, field → its form, text → its bl
         { id: "asks_otp", weight: 30, evidence: "otp" },
     ];
     const groups = fragmentGroups(signals, {
-        textBlocks: (phrase) => (phrase === "diblokir dalam 24 jam" ? [urgent] : []),
-        imageBlocks: () => [],
+        textElements: (phrase) => (phrase === "diblokir dalam 24 jam" ? [urgent] : []),
+        imageElements: () => [],
         fields: () => [{ el: otp, name: "otp", id: "", kind: "otp" }],
+        blockOf: (el) => el,
         fieldBlock: (el) => (el === otp ? form : null),
     });
     assert.deepEqual(groups.map((g) => g.signalIds[0]), ["asks_otp", "urgent_language"]);
     assert.equal(groups[0].element, form);
     assert.equal(groups[1].element, urgent);
+    // Each part names the element holding the evidence: the field itself, the text's own element.
+    assert.deepEqual(groups.map((g) => g.marks.map((m) => [m.element, m.signalId])), [[[otp, "asks_otp"]], [[urgent, "urgent_language"]]]);
 });
 
 test("fragmentGroups: a field signal without a name match falls back to the field kind", () => {
     const { form, otp } = scamPage();
     const groups = fragmentGroups([{ id: "asks_otp", weight: 30, evidence: "" }], {
-        textBlocks: () => [], imageBlocks: () => [],
+        textElements: () => [], imageElements: () => [],
         fields: () => [{ el: otp, name: "code", id: "", kind: "otp" }],
+        blockOf: (el) => el,
         fieldBlock: () => form,
     });
     assert.equal(groups.length, 1);
+});
+
+test("fragmentGroups: a brand not in the page text or alts (title only, or a copied form without evidence) → the page's logo", () => {
+    // shopeeofficial-refund.vercel.app/login.html (5 Nov 2026): "Shopee" only in <title>, the logo an inline <svg>
+    // in div.login-logo. Without this the scan had no part at all, so the dashboard showed none.
+    const { urgent } = scamPage();
+    const logo = h("div", { class: "login-logo" });
+    const page = { textElements: () => [], imageElements: () => [], fields: () => [], blockOf: (el) => el, fieldBlock: () => null, logos: () => [logo] };
+    for (const evidence of ["Shopee", undefined]) {
+        const groups = fragmentGroups([{ id: "brand_logo_offsite", weight: 25, evidence }, { id: "suspicious_link", weight: 34, evidence: "free_host" }], page);
+        assert.deepEqual(groups.map((g) => [g.element, g.signalIds]), [[logo, ["brand_logo_offsite"]]]);
+    }
+    // Found in the text: that block, not the logo.
+    const inText = fragmentGroups([{ id: "brand_logo_offsite", weight: 25, evidence: "BCA" }], { ...page, textElements: () => [urgent] });
+    assert.deepEqual(inText.map((g) => g.element), [urgent]);
+    // Only the brand signal falls back to the logo.
+    assert.deepEqual(fragmentGroups([{ id: "urgent_language", weight: 15, evidence: "segera" }], page), []);
 });
 
 const noFetch = { fetchText: async () => null, fetchImage: async () => null };
