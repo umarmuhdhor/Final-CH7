@@ -36,7 +36,7 @@ select has_trigger('admin', 'label_forget', 'admin_archive_forget', 'admin_archi
 select columns_are('admin', 'v_scan_archive',
   array['scan_id', 'domain', 'path', 'page_title', 'score', 'status', 'signals', 'signal_ids', 'layers',
         'detected_at', 'created_at', 'owner_ref', 'verdict', 'verdict_at', 'by_ref', 'note',
-        'fragments_key', 'fragments_bytes', 'stripped_at'],
+        'fragments_key', 'fragments_bytes', 'stripped_at', 'rdap_registered_at'],
   'K15: v_scan_archive columns (pseudonyms, never owner_id/by_device_id/name/raw URL)');
 select hasnt_column('admin', 'scan_archive', c, 'admin.scan_archive has no ' || c)
 from unnest(array['owner_id', 'by_device_id', 'by_name', 'name', 'url']) as c;
