@@ -10,7 +10,7 @@ import type { ScreenshotStore } from "./screenshots";
  * and blocked scan, with or without a family, and kept for good in `shoo-replica-archive`. A
  * fragments document is a few KB to tens of KB of gzip; at the global bound (2000 uploads, 100 MB per
  * day) the bucket would pass R2's free 10 GB in ±100 days, which the dashboard's archive size warning
- * (Config archive_warn_bytes, 5 GB) shows long before. Per device 100 uploads + 10 MB (anti-abuse).
+ * (Config archive_warn_mb, 5120 MB) shows long before. Per device 100 uploads + 10 MB (anti-abuse).
  * Past a quota the scan is stored without fragments.
  */
 export const FRAGMENT_QUOTA: FragmentQuota = {
