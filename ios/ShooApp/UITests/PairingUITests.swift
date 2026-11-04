@@ -62,8 +62,6 @@ final class PairingUITests: XCTestCase {
         let enabled = NSPredicate(format: "isEnabled == true")
         wait(for: [expectation(for: enabled, evaluatedWith: next)], timeout: 5)
         next.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["greeting.avatar"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["greeting.continue"].tap()
 
         let join = app.buttons["connect.join"]
         XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)

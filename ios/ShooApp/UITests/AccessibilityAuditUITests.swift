@@ -15,7 +15,6 @@ final class AccessibilityAuditUITests: XCTestCase {
         ("ON01-splash", ["-UITestReset", "YES"]),
         ("ON02-name", ["-UITestReset", "YES", "-debug.onboardingStep", "name"]),
         ("ON03-mode", ["-UITestReset", "YES", "-debug.onboardingStep", "mode"]),
-        ("ON03-greeting", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "greeting"]),
         ("ON03-connect", ["-UITestReset", "YES", "-settings.mode", "protected", "-debug.onboardingStep", "connect"]),
         ("ON03-invite", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "invite"]),
         ("ON04-extension", ["-UITestReset", "YES", "-settings.mode", "guardian", "-debug.onboardingStep", "turnOnExtension"]),

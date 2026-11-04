@@ -31,8 +31,6 @@ enum OnboardingStep: Equatable {
     case name
     /// ON-03
     case mode
-    /// "Hi, [name]" with the random avatar (D-alief-22).
-    case greeting
     /// Protected only: PR-01.
     case connect
     /// Guardian only: "Protect yourself and your loved ones", invite now (GD-04 sheet) or skip.
@@ -62,7 +60,6 @@ final class OnboardingModel {
     var brandSplashShown = false
     /// The avatar from `POST /devices` (the pick, or random if the server did not keep it). The token is not kept here (fase 13 stores it in the Keychain).
     private(set) var avatarId: String?
-    private(set) var registeredName = ""
     private(set) var isWorking = false
     private(set) var registrationFailed = false
 
@@ -97,8 +94,8 @@ final class OnboardingModel {
         step = .name
     }
 
-    /// Opened from an invite link (PR-03, WhatsApp/QR): only a Protected joins with a code, so ON-03 and
-    /// the greeting are skipped and Connect opens with the code filled in.
+    /// Opened from an invite link (PR-03, WhatsApp/QR): only a Protected joins with a code, so ON-03 is
+    /// skipped and Connect opens with the code filled in.
     var opensWithInvite: Bool { environment.router.pendingJoinCode != nil }
 
     /// ON-02 Next. Without an invite link ON-03 shows right away, in the same tap, so the slide starts at
@@ -112,7 +109,7 @@ final class OnboardingModel {
             return nil
         }
         selectedMode = .protected
-        return Task { await registerDevice(skipGreeting: true) }
+        return Task { await registerDevice() }
     }
 
     /// Back from ON-02 or ON-03 (only before registration: after that the mode is saved for good),
@@ -131,32 +128,26 @@ final class OnboardingModel {
 
     func register() async {
         guard step == .mode else { return }
-        await registerDevice(skipGreeting: selectedMode == .protected && opensWithInvite)
+        await registerDevice()
     }
 
     /// From ON-03, or from ON-02 when an invite link opened the app. A failure there shows ON-03 with
     /// Protected picked and the error, so Next tries again.
-    private func registerDevice(skipGreeting: Bool) async {
+    private func registerDevice() async {
         guard !isWorking, let selectedMode, case .success(let trimmed) = NameRule.validate(name) else { return }
         isWorking = true
         registrationFailed = false
         defer { isWorking = false }
         do {
             avatarId = try await environment.register(name: trimmed, mode: selectedMode, avatarId: selectedAvatarId).avatarId
-            registeredName = trimmed
             movedBack = false
-            step = skipGreeting ? .connect : .greeting
+            step = selectedMode == .protected ? .connect : .invite
         } catch {
             Log.app.error("Registration failed", error)
             registrationFailed = true
             movedBack = false
             step = .mode
         }
-    }
-
-    func continueFromGreeting() {
-        guard step == .greeting else { return }
-        step = mode == .protected ? .connect : .invite
     }
 
     /// "Skip", or the invite sheet's Done. Inviting later stays possible from Shield and Profile.
@@ -218,11 +209,10 @@ final class OnboardingModel {
     }
 
     #if DEBUG
-    /// UI-gate screenshots only (`-debug.onboardingStep greeting`): shows a step with sample data.
+    /// UI-gate screenshots only (`-debug.onboardingStep invite`): shows a step with sample data.
     func showForScreenshot(_ step: OnboardingStep) {
         // The name and mode steps start empty, as in Figma "Atur Nama · kosong" and "Choose Mode".
         name = step == .name ? "" : "Rina"
-        registeredName = "Rina"
         selectedMode = step == .mode ? nil : mode ?? .guardian
         avatarId = "avatar_05"
         movedBack = false

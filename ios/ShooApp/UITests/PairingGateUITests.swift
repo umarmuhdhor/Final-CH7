@@ -59,7 +59,6 @@ final class PairingGateUITests: XCTestCase {
                 tap(app.buttons["name.continue"], in: app)
                 tap(app.buttons["mode.protected"], in: app)
                 tap(app.buttons["mode.continue"], in: app)
-                tap(app.buttons["greeting.continue"], in: app)
                 let field = app.textFields["connect.code"]
                 XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
                 field.tap()

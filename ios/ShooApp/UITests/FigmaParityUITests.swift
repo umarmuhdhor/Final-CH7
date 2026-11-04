@@ -25,7 +25,7 @@ final class FigmaParityUITests: XCTestCase {
         settle()
         shot("on-splash-2")
 
-        for step in ["name", "mode", "greeting", "connect", "invite", "turnOnExtension", "extensionOn", "notifications"] {
+        for step in ["name", "mode", "connect", "invite", "turnOnExtension", "extensionOn", "notifications"] {
             // "Aktifkan Ekstensi" only shows while the extension is still off.
             app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step], onboarded: false, extensionActive: step != "turnOnExtension")
             shot("on-\(step)")

@@ -675,7 +675,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Browsing lebih tenang, diiringi rasa aman."
+            "value" : "Browsing lebih tenang,\ndiiringi rasa aman."
           }
         }
       }
@@ -2493,13 +2493,13 @@
         }
       }
     },
-    "No need to guess which sites are safe. Let Shoo do the work for you and your family." : {
+    "No worrying about dangerous sites. Let Shoo do the work for you and your family." : {
       "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak perlu menebak mana situs yang aman. Biarkan Shoo yang bekerja untuk Anda dan keluarga."
+            "value" : "Tidak khawatir situs berbahaya. Biarkan Shoo yang bekerja untuk Anda dan keluarga."
           }
         }
       }
@@ -3440,13 +3440,13 @@
         }
       }
     },
-    "Scams look real.\nShoo looks closer." : {
+    "Looks real, may not be safe.\nLet Shoo check." : {
       "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Penipuan terlihat asli.\nShoo melihat lebih jeli."
+            "value" : "Tampak asli, belum tentu aman. Biar Shoo yang cek."
           }
         }
       }
@@ -3792,13 +3792,13 @@
         }
       }
     },
-    "Shoo checks the pages you open in Safari and blocks fake sites before they can hurt you." : {
+    "Shoo checks the pages you open and blocks fake sites before they can hurt you." : {
       "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shoo mengecek halaman yang Anda buka di Safari dan memblokir situs palsu sebelum merugikan Anda."
+            "value" : "Shoo mengecek halaman yang Anda buka dan memblokir situs palsu sebelum merugikan Anda."
           }
         }
       }

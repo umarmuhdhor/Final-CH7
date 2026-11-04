@@ -26,12 +26,11 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|mode|greeting|connect|invite|turnOnExtension|extensionOn|notifications`
+    /// `-debug.onboardingStep name|mode|connect|invite|turnOnExtension|extensionOn|notifications`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
         case "mode": .mode
-        case "greeting": .greeting
         case "connect": .connect
         case "invite": .invite
         case "turnOnExtension": .turnOnExtension
@@ -53,7 +52,6 @@ private struct OnboardingStepView: View {
             case .splash: SplashView(model: model)
             case .name: NameView(model: model)
             case .mode: ModeView(model: model)
-            case .greeting: GreetingView(model: model)
             case .connect: OnboardingConnectStep(model: model)
             case .invite: InviteFamilyView(model: model)
             case .turnOnExtension:

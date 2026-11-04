@@ -30,8 +30,8 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertFalse(app.buttons["mode.continue"].isEnabled)
         app.buttons["mode.\(mode)"].tap()
         app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["greeting.avatar"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Hi, \(name)!"].exists)
+        let next = mode == "guardian" ? "invite.open" : "connect.tabs"
+        XCTAssertTrue(app.descendants(matching: .any)[next].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
     }
 
     @MainActor
@@ -44,7 +44,6 @@ final class OnboardingUITests: XCTestCase {
     func testGuardianInviteSheetShowsCodeThenGoesToExtension() {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
-        app.buttons["greeting.continue"].tap()
         XCTAssertTrue(app.buttons["invite.open"].waitForExistence(timeout: 5))
         app.buttons["invite.open"].tap()
         XCTAssertTrue(app.images["invite.qr"].waitForExistence(timeout: 10), app.debugDescription)
@@ -66,11 +65,11 @@ final class OnboardingUITests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 10))
         app.swipeLeft()
-        XCTAssertTrue(app.staticTexts["Scams look real.\nShoo looks closer."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Looks real, may not be safe.\nLet Shoo check."].waitForExistence(timeout: 5), app.debugDescription)
         app.swipeRight()
         XCTAssertTrue(app.staticTexts["Browse calmer, feeling safe."].waitForExistence(timeout: 5))
         app.buttons["splash.next"].tap()
-        XCTAssertTrue(app.staticTexts["Scams look real.\nShoo looks closer."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Looks real, may not be safe.\nLet Shoo check."].waitForExistence(timeout: 5))
         app.buttons["splash.skip"].tap()
         XCTAssertTrue(app.textFields["name.field"].waitForExistence(timeout: 5))
         app.buttons["onboarding.back"].tap()
@@ -85,7 +84,7 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText(String(repeating: "a", count: 21))
-        XCTAssertTrue(app.staticTexts["Use 20 characters or fewer."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["*Your name can be up to 20 characters"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["name.continue"].isEnabled)
     }
 
@@ -95,7 +94,6 @@ final class OnboardingUITests: XCTestCase {
         register(app, name: "Rina", mode: "guardian")
         // No way back to ON-03.
         XCTAssertFalse(app.navigationBars.buttons.firstMatch.exists)
-        app.buttons["greeting.continue"].tap()
         XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["onboarding.back"].exists)
         app.buttons["invite.skip"].tap()
@@ -118,7 +116,6 @@ final class OnboardingUITests: XCTestCase {
     func testProtectedGoesThroughConnectAndMaySkipNotifications() {
         let app = launch(notifications: "granted")
         register(app, name: "Mom", mode: "protected")
-        app.buttons["greeting.continue"].tap()
         XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 5))
         app.buttons["connect.skip"].tap()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
@@ -133,7 +130,6 @@ final class OnboardingUITests: XCTestCase {
     func testExtensionOffStaysOnTurnOnScreenAndRelaunchNeverReturnsToModeChoice() {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
-        app.buttons["greeting.continue"].tap()
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5))
@@ -149,7 +145,6 @@ final class OnboardingUITests: XCTestCase {
     func testNarrowedAccessOffersSafariAndSettings() {
         let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")
         register(app, name: "Rina", mode: "guardian")
-        app.buttons["greeting.continue"].tap()
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.openSafari"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["extension.settings"].exists)
@@ -161,7 +156,6 @@ final class OnboardingUITests: XCTestCase {
     func testSwitchOnWithoutAPageCanContinueWithoutChecking() {
         let app = launch(extensionActive: false, extensionStatus: "unchecked")
         register(app, name: "Rina", mode: "guardian")
-        app.buttons["greeting.continue"].tap()
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.skipCheck"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["extension.openSafari"].exists)
@@ -173,7 +167,6 @@ final class OnboardingUITests: XCTestCase {
     func testVideoLinkOpensPlayer() {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
-        app.buttons["greeting.continue"].tap()
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.video"].waitForExistence(timeout: 5))
         app.buttons["extension.video"].tap()
@@ -186,7 +179,6 @@ final class OnboardingUITests: XCTestCase {
     func testTurnOnOpensSettings() {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
-        app.buttons["greeting.continue"].tap()
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
         app.buttons["extension.turnOn"].tap()

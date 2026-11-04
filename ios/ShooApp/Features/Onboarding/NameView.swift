@@ -21,6 +21,8 @@ struct NameView: View {
     @Bindable var model: OnboardingModel
     @FocusState private var focused: Bool
     @Environment(\.locale) private var locale
+    /// Figma "Atur Nama": no avatar is marked until the user picks one or starts typing.
+    @State private var pickedAvatar = false
 
     var body: some View {
         OnboardingFormPage(
@@ -34,14 +36,16 @@ struct NameView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100, height: 100)
+                    .overlay { Circle().strokeBorder(OnboardingTheme.card, lineWidth: 3) }
                     .accessibilityHidden(true)
-                    .padding(.top, 32)
+                    // Figma: message ends at y 182, avatar at 209, picker at 352, field at 464.
+                    .padding(.top, 27)
 
                 avatarPicker
-                    .padding(.top, 42)
+                    .padding(.top, 43)
 
                 nameField
-                    .padding(.top, 33)
+                    .padding(.top, 32)
                     .id("name.form")
             }
         } footer: {
@@ -72,8 +76,10 @@ struct NameView: View {
                 AvatarChoice(
                     imageName: OnboardingAvatar.imageName(for: id),
                     number: index + 1,
-                    isSelected: model.selectedAvatarId == id
+                    isSelected: model.selectedAvatarId == id,
+                    isMarked: pickedAvatar || !model.name.isEmpty
                 ) {
+                    pickedAvatar = true
                     withAnimation(.snappy(duration: 0.25)) { model.selectedAvatarId = id }
                 }
                 .accessibilityIdentifier("name.avatar.\(index + 1)")
@@ -130,8 +136,9 @@ struct NameView: View {
             // field (no red); while typing within the limit there is no note ("Atur Nama · mengetik").
             if visibleProblem == .tooLong {
                 Text("*Your name can be up to 20 characters")
-                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                     .foregroundStyle(OnboardingTheme.noteInk)
+                    .opacity(0.7)
                     .accessibilityIdentifier("name.error")
             } else if let message = problemMessage {
                 Label { Text(message) } icon: { Image(systemName: "exclamationmark.circle.fill") }
@@ -156,12 +163,13 @@ struct NameView: View {
     }
 }
 
-/// One 80 pt memoji (smaller on narrow screens); the chosen one gets the green ring from Figma ("Main Avatar",
-/// stroke #2CBF81 → #8EE9EC), the others a white one, both 2.67 pt.
+/// One 80 pt memoji (smaller on narrow screens); the chosen one gets Figma's 4 pt green frame and shadow.
 private struct AvatarChoice: View {
     let imageName: String
     let number: Int
     let isSelected: Bool
+    /// False until there is a pick to show (`isSelected` is still true for VoiceOver).
+    let isMarked: Bool
     let action: () -> Void
 
     var body: some View {
@@ -171,12 +179,14 @@ private struct AvatarChoice: View {
                 .scaledToFit()
                 .frame(maxWidth: 80, maxHeight: 80)
                 .overlay {
-                    if isSelected {
-                        Circle().strokeBorder(OnboardingTheme.avatarRing, lineWidth: 2.67)
+                    if isSelected, isMarked {
+                        Circle().strokeBorder(OnboardingTheme.avatarSelectedStroke, lineWidth: 4)
                     } else {
-                        Circle().strokeBorder(OnboardingTheme.card, lineWidth: 2.67)
+                        Circle().strokeBorder(OnboardingTheme.card, lineWidth: 2)
                     }
                 }
+                // Figma: #000 3 %, y 12, blur 6.
+                .shadow(color: .black.opacity(isSelected && isMarked ? 0.03 : 0), radius: 3, y: 12)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Avatar \(number)"))
