@@ -359,14 +359,22 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     expect(await row(id)).toEqual({ path: null, bytes: null });
   });
 
-  it("an owner without family keeps no replica (nobody could see it), and spends no IP slot", async () => {
+  it("an owner without family keeps a replica of its own scans: Detail shows the evidence in Personal mode too", async () => {
+    // Was dropped as no_family (5 Nov 2026: a Guardian with no members saw "No copy of this page").
     const p = await createDevice("Solo");
     const ip = freshIp();
     const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) }, ip);
-    await droppedFor("no_family");
+    expect((await stored(id)).path).toBe(`${p.deviceId}/${id}-replica.html.gz`);
+    expect(await r2Keys(`${p.deviceId}/`)).toEqual([`${p.deviceId}/${id}-replica.html.gz`]);
+    expect((await detail(p, id)).pageReplicaUrl).toEqual(expect.any(String));
+  });
+
+  it("a device without family still has the per-device quota (50 uploads in 24 h)", async () => {
+    const p = await createDevice("Solo");
+    await fakeUploads(p.deviceId, REPLICA_QUOTA.owner);
+    const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("quota");
     expect(await row(id)).toEqual({ path: null, bytes: null });
-    expect(await r2Keys(`${p.deviceId}/`)).toEqual([]);
-    expect((await sql`select 1 from rate_limit_hits where bucket = ${limits.replicaIp.bucket}`).length).toBe(0);
   });
 
   it("a Guardian with members keeps replicas of its own scans", async () => {
