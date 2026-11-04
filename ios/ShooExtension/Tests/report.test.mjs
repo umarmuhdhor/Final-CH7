@@ -7,7 +7,7 @@ await import("../Resources/dom.js");
 await import("../Resources/pipeline.js");
 await import("../Resources/marks.js");
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
-const { shouldReport, scanBody, shareableUrl, signalMarks } = globalThis.ShooReport;
+const { shouldReport, shouldCount, scanBody, shareableUrl, signalMarks } = globalThis.ShooReport;
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const schema = read("../../../contracts/scan-result.schema.json");
@@ -21,6 +21,15 @@ test("reports once per page: when blocked, or when a warning page is done", () =
     assert.equal(shouldReport({ scanId: 3, status: "normal", done: true }, seen), false); // < 30 never leaves the phone
     seen.add(2);
     assert.equal(shouldReport({ scanId: 2, status: "blocked", done: true }, seen), false);
+});
+
+test("counts a page once, when its scan is done, at any score", () => {
+    const seen = new Set();
+    assert.equal(shouldCount({ scanId: 1, status: "normal", done: false }, seen), false); // layers still running
+    assert.equal(shouldCount({ scanId: 1, status: "normal", done: true }, seen), true);
+    assert.equal(shouldCount({ scanId: 2, status: "blocked", done: true, remembered: true }, seen), true);
+    seen.add(1);
+    assert.equal(shouldCount({ scanId: 1, status: "warning", done: true }, seen), false); // a re-check is the same page
 });
 
 test("POST /scans body matches ScanResult once background adds the owner", () => {
