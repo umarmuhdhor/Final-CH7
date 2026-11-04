@@ -1,9 +1,9 @@
 # Layer 5: feedback Guardian di atas database ADM
 
-Status: **usulan v2, 4 Nov 2026 (D-imelda-52)**. Menggantikan v1 (3 Nov, D-imelda-51).
+Status: **usulan v2, 4 Nov 2026 (D-imelda-52, D-imelda-53)**. Menggantikan v1 (3 Nov, D-imelda-51).
 Umar sudah setuju Q1–3 di #241 secara lisan (4 Nov). Persetujuannya perlu ditulis di #241. Alief sudah menjawab Q4–6 di #241. Jangan dikoding sebelum persetujuan Umar ada di issue.
 
-Layer 5 tidak memunculkan `Signal`. Isinya: keputusan Guardian per link, data belajar per domain di database admin (ADM-02/04, sudah merged), dan saran LLM yang diputuskan manusia.
+Layer 5 tidak memunculkan `Signal`. Isinya: keputusan Guardian per link, data belajar di database admin (ADM-02/04, sudah merged) termasuk satu tabel siap pakai untuk tim AI (`admin.ai_dataset`), dan saran LLM yang diputuskan manusia.
 
 ## Yang berubah dari v1
 
@@ -17,6 +17,8 @@ Layer 5 tidak memunculkan `Signal`. Isinya: keputusan Guardian per link, data be
 | LLM menilai semua laporan baru (minimal 10) | LLM menilai domain di antrean blocklist (`pending`) saja | Lebih murah, hasilnya langsung dipakai admin |
 | — | Signals (id, layer, weight) disalin ke tiap label | Satu label = satu contoh latih lengkap |
 | — | `case_library`, `ai_lessons` tidak dipakai | Belum ada di flow tim AI |
+| Tim AI menulis join sendiri dari beberapa tabel | Tabel `admin.ai_dataset`: satu baris per keputusan Guardian, berisi URL, RDAP, hasil tiap layer, label, ringkasan domain, saran LLM | Tim AI cukup `select`, tanpa query manual (D-imelda-53) |
+| Data permanen tanpa URL | `ai_dataset.url` permanen (`origin + path`, tanpa query) | Dibutuhkan untuk verifikasi dan menjalankan ulang layer 1–2. Sudah dibicarakan dengan Alief, perlu ok Umar (Q7) |
 
 ## Alur
 
@@ -58,7 +60,7 @@ Baris lama per domain: di-backfill `url` dari `scans.url` bila scan masih ada, s
 
 Label anonim tidak ikut dihitung di `families_*`, jadi tidak membuka atau menutup blocklist. Label itu hanya dipakai untuk evaluasi dan tuning. Alasannya: tanpa ref, satu keluarga yang unlink lalu link lagi bisa dihitung dua kali.
 
-`domain_labels` tetap per domain, tanpa URL (SECURITY D1). URL hanya ada di `verdicts`, yang ikut terhapus bersama keluarganya.
+`domain_labels` tetap per domain, tanpa URL. URL permanen hanya disimpan di `admin.ai_dataset` (§ di bawah). Ini mengubah SECURITY D1 untuk satu tabel itu dan perlu ok Umar.
 
 ### `admin.domain_review` (baru, Alief)
 
@@ -85,9 +87,79 @@ create index domain_review_domain on admin.domain_review (domain, reviewed_at de
 - `decision` diisi saat admin memutuskan domain itu. Dari `suggestion` vs `decision` kita dapat precision LLM tanpa label tambahan.
 - `admin.v_review_queue` menampilkan `result`, `confidence`, `reason`, `suggestion` terbaru.
 
-### Ringkasan per domain untuk tim AI
+### `admin.ai_dataset` (baru, Alief)
 
-Sudah ada: view `admin.v_domain_intel` (`domain_intel` + `domain_intel_label` + status blocklist). Layer 1–3 dibaca dari `signal_counts`. Pemetaan id ke layer ada di `contracts/detector-interface.md`. Tidak perlu tabel ringkasan baru.
+Satu tabel siap pakai untuk tim AI: satu baris per keputusan Guardian, sudah digabung dengan hasil detector saat itu dan ringkasan domainnya. Tim AI cukup `select`, tanpa join. Isi teks halaman (snapshot) **tidak** disimpan, hanya hasil tiap layer.
+
+```sql
+create table admin.ai_dataset (
+  id                 bigint generated always as identity primary key,
+  label_id           bigint unique references admin.domain_labels (id) on delete set null,
+
+  -- link
+  url                text not null,          -- origin + path, tanpa query (shareableUrl)
+  domain             text not null,
+  rdap_registered_at date,                   -- tanggal daftar domain menurut RDAP saat scan
+  rdap_age_days      int,                    -- umur domain saat scan; dicek ulang saat verifikasi
+
+  -- hasil tiap layer saat scan: [{id, weight, evidence}]
+  layer1             jsonb not null default '[]',   -- blocklist
+  layer2             jsonb not null default '[]',   -- link, lookalike, brand, TLD
+  layer3             jsonb not null default '[]',   -- form, teks, new_domain
+  layer4             jsonb not null default '[]',   -- LLM
+  layer1_score       int not null default 0,
+  layer2_score       int not null default 0,
+  layer3_score       int not null default 0,
+  layer4_score       int not null default 0,
+  score              int,                    -- total saat itu (maks. 100)
+  status             text check (status in ('warning', 'blocked')),
+  thresholds_version int,
+  scanned_at         timestamptz not null,
+
+  -- label
+  is_scam            boolean not null,       -- keputusan Guardian (N = true)
+  note               text,                   -- sudah disamarkan (§Privasi)
+  decided_at         timestamptz not null,
+  anonymous          boolean not null default false,
+
+  -- ringkasan domain (diperbarui run_analysis)
+  domain_scans       bigint,
+  domain_avg_score   int,
+  domain_max_score   int,
+  families_safe      int,
+  families_not_safe  int,
+  final_label        text check (final_label in ('scam_strong', 'scam_weak', 'safe')),
+  shared_host        boolean not null default false,
+
+  -- saran LLM terbaru (admin.domain_review)
+  review_result      text,
+  review_suggestion  text,
+  review_decision    text,
+
+  updated_at         timestamptz not null default now()
+);
+create index ai_dataset_domain on admin.ai_dataset (domain);
+create index ai_dataset_decided on admin.ai_dataset (decided_at);
+```
+
+Cara terisi (backend, bukan tim AI):
+
+| Kapan | Yang ditulis |
+|---|---|
+| Guardian memutuskan (`on_verdict`) | Baris baru: `url`, `domain`, `rdap_*`, `layer1`–`layer4` + skornya (dipecah dari `scans.signals` menurut field `layer`), `score`, `status`, `thresholds_version`, `scanned_at`, `is_scam`, `note` (disamarkan), `decided_at`, `shared_host` |
+| Guardian mengubah keputusan | Baris baru (sama dengan `domain_labels`, `revision_of`), baris lama tetap |
+| `run_analysis` | `domain_*`, `families_*`, `final_label` untuk domain yang berubah |
+| `/review` selesai | `review_result`, `review_suggestion` |
+| Admin memutuskan (`admin.vote`) | `review_decision` |
+| Device dihapus / family link putus | Baris tetap, `anonymous = true` |
+
+Catatan:
+- `evidence` ikut disimpan (teks persis dari halaman yang memicu sinyal, mis. `urgent_language`). Teks ini pendek dan berguna untuk verifikasi, tapi tetap teks halaman: masuk pertanyaan privasi Q7.
+- **RDAP belum tersimpan di mana pun.** Umur domain sekarang hanya muncul di label sinyal `new_domain`, dan hanya kalau domainnya muda. Perlu: `/analyze` mengembalikan `rdapRegisteredAt` (Imelda), extension meneruskannya di `POST /scans` (Umar, kontrak), backend menyimpannya di `scans` (Alief).
+- Layer 1–2 bisa dijalankan ulang dari `url` + `rdap_*`. Layer 3–4 hanya bisa diverifikasi dari hasilnya, karena isi halaman tidak disimpan.
+- Akses: grant `select` ke role read-only untuk tim AI (usulan: role baru `shoo_ai`), bukan seluruh `shoo_admin`.
+
+Ringkasan per domain tanpa label tetap ada di view `admin.v_domain_intel`.
 
 ## LLM: `POST /review` di `ai/` (Imelda)
 
@@ -119,7 +191,8 @@ Aturan:
 ## Privasi
 
 - `notes` disimpan permanen. Sebelum disalin ke `domain_labels`, backend menyamarkan nomor telepon, email, dan angka ≥ 8 digit (rekening, NIK, kartu) menjadi `[nomor]` / `[email]`. Teks asli tetap di `verdicts.notes` dan hilang bersama keluarga itu.
-- Label anonim: tanpa `owner_ref`, `by_ref`, device id, nama, URL.
+- Label anonim: tanpa `owner_ref`, `by_ref`, device id, nama.
+- `admin.ai_dataset` menyimpan `url` (tanpa query) dan `evidence` secara permanen. Tanpa device id, nama, atau isi halaman lengkap.
 - Wajib sebelum rilis (Umar): privacy policy dan label App Store menyebut bahwa catatan Guardian yang dianonimkan disimpan untuk meningkatkan deteksi. Ini juga menjawab Q7 di #241.
 - `notes` tidak dikirim ke LLM (§LLM).
 
@@ -131,9 +204,9 @@ Aturan:
 
 | Pemilik | Pekerjaan |
 |---|---|
-| Umar | Tulis persetujuan Q1–3 di #241. `contracts/`: `verdicts` per link, `notes`, `GET /verdicts?url=`, `POST /review`. Extension: lookup per link, `block-memory.js` tidak membersihkan seluruh domain saat `safe`. Privacy policy dan label App Store |
-| Alief | Migrasi `verdicts` (`url`, `notes`, baris lama). `domain_labels`: `signals`, `note`, anonimisasi. Penyamaran `notes`. `admin.domain_review` + kolom di `v_review_queue` + `decision` dari `admin.vote`. Cron mingguan. Input `notes` di Detail (perlu frame Figma) |
-| Imelda | `POST /review` (batch, auth secret, prompt `review.v1`, fixture, tes). `ai/data/shared-hosts.json`. Eval aturan vs LLM |
+| Umar | Tulis persetujuan Q1–3 di #241. Ok privasi untuk URL + `evidence` permanen di `ai_dataset` (Q7). `contracts/`: `verdicts` per link, `notes`, `GET /verdicts?url=`, `POST /review`, `rdapRegisteredAt` di respons `/analyze` dan `POST /scans`. Extension: lookup per link, `block-memory.js` tidak membersihkan seluruh domain saat `safe`. Privacy policy dan label App Store |
+| Alief | Migrasi `verdicts` (`url`, `notes`, baris lama). `domain_labels`: `signals`, `note`, anonimisasi. Penyamaran `notes`. `admin.domain_review` + kolom di `v_review_queue` + `decision` dari `admin.vote`. `admin.ai_dataset` + pengisiannya + role `shoo_ai`. Kolom RDAP di `scans`. Cron mingguan. Input `notes` di Detail (perlu frame Figma) |
+| Imelda | `POST /review` (batch, auth secret, prompt `review.v1`, fixture, tes). `rdapRegisteredAt` di respons `/analyze`. `ai/data/shared-hosts.json`. Eval aturan vs LLM dari `ai_dataset` |
 
 ## Kriteria tes
 
@@ -147,4 +220,7 @@ Simulator saja, jangan iPhone pribadi.
 6. Device dihapus: `verdicts` miliknya hilang, `domain_labels` tetap dengan `owner_ref` dan `by_ref` kosong, `families_*` turun.
 7. `/review` untuk shared host tidak memanggil LLM.
 8. Halaman atau `reason` berisi prompt injection tidak mengubah `blocklist_entries`.
-9. Keputusan admin tercatat di `domain_review.decision`.
+9. Keputusan admin tercatat di `domain_review.decision` dan `ai_dataset.review_decision`.
+10. Satu keputusan Guardian = satu baris `ai_dataset`, sinyal terbagi benar ke `layer1`–`layer4` dan skor per layer sama dengan jumlah bobotnya.
+11. `ai_dataset.url` tanpa query, `rdap_*` terisi untuk domain yang RDAP-nya berhasil.
+12. Device dihapus: baris `ai_dataset` tetap dengan `anonymous = true`.
