@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(53);
+select plan(54);
 
 create function pg_temp.as_role(r text, q text) returns text language plpgsql as $$
 declare
@@ -45,6 +45,8 @@ select is((select count(*)::int from pg_proc
               and proname in ('on_scan_insert', 'on_verdict', 'on_device_delete', 'on_family_unlink', 'on_scan_fragments')
               and proconfig @> array['lock_timeout=200ms'] and prosecdef),
   5, 'A8: archive trigger functions are security definer with lock_timeout 200ms');
+
+select is((select value from admin.v_config where key = 'archive_warn_mb'), '5120'::jsonb, '07b K9: archive_warn_mb default');
 
 -- ---------------------------------------------------------------- fixtures
 

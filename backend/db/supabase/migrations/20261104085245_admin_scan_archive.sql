@@ -83,6 +83,11 @@ alter table public.scans add column fragments_bytes int check (fragments_bytes b
 create index scans_fragments on public.scans (created_at) include (owner_id, fragments_bytes)
   where fragments_bytes is not null;
 
+-- 07b K9: the dashboard's Sistem page warns once the archive (table + fragments) passes this.
+-- Megabytes, not bytes: admin_config int values are int4.
+insert into admin.admin_config (key, value, kind, min_value, max_value, internal, confirm_when) values
+  ('archive_warn_mb', '5120', 'int', 100, 10240, false, null);
+
 -- ---------------------------------------------------------------- internal helpers
 
 -- {"id", "layer", "weight", "evidence"} of each signal, nothing else (labels are text the dashboard
