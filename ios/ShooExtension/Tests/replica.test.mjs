@@ -192,7 +192,7 @@ test("images and stylesheets become tokens the background fills in", () => {
     ]);
     assert.ok(draft.html.includes(`<style>${n}-s-0</style><style media="screen">${n}-s-1</style>`));
     assert.ok(draft.html.includes(`<body style="background:url(${n}-i-0)">`));
-    assert.ok(draft.html.includes(`<img src="${n}-i-1" alt="BCA">`));
+    assert.ok(draft.html.includes(`<img src="${n}-i-1-300x150" alt="BCA">`));
     assert.ok(draft.html.includes(`<img src="data:image/png;base64,AAAA">`));
     assert.doesNotMatch(draft.html, /favicon|srcset/);
 });
@@ -246,6 +246,32 @@ test("assemble fills stylesheets and images; a missing image becomes a grey plac
     assert.match(html, /<img src="data:image\/png;base64,TE9HTw==">/);
     assert.match(html, /<img src="data:image\/svg\+xml;base64,[^"]+">/); // gone.png
     assert.ok(files.fetched.every((u) => u.startsWith("https://")));
+});
+
+test("an image that isn't inlined keeps the size it had on the page, so the marks below it stay in place", async () => {
+    // A 320×179 banner shown at 351×196: a 1×1 placeholder under `width:100%; height:auto` became a
+    // 351×351 square and pushed everything below 155 px down (gratiskuota60gb.blogspot.com, 4 Nov 2026).
+    const shown = h("img", { src: "banner.png", class: "banner" });
+    shown.getBoundingClientRect = () => ({ width: 351.2, height: 196.4 });
+    const hidden = h("img", { src: "step2.png" }); // display:none on the page: no box, its own size only
+    hidden.getBoundingClientRect = () => ({ width: 0, height: 0 });
+    hidden.naturalWidth = 320;
+    hidden.naturalHeight = 179;
+    const unknown = h("img", { src: "lazy.png" });
+    unknown.getBoundingClientRect = () => ({ width: 0, height: 0 });
+    const draft = run(h("body", {}, shown, hidden, unknown));
+    const n = draft.nonce;
+    assert.ok(draft.html.includes(`<img src="${n}-i-0-351x196" class="banner">`));
+    assert.ok(draft.html.includes(`<img src="${n}-i-1-320x179">`));
+    assert.ok(draft.html.includes(`<img src="${n}-i-2">`));
+    const html = await assemble(draft, io());
+    assert.doesNotMatch(html, new RegExp(n));
+    const sizes = [...html.matchAll(/<img src="data:image\/svg\+xml;base64,([^"]+)"/g)]
+        .map(([, b64]) => /width="(\d+)" height="(\d+)"/.exec(atob(b64)).slice(1).join("x"));
+    assert.deepEqual(sizes, ["351x196", "320x179", "1x1"]);
+    // Inlined, the image brings its own size; no token suffix is left behind.
+    const inlined = await assemble(draft, io({}, { "https://bca-verifikasi.site/banner.png": "data:image/png;base64,QkFOTkVS" }));
+    assert.match(inlined, /<img src="data:image\/png;base64,QkFOTkVS" class="banner">/);
 });
 
 test("too big → again without images, then without css, then no replica", async () => {

@@ -18,8 +18,11 @@ const PARALLEL = 6;
 const CSS_URL = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)'"\s]*))\s*\)/gi;
 const CSS_IMPORT = /@import\s+(?:url\(\s*)?["']?([^"')\s;]+)["']?\s*\)?([^;]*);/gi;
 const FONT = /\.(woff2?|ttf|otf|eot)(\?|#|$)/i;
-// Grey box for an image that couldn't be inlined: keeps the layout, shows something was there.
-const PLACEHOLDER = "data:image/svg+xml;base64," + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1" fill="#e5e5ea"/></svg>');
+// Grey box for an image that couldn't be inlined: keeps the layout, shows something was there. An <img>
+// token carries the size the image had on the page (replica.js imageSrc); without it the box is 1×1.
+const placeholder = (width = 1, height = 1) => "data:image/svg+xml;base64," +
+    btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#e5e5ea"/></svg>`);
+const PLACEHOLDER = placeholder();
 
 function absolute(url, base) {
     try {
@@ -116,7 +119,8 @@ export async function assemble(draft, io, keep = { images: true, css: true }) {
     // Stylesheets first: their text holds image tokens of its own.
     return draft.html
         .replace(new RegExp(`${nonce}-s-(\\d+)`, "g"), (whole, n) => css[Number(n)] ?? "")
-        .replace(new RegExp(`${nonce}-i-(\\d+)`, "g"), (whole, n) => inlined[Number(n)] ?? PLACEHOLDER);
+        .replace(new RegExp(`${nonce}-i-(\\d+)(?:-(\\d+)x(\\d+))?`, "g"), (whole, n, w, h) =>
+            inlined[Number(n)] ?? (w ? placeholder(w, h) : PLACEHOLDER));
 }
 
 /** gzip → base64, or null when this runtime can't compress. */
