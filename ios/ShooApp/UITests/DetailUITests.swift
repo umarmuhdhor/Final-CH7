@@ -88,6 +88,22 @@ final class DetailUITests: XCTestCase {
     }
 
     @MainActor
+    func testScreenshotZoomClosesWithASwipe() {
+        let app = openDetail(Self.blocked92)
+        app.swipeUp()
+        let screenshot = app.buttons["detail.screenshot"].firstMatch
+        XCTAssertTrue(screenshot.waitForExistence(timeout: 5), app.debugDescription)
+        for down in [true, false] {
+            screenshot.tap()
+            let zoomed = app.descendants(matching: .any)["detail.screenshotZoomed"]
+            XCTAssertTrue(zoomed.waitForExistence(timeout: 5), app.debugDescription)
+            if down { zoomed.swipeDown() } else { zoomed.swipeRight() }
+            XCTAssertTrue(screenshot.waitForExistence(timeout: 5), app.debugDescription)
+            XCTAssertFalse(zoomed.waitForExistence(timeout: 2), app.debugDescription)
+        }
+    }
+
+    @MainActor
     func testWarningTakesAVerdictAndHasNoPhotoWithoutAScreenshot() {
         let app = openDetail(Self.warning41)
         XCTAssertTrue((app.descendants(matching: .any)["detail.header"].value as? String ?? "").contains("Warning"))

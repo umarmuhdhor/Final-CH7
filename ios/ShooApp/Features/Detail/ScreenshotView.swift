@@ -138,12 +138,15 @@ struct ZoomedScreenshot: View {
     @State private var baseScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var baseOffset: CGSize = .zero
+    /// How far a swipe has pulled the unzoomed image, down or to the right.
+    @State private var swipeOffset: CGSize = .zero
 
     private static let maxScale: CGFloat = 5
     private static let doubleTapScale: CGFloat = 2.5
+    private static let swipeToClose: CGFloat = 100
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             GeometryReader { proxy in
                 Image(uiImage: image)
@@ -152,6 +155,7 @@ struct ZoomedScreenshot: View {
                     .frame(width: proxy.size.width, height: proxy.size.height)
                     .scaleEffect(scale)
                     .offset(offset)
+                    .offset(swipeOffset)
                     .gesture(magnify(in: proxy.size).simultaneously(with: drag(in: proxy.size)))
                     .onTapGesture(count: 2) { toggleZoom() }
                     .accessibilityLabel(Text("Screenshot of the page"))
@@ -159,17 +163,21 @@ struct ZoomedScreenshot: View {
                     .accessibilityAction(named: scale > 1 ? Text("Zoom out") : Text("Zoom in")) { toggleZoom() }
                     .accessibilityIdentifier("detail.screenshotZoomed")
             }
+            // Solid, not see-through: a page's own colours sit right behind it and must not hide the way out.
             Button {
                 dismiss()
             } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.title)
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, .white.opacity(0.3))
-                    .frame(minWidth: 44, minHeight: 44)
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 19, weight: .semibold))
+                    .imageScale(.large)
+                    .foregroundStyle(.black)
+                    .frame(width: 50, height: 50)
+                    .background(.white, in: Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
             }
-            .padding()
-            .accessibilityLabel(Text("Close"))
+            .buttonStyle(.plain)
+            .padding(.leading, 24)
+            .accessibilityLabel(Text("Back"))
             .accessibilitySortPriority(1)
             .accessibilityIdentifier("detail.screenshotClose")
         }
@@ -191,13 +199,23 @@ struct ZoomedScreenshot: View {
     private func drag(in size: CGSize) -> some Gesture {
         DragGesture()
             .onChanged { value in
-                guard scale > 1 else { return }
+                guard scale > 1 else {
+                    swipeOffset = CGSize(width: max(value.translation.width, 0), height: max(value.translation.height, 0))
+                    return
+                }
                 offset = clamped(CGSize(
                     width: baseOffset.width + value.translation.width,
                     height: baseOffset.height + value.translation.height
                 ), in: size)
             }
-            .onEnded { _ in baseOffset = offset }
+            .onEnded { _ in
+                baseOffset = offset
+                if max(swipeOffset.width, swipeOffset.height) >= Self.swipeToClose {
+                    dismiss()
+                } else {
+                    withAnimation(reduceMotion ? nil : .spring(duration: 0.3)) { swipeOffset = .zero }
+                }
+            }
     }
 
     /// Keeps the zoomed image covering the screen: it can't be dragged off.
