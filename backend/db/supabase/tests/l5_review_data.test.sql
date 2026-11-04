@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(56);
+select plan(57);
 
 create function pg_temp.as_role(r text, q text) returns text language plpgsql as $$
 declare
@@ -104,6 +104,8 @@ select is((select (rdap_registered_at, rdap_age_days, scanned_at)::text from adm
             where label_id = (select min(id) from admin.domain_labels where domain = 'penipu-l5.test')),
   '(2026-10-29,3,"2026-11-01 10:00:00+00")', 'ai_dataset: RDAP date and age at scan time');
 select is((select note from admin.ai_dataset where note is not null), 'Telepon saya [nomor]', 'ai_dataset: note masked');
+select is((select array_agg((scan_id, has_fragments)::text order by label_id) from admin.ai_dataset where domain = 'penipu-l5.test'),
+  array['(l5_s1,f)', '(l5_s2,f)'], 'ai_dataset: scan_id + has_fragments link a decision to its scan (ADM-08)');
 select is((select count(*)::int from admin.ai_dataset where domain = 'penipu-l5.test' and is_scam and not anonymous), 2,
   'ai_dataset: one row per Guardian decision');
 select is(pg_temp.as_role('shoo_ai', $$select count(*)::text from admin.ai_dataset where domain like '%-l5.test'$$), '2', 'shoo_ai selects ai_dataset');
