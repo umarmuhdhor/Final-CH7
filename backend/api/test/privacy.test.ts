@@ -20,7 +20,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
   it("discloses the AI layer 4 summary, the RDAP domain-age lookup and cache, what is never sent, and unknown retention (#97)", async () => {
     const en = await (await call("/privacy")).text();
     for (const s of ["third-party AI provider", "the page title", "form fields", "never send the page's text", "full web address",
-      "anything you type", "your Shoo name", "can still contain what the site itself shows", "cannot guarantee how long", "3 November 2026",
+      "anything you type", "your Shoo name", "can still contain what the site itself shows", "cannot guarantee how long", "4 November 2026",
       "public domain registry (RDAP)", "registration date, for up to 7 days", "Public domain registries (RDAP) receive",
       "Apart from the short domain-age cache"]) {
       expect(en).toContain(s);
@@ -28,7 +28,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     const id = await (await call("/privacy?lang=id")).text();
     for (const s of ["penyedia AI pihak ketiga", "judul halaman", "kolom formulir", "tidak pernah mengirim isi teks halaman",
       "alamat web lengkap", "yang kamu ketik", "nama Shoo-mu", "tetap bisa berisi apa yang ditampilkan situs", "tidak bisa menjamin berapa lama",
-      "3 November 2026", "registry domain publik (RDAP)", "maksimal 7 hari", "Registry domain publik (RDAP) menerima",
+      "4 November 2026", "registry domain publik (RDAP)", "maksimal 7 hari", "Registry domain publik (RDAP) menerima",
       "Selain cache umur domain singkat"]) {
       expect(id).toContain(s);
     }
@@ -78,7 +78,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
 
   it("discloses the admin dashboard: risky domains kept for good, learning labels, masked addresses, page copy for the team (ADM-02a, D7)", async () => {
     const en = await (await call("/privacy")).text();
-    for (const s of ["Apart from the short domain-age cache and the list of risky website domains described below, we keep no other browsing history.",
+    for (const s of ["Apart from the short domain-age cache, the list of risky website domains and the record of flagged pages described below, we keep no other browsing history.",
       "Risky website domains that Shoo flagged", "kept with counts and detection signals, to improve detection",
       "no link to you, your device or the page address, and are not deleted",
       "A few people on the Shoo team can see the address of pages Shoo flagged, without the part after",
@@ -94,7 +94,7 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
     expect(en).not.toContain("without any link to you or your device");
     expect(en).not.toContain("we keep no other browsing history, except");
     const id = await (await call("/privacy?lang=id")).text();
-    for (const s of ["Selain cache umur domain singkat dan daftar domain situs berisiko yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
+    for (const s of ["Selain cache umur domain singkat, daftar domain situs berisiko, dan catatan halaman yang ditandai yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
       "Domain situs berisiko yang ditandai Shoo", "disimpan bersama jumlah dan sinyal deteksinya, untuk memperbaiki deteksi",
       "tidak terkait denganmu, device-mu, atau alamat halaman, dan tidak dihapus",
       "Beberapa orang di tim Shoo dapat melihat alamat halaman yang ditandai Shoo, tanpa bagian setelah",
@@ -104,6 +104,35 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       "Salinan yang dipakai untuk memperbaiki deteksi (domain, Aman atau Tidak aman, skor risiko Shoo untuk halaman itu saat itu",
       "tidak bisa dilacak ke device kalian tanpa kunci kami", "dihapus saat kamu memutus hubungan atau menghapus datamu",
       "Seseorang di tim Shoo juga bisa melihatnya setelah minimal dua keluarga melaporkan situs yang sama, tanpa melihat dari perangkat mana salinan itu berasal (tercatat)."]) {
+      expect(id).toContain(s);
+    }
+  });
+
+  it("discloses the scan archive: flagged parts sent without a family, code instead of name, kept until deletion, stripped after (ADM-07, D-dash-17)", async () => {
+    const en = await (await call("/privacy")).text();
+    for (const s of ["the parts of the page that made Shoo flag it (for example a form that asks for an OTP), with the page's styling",
+      "This is sent with or without a family.",
+      "see a code instead of your name (for example \"User a3f9c2e1\")",
+      "A record of each flagged page", "is kept to improve detection until you delete your data.",
+      "that record loses every link to you", "the time is rounded to the hour",
+      "kept only for sites shown to be a scam and are deleted for other sites",
+      "When you disconnect, the Guardian's decisions in the record are removed.",
+      "replaced with random characters",
+      "The record of flagged pages loses its link to you at once"]) {
+      expect(en).toContain(s);
+    }
+    // The archive keeps a keyed code while the account exists: never claim it has no link before deletion.
+    expect(en).not.toContain("record of flagged pages has no link to you");
+    const id = await (await call("/privacy?lang=id")).text();
+    for (const s of ["bagian halaman yang membuat Shoo menandainya (misalnya formulir yang meminta OTP), beserta tampilan halamannya",
+      "Ini dikirim baik kamu terhubung dalam keluarga maupun tidak.",
+      "melihat kode, bukan namamu (misalnya \"User a3f9c2e1\")",
+      "Catatan setiap halaman yang ditandai", "disimpan untuk memperbaiki deteksi sampai kamu menghapus datamu.",
+      "catatan itu kehilangan semua kaitan denganmu", "waktunya dibulatkan ke jam",
+      "hanya disimpan untuk situs yang terbukti penipuan dan dihapus untuk situs lain",
+      "Saat kamu memutus hubungan, keputusan Guardian di catatan itu dihapus.",
+      "diganti dengan karakter acak",
+      "Catatan halaman yang ditandai langsung kehilangan kaitan denganmu"]) {
       expect(id).toContain(s);
     }
   });

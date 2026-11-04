@@ -9,6 +9,8 @@ import type { AppEnv } from "../env";
 // 7-day KV cache of domain + registration date (ai/src/rdap/, D-imelda-40). The admin dashboard (ADM-01a/02a) keeps
 // risky domains for good (admin.domain_intel), learning labels with keyed refs until disconnect/delete
 // (admin.domain_labels), shows masked addresses and opens a page copy only from 2+ families (admin.replica_for).
+// ADM-07 (dashboard D-dash-17) keeps every flagged page in admin.scan_archive with a keyed code until deletion,
+// then strips it; the extension sends the flagged parts of the page (evidence fragments) with or without a family.
 
 // TODO(sync:alief): team contact address (fase 24 K10 mailbox) — replace before external TestFlight /
 // App Store (TODO E6). Shared by /privacy and /support, so one line changes both.
@@ -18,7 +20,7 @@ type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo privacy policy",
-    updated: "Last updated: 3 November 2026",
+    updated: "Last updated: 4 November 2026",
     lead: "Shoo blocks scam websites on iPhone and lets a family member (the Guardian) help. We keep as little as we can, only to make that work.",
     sections: [
       { h: "What we store", items: [
@@ -29,15 +31,17 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "How many sites Shoo has blocked or warned you about in total: numbers only, no addresses.",
         "Your notification choices, quiet hours and your phone's time zone (for example \"Asia/Jakarta\"), so pushes respect them.",
         "Pages the extension flagged as risky (score 30 or more): address, domain, page title, site icon, score, the reasons, the time, and a copy of the page (older app versions sent a screenshot instead).",
+        "For pages flagged as risky, the parts of the page that made Shoo flag it (for example a form that asks for an OTP), with the page's styling. Text you typed is removed first. This is sent with or without a family.",
         "Who is connected to whom in a family, and the Guardian's decisions about a site (Safe or Not safe), with the Guardian's name.",
       ] },
       { h: "What we do not do", items: [
         "No ads, no analytics, no tracking, and we never sell data.",
-        "Pages scored below 30 may be analysed but are not stored by us. Apart from the short domain-age cache and the list of risky website domains described below, we keep no other browsing history.",
+        "Pages scored below 30 may be analysed but are not stored by us. Apart from the short domain-age cache, the list of risky website domains and the record of flagged pages described below, we keep no other browsing history.",
       ] },
       { h: "Who can see it", items: [
         "You, and your Guardian while you are connected. When you disconnect, your Guardian loses access at once and their decisions about your sites are deleted.",
         "A few people on the Shoo team can see the address of pages Shoo flagged, without the part after \"?\" and without your device name.",
+        "Those people see a code instead of your name (for example \"User a3f9c2e1\") next to each flagged page, with its score, its reasons, the flagged parts of the page and the Guardian's decision.",
         "A person on the Shoo team may view the copy of a page reported as a scam, without knowing whose device it came from. The copy can include text the page showed you.",
       ] },
       { h: "How long we keep it", items: [
@@ -46,12 +50,15 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "Family codes stop working after 30 minutes, or as soon as a new one is made, and are deleted within a day.",
         "Your device's name, avatar and push token stay until you delete your data in the app. Devices that stop using Shoo are not deleted automatically yet.",
         "A Guardian's decisions stay until you disconnect or delete your data. A copy used to improve detection (the domain, Safe or Not safe, Shoo's risk score for the page at that time, and codes that cannot be traced back to your devices without our key) is kept after the 14 days and is deleted when you disconnect or delete your data.",
+        "A record of each flagged page (domain, address without the part after \"?\", page title, site icon, score, reasons, time, the Guardian's decision and the flagged parts of the page) is kept to improve detection until you delete your data.",
+        "When you delete your data, that record loses every link to you: the code and the page title are removed and the time is rounded to the hour. The flagged parts of the page are kept only for sites shown to be a scam and are deleted for other sites. When you disconnect, the Guardian's decisions in the record are removed.",
+        "When Shoo's detection team uses that record, it gets no code, no page title and no name, and long codes in the address (such as a personal link) are replaced with random characters.",
         "A domain that a person on our team reviewed and confirmed as a scam joins a shared blocklist for every user. Only the domain is kept, with no link to you.",
         "Risky website domains that Shoo flagged (for example bca-verifikasi.site) are kept with counts and detection signals, to improve detection. They have no link to you, your device or the page address, and are not deleted.",
         "Security counters (a keyed hash of your IP address or device, never the address itself) are deleted after 1 day.",
       ] },
       { h: "Delete your data", items: [
-        "In the app: Profile → Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are deleted immediately. Page copy, screenshot and icon links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable).",
+        "In the app: Profile → Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are deleted immediately. Page copy, screenshot and icon links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable). The record of flagged pages loses its link to you at once, as described above.",
       ] },
       { h: "Copy of the page", items: [
         "When the extension blocks a page or warns you about it, it keeps a copy of the page as you saw it, so your Guardian can see what the page looked like. The copy has no scripts and loads nothing from the internet.",
@@ -80,7 +87,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
   },
   id: {
     title: "Kebijakan privasi Shoo",
-    updated: "Terakhir diperbarui: 3 November 2026",
+    updated: "Terakhir diperbarui: 4 November 2026",
     lead: "Shoo memblokir situs penipuan di iPhone dan membiarkan anggota keluarga (Guardian) membantu. Kami menyimpan sesedikit mungkin, hanya supaya itu berjalan.",
     sections: [
       { h: "Yang kami simpan", items: [
@@ -91,15 +98,17 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "Berapa banyak situs yang pernah diblokir atau diberi peringatan oleh Shoo: hanya angka, tanpa alamat.",
         "Pilihan notifikasimu, jam tenang, dan zona waktu ponselmu (misalnya \"Asia/Jakarta\"), supaya push mengikutinya.",
         "Halaman yang ditandai berisiko oleh extension (skor 30 atau lebih): alamat, domain, judul halaman, ikon situs, skor, alasannya, waktu, dan salinan halaman (versi app lama mengirim screenshot).",
+        "Untuk halaman yang ditandai berisiko, bagian halaman yang membuat Shoo menandainya (misalnya formulir yang meminta OTP), beserta tampilan halamannya. Isian yang kamu ketik dihapus dulu. Ini dikirim baik kamu terhubung dalam keluarga maupun tidak.",
         "Siapa terhubung dengan siapa dalam keluarga, dan keputusan Guardian tentang suatu situs (Aman atau Tidak aman) beserta nama Guardian.",
       ] },
       { h: "Yang tidak kami lakukan", items: [
         "Tanpa iklan, tanpa analytics, tanpa pelacakan, dan kami tidak pernah menjual data.",
-        "Halaman dengan skor di bawah 30 bisa dianalisis tetapi tidak kami simpan. Selain cache umur domain singkat dan daftar domain situs berisiko yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
+        "Halaman dengan skor di bawah 30 bisa dianalisis tetapi tidak kami simpan. Selain cache umur domain singkat, daftar domain situs berisiko, dan catatan halaman yang ditandai yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
       ] },
       { h: "Siapa yang bisa melihat", items: [
         "Kamu, dan Guardian-mu selama kalian terhubung. Saat kamu memutus hubungan, Guardian langsung kehilangan akses dan keputusannya tentang situs-situsmu dihapus.",
         "Beberapa orang di tim Shoo dapat melihat alamat halaman yang ditandai Shoo, tanpa bagian setelah \"?\" dan tanpa nama perangkatmu.",
+        "Orang-orang itu melihat kode, bukan namamu (misalnya \"User a3f9c2e1\") di setiap halaman yang ditandai, beserta skor, alasan, bagian halaman yang ditandai, dan keputusan Guardian.",
         "Tim Shoo dapat melihat salinan halaman yang dilaporkan sebagai penipuan, tanpa mengetahui dari perangkat siapa salinan itu berasal. Salinan bisa memuat teks yang ditampilkan halaman itu kepadamu.",
       ] },
       { h: "Berapa lama disimpan", items: [
@@ -108,12 +117,15 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "Kode keluarga berhenti berlaku setelah 30 menit, atau begitu kode baru dibuat, dan dihapus dalam sehari.",
         "Nama, avatar, dan token push device-mu disimpan sampai kamu menghapus datamu di app. Device yang berhenti memakai Shoo belum dihapus otomatis.",
         "Keputusan Guardian disimpan sampai kamu memutus hubungan atau menghapus datamu. Salinan yang dipakai untuk memperbaiki deteksi (domain, Aman atau Tidak aman, skor risiko Shoo untuk halaman itu saat itu, dan kode yang tidak bisa dilacak ke device kalian tanpa kunci kami) tetap disimpan setelah 14 hari dan dihapus saat kamu memutus hubungan atau menghapus datamu.",
+        "Catatan setiap halaman yang ditandai (domain, alamat tanpa bagian setelah \"?\", judul halaman, ikon situs, skor, alasan, waktu, keputusan Guardian, dan bagian halaman yang ditandai) disimpan untuk memperbaiki deteksi sampai kamu menghapus datamu.",
+        "Saat kamu menghapus datamu, catatan itu kehilangan semua kaitan denganmu: kode dan judul halaman dihapus dan waktunya dibulatkan ke jam. Bagian halaman yang ditandai hanya disimpan untuk situs yang terbukti penipuan dan dihapus untuk situs lain. Saat kamu memutus hubungan, keputusan Guardian di catatan itu dihapus.",
+        "Saat tim deteksi Shoo memakai catatan itu, tim tidak menerima kode, judul halaman, maupun nama, dan kode panjang di alamat (misalnya link pribadi) diganti dengan karakter acak.",
         "Domain yang sudah diperiksa tim kami dan dipastikan penipuan masuk ke daftar blokir bersama untuk semua pengguna. Hanya domainnya yang disimpan, tanpa kaitan denganmu.",
         "Domain situs berisiko yang ditandai Shoo (misalnya bca-verifikasi.site) disimpan bersama jumlah dan sinyal deteksinya, untuk memperbaiki deteksi. Domain ini tidak terkait denganmu, device-mu, atau alamat halaman, dan tidak dihapus.",
         "Penghitung keamanan (hash berkunci dari alamat IP atau device, tidak pernah alamatnya sendiri) dihapus setelah 1 hari.",
       ] },
       { h: "Hapus datamu", items: [
-        "Di app: Profil → Hapus akun. Device, halaman yang ditandai, salinan halaman, screenshot, ikon situs, keputusan, dan hubungan keluarga dihapus seketika. Link salinan halaman, screenshot, dan ikon langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi).",
+        "Di app: Profil → Hapus akun. Device, halaman yang ditandai, salinan halaman, screenshot, ikon situs, keputusan, dan hubungan keluarga dihapus seketika. Link salinan halaman, screenshot, dan ikon langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi). Catatan halaman yang ditandai langsung kehilangan kaitan denganmu, seperti dijelaskan di atas.",
       ] },
       { h: "Salinan halaman", items: [
         "Saat extension memblokir halaman atau memberi peringatan, extension menyimpan salinan halaman seperti yang kamu lihat, supaya Guardian bisa melihat tampilan halaman itu. Salinan ini tanpa script dan tidak memuat apa pun dari internet.",
