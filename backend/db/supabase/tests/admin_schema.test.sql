@@ -86,7 +86,10 @@ insert into blocklist_entries (domain, families, approved_at, approved_by) value
 select is(
   (select count(*)::int from information_schema.columns
     where table_schema = 'admin' and column_name in ('owner_id', 'owner_ref', 'by_ref', 'by_device_id', 'by_name', 'page_title', 'url', 'signals', 'replica_path')
-      and table_name in (select table_name from information_schema.views where table_schema = 'admin')),
+      and table_name in (select table_name from information_schema.views where table_schema = 'admin')
+      -- 07a K15: the scan archive shows pseudonyms, title and compact signals (its columns are pinned
+      -- in admin_archive.test.sql); never owner_id, by_device_id, a name or the raw URL.
+      and not (table_name = 'v_scan_archive' and column_name in ('owner_ref', 'by_ref', 'page_title', 'signals'))),
   0, 'I13: no admin view exposes owner, guardian name, title, raw URL, signals or replica path');
 select columns_are('admin', 'v_scans',
   array['id', 'domain', 'url_masked', 'score', 'status', 'signal_ids', 'detected_at', 'has_replica', 'verdict'],

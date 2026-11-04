@@ -36,7 +36,7 @@ app.use("*", async (c, next) => {
   // No sql.end(): Hyperdrive closes the client connection when the request ends
   // (Hyperdrive docs, connection lifecycle); ending it ourselves raises "socket has been closed".
   // Early 413 from the declared length, before auth or rate limits touch the DB. readJson still
-  // caps the streamed body per route (16 KB default, 512 KB for POST /scans with a page replica).
+  // caps the streamed body per route (16 KB default, 1 MiB for POST /scans with a page replica and evidence fragments).
   if (Number(c.req.header("content-length") ?? 0) > maxRequestBytes(c.req.method, c.req.path)) {
     c.res = errorResponse(c, errors.tooLarge());
     setSecurityHeaders(c.res.headers);

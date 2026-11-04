@@ -13,6 +13,7 @@ import { deliverPush } from "../services/push/deliver";
 import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachFavicon, faviconUrl } from "../services/favicons";
+import { attachFragments } from "../services/fragments";
 import { attachReplica, replicaUrl } from "../services/replicas";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
 import { errorInfo } from "../http/logError";
@@ -59,6 +60,8 @@ const scanBody = z
     // EX-07: gzip + base64 page replica. No .max(): an oversized replica is dropped by
     // decodeReplica, while a 422 would make the extension drop the whole scan.
     pageReplicaBase64: z.string().nullish(),
+    // ADM-07: gzip + base64 evidence fragments for the admin archive. No .max(), as the replica.
+    evidenceFragmentsBase64: z.string().nullish(),
     // Dashboard phase 05 (K1): GET /config/public `version` the status was decided with.
     thresholdsVersion: z.number().int().min(0).max(2_147_483_647).optional(),
   })
@@ -117,7 +120,7 @@ scans.post("/scans", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hit(sql, limits.createScan, principal.deviceId);
-  // 512 KB on the exact path only, like the early check in app.ts (also for chunked bodies).
+  // 1 MiB on the exact path only, like the early check in app.ts (also for chunked bodies).
   const body = await readJson(c, scanBody, maxRequestBytes(c.req.method, c.req.path));
   // K1: a scan decided with the active thresholds must match them exactly; another version (a stale
   // cache) or none (an older extension) only has to respect the fence above.
@@ -202,6 +205,17 @@ scans.post("/scans", async (c) => {
       Promise.allSettled(deliveries)
         .then(() => attachReplica(sql, c.env, ref, replica, ip))
         .catch((err) => console.error(JSON.stringify({ event: "replica_dropped", reason: "error", error: errorInfo(err) }))),
+    );
+  }
+  // ADM-07 (07a K5): evidence fragments for the admin archive, also after the pushes. Sent with or
+  // without a family; never returned to the app.
+  const fragments = body.evidenceFragmentsBase64;
+  if (fragments) {
+    const ref = { id, ownerId: principal.deviceId };
+    c.executionCtx.waitUntil(
+      Promise.allSettled(deliveries)
+        .then(() => attachFragments(sql, c.env, ref, fragments))
+        .catch((err) => console.error(JSON.stringify({ event: "fragments_dropped", reason: "error", error: errorInfo(err) }))),
     );
   }
   return c.json({ id }, 201);
