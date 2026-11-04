@@ -43,3 +43,11 @@ id = "74f3afa35cd846f6a8977a3b25feffcd"
 [[kv_namespaces]]
 binding = "RDAP_KV"
 id = "00176b51ac6a417d88756643bcd2d05c"
+
+# ai_usage (05b K4): one Analytics Engine point per /analyze with counts only (src/usage.js): prompt version, cases
+# version, layer 4 outcome; tokens in/out, layer 4 ms, RDAP failed. No IP, domain, URL, page text or index (A1, A4).
+# The dataset is created on the first write; Analytics Engine must be enabled once on the account (Workers ->
+# Analytics Engine). Without this binding nothing is written. Remove the block to turn it off.
+[[analytics_engine_datasets]]
+binding = "AI_USAGE"
+dataset = "shoo_ai_usage"

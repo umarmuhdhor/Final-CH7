@@ -105,6 +105,21 @@ Why the budget: the KV Free plan allows 1,000 writes and 100,000 reads a day **p
 
 Nothing from a request is stored or logged (the only cache is RDAP domain -> registration date): no `console.*` in `src/`, and a test spies on console and stdout/stderr across success and every error path. Responses are `no-store`.
 
+### Usage counts: `ai_usage` (05b K4)
+
+With the `AI_USAGE` binding (`wrangler.toml`, dataset `shoo_ai_usage`), each `/analyze` that reaches the analysis writes one Workers Analytics Engine point (`src/usage.js`). It holds counts and our own labels only, so the cost of layer 4 can be followed over time:
+
+| Field | Value |
+|---|---|
+| `blob1` | `PROMPT_VERSION` (`reality-check.vN`) |
+| `blob2` | cases version (`none` until versioned cases exist) |
+| `blob3` | layer 4 outcome: an `OUTCOMES` name from `src/layer4/reality.js`, or `off` when layer 4 is not configured (a checker that throws before it counts an outcome is written as `http_error`) |
+| `double1`, `double2` | tokens in / out from the provider's `usage`; 0 when it sends none, and 0 on `timeout` / `http_error` (the answer, and its count, never arrives) |
+| `double3` | layer 4 LLM time, ms (0 when no call was made) |
+| `double4` | 1 when a domain-age lookup ran and gave no age, else 0 |
+
+No IP, domain, URL, title, page text, prompt, answer, key or `index`. Refused requests (rate limit, bad JSON, invalid body) write nothing. A missing binding or any binding error leaves the answer unchanged. `stats()` (and `GET /_dev/layer4`) also sums `tokens: { in, out }` since the checker was built. Like the daily cap counter it is per isolate, not a global "cap left". The dataset lives in the `shoo-ai` account; Analytics Engine must be enabled there once. To turn it off, remove the binding.
+
 ## Layout
 
 ```

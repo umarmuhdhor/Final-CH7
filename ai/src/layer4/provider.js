@@ -1,6 +1,8 @@
 // Generic chat-completions client (OpenAI-compatible request shape, which most providers offer).
 // Model, base URL and key come from config. It returns { ok: true, content } or { ok: false, reason }; it never throws
-// and never forwards anything the provider said about an error (SECURITY A10).
+// and never forwards anything the provider said about an error (SECURITY A10). A parsed answer also carries the
+// provider's token counts as `usage` ({ in, out }, 0 when the provider sends none) for the ai_usage point (05b K4).
+import { tokenUsage } from "../usage.js";
 
 const MAX_RESPONSE_BYTES = 64 * 1024;
 const HTTP_ERROR = Object.freeze({ ok: false, reason: "http_error" });
@@ -9,7 +11,7 @@ const TIMEOUT = Object.freeze({ ok: false, reason: "timeout" });
 
 /**
  * @param {{ config: object, fetch: typeof fetch }} deps
- * @returns {(messages: object[], signal: AbortSignal) => Promise<{ ok: true, content: string } | { ok: false, reason: "http_error" | "bad_schema" | "timeout" }>}
+ * @returns {(messages: object[], signal: AbortSignal) => Promise<{ ok: true, content: string, usage: { in: number, out: number } } | { ok: false, reason: "http_error" | "bad_schema" | "timeout", usage?: { in: number, out: number } }>}
  */
 export function createProvider({ config, fetch }) {
     return async (messages, signal) => {
@@ -42,7 +44,8 @@ export function createProvider({ config, fetch }) {
                 return BAD_SCHEMA;
             }
             const content = body?.choices?.[0]?.message?.content;
-            return typeof content === "string" ? { ok: true, content } : BAD_SCHEMA;
+            const usage = tokenUsage(body?.usage); // a reply without content was still billed
+            return typeof content === "string" ? { ok: true, content, usage } : { ...BAD_SCHEMA, usage };
         } catch {
             return signal?.aborted ? TIMEOUT : HTTP_ERROR; // network failure, redirect refused, or our abort
         }

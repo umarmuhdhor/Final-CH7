@@ -1,4 +1,5 @@
 // POST /analyze and GET /public-blocklist (contracts/api.md). Stateless: nothing from a request is stored or logged.
+// The one exception is a count-only Analytics Engine point per /analyze (src/usage.js), when the AI_USAGE binding exists.
 // The only cache is RDAP domain ages (domain + registration date, TTL in rdap/cache.js): memory, plus Workers KV
 // when the RDAP_KV binding exists (D-imelda-40).
 // Authorization is accepted but never read: the AI service cannot verify device tokens in the MVP.
@@ -15,6 +16,7 @@ import { createKvBlocklist } from "./blocklist/kv.js";
 import { readConfig } from "./layer4/config.js";
 import { createRealityCheck, CLIENT_CALLS_PER_HOUR } from "./layer4/reality.js";
 import { clientKey, createRateLimiter } from "./ratelimit.js";
+import { createUsageReport, watchLlm, watchRdap, writeUsage } from "./usage.js";
 
 /** Per-IP limit for /analyze. Phones behind one carrier IP share it, so it is generous; over the limit the extension just keeps layers 1-2. */
 export const ANALYZE_RATE = Object.freeze({ limit: 300, windowMs: 10 * 60 * 1000 });
@@ -144,7 +146,17 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const checked = validateRequest(body);
         if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
         const checker = llm ?? llmFor(c.env);
-        return c.json({ signals: await analyze(checked.snapshot, { rdap: rdapFor(c), llm: checker, client, localSignals: checked.localSignals, deadline: startedAt + SERVER_DEADLINE_MS, now }) });
+        const report = createUsageReport({ hasLayer4: !!checker });
+        const signals = await analyze(checked.snapshot, {
+            rdap: watchRdap(rdapFor(c), report),
+            llm: watchLlm(checker, report),
+            client,
+            localSignals: checked.localSignals,
+            deadline: startedAt + SERVER_DEADLINE_MS,
+            now,
+        });
+        writeUsage(c.env?.AI_USAGE, report); // counts only (src/usage.js); no binding in tests and the dev server
+        return c.json({ signals });
     });
 
     app.get("/public-blocklist", async (c) => {
