@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     runs-on: macos-26 # Xcode 26.x: the app uses iOS 26.2 SDK APIs (SFSafariSettings)
-    timeout-minutes: 60
+    timeout-minutes: 45 # the suite takes about 32 minutes on this runner
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +40,7 @@ jobs:
       # The full log is too long to read; keep its tail plus every assertion line, so a failing
       # test shows why it failed and not only its name. Each finished test is printed as it happens,
       # so a run that gets cancelled still shows how far it got and what took the time.
+      # FigmaParityUITests only takes QA screenshots and is not a gate; it took 17 of the 47 test minutes.
       - name: Test
         run: |
           set +e
@@ -47,6 +48,7 @@ jobs:
             -project ios/Shoo.xcodeproj \
             -scheme Shoo \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -skip-testing:ShooAppUITests/FigmaParityUITests \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
             2>&1 | tee xcodebuild.log | grep --line-buffered -E "^Test Case .* (passed|failed|skipped) \("
           status=${PIPESTATUS[0]}
