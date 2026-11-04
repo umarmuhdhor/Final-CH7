@@ -197,16 +197,18 @@ describe("POST /scans: one Activity row per site", () => {
     expect(d!.blocked_total).toBe(2);
   });
 
-  it("POST /scans takes up to 512 KB (EX-07 page replica); 413 above it", async () => {
+  it("POST /scans takes up to 1 MiB (EX-07 page replica + ADM-07 evidence fragments); 413 above it", async () => {
     const p = await createDevice("Mom");
     // 300 KB passed the old 256 KB limit only with a replica-sized body; the replica itself is checked later.
     expect((await post(p, extensionBody(blocked92, { pageReplicaBase64: "A".repeat(300 * 1024) }))).status).toBe(201);
-    const over = await post(p, extensionBody(blocked92, { pageReplicaBase64: "A".repeat(512 * 1024) }));
+    // 600 KB passed the old 512 KB limit only with a replica and fragments.
+    expect((await post(p, extensionBody(blocked92, { pageReplicaBase64: "A".repeat(600 * 1024) }))).status).toBe(201);
+    const over = await post(p, extensionBody(blocked92, { pageReplicaBase64: "A".repeat(1024 * 1024) }));
     expect(over.status).toBe(413);
     expect(await errorCode(over)).toBe("too_large");
   });
 
-  it("the 512 KB limit is POST /scans exactly: /scans/, /scans/{id} and other routes stay at 256 KB", async () => {
+  it("the 1 MiB limit is POST /scans exactly: /scans/, /scans/{id} and other routes stay at 256 KB", async () => {
     const p = await createDevice("Mom");
     const big = JSON.stringify(extensionBody(blocked92, { pageReplicaBase64: "A".repeat(300 * 1024) }));
     const headers = { "content-type": "application/json" };

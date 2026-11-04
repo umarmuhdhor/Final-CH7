@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../src/index";
 import { replicaUsage } from "../src/db/repo/scans";
 import { logReplicaUsage, MAX_REPLICA_BYTES, REPLICA_QUOTA } from "../src/services/replicas";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { resetDb, testSql, withoutTriggers } from "./helpers/resetDb";
 
 // Fase 19 K5.2 (D-alief-B14): the hourly `replica_quota_usage` gauge, read by fase 21.
 
@@ -17,11 +17,11 @@ async function device(id: string, mode: "guardian" | "protected" = "protected") 
 }
 const link = (p: string, g: string) => sql`insert into family_links (protected_id, guardian_id) values (${p}, ${g})`;
 /** Original uploads of `owner` in the last 24 h (rows only, no objects). */
-const uploads = (owner: string, n: number, bytes = 1000, ageHours = 1) => sql`
+const uploads = (owner: string, n: number, bytes = 1000, ageHours = 1) => withoutTriggers((tx) => tx`
   insert into scans (owner_id, url, domain, score, status, detected_at, created_at, replica_path, replica_bytes)
   select ${owner}, 'https://q.example/', 'q.example', 92, 'blocked', now(), now() - make_interval(hours => ${ageHours}),
          ${owner} || '/q' || g || '-replica.html.gz', ${bytes}
-  from generate_series(1, ${n}) g`;
+  from generate_series(1, ${n}) g`);
 
 const capture = () => {
   const lines: Record<"log" | "warn" | "error", string[]> = { log: [], warn: [], error: [] };

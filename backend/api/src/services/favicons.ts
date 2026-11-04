@@ -6,6 +6,7 @@ import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
 import { hit, hitLight, limits } from "../http/rateLimit";
 import { downloadFavicon, type DownloadOptions, FAVICON_CONTENT_TYPE, FAVICON_EXT, type FetchFail } from "./faviconFetch";
+import { archiveFavicon } from "./fragments";
 import { faviconLink } from "./screenshotLinks";
 import { abandonUpload, r2Store } from "./screenshots";
 
@@ -64,7 +65,9 @@ export async function attachFavicon(
     await abandonUpload(sql, store, path);
     return;
   }
-  if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
+  if (!(await scanExists(sql, scan.id))) return abandonUpload(sql, store, path);
+  // ADM-07 (07a K7): the admin archive keeps one copy per domain.
+  await archiveFavicon(env, scan.domain, bytes, FAVICON_CONTENT_TYPE[type]);
 }
 
 /**
