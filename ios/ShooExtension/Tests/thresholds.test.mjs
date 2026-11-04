@@ -166,7 +166,8 @@ test("client: applies the background's numbers to ShooPipeline.THRESHOLD", async
     const p = page(T(35, 50, 70));
     await p.settle();
     assert.equal(JSON.stringify(p.asked), '[{"type":"thresholds"}]');
-    assert.deepEqual({ ...p.ctx.ShooPipeline.THRESHOLD }, { firstWarning: 35, secondWarning: 50, blocked: 70 });
+    // version rides along for report.js (POST /scans thresholdsVersion); pipeline.js ignores it.
+    assert.deepEqual({ ...p.ctx.ShooPipeline.THRESHOLD }, { firstWarning: 35, secondWarning: 50, blocked: 70, version: 7 });
     assert.equal(p.ctx.ShooPipeline.statusFor(72), "blocked");
     assert.equal(p.ctx.ShooPipeline.statusFor(34), "normal");
 });

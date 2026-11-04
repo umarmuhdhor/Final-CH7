@@ -161,19 +161,24 @@ async function startReport(message) {
     if (!session?.apiBaseURL) return { ok: false, skipped: "no_api_url" }; // not onboarded → nothing leaves the phone
     if (!mayReport(message.scan?.status, session)) return { ok: false, skipped: "sharing_off" };
 
-    const send = (pageReplicaBase64, evidenceFragmentsBase64) =>
-        fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
-            method: "POST",
-            token: session.token,
-            timeoutMs: SCAN_TIMEOUT_MS,
-            body: JSON.stringify({
-                ...message.scan,
-                ownerDeviceId: session.deviceId,
-                ownerName: (session.name || "").slice(0, 20),
-                ...(pageReplicaBase64 ? { pageReplicaBase64 } : {}),
-                ...(evidenceFragmentsBase64 ? { evidenceFragmentsBase64 } : {}),
-            }),
+    // X1: a 422 on a scan that carries thresholdsVersion means the status and that version disagree
+    // (thresholds changed while the page was being scored). Sent again without it, only the fence
+    // applies; the scan matters more than the check.
+    const { thresholdsVersion, ...scan } = message.scan ?? {};
+    const post1 = (body) =>
+        fetchJSON(endpoint(session.apiBaseURL, "/scans"), { method: "POST", token: session.token, timeoutMs: SCAN_TIMEOUT_MS, body });
+    const send = (pageReplicaBase64, evidenceFragmentsBase64) => {
+        const body = (version) => JSON.stringify({
+            ...scan,
+            ...(Number.isInteger(version) ? { thresholdsVersion: version } : {}),
+            ownerDeviceId: session.deviceId,
+            ownerName: (session.name || "").slice(0, 20),
+            ...(pageReplicaBase64 ? { pageReplicaBase64 } : {}),
+            ...(evidenceFragmentsBase64 ? { evidenceFragmentsBase64 } : {}),
         });
+        return post1(body(thresholdsVersion)).catch((error) =>
+            Number.isInteger(thresholdsVersion) && error.status === 422 ? post1(body(undefined)) : Promise.reject(error));
+    };
     const io = webIO();
     const built = (promise, what) =>
         promise.catch((error) => {

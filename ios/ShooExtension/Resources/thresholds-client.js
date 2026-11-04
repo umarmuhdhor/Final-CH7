@@ -26,7 +26,10 @@
         .then((reply) => {
             const t = reply?.thresholds;
             if (!reply?.ok || !inFence(t)) return;
-            Object.assign(THRESHOLD, { firstWarning: t.firstWarning, secondWarning: t.secondWarning, blocked: t.blocked });
+            // version: report.js sends it as POST /scans `thresholdsVersion`, so the backend checks the
+            // status against the numbers it was decided with. pipeline.js never reads it.
+            Object.assign(THRESHOLD, { firstWarning: t.firstWarning, secondWarning: t.secondWarning, blocked: t.blocked,
+                ...(Number.isInteger(t.version) ? { version: t.version } : {}) });
             if (!last || typeof last.score !== "number") return;
             const status = pipeline.statusFor(last.score);
             // Verdict and block memory states score 0 or 100, so their status never changes here.

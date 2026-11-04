@@ -47,6 +47,14 @@ test("POST /scans body matches ScanResult once background adds the owner", () =>
     assert.deepEqual(body.signals.map((s) => s.weight), [25, 15, 13, 10]); // highest weight first
 });
 
+test("X1: thresholdsVersion goes with the scan only when thresholds-client.js set an integer version", () => {
+    const state = { ...warning63, scanId: 1, done: true };
+    const page = { title: "", faviconUrl: null, now: "2026-10-21T10:00:00.000Z" };
+    assert.equal(scanBody(state, { ...page, thresholdsVersion: 7 }).thresholdsVersion, 7);
+    assert.equal(scanBody(state, { ...page, thresholdsVersion: 0 }).thresholdsVersion, 0);
+    for (const v of [undefined, null, "7", 1.5]) assert.ok(!("thresholdsVersion" in scanBody(state, { ...page, thresholdsVersion: v })), String(v));
+});
+
 test("POST /scans url drops query, fragment and credentials; domain is untouched", () => {
     assert.equal(shareableUrl("https://bank.example/reset?token=abc123#sid=9"), "https://bank.example/reset");
     assert.equal(shareableUrl("https://user:pw@bansos.example:8443/klaim/form?nik=1"), "https://bansos.example:8443/klaim/form");

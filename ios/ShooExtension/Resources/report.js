@@ -47,6 +47,8 @@
             status: state.status,
             signals: [...state.signals].sort((a, b) => b.weight - a.weight),
             detectedAt: page.now,
+            // X1: the GET /config/public version the status was decided with; absent before thresholds-client.js answered.
+            ...(Number.isInteger(page.thresholdsVersion) ? { thresholdsVersion: page.thresholdsVersion } : {}),
         };
     }
 
@@ -315,7 +317,10 @@
             return await send({
                 type: "report",
                 key,
-                scan: scanBody(state, { title: dom.title(document), faviconUrl: faviconUrl(), now: new Date().toISOString() }),
+                scan: scanBody(state, {
+                    title: dom.title(document), faviconUrl: faviconUrl(), now: new Date().toISOString(),
+                    thresholdsVersion: globalThis.ShooPipeline?.THRESHOLD?.version,
+                }),
                 replica: draft,
                 fragments: parts,
             });
