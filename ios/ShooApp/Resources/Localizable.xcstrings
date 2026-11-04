@@ -449,17 +449,6 @@
         }
       }
     },
-    "Allow notifications" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izinkan notifikasi"
-          }
-        }
-      }
-    },
     "Allow Shoo to send you alerts" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2156,17 +2145,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Baru saja"
-          }
-        }
-      }
-    },
-    "Know when your family is at risk" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tahu saat keluargamu dalam bahaya"
           }
         }
       }
@@ -4431,7 +4409,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ketuk Shoo lalu nyalakan."
+            "value" : "Nyalakan ekstensi Shoo."
           }
         }
       }
@@ -4707,17 +4685,6 @@
         }
       }
     },
-    "Turn it on in Safari to get protection right away." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktifkan di Safari untuk mendapatkan perlindungan secara langsung."
-          }
-        }
-      }
-    },
     "Turn on" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4972,17 +4939,6 @@
         }
       }
     },
-    "We'll tell you when a family member opens a risky site." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kami kabari saat anggota keluarga membuka situs berisiko."
-          }
-        }
-      }
-    },
     "Weekly summary" : {
       "localizations" : {
         "id" : {
@@ -5156,17 +5112,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu sudah mengingatkan %@ belum lama ini"
-          }
-        }
-      }
-    },
-    "You can turn them on now or later in Settings." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu bisa menyalakannya sekarang atau nanti di Pengaturan."
           }
         }
       }
@@ -5493,6 +5438,106 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Undang keluarga"
+          }
+        }
+      }
+    },
+    "Go back to Shoo, then tap Keep going." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke Shoo, lalu tekan Lanjutkan."
+          }
+        }
+      }
+    },
+    "Go to Apps › Default Apps › Browser App, then choose Safari." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan › App › App Default › App Browser, lalu pilih Safari."
+          }
+        }
+      }
+    },
+    "Go to Apps › Safari › Default Browser App, then choose Safari." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan › App › Safari › App Browser Default, lalu pilih Safari."
+          }
+        }
+      }
+    },
+    "Go to Safari › Default Browser App, then choose Safari." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Pengaturan › Safari › App Browser Default, lalu pilih Safari."
+          }
+        }
+      }
+    },
+    "I already use Safari" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah pakai Safari"
+          }
+        }
+      }
+    },
+    "Keep going" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjutkan"
+          }
+        }
+      }
+    },
+    "Make Safari default" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jadikan Safari default"
+          }
+        }
+      }
+    },
+    "Set Safari as default" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jadikan Safari Default"
+          }
+        }
+      }
+    },
+    "Tap Browser App, then choose Safari." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk App Browser, lalu pilih Safari."
+          }
+        }
+      }
+    },
+    "Tap the button below to open Settings." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekan tombol di bawah untuk membuka Pengaturan."
           }
         }
       }
