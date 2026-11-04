@@ -4,6 +4,7 @@
 
 (() => {
     const MAX_REASONS = 3; // DT-04 shows 1–3
+    const REMEMBER_TIMEOUT_MS = 300; // block memory (#231) must not hold the scam page open
 
     /** Everything blocked.html needs, kept small enough for the URL fragment. Never contains typed input. */
     function payloadFor(state) {
@@ -53,6 +54,14 @@
         // Never let a failed report keep the page open.
         await Promise.resolve(report?.ready(state.scanId)).catch(() => {});
         const reportKey = report?.keyFor(state.scanId) ?? null;
+        // #231: next time this site opens straight to the block screen, without asking the server's layers again.
+        // Background keeps only the reasons, never their evidence (block-memory.js); never wait on it for long.
+        if (!state.remembered) {
+            const remember = browser.runtime
+                .sendMessage({ type: "rememberBlock", url: state.url, domain: state.domain, score: state.score, signals: state.signals, reportKey })
+                .catch(() => {});
+            await Promise.race([remember, new Promise((r) => setTimeout(r, REMEMBER_TIMEOUT_MS))]);
+        }
         const target = `${browser.runtime.getURL("blocked.html")}#${encode(payloadFor({ ...state, reportKey }))}`;
         // replace(): Back skips the scam page instead of landing on it again.
         location.replace(target);
