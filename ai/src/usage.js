@@ -3,7 +3,7 @@
 // and no `indexes` (SECURITY A1, A4; wrangler.toml "no request logs"). Without the AI_USAGE binding nothing is written.
 import { PROMPT_VERSION } from "../prompts/reality-check.js";
 
-/** blobs[1] until versioned cases exist (X4). */
+/** blobs[1] when no case set was used (case library off, missing, broken, or the call never passed the gate). */
 export const NO_CASES = "none";
 const MAX_TOKENS = 1e7;
 
@@ -19,7 +19,7 @@ export function tokenUsage(usage) {
  * requests, so per-request numbers cannot be read back from its counters.
  */
 export function createUsageReport({ hasLayer4 }) {
-    return { layer4: { outcome: hasLayer4 ? null : "off", tokensIn: 0, tokensOut: 0, ms: 0 }, rdapFailed: 0 };
+    return { layer4: { outcome: hasLayer4 ? null : "off", tokensIn: 0, tokensOut: 0, ms: 0, casesVersion: null }, rdapFailed: 0 };
 }
 
 /** The RDAP client with one change: a lookup that gives no age (failure, timeout, unknown TLD) sets `report.rdapFailed`. */
@@ -34,10 +34,10 @@ export function watchRdap(rdap, report) {
     };
 }
 
-/** The layer 4 checker with the request's report passed along. */
-export function watchLlm(llm, report) {
+/** The layer 4 checker with the request's report and case loader (`() => Promise<set | null>`) passed along. */
+export function watchLlm(llm, report, loadCases = null) {
     if (!llm) return llm;
-    return { check: (snapshot, ctx) => llm.check(snapshot, { ...ctx, report: report.layer4 }) };
+    return { check: (snapshot, ctx) => llm.check(snapshot, { ...ctx, report: report.layer4, loadCases }) };
 }
 
 /**
@@ -50,7 +50,7 @@ export function writeUsage(dataset, report) {
     const l4 = report.layer4;
     try {
         dataset.writeDataPoint({
-            blobs: [PROMPT_VERSION, NO_CASES, l4.outcome ?? "http_error"], // null: the checker threw before it counted an outcome
+            blobs: [PROMPT_VERSION, l4.casesVersion ?? NO_CASES, l4.outcome ?? "http_error"], // null: the checker threw before it counted an outcome
             doubles: [l4.tokensIn, l4.tokensOut, l4.ms, report.rdapFailed],
         });
     } catch {

@@ -93,6 +93,15 @@ About 30% of the samples carry the tag `holdout`. It is **derived**, never picke
 4. Read the sample, then the owner runs `node ai/eval/tools/mark-redacted.mjs --confirm-read --ids <id>`. An agent never sets `redacted: true` on a real sample. Limit: nothing in the repo proves a human ran it (the flag is a plain field); a reviewed-hash scheme is a possible later step.
 5. `node ai/eval/tools/check-corpus.mjs` shows whether the set is complete.
 
+## Samples from the admin dashboard (private, never in git)
+The admin dashboard exports `scam_strong` domains backed by enough families as URL-only samples. Team AI pulls them **locally** (never in Actions; this repo is public):
+
+1. `node ai/eval/tools/import-dashboard.mjs` (needs `SHOO_ADMIN_URL`, `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` with scope `export:read`). It writes to `ai/eval/private/` (gitignored, outside `data/`, so the default eval and its tests never read it), keeps only the export's fields and sets every sample to `redacted: false`.
+2. Read the file, then the owner runs `node ai/eval/tools/mark-redacted.mjs --dir ai/eval/private --confirm-read --ids <ids>` and `node ai/eval/tools/assign-holdout.mjs --dir ai/eval/private` (same seed as `data/`).
+3. `node ai/eval/run.mjs --dir ai/eval/private`.
+
+These samples are tagged `url-only`: no page was captured, so they exercise layers 1-2 only. `summarize` leaves them out of the mandate target checks (`checks`, `targetsMet`); they still show in `checksAll` and by tag.
+
 ## Known limits
 - "Real legit 0/39 flagged" is weaker than it sounds: the real legit pages are mostly homepages, 6 are JavaScript shells with empty text, and only `bank-login-klikbca` has a password field. `asks_pin` / `asks_otp` / `asks_ktp` are barely exercised against real legit pages. About 8-10 real pages with a login or checkout form still have to be added (a later PR).
 - `checkout-tokopedia-cart` is not a checkout: the capture is a redirect to `/login`, so it is tagged `bank-login` (a login page), not `checkout`. That leaves 11 checkout samples, so the `checkout` target in `corpus.mjs` is 11 for now. It goes back to 12 in the later PR that adds real login/checkout pages.

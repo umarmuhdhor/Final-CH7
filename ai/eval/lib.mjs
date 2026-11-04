@@ -181,9 +181,11 @@ export function summarize(rows, { remote = false } = {}) {
         legitAtLeast30: { value: lg.length ? count(lg, 30) : null, target: TARGETS.legitAtLeast30 },
     });
     const metOf = (c) => c.scamAtLeast50.value >= c.scamAtLeast50.target && c.scamAtLeast80.value >= c.scamAtLeast80.target && c.legitAtLeast30.value <= c.legitAtLeast30.target;
-    // A claim about the mandate targets may only rest on real pages (R2 §4): synthetic ones are written by us.
-    const realScam = scam.filter((r) => !r.synthetic);
-    const realLegit = legit.filter((r) => !r.synthetic);
+    // A claim about the mandate targets may only rest on real pages (R2 §4): synthetic ones are written by us. A
+    // `url-only` sample (admin dashboard import, no page captured) only exercises layers 1-2, so it is not counted either.
+    const counted = (r) => !r.synthetic && !(r.tags || []).includes("url-only");
+    const realScam = scam.filter(counted);
+    const realLegit = legit.filter(counted);
     const realEnough = realScam.length >= MIN_PER_CLASS && realLegit.length >= MIN_PER_CLASS;
     const checksAll = checksOf(scam, legit);
     const checks = checksOf(realScam, realLegit);
