@@ -63,7 +63,10 @@
      * @param {object} deps.snapshot          PageSnapshot
      * @param {(snapshot) => Promise<Signal[]>} deps.analyzeLocal    layer 1–2
      * @param {(snapshot, localSignals) => Promise<Signal[]>} deps.analyzeRemote  layer 3–4, resolves [] on failure
-     * @param {(domain) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict
+     * @param {(domain, options?: {fresh: boolean}) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict
+     * @param {(url) => Promise<{score, signals, recordId}|null>} [deps.recallBlock]  block memory (#231): a site
+     *   blocked before is asked for its verdict once and, without a `safe`, blocked again with no layer run
+     *   (no /analyze, so no LLM call) and `remembered: true` (report.js sends nothing again)
      * @param {() => boolean} deps.isCurrent  false once the user navigated away — stop and publish nothing
      * @param {(state) => void} deps.publish
      * @param {object} [deps.previous]  last state of this page when it is re-checked after a change
@@ -71,7 +74,7 @@
      *   domain, so layer 3–4 (which read the page) always run again; nothing is published unless a
      *   layer finds a signal that's new or heavier than before.
      */
-    async function runScan({ snapshot, analyzeLocal, analyzeRemote, lookupVerdict, isCurrent, publish, previous }) {
+    async function runScan({ snapshot, analyzeLocal, analyzeRemote, lookupVerdict, recallBlock, isCurrent, publish, previous }) {
         const kept = previous?.signals ?? [];
         const state = {
             url: snapshot.url,
@@ -118,6 +121,44 @@
         };
 
         if (!previous) emit({});
+
+        // Blocked here before: only a guardian's verdict decides now (#231). Server down → still blocked.
+        if (!previous && recallBlock) {
+            let memory = null;
+            try {
+                memory = await recallBlock(snapshot.url);
+            } catch {
+                memory = null; // memory unreadable → scan as usual
+            }
+            if (!isCurrent()) return;
+            if (memory) {
+                verdictChecked = true;
+                let verdict = null;
+                try {
+                    verdict = await lookupVerdict(state.domain, { fresh: true });
+                } catch {
+                    verdict = null;
+                }
+                if (!isCurrent()) return;
+                if (verdict?.value === "safe") {
+                    emit({ verdict, signals: [], score: 0, status: "normal", done: true });
+                    return;
+                }
+                if (verdict?.value === "not_safe") {
+                    emit({ verdict, score: 100, status: "blocked", remembered: true, recordId: memory.recordId, done: true });
+                    return;
+                }
+                emit({
+                    signals: validSignals(memory.signals, [1, 2, 3, 4]),
+                    score: memory.score,
+                    status: "blocked",
+                    remembered: true,
+                    recordId: memory.recordId,
+                    done: true,
+                });
+                return;
+            }
+        }
 
         // Layer 1–2
         let local = [];
