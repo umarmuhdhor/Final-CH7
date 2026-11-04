@@ -72,7 +72,7 @@ struct DetailView: View {
         case .loading:
             VStack(spacing: 0) {
                 topBar(owner: nil)
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                ShieldPulseLoader().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         case .notFound:
             VStack(spacing: 0) {
