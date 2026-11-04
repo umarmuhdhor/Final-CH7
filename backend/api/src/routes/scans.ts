@@ -19,6 +19,7 @@ import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans
 import { errorInfo } from "../http/logError";
 
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** http(s) URL without control or bidi characters (Postgres rejects NUL; the Guardian UI shows the URL). */
 const httpUrl = (s: string) => {
@@ -64,6 +65,9 @@ const scanBody = z
     evidenceFragmentsBase64: z.string().nullish(),
     // Dashboard phase 05 (K1): GET /config/public `version` the status was decided with.
     thresholdsVersion: z.number().int().min(0).max(2_147_483_647).optional(),
+    // #270: RDAP registration date from POST /analyze. No schema check: a bad value becomes null
+    // (rdapDate), since a 422 would make the extension drop the whole scan.
+    rdapRegisteredAt: z.unknown().optional(),
   })
   // The fence every allowed threshold pair respects (blockAt 50–95, warnAt >= 30 via score min).
   // The exact rule for the active version is checked in the handler; it needs the DB.
@@ -86,6 +90,13 @@ const title = (s: string | null | undefined) => {
 };
 /** Only http(s) favicons ≤ 2048 chars are kept; anything else (data:, junk) becomes null. */
 const favicon = (v: unknown) => (typeof v === "string" && v.length <= 2048 && httpUrl(v) ? v : null);
+/** A real calendar day `YYYY-MM-DD` from 1985-01-01 to tomorrow (UTC); anything else becomes null. */
+const rdapDate = (v: unknown): string | null => {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v) || v < "1985-01-01") return null;
+  const t = Date.parse(`${v}T00:00:00Z`);
+  if (Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== v) return null;
+  return t <= Date.now() + DAY_MS ? v : null;
+};
 
 const listQuery = z.object({
   owner: z.string().max(64).default("me"),
@@ -152,6 +163,7 @@ scans.post("/scans", async (c) => {
     signals: body.signals,
     detectedAt: body.detectedAt,
     thresholdsVersion: body.thresholdsVersion ?? null,
+    rdapRegisteredAt: rdapDate(body.rdapRegisteredAt),
   });
   // The site already has its Activity row: no second row, push or evidence for a repeat visit.
   if (!created) return c.json({ id }, 201);

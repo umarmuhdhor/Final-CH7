@@ -488,6 +488,7 @@ optional page replica (and, from older builds, a screenshot).
 | `score` | integer | yes | 30–100 |
 | `status` | `"warning"` \| `"blocked"` | yes | `blocked` needs score ≥ 50. With `thresholdsVersion` equal to the current `GET /config/public` version, it must match those thresholds exactly (see Thresholds) |
 | `thresholdsVersion` | integer ≥ 0 | no | *Dashboard phase 05, proposed (X1).* The `version` from `GET /config/public` the status was decided with. Stored with the scan |
+| `rdapRegisteredAt` | string `YYYY-MM-DD` \| null | no | *#270, proposed.* The domain's RDAP registration date from `POST /analyze`. Anything but a real day from 1985-01-01 to tomorrow (UTC) is stored as null, never a 422. A repeat visit of the same site fills it only while unknown |
 | `signals` | array | yes | At most 20 items, see below |
 | `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
 | `pageReplicaBase64` | string \| null | no | The page as static HTML, gzip, then base64 without a `data:` prefix (see Page replica rules) |

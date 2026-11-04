@@ -13,6 +13,8 @@ export interface NewScan {
   detectedAt: string;
   /** Thresholds version the extension used (dashboard phase 05); null for older extensions. */
   thresholdsVersion: number | null;
+  /** RDAP registration date `YYYY-MM-DD` (#270); null when unknown. */
+  rdapRegisteredAt: string | null;
 }
 
 /**
@@ -29,6 +31,7 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
       with kept as (
         update scans set
           detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
+          rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
           url = case when ${s.score} > score then ${s.url} else url end,
           page_title = case when ${s.score} > score then ${s.pageTitle} else page_title end,
           signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
@@ -53,9 +56,11 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
 async function insertScan(sql: Sql | TransactionSql, s: NewScan): Promise<string> {
   const [row] = await sql<{ id: string }[]>`
     with ins as (
-      insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, thresholds_version)
+      insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, thresholds_version,
+                         rdap_registered_at)
       values (${s.ownerId}, ${s.url}, ${s.domain}, ${s.pageTitle}, ${s.faviconUrl}, ${s.score}, ${s.status},
-              ${sql.json(s.signals as never)}, ${s.detectedAt}::text::timestamptz, ${s.thresholdsVersion})
+              ${sql.json(s.signals as never)}, ${s.detectedAt}::text::timestamptz, ${s.thresholdsVersion},
+              ${s.rdapRegisteredAt}::date)
       returning id, owner_id, status
     ), counted as (
       update devices d set
