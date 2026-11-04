@@ -234,8 +234,9 @@ export interface ReplicaQuota {
 
 /**
  * EX-07 pre-check before the IP limit and the inflate (cheap first, K5): the owner's replica of this
- * domain from the last 24 h to reuse, and whether the owner has a family link (Protected with a
- * Guardian, or Guardian with members). Without one nobody else can ever see the replica.
+ * domain from the last 24 h to reuse. A device without a family link keeps its replicas too: Detail
+ * shows the owner the evidence in Personal mode (5 Nov 2026; was dropped as no_family), and its quota
+ * family is the device itself (replicaCountsQuery).
  * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
  * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
  * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (6, 0) stays the final
@@ -248,17 +249,15 @@ export async function precheckReplica(
   scan: { ownerId: string; domain: string },
   bytes: number,
   quota: ReplicaQuota,
-): Promise<{ reuse: string | undefined; family: boolean; quota: ReplicaQuotaReason | undefined }> {
-  const [row] = await sql<({ reuse: string | null; hasFamily: boolean } & ReplicaCounts)[]>`
-    select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse,
-           exists (select 1 from family_links where protected_id = ${scan.ownerId} or guardian_id = ${scan.ownerId}) as "hasFamily",
-           c.*
+): Promise<{ reuse: string | undefined; quota: ReplicaQuotaReason | undefined }> {
+  const [row] = await sql<({ reuse: string | null } & ReplicaCounts)[]>`
+    select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse, c.*
     from (${replicaCountsQuery(sql, scan.ownerId)}) c`;
-  // An aggregate without group by: always exactly one row. The counts also run for a reuse or a
-  // device without family, where they are not used: one index-only pass, cheaper than a second trip.
+  // An aggregate without group by: always exactly one row. The counts also run for a reuse, where
+  // they are not used: one index-only pass, cheaper than a second trip.
   const r = row!;
   const reuse = r.reuse ?? undefined;
-  return { reuse, family: r.hasFamily, quota: reuse || !r.hasFamily ? undefined : quotaFull(r, bytes, quota) };
+  return { reuse, quota: reuse ? undefined : quotaFull(r, bytes, quota) };
 }
 
 /**

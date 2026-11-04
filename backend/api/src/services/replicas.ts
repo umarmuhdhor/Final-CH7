@@ -45,7 +45,7 @@ export type ReplicaDrop = "invalid" | "too_large" | "not_gzip";
 
 type Drop =
   | ReplicaDrop
-  | "disabled" | "no_storage" | "no_family" | "ip_quota" | "quota" | "family_quota" | "family_bytes" | "reserve"
+  | "disabled" | "no_storage" | "ip_quota" | "quota" | "family_quota" | "family_bytes" | "reserve"
   | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
 
 // Reason only: never the scan id, URL, path or device (SECURITY §3 P6). One level for every drop,
@@ -74,9 +74,9 @@ export async function logReplicaUsage(sql: Sql): Promise<void> {
 }
 
 /**
- * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse,
- * a scan without family or a full quota burns neither the IP slot nor inflate CPU. Kill-switch →
- * reuse/no-family/quota pre-check (fase 22 K12) → per-IP limit → decode → reserve (per-owner lock,
+ * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse
+ * or a full quota burns neither the IP slot nor inflate CPU. Kill-switch →
+ * reuse/quota pre-check (fase 22 K12) → per-IP limit → decode → reserve (per-owner lock,
  * quotas again as the final word, tombstone) → R2 put.
  * Any failure drops the replica only; the scan is already stored and answered.
  */
@@ -98,7 +98,6 @@ export async function attachReplica(
     // { none }: the reuse expired in between; carry on as a new upload.
     if (!("none" in slot)) return;
   }
-  if (!pre.family) return dropped("no_family");
   // Fase 22 K12: a full quota drops here, before the IP slot and the inflate.
   if (pre.quota) return dropped(QUOTA_DROP[pre.quota]);
 
