@@ -65,7 +65,6 @@ struct ModeView: View {
             .disabled(model.selectedMode == nil)
             .accessibilityIdentifier("mode.continue")
         }
-        .messageLineHeight(24)
         .onChange(of: model.registrationFailed) { _, failed in
             if failed {
                 AccessibilityNotification.Announcement(L10n.string("Couldn't save. Check your connection and try again.", language: language)).post()
@@ -74,7 +73,7 @@ struct ModeView: View {
     }
 }
 
-/// White card with the mode's icon tile; blue border when chosen (Figma "Build progress", 169 × 198).
+/// White card with the mode's icon tile; blue border when chosen (Figma "Build progress", 168 × 203).
 private struct ModeCard: View {
     let mode: UserMode
     let image: String
@@ -91,29 +90,26 @@ private struct ModeCard: View {
         Button {
             withAnimation(.snappy(duration: 0.25)) { selection = mode }
         } label: {
-            // Figma "Frame 5": 72 pt icon, 20, title row 28 (20 pt), 4, message rows of 20 (15 pt).
+            // Figma "Frame 5": 72 pt icon, 20, title row 25 (20 pt), 4, message rows of 23.8 (17 pt).
             // The icon image carries its own shadow: 1.8 pt above the tile, 10.8 below.
             VStack(spacing: 0) {
                 Image(image)
                     .accessibilityHidden(true)
                 Text(title)
                     .onboardingFont(20, relativeTo: .title3)
-                    .tracking(-0.2)
+                    .tracking(-0.45)
                     .foregroundStyle(OnboardingTheme.ink)
-                    .frame(minHeight: 28)
+                    .frame(minHeight: 25)
                     .padding(.top, 9.2)
                 Text(message)
-                    .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
-                    .lineSpacing(2)
-                    .foregroundStyle(OnboardingTheme.bodyInk)
-                    .multilineTextAlignment(.center)
+                    .onboardingBodyStyle()
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 5)
+                    .padding(.top, 4)
             }
             .padding(.horizontal, 16)
             .padding(.top, 15.2)
             .padding(.bottom, 17)
-            .frame(maxWidth: .infinity, minHeight: 198, alignment: .top)
+            .frame(maxWidth: .infinity, minHeight: 203, alignment: .top)
             .background {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(LinearGradient(

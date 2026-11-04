@@ -6,7 +6,7 @@ enum OnboardingTheme {
     static let background = Color.dynamic(0xF5F8FC, dark: 0x0E1116)
     /// Cards and fields.
     static let card = Color.dynamic(0xFFFFFF, dark: 0x1B1F26)
-    static let ink = Color.dynamic(0x161618, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
+    static let ink = Color.dynamic(0x151617, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     static let secondaryInk = Color.dynamic(0x67696C, dark: 0xA3A9B3, contrastLight: 0x45474A, contrastDark: 0xCDD1D8)
     /// Figma's small notes under a field ("*Nama harus terdiri dari maksimal 20 karakter").
     static let noteInk = Color.dynamic(0x191C25, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
@@ -19,13 +19,16 @@ enum OnboardingTheme {
     static let placeholder = Color.dynamic(0x939393, dark: 0x7C828C)
     static let error = Color.dynamic(0xC81414, dark: 0xFF6B6B)
     static let link = Color.dynamic(0x0367B6, dark: 0x5EAAF0)
-    /// Text on the dark capsule; the capsule turns light in dark mode.
-    static let onButton = Color.dynamic(0xFFFFFF, dark: 0x0E1116)
+    /// Text on the blue capsule.
+    static let onButton = Color.white
+    /// Figma style "Gradient/Dark Button"; the design has no dark variant.
     static let buttonGradient = LinearGradient(
-        colors: [Color.dynamic(0x191C25, dark: 0xF2F4F8), Color.dynamic(0x3C435A, dark: 0xC9D0DB)],
+        colors: [Color(hex: 0x446EB4), Color(hex: 0x214889)],
         startPoint: .top,
         endPoint: .bottom
     )
+    /// Figma frame on the chosen ON-02 avatar.
+    static let avatarSelectedStroke = Color(hex: 0x7DE49C)
     static let avatarRing = LinearGradient(
         colors: [Color(red: 0x2C / 255, green: 0xBF / 255, blue: 0x81 / 255), Color(red: 0x8E / 255, green: 0xE9 / 255, blue: 0xEC / 255)],
         startPoint: .topLeading,
@@ -42,41 +45,50 @@ extension View {
         figmaFont(size, weight: weight, design: design, tracking: tracking, family: family, relativeTo: style)
     }
 
-    /// Headline 30 medium + body 15 rounded, centred (every onboarding title in Figma).
+    /// Headline 28 medium + body 17 rounded, centred (every onboarding title in Figma).
     func onboardingTitleStyle() -> some View {
-        onboardingFont(30, weight: .medium, relativeTo: .title)
-            .tracking(-0.3)
-            // Figma "Headline": 110 %.
-            .figmaLineHeight(33, glyphOffset: -3, relativeTo: .title)
+        onboardingFont(28, weight: .medium, relativeTo: .title)
+            .tracking(-0.56)
+            // Figma "Title 1/Regular": 120 %.
+            .figmaLineHeight(33.6, glyphOffset: -2, relativeTo: .title)
             .multilineTextAlignment(.center)
             .foregroundStyle(OnboardingTheme.ink)
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// `lineHeight`: Figma's 140 % (21) on most screens, 160 % (24) on Pilih Mode and Hubungkan Akun.
-    func onboardingBodyStyle(lineHeight: CGFloat = 21) -> some View {
-        onboardingFont(15, design: .rounded, relativeTo: .subheadline)
+    /// `lineHeight`: Figma "Subhead/Regular", 140 % (23.8).
+    func onboardingBodyStyle(lineHeight: CGFloat = 23.8) -> some View {
+        onboardingFont(17, design: .rounded, relativeTo: .body)
             // iOS sets the glyphs higher in a tall line than Figma, which centres them.
-            .figmaLineHeight(lineHeight, glyphOffset: (lineHeight - 19) / 2, relativeTo: .subheadline)
+            .figmaLineHeight(lineHeight, glyphOffset: (lineHeight - 22) / 2, relativeTo: .body)
             .lineSpacing(3)
             .multilineTextAlignment(.center)
             .foregroundStyle(OnboardingTheme.bodyInk)
     }
 }
 
-/// Dark pill, 56 pt; grey when disabled ("Selanjutnya" in Figma).
+/// Blue pill, 56 pt; grey when disabled ("Selanjutnya" in Figma).
 struct OnboardingCapsuleButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .onboardingFont(17, weight: .medium, relativeTo: .body)
+            .onboardingFont(17, weight: .semibold, relativeTo: .body)
             // Figma disabled "Button": #DBE2E7 with #000 25 % text, the whole button at 75 %.
             .foregroundStyle(isEnabled ? OnboardingTheme.onButton : OnboardingTheme.ink.opacity(0.25))
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(.horizontal, 16)
             .background {
                 Capsule().fill(isEnabled ? AnyShapeStyle(OnboardingTheme.buttonGradient) : AnyShapeStyle(OnboardingTheme.disabledFill))
+            }
+            // Figma "Button": inner white 20 %, y 1.
+            .overlay {
+                Capsule()
+                    .strokeBorder(
+                        LinearGradient(colors: [.white.opacity(isEnabled ? 0.2 : 0), .clear], startPoint: .top, endPoint: .center),
+                        lineWidth: 1
+                    )
+                    .allowsHitTesting(false)
             }
             // Figma "Button": #121112 20%, y 8, blur 18.
             .shadow(color: Color(hex: 0x121112, opacity: isEnabled ? 0.2 : 0), radius: 9, y: 8)
@@ -161,7 +173,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     /// Figma "Frame 2" side inset: 20 on Atur Nama / Pilih Mode, 24 on Hubungkan Akun, 46 under a hero.
     private var headlineInset: CGFloat = Hero.self == EmptyView.self ? 20 : 46
     private var largeMessage = false
-    private var messageLineHeight: CGFloat = 21
+    private var messageLineHeight: CGFloat = 23.8
     private var messageSpacing: CGFloat?
 
     init(
@@ -281,7 +293,7 @@ extension OnboardingFormPage {
         return page
     }
 
-    /// Figma's message line height when it isn't 140 % (Pilih Mode, Hubungkan Akun: 160 % = 24).
+    /// Figma's message line height when it isn't 140 %.
     func messageLineHeight(_ points: CGFloat) -> Self {
         var page = self
         page.messageLineHeight = points

@@ -19,13 +19,13 @@ struct SplashView: View {
             id: 0,
             image: "OnboardingSlide1",
             title: "Browse calmer, feeling safe.",
-            message: "No need to guess which sites are safe. Let Shoo do the work for you and your family."
+            message: "No worrying about dangerous sites. Let Shoo do the work for you and your family."
         ),
         Slide(
             id: 1,
             image: "OnboardingSlide2",
-            title: "Scams look real.\nShoo looks closer.",
-            message: "Shoo checks the pages you open in Safari and blocks fake sites before they can hurt you."
+            title: "Looks real, may not be safe.\nLet Shoo check.",
+            message: "Shoo checks the pages you open and blocks fake sites before they can hurt you."
         ),
     ]
 
@@ -49,7 +49,7 @@ struct SplashView: View {
         .environment(\.colorScheme, .light)
         .task {
             guard showsBrand else { return }
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(1.9))
             model.brandSplashShown = true
             withAnimation(.easeInOut(duration: reduceMotion ? 0.2 : 0.5)) { showsBrand = false }
         }
@@ -79,8 +79,8 @@ struct SplashView: View {
         HStack {
             Button { model.skipSplash() } label: {
                 Text("Skip")
-                    .onboardingFont(14, weight: .medium, family: .sfPro, relativeTo: .subheadline)
-                    .tracking(-0.14)
+                    // Figma "Subhead/Regular".
+                    .onboardingFont(17, design: .rounded, relativeTo: .body)
                     .foregroundStyle(OnboardingTheme.ink)
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
@@ -97,9 +97,9 @@ struct SplashView: View {
                     withAnimation { page += 1 }
                 }
             } label: {
-                // Figma "Iconly/Light Outline/Arrow Right": 16 × 13 pt, thin stroke.
+                // Figma sets the symbol as SF Pro Rounded Semibold 20 text.
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 17.5, weight: .regular))
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(OnboardingTheme.onButton)
                     .frame(width: 62, height: 62)
                     // Figma "Button/Full/Circle": gradient only, no shadow.
@@ -115,19 +115,96 @@ struct SplashView: View {
     }
 }
 
-/// Full-screen gradient with the white Shoo logo.
+/// Figma "Splash Screen" in motion: the light band sweeps in and settles where the frame has it, the logo
+/// springs in, then a shield ripple and a sheen. With Reduce Motion it is the still frame.
 private struct BrandSplash: View {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var start = Date()
+    @State private var logoIn = false
+    @State private var sheenDone = false
+    @State private var rippleDone = false
+
+    /// Where Figma "final" has the light stop, and how long the band takes to get there.
+    private static let lightStop = 0.46
+    private static let sweep = 1.2
+
     var body: some View {
+        GeometryReader { proxy in
+            let scale = proxy.size.width / 402
+            ZStack {
+                TimelineView(.animation(paused: reduceMotion)) { context in
+                    let progress = reduceMotion ? 1 : min(context.date.timeIntervalSince(start) / Self.sweep, 1)
+                    background(progress: progress, scale: scale)
+                }
+                logo
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .ignoresSafeArea()
+        .onAppear(perform: play)
+    }
+
+    private func background(progress: Double, scale: CGFloat) -> some View {
+        // Ease out: the band slows down as it reaches its place.
+        let eased = 1 - pow(1 - progress, 3)
+        let light = -0.1 + (Self.lightStop + 0.1) * eased
+        let band = Gradient(stops: [
+            .init(color: Color(hex: 0x46A7FF), location: 0),
+            .init(color: Color(hex: 0xBFE0FF), location: max(light, 0.001)),
+            .init(color: Color(hex: 0x46A7FF), location: 1),
+        ])
+        return ZStack {
+            LinearGradient(gradient: band, startPoint: .topLeading, endPoint: .bottomTrailing)
+            // Figma "Ellipse 2" and "Ellipse 3": layer blur 115.
+            Ellipse()
+                .fill(Color(hex: 0x1E78BE))
+                .frame(width: 86 * scale, height: 137 * scale)
+                .blur(radius: 57 * scale)
+                .position(x: (153 + 40 * (1 - eased)) * scale, y: 61 * scale)
+            Ellipse()
+                .fill(Color(hex: 0x5CC6D8))
+                .frame(width: 86 * scale, height: 137 * scale)
+                .blur(radius: 57 * scale)
+                .position(x: (-21 - 40 * (1 - eased)) * scale, y: 111 * scale)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var logo: some View {
         ZStack {
-            Image("SplashBackground")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
+            Image("ShooLogo")
+                .renderingMode(.template)
+                .foregroundStyle(.white)
+                .scaleEffect(rippleDone ? 1.5 : 1)
+                .opacity(rippleDone || !logoIn ? 0 : 0.5)
                 .accessibilityHidden(true)
             Image("ShooLogo")
+                .overlay {
+                    LinearGradient(colors: [.clear, .white.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 56, height: 240)
+                        .rotationEffect(.degrees(20))
+                        .offset(x: sheenDone ? 130 : -130)
+                        .opacity(reduceMotion ? 0 : 1)
+                        .mask { Image("ShooLogo") }
+                        .accessibilityHidden(true)
+                }
                 .accessibilityLabel(Text(verbatim: "Shoo"))
                 .accessibilityIdentifier("splash.logo")
         }
+        .scaleEffect(logoIn ? 1 : 0.7)
+        .opacity(logoIn ? 1 : 0)
+    }
+
+    private func play() {
+        start = Date()
+        guard !reduceMotion else {
+            logoIn = true
+            rippleDone = true
+            return
+        }
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.65)) { logoIn = true }
+        withAnimation(.easeOut(duration: 0.9).delay(0.35)) { rippleDone = true }
+        withAnimation(.easeInOut(duration: 0.7).delay(0.6)) { sheenDone = true }
     }
 }
 

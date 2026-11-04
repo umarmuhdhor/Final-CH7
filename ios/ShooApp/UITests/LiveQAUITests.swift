@@ -84,8 +84,6 @@ final class LiveQAUITests: XCTestCase {
         app.buttons["name.continue"].tap()
         app.buttons["mode.\(mode)"].tap()
         app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["greeting.continue"].waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["greeting.continue"].tap()
     }
 
     /// Taps through the remaining onboarding steps, whichever come, and allows notifications for real.

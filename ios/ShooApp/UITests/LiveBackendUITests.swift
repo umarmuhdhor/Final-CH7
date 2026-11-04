@@ -44,10 +44,10 @@ final class LiveBackendUITests: XCTestCase {
         app.buttons["name.continue"].tap()
         app.buttons["mode.\(mode)"].tap()
         app.buttons["mode.continue"].tap()
-        // A real POST /devices: the greeting only shows after the server answered.
-        XCTAssertTrue(app.staticTexts["Hi, \(name)!"].waitForExistence(timeout: 15), app.debugDescription)
-        shot(app, "\(mode)-1-greeting")
-        app.buttons["greeting.continue"].tap()
+        // A real POST /devices: the next step only shows after the server answered.
+        let next = mode == "guardian" ? "invite.skip" : "connect.skip"
+        XCTAssertTrue(app.buttons[next].waitForExistence(timeout: 15), app.debugDescription)
+        shot(app, "\(mode)-1-registered")
         if mode == "guardian" {
             XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
             app.buttons["invite.skip"].tap()
@@ -107,10 +107,7 @@ final class LiveBackendUITests: XCTestCase {
         app.buttons["name.continue"].tap()
         app.buttons["mode.protected"].tap()
         app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["greeting.avatar"].firstMatch.waitForExistence(timeout: 15),
-                      app.debugDescription)
-        app.buttons["greeting.continue"].tap()
-        XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["connect.skip"].tap()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()

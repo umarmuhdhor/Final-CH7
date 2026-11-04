@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The 12 avatars `avatar_01…avatar_12` (D-alief-13). `avatar_01…04` are the ON-02 memoji the user can
+/// The 12 avatars `avatar_01…avatar_12` (D-alief-13). `avatar_01…04` are the ON-02 bird avatars the user can
 /// pick (#120); the rest are placeholders for the server's random pick. Re-skin when the final design arrives.
 enum AvatarCatalog {
     struct Avatar: Equatable {

@@ -115,12 +115,10 @@ struct OnboardingModelTests {
 
     @Test func guardianPath() async {
         let model = await registered(.guardian)
-        #expect(model.step == .greeting)
+        #expect(model.step == .invite)
         #expect(model.avatarId.map(AvatarCatalog.ids.contains) == true)
         #expect(settings.mode == .guardian)
         #expect(!settings.onboardingCompleted)
-        model.continueFromGreeting()
-        #expect(model.step == .invite)
         model.continueFromInvite()
         #expect(model.step == .turnOnExtension)
         // Back to the invite screen is allowed; the mode stays saved.
@@ -131,7 +129,6 @@ struct OnboardingModelTests {
 
     @Test func protectedPathGoesThroughConnect() async {
         let model = await registered(.protected)
-        model.continueFromGreeting()
         #expect(model.step == .connect)
         model.continueFromConnect()
         #expect(model.step == .turnOnExtension)
@@ -167,7 +164,7 @@ struct OnboardingModelTests {
         #expect(settings.mode == nil)
     }
 
-    @Test func inviteLinkSkipsModeAndGreeting() async {
+    @Test func inviteLinkSkipsMode() async {
         env.router.pendingJoinCode = "482193"
         let model = model()
         model.skipSplash()
@@ -208,14 +205,12 @@ struct OnboardingModelTests {
     @Test func protectedRelaunchResumesAtConnectUntilPassed() async {
         let first = await registered(.protected)
         #expect(model().step == .connect)
-        first.continueFromGreeting()
         first.continueFromConnect()
         #expect(model().step == .turnOnExtension)
     }
 
     @Test func extensionOffStaysActiveContinues() async {
         let model = await registered(.guardian)
-        model.continueFromGreeting()
         model.continueFromInvite()
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
@@ -228,7 +223,6 @@ struct OnboardingModelTests {
 
     @Test func switchOnWithoutAPageWaitsForTheCheckOrASkip() async {
         let model = await registered(.guardian)
-        model.continueFromGreeting()
         model.continueFromInvite()
         // #135: Safari's switch is on, but no page has said whether Shoo may read every site.
         box.status = .active(lastSeen: nil)
@@ -241,7 +235,6 @@ struct OnboardingModelTests {
 
     @Test func narrowedAccessStaysOnTurnOn() async {
         let model = await registered(.guardian)
-        model.continueFromGreeting()
         model.continueFromInvite()
         box.status = .off(lastSeen: Date(), reason: .someSitesOnly)
         #expect(await model.refreshExtensionStatus()?.nextStep == .allowEveryWebsite)
@@ -253,7 +246,6 @@ struct OnboardingModelTests {
 
     @Test func guardianRelaunchSkipsTheInviteScreen() async {
         let first = await registered(.guardian)
-        first.continueFromGreeting()
         #expect(first.step == .invite)
         #expect(model().step == .turnOnExtension)
     }
@@ -261,7 +253,6 @@ struct OnboardingModelTests {
     @Test func guardianFinishesEvenWhenPermissionIsDenied() async {
         notifications.answer = .denied
         let model = await registered(.guardian)
-        model.continueFromGreeting()
         model.continueFromInvite()
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
@@ -275,7 +266,6 @@ struct OnboardingModelTests {
 
     @Test func protectedMaySkipNotifications() async {
         let model = await registered(.protected)
-        model.continueFromGreeting()
         model.continueFromConnect()
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
@@ -297,7 +287,6 @@ struct OnboardingModelTests {
     @Test func alreadyDecidedPermissionIsNotAskedAgain() async {
         notifications.current = .authorized
         let model = await registered(.guardian)
-        model.continueFromGreeting()
         model.continueFromInvite()
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()

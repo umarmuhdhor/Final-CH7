@@ -47,7 +47,6 @@ final class LivePairingUITests: XCTestCase {
         app.buttons["mode.\(mode)"].tap()
         app.buttons["mode.continue"].tap()
         XCTAssertTrue(app.staticTexts["Hi, \(name)!"].waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["greeting.continue"].tap()
         if mode == "guardian" {
             XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
             app.buttons["invite.skip"].tap()
