@@ -89,7 +89,10 @@ select is(
       and table_name in (select table_name from information_schema.views where table_schema = 'admin')
       -- 07a K15: the scan archive shows pseudonyms, title and compact signals (its columns are pinned
       -- in admin_archive.test.sql); never owner_id, by_device_id, a name or the raw URL.
-      and not (table_name = 'v_scan_archive' and column_name in ('owner_ref', 'by_ref', 'page_title', 'signals'))),
+      and not (table_name = 'v_scan_archive' and column_name in ('owner_ref', 'by_ref', 'page_title', 'signals'))
+      -- Layer 5 (#241): ai_dataset.url is https + host + tokenised path, never the raw URL
+      -- (l5_review_data.test.sql).
+      and not (table_name = 'ai_dataset' and column_name = 'url')),
   0, 'I13: no admin view exposes owner, guardian name, title, raw URL, signals or replica path');
 select columns_are('admin', 'v_scans',
   array['id', 'domain', 'url_masked', 'score', 'status', 'signal_ids', 'detected_at', 'has_replica', 'verdict'],
