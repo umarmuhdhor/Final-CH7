@@ -30,10 +30,12 @@ function world({ session = SESSION, answer = body(30, 80, 0), stored = {} } = {}
     return { t, store, calls, tick: (ms) => (clock += ms), answer: (r) => (reply = r) };
 }
 
-test("toThresholds: server body → pipeline thresholds, secondWarning = clamp(50, warnAt, blockAt)", () => {
+test("toThresholds: server body → pipeline thresholds, secondWarning = 50, or the middle of the band when warnAt ≥ 50", () => {
     assert.deepEqual(toThresholds(body(30, 80, 0)), { firstWarning: 30, secondWarning: 50, blocked: 80, version: 0 });
     assert.deepEqual(toThresholds(body(35, 70, 7)), { firstWarning: 35, secondWarning: 50, blocked: 70, version: 7 });
-    assert.deepEqual(toThresholds(body(55, 90, 8)), { firstWarning: 55, secondWarning: 55, blocked: 90, version: 8 });
+    assert.deepEqual(toThresholds(body(55, 90, 8)), { firstWarning: 55, secondWarning: 73, blocked: 90, version: 8 });
+    assert.deepEqual(toThresholds(body(50, 65, 9)), { firstWarning: 50, secondWarning: 58, blocked: 65, version: 9 });
+    assert.deepEqual(toThresholds(body(35, 50, 10)), { firstWarning: 35, secondWarning: 50, blocked: 50, version: 10 });
 });
 
 test("toThresholds: anything outside the fence is refused (null)", () => {

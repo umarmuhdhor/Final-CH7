@@ -24,7 +24,10 @@ export function toThresholds(body) {
     const { warnAt, blockAt, version } = body ?? {};
     if (![warnAt, blockAt, version].every(Number.isInteger)) return null;
     if (warnAt < 30 || warnAt > 60 || blockAt < 50 || blockAt > 95 || blockAt - warnAt < 15 || version < 0) return null;
-    return { firstWarning: warnAt, secondWarning: Math.min(Math.max(50, warnAt), blockAt), blocked: blockAt, version };
+    // Popup tier 2 starts at 50, as built in. When warnAt is already ≥ 50 that would leave tier 1
+    // empty, so tier 2 moves to the middle of the warning band instead (gap ≥ 15, so it stays inside).
+    const secondWarning = warnAt < 50 ? Math.min(50, blockAt) : Math.round((warnAt + blockAt) / 2);
+    return { firstWarning: warnAt, secondWarning, blocked: blockAt, version };
 }
 
 /**
