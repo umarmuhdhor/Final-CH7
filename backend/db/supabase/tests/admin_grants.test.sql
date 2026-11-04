@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(83);
+select plan(89);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -26,7 +26,7 @@ select is(
 select table_privs_are('admin', t, r, array[]::text[], r || ' has no privileges on admin.' || t)
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions',
                   'domain_intel', 'domain_intel_label', 'domain_labels', 'label_forget', 'domain_dirty',
-                  'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons']) as t
+                  'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons', 'api_keys']) as t
 cross join unnest(array['shoo_admin', 'shoo_api']) as r;
 
 -- Views: SELECT for shoo_admin only.
@@ -35,7 +35,7 @@ from unnest(array['v_review_queue', 'v_blocklist', 'v_scans', 'v_ops_snapshot',
                   'v_audit', 'v_config', 'v_categories', 'v_feed',
                   'v_domain_intel', 'v_labels', 'v_analysis_runs', 'v_stats_daily',
                   'v_eval_summary', 'v_eval_curve', 'v_eval_labels', 'v_eval_signals', 'v_eval_targets',
-                  'v_cases', 'v_lessons', 'v_thresholds']) as v;
+                  'v_cases', 'v_lessons', 'v_thresholds', 'v_api_keys']) as v;
 
 -- public_config: SELECT for shoo_api only (phase 05, GET /config/public), I2's one exception.
 select table_privs_are('admin', 'public_config', 'shoo_admin', array[]::text[], 'shoo_admin has no privileges on admin.public_config');
@@ -70,7 +70,10 @@ from (values
   ('lesson_add', array['text', 'text', 'jsonb', 'bigint', 'text']),
   ('lesson_pin', array['bigint', 'boolean', 'text', 'text']),
   ('lesson_delete', array['bigint', 'text', 'text']),
-  ('usage_record', array['text', 'bigint', 'integer', 'integer', 'integer'])
+  ('usage_record', array['text', 'bigint', 'integer', 'integer', 'integer']),
+  ('api_key_create', array['text', 'text', 'text', 'integer', 'text']),
+  ('api_key_revoke', array['bigint', 'text']),
+  ('api_key_use', array['text'])
 ) as x(f, a);
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
