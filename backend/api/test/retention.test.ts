@@ -5,7 +5,7 @@ import { runRetention } from "../src/cron/retention";
 import { opsWriter, type OpsWriter } from "../src/db/repo/ops";
 import { screenshotStore } from "../src/services/screenshots";
 import { jpeg } from "./helpers/images";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { resetDb, testSql, withoutTriggers } from "./helpers/resetDb";
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -99,10 +99,10 @@ describe("retention cron (R4 §5, D-alief-B12)", () => {
     await device("dev_flood");
     await device("dev_other");
     // One device re-posting the same blocked domain: 3000 old rows share one object, older than everyone else's.
-    await sql`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at, screenshot_path)
+    await withoutTriggers((tx) => tx`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at, screenshot_path)
       select 'flood_' || lpad(g::text, 5, '0'), 'dev_flood', 'https://x.example/', 'x.example', 92, 'blocked', now(),
              now() - interval '20 days' + make_interval(secs => g), 'dev_flood/flood_00001.jpg'
-      from generate_series(1, 3000) g`;
+      from generate_series(1, 3000) g`);
     await scan("s_other", "dev_other", 15, "dev_other/s_other.jpg");
     const removed: string[][] = [];
     const spy = vi.fn(async (paths: string[]) => void removed.push(paths));
