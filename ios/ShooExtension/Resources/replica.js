@@ -12,6 +12,19 @@
     const MAX_DEPTH = 400;
     const MAX_MARKS = 24; // the app reads no more (#176)
     const MAX_IMAGE_SIDE = 10000; // an image's placeholder size (CSS px); past it the size is dropped
+    // Evidence fragments: the element holding a signal's evidence (data-shoo-mark) stays lit and the rest of its
+    // part is dimmed, with the signal's label above it, like the app's spotlight. CSS only: the dashboard shows
+    // the document in a sandboxed iframe without script. Position is not !important, so a page that places the
+    // element itself (absolute, fixed) keeps its layout.
+    const MARK_STYLE = [
+        "section[data-shoo-fragment]{position:relative;overflow:hidden;padding-top:36px}",
+        "[data-shoo-mark]{position:relative;z-index:2147483000;border-radius:10px;" +
+            "box-shadow:0 0 0 3px #fff,0 0 0 4px rgba(15,23,42,.12),0 0 0 100vmax rgba(30,41,59,.5)!important}",
+        "[data-shoo-mark][data-shoo-label]::after{content:attr(data-shoo-label);position:absolute;right:8px;bottom:100%;" +
+            "margin-bottom:8px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#fff;" +
+            "color:#111;font:600 12px/1.4 -apple-system,system-ui,sans-serif;letter-spacing:0;text-transform:none;" +
+            "padding:4px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.15);pointer-events:none}",
+    ].join("");
     const MARK_LIMIT = 100000; // px; the app drops a mark with any number at or past it
     const MARK_ID = /^[a-z_]{1,40}$/;
     const ELEMENT = 1;
@@ -117,6 +130,8 @@
         // designMode "on" makes the whole page one editable area: its text may be typed, so the body stays empty.
         const editableDoc = String(getter("Document", "designMode")(doc) ?? "").toLowerCase() === "on";
         const nonce = `shoo${Math.random().toString(36).slice(2, 10)}`;
+        /** Element → { ids, labels }: the evidence inside a fragment (captureFragments), for its spotlight. */
+        const marked = page.marked instanceof Map ? page.marked : null;
         const sheets = [];
         const resources = [];
         const resourceIds = new Map();
@@ -169,6 +184,7 @@
                 const lower = key.toLowerCase();
                 let value = attr.value;
                 if (!ATTR_NAME.test(key) || lower.startsWith("on") || DROP_ATTRS.has(lower)) continue;
+                if (lower === "data-shoo-mark" || lower === "data-shoo-label") continue; // ours only (captureFragments)
                 if (isField && !FIELD_ATTRS.has(lower)) continue;
                 if (SCRIPT_URL.test(value)) continue;
                 if (isInput && lower === "value" && !KEEP_VALUE.has(type)) continue; // typed input (PRD §10)
@@ -281,6 +297,11 @@
 
             emit(`<${name}`);
             writeAttrs(node, lower);
+            const mark = marked?.get(node);
+            if (mark) {
+                emit(` data-shoo-mark="${escapeAttr(mark.ids.join(" "))}"`);
+                if (mark.labels.length) emit(` data-shoo-label="${escapeAttr(mark.labels.join(" · "))}"`);
+            }
             emit(">");
             if (lower === "head") {
                 headWritten = true;
@@ -351,17 +372,23 @@
      */
     function mergeGroups(groups) {
         const kept = [];
-        for (const { element, signalIds } of groups ?? []) {
+        for (const { element, signalIds, marks } of groups ?? []) {
             const name = element && nodeType(element) === ELEMENT ? (localName(element) || "").toLowerCase() : "";
             if (!name || NOT_FRAGMENT.has(name)) continue;
             const ids = [...new Set(signalIds ?? [])];
+            const own = Array.isArray(marks) ? marks : [];
             const outer = kept.find((k) => k.element === element || contains(k.element, element));
             if (outer) {
                 outer.signalIds = [...new Set([...outer.signalIds, ...ids])];
+                outer.marks.push(...own);
                 continue;
             }
             const inner = kept.filter((k) => contains(element, k.element));
-            const merged = { element, signalIds: [...new Set([...inner.flatMap((k) => k.signalIds), ...ids])] };
+            const merged = {
+                element,
+                signalIds: [...new Set([...inner.flatMap((k) => k.signalIds), ...ids])],
+                marks: [...inner.flatMap((k) => k.marks), ...own],
+            };
             const at = inner.length ? kept.indexOf(inner[0]) : kept.length;
             for (const k of inner) kept.splice(kept.indexOf(k), 1);
             kept.splice(Math.min(at, kept.length), 0, merged);
@@ -398,7 +425,15 @@
         if (!root || localName(root) !== "html") return null;
         const kept = mergeGroups(groups);
         if (!kept.length) return null;
-        const w = writer(doc, page);
+        const marked = new Map();
+        for (const { element, signalId, label } of kept.flatMap((k) => k.marks)) {
+            if (!element || typeof signalId !== "string" || !MARK_ID.test(signalId)) continue;
+            const mark = marked.get(element) ?? { ids: [], labels: [] };
+            if (!mark.ids.includes(signalId)) mark.ids.push(signalId);
+            if (label && !mark.labels.includes(label)) mark.labels.push(label);
+            marked.set(element, mark);
+        }
+        const w = writer(doc, { ...page, marked });
         for (const node of styleNodes(root)) w.writeNode(node, 0);
         w.adopted(doc);
         const styles = w.take();
@@ -417,6 +452,7 @@
             `<meta name="viewport" content="width=${Math.round(page.viewport?.width || 390)}">`,
             `<meta name="shoo-fragments" content="${meta}">`,
             styles,
+            `<style>${MARK_STYLE}</style>`, // after the page's sheets, so the spotlight wins
         ].join("");
         return { head, sections, sheets: w.sheets, resources: w.resources, nonce: w.nonce, truncated: w.truncated };
     }

@@ -62,12 +62,13 @@
 
     /**
      * Boxes for the replica's `marks`, heaviest signal first: a text signal → where its evidence phrase is
-     * (brand_logo_offsite: an image whose alt holds it first, the logo itself), an asks_* signal → its field
-     * (by name/id, else by kind).
+     * (brand_logo_offsite: an image whose alt holds it first, the logo itself; neither, or no evidence → the
+     * page's own logo), an asks_* signal → its field (by name/id, else by kind).
      * Signals with nothing on the page (new_domain, db_match, …) get none. Document coordinates, CSS px.
      * @param {object[]} signals
      * @param {{ text(phrase): DOMRect[], images(phrase): DOMRect[],
-     *           fields(): Array<{rect: DOMRect, name: string, id: string, kind: string|null}>, scroll: {x, y} }} page
+     *           fields(): Array<{rect: DOMRect, name: string, id: string, kind: string|null}>, logos?(): DOMRect[],
+     *           scroll: {x, y} }} page
      * @returns {Array<{signalId, x, y, w, h}>}
      */
     function signalMarks(signals, page) {
@@ -82,8 +83,11 @@
             if (seen.has(key)) continue;
             seen.add(key);
             let rects = [];
-            if (TEXT_SIGNALS.has(signal.id) && evidence.length >= 3) {
-                rects = signal.id === "brand_logo_offsite" ? [...page.images(evidence), ...page.text(evidence)] : page.text(evidence);
+            if (signal.id === "brand_logo_offsite") {
+                rects = evidence.length >= 3 ? [...page.images(evidence), ...page.text(evidence)] : [];
+                if (!rects.length) rects = page.logos?.() ?? []; // named in the title only, or a copied form
+            } else if (TEXT_SIGNALS.has(signal.id) && evidence.length >= 3) {
+                rects = page.text(evidence);
             } else if (FIELD_SIGNAL.test(signal.id)) {
                 fields ??= page.fields();
                 const name = evidence.toLowerCase();
@@ -100,15 +104,20 @@
         return marks;
     }
 
+    /** The signal's own label for a fragment's spotlight ("Kalimat mendesak: …"), or "". */
+    const markLabel = (signal) => String(signal.label?.id || signal.label?.en || "").trim().slice(0, 80);
+
     /**
      * ADM-07 evidence fragments: the page part behind each signal, heaviest signal first, for replica.js
      * captureFragments (which merges nested parts). Same lookup as signalMarks: a text signal → the block around
-     * its phrase (brand_logo_offsite: around the logo image too), an asks_* signal → its field's form, else the
-     * field's nearby container. Signals with nothing on the page get none. No cap on the count: the size limit
-     * trims the lightest parts (replica-build.js buildFragments).
-     * @param {{ textBlocks(phrase): object[], imageBlocks(phrase): object[],
-     *           fields(): Array<{el: object, name: string, id: string, kind: string|null}>, fieldBlock(el): object }} page
-     * @returns {Array<{element: object, signalIds: string[]}>}
+     * its phrase (brand_logo_offsite: around the logo image too; neither, or no evidence → the page's own logo),
+     * an asks_* signal → its field's form, else the field's nearby container. Signals with nothing on the page
+     * get none. No cap on the count: the size limit trims the lightest parts (replica-build.js buildFragments).
+     * Each part also names the element that holds the evidence (`marks`), for the dashboard's spotlight.
+     * @param {{ textElements(phrase): object[], imageElements(phrase): object[], logos?(): object[],
+     *           fields(): Array<{el: object, name: string, id: string, kind: string|null}>,
+     *           blockOf(el): object, fieldBlock(el): object }} page
+     * @returns {Array<{element: object, signalIds: string[], marks: Array<{element: object, signalId: string, label: string}>}>}
      */
     function fragmentGroups(signals, page) {
         const { TEXT_SIGNALS, FIELD_SIGNAL } = globalThis.ShooMarks ?? {};
@@ -117,18 +126,27 @@
         let fields = null;
         for (const signal of [...(signals ?? [])].sort((a, b) => b.weight - a.weight)) {
             const evidence = typeof signal.evidence === "string" ? signal.evidence.trim() : "";
-            let elements = [];
-            if (TEXT_SIGNALS.has(signal.id) && evidence.length >= 3) {
-                elements = signal.id === "brand_logo_offsite" ? [...page.imageBlocks(evidence), ...page.textBlocks(evidence)] : page.textBlocks(evidence);
+            let found = [];
+            let around = page.blockOf;
+            if (signal.id === "brand_logo_offsite") {
+                found = evidence.length >= 3 ? [...page.imageElements(evidence), ...page.textElements(evidence)] : [];
+                if (!found.length) found = page.logos?.() ?? []; // named in the title only, or a copied form
+            } else if (TEXT_SIGNALS.has(signal.id) && evidence.length >= 3) {
+                found = page.textElements(evidence);
             } else if (FIELD_SIGNAL.test(signal.id)) {
                 fields ??= page.fields();
                 const name = evidence.toLowerCase();
                 let hits = name ? fields.filter((f) => f.name === name || f.id === name) : [];
                 const ask = signal.id.slice("asks_".length);
                 if (!hits.length) hits = fields.filter((f) => f.kind && f.kind === (ASK_KIND[ask] ?? ask));
-                elements = hits.map((f) => page.fieldBlock(f.el));
+                found = hits.map((f) => f.el);
+                around = page.fieldBlock;
             }
-            for (const element of new Set(elements)) if (element) groups.push({ element, signalIds: [signal.id] });
+            const label = markLabel(signal);
+            for (const el of new Set(found)) {
+                const element = el && around(el);
+                if (element) groups.push({ element, signalIds: [signal.id], marks: [{ element: el, signalId: signal.id, label }] });
+            }
         }
         return groups;
     }
@@ -202,6 +220,23 @@
             .map((img) => dom.rect(img));
     }
 
+    // Layer 3 names a brand from the title or a copied sign-in form too (ai/src/layer3/content.js), so its
+    // evidence may be nowhere in the page text; the logo is then the element the page itself calls a logo.
+    const LOGO = '[class*="logo" i], [id*="logo" i], [alt*="logo" i], [aria-label*="logo" i]';
+    const MAX_LOGO_HEIGHT = 400; // CSS px: a "logo-wrapper" holding the whole header is not the logo
+
+    /** Up to `max` visible elements the page calls a logo, outermost first (a logo box and its <svg> → the box). */
+    function logoElements(max = MARKS_PER_SIGNAL) {
+        const found = [];
+        for (const el of dom.all(document, LOGO)) {
+            if (found.length >= max) break;
+            if (el.closest(NOT_TEXT) || outside(el) || found.some((f) => f.contains(el))) continue;
+            const rect = dom.rect(el);
+            if (rect.width > 0 && rect.height > 0 && rect.height <= MAX_LOGO_HEIGHT) found.push(el);
+        }
+        return found;
+    }
+
     /** Every fillable field with its box, name/id (lowercase) and sensitive kind (marks.js classifyField). */
     function fieldBoxes() {
         const classify = globalThis.ShooMarks?.classifyField ?? (() => null);
@@ -243,33 +278,30 @@
         return box;
     }
 
-    /** The blocks around every occurrence of `phrase` in the page text (case-insensitive, within one text node). */
-    function textBlocks(phrase) {
+    /** The elements whose own text holds `phrase` (case-insensitive, within one text node), once each. */
+    function textElements(phrase) {
         const needle = phrase.toLowerCase();
-        const blocks = new Set();
+        const found = new Set();
         const walker = dom.walker(document, dom.body(document) || dom.root(document), NodeFilter.SHOW_TEXT, {
             acceptNode: (node) => (node.parentElement?.closest(NOT_TEXT) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
         });
         while (walker.nextNode()) {
             const node = walker.currentNode;
-            if (node.data.toLowerCase().includes(needle)) blocks.add(blockOf(node.parentElement));
+            if (node.data.toLowerCase().includes(needle) && node.parentElement) found.add(node.parentElement);
         }
-        return [...blocks];
+        return [...found];
     }
 
-    /** The blocks around images whose alt text holds `phrase` (a brand logo). */
-    function imageBlocks(phrase) {
+    /** Images whose alt text holds `phrase` (a brand logo). */
+    function imageElements(phrase) {
         const needle = phrase.toLowerCase();
-        return dom
-            .all(document, "img[alt]")
-            .filter((img) => (dom.attr(img, "alt") || "").toLowerCase().includes(needle))
-            .map(blockOf);
+        return dom.all(document, "img[alt]").filter((img) => (dom.attr(img, "alt") || "").toLowerCase().includes(needle));
     }
 
     /** The fragments draft (replica.js), or null: a page that breaks the lookup is still reported. */
     function fragments(state) {
         try {
-            const groups = fragmentGroups(state.signals, { textBlocks, imageBlocks, fields: fieldBoxes, fieldBlock });
+            const groups = fragmentGroups(state.signals, { textElements, imageElements, logos: () => logoElements(), fields: fieldBoxes, blockOf, fieldBlock });
             return globalThis.ShooReplica?.captureFragments?.(document, {
                 url: shareableUrl(location.href),
                 viewport: { width: innerWidth, height: innerHeight },
@@ -284,7 +316,10 @@
     /** marks for the replica; [] when the page breaks the lookup (the replica goes without the spotlight). */
     function pageMarks(state) {
         try {
-            return signalMarks(state.signals, { text: textRects, images: imageRects, fields: fieldBoxes, scroll: { x: scrollX, y: scrollY } });
+            return signalMarks(state.signals, {
+                text: textRects, images: imageRects, fields: fieldBoxes, logos: () => logoElements().map((el) => dom.rect(el)),
+                scroll: { x: scrollX, y: scrollY },
+            });
         } catch (error) {
             console.warn("[Shoo] replica marks failed, sending the replica without them", error);
             return [];
