@@ -23,7 +23,7 @@ Lead: @umarmuhdhor (Umar) · Team AI: @imeldamayanti (Imelda) · Team App: @alie
 | `ios/ShooApp/` | Team App | All app screens (ON, PR, GD, DT, PF) |
 | `backend/` | Team App | Pairing, Activity, verdicts, push, 14-day retention |
 | `detector/` | Lead (diambil alih dari Team AI, 23 Okt 2026) | On-device detection (layer 1–2) |
-| `ai/` | Lead (diambil alih dari Team AI, 23 Okt 2026) | Server-side detection (layer 3–4, LLM) |
+| `ai/` | Team AI (Imelda, diambil kembali 30 Okt 2026) | Server-side detection (layer 3–4, LLM) |
 | `plan/<name>/` | That person | Their own work plan (docs only), e.g. `plan/alief/`. Reviewed by the lead |
 
 ## Hard rules

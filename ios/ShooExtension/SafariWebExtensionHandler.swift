@@ -23,6 +23,11 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             reply = ["ok": true]
         case "getSession":
             reply = sessionReply()
+        case "pageChecked":
+            let defaults = AppGroup.defaults
+            defaults.set(defaults.integer(forKey: AppGroup.Key.statsChecked) + 1, forKey: AppGroup.Key.statsChecked)
+            defaults.set(Date(), forKey: AppGroup.Key.statsLastCheckedAt)
+            reply = ["ok": true]
         default:
             log.error("Unknown native message type: \(type ?? "nil", privacy: .public)")
             reply = ["ok": false, "error": "unknown_type"]
@@ -51,6 +56,8 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "guardianName": defaults.string(forKey: AppGroup.Key.guardianName) ?? NSNull(),
             "apiBaseURL": defaults.string(forKey: AppGroup.Key.apiBaseURL) ?? NSNull(),
             "aiBaseURL": defaults.string(forKey: AppGroup.Key.aiBaseURL) ?? NSNull(),
+            "autoSend": defaults.object(forKey: AppGroup.Key.autoSendLinks) as? Bool ?? true,
+            "shareWarnings": defaults.object(forKey: AppGroup.Key.shareWarnings) as? Bool ?? true,
         ]
     }
 }

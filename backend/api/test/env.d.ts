@@ -16,6 +16,7 @@ declare namespace Cloudflare {
     SUPABASE_SERVICE_ROLE_KEY?: string;
     SCREENSHOT_MAX_BYTES?: string;
     REPLICAS: R2Bucket;
+    REPLICA_ARCHIVE: R2Bucket;
     REPLICAS_ENABLED?: string;
     SCREENSHOT_URL_SECRET?: string;
     RATE_KEY_SECRET?: string;

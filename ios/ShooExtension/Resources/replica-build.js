@@ -146,6 +146,46 @@ export async function buildReplica(draft, io, { compress = gzipBase64 } = {}) {
     return null;
 }
 
+const escapeAttr = (text) => String(text).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * The fragments document (contracts/api.md "Evidence fragments") with the draft's first `count` parts, each
+ * one <section data-shoo-fragment data-shoo-signals="ids">. Image and stylesheet tokens are filled by assemble().
+ */
+export function fragmentsDocument(draft, count = draft.sections.length) {
+    const body = draft.sections
+        .slice(0, count)
+        .map((s) => `<section data-shoo-fragment data-shoo-signals="${escapeAttr(s.signalIds.join(" "))}">${s.html}</section>`)
+        .join("");
+    return `<!doctype html><html><head>${draft.head}</head><body>${body}</body></html>`;
+}
+
+/**
+ * evidenceFragmentsBase64 for POST /scans (ADM-07), or null. Same limits as the replica. Too big → without
+ * images, then without the lightest parts (the draft lists the heaviest signal first), then without
+ * stylesheets; the page's look matters, so stylesheets go last.
+ * @param draft  replica.js captureFragments()
+ */
+export async function buildFragments(draft, io, { compress = gzipBase64 } = {}) {
+    if (!draft?.sections?.length || !draft.nonce) return null;
+    if (compress === gzipBase64 && typeof CompressionStream === "undefined") return null;
+    io = remembered(io);
+    const fit = async (count, keep) => {
+        const html = await assemble({ ...draft, html: fragmentsDocument(draft, count) }, io, keep);
+        if (new TextEncoder().encode(html).length > MAX_HTML_BYTES) return null;
+        const packed = await compress(html);
+        return packed != null && packed.length <= MAX_BASE64 ? packed : null;
+    };
+    for (const keep of [{ images: true, css: true }, { images: false, css: true }, { images: false, css: false }]) {
+        // Fewer parts each try, a quarter at a time, so a page with hundreds of them still ends quickly.
+        for (let count = draft.sections.length; count > 0; count -= Math.max(1, Math.floor(count / 4))) {
+            const packed = await fit(count, keep);
+            if (packed) return packed;
+        }
+    }
+    return null;
+}
+
 /** io whose answers are kept per URL, failures too. */
 function remembered(io) {
     const texts = new Map();

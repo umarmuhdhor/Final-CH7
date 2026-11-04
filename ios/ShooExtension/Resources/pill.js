@@ -47,6 +47,11 @@
         return [...new Set(texts)].slice(0, MAX_REASONS);
     }
 
+    /** See detail in the card: this page's record in the app, or Activity until it has one. */
+    function detailUrl(state) {
+        return state.recordId ? `shoo://scan/${encodeURIComponent(state.recordId)}` : "shoo://activity";
+    }
+
     /**
      * Where a dropped bubble rests: snapped to the nearer side edge, kept inside the safe area.
      * @param {{x, y}} center  where the finger let go, px
@@ -77,7 +82,7 @@
         return ok ? { side: pos.side, y: pos.y } : { ...DEFAULT_POS };
     }
 
-    globalThis.ShooPill = { toneFor, decide, dismissed, reasonTexts, snap, place, validPos, SIZE, MARGIN };
+    globalThis.ShooPill = { toneFor, decide, dismissed, reasonTexts, detailUrl, snap, place, validPos, SIZE, MARGIN };
 
     // ---- View (browser only) -------------------------------------------------------------
 
@@ -329,7 +334,7 @@
         note.hidden = reasons.length > 0;
 
         detail.hidden = view.score < THRESHOLD.firstWarning; // a record exists only from 30% (EX-07)
-        detail.href = globalThis.ShooPopup?.detailUrl(state) ?? "shoo://activity";
+        detail.href = detailUrl(state);
     }
 
     /** Card sits beside the bubble's edge, above it when there's room, otherwise below. */

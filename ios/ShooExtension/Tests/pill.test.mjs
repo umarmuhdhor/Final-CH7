@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 await import("../Resources/pipeline.js");
 await import("../Resources/pill.js"); // view part skips itself outside the browser
-const { decide, dismissed, toneFor, reasonTexts, snap, place, validPos, SIZE, MARGIN } = globalThis.ShooPill;
+const { decide, dismissed, toneFor, reasonTexts, detailUrl, snap, place, validPos, SIZE, MARGIN } = globalThis.ShooPill;
 
 /** Feeds a page's pipeline states through decide(); returns the views. */
 function play(states, { scanId = 1, memo = null } = {}) {
@@ -88,6 +88,11 @@ test("card reasons: missing wording and duplicates are skipped", () => {
 });
 
 const phone = { width: 390, height: 700, top: 47, bottom: 34 };
+
+test("See detail: this page's record, or Activity until it has one", () => {
+    assert.equal(detailUrl({ recordId: "a/b" }), "shoo://scan/a%2Fb");
+    assert.equal(detailUrl({}), "shoo://activity");
+});
 
 test("drop snaps to the nearer side edge", () => {
     assert.equal(snap({ x: 100, y: 300 }, phone).side, "left");
