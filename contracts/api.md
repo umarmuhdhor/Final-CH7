@@ -44,7 +44,7 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` (`screenshotBase64?` deprecated) | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
+| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
 | GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` and `pageReplicaUrl` are always `null` in lists | PR-05, GD-05 |
 | GET | `/scans/{id}` | — | ScanResult, `pageReplicaUrl` (and `screenshotUrl` for older scans) = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 
@@ -76,6 +76,16 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 `screenshotBase64` / `screenshotUrl` are **deprecated**: the extension no longer sends a screenshot. Backend keeps accepting it and the app keeps showing `screenshotUrl` until the last old scan is deleted (14 days), then both are removed in a follow-up PR.
 
 `GET <pageReplicaUrl>` answers the HTML with `Content-Type: text/html; charset=utf-8` (it may send `Content-Encoding: gzip`; URLSession decompresses it), `Content-Security-Policy: sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:`, `X-Content-Type-Options: nosniff` and `Cache-Control: private, no-store`, so the link stays inert even if it is opened in a browser.
+
+#### Evidence fragments (ADM-07, admin scan archive)
+
+`evidenceFragmentsBase64` (optional, `null` = absent): only the **parts of the page that made Shoo flag it**, kept by the admin dashboard to improve detection (dashboard decision D-dash-17). Sent with every report (warning or blocked), **with or without a family**. One HTML document, UTF-8, gzip + base64, same limits as the replica (≤ 400 KB base64, ≤ 3 MB decompressed); the backend drops it over either limit, or when it isn't gzip, and still stores the scan. Never returned to devices.
+
+- Same static guarantees as the page replica above (no script, no handler, no typed value, nothing loads; same CSP first in `<head>`), made by the same serializer.
+- `<head>`: charset, CSP, viewport, `<meta name="shoo-fragments" content="<JSON>">` (`{ "v": 1, "url", "capturedAt", "truncated" }`, `url` = origin + path), then the page's stylesheets once, so the parts look as they did on the page.
+- `<body>`: one `<section data-shoo-fragment data-shoo-signals="<ids>">` per part, heaviest signal first; `<ids>` = space-separated signal ids. `asks_*` → the field's `<form>` (no form: the field's container up to 3 levels up); text signals → the block element around the `evidence` text (`brand_logo_offsite`: around the logo image too). A part inside another part is written once, inside the outer one, with both ids. Never `<html>`, `<head>` or `<body>` as a part. Signals with nothing on the page (`db_match`, `new_domain`, layer 2) add no part.
+- No cap on the number of parts. Too big → again without images, then fewer parts (lightest first), then without stylesheets, then none.
+- An extension that doesn't send it is still valid (no parts for that scan). Older backends ignore the field; a `413` makes the extension send again without it.
 
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |
