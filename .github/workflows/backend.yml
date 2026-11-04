@@ -82,3 +82,25 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: pnpm -C backend/api run deploy
+      # Admin dashboard (shoo-dashboard phase 05b X8, W14): one deploy line on its Sistem chart.
+      # Service token with scope ops:deploy only. Never fails the deploy; without the secrets it is skipped.
+      - name: Deploy marker
+        continue-on-error: true
+        env:
+          DEPLOY_CLIENT_ID: ${{ secrets.SHOO_ADMIN_DEPLOY_CLIENT_ID }}
+          DEPLOY_CLIENT_SECRET: ${{ secrets.SHOO_ADMIN_DEPLOY_CLIENT_SECRET }}
+          SHOO_ADMIN_URL: ${{ vars.SHOO_ADMIN_URL }}
+        run: |
+          if [ -z "$DEPLOY_CLIENT_ID" ] || [ -z "$DEPLOY_CLIENT_SECRET" ] || [ -z "$SHOO_ADMIN_URL" ]; then
+            echo "deploy marker skipped: SHOO_ADMIN_DEPLOY_CLIENT_ID/SECRET or vars.SHOO_ADMIN_URL not set"; exit 0
+          fi
+          if [[ ! "$SHOO_ADMIN_URL" =~ ^https://[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev$ ]]; then
+            echo "deploy marker skipped: SHOO_ADMIN_URL must be https://<name>.<account>.workers.dev"; exit 0
+          fi
+          # Credentials go through a curl config on a file descriptor, never on the command line.
+          code="$(curl -s -m 15 -o /dev/null -w '%{http_code}' \
+            -K <(printf 'header = "CF-Access-Client-Id: %s"\nheader = "CF-Access-Client-Secret: %s"\n' "$DEPLOY_CLIENT_ID" "$DEPLOY_CLIENT_SECRET") \
+            -H 'content-type: application/json' \
+            --data "{\"service\":\"shoo-api\",\"sha\":\"$GITHUB_SHA\"}" \
+            "$SHOO_ADMIN_URL/api/ops/deploy" || true)"
+          echo "deploy marker: http $code"

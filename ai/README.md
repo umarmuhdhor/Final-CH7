@@ -105,6 +105,21 @@ Why the budget: the KV Free plan allows 1,000 writes and 100,000 reads a day **p
 
 Nothing from a request is stored or logged (the only cache is RDAP domain -> registration date): no `console.*` in `src/`, and a test spies on console and stdout/stderr across success and every error path. Responses are `no-store`.
 
+### Usage counts: `ai_usage` (05b K4)
+
+With the `AI_USAGE` binding (`wrangler.toml`, dataset `shoo_ai_usage`), each `/analyze` that reaches the analysis writes one Workers Analytics Engine point (`src/usage.js`). It holds counts and our own labels only, so the cost of layer 4 can be followed over time:
+
+| Field | Value |
+|---|---|
+| `blob1` | `PROMPT_VERSION` (`reality-check.vN`) |
+| `blob2` | version of the layer 4 case set in use (`cases.js`), or `none` |
+| `blob3` | layer 4 outcome: an `OUTCOMES` name from `src/layer4/reality.js`, or `off` when layer 4 is not configured (a checker that throws before it counts an outcome is written as `http_error`) |
+| `double1`, `double2` | tokens in / out from the provider's `usage`; 0 when it sends none, and 0 on `timeout` / `http_error` (the answer, and its count, never arrives) |
+| `double3` | layer 4 LLM time, ms (0 when no call was made) |
+| `double4` | 1 when a domain-age lookup ran and gave no age, else 0 |
+
+No IP, domain, URL, title, page text, prompt, answer, key or `index`. Refused requests (rate limit, bad JSON, invalid body) write nothing. A missing binding or any binding error leaves the answer unchanged. `stats()` (and `GET /_dev/layer4`) also sums `tokens: { in, out }` since the checker was built. Like the daily cap counter it is per isolate, not a global "cap left". The dataset lives in the `shoo-ai` account; Analytics Engine must be enabled there once. To turn it off, remove the binding.
+
 ## Layout
 
 ```
@@ -166,9 +181,9 @@ Building 200,000 entries takes ~1 s CPU; the Workers Free plan allows 10 ms per 
 Setup (once, by the lead; not done by the build script):
 1. `cd ai && npx wrangler kv namespace create shoo-public-blocklist`. Put the printed id in `wrangler.toml` (uncomment the `[[kv_namespaces]]` block, binding `BLOCKLIST_KV`).
 2. Cloudflare dashboard -> API Tokens -> custom token with **Account / Workers KV Storage / Edit** on this account only.
-3. GitHub repo -> Settings -> Secrets and variables -> Actions: secrets `BLOCKLIST_CF_API_TOKEN`, `BLOCKLIST_CF_ACCOUNT_ID`; variable `BLOCKLIST_KV_NAMESPACE_ID`. The workflow is skipped while the variable is empty.
+3. GitHub repo -> Settings -> Secrets and variables -> Actions: variable `BLOCKLIST_KV_NAMESPACE_ID`. The workflow is skipped while the variable is empty. Since 3 Nov 2026 the job uses the `production` environment secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (the same as the `shoo-api` deploy; that token has Workers KV Storage Edit), so step 2 is not needed on Alief's account.
 4. Actions -> public-blocklist -> Run workflow; check the log line `public blocklist built at ...: N domains`.
-5. `npm run deploy` (the Worker picks up the binding), then `curl -s https://shoo-ai.uumaarrrrr22.workers.dev/public-blocklist | head -c 300`.
+5. `npm run deploy` (the Worker picks up the binding), then `curl -s https://shoo-ai.afindo-mi01.workers.dev/public-blocklist | head -c 300`.
 
 GitHub turns off scheduled workflows after 60 days without repository activity; re-enable it in the Actions tab if that happens.
 
@@ -191,6 +206,18 @@ Other candidates, checked on the official pages on 23 Oct 2026 (not legal advice
 | Phishing Army | Adds no restriction of its own but grants no upstream rights; sources include OpenPhish and PhishStats | Upstreams forbid redistribution |
 | PhishStats | Terms: no sharing or redistribution of raw feeds without written permission | Not allowed |
 
+## Learning from the admin dashboard (05b X3-X5, all off by default)
+
+Built by the admin dashboard lane; nothing here runs until the PM agrees that Shoo may learn from family decisions. The dashboard client is `scripts/dashboard.mjs` (Cloudflare Access service token in `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET`, `SHOO_ADMIN_URL` = `https://<name>.<account>.workers.dev`). Messages never quote a response body or a query string.
+
+| Piece | Where it runs | Off switch | What leaves the dashboard |
+|---|---|---|---|
+| X3 calibration report: `scripts/calibration-report.mjs` | `.github/workflows/ai-calibration.yml`, weekly, opens a PR with `ai/eval/reports/calibration-<date>.md` | repo variable `AI_CALIBRATION_ENABLED` must be `'true'` | counts and ratios per signal id only (ids Shoo does not emit, `src/signal-ids.js`, fold into one `(other)` row without ratios); never a domain |
+| X4 case library: `scripts/build-cases.mjs`, `src/layer4/cases.js` | build locally; the Worker reads KV | secret `CASES_ENABLED` must be `"true"`, (the `CASES_KV` binding to namespace `shoo-ai-cases` is in `wrangler.toml`) | per case: id, rule ids (known ids only), label, category; no domain, no admin note. The Worker checks the content hash against the version |
+| X5 lesson drafts: `scripts/lessons.mjs` | locally, with `ai/.env` | offline (counts only) unless `--llm`; posts to the dashboard only with `--send`, once per draft | domain, rule ids, AI score and label per mismatch go to the LLM provider (a new data flow: name it in `/privacy` first) |
+
+Case sets: `build-cases.mjs` writes `ai/eval/private-out/cases-<sha8>.json` (gitignored; not `private/`, which holds eval samples only) and prints the eval and the two `wrangler kv key put` commands (`cases:<sha8>`, then `cases:active`). With the switch on, layer 4 loads the set only for a call it will make (cached 10 min per isolate, a cold load waits at most 300 ms, a KV error keeps the last good set) and adds the first 20 cases (8 rules each, no `new_domain`) to the model input as `cases` (DATA, like page words); without it the input is exactly what it was. The system prompt and `PROMPT_VERSION` do not change, so before switching on, Team AI should decide the prompt wording for `cases` (a new prompt version + eval). The version is in `stats().casesVersion` and in `ai_usage` blob2. Lessons never reach the prompt by themselves.
+
 ## Layer 4: reality check (`unreasonable_request`, M4)
 
 Off by default. It switches on when `LLM_API_KEY`, `LLM_MODEL` and an `https://` `LLM_BASE_URL` are set (see `.env.example`; Worker secrets in production). Production (`shoo-ai`) has all three secrets set and runs `deepseek-v4-flash` through an OpenAI-compatible provider. Unit tests still use a fake `fetch`; `test-layer4` calls the real provider.
@@ -211,7 +238,7 @@ Privacy (TODO C5, done): the host, page title and form field labels of pages tha
 
 ## Deploy, limits, headers (M7)
 
-- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). Umar deploys `shoo-ai` from `main` with `npm run deploy` in `ai/` (no auto-deploy); secrets (`LLM_*`) are set with `wrangler secret put`.
+- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). `shoo-ai` runs on Alief's Cloudflare account (`account_id` in `wrangler.toml`, moved from Umar's on 3 Nov 2026), URL `https://shoo-ai.afindo-mi01.workers.dev`. Umar deploys it from `main` with `npm run deploy` in `ai/` as a member of that account (no auto-deploy); secrets (`LLM_*`) are set with `wrangler secret put`.
 - Per-IP rate limits, two layers; over either `429 rate_limited` with `Retry-After`, and the body is not read:
   - Workers Rate Limiting binding (`[[ratelimits]]` in `wrangler.toml`, shared across isolates, works on `workers.dev`): `/analyze` 60 per 60 s, `/public-blocklist` 10 per 60 s. This is the hard limit. A Cloudflare WAF rule would need a custom domain (zone rules do not apply to `workers.dev`).
   - In memory, per isolate: `/analyze` 300 per 10 min, `/public-blocklist` 30 per 10 min. The only limiter in tests; the dev server turns both off (`SHOO_DEV_RATE_LIMIT=1` turns them on), because every local request is one `unknown` client.

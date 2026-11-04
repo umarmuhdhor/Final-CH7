@@ -35,6 +35,9 @@ export async function markTombstonesTried(sql: Sql, paths: string[]): Promise<vo
 
 // Same rule as storeKind (services/screenshots.ts): replicas and new favicons live in R2.
 const R2_PATH = String.raw`(t.path like '%-replica.html.gz' or t.path ~ '-icon\.[a-z]+$')`;
+// ADM-07: evidence fragments in the archive bucket, tombstoned only by DELETE /devices/me (the
+// admin.on_device_delete trigger, K12). No owner prefix and no scan points at them, so only age counts.
+const ARCHIVE_PATH = String.raw`(t.path like '%.fragments.html.gz' and t.path not like '%/%')`;
 
 /**
  * What the cron may remove from one store: no scan points at the path (a live scan or a reuse keeps
@@ -42,11 +45,12 @@ const R2_PATH = String.raw`(t.path like '%-replica.html.gz' or t.path ~ '-icon\.
  * only) and older than 10 minutes. A replica tombstone is written at reservation, so without the
  * replica_path check the cron would remove a live replica 10 minutes after upload (K6).
  */
-export async function dueTombstones(sql: Sql, limit: number, store: "supabase" | "r2" = "supabase"): Promise<string[]> {
+export async function dueTombstones(sql: Sql, limit: number, store: "supabase" | "r2" | "archive" = "supabase"): Promise<string[]> {
+  const where = store === "archive" ? ARCHIVE_PATH : store === "r2" ? R2_PATH : `not ${R2_PATH} and not ${ARCHIVE_PATH}`;
   const rows = await sql<{ path: string }[]>`
     select t.path from storage_tombstones t
     where t.created_at < now() - interval '10 minutes'
-      and ${sql.unsafe(store === "r2" ? R2_PATH : `not ${R2_PATH}`)}
+      and ${sql.unsafe(where)}
       and not exists (
         select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.screenshot_path = t.path)
       and not exists (

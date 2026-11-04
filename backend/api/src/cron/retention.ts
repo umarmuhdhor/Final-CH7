@@ -6,6 +6,7 @@ import { addTombstones, dueTombstones } from "../db/repo/tombstones";
 import {
   byStore, r2Store, removeTombstoned, type ScreenshotStore, screenshotStore, type StoreKind, type Stores,
 } from "../services/screenshots";
+import { archiveStore } from "../services/fragments";
 
 /**
  * 100 paths per Storage DELETE (REMOVE_BATCH); 10 DELETEs keep a run far under the 50 subrequests
@@ -63,6 +64,8 @@ export interface RetentionOptions {
   store?: ScreenshotStore;
   /** Overrides r2Store(env); tests only. */
   r2Store?: ScreenshotStore;
+  /** Overrides archiveStore(env) (ADM-07 evidence fragments); tests only. */
+  archiveStore?: ScreenshotStore;
   plainChunk?: number;
   shotChunk?: number;
   lockTimeoutMs?: number;
@@ -117,6 +120,20 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
         result.tombstones += r2.removed;
         if (r2.error) {
           error ??= r2.error;
+          break;
+        }
+      }
+    }
+    // ADM-07 (07a K12): evidence fragments of deleted accounts, from what is left of the R2 budget
+    // (the archive bucket is another R2 binding of the same Worker).
+    if (budget.r2 > 0) {
+      const archive = opts.archiveStore ?? archiveStore(env);
+      const due = await dueTombstones(sql, budget.r2 * batch, "archive");
+      for (let p = 0; p < due.length && budget.r2 > 0; p += batch, budget.r2--) {
+        const r = await removeTombstoned(sql, archive, due.slice(p, p + batch));
+        result.tombstones += r.removed;
+        if (r.error) {
+          error ??= r.error;
           break;
         }
       }

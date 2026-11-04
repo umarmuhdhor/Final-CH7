@@ -3,7 +3,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(101);
+select plan(97);
 
 -- Runs one SELECT as shoo_admin and returns its first column, or 'ERR <sqlstate> <message>'.
 -- pgTAP's own temp tables belong to postgres, so the role switch stays inside this function; the
@@ -35,15 +35,15 @@ from pg_roles where rolname = 'shoo_admin';
 select is((select count(*)::int from pg_auth_members where member = 'shoo_admin'::regrole), 0,
   'shoo_admin is a member of no role');
 
--- ---------------------------------------------------------------- tables (01a only)
+-- ---------------------------------------------------------------- tables (01a; 02a objects in admin_intel.test.sql)
 
 select has_table('admin', t, 'admin.' || t || ' exists')
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions']) as t;
-select hasnt_table('admin', t, 'admin.' || t || ' belongs to a later phase')
-from unnest(array['domain_intel', 'domain_labels', 'stats_daily', 'case_library']) as t;
 select is((select count(*)::int from admin.categories where active), 8, 'eight active categories');
 select ok((select value ~ '^[0-9a-f]{64}$' from admin.secrets where key = 'owner_ref_salt'), 'owner_ref_salt is 32 random bytes');
-select is((select jsonb_object_agg(key, value) from admin.admin_config),
+select is((select jsonb_object_agg(key, value) from admin.admin_config
+            where key in ('replica_enabled', 'replica_min_families', 'max_publish_per_day',
+                          'require_admin_note_locked', 'require_admin_note')),
   '{"replica_enabled": false, "replica_min_families": 2, "max_publish_per_day": 50,
     "require_admin_note_locked": true, "require_admin_note": true}'::jsonb,
   '01a config defaults (R2 §5)');
@@ -86,7 +86,13 @@ insert into blocklist_entries (domain, families, approved_at, approved_by) value
 select is(
   (select count(*)::int from information_schema.columns
     where table_schema = 'admin' and column_name in ('owner_id', 'owner_ref', 'by_ref', 'by_device_id', 'by_name', 'page_title', 'url', 'signals', 'replica_path')
-      and table_name in (select table_name from information_schema.views where table_schema = 'admin')),
+      and table_name in (select table_name from information_schema.views where table_schema = 'admin')
+      -- 07a K15: the scan archive shows pseudonyms, title and compact signals (its columns are pinned
+      -- in admin_archive.test.sql); never owner_id, by_device_id, a name or the raw URL.
+      and not (table_name = 'v_scan_archive' and column_name in ('owner_ref', 'by_ref', 'page_title', 'signals'))
+      -- Layer 5 (#241): ai_dataset.url is https + host + tokenised path, never the raw URL
+      -- (l5_review_data.test.sql).
+      and not (table_name = 'ai_dataset' and column_name = 'url')),
   0, 'I13: no admin view exposes owner, guardian name, title, raw URL, signals or replica path');
 select columns_are('admin', 'v_scans',
   array['id', 'domain', 'url_masked', 'score', 'status', 'signal_ids', 'detected_at', 'has_replica', 'verdict'],

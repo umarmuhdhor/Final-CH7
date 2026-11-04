@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import postgres, { type Sql } from "postgres";
+import postgres, { type Sql, type TransactionSql } from "postgres";
 
 /** Direct connection for assertions, as role shoo_api (same as the Worker). Not ended: see src/app.ts. */
 export function testSql(): Sql {
@@ -30,4 +30,17 @@ export async function resetDb(sql: Sql): Promise<void> {
   await admin`delete from blocklist_entries`;
   // shoo_api cannot delete ops_jobs rows (fase 21a): nobody but a person does.
   await admin`delete from ops_jobs`;
+}
+
+/**
+ * Bulk fake rows (quota and retention fillers) as role postgres with session_replication_role =
+ * replica, so no per-row trigger runs: the admin triggers (ADM-02 domain intel, ADM-07 scan archive)
+ * make thousands of rows take seconds, past the 5 s test timeout on CI. Real scans arrive one at a time.
+ */
+export async function withoutTriggers(run: (tx: TransactionSql) => Promise<unknown>): Promise<void> {
+  admin ??= adminSql();
+  await admin.begin(async (tx) => {
+    await tx`set local session_replication_role = replica`;
+    await run(tx);
+  });
 }

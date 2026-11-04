@@ -177,9 +177,9 @@ final class ActivityModel {
         isLoadingMore = true
         loadMoreFailed = false
         do {
-            guard let page = try await visiblePage(after: cursor, request: request) else { return }
-            let known = Set(items.map(\.id))
-            items += page.items.filter { !known.contains($0.id) }
+            guard let page = try await visiblePage(after: cursor, request: request, seen: Set(items.map(Self.site)))
+            else { return }
+            items += page.items
             nextCursor = page.nextCursor
             isLoadingMore = false
         } catch {
@@ -198,14 +198,22 @@ final class ActivityModel {
         return scan.ownerDeviceId != ownDeviceId
     }
 
-    /// One page with its hidden rows removed. A page left empty by that is skipped while a next one
-    /// exists, so the list never stalls on an empty page. Nil when a newer list replaced this one.
-    private func visiblePage(after cursor: String?, request: Int) async throws -> ScanPage? {
+    /// One row per site (PR-05): an owner's domain shows once, as its newest scan. The backend keeps
+    /// one row per site; older duplicate rows from before that stay hidden until retention drops them.
+    private static func site(_ scan: ScanResult) -> String {
+        "\(scan.ownerDeviceId)|\(scan.domain)"
+    }
+
+    /// One page with its hidden rows and sites already in `seen` removed. A page left empty by that is
+    /// skipped while a next one exists, so the list never stalls on an empty page. Nil when a newer
+    /// list replaced this one.
+    private func visiblePage(after cursor: String?, request: Int, seen: Set<String> = []) async throws -> ScanPage? {
         var cursor = cursor
+        var seen = seen
         while true {
             let page = try await repository.scans(owner: owner, status: filter.status, cursor: cursor)
             guard request == generation else { return nil }
-            let shown = page.items.filter(isShown)
+            let shown = page.items.filter { isShown($0) && seen.insert(Self.site($0)).inserted }
             if !shown.isEmpty || page.nextCursor == nil {
                 return ScanPage(items: shown, nextCursor: page.nextCursor)
             }

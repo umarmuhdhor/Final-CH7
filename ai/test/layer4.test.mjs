@@ -406,7 +406,7 @@ test("outcome counters: every way a check ends is counted, with no page data", a
     assert.deepEqual(stats.outcomes, { gated: 1, capped: 1, timeout: 1, http_error: 1, bad_schema: 1, reasonable: 1, flagged: 1 });
     assert.equal(stats.promptVersion, PROMPT_VERSION);
     assert.equal(stats.model, CONFIG.model);
-    assert.deepEqual(Object.keys(stats).sort(), ["model", "outcomes", "promptVersion"]);
+    assert.deepEqual(Object.keys(stats).sort(), ["casesVersion", "model", "outcomes", "promptVersion", "tokens"]);
 });
 
 test("GET /_dev/layer4 exists only when devStats is on", async () => {
