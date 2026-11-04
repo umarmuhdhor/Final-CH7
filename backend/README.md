@@ -108,6 +108,13 @@ Approvals from the dashboard need a named admin, a category and a note (≥ 10 c
 
 Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<from the password manager>';`. Local: `seed.sql` sets `shoo_admin_local`. Rollback before dashboard phase 02a: `drop schema admin cascade; drop index scans_domain_created, scans_domain_replica, verdicts_domain_cover;`.
 
+### Layer 5 data (#241, migration `20261104133527_l5_review_data.sql`)
+
+- `admin.domain_review`: one row per LLM review of a queued domain. The dashboard cron calls `admin.review_due(limit)` (pending, not a shared host, no review since the last label change; counts only, no notes or page text) and stores `POST /review` answers with `admin.review_record(results, model, prompt, actor)`, which cleans model output and never touches `blocklist_entries`. `admin.vote` copies its decision to the latest review (trigger on `review_decisions`). Off until `review_enabled` (config, default `false`).
+- `admin.shared_hosts`: replaced as a whole by `admin.shared_hosts_set(hosts, actor, note)` from `ai/data/shared-hosts.json`; the backend keeps no list of its own.
+- `admin.ai_dataset` (view): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
+- Role `shoo_ai` (Team AI, login, read-only transactions, 3 connections): `select` on `admin.ai_dataset` only. Cloud setup (once, SQL editor as `postgres`): `alter role shoo_ai password '<from the password manager>';`.
+
 ## Env
 
 Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secret put <NAME>` (cloud) or `api/.dev.vars` (local, gitignored). Full list: `plan/alief/ref/R3-catatan-api.md` §7.

@@ -47,8 +47,10 @@ select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
     cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
     where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)
-      and not (c.relname = 'public_config' and a.grantee = 'shoo_api'::regrole)),
-  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config)');
+      and not (c.relname = 'public_config' and a.grantee = 'shoo_api'::regrole)
+      -- Layer 5 (#241): Team AI's read-only role, SELECT on ai_dataset only (l5_review_data.test.sql).
+      and not (c.relname = 'ai_dataset' and a.grantee = 'shoo_ai'::regrole and a.privilege_type = 'SELECT')),
+  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config, shoo_ai on ai_dataset)');
 
 -- Functions: EXECUTE for shoo_admin on the API functions, nobody else; internal helpers for nobody.
 select function_privs_are('admin', f, a, 'shoo_admin', array['EXECUTE'], 'shoo_admin EXECUTE on admin.' || f)
@@ -75,7 +77,9 @@ from (values
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
-    where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)),
+    where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)
+      -- Layer 5: the two pure functions ai_dataset calls with shoo_ai's privileges.
+      and not (a.grantee = 'shoo_ai'::regrole and p.proname in ('tokenize_path', 'mask_note'))),
   0, 'I2: PUBLIC, shoo_api and PostgREST roles cannot execute any admin function');
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
