@@ -971,7 +971,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berhasil Terhubung dengan %@!"
+            "value" : "Berhasil Terhubung\ndengan %@!"
           }
         }
       }
@@ -5333,12 +5333,12 @@
         }
       }
     },
-    "Your account is connected. You now get online protection with your Guardian's support." : {
+    "You can now enjoy digital protection with your Guardian's support." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Akunmu berhasil terhubung. Kini kamu bisa menikmati perlindungan digital dengan dukungan Guardian-mu."
+            "value" : "Kini kamu bisa menikmati perlindungan digital dengan dukungan Guardian-mu."
           }
         }
       }
@@ -5433,6 +5433,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Perkecil"
+          }
+        }
+      }
+    },
+    "2 of 3" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 dari 3"
+          }
+        }
+      }
+    },
+    "Mom" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ibu"
+          }
+        }
+      }
+    },
+    "Dad" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayah"
+          }
+        }
+      }
+    },
+    "Site blocked · 92%" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs diblokir · 92%"
+          }
+        }
+      }
+    },
+    "· Protected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· Dilindungi"
+          }
+        }
+      }
+    },
+    "Invite your family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undang keluarga"
           }
         }
       }

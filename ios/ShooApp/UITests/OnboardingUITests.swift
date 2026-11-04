@@ -92,10 +92,10 @@ final class OnboardingUITests: XCTestCase {
     func testGuardianOnboardingEndsOnHomeWithReminderWhenNotificationsDenied() {
         let app = launch(notifications: "denied")
         register(app, name: "Rina", mode: "guardian")
-        // No way back to ON-03.
         XCTAssertFalse(app.navigationBars.buttons.firstMatch.exists)
         XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["onboarding.back"].exists)
+        // Nothing is saved yet, so Back still reaches ON-03 (Figma).
+        XCTAssertTrue(app.buttons["onboarding.back"].exists)
         app.buttons["invite.skip"].tap()
         // ON-04 passes on its own because the extension counts as on.
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))

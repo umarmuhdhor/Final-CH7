@@ -56,6 +56,23 @@ extension View {
             .accessibilityAddTraits(.isHeader)
     }
 
+    /// Figma "Large Title/Regular" over an illustration: 34 semibold, 41 pt lines.
+    func onboardingLargeTitleStyle() -> some View {
+        onboardingFont(34, weight: .semibold, relativeTo: .largeTitle)
+            .tracking(-0.68)
+            .figmaLineHeight(41, glyphOffset: -1, relativeTo: .largeTitle)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(OnboardingTheme.ink)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// Figma "Body/Regular": 17 rounded, 22 pt lines, under a large title.
+    func onboardingLargeBodyStyle() -> some View {
+        onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(OnboardingTheme.bodyInk)
+    }
+
     /// `lineHeight`: Figma "Subhead/Regular", 140 % (23.8).
     func onboardingBodyStyle(lineHeight: CGFloat = 23.8) -> some View {
         onboardingFont(17, design: .rounded, relativeTo: .body)
@@ -172,7 +189,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     private var footerBottom: CGFloat = 34
     /// Figma "Frame 2" side inset: 20 on Atur Nama / Pilih Mode, 24 on Hubungkan Akun, 46 under a hero.
     private var headlineInset: CGFloat = Hero.self == EmptyView.self ? 20 : 46
-    private var largeMessage = false
+    private var largeHeadline = false
     private var messageLineHeight: CGFloat = 23.8
     private var messageSpacing: CGFloat?
 
@@ -212,15 +229,12 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                         .padding(.horizontal, 24)
                     }
 
-                    VStack(spacing: messageSpacing ?? (largeMessage ? 12 : 4)) {
-                        Text(title).onboardingTitleStyle()
-                        if largeMessage {
-                            // Figma "Lindungi dirimu…": body 17 pt rounded, 120 % line height.
-                            Text(message)
-                                .onboardingFont(17, design: .rounded, relativeTo: .body)
-                                .multilineTextAlignment(.center)
-                                .foregroundStyle(OnboardingTheme.bodyInk)
+                    VStack(spacing: messageSpacing ?? (largeHeadline ? 8 : 4)) {
+                        if largeHeadline {
+                            Text(title).onboardingLargeTitleStyle()
+                            Text(message).onboardingLargeBodyStyle()
                         } else {
+                            Text(title).onboardingTitleStyle()
                             Text(message).onboardingBodyStyle(lineHeight: messageLineHeight)
                         }
                     }
@@ -250,7 +264,8 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
             }
         }
         .background(alignment: .top) {
-            OnboardingHeaderBackground().ignoresSafeArea(edges: .top)
+            // Figma "box": 252 pt, 345 where an illustration sits on it.
+            OnboardingHeaderBackground(height: Hero.self == EmptyView.self ? 252 : 345).ignoresSafeArea(edges: .top)
         }
         .background(OnboardingTheme.background.ignoresSafeArea())
         .overlay(alignment: .bottom) {
@@ -308,10 +323,10 @@ extension OnboardingFormPage {
         return page
     }
 
-    /// The 17 pt message of "Lindungi dirimu dan orang terdekat", 8 under its 70 pt headline box (12 here).
-    func largeMessage(_ large: Bool = true) -> Self {
+    /// The 34 pt headline and 22 pt message lines of "Lindungi dirimu dan orang terdekat".
+    func largeHeadline(_ large: Bool = true) -> Self {
         var page = self
-        page.largeMessage = large
+        page.largeHeadline = large
         return page
     }
 
@@ -399,8 +414,8 @@ struct OnboardingSuccessPage<Hero: View>: View {
     let message: Text
     let idPrefix: String
     let onContinue: () -> Void
-    /// Figma: 100 % under "Yeay, kamu berhasil", 70 % under "Berhasil Terhubung".
-    var messageOpacity = 1.0
+    /// Each success screen has its own Figma gradient.
+    var background = "SuccessBackground"
     /// Brings the headline to Figma's y 402 under the hero.
     @ViewBuilder let hero: Hero
 
@@ -409,20 +424,17 @@ struct OnboardingSuccessPage<Hero: View>: View {
             VStack(spacing: 0) {
                 hero
 
-                // Figma: the 2-line headline box is 74 tall (66 here), then 4.
-                VStack(spacing: 12) {
+                // Figma "Frame 2": Large Title, 8, Body.
+                VStack(spacing: 8) {
                     title
-                        .onboardingFont(30, weight: .medium, relativeTo: .title)
-                        .tracking(-0.3)
-                        .figmaLineHeight(33, glyphOffset: -3, relativeTo: .title)
+                        .onboardingFont(34, weight: .semibold, relativeTo: .largeTitle)
+                        .tracking(-0.68)
+                        .figmaLineHeight(41, glyphOffset: -1, relativeTo: .largeTitle)
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("\(idPrefix).title")
                     message
-                        .onboardingFont(15, design: .rounded, relativeTo: .subheadline)
-                        .figmaLineHeight(21, glyphOffset: 1, relativeTo: .subheadline)
-                        .lineSpacing(3)
+                        .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
                         .foregroundStyle(Color(hex: 0xFAF9FB))
-                        .opacity(messageOpacity)
                 }
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
@@ -433,7 +445,7 @@ struct OnboardingSuccessPage<Hero: View>: View {
         .scrollBounceBehavior(.basedOnSize)
         .contentMargins(.bottom, 104, for: .scrollContent)
         .background {
-            Image("SuccessBackground")
+            Image(background)
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()

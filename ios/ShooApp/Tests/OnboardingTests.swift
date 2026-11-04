@@ -84,9 +84,10 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()?.value
+        model.submitName()
         model.selectedMode = mode
-        await model.register()
+        model.continueFromMode()
+        try? await model.ensureRegistered()
         return model
     }
 
@@ -105,11 +106,11 @@ struct OnboardingModelTests {
         model.skipSplash()
         model.name = "   "
         #expect(!model.canSubmitName)
-        await model.submitName()?.value
+        model.submitName()
         #expect(model.step == .name)
         model.name = "Rina"
         #expect(model.canSubmitName)
-        await model.submitName()?.value
+        model.submitName()
         #expect(model.step == .mode)
     }
 
@@ -132,22 +133,68 @@ struct OnboardingModelTests {
         #expect(model.step == .connect)
         model.continueFromConnect()
         #expect(model.step == .turnOnExtension)
-        // Protected has no invite screen to go back to.
+        // Figma: Back from ON-04 is Connect for a Protected, the mode stays saved.
         model.goBack()
-        #expect(model.step == .turnOnExtension)
+        #expect(model.step == .connect)
+        #expect(settings.mode == .protected)
     }
 
-    @Test func registrationNeedsAMode() async {
+    @Test(arguments: [UserMode.guardian, .protected])
+    func backReachesModeUntilTheDeviceIsRegistered(mode: UserMode) async throws {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()?.value
-        await model.register()
+        model.submitName()
+        model.selectedMode = mode
+        model.continueFromMode()
+        #expect(model.step == (mode == .guardian ? .invite : .connect))
+        #expect(settings.mode == nil)
+        #expect(model.canGoBackToMode)
+        model.goBack()
+        #expect(model.step == .mode)
+        model.continueFromMode()
+        try await model.ensureRegistered()
+        #expect(settings.mode == mode)
+        #expect(!model.canGoBackToMode)
+        let stuck = model.step
+        model.goBack()
+        #expect(model.step == stuck)
+    }
+
+    @Test func joiningRegistersFirstAndStaysPassedAfterRelaunch() async {
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        model.selectedMode = .protected
+        model.continueFromMode()
+        let connect = model.connect()
+        connect.code = "482193"
+        await connect.join()
+        #expect(settings.mode == .protected)
+        guard case .joined = connect.state else {
+            Issue.record("expected joined, got \(connect.state)")
+            return
+        }
+        #expect(settings.onboardingConnectPassed)
+        // Back from ON-04 finds the same guardian, not an empty form.
+        model.continueFromConnect()
+        model.goBack()
+        #expect(model.step == .connect)
+        #expect(model.connect() === connect)
+    }
+
+    @Test func modeStepNeedsAMode() {
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        model.continueFromMode()
         #expect(model.step == .mode)
         #expect(settings.mode == nil)
     }
 
-    @Test func registrationErrorStaysOnModeStep() async throws {
+    @Test func registrationErrorStaysOnInvite() async throws {
         let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
         let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
         let env = AppEnvironment(
@@ -156,11 +203,30 @@ struct OnboardingModelTests {
         let model = OnboardingModel(environment: env)
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()?.value
+        model.submitName()
         model.selectedMode = .guardian
-        await model.register()
-        #expect(model.step == .mode)
+        model.continueFromMode()
+        await model.skipInvite()
+        #expect(model.step == .invite)
         #expect(model.registrationFailed)
+        #expect(settings.mode == nil)
+    }
+
+    @Test func registrationErrorStaysOnConnect() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let env = AppEnvironment(
+            repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
+        )
+        let model = OnboardingModel(environment: env)
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        model.selectedMode = .protected
+        model.continueFromMode()
+        await model.skipConnect()
+        #expect(model.step == .connect)
+        #expect(model.connect().problem != nil)
         #expect(settings.mode == nil)
     }
 
@@ -169,28 +235,12 @@ struct OnboardingModelTests {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
-        await model.submitName()?.value
+        model.submitName()
         #expect(model.step == .connect)
-        #expect(settings.mode == .protected)
-        // Connect still gets the code: nothing joins until the user taps Connect (T11).
-        #expect(env.router.pendingJoinCode == "482193")
-    }
-
-    @Test func inviteLinkRegistrationErrorShowsModeWithProtectedPicked() async throws {
-        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
-        let env = AppEnvironment(
-            repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
-        )
-        env.router.pendingJoinCode = "482193"
-        let model = OnboardingModel(environment: env)
-        model.skipSplash()
-        model.name = "Rina"
-        await model.submitName()?.value
-        #expect(model.step == .mode)
         #expect(model.selectedMode == .protected)
-        #expect(model.registrationFailed)
-        #expect(settings.mode == nil)
+        // Connect still gets the code: nothing joins until the user taps Connect (T11).
+        #expect(model.connect().code == "482193")
+        #expect(model.connect().state == .entering)
     }
 
     @Test func modeIsPermanentAfterRegistration() async {

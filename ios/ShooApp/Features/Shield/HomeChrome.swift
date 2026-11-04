@@ -82,8 +82,6 @@ struct HomeHeroLayout {
     /// From the bottom of the last line of text to the top of the status strip.
     var bottomGap: CGFloat = 49
     var showsRings = true
-    /// protected/Home: the frame keeps only the shield's glow, no glass shield.
-    var showsShield = true
     var titleWeight: Font.Weight = .semibold
     /// The background runs on under the strip, to Figma y 443 (end of the "box" fade).
     var backgroundOverhang: CGFloat = 72
@@ -127,20 +125,10 @@ struct HomeHero<Accessory: View>: View {
         let ringCenter = HomeHeroLayout.ringCenter
         VStack(spacing: 0) {
             ZStack {
-                if layout.showsRings { HeroRings() }
-                if layout.showsShield {
-                    HalftoneShield(isOn: shieldOn, tint: shieldTint)
-                        .scaleEffect(layout.shieldScale)
-                        .offset(y: layout.shieldTop - (ringCenter - HomeHeroLayout.kacaRise * layout.shieldScale))
-                } else {
-                    // Figma "Glow": 143 × 135, #1A73D9 at 55 %, 40 blur, 6 pt below the ring centre.
-                    Ellipse()
-                        .fill(Color(red: 0x1A / 255, green: 0x73 / 255, blue: 0xD9 / 255).opacity(0.55))
-                        .frame(width: 143, height: 135)
-                        .blur(radius: 20)
-                        .offset(y: 13.5)
-                        .accessibilityHidden(true)
-                }
+                if layout.showsRings { HeroPulse() }
+                HalftoneShield(isOn: shieldOn, tint: shieldTint)
+                    .scaleEffect(layout.shieldScale)
+                    .offset(y: layout.shieldTop - (ringCenter - HomeHeroLayout.kacaRise * layout.shieldScale))
             }
             .frame(height: 236)
             .padding(.top, ringCenter - 118 - HomeHeroLayout.heroTop)
@@ -186,27 +174,15 @@ extension HomeHero where Accessory == EmptyView {
     }
 }
 
-/// Figma "Latar Shield": three dashed rings (236 / 300 / 368 pt, 2 on 6 off) and a slow sweep on the inner one.
-/// Reduce Motion stops the sweep.
-private struct HeroRings: View {
-    @Environment(\.shooReduceMotion) private var reduceMotion
-
+/// Figma "Latar Shield": three dashed rings (236 / 300 / 368 pt, 2 on 6 off) over soft white discs that grow
+/// out of the shield and fade.
+private struct HeroPulse: View {
     var body: some View {
         ZStack {
+            SoftPulse(smallest: 120, largest: 368, peak: 0.2)
             ring(368, opacity: 0.16, width: 1)
             ring(300, opacity: 0.28, width: 1.2)
             ring(236, opacity: 0.45, width: 1.5)
-            TimelineView(.animation(paused: reduceMotion)) { context in
-                let turn = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 8) / 8
-                Circle()
-                    .fill(AngularGradient(stops: [
-                        .init(color: .white.opacity(0), location: 0),
-                        .init(color: .white.opacity(0), location: 0.84),
-                        .init(color: .white.opacity(0.35), location: 1),
-                    ], center: .center))
-                    .frame(width: 236, height: 236)
-                    .rotationEffect(.degrees(turn * 360))
-            }
         }
         .frame(width: 368, height: 368)
         .frame(height: 236)

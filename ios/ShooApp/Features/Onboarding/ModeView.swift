@@ -1,12 +1,9 @@
 import SwiftUI
 
-/// ON-03: Guardian or Protected, saved for good. Saving registers the device (Figma "Choose Mode").
+/// ON-03: Guardian or Protected, saved for good on the next screen (Figma "Choose Mode").
 struct ModeView: View {
     @Bindable var model: OnboardingModel
-    @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
         OnboardingFormPage(
@@ -39,36 +36,14 @@ struct ModeView: View {
                 Label { Text("You can't change this later.") } icon: { Image(systemName: "info.circle") }
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .foregroundStyle(OnboardingTheme.secondaryInk)
-
-                if model.registrationFailed {
-                    Label { Text("Couldn't save. Check your connection and try again.") } icon: {
-                        Image(systemName: "wifi.exclamationmark")
-                    }
-                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-                    .foregroundStyle(.red)
-                    .accessibilityIdentifier("mode.error")
-                }
             }
             // Figma: cards at y 280.
             .padding(.top, 99)
         } footer: {
-            Button {
-                Task { await model.register() }
-            } label: {
-                ZStack {
-                    Text("Next").opacity(model.isWorking ? 0 : 1)
-                    if model.isWorking { ProgressView().tint(OnboardingTheme.onButton) }
-                }
-            }
-            .buttonStyle(OnboardingCapsuleButtonStyle())
-            // Stays dark while saving so the spinner is visible; `register()` ignores taps then.
-            .disabled(model.selectedMode == nil)
-            .accessibilityIdentifier("mode.continue")
-        }
-        .onChange(of: model.registrationFailed) { _, failed in
-            if failed {
-                AccessibilityNotification.Announcement(L10n.string("Couldn't save. Check your connection and try again.", language: language)).post()
-            }
+            Button("Next", action: model.continueFromMode)
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .disabled(model.selectedMode == nil)
+                .accessibilityIdentifier("mode.continue")
         }
     }
 }

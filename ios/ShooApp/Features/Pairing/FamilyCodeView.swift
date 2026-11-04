@@ -56,7 +56,7 @@ struct FamilyCodeView: View {
     private var codeSection: some View {
         switch model.codeState {
         case .loading:
-            ProgressView()
+            ShieldPulseLoader()
                 .frame(maxWidth: .infinity, minHeight: 280)
                 .accessibilityLabel(Text("Getting a code"))
         case .ready(let code):

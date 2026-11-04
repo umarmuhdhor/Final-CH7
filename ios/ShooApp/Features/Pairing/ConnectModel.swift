@@ -91,6 +91,18 @@ final class ConnectModel {
         return true
     }
 
+    /// A failure outside `join()` that belongs on this screen (onboarding "Not now").
+    func report(_ error: any Error) {
+        problem = Problem(error)
+    }
+
+    #if DEBUG
+    /// UI-gate screenshots only (`-debug.onboardingStep connected`).
+    func showJoinedForScreenshot() {
+        state = .joined(GuardianInfo(deviceId: "dev_nisrina", name: "Nisrina", avatarId: "avatar_04"))
+    }
+    #endif
+
     func join() async {
         guard canJoin else { return }
         state = .joining

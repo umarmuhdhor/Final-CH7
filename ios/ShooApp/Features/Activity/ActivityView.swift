@@ -143,9 +143,8 @@ struct ActivityView: View {
     private var content: some View {
         switch model.state {
         case .loading:
-            ProgressView()
+            ShieldPulseLoader()
                 .frame(maxWidth: .infinity, minHeight: 200)
-                .accessibilityLabel(Text("Loading"))
         case .failed:
             ActivityMessage(systemImage: "wifi.exclamationmark", title: "Couldn't load activity", message: "Check your connection and try again.") {
                 Button { Task { await model.retry() } } label: {

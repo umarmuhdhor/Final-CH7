@@ -17,9 +17,8 @@ struct MemberDetailView: View {
         ProfileScreen(title: "Protected person") {
             switch model.state {
             case .loading:
-                ProgressView()
+                ShieldPulseLoader()
                     .frame(maxWidth: .infinity, minHeight: 300)
-                    .accessibilityLabel(Text("Loading"))
             case .failed:
                 VStack(spacing: 12) {
                     Text("Couldn't load your family").profileFont(17, .semibold)

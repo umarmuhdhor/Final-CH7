@@ -18,6 +18,7 @@ struct OnboardingFlow: View {
             let model = OnboardingModel(environment: env)
             #if DEBUG
             if let step = Self.screenshotStep { model.showForScreenshot(step) }
+            if UserDefaults.standard.string(forKey: "debug.onboardingStep") == "connected" { model.connect().showJoinedForScreenshot() }
             #endif
             self.model = model
         }
@@ -26,12 +27,12 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|mode|connect|invite|turnOnExtension|extensionOn|notifications`
+    /// `-debug.onboardingStep name|mode|connect|connected|invite|turnOnExtension|extensionOn|notifications`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
         case "mode": .mode
-        case "connect": .connect
+        case "connect", "connected": .connect
         case "invite": .invite
         case "turnOnExtension": .turnOnExtension
         case "extensionOn": .extensionOn
@@ -57,7 +58,7 @@ private struct OnboardingStepView: View {
             case .turnOnExtension:
                 TurnOnExtensionView(
                     refreshStatus: model.refreshExtensionStatus,
-                    onBack: model.canGoBackFromExtension ? { model.goBack() } as (() -> Void)? : nil,
+                    onBack: model.goBack,
                     onSkipCheck: model.skipExtensionCheck
                 )
             case .extensionOn: ExtensionOnView(onContinue: model.continueFromExtensionOn)
@@ -153,25 +154,18 @@ struct OnboardingPage<Content: View, Footer: View>: View {
 private struct OnboardingConnectStep: View {
     let model: OnboardingModel
     @Environment(AppEnvironment.self) private var env
-    @State private var connect: ConnectModel?
 
     var body: some View {
-        Group {
-            if let connect {
-                ConnectView(model: connect, onSkip: model.continueFromConnect, onFinish: model.continueFromConnect)
-            } else {
-                // An empty Group never appears, so `onAppear` below would never run.
-                Color(.systemBackground)
-            }
-        }
-        .onAppear {
-            guard connect == nil else { return }
-            connect = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode())
-        }
+        ConnectView(
+            model: model.connect(),
+            onBack: model.canGoBackToMode ? { model.goBack() } as (() -> Void)? : nil,
+            onSkip: { Task { await model.skipConnect() } },
+            onFinish: model.continueFromConnect
+        )
         // An invite link opened while this screen is showing.
         .onChange(of: env.router.pendingJoinCode) { _, code in
             guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
-            connect?.prefill(pending)
+            model.connect().prefill(pending)
         }
     }
 }
