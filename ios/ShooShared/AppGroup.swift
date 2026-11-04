@@ -20,6 +20,16 @@ enum AppGroup {
         static let extensionAllSites = "extension.allSites"
         static let apiBaseURL = "api.baseURL"
         static let aiBaseURL = "ai.baseURL"
+        /// Int, written by the extension: pages checked on this iPhone. Missing = not counted yet.
+        static let statsChecked = "stats.checked"
+        /// Date, written with `statsChecked`: when the extension last checked a page.
+        static let statsLastCheckedAt = "stats.lastCheckedAt"
+        /// Bool, default `true`. `false` = warnings stay on this iPhone; blocked is always sent (#183).
+        static let autoSendLinks = "link.autoSend"
+        /// Bool, default `true`. `false` = warnings stay on this iPhone; blocked is always sent.
+        static let shareWarnings = "history.shareWarnings"
+        /// Bool, default `true`: push when the guardian verifies a link. Server side comes later.
+        static let notifyLinkVerified = "notify.linkVerified"
     }
 
     /// Heartbeat older than this means the extension is treated as Off.

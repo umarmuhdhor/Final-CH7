@@ -18,6 +18,11 @@
         return state.status === "warning" && state.done === true;
     }
 
+    /** Count this page in `stats.checked`? Once per page, when its scan is done (#183). */
+    function shouldCount(state, countedScanIds) {
+        return state.done === true && !countedScanIds.has(state.scanId);
+    }
+
     /**
      * `https://host/path` only: the URL is kept 14 days and shown to the Guardian, so a reset token
      * or session id in the query/fragment (or credentials before the host) must never leave the phone.
@@ -94,7 +99,7 @@
     }
 
     globalThis.ShooReport = {
-        shouldReport, scanBody, shareableUrl, signalMarks, ready: () => Promise.resolve(), keyFor: () => null,
+        shouldReport, shouldCount, scanBody, shareableUrl, signalMarks, ready: () => Promise.resolve(), keyFor: () => null,
     };
 
     // ---- Content script part -------------------------------------------------------------
@@ -104,6 +109,7 @@
 
     const send = (message) => browser.runtime.sendMessage(message);
     const reported = new Set();
+    const counted = new Set();
     const sending = new Map(); // scanId → promise that settles once background has the report
     const keys = new Map(); // scanId → report key (background maps it to the backend's scan id)
 
@@ -234,6 +240,12 @@
         Promise.race([sending.get(scanId) ?? Promise.resolve(), new Promise((r) => setTimeout(r, SEND_TIMEOUT_MS))]);
     /** For block.js: lets blocked.html ask background for the record id later. */
     globalThis.ShooReport.keyFor = (scanId) => keys.get(scanId) ?? null;
+
+    pipeline.subscribe((state) => {
+        if (!shouldCount(state, counted)) return;
+        counted.add(state.scanId);
+        send({ type: "pageChecked" }).catch(() => {});
+    });
 
     pipeline.subscribe((state) => {
         if (!shouldReport(state, reported)) return;
