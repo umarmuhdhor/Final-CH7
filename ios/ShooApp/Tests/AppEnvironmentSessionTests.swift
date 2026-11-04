@@ -236,7 +236,7 @@ struct AppEnvironmentSessionTests {
         #if DEBUG
         #expect(AppConfig.aiBaseURL == nil)
         #else
-        #expect(AppConfig.aiBaseURL?.absoluteString == "https://shoo-ai.uumaarrrrr22.workers.dev")
+        #expect(AppConfig.aiBaseURL?.absoluteString == "https://shoo-ai.afindo-mi01.workers.dev")
         #expect(AppConfig.aiBaseURL.map(SessionStore.isAllowed) == true)
         #endif
     }

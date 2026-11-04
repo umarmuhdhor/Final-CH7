@@ -19,8 +19,9 @@ enum AppConfig {
     /// never sends pages to the deployed AI Worker (#82).
     static let aiBaseURL: URL? = nil
     #else
-    /// AI Worker deployed 23 Oct 2026 (#82).
-    static let aiBaseURL: URL? = URL(string: "https://shoo-ai.uumaarrrrr22.workers.dev")!
+    /// AI Worker deployed 23 Oct 2026 (#82); since 3 Nov 2026 on the same account as shoo-api, where
+    /// `ai/wrangler.toml` deploys it and public-blocklist.yml publishes its list.
+    static let aiBaseURL: URL? = URL(string: "https://shoo-ai.afindo-mi01.workers.dev")!
     #endif
 
     /// PF-01 Tentang Shoo: share link and support address, always the public ones (also in Debug,
