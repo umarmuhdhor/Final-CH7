@@ -44,7 +44,7 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
+| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
 | GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` and `pageReplicaUrl` are always `null` in lists | PR-05, GD-05 |
 | GET | `/scans/{id}` | — | ScanResult, `pageReplicaUrl` (and `screenshotUrl` for older scans) = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 
@@ -86,6 +86,14 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 - `<body>`: one `<section data-shoo-fragment data-shoo-signals="<ids>">` per part, heaviest signal first; `<ids>` = space-separated signal ids. `asks_*` → the field's `<form>` (no form: the field's container up to 3 levels up); text signals → the block element around the `evidence` text (`brand_logo_offsite`: around the logo image too). A part inside another part is written once, inside the outer one, with both ids. Never `<html>`, `<head>` or `<body>` as a part. Signals with nothing on the page (`db_match`, `new_domain`, layer 2) add no part.
 - No cap on the number of parts. Too big → again without images, then fewer parts (lightest first), then without stylesheets, then none.
 - An extension that doesn't send it is still valid (no parts for that scan). Older backends ignore the field; a `413` makes the extension send again without it.
+
+#### Score thresholds (X1, admin dashboard phase 05)
+
+`GET /config/public` (Bearer, either mode, `Cache-Control: private, max-age=3600`) → `{ warnAt, blockAt, version, updatedAt }`. `warnAt` 30–60, `blockAt` 50–95, `blockAt` at least 15 above `warnAt`. `version` 0 = the built-in 30/80 (admins have not switched their thresholds live). No user data; a missing or invalid answer keeps the last good value, or 30/80.
+
+- The Safari extension reads it hourly (last good value kept up to 7 days) and decides `warning` / `blocked` with it. Popup tier 2 starts at 50, or in the middle of the warning band when `warnAt` ≥ 50. Chrome keeps the built-in values.
+- `thresholdsVersion` (optional integer ≥ 0) on `POST /scans` = the `version` the status was decided with. Equal to the current version: the status must match those thresholds exactly, else `422`. Another version or absent: only the fence (`warning` ≥ 30, `blocked` ≥ 50). On a `422` the extension sends the scan again without it.
+- The app shows the `status` the extension sent and does not recompute it from the score.
 
 ### Verdicts (per domain)
 | Method | Path | Body | Response | PRD |

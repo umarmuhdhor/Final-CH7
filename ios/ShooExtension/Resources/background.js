@@ -10,6 +10,7 @@ import { createHeartbeat } from "./heartbeat.js";
 import { createLastSeen } from "./last-seen.js";
 import { createBlockMemory } from "./block-memory.js";
 import { mayReport } from "./share-settings.js";
+import { createThresholds } from "./thresholds.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -115,6 +116,13 @@ const lists = createLists({
     registrableDomain: domainFor,
 });
 lists.refresh();
+// Dashboard 05b X1: score thresholds from GET /config/public; content scripts get numbers only.
+const thresholds = createThresholds({
+    storage: browser.storage.local,
+    getSession,
+    fetchJSON: (url, init) => fetchJSON(url, init),
+});
+thresholds.refresh();
 // EX-01: tells the app the extension is alive and whether it still has access to every website.
 const heartbeat = createHeartbeat({
     permissions: browser.permissions,
@@ -136,6 +144,7 @@ if (browser.alarms) {
     browser.alarms.onAlarm.addListener((alarm) => {
         if (alarm.name !== "shoo-lists") return;
         lists.refresh();
+        thresholds.refresh();
         heartbeat.beat().catch(() => {}); // access can be narrowed while no page is open
         lastSeen.report();
     });
@@ -152,19 +161,24 @@ async function startReport(message) {
     if (!session?.apiBaseURL) return { ok: false, skipped: "no_api_url" }; // not onboarded → nothing leaves the phone
     if (!mayReport(message.scan?.status, session)) return { ok: false, skipped: "sharing_off" };
 
-    const send = (pageReplicaBase64, evidenceFragmentsBase64) =>
-        fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
-            method: "POST",
-            token: session.token,
-            timeoutMs: SCAN_TIMEOUT_MS,
-            body: JSON.stringify({
-                ...message.scan,
-                ownerDeviceId: session.deviceId,
-                ownerName: (session.name || "").slice(0, 20),
-                ...(pageReplicaBase64 ? { pageReplicaBase64 } : {}),
-                ...(evidenceFragmentsBase64 ? { evidenceFragmentsBase64 } : {}),
-            }),
+    // X1: a 422 on a scan that carries thresholdsVersion means the status and that version disagree
+    // (thresholds changed while the page was being scored). Sent again without it, only the fence
+    // applies; the scan matters more than the check.
+    const { thresholdsVersion, ...scan } = message.scan ?? {};
+    const post1 = (body) =>
+        fetchJSON(endpoint(session.apiBaseURL, "/scans"), { method: "POST", token: session.token, timeoutMs: SCAN_TIMEOUT_MS, body });
+    const send = (pageReplicaBase64, evidenceFragmentsBase64) => {
+        const body = (version) => JSON.stringify({
+            ...scan,
+            ...(Number.isInteger(version) ? { thresholdsVersion: version } : {}),
+            ownerDeviceId: session.deviceId,
+            ownerName: (session.name || "").slice(0, 20),
+            ...(pageReplicaBase64 ? { pageReplicaBase64 } : {}),
+            ...(evidenceFragmentsBase64 ? { evidenceFragmentsBase64 } : {}),
         });
+        return post1(body(thresholdsVersion)).catch((error) =>
+            Number.isInteger(thresholdsVersion) && error.status === 422 ? post1(body(undefined)) : Promise.reject(error));
+    };
     const io = webIO();
     const built = (promise, what) =>
         promise.catch((error) => {
@@ -203,6 +217,8 @@ browser.runtime.onMessage.addListener((message) => {
             }));
         case "listMatch":
             return lists.match(message.hostname).then((match) => ({ ok: true, match }));
+        case "thresholds":
+            return thresholds.current().then((t) => ({ ok: true, thresholds: t }));
         case "domain":
             return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
         case "analyze":
