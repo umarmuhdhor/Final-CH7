@@ -3,7 +3,7 @@
 
 import { PSL_RULES } from "./psl.js";
 import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "./domain.js";
-import { buildReplica, webIO } from "./replica-build.js";
+import { buildFragments, buildReplica, webIO } from "./replica-build.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
 import { createHeartbeat } from "./heartbeat.js";
@@ -152,7 +152,7 @@ async function startReport(message) {
     if (!session?.apiBaseURL) return { ok: false, skipped: "no_api_url" }; // not onboarded → nothing leaves the phone
     if (!mayReport(message.scan?.status, session)) return { ok: false, skipped: "sharing_off" };
 
-    const send = (pageReplicaBase64) =>
+    const send = (pageReplicaBase64, evidenceFragmentsBase64) =>
         fetchJSON(endpoint(session.apiBaseURL, "/scans"), {
             method: "POST",
             token: session.token,
@@ -162,15 +162,22 @@ async function startReport(message) {
                 ownerDeviceId: session.deviceId,
                 ownerName: (session.name || "").slice(0, 20),
                 ...(pageReplicaBase64 ? { pageReplicaBase64 } : {}),
+                ...(evidenceFragmentsBase64 ? { evidenceFragmentsBase64 } : {}),
             }),
         });
-    const post = buildReplica(message.replica, webIO())
-        .catch((error) => {
-            console.warn("[Shoo] page replica failed, sending without it", error);
+    const io = webIO();
+    const built = (promise, what) =>
+        promise.catch((error) => {
+            console.warn(`[Shoo] ${what} failed, sending without it`, error);
             return null;
-        })
-        // 413: the backend's body limit is lower than the replica's (older backend) — the scan matters more.
-        .then((replica) => send(replica).catch((error) => (replica && error.status === 413 ? send(null) : Promise.reject(error))))
+        });
+    // ADM-07: the fragments go with every report; the replica as before. Both reuse the page's cached files.
+    const post = Promise.all([built(buildReplica(message.replica, io), "page replica"), built(buildFragments(message.fragments, io), "evidence fragments")])
+        // 413: the backend's body limit is lower (older backend) — drop the fragments, then the replica; the scan matters more.
+        .then(([replica, parts]) =>
+            send(replica, parts)
+                .catch((error) => (parts && error.status === 413 ? send(replica, null) : Promise.reject(error)))
+                .catch((error) => (replica && error.status === 413 ? send(null, null) : Promise.reject(error))))
         .then((reply) => (typeof reply?.id === "string" ? reply.id : null))
         .catch((error) => {
             console.warn("[Shoo] POST /scans failed", error);

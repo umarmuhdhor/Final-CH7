@@ -108,17 +108,8 @@
         });
     }
 
-    /**
-     * Serializes a document into the replica draft.
-     * @param doc  the page's document
-     * @param {{ url: string, focus?: {top:number}|null, scrollY?: number, viewport: {width,height}, now: string,
-     *           marks?: Array<{signalId: string, x: number, y: number, w: number, h: number}> }} page
-     * @returns {{ html: string, sheets: Array<{text?: string, href?: string, base: string, media?: string}>,
-     *             resources: string[], nonce: string, truncated: boolean } | null}
-     */
-    function capture(doc, page) {
-        const root = getter("Document", "documentElement")(doc);
-        if (!root || localName(root) !== "html") return null; // SVG or XML document: no replica
+    /** The serializer shared by capture() and captureFragments(): one document, one set of sheets and images. */
+    function writer(doc, page) {
         const base = getter("Document", "baseURI")(doc) || page.url;
         // designMode "on" makes the whole page one editable area: its text may be typed, so the body stays empty.
         const editableDoc = String(getter("Document", "designMode")(doc) ?? "").toLowerCase() === "on";
@@ -283,19 +274,129 @@
 
         const metaToken = `${nonce}-meta`;
         let headWritten = false;
-        writeNode(root, 0);
-        let html = out.join("");
+        return {
+            writeNode, adopted, emit, sheets, resources, nonce, metaToken,
+            /** What was written since the last take(); the size caps keep counting across takes. */
+            take() {
+                const html = out.join("");
+                out.length = 0;
+                return html;
+            },
+            get truncated() {
+                return truncated;
+            },
+            get headWritten() {
+                return headWritten;
+            },
+        };
+    }
+
+    /**
+     * Serializes a document into the replica draft.
+     * @param doc  the page's document
+     * @param {{ url: string, focus?: {top:number}|null, scrollY?: number, viewport: {width,height}, now: string,
+     *           marks?: Array<{signalId: string, x: number, y: number, w: number, h: number}> }} page
+     * @returns {{ html: string, sheets: Array<{text?: string, href?: string, base: string, media?: string}>,
+     *             resources: string[], nonce: string, truncated: boolean } | null}
+     */
+    function capture(doc, page) {
+        const root = getter("Document", "documentElement")(doc);
+        if (!root || localName(root) !== "html") return null; // SVG or XML document: no replica
+        const w = writer(doc, page);
+        w.writeNode(root, 0);
+        let html = w.take();
         // The parser always makes a <head>; a page that removed it still gets the CSP first.
-        if (!headWritten) html = html.replace(/^<html[^>]*>/, (open) => `${open}<head>${headMeta(page, metaToken)}</head>`);
+        if (!w.headWritten) html = html.replace(/^<html[^>]*>/, (open) => `${open}<head>${headMeta(page, w.metaToken)}</head>`);
         const doctype = getter("Document", "doctype")(doc) ? "<!doctype html>" : ""; // none = quirks mode, as on the page
         const marks = cleanMarks(page.marks);
         const meta = JSON.stringify({
-            v: 1, url: page.url, capturedAt: page.now, viewport: page.viewport, focusY: focusY(page), truncated,
+            v: 1, url: page.url, capturedAt: page.now, viewport: page.viewport, focusY: focusY(page), truncated: w.truncated,
             ...(marks.length ? { marks } : {}),
         });
         // A function, not a string: "$&" or "$'" in the page URL would otherwise splice the document into the meta.
-        html = doctype + html.replace(metaToken, () => escapeAttr(meta));
-        return { html, sheets, resources, nonce, truncated };
+        html = doctype + html.replace(w.metaToken, () => escapeAttr(meta));
+        return { html, sheets: w.sheets, resources: w.resources, nonce: w.nonce, truncated: w.truncated };
+    }
+
+    // Never the root of a fragment: that would be the whole page again.
+    const NOT_FRAGMENT = new Set(["html", "head", "body"]);
+    const contains = method("Node", "contains");
+
+    /**
+     * Groups whose element sits inside (or is) another group's element join that one: the outer element
+     * is written once and carries every signal id. Order stays heaviest signal first.
+     * @param {Array<{element: object, signalIds: string[]}>} groups
+     */
+    function mergeGroups(groups) {
+        const kept = [];
+        for (const { element, signalIds } of groups ?? []) {
+            const name = element && nodeType(element) === ELEMENT ? (localName(element) || "").toLowerCase() : "";
+            if (!name || NOT_FRAGMENT.has(name)) continue;
+            const ids = [...new Set(signalIds ?? [])];
+            const outer = kept.find((k) => k.element === element || contains(k.element, element));
+            if (outer) {
+                outer.signalIds = [...new Set([...outer.signalIds, ...ids])];
+                continue;
+            }
+            const inner = kept.filter((k) => contains(element, k.element));
+            const merged = { element, signalIds: [...new Set([...inner.flatMap((k) => k.signalIds), ...ids])] };
+            const at = inner.length ? kept.indexOf(inner[0]) : kept.length;
+            for (const k of inner) kept.splice(kept.indexOf(k), 1);
+            kept.splice(Math.min(at, kept.length), 0, merged);
+        }
+        return kept;
+    }
+
+    /** Every <style> and stylesheet <link> in the page, in document order (shadow roots carry their own). */
+    function styleNodes(root) {
+        const found = [];
+        const walk = (node, depth) => {
+            if (depth > MAX_DEPTH || nodeType(node) !== ELEMENT) return;
+            const name = (localName(node) || "").toLowerCase();
+            if (name === "style" || name === "link") return void found.push(node);
+            if (name.startsWith("shoo-") || DROP.has(name)) return;
+            for (const child of childNodes(node) ?? []) walk(child, depth + 1);
+        };
+        walk(root, 0);
+        return found;
+    }
+
+    /**
+     * Evidence fragments (ADM-07, contracts/api.md "Evidence fragments"): only the parts of the page that made
+     * Shoo flag it, with the page's stylesheets once so they look as they did. Same guarantees as the replica
+     * (no script, no typed value, nothing loads). Each part is one <section data-shoo-signals="ids">.
+     * @param doc  the page's document
+     * @param {{ url: string, now: string, viewport?: {width,height} }} page
+     * @param {Array<{element: object, signalIds: string[]}>} groups  heaviest signal first
+     * @returns {{ head: string, sections: Array<{signalIds: string[], html: string}>, sheets, resources: string[],
+     *             nonce: string, truncated: boolean } | null}  null when nothing on the page can be cut out
+     */
+    function captureFragments(doc, page, groups) {
+        const root = getter("Document", "documentElement")(doc);
+        if (!root || localName(root) !== "html") return null;
+        const kept = mergeGroups(groups);
+        if (!kept.length) return null;
+        const w = writer(doc, page);
+        for (const node of styleNodes(root)) w.writeNode(node, 0);
+        w.adopted(doc);
+        const styles = w.take();
+        const sections = [];
+        for (const { element, signalIds } of kept) {
+            w.writeNode(element, 1);
+            const html = w.take();
+            if (html) sections.push({ signalIds, html });
+            if (w.truncated) break;
+        }
+        if (!sections.length) return null;
+        const meta = escapeAttr(JSON.stringify({ v: 1, url: page.url, capturedAt: page.now, truncated: w.truncated }));
+        const head = [
+            `<meta charset="utf-8">`,
+            `<meta http-equiv="Content-Security-Policy" content="${CSP}">`,
+            `<meta name="viewport" content="width=${Math.round(page.viewport?.width || 390)}">`,
+            `<meta name="shoo-fragments" content="${meta}">`,
+            styles,
+        ].join("");
+        return { head, sections, sheets: w.sheets, resources: w.resources, nonce: w.nonce, truncated: w.truncated };
     }
 
     /** Document y the app scrolls to first: the sensitive form, else what was on screen. */
@@ -339,5 +440,5 @@
         ].join("");
     }
 
-    globalThis.ShooReplica = { capture, cleanMarks, shareableLink, CSP, MAX_CHARS, MAX_MARKS };
+    globalThis.ShooReplica = { capture, captureFragments, mergeGroups, cleanMarks, shareableLink, CSP, MAX_CHARS, MAX_MARKS };
 })();

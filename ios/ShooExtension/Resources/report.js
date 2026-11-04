@@ -98,8 +98,41 @@
         return marks;
     }
 
+    /**
+     * ADM-07 evidence fragments: the page part behind each signal, heaviest signal first, for replica.js
+     * captureFragments (which merges nested parts). Same lookup as signalMarks: a text signal → the block around
+     * its phrase (brand_logo_offsite: around the logo image too), an asks_* signal → its field's form, else the
+     * field's nearby container. Signals with nothing on the page get none. No cap on the count: the size limit
+     * trims the lightest parts (replica-build.js buildFragments).
+     * @param {{ textBlocks(phrase): object[], imageBlocks(phrase): object[],
+     *           fields(): Array<{el: object, name: string, id: string, kind: string|null}>, fieldBlock(el): object }} page
+     * @returns {Array<{element: object, signalIds: string[]}>}
+     */
+    function fragmentGroups(signals, page) {
+        const { TEXT_SIGNALS, FIELD_SIGNAL } = globalThis.ShooMarks ?? {};
+        if (!TEXT_SIGNALS) return [];
+        const groups = [];
+        let fields = null;
+        for (const signal of [...(signals ?? [])].sort((a, b) => b.weight - a.weight)) {
+            const evidence = typeof signal.evidence === "string" ? signal.evidence.trim() : "";
+            let elements = [];
+            if (TEXT_SIGNALS.has(signal.id) && evidence.length >= 3) {
+                elements = signal.id === "brand_logo_offsite" ? [...page.imageBlocks(evidence), ...page.textBlocks(evidence)] : page.textBlocks(evidence);
+            } else if (FIELD_SIGNAL.test(signal.id)) {
+                fields ??= page.fields();
+                const name = evidence.toLowerCase();
+                let hits = name ? fields.filter((f) => f.name === name || f.id === name) : [];
+                const ask = signal.id.slice("asks_".length);
+                if (!hits.length) hits = fields.filter((f) => f.kind && f.kind === (ASK_KIND[ask] ?? ask));
+                elements = hits.map((f) => page.fieldBlock(f.el));
+            }
+            for (const element of new Set(elements)) if (element) groups.push({ element, signalIds: [signal.id] });
+        }
+        return groups;
+    }
+
     globalThis.ShooReport = {
-        shouldReport, shouldCount, scanBody, shareableUrl, signalMarks, ready: () => Promise.resolve(), keyFor: () => null,
+        shouldReport, shouldCount, scanBody, shareableUrl, signalMarks, fragmentGroups, ready: () => Promise.resolve(), keyFor: () => null,
     };
 
     // ---- Content script part -------------------------------------------------------------
@@ -179,12 +212,71 @@
                     .filter(Boolean)
                     .join(" ");
                 return {
+                    el,
                     rect: dom.rect(el),
                     name: String(el.name || "").toLowerCase(),
                     id: String(el.id || "").toLowerCase(),
                     kind: classify({ type: el.type, hints }),
                 };
             });
+    }
+
+    // ---- Evidence fragments (ADM-07) ----
+
+    const BLOCK = "p, li, td, th, h1, h2, h3, h4, h5, h6, section, article, form, div";
+    const outside = (el) => !el || el === dom.body(document) || el === dom.root(document);
+
+    /** The block element around `el`; `el` itself when the nearest block would be the whole page. */
+    function blockOf(el) {
+        const block = el?.closest?.(BLOCK);
+        return outside(block) ? el : block;
+    }
+
+    /** A field's form, else its container up to 3 levels above (never the body). */
+    function fieldBlock(el) {
+        const form = el?.closest?.("form");
+        if (!outside(form)) return form;
+        let box = el;
+        for (let i = 0; i < 3 && !outside(box?.parentElement); i++) box = box.parentElement;
+        return box;
+    }
+
+    /** The blocks around every occurrence of `phrase` in the page text (case-insensitive, within one text node). */
+    function textBlocks(phrase) {
+        const needle = phrase.toLowerCase();
+        const blocks = new Set();
+        const walker = dom.walker(document, dom.body(document) || dom.root(document), NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => (node.parentElement?.closest(NOT_TEXT) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+        });
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            if (node.data.toLowerCase().includes(needle)) blocks.add(blockOf(node.parentElement));
+        }
+        return [...blocks];
+    }
+
+    /** The blocks around images whose alt text holds `phrase` (a brand logo). */
+    function imageBlocks(phrase) {
+        const needle = phrase.toLowerCase();
+        return dom
+            .all(document, "img[alt]")
+            .filter((img) => (dom.attr(img, "alt") || "").toLowerCase().includes(needle))
+            .map(blockOf);
+    }
+
+    /** The fragments draft (replica.js), or null: a page that breaks the lookup is still reported. */
+    function fragments(state) {
+        try {
+            const groups = fragmentGroups(state.signals, { textBlocks, imageBlocks, fields: fieldBoxes, fieldBlock });
+            return globalThis.ShooReplica?.captureFragments?.(document, {
+                url: shareableUrl(location.href),
+                viewport: { width: innerWidth, height: innerHeight },
+                now: new Date().toISOString(),
+            }, groups) ?? null;
+        } catch (error) {
+            console.warn("[Shoo] evidence fragments failed, reporting without them", error);
+            return null;
+        }
     }
 
     /** marks for the replica; [] when the page breaks the lookup (the replica goes without the spotlight). */
@@ -218,12 +310,14 @@
         try {
             // Taken now, synchronously: a blocked page is replaced by the block screen right after.
             const draft = replica(state);
+            const parts = fragments(state);
             // Background replies once it has the message; replica + POST carry on there.
             return await send({
                 type: "report",
                 key,
                 scan: scanBody(state, { title: dom.title(document), faviconUrl: faviconUrl(), now: new Date().toISOString() }),
                 replica: draft,
+                fragments: parts,
             });
         } catch {
             return null;
