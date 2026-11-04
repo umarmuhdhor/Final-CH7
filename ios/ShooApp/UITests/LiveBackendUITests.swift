@@ -58,10 +58,10 @@ final class LiveBackendUITests: XCTestCase {
     func testGuardianOnboardingActivityAndProfile() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")
+        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5))
+        app.buttons["safariDefault.alreadyUsing"].tap()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.allow"].waitForExistence(timeout: 5))
-        app.buttons["notifications.allow"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
         shot(app, "guardian-2-shield")
 
@@ -109,10 +109,10 @@ final class LiveBackendUITests: XCTestCase {
         app.buttons["mode.continue"].tap()
         XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["connect.skip"].tap()
+        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5))
+        app.buttons["safariDefault.alreadyUsing"].tap()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5))
-        app.buttons["notifications.skip"].tap()
         XCTAssertTrue(app.tabBars.buttons["Perisai"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["shield.nothingBlocked"].firstMatch.waitForExistence(timeout: 10),
                       app.debugDescription)

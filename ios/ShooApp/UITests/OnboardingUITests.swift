@@ -35,6 +35,12 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
+    private func passSafariDefault(_ app: XCUIApplication) {
+        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["safariDefault.alreadyUsing"].tap()
+    }
+
+    @MainActor
     private func skipInvite(_ app: XCUIApplication) {
         XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["invite.skip"].tap()
@@ -98,11 +104,10 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["onboarding.back"].exists)
         app.buttons["invite.skip"].tap()
         // ON-04 passes on its own because the extension counts as on.
+        passSafariDefault(app)
+        // Next asks for notifications; the mock answers "denied".
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.allow"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["notifications.skip"].exists)
-        app.buttons["notifications.allow"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
         // ON-05 reminder as a popup on Home.
         let reminder = app.alerts["Notifications are off"]
@@ -113,31 +118,30 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testProtectedGoesThroughConnectAndMaySkipNotifications() {
+    func testProtectedGoesThroughConnectToHome() {
         let app = launch(notifications: "granted")
         register(app, name: "Mom", mode: "protected")
         XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 5))
         app.buttons["connect.skip"].tap()
+        passSafariDefault(app)
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 5))
-        app.buttons["notifications.skip"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.alerts["Notifications are off"].exists)
     }
 
     @MainActor
-    func testExtensionOffStaysOnTurnOnScreenAndRelaunchNeverReturnsToModeChoice() {
+    func testExtensionOffStaysOnTurnOnScreenAndRelaunchGoesHome() {
         let app = launch(extensionActive: false)
         register(app, name: "Rina", mode: "guardian")
         skipInvite(app)
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5))
 
-        // Relaunch without reset: the saved mode skips straight back to ON-04.
+        // Relaunch without reset: the saved mode goes to Home, never back to the mode choice.
         app.terminate()
         let again = XCUIApplication.mock(["-settings.language", "en", "-UITestNotifications", "denied"], reset: false)
-        XCTAssertTrue(again.buttons["extension.turnOn"].waitForExistence(timeout: 10))
+        XCTAssertTrue(again.tabBars.buttons["Shield"].waitForExistence(timeout: 10), again.debugDescription)
         XCTAssertFalse(again.buttons["mode.continue"].exists)
     }
 
@@ -160,7 +164,25 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["extension.skipCheck"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["extension.openSafari"].exists)
         app.buttons["extension.skipCheck"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testSafariDefaultTurnsIntoKeepGoingAfterSettingsAndBackStays() {
+        let app = launch()
+        register(app, name: "Rina", mode: "guardian")
+        skipInvite(app)
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].exists)
+        app.buttons["safariDefault.open"].tap()
+        app.activate()
+        XCTAssertTrue(app.buttons["safariDefault.continue"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.buttons["safariDefault.alreadyUsing"].exists)
+        // Shoo is on, so ON-04 would pass again: Back stays there and offers Next.
+        app.buttons["onboarding.back"].tap()
+        XCTAssertTrue(app.buttons["extension.continue"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["extension.continue"].tap()
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
     }
 
     @MainActor

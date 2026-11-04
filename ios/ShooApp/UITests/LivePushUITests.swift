@@ -81,12 +81,11 @@ final class LivePushUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Hi, Rina!"].waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["invite.skip"].tap()
+        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["safariDefault.alreadyUsing"].tap()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
         app.buttons["extensionOn.continue"].tap()
-        // ON-05, then the system alert.
-        let allow = app.buttons["notifications.allow"]
-        XCTAssertTrue(allow.waitForExistence(timeout: 10), app.debugDescription)
-        allow.tap()
+        // ON-05: the system alert.
         let systemAllow = springboard.alerts.buttons["Allow"]
         if systemAllow.waitForExistence(timeout: 5) { systemAllow.tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)

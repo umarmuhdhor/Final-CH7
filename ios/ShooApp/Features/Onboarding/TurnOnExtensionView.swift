@@ -5,10 +5,10 @@ import SwiftUI
 struct TurnOnExtensionView: View {
     /// Re-reads Safari's switch and the heartbeat (on appear and when the user is back from Settings or Safari).
     var refreshStatus: () async -> ExtensionStatus? = { nil }
-    /// Guardian onboarding only: back to the invite screen.
+    /// Onboarding only: back to Invite or Connect.
     var onBack: (() -> Void)?
     /// Onboarding only: Safari says Shoo is on but no page has checked in yet. A way on, so nobody is stuck
-    /// when Safari is not their default browser.
+    /// when Safari is not their default browser. Also Next after Back, when Shoo is already on.
     var onSkipCheck: (() -> Void)?
     @Environment(\.scenePhase) private var scenePhase
     @State private var isVideoPresented = false
@@ -22,13 +22,13 @@ struct TurnOnExtensionView: View {
     var body: some View {
         OnboardingFormPage(
             title: "Turn on the extension",
-            message: "Turn it on in Safari to get protection right away.",
             onBack: onBack
         ) {
             // Figma "image 1" at y 72.5, the headline right under it at 373.
             OnboardingHeroImage(name: "ExtensionIllustration", top: 10.5, bottom: 0.5)
         } content: {
-            VStack(alignment: .leading, spacing: 14) {
+            // Figma "stack": 16 between rows, 40 under the headline.
+            VStack(alignment: .leading, spacing: 16) {
                 // The reason first, above the steps, so it is seen without scrolling (#135).
                 if let nextStep {
                     Label { Text(nextStep.message) } icon: { Image(systemName: "info.circle.fill") }
@@ -43,42 +43,44 @@ struct TurnOnExtensionView: View {
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
                 if nextStep?.opensSafariFirst != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                        StepRow(number: index + 1, text: step.text)
+                        OnboardingStepRow(number: index + 1, text: step.text)
                     }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 24)
+            .padding(.top, 40)
         } footer: {
-            // One main button that fits the reason (#135); the other half of the fix stays one tap away.
-            let step = nextStep ?? .switchOn
-            Button(step.opensSafariFirst ? "Open Safari" : "Turn on the extension") {
-                Task { step.opensSafariFirst ? await ExtensionSetup.openSafari() : await ExtensionSetup.openSettings() }
-            }
-            .buttonStyle(OnboardingCapsuleButtonStyle())
-            .accessibilityIdentifier(step.opensSafariFirst ? "extension.openSafari" : "extension.turnOn")
-            if step.hasSecondAction {
-                Button(step.opensSafariFirst ? "Open Safari settings" : "Open Safari") {
-                    Task { step.opensSafariFirst ? await ExtensionSetup.openSettings() : await ExtensionSetup.openSafari() }
+            if let onSkipCheck, status != nil, nextStep == nil {
+                // Back from Safari Default: Shoo is on, nothing left to do here.
+                Button("Next", action: onSkipCheck)
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .accessibilityIdentifier("extension.continue")
+            } else {
+                // One main button that fits the reason (#135); the other half of the fix stays one tap away.
+                let step = nextStep ?? .switchOn
+                Button(step.opensSafariFirst ? "Open Safari" : "Turn on the extension") {
+                    Task { step.opensSafariFirst ? await ExtensionSetup.openSafari() : await ExtensionSetup.openSettings() }
                 }
-                .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .semibold))
-                .accessibilityIdentifier(step.opensSafariFirst ? "extension.settings" : "extension.openSafariLink")
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .accessibilityIdentifier(step.opensSafariFirst ? "extension.openSafari" : "extension.turnOn")
+                if step.hasSecondAction {
+                    Button(step.opensSafariFirst ? "Open Safari settings" : "Open Safari") {
+                        Task { step.opensSafariFirst ? await ExtensionSetup.openSettings() : await ExtensionSetup.openSafari() }
+                    }
+                    .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .semibold))
+                    .accessibilityIdentifier(step.opensSafariFirst ? "extension.settings" : "extension.openSafariLink")
+                }
+                if let onSkipCheck, status?.isActive == true {
+                    Button("Continue without checking", action: onSkipCheck)
+                        .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.secondaryInk, weight: .regular))
+                        .accessibilityIdentifier("extension.skipCheck")
+                }
             }
-            if let onSkipCheck, status?.isActive == true {
-                Button("Continue without checking", action: onSkipCheck)
-                    .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.secondaryInk, weight: .regular))
-                    .accessibilityIdentifier("extension.skipCheck")
-            }
-            // Figma: "Terkendala? " regular ink + "Tonton Tutorial" semibold blue.
-            Button { isVideoPresented = true } label: {
-                Text("Having trouble?") + Text(verbatim: " ")
-                    + Text("Watch the tutorial").fontWeight(.semibold).foregroundStyle(OnboardingTheme.link)
-            }
-            .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
+            OnboardingTutorialLink { isVideoPresented = true }
                 .accessibilityIdentifier("extension.video")
         }
         .footerEndsWithLink()
-        .messageSpacing(9)
+        .largeHeadline()
         // On appear and every time the user is back from Settings or Safari: read now, then a few more
         // times in case the heartbeat from Safari is still on its way (no app restart needed, #135).
         .task(id: scenePhase) {
@@ -100,8 +102,21 @@ struct TurnOnExtensionView: View {
     private var nextStep: ExtensionStatus.NextStep? { status?.nextStep }
 }
 
+/// Figma: "Terkendala? " regular ink + "Tonton Tutorial" semibold blue.
+struct OnboardingTutorialLink: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text("Having trouble?") + Text(verbatim: " ")
+                + Text("Watch the tutorial").fontWeight(.semibold).foregroundStyle(OnboardingTheme.link)
+        }
+        .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .regular))
+    }
+}
+
 /// White 40 pt badge "01" + one instruction (Figma "row").
-private struct StepRow: View {
+struct OnboardingStepRow: View {
     let number: Int
     let text: LocalizedStringKey
     @ScaledMetric(relativeTo: .subheadline) private var badgeSize: CGFloat = 40
@@ -118,11 +133,9 @@ private struct StepRow: View {
                 .shadow(color: .black.opacity(0.2), radius: 2.3, y: 2.7)
                 .accessibilityLabel(Text("Step \(number)"))
             Text(text)
-                .onboardingFont(17, design: .rounded, relativeTo: .body)
-                // Figma: 140 % (23.8).
-                .figmaLineHeight(23.8, relativeTo: .body)
-                .lineSpacing(3.5)
-                .foregroundStyle(OnboardingTheme.ink)
+                // Figma: 22 pt lines, the font's own.
+                .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                .foregroundStyle(OnboardingTheme.stepInk)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, minHeight: badgeSize, alignment: .leading)
         }
@@ -134,21 +147,25 @@ private struct StepRow: View {
 struct ExtensionOnView: View {
     let onContinue: () -> Void
 
+    private static let shieldScale: CGFloat = 1.67
+
     var body: some View {
         OnboardingSuccessPage(
             title: Text("Yeay, you're better protected now!"),
             message: Text("The extension is on and ready to help spot possible scams on the internet."),
             idPrefix: "extensionOn",
-            onContinue: onContinue
+            onContinue: onContinue,
+            largeTitle: false
         ) {
-            Image("ExtensionOnIllustration")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 286, height: 285)
-                // Figma: the illustration at y 102, the headline at 402.
-                .padding(.top, 40)
-                .padding(.bottom, 15)
-                .accessibilityHidden(true)
+            // Figma: the teal shield, its outline 177 pt wide around y 268; the headline at y 437.
+            HalftoneShield(tint: .teal)
+                .scaleEffect(Self.shieldScale)
+                .frame(
+                    width: HalftoneShield.size.width * Self.shieldScale,
+                    height: HalftoneShield.size.height * Self.shieldScale
+                )
+                .padding(.top, 59)
+                .padding(.bottom, 21)
         }
     }
 }

@@ -1,9 +1,9 @@
 {
   "images" : [
     {
-      "filename" : "SuccessBackground@2x.jpg",
+      "filename" : "SuccessBackground@3x.jpg",
       "idiom" : "universal",
-      "scale" : "2x"
+      "scale" : "3x"
     }
   ],
   "info" : {

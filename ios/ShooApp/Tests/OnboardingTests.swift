@@ -256,7 +256,7 @@ struct OnboardingModelTests {
         let first = await registered(.protected)
         #expect(model().step == .connect)
         first.continueFromConnect()
-        #expect(model().step == .turnOnExtension)
+        #expect(model().step == .done)
     }
 
     @Test func extensionOffStaysActiveContinues() async {
@@ -266,9 +266,23 @@ struct OnboardingModelTests {
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
+        #expect(model.step == .safariDefault)
+        model.continueFromSafariDefault()
         #expect(model.step == .extensionOn)
-        model.continueFromExtensionOn()
-        #expect(model.step == .notifications)
+    }
+
+    @Test func backFromSafariDefaultStaysOnTurnOn() async {
+        let model = await registered(.guardian)
+        model.continueFromInvite()
+        box.status = .active(lastSeen: Date())
+        await model.refreshExtensionStatus()
+        model.goBack()
+        #expect(model.step == .turnOnExtension)
+        // The screen re-reads the status on appear: Shoo is on, but Back must not bounce forward.
+        await model.refreshExtensionStatus()
+        #expect(model.step == .turnOnExtension)
+        model.skipExtensionCheck()
+        #expect(model.step == .safariDefault)
     }
 
     @Test func switchOnWithoutAPageWaitsForTheCheckOrASkip() async {
@@ -280,7 +294,7 @@ struct OnboardingModelTests {
         #expect(status == .active(lastSeen: nil))
         #expect(model.step == .turnOnExtension)
         model.skipExtensionCheck()
-        #expect(model.step == .extensionOn)
+        #expect(model.step == .safariDefault)
     }
 
     @Test func narrowedAccessStaysOnTurnOn() async {
@@ -291,22 +305,27 @@ struct OnboardingModelTests {
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
-        #expect(model.step == .extensionOn)
+        #expect(model.step == .safariDefault)
     }
 
-    @Test func guardianRelaunchSkipsTheInviteScreen() async {
+    /// Through ON-04 and Safari Default to the success screen.
+    func reachSuccess(_ model: OnboardingModel) async {
+        if model.mode == .guardian { model.continueFromInvite() } else { model.continueFromConnect() }
+        box.status = .active(lastSeen: Date())
+        await model.refreshExtensionStatus()
+        model.continueFromSafariDefault()
+    }
+
+    @Test func guardianRelaunchGoesHome() async {
         let first = await registered(.guardian)
         #expect(first.step == .invite)
-        #expect(model().step == .turnOnExtension)
+        #expect(model().step == .done)
     }
 
     @Test func guardianFinishesEvenWhenPermissionIsDenied() async {
         notifications.answer = .denied
         let model = await registered(.guardian)
-        model.continueFromInvite()
-        box.status = .active(lastSeen: Date())
-        await model.refreshExtensionStatus()
-        model.continueFromExtensionOn()
+        await reachSuccess(model)
         await model.requestNotifications()
         #expect(notifications.requestCount == 1)
         #expect(model.step == .done)
@@ -314,33 +333,25 @@ struct OnboardingModelTests {
         #expect(NotificationReminder.isShown(status: .denied, mode: .guardian))
     }
 
-    @Test func protectedMaySkipNotifications() async {
+    @Test func protectedIsAskedForNotificationsToo() async {
         let model = await registered(.protected)
-        model.continueFromConnect()
-        box.status = .active(lastSeen: Date())
-        await model.refreshExtensionStatus()
-        model.continueFromExtensionOn()
-        #expect(model.step == .notifications)
-        #expect(model.canSkipNotifications)
-        model.skipNotifications()
-        #expect(notifications.requestCount == 0)
+        await reachSuccess(model)
+        await model.requestNotifications()
+        #expect(notifications.requestCount == 1)
         #expect(settings.onboardingCompleted)
     }
 
-    @Test func guardianCannotSkipNotifications() async {
+    @Test func notificationsAreOnlyAskedFromTheSuccessScreen() async {
         let model = await registered(.guardian)
-        #expect(!model.canSkipNotifications)
-        model.skipNotifications()
+        await model.requestNotifications()
+        #expect(notifications.requestCount == 0)
         #expect(!settings.onboardingCompleted)
     }
 
     @Test func alreadyDecidedPermissionIsNotAskedAgain() async {
         notifications.current = .authorized
         let model = await registered(.guardian)
-        model.continueFromInvite()
-        box.status = .active(lastSeen: Date())
-        await model.refreshExtensionStatus()
-        model.continueFromExtensionOn()
+        await reachSuccess(model)
         await model.requestNotifications()
         #expect(notifications.requestCount == 0)
         #expect(settings.onboardingCompleted)
@@ -354,6 +365,22 @@ struct OnboardingModelTests {
     ])
     func reminderOnlyForGuardianWithoutPermission(status: NotificationAuthorization, mode: UserMode, shown: Bool) {
         #expect(NotificationReminder.isShown(status: status, mode: mode) == shown)
+    }
+}
+
+struct SafariDefaultSetupTests {
+    @Test(arguments: [
+        (17, 5, SafariDefaultSetup.Step.openSafariLegacy),
+        (18, 0, .openAppsSafari),
+        (18, 1, .openAppsSafari),
+        (18, 2, .openDefaultApps),
+        // iOS 18.3+ opens the Default Apps page itself.
+        (18, 3, .tapBrowserApp),
+        (26, 0, .tapBrowserApp),
+    ])
+    func stepsFollowTheSettingsPage(major: Int, minor: Int, pick: SafariDefaultSetup.Step) {
+        let version = OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0)
+        #expect(SafariDefaultSetup.steps(for: version) == [.tapOpen, pick, .comeBack])
     }
 }
 

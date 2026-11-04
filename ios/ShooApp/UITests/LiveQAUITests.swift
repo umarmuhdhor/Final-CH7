@@ -91,7 +91,7 @@ final class LiveQAUITests: XCTestCase {
     private func finishOnboarding(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let steps = [
-            "invite.skip", "protectedBy.continue", "extension.skipCheck", "extensionOn.continue", "notifications.allow",
+            "invite.skip", "protectedBy.continue", "extension.skipCheck", "safariDefault.alreadyUsing", "extensionOn.continue",
             "reminder.notNow",
         ]
         let end = Date().addingTimeInterval(90)

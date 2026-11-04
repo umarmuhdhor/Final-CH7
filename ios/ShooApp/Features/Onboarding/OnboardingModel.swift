@@ -37,10 +37,10 @@ enum OnboardingStep: Equatable {
     case invite
     /// ON-04
     case turnOnExtension
-    /// ON-04 passed: "Yeay, you're better protected!"
+    /// ON-04 passed (Figma "Jadikan Safari Default"): Shoo only runs in Safari.
+    case safariDefault
+    /// "Yeay, you're better protected!" Its Next asks for notifications (ON-05 has no screen of its own).
     case extensionOn
-    /// ON-05
-    case notifications
     case done
 }
 
@@ -71,11 +71,12 @@ final class OnboardingModel {
     init(environment: AppEnvironment) {
         self.environment = environment
         // Registered earlier but onboarding not finished (app closed in between): never back to ON-03.
-        // Protected continues at Connect until it was passed once, everyone else at ON-04.
+        // Protected continues at Connect until it was passed once. Everyone else goes to Home, which shows
+        // what is still off; `OnboardingFlow` ends onboarding for `.done`.
         switch environment.settings.mode {
         case nil: step = .splash
         case .protected where !environment.settings.onboardingConnectPassed: step = .connect
-        default: step = .turnOnExtension
+        default: step = .done
         }
     }
 
@@ -87,9 +88,6 @@ final class OnboardingModel {
     }
 
     var canSubmitName: Bool { nameProblem == nil }
-
-    /// Notifications matter for the Guardian (pushes); Protected may skip ON-05.
-    var canSkipNotifications: Bool { mode == .protected }
 
     func skipSplash() {
         guard step == .splash else { return }
@@ -130,6 +128,7 @@ final class OnboardingModel {
         case (.invite, nil), (.connect, nil): step = .mode
         case (.turnOnExtension, .guardian): step = .invite
         case (.turnOnExtension, .protected): step = .connect
+        case (.safariDefault, _): step = .turnOnExtension
         default: return
         }
         movedBack = true
@@ -219,43 +218,42 @@ final class OnboardingModel {
 
     /// Called on appear and every time the app comes back to the foreground (ON-04). Moves on only once
     /// Shoo is on and has checked in from Safari, so a new install never shows On before "Allow" (#135).
+    /// After Back it stays, or Back would bounce straight forward again; the screen then offers Next.
     @discardableResult
     func refreshExtensionStatus() async -> ExtensionStatus? {
         guard step == .turnOnExtension else { return nil }
         let status = await environment.extensionStatus()
         // The step may have moved on (Back) while Safari answered.
-        guard step == .turnOnExtension, status.nextStep == nil else { return status }
-        movedBack = false
-        step = .extensionOn
+        guard step == .turnOnExtension, status.nextStep == nil, !movedBack else { return status }
+        step = .safariDefault
         return status
     }
 
-    /// "Continue without checking": Safari says the switch is on, but no page has checked in yet.
+    /// "Continue without checking" (Safari says the switch is on, but no page has checked in yet), or Next
+    /// after Back from Safari Default.
     func skipExtensionCheck() {
         guard step == .turnOnExtension else { return }
+        movedBack = false
+        step = .safariDefault
+    }
+
+    /// Nothing can read the default browser, so this trusts the user.
+    func continueFromSafariDefault() {
+        guard step == .safariDefault else { return }
         movedBack = false
         step = .extensionOn
     }
 
-    func continueFromExtensionOn() {
-        guard step == .extensionOn else { return }
-        step = .notifications
-    }
-
-    /// ON-05: asks once; whatever the answer, onboarding ends (a Guardian who said no gets the Home reminder).
+    /// ON-05, from Next on the success screen: asks once; whatever the answer, onboarding ends (a Guardian
+    /// who said no gets the Home reminder).
     func requestNotifications() async {
-        guard step == .notifications, !isWorking else { return }
+        guard step == .extensionOn, !isWorking else { return }
         isWorking = true
         defer { isWorking = false }
         if await environment.notifications.status() == .notDetermined {
             _ = await environment.notifications.request()
         }
         await environment.registerForPushIfAllowed()
-        finish()
-    }
-
-    func skipNotifications() {
-        guard step == .notifications, canSkipNotifications else { return }
         finish()
     }
 

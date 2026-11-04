@@ -20,6 +20,7 @@ struct OnboardingFlow: View {
             if let step = Self.screenshotStep { model.showForScreenshot(step) }
             if UserDefaults.standard.string(forKey: "debug.onboardingStep") == "connected" { model.connect().showJoinedForScreenshot() }
             #endif
+            if model.step == .done { env.finishOnboarding() }
             self.model = model
         }
     }
@@ -27,7 +28,7 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|mode|connect|connected|invite|turnOnExtension|extensionOn|notifications`
+    /// `-debug.onboardingStep name|mode|connect|connected|invite|turnOnExtension|safariDefault|extensionOn`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
@@ -35,8 +36,8 @@ extension OnboardingFlow {
         case "connect", "connected": .connect
         case "invite": .invite
         case "turnOnExtension": .turnOnExtension
+        case "safariDefault": .safariDefault
         case "extensionOn": .extensionOn
-        case "notifications": .notifications
         default: nil
         }
     }
@@ -61,8 +62,8 @@ private struct OnboardingStepView: View {
                     onBack: model.goBack,
                     onSkipCheck: model.skipExtensionCheck
                 )
-            case .extensionOn: ExtensionOnView(onContinue: model.continueFromExtensionOn)
-            case .notifications: NotificationPermissionView(model: model)
+            case .safariDefault: SafariDefaultView(onBack: model.goBack, onContinue: model.continueFromSafariDefault)
+            case .extensionOn: ExtensionOnView { Task { await model.requestNotifications() } }
             case .done: Color(.systemBackground)
             }
         }

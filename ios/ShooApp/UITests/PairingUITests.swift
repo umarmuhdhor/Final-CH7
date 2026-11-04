@@ -88,9 +88,10 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Adhella"), title.label)
         app.buttons["protectedBy.continue"].tap()
+        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 10), app.debugDescription)
+        app.buttons["safariDefault.alreadyUsing"].tap()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["extensionOn.continue"].tap()
-        XCTAssertTrue(app.buttons["notifications.skip"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
     /// A new install opened from an invite link (WhatsApp): no mode choice, Connect has the code, one tap joins.

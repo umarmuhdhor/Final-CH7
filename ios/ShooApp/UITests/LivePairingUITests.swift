@@ -76,9 +76,8 @@ final class LivePairingUITests: XCTestCase {
     func testGuardianShowsTheFamilyCode() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")
+        if app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5) { app.buttons["safariDefault.alreadyUsing"].tap() }
         if app.buttons["extensionOn.continue"].waitForExistence(timeout: 5) { app.buttons["extensionOn.continue"].tap() }
-        // ON-05: a Guardian only has "Allow" (`-UITestNotifications denied` answers it).
-        if app.buttons["notifications.allow"].waitForExistence(timeout: 5) { app.buttons["notifications.allow"].tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["profileButton"].tap()
         let open = app.buttons["profile.invite"]

@@ -10,6 +10,8 @@ enum OnboardingTheme {
     static let secondaryInk = Color.dynamic(0x67696C, dark: 0xA3A9B3, contrastLight: 0x45474A, contrastDark: 0xCDD1D8)
     /// Figma's small notes under a field ("*Nama harus terdiri dari maksimal 20 karakter").
     static let noteInk = Color.dynamic(0x191C25, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
+    /// Figma's numbered steps ("Tekan tombol di bawah…").
+    static let stepInk = Color.dynamic(0x191D2F, dark: 0xF2F4F8, contrastLight: 0x000000, contrastDark: 0xFFFFFF)
     /// Figma "Body" under every onboarding headline.
     static let bodyInk = Color.dynamic(0x6A717E, dark: 0xA3A9B3, contrastLight: 0x4A505B, contrastDark: 0xCDD1D8)
     static let cardStroke = Color.dynamic(0xD8DFE2, dark: 0x343B46, contrastLight: 0x9AA1AC, contrastDark: 0x6B7380)
@@ -175,7 +177,8 @@ struct OnboardingHeaderBackground: View {
 /// `hero` is the 300 pt illustration above the title (invite, ON-04); it sits beside the back button.
 struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
+    /// `nil` where Figma has only the headline (ON-04, Safari Default).
+    let message: LocalizedStringKey?
     /// `nil` where there is no way back (e.g. Connect inside onboarding, after the mode is saved).
     let onBack: (() -> Void)?
     /// `id` of a view to keep visible above the button, e.g. the focused field once the keyboard is up.
@@ -195,7 +198,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
 
     init(
         title: LocalizedStringKey,
-        message: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
         onBack: (() -> Void)?,
         scrollTarget: String? = nil,
         @ViewBuilder hero: () -> Hero,
@@ -232,10 +235,10 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                     VStack(spacing: messageSpacing ?? (largeHeadline ? 8 : 4)) {
                         if largeHeadline {
                             Text(title).onboardingLargeTitleStyle()
-                            Text(message).onboardingLargeBodyStyle()
+                            if let message { Text(message).onboardingLargeBodyStyle() }
                         } else {
                             Text(title).onboardingTitleStyle()
-                            Text(message).onboardingBodyStyle(lineHeight: messageLineHeight)
+                            if let message { Text(message).onboardingBodyStyle(lineHeight: messageLineHeight) }
                         }
                     }
                     .padding(.horizontal, headlineInset)
@@ -340,7 +343,7 @@ extension OnboardingFormPage {
 extension OnboardingFormPage where Hero == EmptyView {
     init(
         title: LocalizedStringKey,
-        message: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
         onBack: (() -> Void)?,
         scrollTarget: String? = nil,
         @ViewBuilder content: () -> Content,
@@ -416,7 +419,9 @@ struct OnboardingSuccessPage<Hero: View>: View {
     let onContinue: () -> Void
     /// Each success screen has its own Figma gradient.
     var background = "SuccessBackground"
-    /// Brings the headline to Figma's y 402 under the hero.
+    /// Figma "Berhasil Terhubung" has a 34 pt headline, "Yeay, kamu berhasil" a 28 pt one.
+    var largeTitle = true
+    /// Brings the headline to Figma's y under the hero.
     @ViewBuilder let hero: Hero
 
     var body: some View {
@@ -424,16 +429,12 @@ struct OnboardingSuccessPage<Hero: View>: View {
             VStack(spacing: 0) {
                 hero
 
-                // Figma "Frame 2": Large Title, 8, Body.
-                VStack(spacing: 8) {
-                    title
-                        .onboardingFont(34, weight: .semibold, relativeTo: .largeTitle)
-                        .tracking(-0.68)
-                        .figmaLineHeight(41, glyphOffset: -1, relativeTo: .largeTitle)
+                // Figma "Frame 2": Large Title, 8, Body; or Title 1, 4, Subhead.
+                VStack(spacing: largeTitle ? 8 : 4) {
+                    styledTitle
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("\(idPrefix).title")
-                    message
-                        .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                    styledMessage
                         .foregroundStyle(Color(hex: 0xFAF9FB))
                 }
                 .multilineTextAlignment(.center)
@@ -460,5 +461,32 @@ struct OnboardingSuccessPage<Hero: View>: View {
                 .padding(.bottom, 34)
         }
         .environment(\.colorScheme, .light)
+    }
+
+    @ViewBuilder
+    private var styledTitle: some View {
+        if largeTitle {
+            title
+                .onboardingFont(34, weight: .semibold, relativeTo: .largeTitle)
+                .tracking(-0.68)
+                .figmaLineHeight(41, glyphOffset: -1, relativeTo: .largeTitle)
+        } else {
+            title
+                .onboardingFont(28, weight: .medium, relativeTo: .title)
+                .tracking(-0.56)
+                .figmaLineHeight(33.6, glyphOffset: -2, relativeTo: .title)
+        }
+    }
+
+    @ViewBuilder
+    private var styledMessage: some View {
+        if largeTitle {
+            message.onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+        } else {
+            message
+                .onboardingFont(17, design: .rounded, relativeTo: .body)
+                .figmaLineHeight(23.8, glyphOffset: 0.9, relativeTo: .body)
+                .lineSpacing(3)
+        }
     }
 }
