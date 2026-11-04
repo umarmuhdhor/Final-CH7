@@ -133,6 +133,61 @@ private struct HatchedCapsule: View {
     }
 }
 
+/// While the page loads: an empty page that a blue line scans down and up (2.4 s).
+/// Reduce Motion keeps the empty page without the line.
+private struct PageScanPlaceholder: View {
+    let pageWidth: CGFloat
+    let topInset: CGFloat
+
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    private static let period = 2.4
+    private static let bandHeight: CGFloat = 46
+    private static let travel: CGFloat = 196
+    private static let bar = DetailStyle.hex(0xDDE6F1)
+    private static let line = DetailStyle.hex(0x1A73D9)
+    private static let band = DetailStyle.hex(0x4FB4F2)
+    /// Blocks of the empty page: x, y, width, height.
+    private static let blocks: [CGRect] = [
+        CGRect(x: 16, y: 22, width: 120, height: 12),
+        CGRect(x: 16, y: 44, width: 238, height: 70),
+        CGRect(x: 16, y: 126, width: 200, height: 9),
+        CGRect(x: 16, y: 142, width: 226, height: 9),
+        CGRect(x: 16, y: 158, width: 170, height: 9),
+        CGRect(x: 16, y: 174, width: 214, height: 9),
+    ]
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 10.8, style: .continuous).fill(.white)
+            ForEach(Self.blocks, id: \.minY) { block in
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Self.bar)
+                    .frame(width: block.width, height: block.height)
+                    .offset(x: block.minX, y: block.minY)
+            }
+            if !reduceMotion {
+                TimelineView(.animation) { context in
+                    let turn = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: Self.period) / Self.period
+                    scanLine.offset(y: abs(sin(turn * .pi)) * Self.travel - Self.bandHeight)
+                }
+            }
+        }
+        .frame(width: pageWidth, height: EvidencePhoto.height)
+        .clipped()
+        .offset(y: topInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Loading"))
+    }
+
+    private var scanLine: some View {
+        LinearGradient(colors: [Self.band.opacity(0), Self.band.opacity(0.38)], startPoint: .top, endPoint: .bottom)
+            .frame(height: Self.bandHeight)
+            .overlay(alignment: .bottom) { Self.line.frame(height: 2) }
+    }
+}
+
 /// Figma "Bukti" (416:10831): the page on a pale panel. One area on the page gets the white spotlight
 /// with a tag ("Spotlight (default)"); several areas get yellow outlines with numbers ("Spotlight +
 /// kuning"); none shows the photo plain ("Tanpa highlight"). Red stays for risk status only.
@@ -158,7 +213,7 @@ struct EvidencePhoto: View {
             if let image {
                 page(image)
             } else if isLoading {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                PageScanPlaceholder(pageWidth: Self.pageWidth, topInset: Self.pageInset)
             }
         }
         .frame(height: Self.height)

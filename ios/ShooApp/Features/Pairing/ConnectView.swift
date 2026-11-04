@@ -4,7 +4,7 @@ import SwiftUI
 /// Used in onboarding (with "Not now") and from Shield / an invite link after onboarding.
 struct ConnectView: View {
     let model: ConnectModel
-    /// After onboarding only (sheet): close. Inside onboarding there is no way back, the mode is saved.
+    /// After onboarding (sheet): close. Inside onboarding: back to ON-03 until the mode is saved.
     var onBack: (() -> Void)?
     /// Continue without a guardian for now.
     var onSkip: (() -> Void)?
@@ -115,7 +115,6 @@ struct ConnectView: View {
         }
         .footerEndsWithLink(onSkip != nil)
         .headlineInset(24)
-        .messageLineHeight(24)
         .onChange(of: tab) { scanRefused = false }
         .onChange(of: scanRefused) { _, refused in
             guard refused else { return }
@@ -139,15 +138,15 @@ struct ConnectView: View {
     }
 }
 
-/// "Pindai QR | Kode": capsule track with a white thumb that slides (Figma "Segmented Control").
+/// "Kode | Pindai QR": capsule track with a white thumb that slides (Figma "Segmented Control").
 private struct ConnectTabs: View {
     @Binding var tab: ConnectView.Tab
     @Namespace private var thumb
 
     var body: some View {
         HStack(spacing: 4) {
-            segment(.scan, title: "Scan QR", id: "connect.tab.scan")
             segment(.code, title: "Code", id: "connect.tab.code")
+            segment(.scan, title: "Scan QR", id: "connect.tab.scan")
         }
         .padding(2)
         .background(Color(red: 0x76 / 255, green: 0x76 / 255, blue: 0x80 / 255).opacity(0.12), in: Capsule())
@@ -299,33 +298,32 @@ private struct Caret: View {
     }
 }
 
-/// PR-02: who looks after this phone now (Figma "Berhasil Terhubung").
+/// PR-02: who looks after this phone now (Figma "Berhasil Terhubung", 929:8067).
 struct ProtectedByView: View {
     let guardian: GuardianInfo
     let onContinue: () -> Void
+    @Environment(AppEnvironment.self) private var env
+    @State private var ownAvatarId: String?
 
     var body: some View {
         OnboardingSuccessPage(
             title: Text("Connected to \(guardian.name)!"),
-            message: Text("Your account is connected. You now get online protection with your Guardian's support."),
+            message: Text("You can now enjoy digital protection with your Guardian's support."),
             idPrefix: "protectedBy",
             onContinue: onContinue,
-            messageOpacity: 0.7
+            background: "ConnectedBackground"
         ) {
-            Image("ConnectedIllustration")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 300, height: 300)
-                .overlay(alignment: .topLeading) {
-                    // Sits on the "+" badge of the illustration.
-                    AvatarView(id: guardian.avatarId, size: 55)
-                        .overlay { Circle().strokeBorder(.white, lineWidth: 1.5) }
-                        .offset(x: 198.5, y: 186.5)
-                }
-                // Figma: the illustration at y 58.5, the headline at 402.
-                .padding(.top, -3.5)
-                .padding(.bottom, 43.5)
-                .accessibilityHidden(true)
+            ConnectedOrbitIllustration(guardian: guardian, ownAvatarId: ownAvatarId)
+                // Figma: the illustration at y 46, the headline at 402.
+                .padding(.top, -16)
+                .padding(.bottom, 17)
+        }
+        .task {
+            do {
+                ownAvatarId = try await env.repository.me().avatarId
+            } catch {
+                Log.ui.error("Own avatar for PR-02 failed", error)
+            }
         }
     }
 }
@@ -336,4 +334,5 @@ struct ProtectedByView: View {
 
 #Preview("Connected") {
     ProtectedByView(guardian: GuardianInfo(deviceId: "dev_nis", name: "Nisrina", avatarId: "avatar_03"), onContinue: {})
+        .environment(AppEnvironment.preview(mode: .protected))
 }

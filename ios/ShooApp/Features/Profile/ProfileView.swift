@@ -23,9 +23,8 @@ struct ProfileView: View {
         ProfileScreen(title: "Profile") {
             switch model.state {
             case .loading:
-                ProgressView()
+                ShieldPulseLoader()
                     .frame(maxWidth: .infinity, minHeight: 300)
-                    .accessibilityLabel(Text("Loading"))
             case .failed:
                 VStack(spacing: 12) {
                     Text("Couldn't load your profile").profileFont(17, .semibold)

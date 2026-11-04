@@ -745,7 +745,7 @@ private struct ConnectionPage: View {
                     .frame(maxWidth: .infinity, minHeight: 200)
                     .accessibilityIdentifier("profile.guardian.none")
             } else {
-                ProgressView().frame(maxWidth: .infinity, minHeight: 200)
+                ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
         .task { model.linked.refresh() }

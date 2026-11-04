@@ -44,8 +44,9 @@ enum OnboardingStep: Equatable {
     case done
 }
 
-/// State of the whole onboarding flow (ON-01 … ON-05). Steps only move forward; once the device is
-/// registered there is no way back to the mode choice, also not after a relaunch.
+/// State of the whole onboarding flow (ON-01 … ON-05). The device registers on the first action on
+/// Invite or Connect, so until then Back reaches the mode choice (Figma). After that there is no way
+/// back to it, also not after a relaunch.
 @MainActor
 @Observable
 final class OnboardingModel {
@@ -64,6 +65,8 @@ final class OnboardingModel {
     private(set) var registrationFailed = false
 
     @ObservationIgnored private let environment: AppEnvironment
+    /// Kept across steps: Back from ON-04 finds the joined guardian, Back to ON-03 keeps an invite code.
+    @ObservationIgnored private var connectModel: ConnectModel?
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -98,56 +101,78 @@ final class OnboardingModel {
     /// skipped and Connect opens with the code filled in.
     var opensWithInvite: Bool { environment.router.pendingJoinCode != nil }
 
-    /// ON-02 Next. Without an invite link ON-03 shows right away, in the same tap, so the slide starts at
-    /// once. With one, registration runs in the returned task.
-    @discardableResult
-    func submitName() -> Task<Void, Never>? {
-        guard step == .name, canSubmitName, !isWorking else { return nil }
+    /// ON-02 Next. An invite link opens Connect right away, with Protected picked.
+    func submitName() {
+        guard step == .name, canSubmitName, !isWorking else { return }
         movedBack = false
         guard opensWithInvite else {
             step = .mode
-            return nil
+            return
         }
         selectedMode = .protected
-        return Task { await registerDevice() }
+        step = .connect
     }
 
-    /// Back from ON-02 or ON-03 (only before registration: after that the mode is saved for good),
-    /// and from ON-04 to the Guardian's invite screen.
+    /// ON-03 Next. Nothing is saved yet (see `ensureRegistered`).
+    func continueFromMode() {
+        guard step == .mode, let selectedMode else { return }
+        movedBack = false
+        registrationFailed = false
+        step = selectedMode == .protected ? .connect : .invite
+    }
+
+    /// Back follows Figma: every step has one, except where it would change a saved mode.
     func goBack() {
         guard !isWorking else { return }
         switch (step, mode) {
         case (.name, nil): step = .splash
         case (.mode, nil): step = .name
+        case (.invite, nil), (.connect, nil): step = .mode
         case (.turnOnExtension, .guardian): step = .invite
+        case (.turnOnExtension, .protected): step = .connect
         default: return
         }
         movedBack = true
         registrationFailed = false
     }
 
-    func register() async {
-        guard step == .mode else { return }
-        await registerDevice()
+    /// Whether Back on Invite or Connect still reaches ON-03.
+    var canGoBackToMode: Bool { mode == nil }
+
+    /// Saves the mode for good (`POST /devices`), once. Runs on the first action on Invite or Connect.
+    func ensureRegistered() async throws {
+        guard mode == nil else { return }
+        guard let selectedMode, case .success(let trimmed) = NameRule.validate(name) else {
+            throw RepositoryError.network
+        }
+        avatarId = try await environment.register(name: trimmed, mode: selectedMode, avatarId: selectedAvatarId).avatarId
     }
 
-    /// From ON-03, or from ON-02 when an invite link opened the app. A failure there shows ON-03 with
-    /// Protected picked and the error, so Next tries again.
-    private func registerDevice() async {
-        guard !isWorking, let selectedMode, case .success(let trimmed) = NameRule.validate(name) else { return }
+    /// Runs `ensureRegistered` for a tap on Invite; a failure shows on the screen and the tap can be repeated.
+    private func registerFromInvite() async -> Bool {
+        guard step == .invite, !isWorking else { return false }
         isWorking = true
         registrationFailed = false
         defer { isWorking = false }
         do {
-            avatarId = try await environment.register(name: trimmed, mode: selectedMode, avatarId: selectedAvatarId).avatarId
-            movedBack = false
-            step = selectedMode == .protected ? .connect : .invite
+            try await ensureRegistered()
+            return true
         } catch {
             Log.app.error("Registration failed", error)
             registrationFailed = true
-            movedBack = false
-            step = .mode
+            return false
         }
+    }
+
+    /// "Invite": true once the sheet may open (it needs the device's token for the code).
+    func prepareInvite() async -> Bool {
+        await registerFromInvite()
+    }
+
+    /// "Skip".
+    func skipInvite() async {
+        guard await registerFromInvite() else { return }
+        continueFromInvite()
     }
 
     /// "Skip", or the invite sheet's Done. Inviting later stays possible from Shield and Profile.
@@ -157,12 +182,38 @@ final class OnboardingModel {
         step = .turnOnExtension
     }
 
-    /// Only Guardians see the invite screen before ON-04, so only they get a way back to it.
-    var canGoBackFromExtension: Bool { mode == .guardian }
+    /// PR-01 inside onboarding: a join registers the device first.
+    func connect() -> ConnectModel {
+        if let connectModel { return connectModel }
+        let connect = ConnectModel(repository: environment.repository, code: environment.router.takePendingJoinCode()) { [weak self] code in
+            guard let self else { throw CancellationError() }
+            try await self.ensureRegistered()
+            let guardian = try await self.environment.repository.joinFamily(code: code)
+            self.environment.settings.onboardingConnectPassed = true
+            return guardian
+        }
+        connectModel = connect
+        return connect
+    }
+
+    /// "Not now": still registers, then ON-04. A failure shows on Connect.
+    func skipConnect() async {
+        guard step == .connect, !isWorking else { return }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await ensureRegistered()
+            continueFromConnect()
+        } catch {
+            Log.app.error("Registration failed", error)
+            connect().report(error)
+        }
+    }
 
     func continueFromConnect() {
         guard step == .connect else { return }
         environment.settings.onboardingConnectPassed = true
+        movedBack = false
         step = .turnOnExtension
     }
 
@@ -213,7 +264,7 @@ final class OnboardingModel {
     func showForScreenshot(_ step: OnboardingStep) {
         // The name and mode steps start empty, as in Figma "Atur Nama · kosong" and "Choose Mode".
         name = step == .name ? "" : "Rina"
-        selectedMode = step == .mode ? nil : mode ?? .guardian
+        selectedMode = step == .mode ? nil : mode ?? .protected
         avatarId = "avatar_05"
         movedBack = false
         self.step = step

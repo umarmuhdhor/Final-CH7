@@ -83,9 +83,7 @@ struct ProtectedShieldView: View {
 
     private var hero: some View {
         let isActive = model.extensionStatus.isActive
-        // Figma protected/Home keeps only the shield's glow; Off still shows the dimmed shield.
         var layout = HomeHeroLayout.personal
-        layout.showsShield = !isActive
         // The background's fade ends where the next card starts (Figma y 443).
         layout.backgroundOverhang = 0
         return HomeHero(
