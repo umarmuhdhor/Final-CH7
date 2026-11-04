@@ -85,7 +85,7 @@ commit, judul PR: Bahasa Inggris.
 <batasan>
 - Jangan mengarang API pihak ketiga (RDAP, daftar phishing, LLM). Ambil fakta dari dokumentasi resmi atau kode yang dibaca;
   yang belum pasti tandai "BELUM DIVERIFIKASI".
-- Jangan menambah fitur di luar mandat. Hoaks bukan MVP. Layer 5 (database feedback Guardian, `layer-5-feedback.md`) jangan dikoding sebelum #241 terjawab.
+- Jangan menambah fitur di luar mandat. Hoaks bukan MVP. Layer 5 (feedback Guardian di atas database ADM, `layer-5-feedback.md` v2) jangan dikoding sebelum persetujuan Umar tertulis di #241.
 - Jangan mengirim pesan atas nama Imelda ke Umar/Alief. Tulis isinya di TODO §C.
 </batasan>
 ```
