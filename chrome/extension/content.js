@@ -89,7 +89,8 @@
                 analyzeLocal: async (s) => (await globalThis.ShooDetector?.analyzeLocal(s)) ?? [],
                 analyzeRemote: async (s, localSignals) =>
                     (await send({ type: "analyze", snapshot: s, localSignals }))?.signals ?? [],
-                lookupVerdict: async (domain) => (await send({ type: "verdict", domain }))?.verdict ?? null,
+                lookupVerdict: async (domain, { fresh = false } = {}) => (await send({ type: "verdict", domain, fresh }))?.verdict ?? null,
+                recallBlock: async (url) => (await send({ type: "recallBlock", url }))?.memory ?? null,
                 isCurrent,
                 publish: (state) => {
                     const result = { ...state, scanId: p.scanId };

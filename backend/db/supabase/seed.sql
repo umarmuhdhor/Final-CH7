@@ -45,3 +45,16 @@ insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name, g
 
 insert into blocklist_entries (domain, families) values
   ('contoh-a.test', 1), ('contoh-b.test', 1), ('contoh-c.test', 1);
+
+-- Admin dashboard evaluation (ADM-04): analyzed Guardian labels with an AI snapshot, so Evaluasi AI
+-- has numbers locally (2 TP, 1 FP, 1 FN, 1 TN, 1 without AI data), plus one AI case and two lessons.
+insert into admin.domain_labels (domain, is_scam, source, connected, ai_score, ai_status, thresholds_version, owner_ref, by_ref, analyzed_at)
+select d, s, 'guardian', true, sc, st, 0, admin.owner_ref('seed-o' || n), admin.owner_ref('seed-g' || n), now() - interval '1 day'
+from (values (1, 'eval-a.test', true, 92, 'blocked'), (2, 'eval-b.test', false, 84, 'blocked'),
+             (3, 'eval-c.test', true, 55, 'warning'), (4, 'eval-d.test', false, 35, 'warning'),
+             (5, 'eval-e.test', true, 88, 'blocked'), (6, 'eval-f.test', true, null, null)) v(n, d, s, sc, st);
+select admin.case_add('contoh-kasus.test', 'scam_weak', 'phishing_bank', 'Halaman login bank palsu, domain umur 3 hari',
+                      '{"new_domain": 1}', 'ai:seed');
+select admin.lesson_add('avoid', 'Jangan anggap aman halaman login bank di domain yang baru dibuat',
+                        '{"signals": ["new_domain"]}', null, 'ai:seed');
+select admin.lesson_add('repeat', 'Domain resmi bank dengan sertifikat lama hampir selalu aman', '{}', null, 'ai:seed');

@@ -19,6 +19,8 @@ concurrency:
 jobs:
   build:
     if: vars.BLOCKLIST_KV_NAMESPACE_ID != ''
+    # CLOUDFLARE_* are environment secrets of `production` (shared with backend.yml).
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -28,7 +30,8 @@ jobs:
           node-version: 24
       - name: Build list and write to Workers KV
         env:
-          BLOCKLIST_CF_API_TOKEN: ${{ secrets.BLOCKLIST_CF_API_TOKEN }}
-          BLOCKLIST_CF_ACCOUNT_ID: ${{ secrets.BLOCKLIST_CF_ACCOUNT_ID }}
+          # Same token and account as the shoo-api deploy (backend.yml): shoo-ai runs on that account since 3 Nov 2026.
+          BLOCKLIST_CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BLOCKLIST_CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           BLOCKLIST_KV_NAMESPACE_ID: ${{ vars.BLOCKLIST_KV_NAMESPACE_ID }}
         run: node ai/scripts/build-blocklist.mjs

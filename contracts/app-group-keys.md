@@ -18,6 +18,11 @@ Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, ne
 | `extension.allSites` | Bool | Extension | App | Safari access to every website (EX-01). `false` → app shows Off even if the heartbeat is recent. Missing → unknown, treat as `true` |
 | `api.baseURL` | String | App | Extension | Backend base URL |
 | `ai.baseURL` | String | App | Extension | AI service base URL |
+| `stats.checked` | Int | Extension | App | Pages checked on this iPhone, all verdicts, +1 per page. A number only, never an address. Missing → app shows "—" (PF-01, PR-05) |
+| `stats.lastCheckedAt` | Date | Extension | App | When the extension last checked a page. Written with `stats.checked`. Missing → app leaves the time out |
+| `link.autoSend` | Bool | App | Extension | "Kirim link secara otomatis". `false` → `warning` scans are not sent. `blocked` is always sent, so the Guardian can still open the block screen (#183). Missing → `true` |
+| `history.shareWarnings` | Bool | App | Extension | "Bagikan riwayat waspada". `false` → `warning` scans are not sent. `blocked` is always sent. Missing → `true` |
+| `notify.linkVerified` | Bool | App | — (server later) | "Link terblokir": push when the Guardian verifies a link. Missing → `true` |
 
 ## Language
 There is **no language key**. Extension UI (popup, marks, block screen) and the signal wording it shows follow the **iPhone's language** (`en`, or `id` when iOS is set to Bahasa Indonesia). The in-app language setting (PF-01) only changes the app.
@@ -28,7 +33,8 @@ All messages: `{ "type": string, ... }`. Response always `{ "ok": boolean, ... }
 | type | Request | Response |
 |---|---|---|
 | `heartbeat` | `{ allSites?: boolean }` | `{ ok }` — writes `extension.lastSeenAt`, and `extension.allSites` when `allSites` is present |
-| `getSession` | `{}` | `{ ok, deviceId, token, mode, name, guardianName, apiBaseURL, aiBaseURL }` (`ok: false` if app not onboarded) |
+| `getSession` | `{}` | `{ ok, deviceId, token, mode, name, guardianName, apiBaseURL, aiBaseURL, autoSend, shareWarnings }` (`ok: false` if app not onboarded). `autoSend` and `shareWarnings` are `true` when their key is missing |
+| `pageChecked` | `{}` | `{ ok }` — adds 1 to `stats.checked` and sets `stats.lastCheckedAt`. Sent once per page. Carries no address |
 
 ## Deep links (extension / invite link → app)
 URL scheme `shoo://` (registered in `ios/project.yml`). The app handles these in `ShooApp` (`.onOpenURL`); an unknown or malformed link opens Shield.

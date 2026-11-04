@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import * as z from "zod";
 import type { AppEnv } from "../env";
-import { findVisibleScan, insertScan, listScans, memberIds } from "../db/repo/scans";
+import { type PublicThresholds, publicThresholds } from "../db/repo/config";
+import { findVisibleScan, listScans, memberIds, recordScan } from "../db/repo/scans";
 import { requireDevice } from "../http/auth";
 import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
@@ -12,11 +13,13 @@ import { deliverPush } from "../services/push/deliver";
 import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
 import { attachFavicon, faviconUrl } from "../services/favicons";
+import { attachFragments } from "../services/fragments";
 import { attachReplica, replicaUrl } from "../services/replicas";
 import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
 import { errorInfo } from "../http/logError";
 
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** http(s) URL without control or bidi characters (Postgres rejects NUL; the Guardian UI shows the URL). */
 const httpUrl = (s: string) => {
@@ -58,9 +61,18 @@ const scanBody = z
     // EX-07: gzip + base64 page replica. No .max(): an oversized replica is dropped by
     // decodeReplica, while a 422 would make the extension drop the whole scan.
     pageReplicaBase64: z.string().nullish(),
+    // ADM-07: gzip + base64 evidence fragments for the admin archive. No .max(), as the replica.
+    evidenceFragmentsBase64: z.string().nullish(),
+    // Dashboard phase 05 (K1): GET /config/public `version` the status was decided with.
+    thresholdsVersion: z.number().int().min(0).max(2_147_483_647).optional(),
+    // #270: RDAP registration date from POST /analyze. No schema check: a bad value becomes null
+    // (rdapDate), since a 422 would make the extension drop the whole scan.
+    rdapRegisteredAt: z.unknown().optional(),
   })
-  .refine((b) => b.status === (b.score >= 80 ? "blocked" : "warning"), {
-    message: "must be blocked for score >= 80, else warning",
+  // The fence every allowed threshold pair respects (blockAt 50–95, warnAt >= 30 via score min).
+  // The exact rule for the active version is checked in the handler; it needs the DB.
+  .refine((b) => b.status !== "blocked" || b.score >= 50, {
+    message: "must not be blocked below score 50",
     path: ["status"],
   })
   .refine(
@@ -78,6 +90,13 @@ const title = (s: string | null | undefined) => {
 };
 /** Only http(s) favicons ≤ 2048 chars are kept; anything else (data:, junk) becomes null. */
 const favicon = (v: unknown) => (typeof v === "string" && v.length <= 2048 && httpUrl(v) ? v : null);
+/** A real calendar day `YYYY-MM-DD` from 1985-01-01 to tomorrow (UTC); anything else becomes null. */
+const rdapDate = (v: unknown): string | null => {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v) || v < "1985-01-01") return null;
+  const t = Date.parse(`${v}T00:00:00Z`);
+  if (Number.isNaN(t) || new Date(t).toISOString().slice(0, 10) !== v) return null;
+  return t <= Date.now() + DAY_MS ? v : null;
+};
 
 const listQuery = z.object({
   owner: z.string().max(64).default("me"),
@@ -112,13 +131,28 @@ scans.post("/scans", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
   await hit(sql, limits.createScan, principal.deviceId);
-  // 512 KB on the exact path only, like the early check in app.ts (also for chunked bodies).
+  // 1 MiB on the exact path only, like the early check in app.ts (also for chunked bodies).
   const body = await readJson(c, scanBody, maxRequestBytes(c.req.method, c.req.path));
+  // K1: a scan decided with the active thresholds must match them exactly; another version (a stale
+  // cache) or none (an older extension) only has to respect the fence above.
+  // The lookup reads the admin schema; if it fails, the scan is still stored under the fence (a 500
+  // would make the extension retry and could lose the scan and its push).
+  if (body.thresholdsVersion !== undefined) {
+    let t: PublicThresholds | undefined;
+    try {
+      t = await publicThresholds(sql);
+    } catch (err) {
+      console.error(JSON.stringify({ event: "thresholds_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
+    }
+    if (t && body.thresholdsVersion === t.version && (body.score < t.warnAt || body.status !== (body.score >= t.blockAt ? "blocked" : "warning"))) {
+      throw errors.invalidBody(`status: does not match thresholds version ${t.version} (warning from ${t.warnAt}, blocked from ${t.blockAt})`);
+    }
+  }
   // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
   await hitLight(sql, limits.createScanAll, "all");
 
   const iconUrl = favicon(body.faviconUrl);
-  const id = await insertScan(sql, {
+  const { id, created } = await recordScan(sql, {
     ownerId: principal.deviceId,
     url: body.url,
     domain: body.domain,
@@ -128,7 +162,11 @@ scans.post("/scans", async (c) => {
     status: body.status,
     signals: body.signals,
     detectedAt: body.detectedAt,
+    thresholdsVersion: body.thresholdsVersion ?? null,
+    rdapRegisteredAt: rdapDate(body.rdapRegisteredAt),
   });
+  // The site already has its Activity row: no second row, push or evidence for a repeat visit.
+  if (!created) return c.json({ id }, 201);
   if (body.screenshotBase64) {
     try {
       await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);
@@ -179,6 +217,17 @@ scans.post("/scans", async (c) => {
       Promise.allSettled(deliveries)
         .then(() => attachReplica(sql, c.env, ref, replica, ip))
         .catch((err) => console.error(JSON.stringify({ event: "replica_dropped", reason: "error", error: errorInfo(err) }))),
+    );
+  }
+  // ADM-07 (07a K5): evidence fragments for the admin archive, also after the pushes. Sent with or
+  // without a family; never returned to the app.
+  const fragments = body.evidenceFragmentsBase64;
+  if (fragments) {
+    const ref = { id, ownerId: principal.deviceId };
+    c.executionCtx.waitUntil(
+      Promise.allSettled(deliveries)
+        .then(() => attachFragments(sql, c.env, ref, fragments))
+        .catch((err) => console.error(JSON.stringify({ event: "fragments_dropped", reason: "error", error: errorInfo(err) }))),
     );
   }
   return c.json({ id }, 201);

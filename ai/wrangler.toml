@@ -1,6 +1,8 @@
 # Cloudflare Worker for the Shoo AI service (/analyze, /public-blocklist). Nothing is deployed by committing this file.
 # Deploy is a manual step: see plan/imelda/log/fase-08.md. Secrets (LLM_*) are set with `wrangler secret put`, never written here.
 name = "shoo-ai"
+# Alief's Cloudflare account (moved from Umar's on 3 Nov 2026). The id is not a secret.
+account_id = "e2e23fb2cd373f8675470d603832f0f7"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
 
@@ -33,14 +35,14 @@ simple = { limit = 10, period = 60 }
 # `npx wrangler kv namespace create shoo-public-blocklist` (ai/README.md "Pre-built list"). The id is not a secret.
 [[kv_namespaces]]
 binding = "BLOCKLIST_KV"
-id = "c0d0b3975fbd4f22a979a8baa8069d1d"
+id = "74f3afa35cd846f6a8977a3b25feffcd"
 
 # RDAP cache shared by all isolates (D-imelda-40): key `rdap:<registrable domain>`, value { registeredAt } only.
 # Separate namespace: the blocklist build owns every key in BLOCKLIST_KV. Without this binding the cache stays in memory.
 # Namespace "shoo-rdap-cache", created with `npx wrangler kv namespace create shoo-rdap-cache`. The id is not a secret.
 [[kv_namespaces]]
 binding = "RDAP_KV"
-id = "5ab0aaecad5b4194b252a755076b2dbb"
+id = "00176b51ac6a417d88756643bcd2d05c"
 
 # ai_usage (05b K4): one Analytics Engine point per /analyze with counts only (src/usage.js): prompt version, cases
 # version, layer 4 outcome; tokens in/out, layer 4 ms, RDAP failed. No IP, domain, URL, page text or index (A1, A4).

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { app } from "../src/app";
 import { runRetention } from "../src/cron/retention";
+import { reserveReplica } from "../src/db/repo/scans";
 import { addTombstones, dueTombstones } from "../src/db/repo/tombstones";
 import type { Env } from "../src/env";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
@@ -252,10 +253,16 @@ const fill = async (limit: { bucket: string; max: number }, key: string, n = lim
   await sql`insert into rate_limit_hits (bucket, key_hash) select ${limit.bucket}, ${k} from generate_series(1, ${n})`;
 };
 /** Original uploads (replica_bytes set) of `owner` in the last 24 h, without objects: quota fodder. */
+// Fake rows only fill the quota. Without triggers: the per-row domain-intel trigger (ADM-02) makes
+// 3000 rows take seconds, past the 5 s test timeout on CI (QA-D D-1). Role postgres may skip them.
+const quotaFiller = adminSql();
 const fakeUploads = async (owner: string, n: number, bytes = 1000) => {
-  await sql`insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_bytes)
-    select ${owner}, 'https://q.example/', 'q.example', 92, 'blocked', now(), ${owner} || '/q' || g || '-replica.html.gz', ${bytes}
-    from generate_series(1, ${n}) g`;
+  await quotaFiller.begin(async (tx) => {
+    await tx`set local session_replication_role = replica`;
+    await tx`insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_bytes)
+      select ${owner}, 'https://q.example/', 'q.example', 92, 'blocked', now(), ${owner} || '/q' || g || '-replica.html.gz', ${bytes}
+      from generate_series(1, ${n}) g`;
+  });
 };
 
 describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
@@ -379,19 +386,18 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     expect(limits.replicaIp).toMatchObject({ max: 300, windowSeconds: 86400 });
   });
 
-  it("reuses the owner's replica of the same domain within 24 h: no decode, no put, no IP slot, no bytes", async () => {
+  it("a repeat visit of the site keeps its row and replica: no decode, no put, no IP slot", async () => {
     const { p } = await family();
     const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
-    const { path } = await stored(first);
+    const kept = await stored(first);
     const put = vi.spyOn(R2ReplicaStore.prototype, "put");
-    const second = await postScan(p, { pageReplicaBase64: "!!would be invalid!!" });
-    expect(await stored(second)).toEqual({ path, bytes: null });
+    expect(await postScan(p, { pageReplicaBase64: "!!would be invalid!!" })).toBe(first);
+    // Past 24 h too: the site keeps its one row and its first replica.
+    await sql`update scans set created_at = now() - interval '25 hours' where id = ${first}`;
+    expect(await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) })).toBe(first);
+    expect(await row(first)).toEqual(kept);
     expect(put).not.toHaveBeenCalled();
     expect((await sql`select 1 from rate_limit_hits where bucket = ${limits.replicaIp.bucket}`).length).toBe(1);
-    // Another owner never shares it; past 24 h a new upload is made.
-    await sql`update scans set created_at = now() - interval '25 hours' where id = ${first}`;
-    const third = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
-    expect((await stored(third)).path).toBe(`${p.deviceId}/${third}-replica.html.gz`);
   });
 
   it("per-device quota: 50 uploads in 24 h, reuses not counted", async () => {
@@ -568,8 +574,11 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
     const { path } = await stored(first);
     await fakeUploads(g.deviceId, REPLICA_QUOTA.family - 1);
-    const again = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
-    await until(async () => (await row(again))?.path === path);
+    // A younger row of the same site from before one row per site, without a replica yet.
+    const [{ id: again }] = await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now()) returning id`;
+    expect(await reserveReplica(sql, { id: again, ownerId: p.deviceId, domain }, null, REPLICA_QUOTA)).toEqual({ reuse: path });
     expect(await row(again)).toEqual({ path, bytes: null });
   });
 
@@ -840,8 +849,10 @@ describe("retention and tombstones with replicas (K6)", () => {
     const { p } = await family();
     const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
     const { path } = await stored(first);
-    const younger = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
-    expect((await stored(younger)).path).toBe(path);
+    // A younger row of the same site from before one row per site (it reused the replica).
+    const [{ id: younger }] = await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at, replica_path)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}) returning id`;
     await sql`update scans set created_at = now() - interval '15 days' where id = ${first}`;
     await runRetention(sql, env);
     expect(await env.REPLICAS.head(path!)).not.toBeNull();
@@ -873,7 +884,7 @@ describe("retention and tombstones with replicas (K6)", () => {
     expect(r2.calls.flat().every((p) => p.endsWith("-replica.html.gz"))).toBe(true);
     expect(supabase.calls.flat().every((p) => p.endsWith(".jpg"))).toBe(true);
     expect((await sql`select count(*)::int as n from storage_tombstones`)[0]!.n).toBe(0);
-  });
+  }, 60_000); // 5000 rows take longer than the default 5 s on a CI runner
 
   it("R2 missing: its batch fails and keeps its tombstones; the Supabase batch still runs", async () => {
     await device("dev_mix");

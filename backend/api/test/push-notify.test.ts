@@ -1,8 +1,11 @@
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
+import { app } from "../src/app";
 import { guardianPush } from "../src/services/push/notify";
 import { resetDb, testSql } from "./helpers/resetDb";
-import { call, createDevice, type Created } from "./helpers/seed";
+import { call, createDevice, type Created, freshIp } from "./helpers/seed";
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
@@ -57,15 +60,25 @@ describe("guardianPush cap (security review fase 11 M1)", () => {
 
 describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
   const { id: _id, verdict: _v, screenshotUrl: _s, ownerDeviceId: _o, ownerName: _n, ...scanBody } = blocked92;
-  const pushRows = async (expected: number) => {
-    // The push runs in waitUntil after the response.
-    for (let i = 0; i < 20; i++) {
-      const r = await sql<{ to_device_id: string; scan_id: string; result: string }[]>`select to_device_id, scan_id, result from push_log`;
-      if (r.length >= expected) return r;
-      await new Promise((res) => setTimeout(res, 50));
-    }
-    return sql<{ to_device_id: string; scan_id: string; result: string }[]>`select to_device_id, scan_id, result from push_log`;
+  /** A scan of its own site (one Activity row per site), waiting for its waitUntil work: the push
+   * runs after the response, and a query still open when the file ends fails as "socket closed". */
+  const postScan = async (token: string, site: string) => {
+    const ctx = createExecutionContext();
+    const res = await app.fetch(
+      new Request("http://api.test/scans", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "cf-connecting-ip": freshIp(), "content-type": "application/json" },
+        body: JSON.stringify({ ...scanBody, url: `https://${site}/`, domain: site }),
+      }),
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(201);
+    return ((await res.json()) as { id: string }).id;
   };
+  const pushRows = () =>
+    sql<{ to_device_id: string; scan_id: string; result: string }[]>`select to_device_id, scan_id, result from push_log`;
   const link = async (g: Created, p: Created) => {
     const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
     await call("/family/join", { method: "POST", token: p.token, json: { code } });
@@ -76,22 +89,21 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
     const p = await createDevice("Mom");
     await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
     await link(g, p);
-    const res = await call("/scans", { method: "POST", token: p.token, json: scanBody });
-    expect(res.status).toBe(201);
-    const { id } = (await res.json()) as { id: string };
-    expect(await pushRows(1)).toEqual([{ to_device_id: g.deviceId, scan_id: id, result: "logged" }]);
+    const id = await postScan(p.token, "a.example");
+    expect(await pushRows()).toEqual([{ to_device_id: g.deviceId, scan_id: id, result: "logged" }]);
   });
 
   it("no row for the guardian's own scan, no guardian, or a guardian without a token", async () => {
     const g = await createDevice("G", "guardian");
     const p = await createDevice("Mom");
-    expect((await call("/scans", { method: "POST", token: p.token, json: scanBody })).status).toBe(201);
+    await postScan(p.token, "a.example");
     await link(g, p);
-    expect((await call("/scans", { method: "POST", token: p.token, json: scanBody })).status).toBe(201);
+    await postScan(p.token, "b.example");
     await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
-    expect((await call("/scans", { method: "POST", token: g.token, json: scanBody })).status).toBe(201);
-    // Negative check: a later protected scan's row proves earlier waitUntil work has settled.
-    await call("/scans", { method: "POST", token: p.token, json: scanBody });
-    expect((await pushRows(1)).map((r) => r.result)).toEqual(["logged"]);
+    const own = await postScan(g.token, "c.example");
+    expect((await pushRows()).filter((r) => r.to_device_id === g.deviceId && r.scan_id !== own)).toEqual([]);
+    // A later protected scan of another site does push: the checks above were not just too early.
+    const later = await postScan(p.token, "d.example");
+    expect((await pushRows()).filter((r) => r.scan_id === later)).toEqual([{ to_device_id: g.deviceId, scan_id: later, result: "logged" }]);
   });
 });

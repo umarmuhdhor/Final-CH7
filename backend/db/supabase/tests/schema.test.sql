@@ -55,10 +55,12 @@ select throws_ok(
   $$insert into scans (owner_id, url, domain, score, status, detected_at)
     values ('t_p1', 'https://a.example', 'a.example', 29, 'warning', now())$$,
   '23514', null, 'I5: score below 30 rejected');
+-- Dashboard phase 05 (Q47): the DB keeps the fence only, blocked needs score >= 50; the API checks
+-- status against the thresholds version (admin_public_config.test.sql).
 select throws_ok(
   $$insert into scans (owner_id, url, domain, score, status, detected_at)
-    values ('t_p1', 'https://a.example', 'a.example', 85, 'warning', now())$$,
-  '23514', null, 'I5: status must match score');
+    values ('t_p1', 'https://a.example', 'a.example', 45, 'blocked', now())$$,
+  '23514', null, 'I5: blocked needs score >= 50');
 select lives_ok(
   $$insert into scans (id, owner_id, url, domain, score, status, detected_at)
     values ('t_s1', 't_p1', 'https://a.example/x', 'a.example', 92, 'blocked', now())$$,
