@@ -155,7 +155,7 @@ Cara terisi (backend, bukan tim AI):
 
 Catatan:
 - `evidence` ikut disimpan (teks persis dari halaman yang memicu sinyal, mis. `urgent_language`). Teks ini pendek dan berguna untuk verifikasi, tapi tetap teks halaman: masuk pertanyaan privasi Q7.
-- **RDAP belum tersimpan di mana pun.** Umur domain sekarang hanya muncul di label sinyal `new_domain`, dan hanya kalau domainnya muda. Perlu: `/analyze` mengembalikan `rdapRegisteredAt` (Imelda), extension meneruskannya di `POST /scans` (Umar, kontrak), backend menyimpannya di `scans` (Alief).
+- **RDAP belum tersimpan di mana pun.** Umur domain sekarang hanya muncul di label sinyal `new_domain`, dan hanya kalau domainnya muda. Perlu: `/analyze` mengembalikan `rdapRegisteredAt` (Imelda), extension meneruskannya di `POST /scans` (Umar, kontrak), backend menyimpannya di `scans` (Alief). Dilacak terpisah di #270, bisa jalan sebelum bagian lain layer 5.
 - Layer 1–2 bisa dijalankan ulang dari `url` + `rdap_*`. Layer 3–4 hanya bisa diverifikasi dari hasilnya, karena isi halaman tidak disimpan.
 - Akses: grant `select` ke role read-only untuk tim AI (usulan: role baru `shoo_ai`), bukan seluruh `shoo_admin`.
 
