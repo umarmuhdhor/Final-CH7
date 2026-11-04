@@ -168,6 +168,17 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
+    func testBackStaysTappableOnConnectWithTheKeyboardUp() {
+        let app = launch()
+        register(app, name: "Mom", mode: "protected")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        let back = app.buttons["onboarding.back"]
+        XCTAssertTrue(back.isHittable, app.debugDescription)
+        back.tap()
+        XCTAssertTrue(app.buttons["mode.continue"].waitForExistence(timeout: 5), app.debugDescription)
+    }
+
+    @MainActor
     func testSafariDefaultTurnsIntoKeepGoingAfterSettingsAndBackStays() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")

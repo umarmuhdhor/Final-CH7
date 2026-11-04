@@ -41,8 +41,9 @@ struct ConnectView: View {
             scrollTarget: codeFocused || model.problem != nil ? Self.codeFieldID : nil
         ) {
             VStack(spacing: 0) {
+                // Figma: tabs at y 242, label at y 332.
                 ConnectTabs(tab: $tab)
-                    .padding(.top, 23)
+                    .padding(.top, 37)
 
                 switch tab {
                 case .scan:
@@ -75,7 +76,7 @@ struct ConnectView: View {
                         }
                         .id(Self.codeFieldID)
                     }
-                    .padding(.top, 64)
+                    .padding(.top, 39)
                 }
             }
         } footer: {

@@ -221,15 +221,8 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                     ZStack(alignment: .top) {
                         hero
                             // The hero sets its own Figma offsets (`OnboardingHeroImage(top:bottom:)`).
-                        HStack {
-                            if let onBack {
-                                OnboardingBackButton(action: onBack)
-                            } else {
-                                Color.clear.frame(width: 50, height: 50)
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal, 24)
+                        // Room for the back button, pinned over the page.
+                        Color.clear.frame(height: 50)
                     }
 
                     VStack(spacing: messageSpacing ?? (largeHeadline ? 8 : 4)) {
@@ -265,12 +258,21 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                     withAnimation(.smooth) { proxy.scrollTo(target, anchor: .bottom) }
                 }
             }
+            .mask { scrollMask }
         }
         .background(alignment: .top) {
             // Figma "box": 252 pt, 345 where an illustration sits on it.
             OnboardingHeaderBackground(height: Hero.self == EmptyView.self ? 252 : 345).ignoresSafeArea(edges: .top)
         }
         .background(OnboardingTheme.background.ignoresSafeArea())
+        // Outside the scroll view: with the keyboard up the page scrolls and Back has to stay reachable.
+        .overlay(alignment: .topLeading) {
+            if let onBack {
+                OnboardingBackButton(action: onBack)
+                    .padding(.leading, 24)
+                    .accessibilitySortPriority(1)
+            }
+        }
         .overlay(alignment: .bottom) {
             // Figma "Footer": 16 between the button and the text link under it.
             VStack(spacing: 16) { footer }
@@ -298,6 +300,21 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                 }
         }
         .environment(\.colorScheme, .light)
+    }
+
+    /// A scrolled headline fades out under the back button instead of running through it and the status
+    /// bar. A hero sits beside the button by design, so it stays whole.
+    @ViewBuilder
+    private var scrollMask: some View {
+        if Hero.self == EmptyView.self {
+            VStack(spacing: 0) {
+                Color.clear.frame(height: 50)
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 8)
+                Color.black.ignoresSafeArea(edges: .bottom)
+            }
+        } else {
+            Color.black.ignoresSafeArea()
+        }
     }
 }
 
