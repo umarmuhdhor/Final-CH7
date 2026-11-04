@@ -11,6 +11,7 @@
     const MAX_CHARS = 2_000_000; // HTML without stylesheets and images; past it the rest of the page is cut
     const MAX_DEPTH = 400;
     const MAX_MARKS = 24; // the app reads no more (#176)
+    const MAX_IMAGE_SIDE = 10000; // an image's placeholder size (CSS px); past it the size is dropped
     const MARK_LIMIT = 100000; // px; the app drops a mark with any number at or past it
     const MARK_ID = /^[a-z_]{1,40}$/;
     const ELEMENT = 1;
@@ -59,6 +60,8 @@
     const shadowRoot = getter("Element", "shadowRoot");
     const getAttr = method("Element", "getAttribute");
     const rectOf = method("Element", "getBoundingClientRect");
+    const naturalWidth = getter("HTMLImageElement", "naturalWidth");
+    const naturalHeight = getter("HTMLImageElement", "naturalHeight");
 
     const escapeText = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/ /g, "&nbsp;");
     const escapeAttr = (text) => text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -191,9 +194,28 @@
             }
         }
 
+        /**
+         * The image's token, with the size it had on the page (`-WxH`): an image the background can't inline
+         * becomes a placeholder of that size, so the layout below it (and the marks on it) stays where it was.
+         */
         function imageSrc(el, value) {
             if (/^data:image\//i.test(value)) return value;
-            return resource(absolute(el.currentSrc || value, base));
+            const token = resource(absolute(el.currentSrc || value, base));
+            if (!token) return null;
+            const size = imageSize(el);
+            return size ? `${token}-${size}` : token;
+        }
+
+        /** Its box on the page, else (not laid out, e.g. a hidden step) its own pixel size, as "WxH"; else null. */
+        function imageSize(el) {
+            const rect = rectOf(el) || {};
+            let width = Math.round(rect.width || 0);
+            let height = Math.round(rect.height || 0);
+            if (width < 1 || height < 1) {
+                width = Math.round(naturalWidth(el) || 0);
+                height = Math.round(naturalHeight(el) || 0);
+            }
+            return width >= 1 && height >= 1 && width <= MAX_IMAGE_SIDE && height <= MAX_IMAGE_SIDE ? `${width}x${height}` : null;
         }
 
         function box(el, name) {
