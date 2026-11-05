@@ -17,6 +17,6 @@ What it does:
 
 Order matters: migrations run **before** the new Worker is live, so every migration must work with the Worker version still running (add first, remove one deploy later). Worker secrets (`SUPABASE_SERVICE_ROLE_KEY`, `SCREENSHOT_URL_SECRET`, `RATE_KEY_SECRET`, APNs keys) are set once by hand.
 
-History scan: `gitleaks detect --gitleaks-ignore-path backend/.gitleaksignore` lists known false positives by commit; after a rebase the fingerprints change, so CI scans the files (`gitleaks dir`) instead.
+History scan: `gitleaks detect --gitleaks-ignore-path backend/.gitleaksignore` lists known false positives by commit; after a rebase the fingerprints change, so CI scans the files (`gitleaks dir`) instead. That scan covers the whole repo, not only `backend/`: a finding in another folder (the extension, say) also stops the deploy, and those folders have no CI of their own to catch it first. A string that only looks like a key gets `// gitleaks:allow` on its line.
 
 Manual deploys from Alief's Mac still work as a fallback (backend/README.md).
