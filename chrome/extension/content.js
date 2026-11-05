@@ -87,8 +87,7 @@
                 snapshot,
                 previous,
                 analyzeLocal: async (s) => (await globalThis.ShooDetector?.analyzeLocal(s)) ?? [],
-                analyzeRemote: async (s, localSignals) =>
-                    (await send({ type: "analyze", snapshot: s, localSignals }))?.signals ?? [],
+                analyzeRemote: (s, localSignals) => send({ type: "analyze", snapshot: s, localSignals }),
                 lookupVerdict: async (domain, { fresh = false } = {}) => (await send({ type: "verdict", domain, fresh }))?.verdict ?? null,
                 recallBlock: async (url) => (await send({ type: "recallBlock", url }))?.memory ?? null,
                 isCurrent,

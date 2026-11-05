@@ -131,3 +131,10 @@ test("a page blocked again from memory (#231) is not reported again: one push pe
     assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true }, seen), false);
     assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true }, seen), true);
 });
+
+test("#270: scanBody carries the RDAP date only when known", () => {
+    const state = { url: "https://x.test/", domain: "x.test", score: 40, status: "warning", signals: [] };
+    const page = { title: "", faviconUrl: null, now: "2026-10-21T10:00:00.000Z" };
+    assert.equal(scanBody({ ...state, rdapRegisteredAt: "2026-10-30" }, page).rdapRegisteredAt, "2026-10-30");
+    for (const v of [undefined, null]) assert.ok(!("rdapRegisteredAt" in scanBody({ ...state, rdapRegisteredAt: v }, page)), String(v));
+});

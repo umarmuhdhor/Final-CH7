@@ -49,6 +49,8 @@
             detectedAt: page.now,
             // X1: the GET /config/public version the status was decided with; absent before thresholds-client.js answered.
             ...(Number.isInteger(page.thresholdsVersion) ? { thresholdsVersion: page.thresholdsVersion } : {}),
+            // #270: from POST /analyze; absent when unknown (the page was blocked before it answered, RDAP failed).
+            ...(typeof state.rdapRegisteredAt === "string" ? { rdapRegisteredAt: state.rdapRegisteredAt } : {}),
         };
     }
 
