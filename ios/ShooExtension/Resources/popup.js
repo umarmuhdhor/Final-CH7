@@ -82,6 +82,7 @@
 
     // Sizes and colours from Figma "UI Pop Up Safari" (frames "Pertama kali buka langsung ke detect",
     // "Safari / Warning Sedang / Minimized"). Gauge and ring drawings: gauge.js.
+    const LEAVE_CHECK_MS = 1000;
     const CSS = `
         :host { all: initial; }
         .ui { --ink: #151617; --muted: #6a717e;
@@ -319,8 +320,13 @@
     /** Back to where the user came from; a page opened on its own has nothing behind it. */
     function leave() {
         hide();
-        if (history.length > 1) history.back();
-        else location.replace("about:blank");
+        if (history.length <= 1) return location.replace("about:blank");
+        // Pages can fill the history with their own address: still here after Back means nothing was behind it.
+        const from = location.href;
+        history.back();
+        setTimeout(() => {
+            if (location.href === from) location.replace("about:blank");
+        }, LEAVE_CHECK_MS);
     }
 
     function hide() {

@@ -72,6 +72,13 @@ test("other errors and missing session → null, never throws", async () => {
     assert.deepEqual(await world([], { session: null }).verdicts.lookup("a.example"), { ok: true, verdict: null, skipped: "no_api_url" });
 });
 
+test("reset forgets every answer: the next device asks for itself", async () => {
+    const { verdicts } = world([{ verdict: SAFE }, { verdict: null }]);
+    assert.deepEqual((await verdicts.lookup("a.test")).verdict, SAFE);
+    verdicts.reset();
+    assert.equal((await verdicts.lookup("a.test")).verdict, null);
+});
+
 test("Retry-After: seconds or HTTP-date, clamped to 1 s … 5 min, default one window", () => {
     const now = Date.UTC(2026, 9, 22);
     assert.equal(retryAfterMs("3", now), 3000);

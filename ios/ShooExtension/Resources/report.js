@@ -1,7 +1,8 @@
 // Owner: lead. Sends one result per page to the backend when score ≥ 30 (EX-07).
 // Plain content script, loaded after replica.js and before block.js (block.js waits for our report).
-// When: the moment a page is blocked, or when a warning page has finished all layers — never both,
-// so a guardian gets one push per page. The POST itself runs in background.js so it survives the
+// When: the moment a page is blocked, or when a warning page has finished all layers. A warning page
+// that a re-check lifts to blocked goes once more, so the guardian hears about the block and gets a
+// scan they can decide on. The POST itself runs in background.js so it survives the
 // block screen navigation. Evidence: a static copy of the page's DOM (replica.js), taken here, at once,
 // before the block screen replaces the page; no typed value is in it (PRD §10).
 
@@ -10,12 +11,11 @@
     const SENSITIVE = /pin|otp|cvv|cvc|card|kartu|ktp|nik|password|sandi|kata ?kunci|rekening/i;
     const dom = globalThis.ShooDom; // the page can shadow document/form properties (dom.js)
 
-    /** Report now? Once per page: on blocked, or on a finished warning. */
-    function shouldReport(state, reportedScanIds) {
-        if (reportedScanIds.has(state.scanId)) return false;
+    /** Report now? On a finished warning, on blocked, and on blocked after a warning. `reported`: scanId → last status sent. */
+    function shouldReport(state, reported) {
         if (state.remembered) return false; // blocked again from memory (#231): reported the first time, no second push
-        if (state.status === "blocked") return true;
-        return state.status === "warning" && state.done === true;
+        if (state.status === "blocked") return reported.get(state.scanId) !== "blocked";
+        return state.status === "warning" && state.done === true && !reported.has(state.scanId);
     }
 
     /** Count this page in `stats.checked`? Once per page, when its scan is done (#183). */
@@ -36,13 +36,23 @@
         }
     }
 
+    /** What the popup shows once `sent` has its record id: the page as it is now, or null if that's another page. */
+    function withRecord(latest, sent, recordId) {
+        return latest && latest.scanId === sent.scanId ? { ...latest, recordId } : null;
+    }
+
+    /** Same rule for the site's icon; a data: icon carries no address worth sending. */
+    function shareableIcon(url) {
+        return typeof url === "string" && /^https?:/i.test(url) ? shareableUrl(url) : null;
+    }
+
     /** ScanResult without id/verdict/owner (background adds the owner from the session). */
     function scanBody(state, page) {
         return {
             url: shareableUrl(state.url),
             domain: state.domain,
             pageTitle: page.title || undefined,
-            faviconUrl: page.faviconUrl ?? null,
+            faviconUrl: shareableIcon(page.faviconUrl),
             score: state.score,
             status: state.status,
             signals: [...state.signals].sort((a, b) => b.weight - a.weight),
@@ -154,7 +164,7 @@
     }
 
     globalThis.ShooReport = {
-        shouldReport, shouldCount, scanBody, shareableUrl, signalMarks, fragmentGroups, ready: () => Promise.resolve(), keyFor: () => null,
+        shouldReport, shouldCount, scanBody, shareableUrl, withRecord, signalMarks, fragmentGroups, ready: () => Promise.resolve(), keyFor: () => null,
     };
 
     // ---- Content script part -------------------------------------------------------------
@@ -163,7 +173,8 @@
     if (!pipeline || typeof document === "undefined" || typeof browser === "undefined") return;
 
     const send = (message) => browser.runtime.sendMessage(message);
-    const reported = new Set();
+    const reported = new Map(); // scanId → last status sent
+    let latest = null; // what the pipeline published last
     const counted = new Set();
     const sending = new Map(); // scanId → promise that settles once background has the report
     const keys = new Map(); // scanId → report key (background maps it to the backend's scan id)
@@ -368,7 +379,8 @@
 
     async function linkPopupToRecord(state, key) {
         const reply = await send({ type: "recordId", key }).catch(() => null);
-        if (reply?.recordId) pipeline.notify({ ...state, recordId: reply.recordId }); // popup's See detail → Detail
+        const linked = reply?.recordId ? withRecord(latest, state, reply.recordId) : null;
+        if (linked) pipeline.notify(linked); // popup's See detail → Detail
     }
 
     /** For block.js: resolves once background has the report (or after a short timeout). */
@@ -378,6 +390,10 @@
     globalThis.ShooReport.keyFor = (scanId) => keys.get(scanId) ?? null;
 
     pipeline.subscribe((state) => {
+        latest = state;
+    });
+
+    pipeline.subscribe((state) => {
         if (!shouldCount(state, counted)) return;
         counted.add(state.scanId);
         send({ type: "pageChecked" }).catch(() => {});
@@ -385,7 +401,7 @@
 
     pipeline.subscribe((state) => {
         if (!shouldReport(state, reported)) return;
-        reported.add(state.scanId);
+        reported.set(state.scanId, state.status);
         const key = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
         keys.set(state.scanId, key);
         const sent = report(state, key); // registered synchronously, before block.js runs

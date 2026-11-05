@@ -1,6 +1,8 @@
 // Owner: lead. Layer-1 lists on the phone (docs/design/blocklist.md). ES module, used by background.js.
 // Downloads GET /blocklist (backend) and GET /public-blocklist (AI service), keeps them in storage.local,
 // refreshes them, and answers match(hostname) for content scripts. The visited URL never leaves the phone.
+// The public list is about 14 MB and Safari can stop this page at any time, so the lists stay in storage,
+// split into shards: a page reads the shards of its own names, a delta rewrites only the shards it changes.
 
 const HOUR = 60 * 60 * 1000;
 
@@ -10,10 +12,31 @@ export const SOURCES = [
 ];
 export const FULL_EVERY = 24 * HOUR; // full download also drops domains removed server-side
 export const MAX_AGE = 7 * 24 * HOUR; // older copies are ignored, not trusted
-export const MAX_ENTRIES = 200_000; // per source; ≈ 4 MB in storage
+export const MAX_ENTRIES = 200_000; // per source, kept at each full download; ≈ 15 MB in storage
+export const RETRY_AFTER_FAILURE = 10 * 60 * 1000; // a server that is down is not asked on every page load
+export const SHARDS = 256;
+const WRITE_BATCH = 16; // shards per storage.set
 const MAX_PAGES = 10;
 const TIMEOUT_MS = 20 * 1000;
-const STORAGE_PREFIX = "lists.v1.";
+const STORAGE_PREFIX = "lists.v2.";
+const OLD_PREFIX = "lists.v1."; // one key per source, the whole list in it
+
+const metaKey = (id) => `${STORAGE_PREFIX}${id}.meta`;
+const shardKey = (id, shard) => `${STORAGE_PREFIX}${id}.${shard}`;
+
+/** The shard a domain lives in (FNV-1a). */
+export function shardOf(domain) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < domain.length; i++) hash = Math.imul(hash ^ domain.charCodeAt(i), 0x01000193);
+    return (hash >>> 0) % SHARDS;
+}
+
+/** Map(domain → addedAt) as shard → { domain: addedAt }, with every shard present so old entries go. */
+function toShards(map) {
+    const shards = new Map(Array.from({ length: SHARDS }, (_, shard) => [shard, {}]));
+    for (const [domain, addedAt] of map) shards.get(shardOf(domain))[domain] = addedAt;
+    return shards;
+}
 
 /** Hostname and each parent down to the registrable domain — never above it (no "vercel.app", no "co.id"). */
 export function candidates(hostname, registrable) {
@@ -47,6 +70,17 @@ export function applyPage(map, page) {
     }
     if (map.size > MAX_ENTRIES) evictOldest(map, map.size - MAX_ENTRIES);
     return map;
+}
+
+/** One page of an incremental update into changes: Map(domain → addedAt), undefined = remove. Mutates it. */
+function collectChanges(changes, page) {
+    for (const entry of Array.isArray(page?.removed) ? page.removed : []) {
+        if (typeof entry?.domain === "string") changes.set(entry.domain.toLowerCase().trim(), undefined);
+    }
+    for (const entry of Array.isArray(page?.domains) ? page.domains : []) {
+        const domain = typeof entry?.domain === "string" ? entry.domain.toLowerCase().trim() : "";
+        if (domain) changes.set(domain, entry.addedAt ?? null);
+    }
 }
 
 /** a older than b? null addedAt is oldest; ties go to the earlier-inserted entry. Items: [addedAt, index, domain]. */
@@ -84,55 +118,97 @@ function evictOldest(map, count) {
 
 /**
  * @param {object} deps
- * @param {{get(keys): Promise<object>, set(items): Promise<void>}} deps.storage  browser.storage.local
+ * @param {{get(keys): Promise<object>, set(items): Promise<void>, remove(keys): Promise<void>}} deps.storage  browser.storage.local
  * @param {() => Promise<object|null>} deps.getSession   getSession reply (token, apiBaseURL, aiBaseURL) or null
  * @param {(url, init) => Promise<object>} deps.fetchJSON
  * @param {(hostname) => string} deps.registrableDomain
  * @param {() => number} [deps.now]
  */
 export function createLists({ storage, getSession, fetchJSON, registrableDomain, now = () => Date.now() }) {
-    const state = new Map(); // source id → { map: Map, meta: { fetchedAt, fullAt, nextSince } }
+    const state = new Map(); // source id → { meta: { fetchedAt, fullAt, nextSince, failedAt } }
     let loaded = null;
+    let generation = 0; // reset() moves it on: work started before that writes nothing
     const inFlight = new Map(); // source id → Promise
 
     function load() {
         loaded ??= (async () => {
-            const keys = SOURCES.map((s) => STORAGE_PREFIX + s.id);
             let stored = {};
             try {
-                stored = (await storage.get(keys)) ?? {};
+                stored = (await storage.get(SOURCES.flatMap((s) => [metaKey(s.id), OLD_PREFIX + s.id]))) ?? {};
             } catch (error) {
                 console.warn("[Shoo] lists: storage read failed", error);
             }
             for (const source of SOURCES) {
-                const saved = stored[STORAGE_PREFIX + source.id];
-                state.set(source.id, {
-                    map: new Map(Array.isArray(saved?.domains) ? saved.domains : []),
-                    meta: saved?.meta ?? {},
-                });
+                state.set(source.id, { meta: stored[metaKey(source.id)] ?? {} });
+                const old = stored[OLD_PREFIX + source.id];
+                if (old) await migrate(source, old, generation);
             }
         })();
         return loaded;
     }
 
-    async function save(source) {
-        const { map, meta } = state.get(source.id);
+    /** The whole list under one key, as an earlier version stored it, moves into shards. */
+    async function migrate(source, old, run) {
         try {
-            await storage.set({ [STORAGE_PREFIX + source.id]: { domains: [...map], meta } });
+            if (state.get(source.id).meta.fetchedAt == null && Array.isArray(old.domains)) {
+                await writeShards(source, toShards(new Map(old.domains)), run);
+                await saveMeta(source, old.meta ?? {}, run);
+            }
+            await storage.remove(OLD_PREFIX + source.id);
         } catch (error) {
-            console.warn(`[Shoo] lists: storage write failed (${source.id})`, error);
+            console.warn(`[Shoo] lists: migration failed (${source.id})`, error);
         }
     }
 
-    async function refreshSource(source, session) {
+    async function writeShards(source, shards, run) {
+        const entries = [...shards];
+        for (let i = 0; i < entries.length && run === generation; i += WRITE_BATCH) {
+            const batch = entries.slice(i, i + WRITE_BATCH).map(([shard, domains]) => [shardKey(source.id, shard), domains]);
+            await storage.set(Object.fromEntries(batch));
+        }
+    }
+
+    async function saveMeta(source, meta, run) {
+        if (run !== generation) return;
+        state.get(source.id).meta = meta;
+        await storage.set({ [metaKey(source.id)]: meta });
+    }
+
+    /** Applies an incremental update to the shards it touches. */
+    async function writeChanges(source, changes, run) {
+        const bySlot = new Map();
+        for (const [domain, addedAt] of changes) {
+            const shard = shardOf(domain);
+            if (!bySlot.has(shard)) bySlot.set(shard, []);
+            bySlot.get(shard).push([domain, addedAt]);
+        }
+        const stored = (await storage.get([...bySlot.keys()].map((shard) => shardKey(source.id, shard)))) ?? {};
+        const shards = new Map();
+        for (const [shard, entries] of bySlot) {
+            const domains = stored[shardKey(source.id, shard)] ?? {};
+            for (const [domain, addedAt] of entries) {
+                if (addedAt === undefined) delete domains[domain];
+                else domains[domain] = addedAt;
+            }
+            shards.set(shard, domains);
+        }
+        await writeShards(source, shards, run);
+    }
+
+    async function refreshSource(source, session, run) {
         const current = state.get(source.id);
-        const kind = due(current.meta, source, now());
+        if (!current) return;
+        const { meta } = current;
+        const kind = due(meta, source, now());
         const base = session?.[source.baseKey];
         if (!kind || !base) return;
+        const waited = now() - meta.failedAt;
+        if (waited >= 0 && waited < RETRY_AFTER_FAILURE) return;
 
         const full = kind === "full";
-        const map = full ? new Map() : new Map(current.map);
-        let since = full ? null : current.meta.nextSince ?? null;
+        const map = new Map();
+        const changes = new Map();
+        let since = full ? null : meta.nextSince ?? null;
         for (let page = 0; page < MAX_PAGES; page++) {
             const query = since ? `?since=${encodeURIComponent(since)}` : "";
             const body = await fetchJSON(base.replace(/\/+$/, "") + source.path + query, {
@@ -140,16 +216,28 @@ export function createLists({ storage, getSession, fetchJSON, registrableDomain,
                 token: session.token,
                 timeoutMs: TIMEOUT_MS,
             });
-            applyPage(map, body);
+            if (full) applyPage(map, body);
+            else collectChanges(changes, body);
             const next = body?.nextSince ?? null;
             const empty = !body?.domains?.length && !body?.removed?.length;
             const caughtUp = empty || next == null || next === since;
             if (next != null) since = next;
             if (caughtUp) break; // otherwise ask again from the new cursor (server may page)
         }
+        if (run !== generation) return;
+        if (full) await writeShards(source, toShards(map), run);
+        else if (changes.size) await writeChanges(source, changes, run);
         const at = now();
-        state.set(source.id, { map, meta: { fetchedAt: at, fullAt: full ? at : current.meta.fullAt, nextSince: since } });
-        await save(source);
+        await saveMeta(source, { fetchedAt: at, fullAt: full ? at : meta.fullAt, nextSince: since }, run);
+    }
+
+    /** Remembered in storage too: Safari can stop this page at any time. */
+    async function noteFailure(source, run) {
+        try {
+            await saveMeta(source, { ...state.get(source.id)?.meta, failedAt: now() }, run);
+        } catch (error) {
+            console.warn(`[Shoo] lists: storage write failed (${source.id})`, error);
+        }
     }
 
     /** Refreshes whatever is due. Never rejects; one download per source at a time. */
@@ -165,8 +253,12 @@ export function createLists({ storage, getSession, fetchJSON, registrableDomain,
         await Promise.all(
             SOURCES.map((source) => {
                 if (!inFlight.has(source.id)) {
-                    const job = refreshSource(source, session)
-                        .catch((error) => console.warn(`[Shoo] lists: refresh failed (${source.id})`, error))
+                    const run = generation;
+                    const job = refreshSource(source, session, run)
+                        .catch((error) => {
+                            console.warn(`[Shoo] lists: refresh failed (${source.id})`, error);
+                            return noteFailure(source, run);
+                        })
                         .finally(() => inFlight.delete(source.id));
                     inFlight.set(source.id, job);
                 }
@@ -191,11 +283,16 @@ export function createLists({ storage, getSession, fetchJSON, registrableDomain,
                 return null;
             }
             const names = candidates(hostname, registrable);
-            for (const source of SOURCES) {
-                const { map, meta } = state.get(source.id);
-                if (meta.fetchedAt == null || now() - meta.fetchedAt > MAX_AGE) continue; // stale copy: don't trust it
+            const usable = SOURCES.filter((source) => {
+                const fetchedAt = state.get(source.id)?.meta.fetchedAt;
+                return fetchedAt != null && now() - fetchedAt <= MAX_AGE; // stale copy: don't trust it
+            });
+            if (!usable.length || !names.length) return null;
+            const stored = await storage.get([...new Set(usable.flatMap((source) => names.map((name) => shardKey(source.id, shardOf(name)))))]);
+            for (const source of usable) {
                 for (const name of names) {
-                    if (map.has(name)) return { source: source.id, domain: name, addedAt: map.get(name) };
+                    const domains = stored?.[shardKey(source.id, shardOf(name))];
+                    if (domains && Object.hasOwn(domains, name)) return { source: source.id, domain: name, addedAt: domains[name] };
                 }
             }
             return null;
@@ -205,5 +302,12 @@ export function createLists({ storage, getSession, fetchJSON, registrableDomain,
         }
     }
 
-    return { load, refresh, match, _state: state };
+    /** Storage was cleared for a new device: nothing of the old one stays or gets written back. */
+    function reset() {
+        generation++;
+        state.clear();
+        loaded = null;
+    }
+
+    return { load, refresh, match, reset };
 }

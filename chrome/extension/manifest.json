@@ -30,6 +30,6 @@
         "matches": [ "http://*/*", "https://*/*" ]
     }],
 
-    "permissions": [ "storage", "alarms" ],
+    "permissions": [ "storage", "unlimitedStorage", "alarms" ],
     "host_permissions": [ "http://*/*", "https://*/*" ]
 }

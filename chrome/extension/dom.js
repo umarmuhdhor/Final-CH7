@@ -22,6 +22,7 @@
     }
 
     const nodeType = getter("Node", "nodeType");
+    const TEXT = 3;
     const DOCUMENT = 9;
     const FRAGMENT = 11; // shadow roots too
 
@@ -72,6 +73,7 @@
         /** querySelectorAll on a document, element or shadow root, as an array. */
         all: (node, selector) => [...queryAll[kind(node)](node, selector)],
         one: (node, selector) => queryOne[kind(node)](node, selector),
+        isText: (node) => nodeType(node) === TEXT,
         forms: getter("Document", "forms"),
         images: getter("Document", "images"),
         body: getter("Document", "body"),
@@ -80,6 +82,12 @@
         url: getter("Document", "URL"),
         create: method("Document", "createElement"),
         walker: method("Document", "createTreeWalker"),
+        matches: method("Element", "matches"),
+        /** Rendered? Safari before 17.4 can't tell: everything counts as rendered there. */
+        visible(el) {
+            const check = proto("Element")?.checkVisibility ?? el.checkVisibility;
+            return typeof check === "function" ? check.call(el, { checkVisibilityCSS: true }) : true;
+        },
         attr: method("Element", "getAttribute"),
         rect: method("Element", "getBoundingClientRect"),
         on: method("EventTarget", "addEventListener"),

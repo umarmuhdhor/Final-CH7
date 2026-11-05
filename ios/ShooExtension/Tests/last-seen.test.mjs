@@ -1,7 +1,7 @@
 // node --test ios/ShooExtension/Tests/*.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLastSeen, INTERVAL_MS } from "../Resources/last-seen.js";
+import { createLastSeen, INTERVAL_MS, RETRY_AFTER_FAILURE } from "../Resources/last-seen.js";
 
 const SESSION = { token: "t0k", apiBaseURL: "https://api.shoo.test/" };
 
@@ -61,11 +61,13 @@ test("not onboarded → nothing leaves the phone", async () => {
     assert.equal(calls.length, 0);
 });
 
-test("failure (server down, 429) never rejects and retries on the next heartbeat", async () => {
-    const { lastSeen, calls, store, server } = world({ fail: Object.assign(new Error("HTTP 429"), { status: 429 }) });
+test("failure (server down, 429) never rejects, isn't recorded as sent and is retried after the wait", async () => {
+    const { lastSeen, calls, store, server, tick } = world({ fail: Object.assign(new Error("HTTP 429"), { status: 429 }) });
     assert.deepEqual(await lastSeen.report(), { ok: true, skipped: "error" });
-    assert.deepEqual(store, {});
+    assert.ok(!("lastSeen.v1.sentAt" in store));
     server.fail = null;
+    assert.deepEqual(await lastSeen.report(), { ok: true, skipped: "waiting" });
+    tick(RETRY_AFTER_FAILURE);
     assert.deepEqual(await lastSeen.report(), { ok: true, sent: true });
     assert.equal(calls.length, 2);
 });
@@ -74,6 +76,30 @@ test("overlapping heartbeats share one request", async () => {
     const { lastSeen, calls } = world();
     await Promise.all([lastSeen.report(), lastSeen.report(), lastSeen.report()]);
     assert.equal(calls.length, 1);
+});
+
+test("a failed send waits 10 minutes, across a restart too; one minute's heartbeat doesn't retry", async () => {
+    const { lastSeen, restart, calls, server, tick } = world({ fail: new Error("down") });
+    await lastSeen.report();
+    assert.equal(calls.length, 1);
+    tick(60 * 1000);
+    await lastSeen.report();
+    assert.equal(calls.length, 1);
+    await restart().report();
+    assert.equal(calls.length, 1);
+    tick(RETRY_AFTER_FAILURE);
+    server.fail = null;
+    assert.deepEqual(await restart().report(), { ok: true, sent: true });
+    assert.equal(calls.length, 2);
+});
+
+test("reset forgets the last send: a new device reports at once", async () => {
+    const { lastSeen, store, calls } = world();
+    await lastSeen.report();
+    for (const key of Object.keys(store)) delete store[key];
+    lastSeen.reset();
+    await lastSeen.report();
+    assert.equal(calls.length, 2);
 });
 
 test("unreadable storage → still sends (never stuck silent)", async () => {

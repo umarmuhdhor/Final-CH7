@@ -217,6 +217,7 @@ test("memory: a safe verdict opens the page (score 0)", async () => {
 
 test("memory: not_safe stays blocked at 100, still remembered (no second report)", async () => {
     const { last } = await run({ memory: REMEMBERED, verdict: { value: "not_safe" } });
+    assert.deepEqual(last.signals, REMEMBERED.signals, "the block screen still has its reasons");
     assert.equal(last.status, "blocked");
     assert.equal(last.score, 100);
     assert.equal(last.remembered, true);
@@ -273,4 +274,12 @@ test("#270: a re-check keeps the date when RDAP fails the second time", async ()
     const first = await run({ remote: [sig("asks_otp", 3, 35)], rdap: "2026-10-30" });
     const again = await run({ remote: [sig("asks_otp", 3, 35), sig("asks_pin", 3, 35)], rdap: null, previous: first.last });
     assert.equal(again.last.rdapRegisteredAt, "2026-10-30");
+});
+
+test("urlChurn: a few route changes are normal, a page that keeps changing its address is not", () => {
+    const churn = globalThis.ShooPipeline.urlChurn();
+    assert.deepEqual([0, 2000, 4000].map((at) => churn(at)), [false, false, false]);
+    assert.equal(churn(4490), true);
+    assert.equal(churn(4980), true);
+    assert.equal(churn(30_000), false, "quiet again after the window");
 });

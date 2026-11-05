@@ -4,8 +4,10 @@
 // storage.local: Safari can stop the background page at any time, so a counter in memory would reset.
 
 export const INTERVAL_MS = 60 * 60 * 1000;
+export const RETRY_AFTER_FAILURE = 10 * 60 * 1000; // a server that is down is not asked on every heartbeat
 const TIMEOUT_MS = 8 * 1000;
 const STORAGE_KEY = "lastSeen.v1.sentAt";
+const FAILED_KEY = "lastSeen.v1.failedAt";
 
 /**
  * @param {object} deps
@@ -16,13 +18,15 @@ const STORAGE_KEY = "lastSeen.v1.sentAt";
  */
 export function createLastSeen({ storage, getSession, fetchJSON, intervalMs = INTERVAL_MS, now = () => Date.now() }) {
     let sentAt = null; // null = not read from storage yet
+    let failedAt = null;
     let inFlight = null;
 
     async function lastSentAt() {
         if (sentAt !== null) return sentAt;
         try {
-            const stored = (await storage.get([STORAGE_KEY])) ?? {};
+            const stored = (await storage.get([STORAGE_KEY, FAILED_KEY])) ?? {};
             sentAt = Number.isFinite(stored[STORAGE_KEY]) ? stored[STORAGE_KEY] : -Infinity;
+            failedAt = Number.isFinite(stored[FAILED_KEY]) ? stored[FAILED_KEY] : null;
         } catch (error) {
             console.warn("[Shoo] lastSeen: storage read failed", error);
             sentAt = -Infinity;
@@ -30,8 +34,12 @@ export function createLastSeen({ storage, getSession, fetchJSON, intervalMs = IN
         return sentAt;
     }
 
+    const save = (items) => Promise.resolve().then(() => storage.set(items))
+        .catch((error) => console.warn("[Shoo] lastSeen: storage write failed", error));
+
     async function send() {
         if (now() - (await lastSentAt()) < intervalMs) return { ok: true, throttled: true };
+        if (failedAt != null && now() - failedAt >= 0 && now() - failedAt < RETRY_AFTER_FAILURE) return { ok: true, skipped: "waiting" };
         const session = await getSession();
         if (!session?.apiBaseURL || !session.token) return { ok: true, skipped: "no_api_url" }; // not onboarded
 
@@ -44,16 +52,15 @@ export function createLastSeen({ storage, getSession, fetchJSON, intervalMs = IN
                 body: JSON.stringify({ extensionLastSeenAt: new Date(at).toISOString() }),
             });
         } catch (error) {
-            // Not recorded as sent → the next heartbeat tries again. A 429 waits the same way.
+            // Not recorded as sent → tried again after the wait. A 429 waits the same way.
             console.warn("[Shoo] PATCH /devices/me failed", error);
+            failedAt = now();
+            await save({ [FAILED_KEY]: failedAt });
             return { ok: true, skipped: "error" };
         }
         sentAt = at;
-        try {
-            await storage.set({ [STORAGE_KEY]: at });
-        } catch (error) {
-            console.warn("[Shoo] lastSeen: storage write failed", error);
-        }
+        failedAt = null;
+        await save({ [STORAGE_KEY]: at, [FAILED_KEY]: null });
         return { ok: true, sent: true };
     }
 
@@ -65,5 +72,11 @@ export function createLastSeen({ storage, getSession, fetchJSON, intervalMs = IN
         return inFlight;
     }
 
-    return { report };
+    /** A new device on this phone: its first heartbeat reports at once. */
+    function reset() {
+        sentAt = null;
+        failedAt = null;
+    }
+
+    return { report, reset };
 }

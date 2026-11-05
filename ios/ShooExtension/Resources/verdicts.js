@@ -52,5 +52,11 @@ export function createVerdicts({ getSession, fetchJSON, now = () => Date.now() }
         }
     }
 
-    return { lookup };
+    /** A new device on this phone: nothing another device was told carries over. */
+    function reset() {
+        cache.clear();
+        limitedUntil = 0;
+    }
+
+    return { lookup, reset };
 }

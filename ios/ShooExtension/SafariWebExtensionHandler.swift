@@ -25,8 +25,11 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             reply = sessionReply()
         case "pageChecked":
             let defaults = AppGroup.defaults
-            defaults.set(defaults.integer(forKey: AppGroup.Key.statsChecked) + 1, forKey: AppGroup.Key.statsChecked)
-            defaults.set(Date(), forKey: AppGroup.Key.statsLastCheckedAt)
+            // Nobody signed in: a deleted account's count stays gone.
+            if defaults.string(forKey: AppGroup.Key.deviceId) != nil {
+                defaults.set(defaults.integer(forKey: AppGroup.Key.statsChecked) + 1, forKey: AppGroup.Key.statsChecked)
+                defaults.set(Date(), forKey: AppGroup.Key.statsLastCheckedAt)
+            }
             reply = ["ok": true]
         default:
             log.error("Unknown native message type: \(type ?? "nil", privacy: .public)")

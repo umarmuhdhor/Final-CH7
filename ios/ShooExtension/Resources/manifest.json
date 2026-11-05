@@ -32,6 +32,6 @@
         "matches": [ "<all_urls>" ]
     }],
 
-    "permissions": [ "nativeMessaging", "storage", "alarms" ],
+    "permissions": [ "nativeMessaging", "storage", "unlimitedStorage", "alarms" ],
     "host_permissions": [ "<all_urls>" ]
 }
