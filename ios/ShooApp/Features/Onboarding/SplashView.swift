@@ -116,13 +116,11 @@ struct SplashView: View {
 }
 
 /// Figma "Splash Screen" in motion: the light band sweeps in and settles where the frame has it, the logo
-/// springs in, then a shield ripple and a sheen. With Reduce Motion it is the still frame.
+/// springs in, then breathes, blinks and twinkles (`ShooBirdLogo`). With Reduce Motion it is the still frame.
 private struct BrandSplash: View {
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var start = Date()
     @State private var logoIn = false
-    @State private var sheenDone = false
-    @State private var rippleDone = false
 
     /// Where Figma "final" has the light stop, and how long the band takes to get there.
     private static let lightStop = 0.46
@@ -171,40 +169,21 @@ private struct BrandSplash: View {
     }
 
     private var logo: some View {
-        ZStack {
-            Image("ShooLogo")
-                .renderingMode(.template)
-                .foregroundStyle(.white)
-                .scaleEffect(rippleDone ? 1.5 : 1)
-                .opacity(rippleDone || !logoIn ? 0 : 0.5)
-                .accessibilityHidden(true)
-            Image("ShooLogo")
-                .overlay {
-                    LinearGradient(colors: [.clear, .white.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: 56, height: 240)
-                        .rotationEffect(.degrees(20))
-                        .offset(x: sheenDone ? 130 : -130)
-                        .opacity(reduceMotion ? 0 : 1)
-                        .mask { Image("ShooLogo") }
-                        .accessibilityHidden(true)
-                }
-                .accessibilityLabel(Text(verbatim: "Shoo"))
-                .accessibilityIdentifier("splash.logo")
-        }
-        .scaleEffect(logoIn ? 1 : 0.7)
-        .opacity(logoIn ? 1 : 0)
+        ShooBirdLogo()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: "Shoo"))
+            .accessibilityIdentifier("splash.logo")
+            .scaleEffect(logoIn ? 1 : 0.7)
+            .opacity(logoIn ? 1 : 0)
     }
 
     private func play() {
         start = Date()
         guard !reduceMotion else {
             logoIn = true
-            rippleDone = true
             return
         }
         withAnimation(.spring(response: 0.6, dampingFraction: 0.65)) { logoIn = true }
-        withAnimation(.easeOut(duration: 0.9).delay(0.35)) { rippleDone = true }
-        withAnimation(.easeInOut(duration: 0.7).delay(0.6)) { sheenDone = true }
     }
 }
 
