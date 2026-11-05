@@ -101,7 +101,7 @@ describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; 
   it("the list of limits is the reviewed one; a new limit needs a test and an entry here", () => {
     // Bucket → test file that proves its 429.
     const tested: Record<string, string> = {
-      devices_create: "devices.test.ts", healthz_db: "health.test.ts", family_code: "family.test.ts",
+      devices_create: "devices.test.ts", healthz_db: "health.test.ts", healthz_db_all: "health.test.ts", family_code: "family.test.ts",
       scans_create: "scans.test.ts", screenshots_view: "screenshots.test.ts", verdicts_create: "verdicts.test.ts",
       verdicts_get: "verdicts.test.ts", auth_fail: "security-headers.test.ts", auth_fail_all: "security-headers.test.ts",
       devices_create_all: "security-review.test.ts", scans_create_all: "security-review.test.ts",

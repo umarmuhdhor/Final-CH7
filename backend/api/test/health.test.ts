@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { keyHash } from "../src/http/keyHash";
+import { limits } from "../src/http/rateLimit";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call } from "./helpers/seed";
 
@@ -22,6 +24,14 @@ describe("health", () => {
     const again = await call("/healthz/db", { ip: "192.0.2.1" });
     expect(again.status).toBe(429);
     expect(again.headers.get("retry-after")).toBeTruthy();
+  });
+
+  it("GET /healthz/db has a limit for all callers together, so rotating IPs cannot keep writing", async () => {
+    const { bucket, max } = limits.healthDbAll;
+    const key = await keyHash(`${bucket}:all`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select ${bucket}, ${key} from generate_series(1, ${max - 1})`;
+    expect((await call("/healthz/db", { ip: "203.0.113.8" })).status).toBe(200);
+    expect((await call("/healthz/db", { ip: "203.0.113.9" })).status).toBe(429);
   });
 
   it("unknown route → contract error shape", async () => {
