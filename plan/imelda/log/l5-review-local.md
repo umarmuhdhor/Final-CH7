@@ -23,3 +23,20 @@ Notes:
 - Tokens: `/review` does not return token usage (it is not in the contract), so only the model name and latency are logged. At 25 domains per request and `max_tokens` 2000, one request is one provider call.
 - The prompt is in Indonesian (`ai/prompts/review.js`, `review.v1`). The model's reasons come back in Indonesian.
 - `shared_host` rows are never sent: `sites.google.com` is absent from `admin.review_due()` once `admin.shared_hosts` is filled from `ai/data/shared-hosts.json`.
+
+## Task 5: rule vs LLM (`ai/eval/dataset/eval-review.mjs`)
+
+Run on the dummy export after the real-LLM run above (`node eval/dataset/eval-review.mjs eval/dataset/out.jsonl`):
+
+Domains scored: 9 (labelled, not shared hosts, reviewed)
+
+| Approach | TP | FP | FN | TN | Precision | Recall |
+|---|---|---|---|---|---|---|
+| (a) rule: >= 2 families N and avg score >= 50 | 7 | 0 | 2 | 0 | 1.00 | 0.78 |
+| (b) LLM suggestion = approve | 6 | 0 | 3 | 0 | 1.00 | 0.67 |
+
+**Dummy data, not evidence.** All 9 reviewed domains came out as `scam_weak` (even legit-05, because 2 N families already
+reach the label threshold), so there are no negatives and precision is 1.00 by construction. The rule approved scam-07 and
+scam-08 only because it ignores the score cut-off in the LLM's reading (rule: avg 40 and 42 < 50, so both miss it too; the
+rule's two misses are scam-07 and scam-08, the LLM's three are those plus legit-05). Whether to use the LLM at all is decided on
+real Guardian data once layer 5 has collected some.
