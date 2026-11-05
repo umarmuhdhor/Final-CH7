@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Protected Home (PR-04, Figma "protected/Home" 441:3800): extension status, the guardian, the site blocked
-/// in the last 24 h, the counts, and recent activity. All from `GET /scans?owner=me`.
+/// Protected Home (PR-04, Figma "protected/Home" 957:11102 / 957:11377): extension status, the guardian, the
+/// site blocked in the last 24 h, and recent activity. All from `GET /scans?owner=me`.
 @MainActor
 @Observable
 final class ShieldModel {
@@ -20,14 +20,8 @@ final class ShieldModel {
     private(set) var profileName: String?
     /// This device's scans the server still keeps (14-day retention), newest first.
     private(set) var scans: [ScanResult] = []
-
-    /// The two Figma tiles; `verified` = how many of them the guardian already looked at.
-    struct Counts: Equatable {
-        var blocked = 0
-        var blockedVerified = 0
-        var warnings = 0
-        var warningsVerified = 0
-    }
+    /// The card under the activity; empty hides it.
+    private(set) var scamCases: [ScamCase] = []
 
     /// The blocked card shows a site for this long after it was blocked.
     static let blockedCardWindow: TimeInterval = 24 * 60 * 60
@@ -64,18 +58,8 @@ final class ShieldModel {
         return scan
     }
 
-    var counts: Counts {
-        let blocked = scans.filter { $0.status == .blocked }
-        let warnings = scans.filter { $0.status == .warning }
-        return Counts(
-            blocked: blocked.count,
-            blockedVerified: blocked.filter { $0.verdict != nil }.count,
-            warnings: warnings.count,
-            warningsVerified: warnings.filter { $0.verdict != nil }.count
-        )
-    }
-
-    var recent: [ScanResult] { Array(scans.prefix(Self.recentCount)) }
+    /// The site in the big card is not listed again (Figma 957:11377).
+    var recent: [ScanResult] { scans.prefix(Self.recentCount).filter { $0.id != recentBlocked?.id } }
 
     /// On appear and every time the app comes back to the foreground.
     /// Overlapping calls: only the newest one is applied.
@@ -88,11 +72,15 @@ final class ShieldModel {
         do {
             async let profile = repository.me()
             async let all = allScans()
+            // A bonus on Home: it never fails the screen.
+            async let cases = try? repository.latestScams()
             let (me, loaded) = try await (profile, all)
+            let loadedCases = await cases
             guard request == generation else { return }
             guardian = me.guardian
             profileName = me.name
             scans = loaded.sorted { $0.detectedAt > $1.detectedAt }
+            scamCases = loadedCases ?? []
             state = .loaded
         } catch {
             guard request == generation, !error.isCancellation else { return }

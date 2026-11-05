@@ -29,20 +29,19 @@ enum HomeTheme {
     static let warningText = Color(red: 0xA8 / 255, green: 0x5A / 255, blue: 0x00 / 255)
     static let warningFill = Color(red: 0xFF / 255, green: 0xF8 / 255, blue: 0xEF / 255)
     static let warningStroke = Color(red: 0xFF / 255, green: 0xE1 / 255, blue: 0xB6 / 255)
-    /// Figma "7 Waspada" orange, darkened to 3:1 on white for the 28 pt number.
-    static let warningNumber = Color(red: 0xE0 / 255, green: 0x78 / 255, blue: 0x00 / 255)
     static let dangerText = Color(red: 0xBB / 255, green: 0x16 / 255, blue: 0x16 / 255)
-    static let dangerButton = Color(red: 0xCE / 255, green: 0x20 / 255, blue: 0x20 / 255)
     static let dangerFill = Color(red: 0xFF / 255, green: 0xF4 / 255, blue: 0xF4 / 255)
     static let dangerStroke = Color(red: 0xFF / 255, green: 0xCD / 255, blue: 0xCD / 255)
     static let success = Color(red: 0x34 / 255, green: 0xC7 / 255, blue: 0x59 / 255)
     static let successText = Color(red: 0x1B / 255, green: 0x7F / 255, blue: 0x3A / 255)
     static let offline = Color(red: 0x8E / 255, green: 0x93 / 255, blue: 0x9C / 255)
+    /// Figma "Kartu/Scam Terbaru" icon circle, State/Danger/Background.
+    static let scamIconFill = Color(red: 0xFD / 255, green: 0xEC / 255, blue: 0xEA / 255)
 }
 
 // MARK: - Hero
 
-/// The three hero looks of the Figma HOME page.
+/// The hero looks of the Figma HOME page.
 enum HomeHeroStyle {
     /// Blue: own Home (Pribadi, protected).
     case blue
@@ -50,14 +49,31 @@ enum HomeHeroStyle {
     case teal
     /// Blue with a teal glow: nobody in the family yet (435:20630).
     case empty
+    /// Orange: own Home after a warning (Pribadi/Home · Waspada 955:10369).
+    case amber
+    /// Red: own Home after a block (Pribadi/Home · Bahaya 955:10467).
+    case red
+    /// Deep red: a blocked family site waits (Guardian/Home · Bahaya 955:10565).
+    case crimson
 
-    /// The Figma "Gradient-classic-2 lighter" frame (402 × 450, rectangle and two 134-blur ellipses), exported
-    /// without its grain: the blurred shapes are rotated paths SwiftUI can't redraw one to one.
+    /// The Figma "Gradient-classic-2 lighter" frame (402 × 450, rectangle and two 134-blur ellipses): the
+    /// blurred shapes are rotated paths SwiftUI can't redraw one to one.
     var gradientImage: String {
         switch self {
         case .blue: "HeroGradientBlue"
         case .teal: "HeroGradientTeal"
         case .empty: "HeroGradientEmpty"
+        case .amber: "HeroGradientAmber"
+        case .red: "HeroGradientRed"
+        case .crimson: "HeroGradientCrimson"
+        }
+    }
+
+    /// Blue, teal and empty were exported without the film grain; the others carry it in the image.
+    var needsGrain: Bool {
+        switch self {
+        case .blue, .teal, .empty: true
+        case .amber, .red, .crimson: false
         }
     }
 
@@ -67,6 +83,9 @@ enum HomeHeroStyle {
         case .blue: Color(red: 0x1D / 255, green: 0x82 / 255, blue: 0xD0 / 255)
         case .teal: Color(red: 0x00 / 255, green: 0xB3 / 255, blue: 0xBE / 255)
         case .empty: Color(red: 0x1E / 255, green: 0x78 / 255, blue: 0xBE / 255)
+        case .amber: Color(red: 0xD0 / 255, green: 0x7A / 255, blue: 0x1E / 255)
+        case .red: Color(red: 0xD0 / 255, green: 0x1E / 255, blue: 0x28 / 255)
+        case .crimson: Color(red: 0xBE / 255, green: 0x08 / 255, blue: 0x12 / 255)
         }
     }
 }
@@ -82,7 +101,6 @@ struct HomeHeroLayout {
     /// From the bottom of the last line of text to the top of the status strip.
     var bottomGap: CGFloat = 49
     var showsRings = true
-    var titleWeight: Font.Weight = .semibold
     /// The background runs on under the strip, to Figma y 443 (end of the "box" fade).
     var backgroundOverhang: CGFloat = 72
 
@@ -94,7 +112,7 @@ struct HomeHeroLayout {
     static let familyPending = HomeHeroLayout(shieldTop: 126, shieldScale: 1.25 * 133 / 130, titleTop: 308, bottomGap: 31)
     /// Guardian/Home · Belum ada orang 435:20630: no rings, bold headline and a line under it.
     static let familyEmpty = HomeHeroLayout(shieldTop: 104, shieldScale: 1.25 * 133 / 130, titleTop: 284, bottomGap: 32,
-                                            showsRings: false, titleWeight: .bold)
+                                            showsRings: false)
 
     // The ring centre is 204 pt from the top of the frame; the hero itself starts under the navigation bar,
     // 115 pt down on this 402 × 874 screen.
@@ -102,7 +120,7 @@ struct HomeHeroLayout {
     fileprivate static let heroTop: CGFloat = 115.3
     /// Kaca top above the shield's centre at scale 1.
     fileprivate static let kacaRise: CGFloat = 61.3
-    /// SwiftUI's text box for 27 pt starts 1.4 pt above Figma's (110 % line height) for the same glyphs.
+    /// SwiftUI's text box for 28 pt starts 1.4 pt above Figma's (34 pt lines) for the same glyphs.
     fileprivate static let titleBoxShift: CGFloat = 1.4
 }
 
@@ -135,8 +153,9 @@ struct HomeHero<Accessory: View>: View {
 
             VStack(spacing: 6) {
                 Text(title)
-                    .onboardingFont(27, weight: layout.titleWeight, relativeTo: .title)
-                    .tracking(-0.27)
+                    // Figma "Title 1/Emphasized".
+                    .onboardingFont(28, weight: .bold, relativeTo: .title)
+                    .tracking(-0.56)
                     .foregroundStyle(titleColor)
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
@@ -209,10 +228,12 @@ private struct HeroBackground: View {
                 .resizable()
                 .frame(height: 450)
                 .overlay {
-                    Image("HeroTexture")
-                        .resizable(resizingMode: .tile)
-                        .blendMode(.multiply)
-                        .opacity(0.35)
+                    if style.needsGrain {
+                        Image("HeroTexture")
+                            .resizable(resizingMode: .tile)
+                            .blendMode(.multiply)
+                            .opacity(0.35)
+                    }
                 }
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [HomeTheme.fade.opacity(0), HomeTheme.fade], startPoint: .top, endPoint: .bottom)
@@ -345,22 +366,21 @@ struct InitialAvatar: View {
 
 // MARK: - Status strip and sheet
 
-/// Coloured strip under the hero ("Status Keamanan : Bagus!"); the white sheet below overlaps its lower part.
+/// Coloured strip under the hero ("Status Keluarga : perlu konfirmasi"); the white sheet below overlaps its lower part.
 struct StatusStrip: View {
     let title: LocalizedStringKey
     let value: LocalizedStringKey
     let fill: Color
-    /// Figma: Medium for "Bagus!", Regular and grey for "Belum ada anggota".
-    var valueWeight: Font.Weight = .medium
     var valueColor: Color = .white
 
-    static let personal = Color(red: 0x1C / 255, green: 0x71 / 255, blue: 0xBA / 255)
     static let family = Color(red: 0x00 / 255, green: 0x9F / 255, blue: 0xA3 / 255)
+    /// Figma "Guardian/Home · Bahaya".
+    static let danger = Color(red: 0xA3 / 255, green: 0x00 / 255, blue: 0x0B / 255)
     /// Figma "Belum ada anggota" #C7C7CE on navy.
     static let mutedValue = Color(red: 0xC7 / 255, green: 0xC7 / 255, blue: 0xCE / 255)
-    /// Figma "Frame 1618872173": 62 pt tall; the sheet covers all but its top 37.
-    static let height: CGFloat = 62
-    static let visibleHeight: CGFloat = 37
+    /// Figma "Frame 1618872173": 80 pt tall; the sheet covers all but its top 44.
+    static let height: CGFloat = 80
+    static let visibleHeight: CGFloat = 44
 
     /// Figma glyph U+102DF8 is `app.background.dotted` (iOS 26); older systems get the closest dot grid.
     private static let symbol = UIImage(systemName: "app.background.dotted") != nil ? "app.background.dotted" : "circle.grid.3x3.fill"
@@ -372,14 +392,13 @@ struct StatusStrip: View {
                 .foregroundStyle(Color(red: 0xFA / 255, green: 0xF9 / 255, blue: 0xFB / 255))
                 .accessibilityHidden(true)
             (Text(title).foregroundStyle(Color(red: 0xFA / 255, green: 0xF9 / 255, blue: 0xFB / 255))
-                + Text(verbatim: " ") + Text(value).fontWeight(valueWeight).foregroundStyle(valueColor))
-                .onboardingFont(15, relativeTo: .subheadline)
-                .tracking(-0.15)
+                + Text(verbatim: " ") + Text(value).foregroundStyle(valueColor))
+                .onboardingFont(17, design: .rounded, relativeTo: .body)
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 10)
-        // 10 + the 18 pt line + 34 = 62; larger text grows the strip, the sheet keeps covering only the bottom.
-        .padding(.bottom, Self.height - Self.visibleHeight + 9)
+        .padding(.top, 12)
+        // 12 + the 20 pt line + 48 = 80; larger text grows the strip, the sheet keeps covering only the bottom.
+        .padding(.bottom, Self.height - Self.visibleHeight + 12)
         .background(fill, in: UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("home.securityStatus")
@@ -464,25 +483,18 @@ struct FittedScoreGauge: View {
 
 // MARK: - Recent activity
 
-/// Figma "Aktivitas Terakhir": three cards, then "Lihat Semua". Family Home adds whose site it was.
+/// Figma "Aktivitas Terakhir": the title with "Lihat Semua" beside it, then the cards. Family Home adds whose
+/// site it was.
 struct RecentActivity: View {
-    enum SeeAllStyle {
-        /// Pribadi / Guardian: centred glass text button.
-        case centered
-        /// protected/Home: blue "Lihat Semua ▶" on the right.
-        case trailingLink
-    }
-
     let scans: [ScanResult]
     let language: AppLanguage
     var showsOwner = false
-    var seeAllStyle: SeeAllStyle = .centered
     let onOpen: (ScanResult) -> Void
     let onSeeAll: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HomeSectionTitle("Recent activity")
+            header
             if scans.isEmpty {
                 EmptyStateView(
                     systemImage: "checkmark.shield",
@@ -493,7 +505,6 @@ struct RecentActivity: View {
                 .homeCard()
                 .accessibilityIdentifier("shield.nothingBlocked")
             } else {
-                // Figma: "Lihat Semua" sits in the same 12 pt stack as the cards.
                 VStack(spacing: 12) {
                     ForEach(scans) { scan in
                         Button { onOpen(scan) } label: {
@@ -502,43 +513,32 @@ struct RecentActivity: View {
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("home.recent.\(scan.id)")
                     }
-                    seeAll
                 }
             }
         }
     }
 
-    @ViewBuilder
-    private var seeAll: some View {
-        switch seeAllStyle {
-        case .centered:
-            Button(action: onSeeAll) {
-                Text("See all")
-                    .onboardingFont(17, weight: .medium, relativeTo: .headline)
-                    .tracking(-0.17)
-                    .foregroundStyle(Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255))
-                    .padding(.horizontal, 20)
-                    .frame(minWidth: 130, minHeight: 50)
-                    .contentShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
-            .accessibilityIdentifier("home.seeAll")
-        case .trailingLink:
-            Button(action: onSeeAll) {
-                HStack(spacing: 6) {
+    /// Figma "Header Aktivitas" 957:10959: "Title 3/Emphasized" and "Subhead/Emphasized".
+    private var header: some View {
+        HStack(spacing: 12) {
+            Text("Recent activity")
+                .onboardingFont(20, weight: .semibold, relativeTo: .title3)
+                .tracking(-0.45)
+                .foregroundStyle(HomeTheme.navy)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
+            if !scans.isEmpty {
+                Button(action: onSeeAll) {
                     Text("See all")
-                    Image(systemName: "play.fill").font(.system(size: 13)).accessibilityHidden(true)
+                        .onboardingFont(15, weight: .semibold, design: .rounded, relativeTo: .subheadline)
+                        .tracking(-0.23)
+                        .foregroundStyle(HomeTheme.action)
+                        // A 20 pt line in Figma; the touch area still reaches 44.
+                        .contentShape(Rectangle().inset(by: -12))
                 }
-                .onboardingFont(17, weight: .medium, relativeTo: .headline)
-                .tracking(-0.17)
-                .foregroundStyle(HomeTheme.action)
-                .frame(minHeight: 44)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.seeAll")
             }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .accessibilityIdentifier("home.seeAll")
         }
     }
 }
@@ -549,6 +549,10 @@ private struct RecentRow: View {
     let language: AppLanguage
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    private var badge: ScanBadge { ScanBadge(scan: scan) }
+    /// Beside the 20 pt site name these would squeeze it to a few letters ("Penipuan terverifikasi").
+    private var badgeGoesBelow: Bool { badge == .verifiedScam || badge == .markedSafe }
+
     private var subtitle: String {
         // Figma: "Hari ini · 10.42 WIB" on your own Home, "Syahnaz · Hari ini, 10.42" on the family's.
         guard showsOwner else { return Formatters.dayAndTime(scan.detectedAt, language: language) }
@@ -558,22 +562,30 @@ private struct RecentRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             SiteIcon(url: scan.faviconUrl)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: scan.domain)
-                    .onboardingFont(17, relativeTo: .body)
-                    .tracking(-0.17)
+                    .onboardingFont(20, relativeTo: .title3)
+                    .tracking(-0.45)
                     .foregroundStyle(HomeTheme.navy)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                     .truncationMode(.middle)
                 Text(verbatim: subtitle)
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                    .tracking(-0.08)
                     .foregroundStyle(HomeTheme.rowSubtitle)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
+                if badgeGoesBelow {
+                    HomeStatusChip(badge: badge)
+                        .padding(.top, 8)
+                }
             }
-            // Figma: the 32 pt title line starts 2 pt below the icon's top.
-            .padding(.top, 4)
+            // Figma "stack": 42 pt of text centred on the 48 pt icon.
+            .padding(.top, 3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            HomeStatusChip(badge: ScanBadge(scan: scan))
+            if !badgeGoesBelow {
+                HomeStatusChip(badge: badge)
+                    .padding(.leading, 4)
+            }
         }
         .padding(17)
         .homeCard()
@@ -601,18 +613,18 @@ struct HomeStatusChip: View {
 
     var body: some View {
         let colors = colors
-        // Figma "Button": 13 pt text (−1.25 %), 11 pt icon, 4 gap, 8 × 6 padding, 0.75 inside stroke;
-        // the large "Status Badge" on protected/Home is the same at 1.66×.
+        // Figma "Button": 13 pt rounded text, 13 pt icon, 4 gap, 8 × 6 padding, 0.75 inside stroke;
+        // the large "Status Badge" on protected/Home: 14 pt semibold, 18 pt icon, 13.3 × 10 padding.
         HStack(spacing: large ? 6.6 : 4) {
-            Image(systemName: "exclamationmark.circle.fill").font(.system(size: large ? 17.5 : 11)).accessibilityHidden(true)
+            Image(systemName: "exclamationmark.circle.fill").font(.system(size: large ? 18.2 : 13)).accessibilityHidden(true)
             Text(title)
-                .onboardingFont(large ? 21.5 : 13, relativeTo: large ? .title3 : .footnote)
-                .tracking(large ? -0.27 : -0.16)
+                .onboardingFont(large ? 14 : 13, weight: large ? .semibold : .regular, design: large ? .default : .rounded, relativeTo: .footnote)
+                .tracking(-0.04)
                 .lineLimit(1)
         }
         .foregroundStyle(colors.text)
         .padding(.horizontal, large ? 13.3 : 8)
-        .padding(.vertical, large ? 6.6 : 3.75)
+        .padding(.vertical, large ? 10 : 6)
         .background(colors.fill, in: Capsule())
         .overlay(Capsule().strokeBorder(colors.stroke, lineWidth: large ? 1.24 : 0.75))
         .fixedSize()

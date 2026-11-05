@@ -51,14 +51,11 @@ struct ShieldModelTests {
         #expect(card.ownerDeviceId == "dev_mom")
     }
 
-    @Test func countsAndRecentComeFromOwnScans() async throws {
+    @Test func recentComesFromOwnScans() async throws {
         let repository = MockRepository(mode: .protected, latency: .zero)
         let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
         await model.refresh()
         let own = try await repository.scans(owner: .me, status: nil, cursor: nil).items
-        #expect(model.counts.blocked == own.filter { $0.status == .blocked }.count)
-        #expect(model.counts.warnings == own.filter { $0.status == .warning }.count)
-        #expect(model.counts.blockedVerified <= model.counts.blocked)
         #expect(model.recent.count == min(own.count, ShieldModel.recentCount))
         #expect(model.recent.map(\.detectedAt) == model.recent.map(\.detectedAt).sorted(by: >))
     }
@@ -71,6 +68,8 @@ struct ShieldModelTests {
         let soon = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) }, now: { blocked.detectedAt.addingTimeInterval(60) })
         await soon.refresh()
         #expect(soon.recentBlocked?.id == blocked.id)
+        // The big card's site is not listed twice.
+        #expect(!soon.recent.contains { $0.id == blocked.id })
         let later = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) },
                                 now: { blocked.detectedAt.addingTimeInterval(ShieldModel.blockedCardWindow + 60) })
         await later.refresh()

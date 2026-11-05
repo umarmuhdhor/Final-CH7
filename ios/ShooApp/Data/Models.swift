@@ -175,6 +175,15 @@ struct FamilyMembersResponse: Codable, Hashable, Sendable {
 }
 
 /// `GET /scans` response.
+/// One line of the Home card "Scam terbaru di pengguna Shoo" (Figma 955:10323). Not in contracts/ yet.
+struct ScamCase: Hashable, Identifiable, Sendable {
+    let id: String
+    /// "Situs palsu BCA minta PIN m-banking".
+    let title: String
+    /// "Hari ini · lewat link SMS".
+    let detail: String
+}
+
 struct ScanPage: Codable, Hashable, Sendable {
     var items: [ScanResult]
     var nextCursor: String?

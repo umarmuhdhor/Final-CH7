@@ -5,11 +5,15 @@ import SwiftUI
 /// the glass. Off ("Perlindungan sedang mati", node 480:5592): grey with a power symbol in the dots, still.
 /// Reduce Motion keeps the On look without movement.
 struct HalftoneShield: View {
-    /// Core colours per screen: blue (Activity, own Home), teal (Family Home), orange (a family site waits).
+    /// Core colours per screen: blue (Activity, own Home), teal (Family Home), orange (a family site waits),
+    /// amber / red (own Home after a warning / a block), crimson (a blocked family site waits).
     enum Tint {
         case blue
         case teal
         case orange
+        case amber
+        case red
+        case crimson
     }
 
     var isOn = true
@@ -237,12 +241,31 @@ private struct ShieldPalette {
         coreBottom: ActivityStyle.hex(0xE07800), coreStroke: ActivityStyle.hex(0xC46700),
         dots: on.dots
     )
+    /// Figma "Pribadi/Home · Waspada" 955:10394, "· Bahaya" 955:10492, "Guardian/Home · Bahaya" 955:10658.
+    static let amber = ShieldPalette(
+        glow: ActivityStyle.hex(0xD9801A), coreTop: ActivityStyle.hex(0xF2A64F),
+        coreBottom: ActivityStyle.hex(0xB0650F), coreStroke: ActivityStyle.hex(0xB06C1E),
+        dots: on.dots
+    )
+    static let red = ShieldPalette(
+        glow: ActivityStyle.hex(0xD91A26), coreTop: ActivityStyle.hex(0xF24F5A),
+        coreBottom: ActivityStyle.hex(0xB00F1A), coreStroke: ActivityStyle.hex(0xB01E28),
+        dots: on.dots
+    )
+    static let crimson = ShieldPalette(
+        glow: ActivityStyle.hex(0xFF0011), coreTop: ActivityStyle.hex(0xFF7A83),
+        coreBottom: ActivityStyle.hex(0xE0000F), coreStroke: ActivityStyle.hex(0xC4000D),
+        dots: on.dots
+    )
 
     static func palette(for tint: HalftoneShield.Tint) -> ShieldPalette {
         switch tint {
         case .blue: on
         case .teal: teal
         case .orange: orange
+        case .amber: amber
+        case .red: red
+        case .crimson: crimson
         }
     }
 
