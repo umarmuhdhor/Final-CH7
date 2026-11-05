@@ -62,7 +62,8 @@
      * @param {object} deps
      * @param {object} deps.snapshot          PageSnapshot
      * @param {(snapshot) => Promise<Signal[]>} deps.analyzeLocal    layer 1–2
-     * @param {(snapshot, localSignals) => Promise<Signal[]>} deps.analyzeRemote  layer 3–4, resolves [] on failure
+     * @param {(snapshot, localSignals) => Promise<{signals: Signal[], rdapRegisteredAt?: string|null}|null>} deps.analyzeRemote
+     *   layer 3–4, resolves with no signals on failure. `rdapRegisteredAt` (#270) is kept on the state for report.js
      * @param {(domain, options?: {fresh: boolean}) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict
      * @param {(url) => Promise<{score, signals, recordId}|null>} [deps.recallBlock]  block memory (#231): a site
      *   blocked before is asked for its verdict once and, without a `safe`, blocked again with no layer run
@@ -85,6 +86,7 @@
             layersDone: previous ? [...previous.layersDone] : [],
             verdict: null,
             done: false,
+            rdapRegisteredAt: previous?.rdapRegisteredAt ?? null,
         };
         let verdictChecked = false;
 
@@ -182,7 +184,9 @@
         // Layer 3–4
         let remote = [];
         try {
-            remote = validSignals(await analyzeRemote(snapshot, local), [3, 4]);
+            const reply = await analyzeRemote(snapshot, local);
+            remote = validSignals(reply?.signals, [3, 4]);
+            state.rdapRegisteredAt = reply?.rdapRegisteredAt ?? state.rdapRegisteredAt;
         } catch {
             remote = [];
         }

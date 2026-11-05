@@ -81,7 +81,7 @@ async function analyze(snapshot, localSignals) {
             timeoutMs: ANALYZE_TIMEOUT_MS,
             body: JSON.stringify({ snapshot: { ...snapshot, url: shareableUrl(snapshot.url) }, localSignals }),
         });
-        return { ok: true, signals: Array.isArray(body?.signals) ? body.signals : [] };
+        return { ok: true, signals: Array.isArray(body?.signals) ? body.signals : [], rdapRegisteredAt: body?.rdapRegisteredAt ?? null };
     } catch (error) {
         console.warn("[Shoo] /analyze failed", error);
         return { ok: true, signals: [], skipped: "error" };

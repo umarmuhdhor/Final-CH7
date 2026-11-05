@@ -12,7 +12,7 @@ const fixture = (name) =>
 const snapshotFor = (result) => ({ url: result.url, domain: result.domain, title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: "" });
 
 /** Runs a scan with fakes; returns every published state and which deps were called. */
-async function run({ local = [], remote = [], verdict = null, current = () => true, snapshot, previous, memory } = {}) {
+async function run({ local = [], remote = [], rdap, verdict = null, current = () => true, snapshot, previous, memory } = {}) {
     const states = [];
     const calls = { remote: 0, verdict: [], local: 0, fresh: [] };
     await P.runScan({
@@ -23,7 +23,7 @@ async function run({ local = [], remote = [], verdict = null, current = () => tr
         },
         analyzeRemote: async () => {
             calls.remote++;
-            return typeof remote === "function" ? remote() : remote;
+            return { signals: typeof remote === "function" ? remote() : remote, rdapRegisteredAt: rdap };
         },
         lookupVerdict: async (domain, options) => {
             calls.verdict.push(domain);
@@ -255,4 +255,22 @@ test("memory: stored signals that fail the schema are dropped, the block stays",
     const { last } = await run({ memory: { score: 85, recordId: null, signals: [{ id: "x" }, sig("asks_otp", 3, 30)] } });
     assert.equal(last.status, "blocked");
     assert.deepEqual(last.signals.map((s) => s.id), ["asks_otp"]);
+});
+
+test("#270: the RDAP date from /analyze stays on the state", async () => {
+    const { last } = await run({ remote: [sig("asks_otp", 3, 35)], rdap: "2026-10-30" });
+    assert.equal(last.rdapRegisteredAt, "2026-10-30");
+});
+
+test("#270: no date when /analyze has none, fails or answers nothing", async () => {
+    assert.equal((await run({ remote: [sig("asks_otp", 3, 35)] })).last.rdapRegisteredAt, null);
+    assert.equal((await run({ remote: [sig("asks_otp", 3, 35)], rdap: null })).last.rdapRegisteredAt, null);
+    const failed = await run({ remote: () => { throw new Error("down"); } });
+    assert.equal(failed.last.rdapRegisteredAt, null);
+});
+
+test("#270: a re-check keeps the date when RDAP fails the second time", async () => {
+    const first = await run({ remote: [sig("asks_otp", 3, 35)], rdap: "2026-10-30" });
+    const again = await run({ remote: [sig("asks_otp", 3, 35), sig("asks_pin", 3, 35)], rdap: null, previous: first.last });
+    assert.equal(again.last.rdapRegisteredAt, "2026-10-30");
 });
