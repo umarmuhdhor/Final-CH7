@@ -16,6 +16,7 @@ import { createKvBlocklist } from "./blocklist/kv.js";
 import { readConfig } from "./layer4/config.js";
 import { createRealityCheck, CLIENT_CALLS_PER_HOUR } from "./layer4/reality.js";
 import { createCasesLoader } from "./layer4/cases.js";
+import { bearerMatches, createReviewer, DEFAULT_DAILY_CAP, validateReviewRequest } from "./review/review.js";
 import { clientKey, createRateLimiter } from "./ratelimit.js";
 import { createUsageReport, watchLlm, watchRdap, writeUsage } from "./usage.js";
 
@@ -23,6 +24,8 @@ import { createUsageReport, watchLlm, watchRdap, writeUsage } from "./usage.js";
 export const ANALYZE_RATE = Object.freeze({ limit: 300, windowMs: 10 * 60 * 1000 });
 /** A GET to /public-blocklist has no body; anything that declares more than this is refused. */
 const MAX_GET_BODY_BYTES = 1024;
+/** POST /review: 25 domains with at most 30 signal counts each stay far below this. */
+const REVIEW_MAX_BODY_BYTES = 128 * 1024;
 
 // Same on every answer, including errors and preflights. The API returns JSON only: nothing here is ever rendered.
 const SECURITY_HEADERS = {
@@ -116,6 +119,18 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         if (envLlm.key !== key) envLlm = { key, checker: createRealityCheck({ config, fetch: llmFetch, now, clientCallsPerHour: llmClientCallsPerHour }) };
         return envLlm.checker;
     }
+    let envReviewer = { key: "", reviewer: null }; // like envLlm: one reviewer per configuration, so its daily counter survives requests
+    /** The layer 5 reviewer for this request's env, or null when the LLM is not configured (or no fetch was injected). */
+    function reviewerFor(env) {
+        if (!llmFetch) return null;
+        const config = readConfig(env);
+        if (!config) return null;
+        const cap = Number(env.REVIEW_DAILY_CAP);
+        const dailyCap = env.REVIEW_DAILY_CAP !== undefined && env.REVIEW_DAILY_CAP !== "" && Number.isInteger(cap) && cap >= 0 ? cap : DEFAULT_DAILY_CAP;
+        const key = JSON.stringify({ config, dailyCap });
+        if (envReviewer.key !== key) envReviewer = { key, reviewer: createReviewer({ config, fetch: llmFetch, now, dailyCap }) };
+        return envReviewer.reviewer;
+    }
     const app = new Hono();
 
     app.use("*", async (c, next) => {
@@ -186,6 +201,29 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
             return c.json(checker?.stats ? checker.stats() : { off: true });
         });
     }
+
+    // Layer 5 (server-to-server, called by the dashboard cron): no CORS, and off (404) until AI_REVIEW_SECRET is set.
+    // Order: secret configured -> method -> Bearer -> body -> LLM configured, so an unauthenticated caller learns nothing.
+    app.all("/review", async (c) => {
+        const secret = c.env?.AI_REVIEW_SECRET;
+        if (!secret) return errorResponse(404, "not_found", "Not found.");
+        if (c.req.method !== "POST") return errorResponse(405, "method_not_allowed", "Use POST.", { allow: "POST" });
+        if (!(await bearerMatches(c.req.header("authorization"), secret))) return errorResponse(401, "unauthorized", "Unauthorized.");
+        const type = (c.req.header("content-type") ?? "").split(";")[0].trim().toLowerCase();
+        if (type !== "application/json") throw new HttpError(422, "invalid_body", "Content-Type must be application/json.");
+        const text = await readTextLimited(c.req.raw, REVIEW_MAX_BODY_BYTES);
+        let body;
+        try {
+            body = JSON.parse(text);
+        } catch {
+            throw new HttpError(400, "bad_json", "Body is not valid JSON.");
+        }
+        const checked = validateReviewRequest(body);
+        if ("error" in checked) throw new HttpError(422, "invalid_body", checked.error);
+        const reviewer = reviewerFor(c.env);
+        if (!reviewer) return errorResponse(503, "review_unavailable", "Review is not available.");
+        return c.json(await reviewer.review(checked.domains));
+    });
 
     app.all("/public-blocklist", () => errorResponse(405, "method_not_allowed", "Use GET.", { allow: "GET" }));
     app.all("/analyze", () => errorResponse(405, "method_not_allowed", "Use POST.", { allow: "POST" }));

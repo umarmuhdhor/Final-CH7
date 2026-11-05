@@ -11,10 +11,10 @@ const TIMEOUT = Object.freeze({ ok: false, reason: "timeout" });
 
 /**
  * @param {{ config: object, fetch: typeof fetch }} deps
- * @returns {(messages: object[], signal: AbortSignal) => Promise<{ ok: true, content: string, usage: { in: number, out: number } } | { ok: false, reason: "http_error" | "bad_schema" | "timeout", usage?: { in: number, out: number } }>}
+ * @returns {(messages: object[], signal: AbortSignal, opts?: { maxTokens?: number }) => Promise<{ ok: true, content: string, usage: { in: number, out: number } } | { ok: false, reason: "http_error" | "bad_schema" | "timeout", usage?: { in: number, out: number } }>}
  */
 export function createProvider({ config, fetch }) {
-    return async (messages, signal) => {
+    return async (messages, signal, opts = {}) => {
         try {
             const res = await fetch(`${config.baseUrl}/chat/completions`, {
                 method: "POST",
@@ -23,7 +23,7 @@ export function createProvider({ config, fetch }) {
                     model: config.model,
                     messages,
                     temperature: 0, // A13: repeatable answers
-                    max_tokens: 200,
+                    max_tokens: opts.maxTokens ?? 200, // layer 4 answers are one short verdict; POST /review asks for 2000
                     response_format: { type: "json_object" },
                     chat_template_kwargs: { thinking: false }, // no hidden reasoning pass: measured 1.2 s median (test-layer4)
                 }),
