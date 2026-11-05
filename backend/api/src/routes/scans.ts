@@ -152,7 +152,7 @@ scans.post("/scans", async (c) => {
   await hitLight(sql, limits.createScanAll, "all");
 
   const iconUrl = favicon(body.faviconUrl);
-  const { id, created } = await recordScan(sql, {
+  const { id, created, escalated } = await recordScan(sql, {
     ownerId: principal.deviceId,
     url: body.url,
     domain: body.domain,
@@ -165,9 +165,10 @@ scans.post("/scans", async (c) => {
     thresholdsVersion: body.thresholdsVersion ?? null,
     rdapRegisteredAt: rdapDate(body.rdapRegisteredAt),
   });
-  // The site already has its Activity row: no second row, push or evidence for a repeat visit.
-  if (!created) return c.json({ id }, 201);
-  if (body.screenshotBase64) {
+  // The site already has its Activity row: no second row, push or evidence for a repeat visit,
+  // except the push when a warned site is now blocked. Its evidence stays the first visit's.
+  if (!created && !escalated) return c.json({ id }, 201);
+  if (created && body.screenshotBase64) {
     try {
       await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);
     } catch (err) {
@@ -177,7 +178,7 @@ scans.post("/scans", async (c) => {
   }
   // PR-05: the Worker downloads the favicon once, after the response (a slow scam host never delays
   // or fails the scan), so the app never contacts the scam host (SECURITY P9).
-  if (iconUrl) {
+  if (created && iconUrl) {
     c.executionCtx.waitUntil(
       attachFavicon(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, iconUrl).catch((err) =>
         console.error(JSON.stringify({ event: "favicon_dropped", reason: "error", error: errorInfo(err) })),
@@ -206,6 +207,7 @@ scans.post("/scans", async (c) => {
   } catch (err) {
     console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
   }
+  if (!created) return c.json({ id }, 201);
   // EX-07 (K2, D-alief-C22 a): the replica only after the pushes went out. Inflating up to 3 MB costs
   // CPU; if the invocation is killed for it, the scan and the Guardian's push are already done.
   // Outside the try above: a failed push lookup does not drop the replica.

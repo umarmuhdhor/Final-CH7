@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
-import { clientIp, hit, limits } from "../http/rateLimit";
+import { clientIp, hit, hitLight, limits } from "../http/rateLimit";
 
 export const health = new Hono<AppEnv>();
 
@@ -10,6 +10,7 @@ health.get("/healthz", (c) => c.json({ ok: true }));
 health.get("/healthz/db", async (c) => {
   const sql = c.get("sql");
   await hit(sql, limits.healthDb, clientIp((n) => c.req.header(n)));
+  await hitLight(sql, limits.healthDbAll, "all");
   await sql`insert into ops_heartbeat (source, at) values ('healthz', now())
             on conflict (source) do update set at = now()`;
   return c.json({ ok: true });

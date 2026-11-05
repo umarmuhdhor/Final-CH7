@@ -62,13 +62,13 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
   const { id: _id, verdict: _v, screenshotUrl: _s, ownerDeviceId: _o, ownerName: _n, ...scanBody } = blocked92;
   /** A scan of its own site (one Activity row per site), waiting for its waitUntil work: the push
    * runs after the response, and a query still open when the file ends fails as "socket closed". */
-  const postScan = async (token: string, site: string) => {
+  const postScan = async (token: string, site: string, fields: Record<string, unknown> = {}) => {
     const ctx = createExecutionContext();
     const res = await app.fetch(
       new Request("http://api.test/scans", {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "cf-connecting-ip": freshIp(), "content-type": "application/json" },
-        body: JSON.stringify({ ...scanBody, url: `https://${site}/`, domain: site }),
+        body: JSON.stringify({ ...scanBody, url: `https://${site}/`, domain: site, ...fields }),
       }),
       env,
       ctx,
@@ -105,5 +105,34 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
     // A later protected scan of another site does push: the checks above were not just too early.
     const later = await postScan(p.token, "d.example");
     expect((await pushRows()).filter((r) => r.scan_id === later)).toEqual([{ to_device_id: g.deviceId, scan_id: later, result: "logged" }]);
+  });
+
+  describe("a repeat visit of a site", () => {
+    const warning = { score: 41, status: "warning" };
+    const linked = async () => {
+      const g = await createDevice("G", "guardian");
+      const p = await createDevice("Mom");
+      await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
+      await link(g, p);
+      return { g, p };
+    };
+
+    it("warning that became blocked → a second push for the same row", async () => {
+      const { g, p } = await linked();
+      const id = await postScan(p.token, "a.example", warning);
+      expect(await postScan(p.token, "a.example")).toBe(id);
+      const row = { to_device_id: g.deviceId, scan_id: id, result: "logged" };
+      expect(await pushRows()).toEqual([row, row]);
+    });
+
+    it("no new push: still a warning, blocked again, or a lower score after a block", async () => {
+      const { p } = await linked();
+      await postScan(p.token, "a.example", warning);
+      await postScan(p.token, "a.example", { ...warning, score: 55 });
+      await postScan(p.token, "b.example");
+      await postScan(p.token, "b.example");
+      await postScan(p.token, "b.example", warning);
+      expect(await pushRows()).toHaveLength(2);
+    });
   });
 });

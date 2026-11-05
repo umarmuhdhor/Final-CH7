@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(54);
+select plan(60);
 
 create function pg_temp.as_role(r text, q text) returns text language plpgsql as $$
 declare
@@ -120,6 +120,10 @@ select is(pg_temp.shape(admin.tokenize_path('/t/eyJhbGciOiJIUzI1NiJ9.abc')), pg_
   'K13: a base64url token keeps its shape, dots kept');
 select isnt(admin.tokenize_path('/r/0123456789abcdef0123'), admin.tokenize_path('/r/0123456789abcdef0123'),
   'K13: new random value on every call');
+select isnt(admin.tokenize_path('/order/8841027'), '/order/8841027', 'audit: a numeric id is replaced');
+select is(pg_temp.shape(admin.tokenize_path('/u/budi1984')), pg_temp.shape('/u/budi1984'), 'audit: a short id keeps its shape');
+select isnt(admin.tokenize_path('/u/budi1984'), '/u/budi1984', 'audit: a short id is replaced');
+select is(admin.tokenize_path('/2026/11/05/klaim-hadiah'), '/2026/11/05/klaim-hadiah', 'audit: a date path and words stay readable');
 select is(pg_temp.as_role('shoo_admin', $$select count(*)::text from admin.v_scan_archive where scan_id like 'a\_%'$$), '3', 'shoo_admin reads the view');
 select is(pg_temp.as_role('shoo_admin', $$select count(*)::text from admin.scan_archive$$), 'ERR 42501', 'shoo_admin cannot read the table');
 select is(pg_temp.as_role('shoo_api', $$select count(*)::text from admin.v_scan_archive$$), 'ERR 42501', 'shoo_api cannot read the view');
@@ -152,7 +156,10 @@ select is((pg_temp.arc('a_s1')).by_ref, null, 'K11: by_ref stripped');
 
 insert into scans (id, owner_id, url, domain, score, status, detected_at) values
   ('a_s4', 'a_p3', 'https://antre.test/', 'antre.test', 40, 'warning', now());
+update admin.scan_archive set fragments_key = 'a_s4.fragments.html.gz', fragments_bytes = 5 where scan_id = 'a_s4';
 insert into admin.label_forget (owner_ref, by_ref) values (admin.owner_ref('a_p3'), null);
+select is((select fragments_key from admin.v_scan_archive where scan_id = 'a_s4'), null, 'I11: a queued forget hides the fragments');
+select is((select fragments_bytes from admin.v_scan_archive where scan_id = 'a_s4'), null, 'I11: and their size');
 select is((select owner_ref from admin.v_scan_archive where scan_id = 'a_s4'), null, 'I11: a queued forget hides owner_ref at once');
 delete from admin.label_forget where owner_ref = admin.owner_ref('a_p3');
 select is((pg_temp.arc('a_s4')).owner_ref, null, 'I11: draining the queue applies the strip');

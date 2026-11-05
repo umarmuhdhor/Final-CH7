@@ -22,13 +22,17 @@ export interface NewScan {
  * (`created: false`) instead of a new one. Its time moves to the newest visit, and a higher score
  * replaces url, title, score, status and signals; its evidence stays. Locked per owner + domain, so
  * two parallel scans of one site cannot both insert. Every scan still counts in the owner's
- * lifetime totals (profile stats, PF-01).
+ * lifetime totals (profile stats, PF-01). `escalated`: this visit moved the kept row from warning to
+ * blocked, which the guardian has to hear about.
  */
-export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean }> {
+export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; escalated: boolean }> {
   return sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(7, hashtext(${`${s.ownerId}|${s.domain}`}))`;
-    const [kept] = await tx<{ id: string }[]>`
-      with kept as (
+    const [kept] = await tx<{ id: string; escalated: boolean }[]>`
+      with previous as (
+        select id, status from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
+        order by created_at desc, id desc limit 1
+      ), kept as (
         update scans set
           detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
           rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
@@ -37,18 +41,18 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
           signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
           status = case when ${s.score} > score then ${s.status} else status end,
           score = greatest(score, ${s.score})
-        where id = (select id from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
-                    order by created_at desc, id desc limit 1)
-        returning id
+        where id = (select id from previous)
+        returning id, status
       ), counted as (
         update devices d set
           blocked_total = d.blocked_total + (${s.status} = 'blocked')::int,
           warning_total = d.warning_total + (${s.status} = 'warning')::int
         where d.id = ${s.ownerId} and exists (select 1 from kept)
       )
-      select id from kept`;
-    if (kept) return { id: kept.id, created: false };
-    return { id: await insertScan(tx, s), created: true };
+      select kept.id, previous.status = 'warning' and kept.status = 'blocked' as escalated
+      from kept join previous using (id)`;
+    if (kept) return { id: kept.id, created: false, escalated: kept.escalated };
+    return { id: await insertScan(tx, s), created: true, escalated: false };
   });
 }
 

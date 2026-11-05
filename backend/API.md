@@ -467,8 +467,8 @@ ever sent. Scans, screenshots, favicons and page replicas are deleted automatica
 page. One page is one scan, one Activity item and (for a Protected device) one push to the Guardian.
 
 **One row per site (PR-05):** when the owner already has a scan of the same `domain`, no new row is
-made. The response is `201 { id }` with that row's id; no push is sent and no screenshot, favicon or
-page replica is stored. The row's `detectedAt` moves to the newest visit, and a higher `score` replaces
+made. The response is `201 { id }` with that row's id; no screenshot, favicon or page replica is
+stored, and no push is sent unless this visit moves the row from `warning` to `blocked`. The row's `detectedAt` moves to the newest visit, and a higher `score` replaces
 its `url`, `pageTitle`, `score`, `status` and `signals`. The lifetime totals (profile stats) still count
 every scan. Once retention deletes the row (14 days after the first visit), the next visit makes a new one.
 

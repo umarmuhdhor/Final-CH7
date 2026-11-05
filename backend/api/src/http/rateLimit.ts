@@ -14,6 +14,8 @@ export const limits = {
   // 1000/day is far above a demo's sign-ups; reaching it blocks new devices only, not existing ones.
   createDeviceAll: { bucket: "devices_create_all", max: 1000, windowSeconds: 86400 },
   healthDb: { bucket: "healthz_db", max: 1, windowSeconds: 60 },
+  // All callers together, key "all", hitLight: rotating IPs cannot keep writing. Far above ops-watch's 4/h.
+  healthDbAll: { bucket: "healthz_db_all", max: 120, windowSeconds: 3600 },
   // GET /ops/status, key "all", counted only after the token matched (fase 21 K6): the ops-watch
   // workflow calls it 4×/h, the rest is for Alief by hand.
   opsStatus: { bucket: "ops_status", max: 30, windowSeconds: 3600 },
