@@ -22,12 +22,13 @@ function assertSignalShape(s) {
 }
 
 // ---- a. contract -----------------------------------------------------------
-test("a. valid request -> 200 { signals } and nothing else", async () => {
+test("a. valid request -> 200 { signals, rdapRegisteredAt } and nothing else", async () => {
     const res = await post(app, { snapshot: PIN_PAGE(), localSignals: [] });
     assert.equal(res.status, 200);
     assert.match(res.headers.get("content-type"), /application\/json/);
     const body = await res.json();
-    assert.deepEqual(Object.keys(body), ["signals"]);
+    assert.deepEqual(Object.keys(body), ["signals", "rdapRegisteredAt"]);
+    assert.equal(body.rdapRegisteredAt, null, "no RDAP client in this app");
     assert.ok(Array.isArray(body.signals));
     assert.deepEqual(ids(body.signals), ["asks_pin"]);
     body.signals.forEach(assertSignalShape);
@@ -39,10 +40,10 @@ test("a. only layer 3 signals come back, even when localSignals carry layer 1-2"
     assert.ok(body.signals.every((s) => s.layer === 3));
 });
 
-test("a. no signals -> 200 { signals: [] }", async () => {
+test("a. no signals -> 200 { signals: [], rdapRegisteredAt: null }", async () => {
     const res = await post(app, { snapshot: page("https://toko.example.com/", [field({ name: "alamat" })]), localSignals: [] });
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), { signals: [] });
+    assert.deepEqual(await res.json(), { signals: [], rdapRegisteredAt: null });
 });
 
 test("a. fixtures: asks_pin / asks_ktp match the fixtures' shape and stay within weight +-10", async () => {

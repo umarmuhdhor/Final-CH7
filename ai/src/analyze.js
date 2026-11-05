@@ -48,25 +48,33 @@ export function analyzeSnapshot(rawSnapshot) {
  * Rules + domain age. The RDAP lookup starts first and runs while the rules run; it has its own
  * deadline and returns null on any failure, so the rules' answer never depends on it.
  * @param {object} rawSnapshot
- * @param {{ rdap?: { lookupAgeDays(host: string): Promise<number|null> } | null, llm?: { check: Function } | null, client?: string, localSignals?: unknown, deadline?: number, now?: () => number }} [deps]
+ * @param {{ rdap?: { lookup(host: string): Promise<{ registeredAt: string|null, ageDays: number|null }> } | null, llm?: { check: Function } | null, client?: string, localSignals?: unknown, deadline?: number, now?: () => number }} [deps]
  *   deadline: time (ms, same clock as `now`) by which the answer must be ready; layer 4 is cut there. Default: none.
+ * @returns {Promise<{ signals: object[], rdapRegisteredAt: string|null }>} rdapRegisteredAt (#270): `YYYY-MM-DD`, whether or
+ *   not new_domain fires; null when RDAP failed, timed out, or was not asked (official host, IP, no RDAP client).
  */
-export async function analyze(rawSnapshot, { rdap = null, llm = null, client = "unknown", localSignals = [], deadline = Infinity, now = Date.now } = {}) {
+export async function analyzeWithDomain(rawSnapshot, { rdap = null, llm = null, client = "unknown", localSignals = [], deadline = Infinity, now = Date.now } = {}) {
     const snapshot = sanitizeSnapshot(rawSnapshot);
     const host = hostOf(snapshot.url);
     const official = isOfficialHost(host);
-    const age = rdap && !official ? rdap.lookupAgeDays(host).catch(() => null) : Promise.resolve(null);
+    const noDomain = { registeredAt: null, ageDays: null };
+    const domain = rdap && !official ? rdap.lookup(host).catch(() => noDomain) : Promise.resolve(noDomain);
     const signals = rules(snapshot, official, looksLikeImpersonation(localSignals));
     // D-imelda-46: the LLM only settles the middle. It waits for the domain age (<= 1 s), because new_domain is part of the
     // layer 1-3 total that decides: total < 30 nothing is shown, total >= 80 the extension blocks, only 30..79 is asked.
     // The total counts the client's layer 1-2 weights (untrusted, so a client can open or close the gate for its own page;
     // each call is still capped per IP and per day). Layer 4's budget is what is left of the deadline, capped by the checker (<= 6 s).
-    const days = await age;
-    const domainSignal = days === null ? null : buildNewDomainSignal(days);
+    const { registeredAt, ageDays } = (await domain) ?? noDomain;
+    const domainSignal = ageDays === null || ageDays === undefined ? null : buildNewDomainSignal(ageDays);
     const ruleIds = signals.map((s) => s.id); // before new_domain: the model is not told the domain age, prompt v4 has no wording for it (D-imelda-50)
     if (domainSignal) signals.push(domainSignal);
     const score = localScore(localSignals) + signals.reduce((sum, s) => sum + s.weight, 0);
     const layer4 = llm ? await llm.check(snapshot, { official, score, ruleIds, localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : null;
     if (layer4) signals.push(layer4);
-    return strongestFirst(signals);
+    return { signals: strongestFirst(signals), rdapRegisteredAt: registeredAt ?? null };
+}
+
+/** Same as `analyzeWithDomain`, signals only (eval scripts and tests). */
+export async function analyze(rawSnapshot, deps) {
+    return (await analyzeWithDomain(rawSnapshot, deps)).signals;
 }

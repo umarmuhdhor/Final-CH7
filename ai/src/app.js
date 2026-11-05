@@ -7,7 +7,7 @@ import { Hono } from "hono";
 import { LIMITS } from "./limits.js";
 import { HttpError, errorResponse, readTextLimited } from "./http.js";
 import { validateRequest } from "./validate.js";
-import { analyze, SERVER_DEADLINE_MS } from "./analyze.js";
+import { analyzeWithDomain, SERVER_DEADLINE_MS } from "./analyze.js";
 import { createMemoryCache, createKvCache, createKvBudget, createTieredCache } from "./rdap/cache.js";
 import { createRdapClient } from "./rdap/rdap.js";
 import { emptySource } from "./blocklist/source.js";
@@ -102,7 +102,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const kv = c.env?.RDAP_KV;
         if (!rdap || typeof kv?.get !== "function" || typeof kv?.put !== "function") return rdap;
         const requestCache = createTieredCache({ memory: memoryCache, kv: createKvCache(kv), budget: kvBudget, waitUntil: waitUntilOf(c) });
-        return { lookupAgeDays: (host) => rdap.lookupAgeDays(host, { cache: requestCache }) };
+        return { lookup: (host) => rdap.lookup(host, { cache: requestCache }) };
     }
     const blocklist = createBlocklist({ source: blocklistSource, now });
     const kvBlocklist = createKvBlocklist({ now });
@@ -153,7 +153,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
         const report = createUsageReport({ hasLayer4: !!checker });
         // Cases are loaded by the checker only once the gate passed (layer4/cases.js: cached, at most 300 ms on a cold load).
         const cases = fixedCases ? async () => fixedCases : () => loadCases(c.env, waitUntilOf(c));
-        const signals = await analyze(checked.snapshot, {
+        const { signals, rdapRegisteredAt } = await analyzeWithDomain(checked.snapshot, {
             rdap: watchRdap(rdapFor(c), report),
             llm: watchLlm(checker, report, cases),
             client,
@@ -162,7 +162,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
             now,
         });
         writeUsage(c.env?.AI_USAGE, report); // counts only (src/usage.js); no binding in tests and the dev server
-        return c.json({ signals });
+        return c.json({ signals, rdapRegisteredAt }); // #270: public RDAP date, the extension copies it into POST /scans
     });
 
     app.get("/public-blocklist", async (c) => {
