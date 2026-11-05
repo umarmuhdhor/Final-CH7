@@ -155,32 +155,43 @@ export function createRdapClient({ fetch: doFetch, cache, now = Date.now, timeou
 
     const ageOf = (registeredAt) => (registeredAt === null ? null : Math.max(0, Math.floor((now() - registeredAt) / DAY_MS)));
 
-    return {
-        /**
-         * Whole days since registration, or null for anything that goes wrong. Never throws, never logs.
-         * The cache read and the network share one deadline (`timeoutMs`).
-         * @param {string} host hostname of the page
-         * @param {{ cache?: object }} [opts] cache for this request only (memory + KV tiers, app.js); default: the client's cache
-         */
-        async lookupAgeDays(host, { cache: requestCache = cache } = {}) {
-            const domain = registrableDomain(host);
-            if (!domain) return null;
-            const startedAt = now();
-            try {
-                const cached = await requestCache.get(domain);
-                if (cached) return ageOf(cached.registeredAt);
-            } catch {
-                /* a broken cache must not break the answer */
-            }
-            const { registeredAt, cacheable } = await withDeadline(domain, Math.max(0, timeoutMs - (now() - startedAt)));
-            if (cacheable) {
+    const dateOf = (registeredAt) => (registeredAt === null ? null : new Date(registeredAt).toISOString().slice(0, 10));
+
+    /**
+     * Registration date and age, both null for anything that goes wrong. Never throws, never logs.
+     * The cache read and the network share one deadline (`timeoutMs`).
+     * @param {string} host hostname of the page
+     * @param {{ cache?: object }} [opts] cache for this request only (memory + KV tiers, app.js); default: the client's cache
+     * @returns {Promise<{ registeredAt: string|null, ageDays: number|null }>} registeredAt = `YYYY-MM-DD` (UTC), #270
+     */
+    async function lookup(host, { cache: requestCache = cache } = {}) {
+        const domain = registrableDomain(host);
+        if (!domain) return { registeredAt: null, ageDays: null };
+        const startedAt = now();
+        let registeredAt;
+        try {
+            const cached = await requestCache.get(domain);
+            if (cached) registeredAt = cached.registeredAt;
+        } catch {
+            /* a broken cache must not break the answer */
+        }
+        if (registeredAt === undefined) {
+            const fresh = await withDeadline(domain, Math.max(0, timeoutMs - (now() - startedAt)));
+            registeredAt = fresh.registeredAt;
+            if (fresh.cacheable) {
                 try {
                     await requestCache.set(domain, { registeredAt }, registeredAt === null ? FAIL_TTL_MS : SUCCESS_TTL_MS);
                 } catch {
                     /* ignore */
                 }
             }
-            return ageOf(registeredAt);
-        },
+        }
+        return { registeredAt: dateOf(registeredAt), ageDays: ageOf(registeredAt) };
+    }
+
+    return {
+        lookup,
+        /** Whole days since registration, or null. Same lookup as `lookup`, age only. */
+        lookupAgeDays: async (host, opts) => (await lookup(host, opts)).ageDays,
     };
 }

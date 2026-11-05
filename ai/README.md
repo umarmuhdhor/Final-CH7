@@ -25,7 +25,7 @@ The dev server is plain HTTP; the same app (rate limits, headers) runs in it. De
 
 ## Endpoint
 
-`POST /analyze` exactly as in `contracts/api.md`: `{ snapshot, localSignals }` in, `{ signals }` out (layer 3 only).
+`POST /analyze` exactly as in `contracts/api.md`: `{ snapshot, localSignals }` in, `{ signals, rdapRegisteredAt }` out (layer 3–4 signals; `rdapRegisteredAt` = RDAP registration date `YYYY-MM-DD` or `null`, #270).
 
 | Case | Answer |
 |---|---|

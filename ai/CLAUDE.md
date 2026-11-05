@@ -3,7 +3,7 @@
 Server-side detection: layer 3 (content & forms) + layer 4 (reality check, LLM). Layer 5 is proposed as Guardian feedback on top of the admin database (ADM-02/04) in `backend/`, with a batch `POST /review` here: do not build it until Umar's approval is written in #241 (plan/imelda/layer-5-feedback.md v2). Hoax detection is not in MVP; its layer number comes later.
 Exposes `POST /analyze` and `GET /public-blocklist` exactly as in contracts/api.md (M5 design: docs/design/blocklist.md).
 
-- Input `{ snapshot, localSignals }`, output `{ signals: Signal[] }`. Shapes from contracts/ only.
+- Input `{ snapshot, localSignals }`, output `{ signals: Signal[], rdapRegisteredAt }`. Shapes from contracts/ only. `rdapRegisteredAt` (#270): public RDAP registration date `YYYY-MM-DD`, sent whether or not `new_domain` fires; `null` when RDAP failed, timed out or was skipped (official host, IP).
 - `/analyze` is stateless: never store or log the snapshot text.
 - Text signals (`urgent_language`, `brand_logo_offsite`, `unreasonable_request`): `evidence` = text copied **exactly** from the page; the extension highlights it (EX-05).
 - `localSignals` (layer 1–2 from the extension, including `suspicious_link`) are untrusted numbers: they lift the WORD weights when their sum is ≥ 10 (D-imelda-31) and count toward the layer-4 gate total (D-imelda-46); they are never a signal of their own. The raw URL is not sent.

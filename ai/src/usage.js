@@ -22,14 +22,14 @@ export function createUsageReport({ hasLayer4 }) {
     return { layer4: { outcome: hasLayer4 ? null : "off", tokensIn: 0, tokensOut: 0, ms: 0, casesVersion: null }, rdapFailed: 0 };
 }
 
-/** The RDAP client with one change: a lookup that gives no age (failure, timeout, unknown TLD) sets `report.rdapFailed`. */
+/** The RDAP client with one change: a lookup that gives no date (failure, timeout, unknown TLD) sets `report.rdapFailed`. */
 export function watchRdap(rdap, report) {
     if (!rdap) return rdap;
     return {
-        lookupAgeDays: async (host) => {
-            const days = await rdap.lookupAgeDays(host).catch(() => null);
-            if (days === null) report.rdapFailed = 1;
-            return days;
+        lookup: async (host) => {
+            const found = await rdap.lookup(host).catch(() => null);
+            if (!found || found.registeredAt === null) report.rdapFailed = 1;
+            return found ?? { registeredAt: null, ageDays: null };
         },
     };
 }

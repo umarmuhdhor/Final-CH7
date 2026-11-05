@@ -293,6 +293,56 @@ test("analyze: nothing is logged (console spy) on RDAP success, failure and time
     assert.deepEqual(calls, []);
 });
 
+// ---- #270: rdapRegisteredAt -----------------------------------------------------
+test("rdap lookup: registration date as YYYY-MM-DD (UTC) plus age; null for both on failure", async () => {
+    assert.deepEqual(await client().lookup("login.example.com"), { registeredAt: "2026-10-19", ageDays: 3 });
+    const down = client({ fetch: mockFetch({ rdap: () => json({}, 500) }) });
+    assert.deepEqual(await down.lookup("example.com"), { registeredAt: null, ageDays: null });
+    assert.deepEqual(await client().lookup("127.0.0.1"), { registeredAt: null, ageDays: null });
+});
+
+test("rdap lookup: a cache hit gives the same date without a network call", async () => {
+    const f = mockFetch();
+    const c = client({ fetch: f });
+    await c.lookup("a.example.com");
+    const before = f.calls.length;
+    assert.deepEqual(await c.lookup("b.example.com"), { registeredAt: "2026-10-19", ageDays: 3 });
+    assert.equal(f.calls.length, before);
+});
+
+test("analyze #270: rdapRegisteredAt comes back for a new domain, next to new_domain", async () => {
+    const body1 = await (await post(createApp({ fetch: mockFetch(), now: () => NOW }), body())).json();
+    assert.equal(body1.rdapRegisteredAt, "2026-10-19");
+    assert.ok(body1.signals.some((s) => s.id === "new_domain"));
+});
+
+test("analyze #270: rdapRegisteredAt comes back for an old domain too (no new_domain)", async () => {
+    const f = mockFetch({ rdap: () => json({ events: [{ eventAction: "registration", eventDate: "2020-01-01T00:00:00Z" }] }) });
+    const res = await (await post(createApp({ fetch: f, now: () => NOW }), body())).json();
+    assert.equal(res.rdapRegisteredAt, "2020-01-01");
+    assert.ok(!res.signals.some((s) => s.id === "new_domain"));
+});
+
+test("analyze #270: rdapRegisteredAt is null when RDAP fails, hangs, or is not asked (official host)", async () => {
+    const down = await (await post(createApp({ fetch: mockFetch({ rdap: () => { throw new Error("boom"); } }), now: () => NOW }), body())).json();
+    assert.equal(down.rdapRegisteredAt, null);
+    const hang = await (await post(createApp({ fetch: mockFetch({ rdap: () => new Promise(() => {}) }), now: () => NOW, rdapTimeoutMs: 50 }), body())).json();
+    assert.equal(hang.rdapRegisteredAt, null);
+    const official = await (await post(createApp({ fetch: mockFetch(), now: () => NOW }), body("https://www.bca.co.id/"))).json();
+    assert.equal(official.rdapRegisteredAt, null);
+    for (const r of [down, hang, official]) assert.ok("rdapRegisteredAt" in r, "key is always present");
+});
+
+test("analyze #270: date from the KV tier when the memory cache is empty", async () => {
+    const store = new Map([["rdap:example.com", JSON.stringify({ registeredAt: Y2020 })]]);
+    const kv = { get: async (k, t) => (store.has(k) ? (t === "json" ? JSON.parse(store.get(k)) : store.get(k)) : null), put: async (k, v) => store.set(k, v) };
+    const f = mockFetch();
+    const app = createApp({ fetch: f, now: () => NOW });
+    const res = await app.request("/analyze", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body()) }, { RDAP_KV: kv });
+    assert.equal((await res.json()).rdapRegisteredAt, "2020-01-01");
+    assert.equal(f.rdapCalls().length, 0);
+});
+
 test("analyze: rules run in parallel with RDAP (total time is about one RDAP delay, not the sum)", async () => {
     const slow = mockFetch({ rdap: async () => { await new Promise((r) => setTimeout(r, 120)); return json({ events: [{ eventAction: "registration", eventDate: iso(3) }] }); } });
     const app = createApp({ fetch: slow, now: () => NOW });

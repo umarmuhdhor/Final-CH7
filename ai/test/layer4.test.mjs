@@ -222,7 +222,7 @@ test("gate: only layers 1-2 from the client count; a layer 3/4 weight sent by th
 
 test("gate: new_domain (layer 3, RDAP) is part of the total, so the LLM waits for the domain age", async () => {
     const f = fake(() => reply(verdict()));
-    const run = (days, snapshot, localSignals = []) => analyze(snapshot, { rdap: { lookupAgeDays: async () => days }, llm: createRealityCheck({ config: CONFIG, fetch: f.fetch }), localSignals });
+    const run = (days, snapshot, localSignals = []) => analyze(snapshot, { rdap: { lookup: async () => ({ registeredAt: null, ageDays: days }) }, llm: createRealityCheck({ config: CONFIG, fetch: f.fetch }), localSignals });
     const signals = await run(3, PASSWORD()); // 15 + 30 = 45
     assert.equal(f.calls.length, 1);
     assert.ok(ids(signals).includes("new_domain") && ids(signals).includes("unreasonable_request"));
