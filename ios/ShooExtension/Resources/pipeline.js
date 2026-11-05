@@ -3,6 +3,8 @@
 // Rules: contracts/detector-interface.md "Scoring". Thresholds: contracts/README.md.
 
 (() => {
+    const CHURN_WINDOW_MS = 10_000;
+    const CHURN_CHANGES = 3; // more new addresses than this in the window
     const THRESHOLD = { firstWarning: 30, secondWarning: 50, blocked: 80 };
     const DB_MATCH = "db_match";
 
@@ -147,7 +149,7 @@
                     return;
                 }
                 if (verdict?.value === "not_safe") {
-                    emit({ verdict, score: 100, status: "blocked", remembered: true, recordId: memory.recordId, done: true });
+                    emit({ verdict, signals: validSignals(memory.signals, [1, 2, 3, 4]), score: 100, status: "blocked", remembered: true, recordId: memory.recordId, done: true });
                     return;
                 }
                 emit({
@@ -213,6 +215,20 @@
         }
     }
 
+    /**
+     * Tells a page that keeps changing its address from one being browsed. Without it a page could
+     * call replaceState faster than a scan takes and restart the scan for ever, staying at score 0.
+     * @returns {(now: number) => boolean} call on every new page address; true while it is churning
+     */
+    function urlChurn() {
+        let changes = [];
+        return (now) => {
+            changes = changes.filter((at) => now - at < CHURN_WINDOW_MS);
+            changes.push(now);
+            return changes.length > CHURN_CHANGES;
+        };
+    }
+
     globalThis.ShooPipeline = {
         THRESHOLD,
         scoreFrom,
@@ -220,6 +236,7 @@
         validSignals,
         mergeSignals,
         runScan,
+        urlChurn,
         subscribe,
         notify,
     };

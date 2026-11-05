@@ -405,7 +405,8 @@
         }
         const key = want.phrases.join("\n");
         if (want.highlight && (!shown.highlight || key !== shown.key)) highlightText(want.phrases);
-        if (!host || want.strike !== shown.strike) renderLayer(want.strike);
-        shown = { highlight: want.highlight, strike: want.strike, key };
+        const fields = signals.map((signal) => signal.id).join();
+        if (!host || want.strike !== shown.strike || (want.strike && fields !== shown.fields)) renderLayer(want.strike); // a re-check can add a field
+        shown = { highlight: want.highlight, strike: want.strike, key, fields };
     });
 })();

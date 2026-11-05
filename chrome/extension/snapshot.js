@@ -6,8 +6,12 @@
 
 (() => {
     const MAX_FRAMES = 5;
-    const EDITABLE = '[contenteditable]:not([contenteditable="false" i])';
-    const { all, one, forms, attr } = globalThis.ShooDom;
+    const EDITABLE = '[contenteditable]:not([contenteditable="false" i]), [role="textbox" i]';
+    const NOT_READ = new Set(["script", "style", "noscript", "template"]);
+    const INLINE = new Set(["a", "abbr", "b", "bdi", "bdo", "code", "em", "font", "i", "kbd", "label", "mark", "q", "s", "small", "span", "strong", "sub", "sup", "u"]);
+    const SHOW_ELEMENTS_AND_TEXT = 1 | 4; // NodeFilter
+    const ACCEPT = 1, REJECT = 2, SKIP = 3; // NodeFilter
+    const { all, one, forms, attr, isText, matches, visible, walker } = globalThis.ShooDom;
 
     function labelFor(input) {
         if (input.id) {
@@ -17,10 +21,21 @@
         return input.closest("label")?.innerText.trim() || null;
     }
 
+    /** Where a form posts, without what its address carries: a query or credentials can hold a token. */
+    function formTarget(action) {
+        if (!action) return action;
+        try {
+            const parsed = new URL(action);
+            return parsed.origin === "null" ? parsed.protocol : parsed.origin + parsed.pathname;
+        } catch {
+            return action.split(/[?#]/)[0]; // relative
+        }
+    }
+
     /** The forms of one document. */
     function formsOf(doc) {
         return [...forms(doc)].map((form) => ({
-            action: attr(form, "action"),
+            action: formTarget(attr(form, "action")),
             fields: all(form, "input, select, textarea").map((el) => ({
                 type: el.type || el.tagName.toLowerCase(),
                 name: el.getAttribute("name"),
@@ -50,18 +65,43 @@
         return docs;
     }
 
+    /** The page's words, read node by node, leaving out editable areas and what innerText would leave out. */
+    function textBesideEditables(doc, body, max) {
+        const walk = walker(doc, body, SHOW_ELEMENTS_AND_TEXT, {
+            acceptNode(node) {
+                if (isText(node)) return ACCEPT;
+                const name = String(node.localName);
+                return NOT_READ.has(name) || name.startsWith("shoo-") || matches(node, EDITABLE) || !visible(node) ? REJECT : SKIP;
+            },
+        });
+        const blockOf = (node) => {
+            let el = node.parentElement;
+            while (el && INLINE.has(String(el.localName))) el = el.parentElement;
+            return el;
+        };
+        let text = "";
+        let block = null;
+        for (let node = walk.nextNode(); node && text.length < max; node = walk.nextNode()) {
+            const words = node.data.replace(/\s+/g, " ");
+            if (words === " " || !words) continue;
+            const nodeBlock = blockOf(node);
+            text += block === null || block === nodeBlock ? words : `\n${words.trimStart()}`;
+            block = nodeBlock;
+        }
+        return text.trim();
+    }
+
     /**
      * Visible text of the page without what the user typed into editable areas (chat and mail composers,
-     * contenteditable): innerText includes those, and typed input never leaves the phone.
+     * contenteditable): innerText includes those, and typed input never leaves the phone. Open shadow roots
+     * and iframes are not in innerText, in Safari or Chrome. A site that draws typed digits in plain divs
+     * (some OTP boxes) can't be told from page text.
      */
     function pageText(doc, max) {
-        let text = globalThis.ShooDom.body(doc)?.innerText || "";
-        for (const el of all(doc, EDITABLE)) {
-            if (el.parentElement?.closest(EDITABLE)) continue; // nested: the outer one is taken out already
-            const typed = el.innerText;
-            if (typed) text = text.replace(typed, "");
-        }
-        return text.slice(0, max);
+        const body = globalThis.ShooDom.body(doc);
+        if (!body) return "";
+        const typed = all(doc, EDITABLE).some((el) => el.innerText);
+        return (typed ? textBesideEditables(doc, body, max) : body.innerText || "").slice(0, max);
     }
 
     /** Forms of the page, then of its same-origin iframes. */
@@ -69,5 +109,5 @@
         return [doc, ...frameDocuments(doc)].flatMap(formsOf);
     }
 
-    globalThis.ShooSnapshot = { formsOf, frameDocuments, pageForms, pageText };
+    globalThis.ShooSnapshot = { formsOf, formTarget, frameDocuments, pageForms, pageText };
 })();

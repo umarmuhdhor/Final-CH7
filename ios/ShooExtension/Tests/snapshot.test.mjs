@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 globalThis.CSS ??= { escape: (s) => s };
 await import("../Resources/dom.js");
 await import("../Resources/snapshot.js");
-const { formsOf, frameDocuments, pageForms } = globalThis.ShooSnapshot;
+const { formsOf, frameDocuments, pageForms, formTarget } = globalThis.ShooSnapshot;
 
 // Minimal DOM stand-ins: only what snapshot.js reads.
 function makeDoc({ forms = [], labels = {}, frames = [] } = {}) {
@@ -80,15 +80,91 @@ test("page without iframes → only its own forms", () => {
     assert.deepEqual(pageForms(makeDoc()), []);
 });
 
-test("page text leaves out what the user typed into editable areas, nested ones once", () => {
-    const editable = (text, parent = null) => ({ innerText: text, parentElement: { closest: () => parent } });
-    const composer = editable("my PIN is 123456");
-    const doc = {
-        body: { innerText: "Chat with CS\nmy PIN is 123456\nSend" },
-        querySelectorAll: (sel) => (sel.startsWith("[contenteditable]") ? [composer, editable("PIN", composer), editable("")] : []),
+test("the form target keeps where it goes, never what its query carries", () => {
+    assert.equal(formTarget("/submit?token=abc#x"), "/submit");
+    assert.equal(formTarget("https://u:p@evil.test/post?session=1"), "https://evil.test/post");
+    assert.equal(formTarget("mailto:a@b.test?subject=x"), "mailto:");
+    assert.equal(formTarget("javascript:send('secret')"), "javascript:");
+    assert.equal(formTarget(""), "");
+    assert.equal(formTarget(null), null);
+});
+
+/** A tiny page: strings are text nodes. createTreeWalker follows the DOM's filter contract (accept 1, reject 2, skip 3). */
+function page(root) {
+    const editables = [];
+    const build = (node, parent) => {
+        if (typeof node === "string") return { nodeType: 3, data: node, parentElement: parent };
+        const el = { nodeType: 1, localName: node.tag, parentElement: parent, matches: () => Boolean(node.typed !== undefined), checkVisibility: () => !node.hidden };
+        el.kids = (node.kids ?? []).map((kid) => build(kid, el));
+        if (node.typed !== undefined) {
+            el.innerText = node.typed;
+            editables.push(el);
+        }
+        return el;
     };
-    assert.equal(ShooSnapshot.pageText(doc, 20000), "Chat with CS\n\nSend");
-    assert.equal(ShooSnapshot.pageText(doc, 4), "Chat");
+    const body = build(root, null);
+    const flat = (el) => el.kids.flatMap((kid) => (kid.nodeType === 3 ? [kid] : [kid, ...flat(kid)]));
+    body.innerText = flat(body).filter((n) => n.nodeType === 3).map((n) => n.data).join("\n");
+    return {
+        body,
+        querySelectorAll: (selector) => (selector.includes("contenteditable") ? editables : []),
+        createTreeWalker: (_root, _show, filter) => {
+            function* walk(el) {
+                for (const kid of el.kids) {
+                    const answer = filter.acceptNode(kid);
+                    if (kid.nodeType === 3) {
+                        if (answer === 1) yield kid;
+                    } else if (answer === 3) {
+                        yield* walk(kid);
+                    }
+                }
+            }
+            const nodes = walk(body);
+            return { nextNode: () => nodes.next().value ?? null };
+        },
+    };
+}
+
+test("the typed words go, the same words printed on the page stay", () => {
+    const doc = page({ tag: "body", kids: [
+        { tag: "p", kids: ["Your transfer is pending"] },
+        { tag: "div", typed: "transfer", kids: ["transfer"] },
+        { tag: "p", kids: ["Send"] },
+    ] });
+    assert.equal(ShooSnapshot.pageText(doc, 20000), "Your transfer is pending\nSend");
+    assert.equal(ShooSnapshot.pageText(doc, 4), "Your");
+});
+
+test("nested editable areas are left out with the outer one", () => {
+    const doc = page({ tag: "body", kids: [
+        { tag: "p", kids: ["Chat with CS"] },
+        { tag: "div", typed: "my PIN is 123456", kids: ["my ", { tag: "span", typed: "PIN", kids: ["PIN"] }, " is 123456"] },
+        { tag: "p", kids: ["Send"] },
+    ] });
+    assert.equal(ShooSnapshot.pageText(doc, 20000), "Chat with CS\nSend");
+});
+
+test("page text skips what innerText would skip: scripts, styles, hidden parts, our own UI", () => {
+    const doc = page({ tag: "body", kids: [
+        { tag: "script", kids: ["var a"] }, { tag: "style", kids: ["p{}"] }, { tag: "noscript", kids: ["no"] }, { tag: "template", kids: ["t"] },
+        { tag: "p", hidden: true, kids: ["gone"] }, { tag: "shoo-warning", kids: ["ours"] }, { tag: "div", typed: "x", kids: ["x"] },
+        { tag: "p", kids: ["Masukkan ", { tag: "b", kids: ["PIN"] }, " Anda"] },
+    ] });
+    assert.equal(ShooSnapshot.pageText(doc, 20000), "Masukkan PIN Anda");
+});
+
+test("inline tags stay on the line, a new block starts a new one", () => {
+    const doc = page({ tag: "body", kids: [
+        { tag: "h1", kids: ["Your transfer is ", { tag: "b", kids: ["pending"] }] },
+        { tag: "form", kids: [{ tag: "label", kids: ["Masukkan PIN"] }] },
+        { tag: "div", typed: "x", kids: ["x"] },
+    ] });
+    assert.equal(ShooSnapshot.pageText(doc, 20000), "Your transfer is pending\nMasukkan PIN");
+});
+
+test("an empty composer changes nothing: the page is read the fast way", () => {
+    const doc = { body: { innerText: "Plain page" }, querySelectorAll: () => [{ innerText: "" }], createTreeWalker: () => { throw new Error("not needed"); } };
+    assert.equal(ShooSnapshot.pageText(doc, 20000), "Plain page");
 });
 
 test("page text without a body is empty", () => {

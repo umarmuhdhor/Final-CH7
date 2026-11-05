@@ -1,7 +1,7 @@
 // node --test ios/ShooExtension/Tests/*.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLists, candidates, due, applyPage, SOURCES, FULL_EVERY, MAX_AGE, MAX_ENTRIES } from "../Resources/lists.js";
+import { createLists, candidates, due, applyPage, shardOf, SOURCES, FULL_EVERY, MAX_AGE, MAX_ENTRIES, RETRY_AFTER_FAILURE, SHARDS } from "../Resources/lists.js";
 import { PSL_RULES } from "../Resources/psl.js";
 import { parseRules, registrableDomain } from "../Resources/domain.js";
 
@@ -15,9 +15,18 @@ function world({ session = SESSION, server = {}, stored = {} } = {}) {
     let clock = Date.UTC(2026, 9, 21);
     const store = { ...stored };
     const calls = [];
+    const reads = [];
+    const writes = [];
     const lists = createLists({
-        storage: { get: async (keys) => Object.fromEntries(keys.filter((k) => k in store).map((k) => [k, structuredClone(store[k])])),
-                   set: async (items) => Object.assign(store, structuredClone(items)) },
+        storage: { get: async (keys) => {
+                       reads.push(...keys);
+                       return Object.fromEntries(keys.filter((k) => k in store).map((k) => [k, structuredClone(store[k])]));
+                   },
+                   set: async (items) => {
+                       writes.push(...Object.keys(items));
+                       Object.assign(store, structuredClone(items));
+                   },
+                   remove: async (keys) => { for (const key of [keys].flat()) delete store[key]; } },
         getSession: async () => session,
         fetchJSON: async (url, init) => {
             calls.push({ url, token: init.token });
@@ -28,7 +37,7 @@ function world({ session = SESSION, server = {}, stored = {} } = {}) {
         registrableDomain: regDomain,
         now: () => clock,
     });
-    return { lists, store, calls, tick: (ms) => (clock += ms), now: () => clock };
+    return { lists, store, calls, reads, writes, tick: (ms) => (clock += ms), now: () => clock };
 }
 
 const page = (domains, nextSince, removed) => ({ domains: domains.map((domain) => ({ domain, addedAt: "2026-10-20T00:00:00Z" })), nextSince, ...(removed ? { removed: removed.map((domain) => ({ domain, removedAt: "x" })) } : {}) });
@@ -181,6 +190,102 @@ test("server down → keeps the old copy, match never rejects", async () => {
     w.tick(FULL_EVERY);
     await w.lists.refresh();
     assert.ok(await w.lists.match("scam.site"));
+});
+
+const SERVERS = (shoo, pub = () => page([], "p1")) => ({ "https://api.test/blocklist": shoo, "https://ai.test/public-blocklist": pub });
+
+test("shards: every domain has one home, spread evenly", () => {
+    assert.equal(shardOf("scam.site"), shardOf("scam.site"));
+    const counts = new Array(SHARDS).fill(0);
+    for (let i = 0; i < 100_000; i++) counts[shardOf(`scam-${i}.xyz`)]++;
+    assert.ok(Math.max(...counts) < 2 * (100_000 / SHARDS), "no shard holds much more than its share");
+});
+
+test("a page reads only the shards of its own names, never the whole list", async () => {
+    const domains = Array.from({ length: 5000 }, (_, i) => `scam-${i}.site`);
+    const w = world({ server: SERVERS(() => page(domains, "s1")) });
+    await w.lists.refresh();
+    const restarted = world({ server: SERVERS(() => page([], "s1")), stored: w.store });
+    assert.equal((await restarted.lists.match("a.b.scam-7.site")).domain, "scam-7.site");
+    assert.ok(restarted.reads.filter((key) => /\.\d+$/.test(key)).length <= 3 * SOURCES.length);
+});
+
+test("an incremental refresh rewrites only the shards it changes", async () => {
+    const domains = Array.from({ length: 5000 }, (_, i) => `scam-${i}.site`);
+    let reply = () => page(domains, "s1");
+    const w = world({ server: SERVERS(() => reply()) });
+    await w.lists.refresh();
+    reply = () => page(["new-one.site"], "s2", ["scam-1.site"]);
+    w.tick(HOUR);
+    w.writes.length = 0;
+    await w.lists.refresh();
+    assert.ok(w.writes.filter((key) => key.startsWith("lists.v2.shoo.") && !key.endsWith(".meta")).length <= 2);
+    assert.ok(await w.lists.match("new-one.site"));
+    assert.equal(await w.lists.match("scam-1.site"), null);
+    assert.ok(await w.lists.match("scam-2.site"));
+});
+
+test("a full download drops what the server dropped, in every shard", async () => {
+    let reply = () => page(["a.site", "b.site", "c.site"], "s1");
+    const w = world({ server: SERVERS(() => reply()) });
+    await w.lists.refresh();
+    reply = () => page(["b.site"], "s9");
+    w.tick(FULL_EVERY);
+    await w.lists.refresh();
+    assert.equal(await w.lists.match("a.site"), null);
+    assert.ok(await w.lists.match("b.site"));
+    assert.equal(await w.lists.match("c.site"), null);
+});
+
+test("the old single-key copy moves into shards once and stays usable offline", async () => {
+    const at = Date.UTC(2026, 9, 21) - HOUR;
+    const old = { domains: [["scam.site", "2026-10-20T00:00:00Z"], ["two.site", null]], meta: { fetchedAt: at, fullAt: at, nextSince: "s1" } };
+    const w = world({ session: null, stored: { "lists.v1.shoo": old } });
+    assert.deepEqual(await w.lists.match("scam.site"), { source: "shoo", domain: "scam.site", addedAt: "2026-10-20T00:00:00Z" });
+    assert.ok(await w.lists.match("two.site"));
+    assert.ok(!("lists.v1.shoo" in w.store));
+    assert.equal(w.store["lists.v2.shoo.meta"].nextSince, "s1");
+});
+
+test("a failed download waits 10 minutes, across a restart too: a page never starts it again", async () => {
+    let attempts = 0;
+    const down = () => { attempts++; throw new Error("HTTP 503"); };
+    const w = world({ server: SERVERS(down, down) });
+    await w.lists.refresh();
+    assert.equal(attempts, 2);
+    await w.lists.match("a.site");
+    await w.lists.refresh();
+    assert.equal(attempts, 2);
+    const restarted = world({ server: SERVERS(down, down), stored: w.store });
+    await restarted.lists.refresh();
+    assert.equal(attempts, 2);
+    restarted.tick(RETRY_AFTER_FAILURE);
+    await restarted.lists.refresh();
+    assert.equal(attempts, 4);
+});
+
+test("a good download clears the wait", async () => {
+    let up = false;
+    const w = world({ server: SERVERS(() => { if (!up) throw new Error("down"); return page(["scam.site"], "s1"); }) });
+    await w.lists.refresh();
+    up = true;
+    w.tick(RETRY_AFTER_FAILURE);
+    await w.lists.refresh();
+    assert.equal(w.store["lists.v2.shoo.meta"].failedAt, undefined);
+    assert.ok(await w.lists.match("scam.site"));
+});
+
+test("reset: a download still running for the old device writes nothing", async () => {
+    let finish;
+    const gate = new Promise((resolve) => (finish = resolve));
+    const w = world({ server: SERVERS(async () => { await gate; return page(["old.site"], "s1"); }) });
+    const running = w.lists.refresh();
+    await new Promise((resolve) => setImmediate(resolve));
+    for (const key of Object.keys(w.store)) delete w.store[key];
+    w.lists.reset();
+    finish();
+    await running;
+    assert.deepEqual(Object.keys(w.store), []);
 });
 
 test("paging stops when caught up (empty page or same cursor)", async () => {

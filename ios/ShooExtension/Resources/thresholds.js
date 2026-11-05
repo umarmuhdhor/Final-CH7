@@ -11,6 +11,7 @@ const TIMEOUT_MS = 10 * 1000;
 export const RETRY_AFTER_FAILURE = 10 * 60 * 1000; // a server that is down is not asked on every page load
 const CLOCK_SKEW = 5 * 60 * 1000;
 const STORAGE_KEY = "thresholds.v1";
+const FAILED_KEY = "thresholds.v1.failedAt";
 
 /** pipeline.js THRESHOLD as built in, plus the version it stands for. */
 export const DEFAULTS = Object.freeze({ firstWarning: 30, secondWarning: 50, blocked: 80, version: 0 });
@@ -50,7 +51,9 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
     function load() {
         loaded ??= (async () => {
             try {
-                const stored = (await storage.get(STORAGE_KEY))?.[STORAGE_KEY];
+                const items = await storage.get([STORAGE_KEY, FAILED_KEY]);
+                const stored = items?.[STORAGE_KEY];
+                if (Number.isFinite(items?.[FAILED_KEY])) failedAt = items[FAILED_KEY];
                 const value = toThresholds(stored?.value ? { warnAt: stored.value.firstWarning, blockAt: stored.value.blocked,
                     version: stored.value.version } : null);
                 // A time in the future (clock moved back, corrupt entry) would never expire: dropped.
@@ -87,16 +90,27 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
         }
     }
 
+    /** Kept in storage too: Safari can stop the background page at any time. */
+    async function markFailure(at) {
+        if (at === failedAt) return;
+        failedAt = at;
+        try {
+            await storage.set({ [FAILED_KEY]: at });
+        } catch (error) {
+            console.warn("[Shoo] thresholds: storage write failed", error);
+        }
+    }
+
     /** Downloads when due. Never rejects; a failure keeps the last good value. One download at a time. */
     async function refresh() {
         await load();
         if (fresh(REFRESH_EVERY)) return;
         if (failedAt != null && now() - failedAt >= 0 && now() - failedAt < RETRY_AFTER_FAILURE) return;
         inFlight ??= download()
-            .then(() => (failedAt = null))
+            .then(() => markFailure(null))
             .catch((error) => {
-                failedAt = now();
                 console.warn("[Shoo] thresholds: refresh failed", error);
+                return markFailure(now());
             })
             .finally(() => (inFlight = null));
         return inFlight;
@@ -110,5 +124,12 @@ export function createThresholds({ storage, getSession, fetchJSON, now = () => D
         return { ...saved.value };
     }
 
-    return { load, refresh, current };
+    /** A new device on this phone: back to the built-in numbers until its own answer. */
+    function reset() {
+        saved = null;
+        loaded = null;
+        failedAt = null;
+    }
+
+    return { load, refresh, current, reset };
 }

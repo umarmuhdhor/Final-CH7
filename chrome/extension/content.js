@@ -94,7 +94,6 @@
                 publish: (state) => {
                     const result = { ...state, scanId: p.scanId };
                     if (state.done) p.state = result;
-                    console.log("[Shoo]", result.domain, result.score, result.status, result.layersDone, result);
                     ShooPipeline.notify(result);
                 },
             });
@@ -144,16 +143,26 @@
     // Score resets on every navigation, including URL changes without reload (PRD §5).
     let lastUrl = location.href;
     let settleTimer = null;
+    const churning = ShooPipeline.urlChurn();
+    function scanWhenIdle() {
+        settleTimer = page?.running ? setTimeout(scanWhenIdle, URL_POLL_MS) : null;
+        if (!settleTimer) scan();
+    }
     setInterval(() => {
         if (location.href === lastUrl) return;
         const previous = lastUrl;
         lastUrl = location.href;
         if (!isNewPage(previous, lastUrl)) return;
+        if (churning(Date.now())) {
+            // Faster than a page can be checked: the running scan finishes, the score stays, the next one waits.
+            settleTimer ??= setTimeout(scanWhenIdle, RECHECK_GAP_MS);
+            return;
+        }
 
         currentScan++; // invalidate the running scan right away
         ShooPipeline.notify({ url: lastUrl, domain: null, score: 0, status: "normal", signals: [], layersDone: [], done: false, scanId: currentScan });
         clearTimeout(settleTimer);
-        settleTimer = setTimeout(scan, SPA_SETTLE_MS);
+        settleTimer = setTimeout(scanWhenIdle, SPA_SETTLE_MS);
     }, URL_POLL_MS);
 
     send({ type: "heartbeat" }).catch(() => {});

@@ -122,6 +122,35 @@ test("stored value from the future or corrupt is not trusted", async () => {
     }
 });
 
+test("a restart keeps the wait after a failure: a server that is down is not asked on every wake-up", async () => {
+    const first = world({ answer: new Error("down") });
+    await first.t.refresh();
+    assert.equal(first.calls.length, 1);
+    const second = world({ answer: new Error("down"), stored: first.store });
+    await second.t.refresh();
+    assert.equal(second.calls.length, 0);
+    second.tick(RETRY_AFTER_FAILURE);
+    await second.t.refresh();
+    assert.equal(second.calls.length, 1);
+    second.answer(body(40, 80, 2));
+    second.tick(RETRY_AFTER_FAILURE);
+    await second.t.refresh();
+    const third = world({ answer: new Error("down"), stored: second.store });
+    third.tick(2 * RETRY_AFTER_FAILURE + REFRESH_EVERY);
+    await third.t.refresh();
+    assert.equal(third.calls.length, 1, "a good answer clears the wait");
+});
+
+test("reset forgets the saved value: the next device starts from the built-in numbers", async () => {
+    const w = world({ answer: body(40, 80, 2) });
+    await w.t.refresh();
+    assert.equal((await w.t.current()).firstWarning, 40);
+    for (const key of Object.keys(w.store)) delete w.store[key];
+    w.t.reset();
+    w.answer(new Error("down"));
+    assert.deepEqual(await w.t.current(), { ...DEFAULTS });
+});
+
 test("storage that throws: no rejection, the download still counts", async () => {
     const t = createThresholds({
         storage: { get: async () => { throw new Error("quota"); }, set: async () => { throw new Error("quota"); } },

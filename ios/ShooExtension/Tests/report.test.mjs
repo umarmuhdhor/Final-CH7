@@ -7,20 +7,28 @@ await import("../Resources/dom.js");
 await import("../Resources/pipeline.js");
 await import("../Resources/marks.js");
 await import("../Resources/report.js"); // no pipeline/DOM here → helpers only
-const { shouldReport, shouldCount, scanBody, shareableUrl, signalMarks } = globalThis.ShooReport;
+const { shouldReport, shouldCount, scanBody, shareableUrl, signalMarks, withRecord } = globalThis.ShooReport;
 
 const read = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
 const schema = read("../../../contracts/scan-result.schema.json");
 const warning63 = read("../../../contracts/fixtures/warning-63.json");
 
 test("reports once per page: when blocked, or when a warning page is done", () => {
-    const seen = new Set();
+    const seen = new Map();
     assert.equal(shouldReport({ scanId: 1, status: "warning", done: false }, seen), false); // layers still running
     assert.equal(shouldReport({ scanId: 1, status: "warning", done: true }, seen), true);
     assert.equal(shouldReport({ scanId: 2, status: "blocked", done: false }, seen), true); // don't wait: page is leaving
     assert.equal(shouldReport({ scanId: 3, status: "normal", done: true }, seen), false); // < 30 never leaves the phone
-    seen.add(2);
+    seen.set(2, "blocked");
     assert.equal(shouldReport({ scanId: 2, status: "blocked", done: true }, seen), false);
+});
+
+test("a warning page that climbs to blocked on a re-check reports once more, then never again", () => {
+    const seen = new Map([[1, "warning"]]);
+    assert.equal(shouldReport({ scanId: 1, status: "warning", done: true }, seen), false);
+    assert.equal(shouldReport({ scanId: 1, status: "blocked", done: true }, seen), true);
+    seen.set(1, "blocked");
+    assert.equal(shouldReport({ scanId: 1, status: "blocked", done: true }, seen), false);
 });
 
 test("counts a page once, when its scan is done, at any score", () => {
@@ -127,9 +135,24 @@ test("marks stop at 24 and at 3 per signal", () => {
 });
 
 test("a page blocked again from memory (#231) is not reported again: one push per site", () => {
-    const seen = new Set();
+    const seen = new Map();
     assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true }, seen), false);
     assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true }, seen), true);
+});
+
+test("the record id joins what the page shows now, never an older state or another page", () => {
+    const sent = { scanId: 1, score: 40, status: "warning" };
+    assert.deepEqual(withRecord({ scanId: 1, score: 60, status: "warning" }, sent, "r1"), { scanId: 1, score: 60, status: "warning", recordId: "r1" });
+    assert.equal(withRecord({ scanId: 2, score: 0, status: "normal" }, sent, "r1"), null);
+    assert.equal(withRecord({ url: "https://x.test/next", score: 0, status: "normal" }, sent, "r1"), null); // route change, no scan yet
+    assert.equal(withRecord(null, sent, "r1"), null);
+});
+
+test("the favicon address goes out like the page's: http(s) only, no query or credentials", () => {
+    const body = (faviconUrl) => scanBody({ url: "https://x.test/", domain: "x.test", score: 40, status: "warning", signals: [] }, { faviconUrl, now: "2026-10-21T10:00:00.000Z" }).faviconUrl;
+    assert.equal(body("https://u:p@x.test/icon.png?session=abc#f"), "https://x.test/icon.png");
+    assert.equal(body("data:image/png;base64,AAAA"), null);
+    assert.equal(body(null), null);
 });
 
 test("#270: scanBody carries the RDAP date only when known", () => {
