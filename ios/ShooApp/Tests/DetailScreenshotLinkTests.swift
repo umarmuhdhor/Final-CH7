@@ -13,7 +13,7 @@ struct DetailScreenshotLinkTests {
         return try! JSONSerialization.data(withJSONObject: object)
     }
 
-    private static let me = HostStubProtocol.Reply.json(
+    private nonisolated static let me = HostStubProtocol.Reply.json(
         200, #"{"deviceId":"dev_me","name":"Adhella","avatarId":"avatar_01","mode":"guardian","language":"en","guardian":null}"#
     )
 

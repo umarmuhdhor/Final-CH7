@@ -20,6 +20,7 @@ final class LivePairingUITests: XCTestCase {
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-settings.dataConsent", "granted",
             "-UITestReset", "YES",
             "-settings.language", "en",
             "-UITestNotifications", "denied",

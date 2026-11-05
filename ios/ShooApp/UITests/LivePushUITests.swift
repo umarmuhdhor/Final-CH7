@@ -58,7 +58,7 @@ final class LivePushUITests: XCTestCase {
     func testPushTapOpensDetailInEveryAppState() throws {
         let app = XCUIApplication()
         // No `-UITestNotifications`: the real permission and the real APNs registration.
-        app.launchArguments += ["-UITestReset", "YES", "-settings.language", "en", "-UITestExtensionActive", "YES"]
+        app.launchArguments += ["-settings.dataConsent", "granted", "-UITestReset", "YES", "-settings.language", "en", "-UITestExtensionActive", "YES"]
         app.launch()
         onboardAsGuardian(app)
         try pairWithTheHost(app)

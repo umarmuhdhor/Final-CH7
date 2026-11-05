@@ -1329,11 +1329,7 @@ private struct AboutPage: View {
         return "\(short) (\(build))"
     }
 
-    private func page(_ path: String) -> URL {
-        var components = URLComponents(url: AppConfig.apiBaseURL.appending(path: path), resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "lang", value: language.code)]
-        return components.url!
-    }
+    private func page(_ path: String) -> URL { AppConfig.legalPage(path, language: language) }
 
     var body: some View {
         ProfileScreen(title: "About Shoo") {

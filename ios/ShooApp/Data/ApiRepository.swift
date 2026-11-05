@@ -14,7 +14,7 @@ final class ApiRepository: ShooRepository {
     private let lastCode = OSAllocatedUnfairLock<CachedCode?>(initialState: nil)
     private let now: @Sendable () -> Date
 
-    init(client: APIClient, session: SessionStore, now: @escaping @Sendable () -> Date = Date.init) {
+    init(client: APIClient, session: SessionStore, now: @escaping @Sendable () -> Date = { Date() }) {
         self.client = client
         self.session = session
         self.now = now

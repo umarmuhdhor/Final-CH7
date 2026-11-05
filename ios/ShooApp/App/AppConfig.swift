@@ -27,11 +27,17 @@ enum AppConfig {
     /// PF-01 Tentang Shoo: share link and support address, always the public ones (also in Debug,
     /// where `apiBaseURL` may be localhost). `/get` redirects to TestFlight or the App Store.
     static let shareURL = URL(string: "https://shoo-api.afindo-mi01.workers.dev/get")!
-    /// TODO(sync:alief): the team address from Figma; confirm the mailbox exists before release.
-    static let supportEmail = "halo@shoo.id"
+    static let supportEmail = "Apple.a.day.bali@gmail.com"
     /// App Store id for "Beri nilai di App Store". `nil` until the app is listed: the system review
     /// prompt is asked for instead.
     static let appStoreId: String? = nil
+
+    /// The policy or terms page in the app's language, served by the Worker.
+    static func legalPage(_ path: String, language: AppLanguage) -> URL {
+        var components = URLComponents(url: apiBaseURL.appending(path: path), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "lang", value: language.code)]
+        return components.url!
+    }
 
     /// Scan QR (PR-01): `NSCameraUsageDescription` came with C3 (#27). Off = Enter code only.
     static let cameraEnabled = true

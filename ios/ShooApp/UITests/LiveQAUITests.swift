@@ -67,7 +67,7 @@ final class LiveQAUITests: XCTestCase {
     @MainActor
     private func launch(extensionActive: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-UITestReset", "YES", "-settings.language", "id", "-debug.aiBaseURL", Self.aiBaseURL]
+        app.launchArguments += ["-settings.dataConsent", "granted", "-UITestReset", "YES", "-settings.language", "id", "-debug.aiBaseURL", Self.aiBaseURL]
         if extensionActive { app.launchArguments += ["-UITestExtensionActive", "YES"] }
         app.launch()
         return app

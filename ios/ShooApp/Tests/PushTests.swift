@@ -15,16 +15,14 @@ struct NotificationRouterTests {
         #expect(NotificationRouter.scanId(userInfo: userInfo) == Self.scanId)
     }
 
-    @Test(arguments: [
-        [:],
-        ["scanId": 42],
-        ["scanId": ""],
-        ["scanId": "../devices/me"],
-        ["scanId": "a/b"],
-        ["scanId": String(repeating: "a", count: 129)],
-    ] as [[String: AnyHashable]])
-    func unusableScanIdIsNil(userInfo: [String: AnyHashable]) {
-        #expect(NotificationRouter.scanId(userInfo: userInfo) == nil)
+    @Test(arguments: ["", "../devices/me", "a/b", String(repeating: "a", count: 129)])
+    func unusableScanIdIsNil(scanId: String) {
+        #expect(NotificationRouter.scanId(userInfo: ["scanId": scanId]) == nil)
+    }
+
+    @Test func missingOrNonTextScanIdIsNil() {
+        #expect(NotificationRouter.scanId(userInfo: [:]) == nil)
+        #expect(NotificationRouter.scanId(userInfo: ["scanId": 42]) == nil)
     }
 
     @Test func tokenIsLowercaseHex() {

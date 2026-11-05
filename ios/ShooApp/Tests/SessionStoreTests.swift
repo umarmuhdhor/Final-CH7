@@ -12,12 +12,47 @@ struct SessionStoreTests {
             defaults: defaults,
             keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
             apiBaseURL: URL(string: "https://api.shoo.test")!,
-            aiBaseURL: ai
+            aiBaseURL: ai,
+            onlineCheckAllowed: true
         )
         return (store, defaults, suite)
     }
 
     private let registration = DeviceRegistration(deviceId: "dev_mom", token: "shoo_abc", avatarId: "avatar_03")
+
+    @Test func theAIURLOnlyReachesTheExtensionWithConsent() throws {
+        let (store, defaults, suite) = makeStore()
+        defer { store.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        store.setOnlineCheck(allowed: false)
+        try store.save(registration, name: "Mom", mode: .protected)
+        #expect(defaults.string(forKey: AppGroup.Key.aiBaseURL) == nil)
+        #expect(defaults.string(forKey: AppGroup.Key.apiBaseURL) == "https://api.shoo.test")
+        store.setOnlineCheck(allowed: true)
+        #expect(defaults.string(forKey: AppGroup.Key.aiBaseURL) == "https://ai.shoo.test")
+        store.setOnlineCheck(allowed: false)
+        #expect(defaults.string(forKey: AppGroup.Key.aiBaseURL) == nil)
+        store.writeBaseURLs()
+        #expect(defaults.string(forKey: AppGroup.Key.aiBaseURL) == nil)
+    }
+
+    @Test func clearTakesThePageCountWithTheSession() throws {
+        let (store, defaults, suite) = makeStore()
+        defer { store.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        try store.save(registration, name: "Mom", mode: .protected)
+        defaults.set(12, forKey: AppGroup.Key.statsChecked)
+        defaults.set(Date(), forKey: AppGroup.Key.statsLastCheckedAt)
+        store.clear()
+        #expect(defaults.object(forKey: AppGroup.Key.statsChecked) == nil)
+        #expect(defaults.object(forKey: AppGroup.Key.statsLastCheckedAt) == nil)
+    }
+
+    @Test func consentBeforeRegisteringWritesNoSession() {
+        let (store, defaults, suite) = makeStore()
+        defer { store.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        store.setOnlineCheck(allowed: true)
+        #expect(defaults.string(forKey: AppGroup.Key.aiBaseURL) == nil)
+        #expect(defaults.string(forKey: AppGroup.Key.apiBaseURL) == nil)
+    }
 
     @Test func saveWritesEveryContractKey() throws {
         let (store, defaults, suite) = makeStore()

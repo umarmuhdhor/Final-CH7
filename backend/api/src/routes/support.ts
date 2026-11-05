@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../env";
-import { CONTACT, legalPage, pageLanguage, type LegalText } from "./privacy";
+import { contactLink, legalPage, pageLanguage, type LegalText } from "./privacy";
 
 // Fase 24c-1 (E6): the Support URL for App Store Connect. How to reach us and how to delete
 // everything. Static, no auth, no DB, same page shell and headers as /privacy and /terms.
@@ -8,10 +8,10 @@ import { CONTACT, legalPage, pageLanguage, type LegalText } from "./privacy";
 const TEXT: Record<"en" | "id", LegalText> = {
   en: {
     title: "Shoo support",
-    updated: "Last updated: 1 November 2026",
+    updated: "Last updated: 5 November 2026",
     lead: "Shoo blocks scam websites in Safari on iPhone and lets a family member (the Guardian) help. This page says how to reach us and how to remove your data.",
     sections: [
-      { h: "Contact", items: [`Questions or problems: ${CONTACT}.`] },
+      { h: "Contact", items: [`Questions or problems: ${contactLink}.`] },
       { h: "Leave a family", items: [
         "Guardian: open the family member in the app and tap Disconnect. You lose access to their flagged pages at once, and your decisions about their sites are deleted.",
         "Protected person: ask your Guardian to disconnect you, or delete your account (below).",
@@ -28,10 +28,10 @@ const TEXT: Record<"en" | "id", LegalText> = {
   },
   id: {
     title: "Bantuan Shoo",
-    updated: "Terakhir diperbarui: 1 November 2026",
+    updated: "Terakhir diperbarui: 5 November 2026",
     lead: "Shoo memblokir situs penipuan di Safari iPhone dan membiarkan anggota keluarga (Guardian) membantu. Halaman ini menjelaskan cara menghubungi kami dan cara menghapus datamu.",
     sections: [
-      { h: "Kontak", items: [`Pertanyaan atau masalah: ${CONTACT}.`] },
+      { h: "Kontak", items: [`Pertanyaan atau masalah: ${contactLink}.`] },
       { h: "Keluar dari keluarga", items: [
         "Guardian: buka anggota keluarga di app lalu ketuk Putuskan koneksi. Kamu langsung kehilangan akses ke halaman yang ditandai miliknya, dan keputusanmu tentang situsnya dihapus.",
         "Orang yang dilindungi: minta Guardian memutuskan koneksi, atau hapus akunmu (di bawah).",

@@ -48,9 +48,10 @@ final class FamilyCodeModel {
     @ObservationIgnored private var membersVersion = 0
     @ObservationIgnored private var isLoadingMembers = false
 
-    init(repository: any ShooRepository, now: @escaping () -> Date = Date.init, throttle: RefreshThrottle = .shared) {
+    init(repository: any ShooRepository, now: @escaping () -> Date = Date.init, throttle: RefreshThrottle? = nil) {
         self.repository = repository
         self.now = now
+        let throttle = throttle ?? .shared
         self.throttle = throttle
         replaceWait = throttle.wait(at: now())
     }

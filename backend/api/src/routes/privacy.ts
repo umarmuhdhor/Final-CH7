@@ -12,9 +12,10 @@ import type { AppEnv } from "../env";
 // ADM-07 (dashboard D-dash-17) keeps every flagged page in admin.scan_archive with a keyed code until deletion,
 // then strips it; the extension sends the flagged parts of the page (evidence fragments) with or without a family.
 
-// TODO(sync:alief): team contact address (fase 24 K10 mailbox) — replace before external TestFlight /
-// App Store (TODO E6). Shared by /privacy and /support, so one line changes both.
-export const CONTACT = "the Shoo team (contact address coming before public release)";
+// Team mailbox. Shared by /privacy and /support, so one line changes both. The app has its own copy
+// (AppConfig.supportEmail).
+export const CONTACT = "Apple.a.day.bali@gmail.com";
+export const contactLink = `<a href="mailto:${CONTACT}">${CONTACT}</a>`;
 
 type Section = { h: string; items: string[] };
 const TEXT: Record<"en" | "id", LegalText> = {
@@ -36,7 +37,14 @@ const TEXT: Record<"en" | "id", LegalText> = {
       ] },
       { h: "What we do not do", items: [
         "No ads, no analytics, no tracking, and we never sell data.",
-        "Pages scored below 30 may be analysed but are not stored by us. Apart from the short domain-age cache, the list of risky website domains and the record of flagged pages described below, we keep no other browsing history.",
+        "Pages scored below 30 are checked but not stored by us (see \"How pages are checked\"). Apart from the short domain-age cache, the list of risky website domains and the record of flagged pages described below, we keep no other browsing history.",
+      ] },
+      { h: "How pages are checked", items: [
+        "Shoo first checks each page on your iPhone. If you allow the online check, it then sends the page you opened in Safari to Shoo's server for a closer look, unless the site is already on the blocklist or was blocked on this phone before.",
+        "What is sent: the address without the part after \"?\", the page title and language, up to 20,000 characters of the text the page shows, the names, labels and types of its form fields, descriptions of its images, the page address a form submits to, and the results of the checks on your iPhone, together with your device token. What you type into fields is never sent.",
+        "Text you type in chat boxes and mail editors on the page is left out too. Text the page itself shows is sent, and that can include your name, your email or your messages when a site you are logged in to shows them.",
+        "The server only reads this to work out a score, then forgets it: the page text is not stored or logged. The company that runs the server (Cloudflare) sees your IP address when your phone connects, as with any website.",
+        "You choose. Shoo asks before the first check, and you can change your answer at any time in Profile → Online check. With it off, pages are checked on your iPhone only, protection is weaker, and the public list of scam sites stops updating. Pages Shoo still flags are reported as described on this page.",
       ] },
       { h: "Who can see it", items: [
         "You, and your Guardian while you are connected. When you disconnect, your Guardian loses access at once and their decisions about your sites are deleted.",
@@ -50,15 +58,17 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "Family codes stop working after 30 minutes, or as soon as a new one is made, and are deleted within a day.",
         "Your device's name, avatar and push token stay until you delete your data in the app. Devices that stop using Shoo are not deleted automatically yet.",
         "A Guardian's decisions stay until you disconnect or delete your data. A copy used to improve detection (the domain, Safe or Not safe, Shoo's risk score for the page at that time, and codes that cannot be traced back to your devices without our key) is kept after the 14 days and is deleted when you disconnect or delete your data.",
-        "A record of each flagged page (domain, address without the part after \"?\", page title, site icon, score, reasons, time, the Guardian's decision and the flagged parts of the page) is kept to improve detection until you delete your data.",
-        "When you delete your data, that record loses every link to you: the code and the page title are removed and the time is rounded to the hour. The flagged parts of the page are kept only for sites shown to be a scam and are deleted for other sites. When you disconnect, the Guardian's decisions in the record are removed.",
+        "A record of each flagged page (domain, address without the part after \"?\", page title, site icon, score, reasons, time, the Guardian's decision and the flagged parts of the page) is kept to improve detection until you delete your data. It is not deleted after 14 days.",
+        "When you delete your data, that record loses its link to you: the code and the page title are removed and the time is rounded to the hour. When you disconnect, the Guardian's decisions in the record are removed.",
+        "What stays after you delete your data, with no time limit: the domain, the address without the part after \"?\", the score, the reasons and the rounded time of each flagged page. For a site shown to be a scam (approved for the blocklist, labelled as a scam by our checks, or reported Not safe by a Guardian), the flagged parts of the page stay too. For other sites they are deleted.",
+        "We do not clean the text in that kept record. An address or a flagged part of a page can still hold what the page showed, such as a name or an email, and we cannot tell which records those are, so we cannot remove them for you afterwards.",
         "When Shoo's detection team uses that record, it gets no code, no page title and no name, and long codes in the address (such as a personal link) are replaced with random characters.",
         "A domain that a person on our team reviewed and confirmed as a scam joins a shared blocklist for every user. Only the domain is kept, with no link to you.",
         "Risky website domains that Shoo flagged (for example bca-verifikasi.site) are kept with counts and detection signals, to improve detection. They have no link to you, your device or the page address, and are not deleted.",
         "Security counters (a keyed hash of your IP address or device, never the address itself) are deleted after 1 day.",
       ] },
       { h: "Delete your data", items: [
-        "In the app: Profile → Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are deleted immediately. Page copy, screenshot and icon links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable). The record of flagged pages loses its link to you at once, as described above.",
+        "In the app: Profile → Delete account. Your device, flagged pages, page copies, screenshots, site icons, decisions and family links are deleted immediately. Page copy, screenshot and icon links stop working at once, and the files are removed from storage right after (retried daily if storage is unreachable). The record of flagged pages loses its link to you at once, and part of it stays, as described above under \"How long we keep it\".",
       ] },
       { h: "Copy of the page", items: [
         "When the extension blocks a page or warns you about it, it keeps a copy of the page as you saw it, so you (and your Guardian, if you have one) can see what the page looked like. The copy has no scripts and loads nothing from the internet.",
@@ -72,17 +82,18 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "To check how old a site is, our server asks the public domain registry (RDAP) about the site's domain. We keep only the domain name and its registration date, for up to 7 days, not linked to you or your device.",
       ] },
       { h: "AI check of suspicious pages", items: [
-        "When a page already looks suspicious and has a form, Shoo's server may send a small summary of it to a third-party AI provider, to check whether the data the page asks for fits that kind of page.",
-        "The summary is only: the site's domain (for example bank-prize.xyz, without the rest of the address), the page title, the names of up to 12 form fields (for example \"OTP\" or \"card number\") with their type (such as text or password), and which of our own checks fired. Emails and runs of 4 or more digits in the title and field names are hidden first.",
-        "We never send the page's text, the full web address, anything you type, or your Shoo name, device ID or token. The page title can still contain what the site itself shows, such as a name. The request comes from our server, so the provider does not see your IP address. We do not store the request or the answer.",
-        "We cannot guarantee how long the AI provider keeps this summary.",
+        "Shoo uses DeepSeek, a third-party AI provider run by Hangzhou DeepSeek Artificial Intelligence Co., Ltd. in China. This only happens if you allow the online check.",
+        "When a page scores from 30 to 79 and is not a known official site, Shoo's server may send a small summary of it to DeepSeek, with or without a form on the page, to check whether what the page asks for fits that kind of page.",
+        "The summary is only: the site's domain (for example bank-prize.xyz, without the rest of the address), the page title, the names of up to 12 form fields (for example \"OTP\" or \"card number\") with their type (such as text or password), the brands the page mentions, and which of our own checks fired. Emails and runs of 4 or more digits in the title and field names are hidden first.",
+        "We never send the page's text, the full web address, anything you type, or your Shoo name, device ID or token. The page title can still contain what the site itself shows, such as a name. The request comes from our server, so DeepSeek does not see your IP address. We do not store the request or the answer.",
+        "DeepSeek processes data in China. We cannot guarantee how long it keeps this summary, or that it does not use it to improve its models.",
       ] },
       { h: "Service providers", items: [
         "Cloudflare (runs our API and stores page copies and site icons in Cloudflare R2), Supabase (database, and storage of older screenshots and site icons, Singapore region) and Apple (push notifications). They process data only to provide these services.",
         "Public domain registries (RDAP) receive the domain of a site we check, to tell us when it was registered.",
-        "A third-party AI provider receives the page summary described above.",
+        "DeepSeek (China) receives the page summary described above.",
       ] },
-      { h: "Contact", items: [`Questions: ${CONTACT}.`] },
+      { h: "Contact", items: [`Questions: ${contactLink}.`] },
     ],
   },
   id: {
@@ -103,7 +114,14 @@ const TEXT: Record<"en" | "id", LegalText> = {
       ] },
       { h: "Yang tidak kami lakukan", items: [
         "Tanpa iklan, tanpa analytics, tanpa pelacakan, dan kami tidak pernah menjual data.",
-        "Halaman dengan skor di bawah 30 bisa dianalisis tetapi tidak kami simpan. Selain cache umur domain singkat, daftar domain situs berisiko, dan catatan halaman yang ditandai yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
+        "Halaman dengan skor di bawah 30 diperiksa tetapi tidak kami simpan (lihat \"Cara halaman diperiksa\"). Selain cache umur domain singkat, daftar domain situs berisiko, dan catatan halaman yang ditandai yang dijelaskan di bawah, kami tidak menyimpan riwayat browsing lain.",
+      ] },
+      { h: "Cara halaman diperiksa", items: [
+        "Shoo memeriksa setiap halaman dulu di iPhone-mu. Kalau kamu mengizinkan cek online, Shoo lalu mengirim halaman yang kamu buka di Safari ke server Shoo untuk diperiksa lebih teliti, kecuali situsnya sudah ada di daftar blokir atau pernah diblokir di HP ini.",
+        "Yang dikirim: alamat tanpa bagian setelah \"?\", judul dan bahasa halaman, maksimal 20.000 karakter teks yang ditampilkan halaman, nama, label, dan jenis kolom formulirnya, keterangan gambarnya, alamat tujuan formulir, dan hasil pemeriksaan di iPhone-mu, bersama token device-mu. Isian yang kamu ketik di kolom tidak pernah dikirim.",
+        "Teks yang kamu ketik di kotak chat dan editor email pada halaman juga tidak ikut. Teks yang ditampilkan halaman itu sendiri ikut dikirim, dan ini bisa memuat nama, email, atau pesanmu kalau situs tempat kamu login menampilkannya.",
+        "Server hanya membaca data ini untuk menghitung skor, lalu melupakannya: teks halaman tidak disimpan dan tidak dicatat di log. Perusahaan yang menjalankan server (Cloudflare) melihat alamat IP-mu saat HP-mu terhubung, sama seperti situs web lain.",
+        "Kamu yang memilih. Shoo bertanya sebelum pemeriksaan pertama, dan kamu bisa mengubah jawabanmu kapan saja di Profil → Cek online. Kalau dimatikan, halaman hanya diperiksa di iPhone-mu, perlindungan lebih lemah, dan daftar publik situs penipuan berhenti diperbarui. Halaman yang tetap ditandai Shoo dilaporkan seperti dijelaskan di halaman ini.",
       ] },
       { h: "Siapa yang bisa melihat", items: [
         "Kamu, dan Guardian-mu selama kalian terhubung. Saat kamu memutus hubungan, Guardian langsung kehilangan akses dan keputusannya tentang situs-situsmu dihapus.",
@@ -117,15 +135,17 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "Kode keluarga berhenti berlaku setelah 30 menit, atau begitu kode baru dibuat, dan dihapus dalam sehari.",
         "Nama, avatar, dan token push device-mu disimpan sampai kamu menghapus datamu di app. Device yang berhenti memakai Shoo belum dihapus otomatis.",
         "Keputusan Guardian disimpan sampai kamu memutus hubungan atau menghapus datamu. Salinan yang dipakai untuk memperbaiki deteksi (domain, Aman atau Tidak aman, skor risiko Shoo untuk halaman itu saat itu, dan kode yang tidak bisa dilacak ke device kalian tanpa kunci kami) tetap disimpan setelah 14 hari dan dihapus saat kamu memutus hubungan atau menghapus datamu.",
-        "Catatan setiap halaman yang ditandai (domain, alamat tanpa bagian setelah \"?\", judul halaman, ikon situs, skor, alasan, waktu, keputusan Guardian, dan bagian halaman yang ditandai) disimpan untuk memperbaiki deteksi sampai kamu menghapus datamu.",
-        "Saat kamu menghapus datamu, catatan itu kehilangan semua kaitan denganmu: kode dan judul halaman dihapus dan waktunya dibulatkan ke jam. Bagian halaman yang ditandai hanya disimpan untuk situs yang terbukti penipuan dan dihapus untuk situs lain. Saat kamu memutus hubungan, keputusan Guardian di catatan itu dihapus.",
+        "Catatan setiap halaman yang ditandai (domain, alamat tanpa bagian setelah \"?\", judul halaman, ikon situs, skor, alasan, waktu, keputusan Guardian, dan bagian halaman yang ditandai) disimpan untuk memperbaiki deteksi sampai kamu menghapus datamu. Catatan ini tidak dihapus setelah 14 hari.",
+        "Saat kamu menghapus datamu, catatan itu kehilangan kaitannya denganmu: kode dan judul halaman dihapus dan waktunya dibulatkan ke jam. Saat kamu memutus hubungan, keputusan Guardian di catatan itu dihapus.",
+        "Yang tetap ada setelah kamu menghapus datamu, tanpa batas waktu: domain, alamat tanpa bagian setelah \"?\", skor, alasan, dan waktu yang sudah dibulatkan dari setiap halaman yang ditandai. Untuk situs yang terbukti penipuan (disetujui masuk daftar blokir, dilabeli penipuan oleh pemeriksaan kami, atau dilaporkan Tidak aman oleh Guardian), bagian halaman yang ditandai juga tetap ada. Untuk situs lain, bagian itu dihapus.",
+        "Kami tidak membersihkan teks di catatan yang tersisa itu. Alamat atau bagian halaman yang ditandai masih bisa memuat apa yang ditampilkan halaman, misalnya nama atau email, dan kami tidak bisa tahu catatan mana yang memuatnya, jadi kami tidak bisa menghapusnya untukmu setelah itu.",
         "Saat tim deteksi Shoo memakai catatan itu, tim tidak menerima kode, judul halaman, maupun nama, dan kode panjang di alamat (misalnya link pribadi) diganti dengan karakter acak.",
         "Domain yang sudah diperiksa tim kami dan dipastikan penipuan masuk ke daftar blokir bersama untuk semua pengguna. Hanya domainnya yang disimpan, tanpa kaitan denganmu.",
         "Domain situs berisiko yang ditandai Shoo (misalnya bca-verifikasi.site) disimpan bersama jumlah dan sinyal deteksinya, untuk memperbaiki deteksi. Domain ini tidak terkait denganmu, device-mu, atau alamat halaman, dan tidak dihapus.",
         "Penghitung keamanan (hash berkunci dari alamat IP atau device, tidak pernah alamatnya sendiri) dihapus setelah 1 hari.",
       ] },
       { h: "Hapus datamu", items: [
-        "Di app: Profil → Hapus akun. Device, halaman yang ditandai, salinan halaman, screenshot, ikon situs, keputusan, dan hubungan keluarga dihapus seketika. Link salinan halaman, screenshot, dan ikon langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi). Catatan halaman yang ditandai langsung kehilangan kaitan denganmu, seperti dijelaskan di atas.",
+        "Di app: Profil → Hapus akun. Device, halaman yang ditandai, salinan halaman, screenshot, ikon situs, keputusan, dan hubungan keluarga dihapus seketika. Link salinan halaman, screenshot, dan ikon langsung berhenti bekerja, dan filenya dihapus dari penyimpanan sesaat kemudian (dicoba ulang setiap hari kalau penyimpanan tidak bisa dihubungi). Catatan halaman yang ditandai langsung kehilangan kaitan denganmu, dan sebagian tetap ada, seperti dijelaskan di atas pada \"Berapa lama disimpan\".",
       ] },
       { h: "Salinan halaman", items: [
         "Saat extension memblokir halaman atau memberi peringatan, extension menyimpan salinan halaman seperti yang kamu lihat, supaya kamu (dan Guardian, kalau ada) bisa melihat tampilan halaman itu. Salinan ini tanpa script dan tidak memuat apa pun dari internet.",
@@ -139,17 +159,18 @@ const TEXT: Record<"en" | "id", LegalText> = {
         "Untuk memeriksa umur sebuah situs, server kami bertanya ke registry domain publik (RDAP) tentang domain situs itu. Kami hanya menyimpan nama domain dan tanggal registrasinya, maksimal 7 hari, tidak terhubung ke kamu atau device-mu.",
       ] },
       { h: "Pemeriksaan AI untuk halaman mencurigakan", items: [
-        "Kalau sebuah halaman sudah terlihat mencurigakan dan punya formulir, server Shoo bisa mengirim ringkasan kecil halaman itu ke penyedia AI pihak ketiga, untuk memeriksa apakah data yang diminta wajar untuk jenis halaman itu.",
-        "Ringkasannya hanya: domain situs (misalnya bank-hadiah.xyz, tanpa sisa alamatnya), judul halaman, nama maksimal 12 kolom formulir (misalnya \"OTP\" atau \"nomor kartu\") beserta jenisnya (misalnya teks atau password), dan pemeriksaan kami yang terpicu. Email dan deretan 4 angka atau lebih di judul dan nama kolom disembunyikan dulu.",
-        "Kami tidak pernah mengirim isi teks halaman, alamat web lengkap, apa pun yang kamu ketik, atau nama Shoo-mu, ID device, maupun token. Judul halaman tetap bisa berisi apa yang ditampilkan situs itu sendiri, misalnya nama. Permintaan dikirim dari server kami, jadi penyedia tidak melihat alamat IP-mu. Kami tidak menyimpan permintaan maupun jawabannya.",
-        "Kami tidak bisa menjamin berapa lama penyedia AI menyimpan ringkasan ini.",
+        "Shoo memakai DeepSeek, penyedia AI pihak ketiga yang dijalankan Hangzhou DeepSeek Artificial Intelligence Co., Ltd. di China. Ini hanya terjadi kalau kamu mengizinkan cek online.",
+        "Kalau skor sebuah halaman 30 sampai 79 dan bukan situs resmi yang dikenal, server Shoo bisa mengirim ringkasan kecil halaman itu ke DeepSeek, baik halamannya punya formulir maupun tidak, untuk memeriksa apakah yang diminta halaman itu wajar untuk jenis halamannya.",
+        "Ringkasannya hanya: domain situs (misalnya bank-hadiah.xyz, tanpa sisa alamatnya), judul halaman, nama maksimal 12 kolom formulir (misalnya \"OTP\" atau \"nomor kartu\") beserta jenisnya (misalnya teks atau password), merek yang disebut halaman, dan pemeriksaan kami yang terpicu. Email dan deretan 4 angka atau lebih di judul dan nama kolom disembunyikan dulu.",
+        "Kami tidak pernah mengirim isi teks halaman, alamat web lengkap, apa pun yang kamu ketik, atau nama Shoo-mu, ID device, maupun token. Judul halaman tetap bisa berisi apa yang ditampilkan situs itu sendiri, misalnya nama. Permintaan dikirim dari server kami, jadi DeepSeek tidak melihat alamat IP-mu. Kami tidak menyimpan permintaan maupun jawabannya.",
+        "DeepSeek memproses data di China. Kami tidak bisa menjamin berapa lama DeepSeek menyimpan ringkasan ini, atau bahwa DeepSeek tidak memakainya untuk memperbaiki modelnya.",
       ] },
       { h: "Penyedia layanan", items: [
         "Cloudflare (menjalankan API kami dan menyimpan salinan halaman serta ikon situs di Cloudflare R2), Supabase (database, dan penyimpanan screenshot serta ikon situs lama, region Singapura), dan Apple (notifikasi push). Mereka memproses data hanya untuk menyediakan layanan itu.",
         "Registry domain publik (RDAP) menerima domain situs yang kami periksa, untuk memberi tahu kapan domain itu didaftarkan.",
-        "Penyedia AI pihak ketiga menerima ringkasan halaman yang dijelaskan di atas.",
+        "DeepSeek (China) menerima ringkasan halaman yang dijelaskan di atas.",
       ] },
-      { h: "Kontak", items: [`Pertanyaan: ${CONTACT}.`] },
+      { h: "Kontak", items: [`Pertanyaan: ${contactLink}.`] },
     ],
   },
 };

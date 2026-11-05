@@ -52,6 +52,7 @@ private struct OnboardingStepView: View {
         Group {
             switch model.step {
             case .splash: SplashView(model: model)
+            case .dataConsent: DataConsentView(onBack: model.goBack, onAnswer: model.answerDataConsent)
             case .name: NameView(model: model)
             case .mode: ModeView(model: model)
             case .connect: OnboardingConnectStep(model: model)

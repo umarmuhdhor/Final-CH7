@@ -116,8 +116,8 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       "This is sent with or without a family.",
       "see a code instead of your name (for example \"User a3f9c2e1\")",
       "A record of each flagged page", "is kept to improve detection until you delete your data.",
-      "that record loses every link to you", "the time is rounded to the hour",
-      "kept only for sites shown to be a scam and are deleted for other sites",
+      "that record loses its link to you", "What stays after you delete your data, with no time limit", "We do not clean the text in that kept record", "It is not deleted after 14 days", "Shoo uses DeepSeek", "with or without a form", "up to 20,000 characters", "Profile → Online check", "Apple.a.day.bali@gmail.com", "the time is rounded to the hour",
+      "For a site shown to be a scam",
       "When you disconnect, the Guardian's decisions in the record are removed.",
       "replaced with random characters",
       "The record of flagged pages loses its link to you at once"]) {
@@ -130,8 +130,8 @@ describe("GET /privacy (SECURITY §3 P12)", () => {
       "Ini dikirim baik kamu terhubung dalam keluarga maupun tidak.",
       "melihat kode, bukan namamu (misalnya \"User a3f9c2e1\")",
       "Catatan setiap halaman yang ditandai", "disimpan untuk memperbaiki deteksi sampai kamu menghapus datamu.",
-      "catatan itu kehilangan semua kaitan denganmu", "waktunya dibulatkan ke jam",
-      "hanya disimpan untuk situs yang terbukti penipuan dan dihapus untuk situs lain",
+      "catatan itu kehilangan kaitannya denganmu", "Yang tetap ada setelah kamu menghapus datamu, tanpa batas waktu", "Kami tidak membersihkan teks", "Shoo memakai DeepSeek", "baik halamannya punya formulir maupun tidak", "maksimal 20.000 karakter", "Profil → Cek online", "waktunya dibulatkan ke jam",
+      "Untuk situs yang terbukti penipuan",
       "Saat kamu memutus hubungan, keputusan Guardian di catatan itu dihapus.",
       "diganti dengan karakter acak",
       "Catatan halaman yang ditandai langsung kehilangan kaitan denganmu"]) {

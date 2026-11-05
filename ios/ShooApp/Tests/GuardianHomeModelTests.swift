@@ -5,7 +5,7 @@ import Testing
 @MainActor
 struct GuardianHomeModelTests {
     /// A few hours after the newest fixture scan (2026-10-21T04:05:00Z).
-    static let fixtureNow = Date(timeIntervalSince1970: 1_792_584_000) // 2026-10-21T12:00:00Z
+    nonisolated static let fixtureNow = Date(timeIntervalSince1970: 1_792_584_000) // 2026-10-21T12:00:00Z
 
     func settings() throws -> AppSettings {
         AppSettings(defaults: try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)")))

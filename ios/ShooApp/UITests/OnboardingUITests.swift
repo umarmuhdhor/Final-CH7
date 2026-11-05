@@ -17,6 +17,28 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
+    func testConsentComesBeforeNameAndCanBeDeclined() {
+        let app = XCUIApplication.mock(["-settings.language", "en", "-UITestReset", "YES", "-debug.askDataConsent", "YES"])
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
+        app.buttons["splash.skip"].tap()
+        XCTAssertTrue(app.buttons["consent.allow"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["AI check by DeepSeek"].exists)
+        app.buttons["consent.decline"].tap()
+        XCTAssertTrue(app.textFields.firstMatch.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testARegisteredDeviceAnswersBeforeTheApp() {
+        let app = XCUIApplication.mock([
+            "-settings.language", "en", "-UITestReset", "YES", "-debug.askDataConsent", "YES",
+            "-settings.mode", "guardian", "-settings.onboardingCompleted", "YES",
+        ])
+        XCTAssertTrue(app.buttons["consent.allow"].waitForExistence(timeout: 10))
+        app.buttons["consent.allow"].tap()
+        XCTAssertFalse(app.buttons["consent.allow"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
     private func register(_ app: XCUIApplication, name: String, mode: String) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
         app.buttons["splash.skip"].tap()
