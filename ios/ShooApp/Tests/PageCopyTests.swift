@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import Testing
 import UIKit
+import WebKit
 @testable import Shoo
 
 /// Durations a `DetailModel` asked to sleep; the test never really waits.
@@ -227,7 +228,7 @@ extension WebKitTests {
                 url: nil, capturedAt: Date(), focusY: 1000, truncated: false,
                 marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 1000, width: 390, height: 200))]
             )
-            let copy = try #require(await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window))
+            let copy = try #require(await Self.render(locked, meta: meta, ruleList: ruleList, in: window))
             #expect(copy.cssWidth == 390)
             #expect(abs(copy.image.size.width - ReplicaSnapshot.imageWidth) < 1)
             #expect(abs(copy.image.size.height - 1200 * ReplicaSnapshot.imageWidth / 390) < 2)
@@ -253,7 +254,7 @@ extension WebKitTests {
                 url: nil, capturedAt: Date(), focusY: 2500, truncated: false,
                 marks: [ReplicaMark(signalId: "asks_pin", rect: CGRect(x: 0, y: 2500, width: 390, height: 100))]
             )
-            let copy = try #require(await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window))
+            let copy = try #require(await Self.render(locked, meta: meta, ruleList: ruleList, in: window))
             #expect(ReplicaSnapshot.imageWidth == ReplicaSnapshot.renderWidth)
             #expect(abs(copy.image.size.width - 390) < 1)
             #expect(abs(copy.image.size.height - ReplicaSnapshot.windowHeight) < 2)
@@ -299,6 +300,22 @@ extension WebKitTests {
         }
 
         /// Test host without a key window: one of our own.
+        /// `ReplicaSnapshot.render` with one more try. On a cold CI runner the first WebKit content process
+        /// can miss `loadTimeout` or `snapshotTimeout` (CI on #285); a second failure names the stage.
+        private static func render(
+            _ locked: String, meta: ReplicaMeta, ruleList: WKContentRuleList, in window: UIWindow
+        ) async -> PageCopy? {
+            var failure: ReplicaSnapshot.RenderFailure?
+            for _ in 0..<2 {
+                switch await ReplicaSnapshot.attempt(locked, meta: meta, ruleList: ruleList, in: window) {
+                case .success(let copy): return copy
+                case .failure(let stage): failure = stage
+                }
+            }
+            Issue.record("Replica render failed twice, last stage: \(String(describing: failure))")
+            return nil
+        }
+
         private static func hostWindow() -> UIWindow {
             let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
             window.makeKeyAndVisible()

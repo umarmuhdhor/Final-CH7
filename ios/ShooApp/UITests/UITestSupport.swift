@@ -46,7 +46,9 @@ extension XCUIApplication {
         for attempt in 0...retries {
             if condition.waitForExistence(timeout: UITestTimeout.screen) { return }
             guard attempt < retries, element.exists else { break }
-            XCTContext.runActivity(named: "Retap \(element.identifier) (attempt \(attempt + 2))") { _ in element.tap() }
+            XCTContext.runActivity(named: "Retap \(element.identifier) (attempt \(attempt + 2))") { _ in
+                element.tapWhenHittable(file: file, line: line)
+            }
         }
         XCTFail("\(condition) did not appear after tapping \(element)\n\(debugDescription)", file: file, line: line)
     }
@@ -57,6 +59,8 @@ extension XCUIElement {
     /// `waitForExistence` can land while a transition still covers it. Some elements never report
     /// `isHittable` though they take taps (toolbar buttons on iOS 26, e.g. `profileButton`): after
     /// `hittableWait` those are tapped anyway, and `tap(_:until:)` checks the result.
+    /// Such a button can exist before it has a frame (CI on #285: "Activation point invalid and no suggested
+    /// hit points based on element frame"), so it is tapped by coordinate only once its frame is laid out.
     @MainActor
     func tapWhenHittable(timeout: TimeInterval = UITestTimeout.screen, hittableWait: TimeInterval = 2, file: StaticString = #filePath, line: UInt = #line) {
         guard waitForExistence(timeout: timeout) else {
@@ -64,9 +68,19 @@ extension XCUIElement {
             return
         }
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
-        if XCTWaiter().wait(for: [hittable], timeout: hittableWait) != .completed {
-            XCTContext.runActivity(named: "\(identifier) not reported hittable, tapping anyway") { _ in }
+        if XCTWaiter().wait(for: [hittable], timeout: hittableWait) == .completed {
+            tap()
+            return
         }
-        tap()
+        let laidOut = XCTNSPredicateExpectation(predicate: NSPredicate { element, _ in
+            guard let element = element as? XCUIElement, element.exists else { return false }
+            return element.frame.width > 0 && element.frame.height > 0
+        }, object: self)
+        guard XCTWaiter().wait(for: [laidOut], timeout: timeout) == .completed else {
+            XCTFail("\(self) never got a frame to tap", file: file, line: line)
+            return
+        }
+        XCTContext.runActivity(named: "\(identifier) not reported hittable, tapping its frame") { _ in }
+        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 }
