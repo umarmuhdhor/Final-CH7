@@ -98,6 +98,14 @@
         }
       ],
       "description": "null until a Guardian decides. Warning and blocked items can get a verdict."
+    },
+    "rdapRegisteredAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Request only (POST /scans): the domain's RDAP registration date from POST /analyze, YYYY-MM-DD. Absent or null when unknown. Not returned in responses (#270)."
     }
   },
   "$defs": {
