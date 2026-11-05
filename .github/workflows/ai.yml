@@ -1,0 +1,73 @@
+# AI service CI/CD: tests on every PR touching ai/, deploy of the `shoo-ai` Worker on push to main.
+# Same Cloudflare account and `production` environment secrets as backend.yml (shoo-ai moved there on 3 Nov 2026).
+# Worker secrets (`LLM_*`) stay out of this workflow: they are set once with `wrangler secret put`, and a deploy keeps them.
+name: ai
+
+on:
+  pull_request:
+    paths: ["ai/**", ".github/workflows/ai.yml"]
+  push:
+    branches: [main]
+    paths: ["ai/**", ".github/workflows/ai.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-${{ github.ref }}
+  # Never cancel a run on main: it may be in the middle of the deploy.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ai/package-lock.json
+      - run: npm ci
+      - run: npm test
+      # Bundle + wrangler.toml check, no account needed.
+      - run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/ai-dist"
+      - name: gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar xz -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" dir . --no-banner --redact
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: ai
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ai/package-lock.json
+      - run: npm ci
+      - name: Deploy Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run deploy
+      # GET /analyze is the app's own 405 (app.js): proves the new Worker runs, with no LLM call and no 14 MB list.
+      # scripts/smoke.mjs sends at least 5 /analyze and checks latency, too much for every deploy.
+      - name: Worker answers
+        run: |
+          for i in 1 2 3; do
+            code="$(curl -sS -o /dev/null -m 15 -w '%{http_code}' https://shoo-ai.afindo-mi01.workers.dev/analyze || true)"
+            [ "$code" = 405 ] && exit 0
+            echo "attempt $i: http $code"; sleep 5
+          done
+          exit 1

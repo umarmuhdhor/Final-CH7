@@ -238,7 +238,7 @@ Privacy (TODO C5, done): the host, page title and form field labels of pages tha
 
 ## Deploy, limits, headers (M7)
 
-- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). `shoo-ai` runs on Alief's Cloudflare account (`account_id` in `wrangler.toml`, moved from Umar's on 3 Nov 2026), URL `https://shoo-ai.afindo-mi01.workers.dev`. Umar deploys it from `main` with `npm run deploy` in `ai/` as a member of that account (no auto-deploy); secrets (`LLM_*`) are set with `wrangler secret put`.
+- `wrangler.toml` is ready (`name = "shoo-ai"`, logs off). `shoo-ai` runs on Alief's Cloudflare account (`account_id` in `wrangler.toml`, moved from Umar's on 3 Nov 2026), URL `https://shoo-ai.afindo-mi01.workers.dev`. `.github/workflows/ai.yml` deploys it on every push to `main` that touches `ai/` (tests first, `production` environment secrets as `backend.yml`); `npm run deploy` in `ai/` still works by hand for a member of that account. Secrets (`LLM_*`) are set with `wrangler secret put`.
 - Per-IP rate limits, two layers; over either `429 rate_limited` with `Retry-After`, and the body is not read:
   - Workers Rate Limiting binding (`[[ratelimits]]` in `wrangler.toml`, shared across isolates, works on `workers.dev`): `/analyze` 60 per 60 s, `/public-blocklist` 10 per 60 s. This is the hard limit. A Cloudflare WAF rule would need a custom domain (zone rules do not apply to `workers.dev`).
   - In memory, per isolate: `/analyze` 300 per 10 min, `/public-blocklist` 30 per 10 min. The only limiter in tests; the dev server turns both off (`SHOO_DEV_RATE_LIMIT=1` turns them on), because every local request is one `unknown` client.
