@@ -44,7 +44,7 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
+| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` + `rdapRegisteredAt?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
 | GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` and `pageReplicaUrl` are always `null` in lists | PR-05, GD-05 |
 | GET | `/scans/{id}` | — | ScanResult, `pageReplicaUrl` (and `screenshotUrl` for older scans) = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 
@@ -135,11 +135,13 @@ Tap → open Detail for `scanId` (GD-06).
 ## AI (Team AI)
 | Method | Path | Body | Response |
 |---|---|---|---|
-| POST | `/analyze` | `{ snapshot: PageSnapshot, localSignals: Signal[] }` | `{ signals: Signal[] }` — layer 3–4 only |
+| POST | `/analyze` | `{ snapshot: PageSnapshot, localSignals: Signal[] }` | `{ signals: Signal[], rdapRegisteredAt?: string \| null }` — layer 3–4 only |
 | GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape, `nextSince` rules and bad-`since` error (422 `invalid_body`) as `GET /blocklist`; paging is optional here (one response with every entry is fine). Downloaded by the extension every 6 h (full daily) |
 
 **Auth on the AI service:** the extension sends `Authorization: Bearer <device token>` on both calls, but the AI service has no access to the backend's device table, so in MVP it does **not** verify the token. Protect it with a per-IP rate limit and a body-size limit instead (M7). Never log the token.
 
 `/analyze` is **stateless**: it must not store the snapshot. Timeout on client: 8 s → treat as no signals.
+
+`rdapRegisteredAt` (#270) = the domain's RDAP registration date, `YYYY-MM-DD`, returned whether or not `new_domain` fires. `null` when RDAP failed or timed out; may be absent (older AI service). The extension copies it into `POST /scans` when it has one. A page blocked before `/analyze` answers is reported without it. Public RDAP data, not personal data.
 
 > Decided with PM (2026-10-21): pages are **sent for analysis but not stored**. Only results with score ≥ 30 are stored (`POST /scans`).
