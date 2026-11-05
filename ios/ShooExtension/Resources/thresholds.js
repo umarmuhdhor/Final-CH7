@@ -11,7 +11,7 @@ const TIMEOUT_MS = 10 * 1000;
 export const RETRY_AFTER_FAILURE = 10 * 60 * 1000; // a server that is down is not asked on every page load
 const CLOCK_SKEW = 5 * 60 * 1000;
 const STORAGE_KEY = "thresholds.v1";
-const FAILED_KEY = "thresholds.v1.failedAt";
+const FAILED_KEY = "thresholds.v1.failedAt"; // gitleaks:allow (a storage name, not a secret)
 
 /** pipeline.js THRESHOLD as built in, plus the version it stands for. */
 export const DEFAULTS = Object.freeze({ firstWarning: 30, secondWarning: 50, blocked: 80, version: 0 });
