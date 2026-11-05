@@ -112,7 +112,8 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
     const linked = async () => {
       const g = await createDevice("G", "guardian");
       const p = await createDevice("Mom");
-      await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
+      // Quiet hours (default on, 22:00–06:00) hold back warning pushes: off, or the test fails at night.
+      await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN, notifications: { quietHours: false } } });
       await link(g, p);
       return { g, p };
     };
