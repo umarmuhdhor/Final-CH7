@@ -36,7 +36,6 @@ Domains scored: 9 (labelled, not shared hosts, reviewed)
 | (b) LLM suggestion = approve | 6 | 0 | 3 | 0 | 1.00 | 0.67 |
 
 **Dummy data, not evidence.** All 9 reviewed domains came out as `scam_weak` (even legit-05, because 2 N families already
-reach the label threshold), so there are no negatives and precision is 1.00 by construction. The rule approved scam-07 and
-scam-08 only because it ignores the score cut-off in the LLM's reading (rule: avg 40 and 42 < 50, so both miss it too; the
-rule's two misses are scam-07 and scam-08, the LLM's three are those plus legit-05). Whether to use the LLM at all is decided on
-real Guardian data once layer 5 has collected some.
+reach the label threshold), so there are no negatives and precision is 1.00 by construction. The rule misses scam-07 and
+scam-08 (average score 40 and 42, below 50). The LLM misses the same two and also legit-05 (unsure, 0.55). Whether to use the
+LLM at all is decided on real Guardian data once layer 5 has collected some.
