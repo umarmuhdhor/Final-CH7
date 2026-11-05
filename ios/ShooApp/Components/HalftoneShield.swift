@@ -236,10 +236,11 @@ private struct ShieldPalette {
         coreBottom: ActivityStyle.hex(0x05737C), coreStroke: ActivityStyle.hex(0x0D8F93),
         dots: on.dots
     )
+    /// A family site waits (orange, crimson): "!" in the dots instead of the person.
     static let orange = ShieldPalette(
         glow: ActivityStyle.hex(0xFF8C00), coreTop: ActivityStyle.hex(0xFFD27A),
         coreBottom: ActivityStyle.hex(0xE07800), coreStroke: ActivityStyle.hex(0xC46700),
-        dots: on.dots
+        dots: decode(alertDots)
     )
     /// Figma "Pribadi/Home · Waspada" 955:10394, "· Bahaya" 955:10492, "Guardian/Home · Bahaya" 955:10658.
     static let amber = ShieldPalette(
@@ -255,7 +256,7 @@ private struct ShieldPalette {
     static let crimson = ShieldPalette(
         glow: ActivityStyle.hex(0xFF0011), coreTop: ActivityStyle.hex(0xFF7A83),
         coreBottom: ActivityStyle.hex(0xE0000F), coreStroke: ActivityStyle.hex(0xC4000D),
-        dots: on.dots
+        dots: decode(alertDots)
     )
 
     static func palette(for tint: HalftoneShield.Tint) -> ShieldPalette {
@@ -296,6 +297,21 @@ private struct ShieldPalette {
     0,0,0,100,120,130,135,135,138,138,138,138,135,132,120,100,0,0,0|0,0,0,0,125,130,133,133,135,135,135,133,135,130,123,0,0,0,0|\
     0,0,0,0,0,125,130,130,130,130,130,130,130,125,0,0,0,0,0|0,0,0,0,0,0,128,130,127,127,130,130,125,0,0,0,0,0,0|\
     0,0,0,0,0,0,0,0,123,125,123,0,0,0,0,0,0,0,0
+    """
+
+    /// Figma 955:10662 / 957:11099 ("Guardian/Home · Bahaya" and "Keluarga butuh konfirmasi", "!" in the dots).
+    private static let alertDots = """
+    0,0,0,0,0,0,0,0,0,35,0,0,0,0,0,0,0,0,0|0,0,0,0,0,0,0,39,39,39,39,35,0,0,0,0,0,0,0|\
+    0,0,0,0,35,39,43,39,43,51,43,43,39,39,39,0,0,0,0|31,35,35,39,43,39,43,47,59,90,59,43,47,43,39,39,35,31,35|\
+    31,35,39,39,43,47,47,47,94,122,94,51,47,43,43,43,39,39,35|35,39,43,43,47,47,51,51,122,137,118,51,47,51,47,43,43,39,35|\
+    39,39,43,47,51,55,51,55,137,141,133,59,55,51,47,47,43,39,35|39,43,47,47,51,55,59,63,145,145,141,63,55,55,51,47,43,43,39|\
+    39,43,47,51,51,55,59,71,145,149,149,71,63,59,55,51,47,43,43|39,43,47,51,59,63,63,71,149,149,149,71,63,59,55,51,47,47,43|\
+    39,47,51,55,59,63,67,67,149,153,149,67,63,59,55,51,51,47,43|39,47,51,55,59,63,67,71,145,153,145,67,63,59,55,51,51,47,43|\
+    39,43,51,55,59,63,67,67,125,149,125,67,63,59,55,51,51,47,43|39,43,47,51,55,55,59,63,94,129,94,67,63,59,55,51,47,47,43|\
+    0,43,47,51,51,55,59,63,63,90,63,59,63,59,55,51,47,43,0|0,43,43,47,51,55,59,59,86,122,86,59,55,51,51,47,43,39,0|\
+    0,0,43,47,51,55,51,59,137,141,141,59,55,51,47,47,43,0,0|0,0,43,43,43,47,51,63,137,137,137,59,47,51,47,43,43,0,0|\
+    0,0,0,39,43,47,47,47,98,122,98,51,47,43,43,39,0,0,0|0,0,0,0,43,39,43,43,43,43,47,43,43,43,39,0,0,0,0|\
+    0,0,0,0,0,0,43,39,43,43,39,43,39,0,0,0,0,0,0|0,0,0,0,0,0,0,0,39,39,39,0,0,0,0,0,0,0,0
     """
 
     /// Figma 480:5596 (shield "off", a power symbol in the dots).

@@ -295,17 +295,22 @@ struct HomeProfileToolbarItem: ToolbarContent {
     }
 }
 
-/// Liquid Glass on iOS 26, frosted material before; a solid circle with "Kurangi efek kaca".
+/// Frosted circle; a solid circle with "Kurangi efek kaca".
+/// Figma "Liquid Glass - Regular - Small" lays grey and white fills over the glass, so it reads as light frost on
+/// every hero (about 57% light grey over 43% hero colour). The system `glassEffect` and materials make their content
+/// vibrant and turn it into the hero's own colour instead (vivid red on "Bahaya"), so the frost is a plain fill.
 private struct HomeGlassCircle: ViewModifier {
     @Environment(\.shooReduceGlass) private var reduceGlass
 
     func body(content: Content) -> some View {
         if reduceGlass {
             content.background(.white, in: Circle())
-        } else if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: Circle())
         } else {
-            content.background(.ultraThinMaterial, in: Circle())
+            content.background {
+                Circle()
+                    .fill(Color(white: 0.9).opacity(0.57))
+                    .overlay(Circle().strokeBorder(.white.opacity(0.45), lineWidth: 1))
+            }
         }
     }
 }
