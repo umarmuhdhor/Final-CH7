@@ -106,6 +106,19 @@ struct AppSettingsTests {
         #expect(settings.onboardingConnectPassed)
     }
 
+    @Test func dataConsentPersistsAndClearAsksAgain() throws {
+        let defaults = try freshDefaults()
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        #expect(settings.dataConsent == nil)
+        settings.dataConsent = .declined
+        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).dataConsent == .declined)
+        settings.dataConsent = .granted
+        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).dataConsent == .granted)
+        settings.reset()
+        #expect(settings.dataConsent == nil)
+        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).dataConsent == nil)
+    }
+
     @Test func clearRemovesAppearanceToo() throws {
         let defaults = try freshDefaults()
         let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])

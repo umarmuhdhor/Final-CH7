@@ -15,6 +15,8 @@ struct RootView: View {
                 #endif
             } else if env.sessionExpired {
                 SessionExpiredView()
+            } else if env.needsDataConsent {
+                DataConsentView(onBack: nil) { env.setDataConsent($0) }
             } else if env.settings.onboardingCompleted, env.settings.mode != nil {
                 MainTabView()
             } else {

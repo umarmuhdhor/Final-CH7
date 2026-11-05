@@ -15,19 +15,23 @@ final class SessionStore: @unchecked Sendable {
 
     private let lock = NSLock()
     private var _guardian: GuardianInfo?
+    private var _onlineCheckAllowed: Bool
 
     /// The keys this app writes. `extension.lastSeenAt` belongs to the extension and is left alone.
     static let appKeys = [
         AppGroup.Key.deviceId, AppGroup.Key.deviceToken, AppGroup.Key.deviceMode, AppGroup.Key.deviceName,
         AppGroup.Key.guardianName, AppGroup.Key.apiBaseURL, AppGroup.Key.aiBaseURL,
+        AppGroup.Key.statsChecked, AppGroup.Key.statsLastCheckedAt,
     ]
 
     init(
         defaults: UserDefaults = AppGroup.defaults,
         keychain: KeychainItem = .deviceSession,
         apiBaseURL: URL = AppConfig.apiBaseURL,
-        aiBaseURL: URL? = AppConfig.aiBaseURL
+        aiBaseURL: URL? = AppConfig.aiBaseURL,
+        onlineCheckAllowed: Bool = false
     ) {
+        _onlineCheckAllowed = onlineCheckAllowed
         self.defaults = defaults
         self.keychain = keychain
         self.apiBaseURL = apiBaseURL
@@ -65,6 +69,15 @@ final class SessionStore: @unchecked Sendable {
     /// Also at every launch, so a new build's URLs reach the extension.
     func writeBaseURLs() {
         lock.withLock { writeBaseURLsLocked() }
+    }
+
+    /// The person's answer (`DataConsent`). The extension calls `/analyze` only with `aiBaseURL`, so without
+    /// the key no page leaves the phone for a check and nothing reaches DeepSeek. No new contract key needed.
+    func setOnlineCheck(allowed: Bool) {
+        lock.withLock {
+            _onlineCheckAllowed = allowed
+            if hasSessionLocked { writeBaseURLsLocked() }
+        }
     }
 
     /// After `PATCH /devices/me { name }` or a `GET /devices/me` with another name.
@@ -107,7 +120,7 @@ final class SessionStore: @unchecked Sendable {
         } else {
             defaults.removeObject(forKey: AppGroup.Key.apiBaseURL)
         }
-        if let aiBaseURL, Self.isAllowed(aiBaseURL) {
+        if _onlineCheckAllowed, let aiBaseURL, Self.isAllowed(aiBaseURL) {
             defaults.set(aiBaseURL.absoluteString, forKey: AppGroup.Key.aiBaseURL)
         } else {
             defaults.removeObject(forKey: AppGroup.Key.aiBaseURL)

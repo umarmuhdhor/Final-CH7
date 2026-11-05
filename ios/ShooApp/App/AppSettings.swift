@@ -1,6 +1,13 @@
 import Foundation
 import Observation
 
+/// Apple 5.1.1(ii), 5.1.2(i): the person's answer to the online check. It covers `/analyze`: page text sent
+/// to Shoo's server, and the summary of a suspicious page sent to DeepSeek. Until they answer, nothing goes.
+enum DataConsent: String {
+    case granted
+    case declined
+}
+
 /// App-only preferences (not shared with the extension). Persisted in standard `UserDefaults`;
 /// the App Group holds only the contract keys (SECURITY §3 P4).
 ///
@@ -14,6 +21,7 @@ final class AppSettings {
         static let onboardingCompleted = "settings.onboardingCompleted"
         static let familyModeOn = "settings.familyModeOn"
         static let onboardingConnectPassed = "settings.onboardingConnectPassed"
+        static let dataConsent = "settings.dataConsent"
         /// Before the text size slider: "Teks besar" on/off. Read once to pick the slider's start.
         static let largeText = "settings.largeText"
         static let theme = "settings.theme"
@@ -29,7 +37,7 @@ final class AppSettings {
         static let guardianCardDismissed = "settings.guardianCardDismissed"
 
         static let all = [
-            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, largeText,
+            language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
             dismissedHomeScanIds, guardianCardDismissed,
         ]
@@ -53,6 +61,11 @@ final class AppSettings {
     /// Protected passed the Connect step of onboarding (resume point after a relaunch).
     var onboardingConnectPassed: Bool {
         didSet { defaults.set(onboardingConnectPassed, forKey: Keys.onboardingConnectPassed) }
+    }
+
+    /// `nil` = not asked yet. Change it through `AppEnvironment.setDataConsent`, which also tells the session.
+    var dataConsent: DataConsent? {
+        didSet { defaults.set(dataConsent?.rawValue, forKey: Keys.dataConsent) }
     }
 
     /// GD-02: the guardian's last Family mode toggle.
@@ -116,6 +129,7 @@ final class AppSettings {
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
         onboardingConnectPassed = defaults.bool(forKey: Keys.onboardingConnectPassed)
+        dataConsent = defaults.string(forKey: Keys.dataConsent).flatMap(DataConsent.init(rawValue:))
         theme = defaults.string(forKey: Keys.theme).flatMap(AppTheme.init(rawValue:)) ?? .system
         if defaults.object(forKey: Keys.textSize) != nil {
             textSize = TextSizeLevel(rawValue: defaults.integer(forKey: Keys.textSize)) ?? .standard
@@ -170,6 +184,7 @@ final class AppSettings {
         onboardingCompleted = false
         familyModeOn = false
         onboardingConnectPassed = false
+        dataConsent = nil
         theme = .system
         textSize = .standard
         boldText = false

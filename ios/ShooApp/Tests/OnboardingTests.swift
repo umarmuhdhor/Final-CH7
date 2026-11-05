@@ -68,6 +68,7 @@ struct OnboardingModelTests {
     init() throws {
         let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
         settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.dataConsent = .granted
         notifications = FakeNotificationPermission()
         let box = box
         env = AppEnvironment(
@@ -93,6 +94,34 @@ struct OnboardingModelTests {
 
     @Test func freshInstallStartsAtSplash() {
         #expect(model().step == .splash)
+    }
+
+    @Test func withoutAnAnswerSkipGoesToConsentFirst() {
+        settings.dataConsent = nil
+        let model = model()
+        model.skipSplash()
+        #expect(model.step == .dataConsent)
+        model.goBack()
+        #expect(model.step == .splash)
+    }
+
+    @Test(arguments: [DataConsent.granted, .declined])
+    func answeringConsentMovesToNameAndIsKept(answer: DataConsent) {
+        settings.dataConsent = nil
+        let model = model()
+        model.skipSplash()
+        model.answerDataConsent(answer)
+        #expect(model.step == .name)
+        #expect(settings.dataConsent == answer)
+    }
+
+    @Test func aRegisteredDeviceWithoutAnAnswerIsAskedOnce() {
+        #expect(!env.needsDataConsent)
+        #expect(settings.chooseMode(.guardian))
+        settings.dataConsent = nil
+        #expect(env.needsDataConsent)
+        env.setDataConsent(.declined)
+        #expect(!env.needsDataConsent)
     }
 
     @Test func skipGoesToName() {
@@ -197,6 +226,7 @@ struct OnboardingModelTests {
     @Test func registrationErrorStaysOnInvite() async throws {
         let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
         let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.dataConsent = .granted
         let env = AppEnvironment(
             repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
         )
@@ -215,6 +245,7 @@ struct OnboardingModelTests {
     @Test func registrationErrorStaysOnConnect() async throws {
         let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
         let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.dataConsent = .granted
         let env = AppEnvironment(
             repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
         )

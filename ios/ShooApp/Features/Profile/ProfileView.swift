@@ -125,6 +125,7 @@ struct ProfileView: View {
         protectionSection
         accountSection
         preferencesSection
+        privacySection
 
         Button { isDeleteConfirming = true } label: {
             // Figma "Hapus Akun" (title case here, unlike the Kelola profil row).
@@ -309,6 +310,22 @@ struct ProfileView: View {
             )
             ProfileDivider()
             navRow(symbol: "text.magnifyingglass", title: Text("About Shoo"), page: .about, id: "profile.about")
+        }
+    }
+
+    /// Apple 5.1.1: the online check can be taken back at any time.
+    private var privacySection: some View {
+        ProfileSection(title: "Privacy", top: sectionTop) {
+            ProfileToggleRow(
+                symbol: "checkmark.shield",
+                title: Text("Online check"),
+                subtitle: Text("Sends pages to Shoo's server and suspicious-page summaries to DeepSeek"),
+                isOn: Binding(
+                    get: { env.settings.dataConsent == .granted },
+                    set: { env.setDataConsent($0 ? .granted : .declined) }
+                )
+            )
+            .accessibilityIdentifier("profile.onlineCheck")
         }
     }
 

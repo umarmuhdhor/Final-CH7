@@ -13,6 +13,7 @@ final class AccessibilityAuditUITests: XCTestCase {
     /// Screen name → launch arguments (same set as the QA-A screenshots).
     private static let screens: [(String, [String])] = [
         ("ON01-splash", ["-UITestReset", "YES"]),
+        ("ON01-consent", ["-UITestReset", "YES", "-debug.askDataConsent", "YES", "-settings.mode", "guardian", "-settings.onboardingCompleted", "YES"]),
         ("ON02-name", ["-UITestReset", "YES", "-debug.onboardingStep", "name"]),
         ("ON03-mode", ["-UITestReset", "YES", "-debug.onboardingStep", "mode"]),
         ("ON03-connect", ["-UITestReset", "YES", "-settings.mode", "protected", "-debug.onboardingStep", "connect"]),

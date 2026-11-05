@@ -17,6 +17,7 @@ final class LiveBackendUITests: XCTestCase {
         let app = XCUIApplication()
         // No -UITestMock: this is ApiRepository. The extension heartbeat is faked (no Safari in the test).
         app.launchArguments += [
+            "-settings.dataConsent", "granted",
             "-UITestReset", "YES",
             "-settings.language", language,
             "-UITestNotifications", "granted",

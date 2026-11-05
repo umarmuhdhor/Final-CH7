@@ -160,12 +160,162 @@
         }
       }
     },
+    "AI check by DeepSeek" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pemeriksaan AI oleh DeepSeek"
+          }
+        }
+      }
+    },
+    "Allow online check" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izinkan cek online"
+          }
+        }
+      }
+    },
+    "Before you start" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sebelum mulai"
+          }
+        }
+      }
+    },
+    "Continue without it" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lanjut tanpa cek online"
+          }
+        }
+      }
+    },
+    "Online check" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cek online"
+          }
+        }
+      }
+    },
+    "Pages you open" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman yang kamu buka"
+          }
+        }
+      }
+    },
+    "Privacy" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privasi"
+          }
+        }
+      }
+    },
+    "Read the privacy policy" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baca kebijakan privasi"
+          }
+        }
+      }
+    },
+    "Risky pages" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman berisiko"
+          }
+        }
+      }
+    },
+    "Sends pages to Shoo's server and suspicious-page summaries to DeepSeek" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengirim halaman ke server Shoo dan ringkasan halaman mencurigakan ke DeepSeek"
+          }
+        }
+      }
+    },
+    "Shoo checks the pages you open in Safari. This is what leaves your iPhone." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo memeriksa halaman yang kamu buka di Safari. Ini yang keluar dari iPhone-mu."
+          }
+        }
+      }
+    },
+    "Shoo keeps the address, a copy of the page and the flagged parts. You and your Guardian can see them. Some of this stays after you delete your account." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo menyimpan alamat, salinan halaman, dan bagian yang ditandai. Kamu dan Guardian-mu bisa melihatnya. Sebagian tetap ada setelah kamu menghapus akun."
+          }
+        }
+      }
+    },
     "Watch the tutorial" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tonton Tutorial"
+          }
+        }
+      }
+    },
+    "With the online check on, Shoo's server may send DeepSeek, an AI company in China, a short summary of a suspicious page: site name, page title and form field names." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalau cek online aktif, server Shoo bisa mengirim ringkasan singkat halaman mencurigakan ke DeepSeek, perusahaan AI di China: nama situs, judul halaman, dan nama kolom formulir."
+          }
+        }
+      }
+    },
+    "With the online check on, Shoo's server reads the page's text, form field names and address without the part after “?”. Text you type is not sent. Pages scored under 30 are not stored." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalau cek online aktif, server Shoo membaca teks halaman, nama kolom formulir, dan alamatnya tanpa bagian setelah “?”. Teks yang kamu ketik tidak dikirim. Halaman dengan skor di bawah 30 tidak disimpan."
+          }
+        }
+      }
+    },
+    "Without it, Shoo checks pages on your iPhone only and protects you less. Risky pages are still reported. You can change this in Profile." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa ini, Shoo hanya memeriksa halaman di iPhone-mu dan perlindunganmu berkurang. Halaman berisiko tetap dilaporkan. Kamu bisa mengubahnya di Profil."
           }
         }
       }

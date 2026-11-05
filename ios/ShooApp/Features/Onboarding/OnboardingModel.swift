@@ -27,6 +27,8 @@ enum NameRule {
 enum OnboardingStep: Equatable {
     /// ON-01
     case splash
+    /// The online check question (`DataConsent`), before anything can leave the phone.
+    case dataConsent
     /// ON-02
     case name
     /// ON-03
@@ -92,6 +94,13 @@ final class OnboardingModel {
     func skipSplash() {
         guard step == .splash else { return }
         movedBack = false
+        step = environment.settings.dataConsent == nil ? .dataConsent : .name
+    }
+
+    func answerDataConsent(_ consent: DataConsent) {
+        guard step == .dataConsent else { return }
+        environment.setDataConsent(consent)
+        movedBack = false
         step = .name
     }
 
@@ -123,7 +132,7 @@ final class OnboardingModel {
     func goBack() {
         guard !isWorking else { return }
         switch (step, mode) {
-        case (.name, nil): step = .splash
+        case (.dataConsent, nil), (.name, nil): step = .splash
         case (.mode, nil): step = .name
         case (.invite, nil), (.connect, nil): step = .mode
         case (.turnOnExtension, .guardian): step = .invite

@@ -6,11 +6,11 @@ import UIKit
 /// Fase 13: `AppEnvironment` with the real repository — registration, foreground sync, session expiry.
 @MainActor
 struct AppEnvironmentSessionTests {
-    private static let registered = HostStubProtocol.Reply.json(
+    private nonisolated static let registered = HostStubProtocol.Reply.json(
         201, #"{"deviceId":"dev_new","token":"shoo_fresh_token","avatarId":"avatar_05"}"#
     )
-    private static let ok = HostStubProtocol.Reply.json(200, #"{"ok":true}"#)
-    private static let profile = HostStubProtocol.Reply.json(
+    private nonisolated static let ok = HostStubProtocol.Reply.json(200, #"{"ok":true}"#)
+    private nonisolated static let profile = HostStubProtocol.Reply.json(
         200, #"{"deviceId":"dev_new","name":"Rina","avatarId":"avatar_05","mode":"guardian","language":"en","guardian":null}"#
     )
 

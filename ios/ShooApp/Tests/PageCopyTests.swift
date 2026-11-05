@@ -14,8 +14,8 @@ private actor SleepLog {
 /// fase 18b step 5: a push opens Detail before the Worker stored the page copy.
 @MainActor
 struct PageCopyWaitTests {
-    static let replica = URL(string: "https://shoo-api.example/replicas/abc?e=1&s=x")!
-    static let now = Date(timeIntervalSince1970: 2_000_000_000)
+    nonisolated static let replica = URL(string: "https://shoo-api.example/replicas/abc?e=1&s=x")!
+    nonisolated static let now = Date(timeIntervalSince1970: 2_000_000_000)
 
     /// A scan `age` seconds old with no copy and no screenshot; the copy shows up on call `copyOnCall`.
     private func model(

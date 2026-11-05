@@ -76,15 +76,20 @@ final class AppEnvironment {
                 pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
             )
             session = nil
+            // Fixtures only, nothing leaves the phone: UI tests don't answer the question unless they test it.
+            if Self.value(after: "-debug.askDataConsent", in: arguments) != "YES" {
+                settings.dataConsent = settings.dataConsent ?? .granted
+            }
         } else {
             #if DEBUG
             // Live QA on a local stack: `-debug.aiBaseURL http://localhost:8788` gives the extension layers 3–4
             // (AppConfig has no AI URL in Debug). `SessionStore.isAllowed` still rejects anything but HTTPS or localhost.
             let store = SessionStore(
-                aiBaseURL: Self.value(after: "-debug.aiBaseURL", in: arguments).flatMap(URL.init(string:)) ?? AppConfig.aiBaseURL
+                aiBaseURL: Self.value(after: "-debug.aiBaseURL", in: arguments).flatMap(URL.init(string:)) ?? AppConfig.aiBaseURL,
+                onlineCheckAllowed: settings.dataConsent == .granted
             )
             #else
-            let store = SessionStore()
+            let store = SessionStore(onlineCheckAllowed: settings.dataConsent == .granted)
             #endif
             let client = APIClient(
                 baseURL: AppConfig.apiBaseURL,
@@ -151,6 +156,16 @@ final class AppEnvironment {
         }
         #endif
         return environment
+    }
+
+    /// A device registered before the question existed answers it before anything else (Apple 5.1.2(i)).
+    var needsDataConsent: Bool { settings.mode != nil && settings.dataConsent == nil && !sessionExpired }
+
+    /// Onboarding, the same question for an existing device, and the switch in Profile.
+    @MainActor
+    func setDataConsent(_ consent: DataConsent) {
+        settings.dataConsent = consent
+        session?.setOnlineCheck(allowed: consent == .granted)
     }
 
     /// ON-03: registers the device and saves the mode for good. The repository then answers as this
@@ -385,6 +400,7 @@ final class AppEnvironment {
         settings.chooseMode(mode)
         settings.language = language
         settings.onboardingCompleted = true
+        settings.dataConsent = .granted
         return AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
     }
 
