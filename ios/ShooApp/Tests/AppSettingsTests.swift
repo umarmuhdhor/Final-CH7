@@ -15,6 +15,19 @@ struct AppSettingsTests {
         #expect(!settings.familyModeOn)
     }
 
+    @Test func demoIsAGuardianThatSurvivesARelaunchUntilReset() throws {
+        let defaults = try freshDefaults()
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings.enterDemo()
+        let second = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        #expect(second.demoMode)
+        #expect(second.mode == .guardian)
+        #expect(second.onboardingCompleted)
+        #expect(second.dataConsent == .granted)
+        second.reset()
+        #expect(!AppSettings(defaults: defaults, preferredLanguages: ["en"]).demoMode)
+    }
+
     @Test func valuesPersistAcrossLaunches() throws {
         let defaults = try freshDefaults()
         let first = AppSettings(defaults: defaults, preferredLanguages: ["en"])
