@@ -75,8 +75,8 @@ Defined in `scan-result.schema.json#/$defs/Signal`.
 ## Scoring (owned by lead, implemented in extension)
 - `score = min(100, sum(signal.weight))`, recomputed every time a layer returns.
 - Any signal with `id: "db_match"` → score 100 immediately, skip remaining layers.
-- Domain with a family/personal `safe` verdict → skip detection, score 0.
-- Domain with `not_safe` verdict → blocked (100).
+- Link with a family/personal `safe` verdict → skip detection, score 0.
+- Link with a `not_safe` verdict, or another link of the same domain with one (not on a shared host) → blocked (100). See `api.md` Verdicts.
 - Score resets to 0 on every navigation, including URL change without reload.
 
 Team AI owns the **weights**. The lead owns the **thresholds** (contracts/README.md).
@@ -101,6 +101,8 @@ Optional, but it drives what the extension marks on the page:
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
 | `urgent_language` | 3 | "blocked in 24 hours", etc. |
 | `unreasonable_request` | 4 | LLM: requested data doesn't fit the page type |
-| `hoax_claim` | 5 | Phase 2 — not used in MVP |
+| `hoax_claim` | 6 | Phase 2 — not used in MVP |
+
+Layer 5 is Guardian feedback (#241): it emits no signal.
 
 Adding a new id = contract change (PR to `contracts/`).

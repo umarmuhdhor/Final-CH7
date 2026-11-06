@@ -32,6 +32,7 @@ final class AppSettings {
         static let reduceGlass = "settings.reduceGlass"
         static let haptics = "settings.haptics"
         static let readAloud = "settings.readAloud"
+        static let demoMode = "settings.demoMode"
 
         static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
         static let guardianCardDismissed = "settings.guardianCardDismissed"
@@ -39,7 +40,7 @@ final class AppSettings {
         static let all = [
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds, guardianCardDismissed,
+            dismissedHomeScanIds, guardianCardDismissed, demoMode,
         ]
     }
 
@@ -121,6 +122,11 @@ final class AppSettings {
         didSet { defaults.set(guardianCardDismissed, forKey: Keys.guardianCardDismissed) }
     }
 
+    /// "Try the demo": sample data on this phone, no device on the server. Read at launch (`AppEnvironment.live`).
+    private(set) var demoMode: Bool {
+        didSet { defaults.set(demoMode, forKey: Keys.demoMode) }
+    }
+
     init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
         self.defaults = defaults
         language = defaults.string(forKey: Keys.language).flatMap(AppLanguage.init(rawValue:))
@@ -145,12 +151,22 @@ final class AppSettings {
         readAloud = defaults.bool(forKey: Keys.readAloud)
         dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
         guardianCardDismissed = defaults.bool(forKey: Keys.guardianCardDismissed)
+        demoMode = defaults.bool(forKey: Keys.demoMode)
     }
 
     /// Hides a scan's Home card for good. Old ids drop off; a scan older than 24 h has no card anyway.
     func dismissHomeScan(_ scanId: String) {
         guard !dismissedHomeScanIds.contains(scanId) else { return }
         dismissedHomeScanIds = Array((dismissedHomeScanIds + [scanId]).suffix(50))
+    }
+
+    /// A Guardian with a family, straight to the tabs. Fixtures only, so the data question has nothing to ask.
+    func enterDemo() {
+        demoMode = true
+        mode = .guardian
+        familyModeOn = true
+        dataConsent = .granted
+        onboardingCompleted = true
     }
 
     /// Saves the ON-03 choice. Returns `false` and changes nothing when a mode is already saved.
@@ -193,6 +209,7 @@ final class AppSettings {
         reduceGlass = false
         haptics = true
         readAloud = false
+        demoMode = false
         dismissedHomeScanIds = []
         guardianCardDismissed = false
     }

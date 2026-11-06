@@ -27,7 +27,7 @@
     },
     "domain": {
       "type": "string",
-      "description": "Registrable domain, lowercase, no www. Verdicts apply per domain (PRD §5)."
+      "description": "Registrable domain, lowercase, no www. A verdict applies per link, see contracts/api.md Verdicts."
     },
     "pageTitle": {
       "type": "string"
@@ -145,9 +145,9 @@
             2,
             3,
             4,
-            5
+            6
           ],
-          "description": "1 database, 2 link name, 3 content & forms, 4 reality check (LLM), 5 hoax (phase 2)"
+          "description": "1 database, 2 link name, 3 content & forms, 4 reality check (LLM), 6 hoax (phase 2). Layer 5 is Guardian feedback and emits no Signal."
         },
         "weight": {
           "type": "integer",
@@ -190,6 +190,10 @@
         "byName": {
           "type": "string",
           "description": "Shown as 'Verified scam by [name]' / 'Marked safe by [name]'. 'you' is rendered client-side."
+        },
+        "url": {
+          "type": "string",
+          "description": "The link this verdict was made on: origin + path, no query or fragment. Optional: absent on a verdict from before #241."
         },
         "decidedAt": {
           "type": "string",

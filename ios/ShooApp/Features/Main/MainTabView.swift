@@ -29,6 +29,9 @@ struct MainTabView: View {
             .tabItem { Label("Activity", systemImage: "list.bullet.circle.fill") }
             .tag(AppTab.activity)
         }
+        .overlay(alignment: .top) {
+            if env.settings.demoMode, router.shieldPath.isEmpty, router.activityPath.isEmpty { DemoBanner() }
+        }
         .sheet(isPresented: $router.isConnectPresented) {
             ConnectSheet()
                 .environment(\.locale, env.settings.language.locale)
@@ -160,5 +163,29 @@ private struct ConnectSheet: View {
             guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
             model?.prefill(pending)
         }
+    }
+}
+
+/// Sample data must never pass for a real family: on both tabs, between the top bar's two buttons.
+/// Pushed screens keep their own top bar free.
+private struct DemoBanner: View {
+    @Environment(AppEnvironment.self) private var env
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Demo: sample data")
+            Button("Exit demo") { env.leaveDemo() }
+                .fontWeight(.semibold)
+                .accessibilityIdentifier("demo.exit")
+        }
+        .font(.footnote)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: Capsule())
+        .padding(.top, 8)
+        // Stays clear of the title and the buttons on every iPhone width.
+        .padding(.horizontal, 120)
     }
 }

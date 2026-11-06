@@ -33,8 +33,8 @@
     "APPLINKS_APP_IDS": "DWTZNGA7Y8.com.umarmuhdhor.shoo",
     // APNs (fase 11): bundle ID of the build that receives pushes (B6) and the APNs host.
     // Empty topic → pushes are only logged. Key, key id and team id are secrets (wrangler secret put).
-    "APNS_TOPIC": "",
-    "APNS_ENV": "sandbox",
+    "APNS_TOPIC": "com.umarmuhdhor.shoo",
+    "APNS_ENV": "production",
     // Supabase project URL, for Storage only (not a secret). The key is a secret (wrangler secret put).
     "SUPABASE_URL": "https://nmekxihgjszgcibqytyj.supabase.co",
     // contracts/api.md: screenshots over 150 KB are dropped.
