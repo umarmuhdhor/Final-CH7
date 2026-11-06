@@ -95,15 +95,27 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 - `thresholdsVersion` (optional integer ≥ 0) on `POST /scans` = the `version` the status was decided with. Equal to the current version: the status must match those thresholds exactly, else `422`. Another version or absent: only the fence (`warning` ≥ 30, `blocked` ≥ 50). On a `422` the extension sends the scan again without it.
 - The app shows the `status` the extension sent and does not recompute it from the score.
 
-### Verdicts (per domain)
+### Verdicts (per link)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe" }` (guardian) | `{ verdict }` — applies to the scan's domain for that owner. Error `verdict_not_allowed`: not the owner's guardian. `warning` and `blocked` scans can both get a verdict (#190) | GD-07 |
-| GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
+| POST | `/verdicts` | `{ scanId, value: "safe"\|"not_safe", notes? }` (guardian) | `{ verdict }` — applies to the scan's link for that owner. Error `verdict_not_allowed`: not the owner's guardian. `warning` and `blocked` scans can both get a verdict (#190) | GD-07 |
+| GET | `/verdicts?url=&domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
+| GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` — **deprecated**, for builds from before #241 | EX-06 auto-open |
 
-Extension polls `GET /verdicts?domain=` every 5 s while the block screen is open, for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
+A **link** is origin + path, with no query or fragment (`shareableUrl` in the extension). `domain` is the registrable domain, as on a scan: the backend can't derive it from the link.
 
-The extension only asks for a verdict once a page reaches score 30 — the point where the domain would be sent with `POST /scans` anyway. Low-score browsing never reaches the backend.
+Lookup (#241), first match wins:
+1. A verdict on exactly this link, `safe` or `not_safe`.
+2. A `not_safe` by this owner on another link of the same domain, unless the domain is a shared host (`ai/data/shared-hosts.json`): one page there says nothing about the others.
+3. Otherwise `null`. A `safe` never reaches past its own link.
+
+A scan's `verdict` in Activity follows the same rule. `?domain=` alone answers with any `not_safe` on that domain, else the newest `safe`. It goes once the last older build is gone.
+
+`notes` (optional, at most 280 characters): why the Guardian decided. The app requires it on `not_safe`; the backend accepts a verdict without it, because older builds don't send it. It is never returned in a `Verdict`. It is cleared after 14 days and the decision stays, otherwise the link would be blocked again on day 15.
+
+Extension polls `GET /verdicts?url=&domain=` every 5 s while the block screen is open, for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
+
+The extension only asks for a verdict once a page reaches score 30 — the point where the page would be sent with `POST /scans` anyway. Low-score browsing never reaches the backend.
 
 ### Blocklist (layer 1 database)
 | Method | Path | Body | Response | PRD |
@@ -136,12 +148,20 @@ Tap → open Detail for `scanId` (GD-06).
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/analyze` | `{ snapshot: PageSnapshot, localSignals: Signal[] }` | `{ signals: Signal[], rdapRegisteredAt?: string \| null }` — layer 3–4 only |
+| POST | `/review` | `{ domains: ReviewInput[] }` | `{ model, prompt, results: ReviewResult[] }` — layer 5, server to server |
 | GET | `/public-blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — public phishing feeds aggregated server-side, registrable domains, allowlist applied. Same shape, `nextSince` rules and bad-`since` error (422 `invalid_body`) as `GET /blocklist`; paging is optional here (one response with every entry is fine). Downloaded by the extension every 6 h (full daily) |
 
-**Auth on the AI service:** the extension sends `Authorization: Bearer <device token>` on both calls, but the AI service has no access to the backend's device table, so in MVP it does **not** verify the token. Protect it with a per-IP rate limit and a body-size limit instead (M7). Never log the token.
+**Auth on the AI service:** the extension sends `Authorization: Bearer <device token>` on both calls, but the AI service has no access to the backend's device table, so in MVP it does **not** verify the token. Protect it with a per-IP rate limit and a body-size limit instead (M7). Never log the token. `POST /review` is the exception: see below.
 
 `/analyze` is **stateless**: it must not store the snapshot. Timeout on client: 8 s → treat as no signals.
 
 `rdapRegisteredAt` (#270) = the domain's RDAP registration date, `YYYY-MM-DD`, returned whether or not `new_domain` fires. `null` when RDAP failed or timed out; may be absent (older AI service). The extension copies it into `POST /scans` when it has one. A page blocked before `/analyze` answers is reported without it. Public RDAP data, not personal data.
+
+**`POST /review`** (layer 5, #241): the `shoo-admin` weekly job asks for a suggestion on domains in the review queue. No device calls it. Auth: `Authorization: Bearer <AI_REVIEW_SECRET>`, a Wrangler secret on `shoo-ai` and `shoo-admin`.
+- `ReviewInput`, 1–25 per request: `{ domain, signal_counts, avg_score, max_score, families_safe, families_not_safe }`. `signal_counts` = `{ [signalId]: count }`. `avg_score` and `max_score` = 0–100 or `null`. No notes and no page text until the LLM provider has written zero data retention.
+- `ReviewResult`: `{ index, result: "scam"|"legit"|"unsure"|null, confidence: 0–1|null, reason: string|null, suggestion: "approve"|"reject"|"none" }`. `index` = position in `domains`. `suggestion` is computed from `result` + `confidence`, never copied from the model.
+- `result: null` = no usable answer for that domain. A shared host gets `result: "unsure"`, `reason: "shared_host"`, `suggestion: "none"`, with no LLM call.
+- Errors: 404 while `AI_REVIEW_SECRET` is unset, 401 wrong Bearer, 422 bad body, 429 daily cap, 503 LLM not configured.
+- The answer is only stored. It changes no block: the global list still needs manual approval. Stateless, and nothing from the request or the answer is logged.
 
 > Decided with PM (2026-10-21): pages are **sent for analysis but not stored**. Only results with score ≥ 30 are stored (`POST /scans`).

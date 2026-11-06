@@ -5,8 +5,8 @@
 
 ## Decisions (2026-10-21)
 1. **Privacy vs. server detection (PRD §10):** page content sent to `POST /analyze` for layer 3–4 is **never stored**. Only results with score ≥ 30 are stored (`POST /scans`), together with a static copy of the page as evidence (EX-07 page replica: the page's own HTML, never what the user typed). See contracts/api.md.
-2. **Hoax detection (layer 5) is Phase 2**, not MVP. No hoax work in MVP.
-3. **Verdict lookup only at score ≥ 30 (EX-02):** the extension asks `GET /verdicts?domain=` only once a page reaches 30 — the same point the domain would be sent with `POST /scans`. Low-score browsing never reaches the backend.
+2. **Hoax detection (layer 6) is Phase 2**, not MVP. No hoax work in MVP.
+3. **Verdict lookup only at score ≥ 30 (EX-02):** the extension asks `GET /verdicts?url=&domain=` only once a page reaches 30 — the same point the page would be sent with `POST /scans`. Low-score browsing never reaches the backend.
 
 ## Open questions for PM
 1. PRD §4 Scope table also marks "Validasi item Warning", "AI belajar dari keputusan keluarga", and "Lebih dari 3 orang per guardian" with ✓ in the MVP column. Confirm whether these are MVP or Phase 2.

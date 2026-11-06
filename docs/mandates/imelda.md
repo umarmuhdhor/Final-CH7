@@ -92,7 +92,7 @@ Desain (sudah disetujui): [`docs/design/blocklist.md`](../design/blocklist.md).
 - Branch: `feat/AI-M7-deploy`
 
 ## Bukan tugasmu di MVP
-- Deteksi hoaks (layer 5) → Fase 2.
+- Deteksi hoaks (layer 6) → Fase 2.
 - "AI belajar dari keputusan keluarga" → masih menunggu keputusan PM. Jangan dikerjakan dulu.
 - UI apa pun (popup, layar blokir, app).
 
