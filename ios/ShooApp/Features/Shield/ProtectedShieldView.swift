@@ -149,6 +149,7 @@ struct ProtectedShieldView: View {
             RecentActivity(
                 scans: model.recent,
                 language: language,
+                hasSitesAbove: model.recentBlocked != nil,
                 onOpen: { env.router.showDetail(scanId: $0.id) },
                 onSeeAll: { env.router.selectedTab = .activity }
             )

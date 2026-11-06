@@ -494,13 +494,18 @@ struct RecentActivity: View {
     let scans: [ScanResult]
     let language: AppLanguage
     var showsOwner = false
+    /// The only sites are already on Home above the list (Protected's blocked card): no "nothing yet" message,
+    /// but "See all" still leads to Activity.
+    var hasSitesAbove = false
     let onOpen: (ScanResult) -> Void
     let onSeeAll: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
-            if scans.isEmpty {
+            if scans.isEmpty, hasSitesAbove {
+                EmptyView()
+            } else if scans.isEmpty {
                 EmptyStateView(
                     systemImage: "checkmark.shield",
                     title: "No risky sites yet",
@@ -532,7 +537,7 @@ struct RecentActivity: View {
                 .foregroundStyle(HomeTheme.navy)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-            if !scans.isEmpty {
+            if !scans.isEmpty || hasSitesAbove {
                 Button(action: onSeeAll) {
                     Text("See all")
                         .onboardingFont(15, weight: .semibold, design: .rounded, relativeTo: .subheadline)

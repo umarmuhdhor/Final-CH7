@@ -134,21 +134,25 @@ final class GuardianHomeModel {
             async let me = repository.me()
             async let family: [FamilyMember] = scope == .family ? repository.familyMembers() : []
             async let all = allScans()
-            // A bonus on Home: it never fails the screen.
-            async let cases = scope == .personal ? try? repository.latestScams() : nil
             let (loadedProfile, loadedMembers, loadedScans) = try await (me, family, all)
-            let loadedCases = await cases
             guard request == generation else { return }
             profile = loadedProfile
             members = loadedMembers
             scans = loadedScans
-            scamCases = loadedCases ?? []
             state = .loaded
         } catch {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Guardian Home load failed", error)
             if state != .loaded { state = .failed }
+            return
         }
+        if scope == .personal { await refreshScamCases(request: request) }
+    }
+
+    /// A bonus on Home: loaded after the screen, never fails it, and a failed call keeps the card on screen.
+    private func refreshScamCases(request: Int) async {
+        guard let cases = try? await repository.latestScams(), request == generation else { return }
+        scamCases = cases
     }
 
     func retry() async {
@@ -186,14 +190,19 @@ final class GuardianHomeModel {
         }
     }
 
+    /// Pages arrive newest first. Personal needs only the last day (the hero) and the list's rows: it stops once
+    /// a page reaches past the window with enough rows. Family reads every page (members' sites, pending card).
     private func allScans() async throws -> [ScanResult] {
         let owner: ScanOwnerFilter = scope == .family ? .family : .me
+        let since = now().addingTimeInterval(-Self.pendingWindow)
         var items: [ScanResult] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {
             let page = try await repository.scans(owner: owner, status: nil, cursor: cursor)
             items += page.items
             guard let next = page.nextCursor else { break }
+            if scope == .personal, let oldest = page.items.last, oldest.detectedAt < since,
+               items.count >= Self.recentCount { break }
             cursor = next
         }
         return items

@@ -61,6 +61,16 @@
         }
       }
     },
+    "Shoo is on" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo Aktif"
+          }
+        }
+      }
+    },
     "Stay alert!" : {
       "localizations" : {
         "id" : {

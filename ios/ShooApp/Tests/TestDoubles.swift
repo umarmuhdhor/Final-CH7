@@ -90,6 +90,8 @@ final class CountingScansRepository: ShooRepository, @unchecked Sendable {
     private(set) var scanCalls = 0
     /// Scripted `scans` pages by cursor ("" for the first page); other cursors go to `base`.
     var pages: [String: ScanPage] = [:]
+    /// Scripted "Scam terbaru" answer; `nil` goes to `base`.
+    var latestScamsResult: Result<[ScamCase], RepositoryError>?
 
     init(base: any ShooRepository) {
         self.base = base
@@ -99,6 +101,11 @@ final class CountingScansRepository: ShooRepository, @unchecked Sendable {
         scanCalls += 1
         if let page = pages[cursor ?? ""] { return page }
         return try await base.scans(owner: owner, status: status, cursor: cursor)
+    }
+
+    func latestScams() async throws -> [ScamCase] {
+        if let latestScamsResult { return try latestScamsResult.get() }
+        return try await base.latestScams()
     }
 
     func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {

@@ -151,4 +151,31 @@ struct GuardianHomeModelTests {
         await model.refresh()
         #expect(!model.extensionStatus.isActive)
     }
+
+    @Test func personalPagingStopsPastTheLastDayFamilyReadsAll() async throws {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let template = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
+        let now = Self.fixtureNow
+        // 60 scans an hour apart, 10 a page: the last day ends in the third page.
+        let scans = (0..<60).map { index in
+            var scan = template
+            scan.id = "scan-\(index)"
+            scan.detectedAt = now.addingTimeInterval(-Double(index + 1) * 3600)
+            return scan
+        }
+        func repository() -> CountingScansRepository {
+            let repository = CountingScansRepository(base: base)
+            for start in stride(from: 0, to: 60, by: 10) {
+                repository.pages[start == 0 ? "" : String(start)] =
+                    ScanPage(items: Array(scans[start..<start + 10]), nextCursor: start + 10 < 60 ? String(start + 10) : nil)
+            }
+            return repository
+        }
+        let personalRepository = repository()
+        await model(repository: personalRepository, settings: try settings(), now: now, scope: .personal).refresh()
+        #expect(personalRepository.scanCalls == 3)
+        let familyRepository = repository()
+        await model(repository: familyRepository, settings: try settings(), now: now, scope: .family).refresh()
+        #expect(familyRepository.scanCalls == 6)
+    }
 }

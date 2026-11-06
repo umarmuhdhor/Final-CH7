@@ -117,4 +117,68 @@ struct ShieldModelTests {
         await model.refresh()
         #expect(model.state == .loading)
     }
+
+    // MARK: Recent list, scam card, paging (review of #299)
+
+    /// `count` own scans an hour apart before `now`, the newest one blocked, as one scripted page.
+    func repository(scans count: Int, pageSize: Int? = nil) async throws -> CountingScansRepository {
+        let base = MockRepository(mode: .protected, latency: .zero)
+        let own = try await base.scans(owner: .me, status: nil, cursor: nil).items
+        let blocked = try #require(own.first { $0.status == .blocked })
+        let warning = try #require(own.first { $0.status != .blocked })
+        let scans = (0..<count).map { index in
+            var scan = index == 0 ? blocked : warning
+            scan.id = "scan-\(index)"
+            scan.verdict = nil
+            scan.detectedAt = now.addingTimeInterval(-Double(index + 1) * 3600)
+            return scan
+        }
+        let repository = CountingScansRepository(base: base)
+        let size = pageSize ?? count
+        for start in stride(from: 0, to: count, by: size) {
+            let end = min(start + size, count)
+            repository.pages[start == 0 ? "" : String(start)] =
+                ScanPage(items: Array(scans[start..<end]), nextCursor: end < count ? String(end) : nil)
+        }
+        return repository
+    }
+
+    @Test func recentKeepsThreeRowsUnderTheBlockedCard() async throws {
+        let now = now
+        let model = ShieldModel(repository: try await repository(scans: 10), extensionStatus: { .off(lastSeen: nil) }, now: { now })
+        await model.refresh()
+        #expect(model.recentBlocked?.id == "scan-0")
+        #expect(model.recent.map(\.id) == ["scan-1", "scan-2", "scan-3"])
+    }
+
+    @Test func onlyTheBlockedCardLeavesTheListEmpty() async throws {
+        let now = now
+        let model = ShieldModel(repository: try await repository(scans: 1), extensionStatus: { .off(lastSeen: nil) }, now: { now })
+        await model.refresh()
+        #expect(model.recentBlocked?.id == "scan-0")
+        #expect(model.recent.isEmpty)
+    }
+
+    @Test func failedScamCasesKeepTheCard() async throws {
+        let repository = try await repository(scans: 4)
+        let cases = [ScamCase(id: "case", title: "Situs palsu", detail: "Hari ini")]
+        repository.latestScamsResult = .success(cases)
+        let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
+        await model.refresh()
+        #expect(model.scamCases == cases)
+        repository.latestScamsResult = .failure(.network)
+        await model.refresh()
+        #expect(model.state == .loaded)
+        #expect(model.scamCases == cases)
+    }
+
+    @Test func pagingStopsPastTheLastDay() async throws {
+        let now = now
+        // 60 scans an hour apart, 10 a page: the last day ends in the third page.
+        let repository = try await repository(scans: 60, pageSize: 10)
+        let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) }, now: { now })
+        await model.refresh()
+        #expect(repository.scanCalls == 3)
+        #expect(model.scans.count == 30)
+    }
 }

@@ -114,12 +114,15 @@ struct GuardianHomeView: View {
     private var hero: some View {
         if !isFamily {
             let isActive = model.extensionStatus.isActive
+            // The level reads the last day's sites: while they load (or never loaded) the hero only says Shoo is
+            // on, never "You're protected!" without the data behind it.
+            let isChecking = isActive && model.state != .loaded
             // Shoo being off outranks what it saw while it was on.
-            let level = isActive ? model.level : .normal
+            let level = isActive && !isChecking ? model.level : .normal
             HomeHero(
                 style: level.heroStyle,
-                title: isActive ? level.title : "You're not protected yet",
-                titleIdentifier: isActive ? level.titleIdentifier : "home.status.off",
+                title: !isActive ? "You're not protected yet" : isChecking ? "Shoo is on" : level.title,
+                titleIdentifier: !isActive ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier,
                 shieldOn: isActive,
                 shieldTint: level.shieldTint,
                 bottomPadding: isActive ? nil : 20

@@ -18,7 +18,7 @@ final class ShieldModel {
     private(set) var guardian: GuardianInfo?
     /// For the profile initial top right.
     private(set) var profileName: String?
-    /// This device's scans the server still keeps (14-day retention), newest first.
+    /// This device's scans of the last 24 h, and at least enough older ones to fill the list; newest first.
     private(set) var scans: [ScanResult] = []
     /// The card under the activity; empty hides it.
     private(set) var scamCases: [ScamCase] = []
@@ -47,7 +47,7 @@ final class ShieldModel {
 
     // MARK: Derived
 
-    /// Newest `blocked` scan of this device.
+    /// Newest `blocked` scan among the loaded ones.
     var lastBlocked: ScanResult? {
         scans.filter { $0.status == .blocked }.max { $0.detectedAt < $1.detectedAt }
     }
@@ -58,8 +58,11 @@ final class ShieldModel {
         return scan
     }
 
-    /// The site in the big card is not listed again (Figma 957:11377).
-    var recent: [ScanResult] { scans.prefix(Self.recentCount).filter { $0.id != recentBlocked?.id } }
+    /// The site in the big card is not listed again (Figma 957:11377); the next site takes its row.
+    var recent: [ScanResult] {
+        let card = recentBlocked?.id
+        return Array(scans.lazy.filter { $0.id != card }.prefix(Self.recentCount))
+    }
 
     /// On appear and every time the app comes back to the foreground.
     /// Overlapping calls: only the newest one is applied.
@@ -72,22 +75,26 @@ final class ShieldModel {
         do {
             async let profile = repository.me()
             async let all = allScans()
-            // A bonus on Home: it never fails the screen.
-            async let cases = try? repository.latestScams()
             let (me, loaded) = try await (profile, all)
-            let loadedCases = await cases
             guard request == generation else { return }
             guardian = me.guardian
             profileName = me.name
             scans = loaded.sorted { $0.detectedAt > $1.detectedAt }
-            scamCases = loadedCases ?? []
             state = .loaded
         } catch {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Shield load failed", error)
             // A failed foreground refresh keeps what is already on screen.
             if state != .loaded { state = .failed }
+            return
         }
+        await refreshScamCases(request: request)
+    }
+
+    /// A bonus on Home: loaded after the screen, never fails it, and a failed call keeps the card on screen.
+    private func refreshScamCases(request: Int) async {
+        guard let cases = try? await repository.latestScams(), request == generation else { return }
+        scamCases = cases
     }
 
     /// "Try again" on the error view: shows the spinner while it retries.
@@ -96,13 +103,17 @@ final class ShieldModel {
         await refresh()
     }
 
+    /// Pages arrive newest first: stop once a page reaches past the blocked card's window and the list
+    /// (plus the card's site) has its rows.
     private func allScans() async throws -> [ScanResult] {
+        let since = now().addingTimeInterval(-Self.blockedCardWindow)
         var items: [ScanResult] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {
             let page = try await repository.scans(owner: .me, status: nil, cursor: cursor)
             items += page.items
             guard let next = page.nextCursor else { break }
+            if let oldest = page.items.last, oldest.detectedAt < since, items.count > Self.recentCount { break }
             cursor = next
         }
         return items
