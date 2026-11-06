@@ -26,6 +26,24 @@ struct AppEnvironmentSessionTests {
         )
     }
 
+    @Test func demoUsesFixturesAndTouchesNoSession() {
+        let server = StubServer(token: nil)
+        let env = environment(server: server)
+        env.startDemo()
+        #expect(env.repository is MockRepository)
+        #expect(env.session == nil)
+        #expect(env.settings.demoMode)
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceId) == nil)
+    }
+
+    @Test func demoIsNotOfferedToARegisteredDevice() {
+        let server = StubServer(token: "shoo_token")
+        let env = environment(server: server, mode: .guardian)
+        env.startDemo()
+        #expect(!(env.repository is MockRepository))
+        #expect(!env.settings.demoMode)
+    }
+
     @Test func registrationSavesTheSessionBeforeTheMode() async throws {
         let server = StubServer(token: nil)
         server.reply { _ in Self.registered }

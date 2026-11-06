@@ -29,7 +29,8 @@ struct ProfilePageView: View {
         .task {
             if model == nil {
                 let model = ProfileModel(repository: env.repository, settings: env.settings, notifications: env.notifications)
-                model.onSessionEnd = { [router = env.router] in
+                model.onSessionEnd = { [env, router = env.router] in
+                    env.leaveDemo()
                     router.reset()
                     DeliveredPushes.clear()
                 }

@@ -278,6 +278,11 @@ final class OnboardingModel {
     }
     #endif
 
+    func startDemo() {
+        environment.startDemo()
+        step = .done
+    }
+
     private func finish() {
         environment.finishOnboarding()
         step = .done

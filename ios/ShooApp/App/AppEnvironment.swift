@@ -6,13 +6,13 @@ import UIKit
 /// `@Environment(AppEnvironment.self) private var env`.
 @Observable
 final class AppEnvironment {
-    let repository: any ShooRepository
+    private(set) var repository: any ShooRepository
     let settings: AppSettings
     let router: Router
     let notifications: any NotificationPermission
     /// Keychain token + App Group keys. `nil` with `MockRepository` (previews, UI tests): fixtures never
     /// touch the real App Group.
-    @ObservationIgnored let session: SessionStore?
+    @ObservationIgnored private(set) var session: SessionStore?
     /// Safari extension Active/Off right now (Safari's switch + heartbeat in the App Group).
     @ObservationIgnored let extensionStatus: () async -> ExtensionStatus
     /// The server no longer knows our token (401), or the Keychain has none (backup restored onto
@@ -30,6 +30,8 @@ final class AppEnvironment {
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
     /// so XCUITest finds it idle (fase 23a K2). Not for screenshots or the accessibility audit.
     @ObservationIgnored private(set) var reducesMotionForUITests = false
+    /// Builds the real backend when the demo ends. `nil` in previews and tests that don't leave a demo.
+    @ObservationIgnored fileprivate var makeLiveBackend: (() -> (repository: any ShooRepository, session: SessionStore))?
 
     init(
         repository: any ShooRepository,
@@ -60,27 +62,16 @@ final class AppEnvironment {
         if Self.value(after: "-UITestReset", in: arguments) == "YES" {
             AppSettings.clear(defaults: .standard)
         }
-        let usesMock = Self.value(after: "-UITestMock", in: arguments) == "YES"
+        let usesMockFixtures = Self.value(after: "-UITestMock", in: arguments) == "YES"
         #else
-        let usesMock = false
+        let usesMockFixtures = false
         #endif
         let settings = AppSettings()
+        let usesMock = usesMockFixtures || settings.demoMode
         let repository: any ShooRepository
         let session: SessionStore?
         let expiry = SessionExpiry()
-        if usesMock {
-            let scenario = Self.value(after: "-mock.scenario", in: arguments)
-                .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
-            repository = MockRepository(
-                mode: settings.mode ?? .guardian, scenario: scenario,
-                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
-            )
-            session = nil
-            // Fixtures only, nothing leaves the phone: UI tests don't answer the question unless they test it.
-            if Self.value(after: "-debug.askDataConsent", in: arguments) != "YES" {
-                settings.dataConsent = settings.dataConsent ?? .granted
-            }
-        } else {
+        let makeLiveBackend: () -> (repository: any ShooRepository, session: SessionStore) = {
             #if DEBUG
             // Live QA on a local stack: `-debug.aiBaseURL http://localhost:8788` gives the extension layers 3–4
             // (AppConfig has no AI URL in Debug). `SessionStore.isAllowed` still rejects anything but HTTPS or localhost.
@@ -96,8 +87,22 @@ final class AppEnvironment {
                 token: { try store.readToken() },
                 onUnauthorized: { expiry.report(usedToken: $0) }
             )
-            repository = ApiRepository(client: client, session: store)
-            session = store
+            return (ApiRepository(client: client, session: store), store)
+        }
+        if usesMock {
+            let scenario = Self.value(after: "-mock.scenario", in: arguments)
+                .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
+            repository = MockRepository(
+                mode: settings.mode ?? .guardian, scenario: scenario,
+                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
+            )
+            session = nil
+            // Fixtures only, nothing leaves the phone: UI tests don't answer the question unless they test it.
+            if Self.value(after: "-debug.askDataConsent", in: arguments) != "YES" {
+                settings.dataConsent = settings.dataConsent ?? .granted
+            }
+        } else {
+            (repository, session) = makeLiveBackend()
         }
         var notifications: any NotificationPermission = SystemNotificationPermission()
         var extensionStatus: () async -> ExtensionStatus = { await ExtensionStatus.load() }
@@ -133,6 +138,7 @@ final class AppEnvironment {
             extensionStatus: extensionStatus,
             registerForPush: registerForPush
         )
+        environment.makeLiveBackend = makeLiveBackend
         expiry.environment = environment
         environment.checkStoredSession()
         #if DEBUG
@@ -274,6 +280,28 @@ final class AppEnvironment {
         Log.app.info("Session expired")
         sessionExpired = true
         DeliveredPushes.clear()
+    }
+
+    /// "Try the demo" (App Review, Guideline 2.1): a family of fixtures on this phone. Nothing is registered and
+    /// nothing leaves the phone. Offered only before this device has a mode, so no real session is replaced.
+    @MainActor
+    func startDemo() {
+        guard settings.mode == nil else { return }
+        repository = MockRepository(mode: .guardian)
+        session = nil
+        settings.enterDemo()
+    }
+
+    /// Back to a fresh install on the real backend.
+    @MainActor
+    func leaveDemo() {
+        guard settings.demoMode else { return }
+        router.reset()
+        settings.reset()
+        if let backend = makeLiveBackend?() {
+            repository = backend.repository
+            session = backend.session
+        }
     }
 
     /// "Start again" on the Session expired screen: a fresh install (onboarding from the start).
