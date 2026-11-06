@@ -5,11 +5,15 @@ import SwiftUI
 /// the glass. Off ("Perlindungan sedang mati", node 480:5592): grey with a power symbol in the dots, still.
 /// Reduce Motion keeps the On look without movement.
 struct HalftoneShield: View {
-    /// Core colours per screen: blue (Activity, own Home), teal (Family Home), orange (a family site waits).
+    /// Core colours per screen: blue (Activity, own Home), teal (Family Home), orange (a family site waits),
+    /// amber / red (own Home after a warning / a block), crimson (a blocked family site waits).
     enum Tint {
         case blue
         case teal
         case orange
+        case amber
+        case red
+        case crimson
     }
 
     var isOn = true
@@ -232,10 +236,27 @@ private struct ShieldPalette {
         coreBottom: ActivityStyle.hex(0x05737C), coreStroke: ActivityStyle.hex(0x0D8F93),
         dots: on.dots
     )
+    /// A family site waits (orange, crimson): "!" in the dots instead of the person.
     static let orange = ShieldPalette(
         glow: ActivityStyle.hex(0xFF8C00), coreTop: ActivityStyle.hex(0xFFD27A),
         coreBottom: ActivityStyle.hex(0xE07800), coreStroke: ActivityStyle.hex(0xC46700),
+        dots: decode(alertDots)
+    )
+    /// Figma "Pribadi/Home · Waspada" 955:10394, "· Bahaya" 955:10492, "Guardian/Home · Bahaya" 955:10658.
+    static let amber = ShieldPalette(
+        glow: ActivityStyle.hex(0xD9801A), coreTop: ActivityStyle.hex(0xF2A64F),
+        coreBottom: ActivityStyle.hex(0xB0650F), coreStroke: ActivityStyle.hex(0xB06C1E),
         dots: on.dots
+    )
+    static let red = ShieldPalette(
+        glow: ActivityStyle.hex(0xD91A26), coreTop: ActivityStyle.hex(0xF24F5A),
+        coreBottom: ActivityStyle.hex(0xB00F1A), coreStroke: ActivityStyle.hex(0xB01E28),
+        dots: on.dots
+    )
+    static let crimson = ShieldPalette(
+        glow: ActivityStyle.hex(0xFF0011), coreTop: ActivityStyle.hex(0xFF7A83),
+        coreBottom: ActivityStyle.hex(0xE0000F), coreStroke: ActivityStyle.hex(0xC4000D),
+        dots: decode(alertDots)
     )
 
     static func palette(for tint: HalftoneShield.Tint) -> ShieldPalette {
@@ -243,6 +264,9 @@ private struct ShieldPalette {
         case .blue: on
         case .teal: teal
         case .orange: orange
+        case .amber: amber
+        case .red: red
+        case .crimson: crimson
         }
     }
 
@@ -273,6 +297,21 @@ private struct ShieldPalette {
     0,0,0,100,120,130,135,135,138,138,138,138,135,132,120,100,0,0,0|0,0,0,0,125,130,133,133,135,135,135,133,135,130,123,0,0,0,0|\
     0,0,0,0,0,125,130,130,130,130,130,130,130,125,0,0,0,0,0|0,0,0,0,0,0,128,130,127,127,130,130,125,0,0,0,0,0,0|\
     0,0,0,0,0,0,0,0,123,125,123,0,0,0,0,0,0,0,0
+    """
+
+    /// Figma 955:10662 / 957:11099 ("Guardian/Home · Bahaya" and "Keluarga butuh konfirmasi", "!" in the dots).
+    private static let alertDots = """
+    0,0,0,0,0,0,0,0,0,35,0,0,0,0,0,0,0,0,0|0,0,0,0,0,0,0,39,39,39,39,35,0,0,0,0,0,0,0|\
+    0,0,0,0,35,39,43,39,43,51,43,43,39,39,39,0,0,0,0|31,35,35,39,43,39,43,47,59,90,59,43,47,43,39,39,35,31,35|\
+    31,35,39,39,43,47,47,47,94,122,94,51,47,43,43,43,39,39,35|35,39,43,43,47,47,51,51,122,137,118,51,47,51,47,43,43,39,35|\
+    39,39,43,47,51,55,51,55,137,141,133,59,55,51,47,47,43,39,35|39,43,47,47,51,55,59,63,145,145,141,63,55,55,51,47,43,43,39|\
+    39,43,47,51,51,55,59,71,145,149,149,71,63,59,55,51,47,43,43|39,43,47,51,59,63,63,71,149,149,149,71,63,59,55,51,47,47,43|\
+    39,47,51,55,59,63,67,67,149,153,149,67,63,59,55,51,51,47,43|39,47,51,55,59,63,67,71,145,153,145,67,63,59,55,51,51,47,43|\
+    39,43,51,55,59,63,67,67,125,149,125,67,63,59,55,51,51,47,43|39,43,47,51,55,55,59,63,94,129,94,67,63,59,55,51,47,47,43|\
+    0,43,47,51,51,55,59,63,63,90,63,59,63,59,55,51,47,43,0|0,43,43,47,51,55,59,59,86,122,86,59,55,51,51,47,43,39,0|\
+    0,0,43,47,51,55,51,59,137,141,141,59,55,51,47,47,43,0,0|0,0,43,43,43,47,51,63,137,137,137,59,47,51,47,43,43,0,0|\
+    0,0,0,39,43,47,47,47,98,122,98,51,47,43,43,39,0,0,0|0,0,0,0,43,39,43,43,43,43,47,43,43,43,39,0,0,0,0|\
+    0,0,0,0,0,0,43,39,43,43,39,43,39,0,0,0,0,0,0|0,0,0,0,0,0,0,0,39,39,39,0,0,0,0,0,0,0,0
     """
 
     /// Figma 480:5596 (shield "off", a power symbol in the dots).

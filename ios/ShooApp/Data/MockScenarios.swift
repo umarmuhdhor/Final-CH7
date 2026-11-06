@@ -34,6 +34,13 @@ enum MockScenarios {
         }
     }
 
+    /// Figma "Kartu/Scam Terbaru" 955:10323.
+    static let scamCases = [
+        ScamCase(id: "figma-case-1", title: "Situs palsu BCA minta PIN m-banking", detail: "Hari ini · lewat link SMS"),
+        ScamCase(id: "figma-case-2", title: "Undian palsu Shopee lewat WhatsApp", detail: "Kemarin · lewat WhatsApp"),
+        ScamCase(id: "figma-case-3", title: "Bansos palsu minta foto KTP", detail: "2 hari lalu · lewat Facebook"),
+    ]
+
     // MARK: Figma (416:8768, 416:8541, 416:9255, 416:10447, 455:10275)
 
     static func figma(now: Date) -> MockDataset {

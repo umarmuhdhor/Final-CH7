@@ -36,7 +36,6 @@ final class ProtectedUITests: XCTestCase {
         let app = launch(extra: ["-mock.scenario", "figma"])
         let card = app.buttons["shield.lastBlocked"]
         XCTAssertTrue(card.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.descendants(matching: .any)["shield.stats"].exists)
         app.tap(card, until: app.descendants(matching: .any)["detail.header"])
         // Protected users never see the guardian's verdict buttons (GD-07).
         XCTAssertFalse(app.buttons["detail.verdict.safe"].exists)

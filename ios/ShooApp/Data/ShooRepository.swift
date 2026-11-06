@@ -40,4 +40,11 @@ protocol ShooRepository: AnyObject, Sendable {
     func scan(id: String) async throws -> ScanResult
     /// `POST /verdicts` — guardian, blocked scans only (GD-07).
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict
+    /// The Home card "Scam terbaru di pengguna Shoo". No endpoint in contracts/ yet.
+    func latestScams() async throws -> [ScamCase]
+}
+
+extension ShooRepository {
+    /// Nothing to show until there is an endpoint: Home hides the card rather than make cases up.
+    func latestScams() async throws -> [ScamCase] { [] }
 }
