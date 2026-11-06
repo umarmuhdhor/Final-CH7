@@ -26,16 +26,29 @@ Notes:
 
 ## Task 5: rule vs LLM (`ai/eval/dataset/eval-review.mjs`)
 
-Run on the dummy export after the real-LLM run above (`node eval/dataset/eval-review.mjs eval/dataset/out.jsonl`):
+Run on the dummy export after the real-LLM run above (`node eval/dataset/eval-review.mjs eval/dataset/out.jsonl`).
 
-Domains scored: 9 (labelled, not shared hosts, reviewed)
+First run, truth = `final_label` (the label the families' votes produced):
 
 | Approach | TP | FP | FN | TN | Precision | Recall |
 |---|---|---|---|---|---|---|
 | (a) rule: >= 2 families N and avg score >= 50 | 7 | 0 | 2 | 0 | 1.00 | 0.78 |
 | (b) LLM suggestion = approve | 6 | 0 | 3 | 0 | 1.00 | 0.67 |
 
-**Dummy data, not evidence.** All 9 reviewed domains came out as `scam_weak` (even legit-05, because 2 N families already
-reach the label threshold), so there are no negatives and precision is 1.00 by construction. The rule misses scam-07 and
-scam-08 (average score 40 and 42, below 50). The LLM misses the same two and also legit-05 (unsure, 0.55). Whether to use the
-LLM at all is decided on real Guardian data once layer 5 has collected some.
+That truth was wrong for the dummy set: all 9 reviewed domains came out as `scam_weak`, including `legit-05` (2 N + 2 Y, built
+to be legit), so there were no negatives and precision was 1.00 by construction. The LLM's `unsure` on `legit-05` was counted
+as a miss, and the rule's approval of it as a hit.
+
+Fixed run (6 Nov 2026, `--dummy-truth`: `scam-*` = scam, `legit-*` = not scam, other names left out), same 9 domains, same
+review answers:
+
+| Approach | TP | FP | FN | TN | Precision | Recall |
+|---|---|---|---|---|---|---|
+| (a) rule: >= 2 families N and avg score >= 50 | 6 | 1 | 2 | 0 | 0.86 | 0.75 |
+| (b) LLM suggestion = approve | 6 | 0 | 2 | 1 | 1.00 | 0.75 |
+
+Reading it: both approve `scam-01..06` and both miss `scam-07`/`scam-08` (average score 40 and 42). The only difference is
+`legit-05`: the rule approves it (a false approve), the LLM holds it back (`unsure`, 0.55). That is one domain, so it shows the
+eval can now tell the two apart, not that the LLM is better. **Dummy data, not evidence.** Only one negative, and only
+`legit-05` was reviewed (`legit-01..04` are not among the 9 domains `review_due` returned; why was not checked). Whether to use the LLM at all
+is decided on real Guardian data once layer 5 has collected some, scored with the default truth (the admin's final decision).
