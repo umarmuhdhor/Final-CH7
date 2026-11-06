@@ -26,7 +26,7 @@ export function hostOf(url) {
 
 // Hosts under an official domain where ANYONE can publish a page (forms, sites, file hosting).
 // A scam form on docs.google.com must not get the official-site exemption.
-const USER_CONTENT = [
+export const USER_CONTENT = [
     "docs.google.com", "sites.google.com", "drive.google.com", "script.google.com", "forms.office.com", "forms.microsoft.com", "sites.live.com",
     "storage.googleapis.com", "firebaseapp.com", "web.app", "sway.office.com", "onedrive.live.com", "forms.cloud.microsoft", "sharepoint.com", "1drv.ms",
     // user-made pages on popular domains (review #60): common phishing lures

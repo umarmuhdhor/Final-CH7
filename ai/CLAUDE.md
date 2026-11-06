@@ -1,6 +1,6 @@
 # ai/ — owner: Team AI
 
-Server-side detection: layer 3 (content & forms) + layer 4 (reality check, LLM). Layer 5 is proposed as Guardian feedback on top of the admin database (ADM-02/04) in `backend/`, with a batch `POST /review` here: do not build it until Umar's approval is written in #241 (plan/imelda/layer-5-feedback.md v2). Hoax detection is not in MVP; its layer number comes later.
+Server-side detection: layer 3 (content & forms) + layer 4 (reality check, LLM). Layer 5 is proposed as Guardian feedback on top of the admin database (ADM-02/04) in `backend/`, with a batch `POST /review` here (draft: merge only after Umar's approval is written in #241, plan/imelda/layer-5-feedback.md v2). `/review` is server-to-server: Bearer `AI_REVIEW_SECRET` (404 while unset), counts only to the LLM (no notes, no page text), the `suggestion` is computed in `src/review/review.js` from result + confidence and never copied from the model, nothing logged. Hoax detection is not in MVP; its layer number comes later.
 Exposes `POST /analyze` and `GET /public-blocklist` exactly as in contracts/api.md (M5 design: docs/design/blocklist.md).
 
 - Input `{ snapshot, localSignals }`, output `{ signals: Signal[], rdapRegisteredAt }`. Shapes from contracts/ only. `rdapRegisteredAt` (#270): public RDAP registration date `YYYY-MM-DD`, sent whether or not `new_domain` fires; `null` when RDAP failed, timed out or was skipped (official host, IP).
