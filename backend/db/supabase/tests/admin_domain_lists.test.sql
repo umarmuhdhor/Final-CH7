@@ -5,7 +5,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(97);
+select plan(103);
 
 -- One SELECT as shoo_admin: its first column, or 'ERR <sqlstate> <message>' (as admin_schema.test.sql).
 create function pg_temp.as_admin(q text) returns text language plpgsql as $$
@@ -124,6 +124,16 @@ select is(pg_temp.as_admin($$select admin.domain_set('newpage.test', 'apex', tru
 
 select is(pg_temp.as_admin($$select admin.domain_set('co.id', 'apex', true, 'none', true, 'percobaan suffix resmi', 'a@test', 'co.id')$$),
   'ERR SA021 domain_not_registrable', 'K6: trusted on a public suffix');
+-- Security review 10b: a stored public_suffix is sticky (cleared or re-added only by migration).
+select is(pg_temp.as_admin($$select admin.domain_set('co.id', 'apex', true, 'none', false, 'percobaan suffix resmi', 'a@test', 'co.id')$$),
+  'ERR SA021 domain_not_registrable', 'trusted on a public suffix while clearing the flag');
+select is(pg_temp.as_admin($$select admin.domain_set('co.id', 'apex', false, 'none', false, 'hapus tanda suffix', 'a@test', 'co.id')$$),
+  'ERR SA021 domain_not_registrable', 'a stored public_suffix cannot be cleared');
+select is(pg_temp.as_admin($$select admin.domain_set('co.id', 'apex', false, 'none', null, 'catatan suffix baru', 'a@test', 'co.id')$$),
+  '', 'public_suffix null keeps the stored value');
+select is((select public_suffix from admin.domain_lists where domain = 'co.id'), true, 'co.id is still a public suffix');
+select is(pg_temp.as_admin($$select admin.domain_set('sfx-dl.test', 'subtree', false, 'none', true, 'suffix dengan subtree', 'a@test', 'sfx-dl.test')$$),
+  'ERR SA021 domain_not_registrable', 'a new subtree on a public suffix');
 select is(pg_temp.as_admin($$select admin.domain_set('forms-x.test', 'apex', true, 'host_path', false, 'percobaan host path', 'a@test', 'forms-x.test')$$),
   'ERR SA021 domain_not_registrable', 'K6: trusted on a host_path row');
 select is(pg_temp.as_admin($$select admin.domain_set('loose.test', 'none', false, 'subdomains', false, 'platform tanpa induk', 'a@test')$$),
@@ -190,6 +200,8 @@ select is(pg_temp.as_admin($$select admin.domain_remove('github.io', 'hapus bari
   'ERR SA011 confirm_required', 'I16: removing a locked row needs confirm');
 select is(pg_temp.as_admin($$select admin.domain_remove('klikbca.com', 'hapus baris brand', 'a@test', 'klikbca.com')$$),
   'ERR SA023 brand_locked', 'I16: a hard_locked row cannot be removed');
+select is(pg_temp.as_admin($$select admin.domain_remove('co.id', 'hapus suffix publik', 'a@test', 'co.id')$$),
+  'ERR SA023 brand_locked', 'a public suffix row cannot be removed (it would come back without the flag)');
 select is(pg_temp.as_admin($$select admin.domain_remove('newpage.test', 'tidak dipakai lagi', 'a@test')$$), '',
   'an unlocked row is removed without confirm');
 select is((select (target, before ->> 'protect', after is null)::text from admin.admin_audit
@@ -222,8 +234,9 @@ select is(pg_temp.as_admin($$select admin.add_domain('evil.github.io', 'phishing
   'add_domain on a tenant of a subdomains row still works');
 
 -- A parent of a hard_locked row stays unblockable even after its own row is removed (security review).
-select is(pg_temp.as_admin($$select admin.domain_remove('co.id', 'hapus suffix untuk uji', 'a@test', 'co.id')$$), '',
-  'a locked suffix row can be removed with confirm');
+-- Since security review 10b a suffix row goes only by migration; a migration (superuser) removes it here.
+delete from admin.domain_lists where domain = 'co.id';
+select is((select count(*)::int from admin.domain_lists where domain = 'co.id'), 0, 'a migration can still remove a suffix row');
 select is(pg_temp.as_admin($$select admin.add_domain('co.id', 'phishing_bank', 'tambah manual oleh admin', 'a@test')$$),
   'ERR SA019 allowlisted', 'add_domain refuses a parent of a hard_locked row (co.id above bca.co.id)');
 select is(pg_temp.as_admin($$select admin.vote('co.id', 'approve', 'phishing_bank', 'disetujui oleh admin', 'a@test')$$),

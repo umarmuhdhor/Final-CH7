@@ -422,7 +422,9 @@ begin
   end if;
 end $$;
 
--- Upsert one row. brand_id, locked and hard_locked never change here (only by migration).
+-- Upsert one row. brand_id, locked and hard_locked never change here (only by migration), and neither
+-- does a stored public_suffix (security review 10b): clearing it, or removing the row and adding it back,
+-- would let one call make every name under co.id trusted. p_public_suffix null = keep the stored value.
 -- p_confirm = the domain typed again (checked here, not only in the Worker), needed to change a
 -- locked row and to switch on trusted, subtree or public_suffix. The DB has no Public Suffix List:
 -- trusted on a suffix that is not in the seed (com.ng) is stopped only by that confirmation.
@@ -445,7 +447,7 @@ begin
   perform admin._check_list_note(p_note);
   if p_protect is null or p_protect not in ('subtree', 'apex', 'none')
      or p_hosting is null or p_hosting not in ('none', 'subdomains', 'host_path')
-     or p_trusted is null or p_public_suffix is null
+     or p_trusted is null
      or (p_protect = 'none' and not p_trusted and p_hosting = 'none') then
     raise exception using errcode = '22023', message = 'invalid_argument';
   end if;
@@ -454,6 +456,14 @@ begin
   select * into v_old from admin.domain_lists where domain = p_domain for update;
   if v_old.hard_locked then
     raise exception using errcode = 'SA023', message = 'brand_locked';
+  end if;
+  if coalesce(v_old.public_suffix, false) and p_public_suffix is not distinct from false then
+    raise exception using errcode = 'SA021', message = 'domain_not_registrable';
+  end if;
+  p_public_suffix := coalesce(p_public_suffix, v_old.public_suffix, false);
+  -- A new subtree on a suffix would make every name under it unblockable at once (go.id is seeded so).
+  if p_public_suffix and p_protect = 'subtree' and v_old.protect is distinct from 'subtree' then
+    raise exception using errcode = 'SA021', message = 'domain_not_registrable';
   end if;
   if v_old.domain is null and (select count(*) from admin.domain_lists) >= 5000 then
     raise exception using errcode = 'SA022', message = 'domain_list_full';
@@ -523,7 +533,8 @@ begin
   if not found then
     raise exception using errcode = 'SA002', message = 'not_found';
   end if;
-  if v_old.hard_locked then
+  -- A public suffix row only goes by migration: removed and added back, it could lose the flag.
+  if v_old.hard_locked or v_old.public_suffix then
     raise exception using errcode = 'SA023', message = 'brand_locked';
   end if;
   if v_old.locked and p_confirm is distinct from p_domain then
