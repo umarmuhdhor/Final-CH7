@@ -52,6 +52,27 @@ struct FaviconCacheTests {
         #expect(first === second)
     }
 
+    /// P13: never longer than the signed link (1 h); after that the Worker decides again.
+    @Test func anIconOlderThanItsLinkIsAskedForAgain() async throws {
+        let loader = CountingLoader()
+        let clock = Clock()
+        let cache = CachedFaviconLoader(loader: loader, notificationCenter: NotificationCenter(), now: { clock.now })
+        _ = try await cache.image(at: Self.link(Self.scanA, exp: 1000))
+        clock.advance(CachedFaviconLoader.maxAge - 1)
+        #expect(cache.cachedImage(at: Self.link(Self.scanA, exp: 2000)) != nil)
+        clock.advance(1)
+        #expect(cache.cachedImage(at: Self.link(Self.scanA, exp: 3000)) == nil)
+        _ = try await cache.image(at: Self.link(Self.scanA, exp: 3000))
+        #expect(loader.count == 2)
+    }
+
+    private final class Clock: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = Date(timeIntervalSince1970: 1_000_000)
+        var now: Date { lock.withLock { value } }
+        func advance(_ seconds: TimeInterval) { lock.withLock { value += seconds } }
+    }
+
     @Test func differentScansAreDownloadedEach() async throws {
         let loader = CountingLoader()
         let cache = CachedFaviconLoader(loader: loader, notificationCenter: NotificationCenter())

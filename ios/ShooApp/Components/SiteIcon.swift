@@ -73,23 +73,40 @@ struct URLSessionFaviconLoader: FaviconLoading {
 /// SECURITY §3 P9/P13: memory only (`NSCache`, never disk), at most 100 icons, failures not kept.
 /// `clear()` runs when data goes (`SessionStore.forgetCachedData`: delete my data, session cleared or
 /// expired, a new session, losing the guardian; `ApiRepository.removeMember`; leaving the demo) and on a
-/// memory warning. A download that was running during `clear()` is returned but not kept.
+/// memory warning. A download that was running during `clear()` is returned but not kept. An icon is
+/// kept at most `maxAge` (the lifetime of the signed link, 1 h): after that the Worker is asked again,
+/// so a scan that was deleted or a member who left is never shown from the cache past its link.
 ///
 /// `@unchecked Sendable`: `NSCache` is thread-safe, and `generation` is only touched under `lock`.
 final class CachedFaviconLoader: FaviconLoading, @unchecked Sendable {
     static let maxEntries = 100
+    /// `exp` of a signed favicon link is now + 3600 s (`backend/api/src/services/screenshotLinks.ts`).
+    static let maxAge: TimeInterval = 3600
     static let shared = CachedFaviconLoader(loader: URLSessionFaviconLoader.shared)
 
     private let loader: any FaviconLoading
-    private let cache = NSCache<NSString, UIImage>()
+    private final class Entry {
+        let image: UIImage
+        let storedAt: Date
+        init(image: UIImage, storedAt: Date) { self.image = image; self.storedAt = storedAt }
+    }
+
+    private let cache = NSCache<NSString, Entry>()
+    private let now: @Sendable () -> Date
     private let lock = NSLock()
     /// Bumped by `clear()`: a download that started before it is not stored.
     private var generation = 0
     private let notificationCenter: NotificationCenter
     private var memoryWarning: (any NSObjectProtocol)?
 
-    init(loader: any FaviconLoading, countLimit: Int = maxEntries, notificationCenter: NotificationCenter = .default) {
+    init(
+        loader: any FaviconLoading,
+        countLimit: Int = maxEntries,
+        notificationCenter: NotificationCenter = .default,
+        now: @escaping @Sendable () -> Date = Date.init
+    ) {
         self.loader = loader
+        self.now = now
         self.notificationCenter = notificationCenter
         cache.countLimit = countLimit
         memoryWarning = notificationCenter.addObserver(
@@ -106,17 +123,27 @@ final class CachedFaviconLoader: FaviconLoading, @unchecked Sendable {
     func image(at url: URL) async throws -> UIImage {
         // Not a favicon link: the loader decides (it refuses it), nothing is kept.
         guard let key = Self.key(for: url) else { return try await loader.image(at: url) }
-        if let hit = cache.object(forKey: key) { return hit }
+        if let hit = fresh(key) { return hit }
         let started = lock.withLock { generation }
         let image = try await loader.image(at: url)
         lock.withLock {
-            if generation == started { cache.setObject(image, forKey: key) }
+            if generation == started { cache.setObject(Entry(image: image, storedAt: now()), forKey: key) }
         }
         return image
     }
 
     func cachedImage(at url: URL) -> UIImage? {
-        Self.key(for: url).flatMap { cache.object(forKey: $0) }
+        Self.key(for: url).flatMap(fresh)
+    }
+
+    /// The stored icon while it is younger than `maxAge`; an older one is dropped.
+    private func fresh(_ key: NSString) -> UIImage? {
+        guard let entry = cache.object(forKey: key) else { return nil }
+        guard now().timeIntervalSince(entry.storedAt) < Self.maxAge else {
+            cache.removeObject(forKey: key)
+            return nil
+        }
+        return entry.image
     }
 
     func clear() {
