@@ -77,7 +77,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
-| `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
+| `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not protected by `admin.domain_lists`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
 | `ops_jobs` | one row per cron job (`retention`, `notifications`): last start, last finish, last clean finish (`ok_at`), failed steps, backlog. Read by `GET /ops/status`; `shoo_api` cannot delete rows |
@@ -111,9 +111,18 @@ Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<
 ### Layer 5 data (#241, migration `20261104133527_l5_review_data.sql`)
 
 - `admin.domain_review`: one row per LLM review of a queued domain. The dashboard cron calls `admin.review_due(limit)` (pending, not a shared host, no review since the last label change; counts only, no notes or page text) and stores `POST /review` answers with `admin.review_record(results, model, prompt, actor)`, which cleans model output and never touches `blocklist_entries`. `admin.vote` copies its decision to the latest review (trigger on `review_decisions`). Off until `review_enabled` (config, default `false`).
-- `admin.shared_hosts`: replaced as a whole by `admin.shared_hosts_set(hosts, actor, note)` from `ai/data/shared-hosts.json`; the backend keeps no list of its own.
+- Shared hosts: the view `admin.v_shared_hosts` (rows of `admin.domain_lists` with `hosting <> 'none'`, see below). The `admin.shared_hosts` table and `shared_hosts_set` were dropped in ADM-09.
 - `admin.ai_dataset` (view): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
 - Role `shoo_ai` (Team AI, login, read-only transactions, 3 connections): `select` on `admin.ai_dataset` only. Cloud setup (once, SQL editor as `postgres`): `alter role shoo_ai password '<from the password manager>';`.
+
+### Domain lists (ADM-09, migration `20261107095337_admin_domain_lists.sql`)
+
+`admin.domain_lists` is the one list of domains that must never be blocked (official banks, e-wallets, popular sites, public suffixes, shared hosting platforms). Each row has `protect` (`subtree` = the domain and its subdomains, `apex` = the exact name), `trusted` (official site, layer 3 stays quiet), `hosting` (`subdomains`: anyone gets a subdomain, `host_path`: anyone publishes under a path) and `public_suffix`. The matching rule is `admin.domain_match(host)`.
+
+- **Backend:** `POST /verdicts` asks `src/db/repo/domainLists.ts` `isProtected` in its own transaction (`admin.v_domain_lists_public`, the only `admin` object `shoo_api` reads besides `public_config`). A protected domain never enters the global review queue; the family's own verdict still applies. The backend keeps no list in code.
+- **Change it:** in the dashboard (page *Daftar domain*, phase 10b), which calls `admin.domain_set` / `admin.domain_remove` (note ≥ 10 characters, audited). Seed rows are `locked`: changing or removing one needs the domain typed again. Brand rows and 18 bank/payment rows are `hard_locked`: change them with a migration only. `admin.vote` (approve) and `admin.add_domain` refuse a protected domain (`SA019 allowlisted`).
+- **Seed:** generated once from the old lists by `db/scripts/domain-lists-seed.mjs`; `db/scripts/domain-lists-golden.mjs` recorded the old answers (`api/test/fixtures/domain-lists-golden.json`), and `api/test/domain-lists-golden.test.ts` proves the seed answers the same except the listed, categorized differences (`domain-lists-expected-diff.json`, summary in `db/scripts/domain-lists-diff.md`). `ai/` and the extensions keep their own lists until dashboard phase 10c.
+- **Rollback:** see the header of the migration (one transaction), then `git revert` the backend change.
 
 ## Env
 

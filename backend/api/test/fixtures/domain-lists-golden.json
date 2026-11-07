@@ -1,0 +1,8899 @@
+{
+ "source": "origin/main ce137f9 (7 Nov 2026)",
+ "readers": [
+  "backend",
+  "build",
+  "official",
+  "blockMemory"
+ ],
+ "cases": [
+  {
+   "host": "000webhostapp.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "000webhostapp.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "1drv.ms",
+   "backend": false,
+   "build": false,
+   "buildDomain": "1drv.ms",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.000webhostapp.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "000webhostapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.1drv.ms",
+   "backend": false,
+   "build": false,
+   "buildDomain": "1drv.ms",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ac.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "b.ac.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.acrobat.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.agoda.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "agoda.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.agoda.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "agoda.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.airbnb.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "airbnb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.akamaihd.net",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.akamaihd.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.alodokter.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "alodokter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.amazon.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "amazon.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.amazonaws.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "amazonaws.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.antaranews.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "antaranews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.anteraja.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "anteraja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.anthropic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "anthropic.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.apple.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "apple.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.appspot.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.appspot.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.azurewebsites.net",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.azurewebsites.net",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.bankbsi.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bankbsi.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bankjago.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "bankjago.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bankmandiri.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bankmandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bankmega.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "bankmega.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bbc.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bbc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bca.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bca.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bi.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bi.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bing.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bing.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bit.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bit.ly",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.biz.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.biz.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.blibli.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "blibli.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.blogger.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "blogger.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.blogspot.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.blogspot.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.blubybcadigital.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "blubybcadigital.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bni.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bni.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.booking.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "booking.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bpjs-kesehatan.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bpjs-kesehatan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bpjsketenagakerjaan.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bpjsketenagakerjaan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bri.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.btn.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "btn.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.btpn.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "btpn.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.bukalapak.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bukalapak.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.canva.site",
+   "backend": false,
+   "build": true,
+   "buildDomain": "canva.site",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.carrd.co",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.carrd.co",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.cimbniaga.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "cimbniaga.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.cloud.microsoft",
+   "backend": false,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.cloudflare.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cloudflare.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.cloudfront.net",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.cloudfront.net",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.cnn.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cnn.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.cnnindonesia.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "cnnindonesia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.in",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.in",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.jp",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.jp",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.kr",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.kr",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.nz",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.nz",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.th",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.th",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.co.uk",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.co.uk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.au",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.au",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.br",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.br",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.cn",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.hk",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.hk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.my",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.my",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.ph",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.ph",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.sg",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.sg",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.tw",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.tw",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.com.vn",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.com.vn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.cutt.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cutt.ly",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.dana.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dana.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.danamon.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "danamon.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.desa.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "b.desa.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.detik.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "detik.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.dhl.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dhl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.dhl.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dhl.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.discord.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "discord.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.docs.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.doku.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "doku.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.drive.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.dropbox.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.duckdns.org",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.duckdns.org",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.duckduckgo.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "duckduckgo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ebay.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "ebay.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.express.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.facebook.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "facebook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.fastly.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fastly.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.fb.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "fb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.fb.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fb.me",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.fbcdn.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fbcdn.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.firebaseapp.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.firebaseapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.firebasestorage.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "firebasestorage.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.fly.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.fly.dev",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.forms.cloud.microsoft",
+   "backend": false,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.forms.gle",
+   "backend": false,
+   "build": true,
+   "buildDomain": "forms.gle",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.forms.microsoft.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.forms.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.framer.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.framer.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.framer.website",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.framer.website",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.gist.github.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.github.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.github.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.github.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.githubusercontent.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.githubusercontent.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.gitlab.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gitlab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.gitlab.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.gitlab.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.glitch.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "glitch.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.gmail.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gmail.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "b.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.godaddysites.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "godaddysites.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.gojek.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gojek.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.goo.gl",
+   "backend": false,
+   "build": true,
+   "buildDomain": "goo.gl",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.google.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "b.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.googleusercontent.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "googleusercontent.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.gopay.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gopay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.grab.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "grab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.gramedia.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gramedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.gstatic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.halodoc.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "halodoc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.herokuapp.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.herokuapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.icloud.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "icloud.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.idntimes.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "idntimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.in.th",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.in.th",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.indihome.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "indihome.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.indonesia.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "indonesia.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.indosatooredoo.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "indosatooredoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.infinityfreeapp.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "infinityfreeapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.instagram.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "instagram.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.is.gd",
+   "backend": false,
+   "build": true,
+   "buildDomain": "is.gd",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.jd.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "jd.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.jenius.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jenius.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.jet.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jet.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.jimdofree.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "jimdofree.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.jne.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jne.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.jntexpress.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "jntexpress.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kai.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "kai.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kaskus.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "kaskus.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kemdikbud.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemdikbud.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kemenkeu.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemenkeu.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kemensos.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemensos.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kemkes.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemkes.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.klikbca.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "klikbca.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kominfo.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kominfo.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kompas.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kompas.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.kumparan.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kumparan.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.lazada.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lazada.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.lazada.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lazada.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.linkaja.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linkaja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.linkedin.cn",
+   "backend": false,
+   "build": true,
+   "buildDomain": "linkedin.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.linkedin.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linkedin.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.linktr.ee",
+   "backend": false,
+   "build": true,
+   "buildDomain": "linktr.ee",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.liputan6.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "liputan6.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.live.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "live.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.livin.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "livin.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.lps.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lps.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.mandiri.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.maybank.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "maybank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.mediafire.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mediafire.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.medium.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "medium.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.mega.nz",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mega.nz",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.meta.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "meta.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.microsoft.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.microsoftonline.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoftonline.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.midtrans.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "midtrans.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.mil.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "b.mil.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.mozilla.org",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mozilla.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.my.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.my.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.myshopify.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.myshopify.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.mystrikingly.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mystrikingly.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.mzstatic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mzstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.net.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.net.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.netflix.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "netflix.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.netlify.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.netlify.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.ngrok-free.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.ngrok-free.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.ngrok.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.ngrok.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.notion.site",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.notion.site",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.nytimes.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "nytimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ocbc.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ocbc.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.office365.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "office365.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ojk.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ojk.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.olx.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "olx.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.onedrive.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "onedrive.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.onedrive.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.onrender.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.onrender.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.openai.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "openai.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.or.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.or.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.org.uk",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.org.uk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.outlook.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "outlook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ovo.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ovo.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.page.link",
+   "backend": false,
+   "build": false,
+   "buildDomain": "page.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.pages.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.pages.dev",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.pajak.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pajak.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.panin.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "panin.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.paper.dropbox.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.paypal.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "paypal.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.permatabank.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "permatabank.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.pertamina.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pertamina.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.pinterest.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "pinterest.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.pln.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pln.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.polri.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "polri.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ponpes.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.ponpes.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.pos.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "pos.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.posindonesia.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "posindonesia.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.r2.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.r2.dev",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.rebrand.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "rebrand.ly",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.reddit.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "reddit.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.repl.co",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.repl.co",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.replit.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.replit.app",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.ruangguru.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "ruangguru.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.s.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "s.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.s3.amazonaws.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "b.s3.amazonaws.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.sch.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "b.sch.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.script.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.seabank.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "seabank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.sharepoint.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sharepoint.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.shopee.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopee.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.shopee.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopee.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.shopeepay.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopeepay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.sicepat.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sicepat.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.sites.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.sites.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.smartfren.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "smartfren.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.sociolla.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sociolla.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.spark.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.spotify.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "spotify.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.square.site",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.square.site",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.squarespace.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "squarespace.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.stackoverflow.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "stackoverflow.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.storage.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "storage.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.sway.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.t.co",
+   "backend": false,
+   "build": true,
+   "buildDomain": "t.co",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.t.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "t.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.telegram.org",
+   "backend": false,
+   "build": true,
+   "buildDomain": "telegram.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.telkom.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "telkom.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.telkomsel.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "telkomsel.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tempo.co",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tempo.co",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.theguardian.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "theguardian.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tiket.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tiket.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tiki.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tiki.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tiktok.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tiktok.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tinyurl.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tinyurl.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.tokopedia.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tokopedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tokopedia.link",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tokopedia.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.translate.goog",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.translate.goog",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.traveloka.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "traveloka.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.traveloka.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "traveloka.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tribunnews.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tribunnews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.tripadvisor.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tripadvisor.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.trycloudflare.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.trycloudflare.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.tumblr.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tumblr.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.twitch.tv",
+   "backend": false,
+   "build": true,
+   "buildDomain": "twitch.tv",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.twitter.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "twitter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.typedream.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.typedream.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.uber.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "uber.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.uob.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "uob.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.vercel.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.vercel.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.wa.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wa.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.web.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.web.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.web.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.web.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.webflow.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.webflow.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.webwave.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "webwave.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.weebly.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "weebly.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.whatsapp.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "whatsapp.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.wikipedia.org",
+   "backend": true,
+   "build": true,
+   "buildDomain": "wikipedia.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.windows.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "windows.net",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.wix.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wix.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.wixsite.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.wixsite.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.wordpress.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wordpress.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.workers.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.workers.dev",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.x.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "x.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.xendit.co",
+   "backend": true,
+   "build": false,
+   "buildDomain": "xendit.co",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.xl.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "xl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.yahoo.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "yahoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.yolasite.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "b.yolasite.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "a.b.youtu.be",
+   "backend": false,
+   "build": true,
+   "buildDomain": "youtu.be",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.youtube.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "youtube.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.zalora.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "zalora.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "a.b.zoom.us",
+   "backend": true,
+   "build": true,
+   "buildDomain": "zoom.us",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ac.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "acrobat.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "agoda.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "agoda.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "agoda.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "agoda.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "airbnb.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "airbnb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "akamaihd.net",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "alodokter.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "alodokter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "amazon.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "amazon.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "amazonaws.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "amazonaws.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "antaranews.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "antaranews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "anteraja.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "anteraja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "anthropic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "anthropic.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "apple.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "apple.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "appspot.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "azurewebsites.net",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "bankbsi.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bankbsi.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bankjago.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "bankjago.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bankmandiri.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bankmandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bankmega.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "bankmega.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bbc.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bbc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bca.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bca.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bca.co.id.evil.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "evil.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bi.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bi.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bing.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bing.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bit.ly",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bit.ly",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "biz.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "blibli.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "blibli.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "blogger.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "blogger.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "blogspot.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "blubybcadigital.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "blubybcadigital.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bni.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bni.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "booking.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "booking.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bpjs-kesehatan.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bpjs-kesehatan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bpjsketenagakerjaan.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bpjsketenagakerjaan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bri.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "btn.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "btn.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "btpn.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "btpn.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "bukalapak.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bukalapak.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "canva.site",
+   "backend": false,
+   "build": true,
+   "buildDomain": "canva.site",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "carrd.co",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "cimbniaga.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "cimbniaga.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "cloud.microsoft",
+   "backend": false,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "cloudflare.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cloudflare.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "cloudfront.net",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "cnn.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cnn.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "cnnindonesia.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "cnnindonesia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.in",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.jp",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.kr",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.nz",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.th",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "co.uk",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.au",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.br",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.cn",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.hk",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.my",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.ph",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.sg",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.tw",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "com.vn",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "cutt.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cutt.ly",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "dana.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dana.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "danamon.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "danamon.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "desa.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "detik.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "detik.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "dhl.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dhl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "dhl.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dhl.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "discord.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "discord.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "docs.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "doku.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "doku.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "drive.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "dropbox.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "duckdns.org",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "duckduckgo.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "duckduckgo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ebay.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "ebay.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "example.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "example.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "express.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "facebook.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "facebook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "fastly.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fastly.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "fb.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "fb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "fb.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fb.me",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "fbcdn.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fbcdn.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "firebaseapp.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "firebasestorage.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "firebasestorage.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "fly.dev",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "forms.cloud.microsoft",
+   "backend": false,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "forms.gle",
+   "backend": false,
+   "build": true,
+   "buildDomain": "forms.gle",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "forms.microsoft.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "forms.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "framer.app",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "framer.website",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "gist.github.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "github.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "github.io",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "githubusercontent.com",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "gitlab.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gitlab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "gitlab.io",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "glitch.me",
+   "backend": true,
+   "build": true,
+   "buildDomain": "glitch.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "gmail.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gmail.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "go-id.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "go-id.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "go.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "godaddysites.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "godaddysites.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "gojek.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gojek.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "goo.gl",
+   "backend": false,
+   "build": true,
+   "buildDomain": "goo.gl",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "google.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "googleapis.com",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "googleusercontent.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "googleusercontent.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "gopay.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gopay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "grab.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "grab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "gramedia.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gramedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "gstatic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "halodoc.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "halodoc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "herokuapp.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "icloud.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "icloud.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "id-bca.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "id-bca.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "idntimes.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "idntimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "in.th",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "indihome.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "indihome.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "indonesia.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "indonesia.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "indosatooredoo.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "indosatooredoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "infinityfreeapp.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "infinityfreeapp.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "instagram.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "instagram.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "is.gd",
+   "backend": false,
+   "build": true,
+   "buildDomain": "is.gd",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "jd.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "jd.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "jenius.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jenius.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "jet.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jet.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "jimdofree.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "jimdofree.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "jne.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jne.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "jntexpress.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "jntexpress.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kai.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "kai.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kaskus.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "kaskus.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kemdikbud.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemdikbud.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kemenkeu.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemenkeu.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kemensos.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemensos.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kemkes.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemkes.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "klikbca-login.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "klikbca-login.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "klikbca.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "klikbca.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kominfo.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kominfo.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kompas.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kompas.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "kumparan.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kumparan.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "lazada.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lazada.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "lazada.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lazada.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "linkaja.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linkaja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "linkedin.cn",
+   "backend": false,
+   "build": true,
+   "buildDomain": "linkedin.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "linkedin.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linkedin.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "linktr.ee",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linktr.ee",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "liputan6.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "liputan6.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "live.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "live.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "livin.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "livin.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "lps.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lps.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "mandiri.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "maybank.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "maybank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "mediafire.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mediafire.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "medium.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "medium.com",
+   "official": true,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "mega.nz",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mega.nz",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "meta.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "meta.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "microsoft.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "microsoftonline.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoftonline.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "midtrans.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "midtrans.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "mil.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "mozilla.org",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mozilla.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "my.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "myshopify.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "mystrikingly.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mystrikingly.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "mzstatic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mzstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "net.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "netflix.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "netflix.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "netlify.app",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "ngrok-free.app",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "ngrok.io",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "notgoogle.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "notgoogle.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "notion.site",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "nytimes.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "nytimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ocbc.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ocbc.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "office365.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "office365.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ojk.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ojk.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "olx.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "olx.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "onedrive.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "onedrive.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "onedrive.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "onrender.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "openai.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "openai.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "or.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "org.uk",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "outlook.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "outlook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ovo.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ovo.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "page.link",
+   "backend": true,
+   "build": false,
+   "buildDomain": "page.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "pages.dev",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "pajak.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pajak.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "panin.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "panin.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "paper.dropbox.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "paypal.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "paypal.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "permatabank.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "permatabank.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "pertamina.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pertamina.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "pinterest.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "pinterest.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "pln.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pln.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "polri.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "polri.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ponpes.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "pos.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "pos.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "posindonesia.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "posindonesia.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "r2.dev",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "rebrand.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "rebrand.ly",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "reddit.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "reddit.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "repl.co",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "replit.app",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "ruangguru.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "ruangguru.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "s.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "s.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "s3.amazonaws.com",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "sch.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "script.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "seabank.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "seabank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "sharepoint.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sharepoint.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "shopee.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopee.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "shopee.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopee.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "shopeepay.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopeepay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "sicepat.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sicepat.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "sites.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "sites.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "smartfren.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "smartfren.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "sociolla.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sociolla.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "spark.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "spotify.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "spotify.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "square.site",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "squarespace.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "squarespace.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "stackoverflow.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "stackoverflow.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "storage.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "storage.googleapis.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "sway.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "t.co",
+   "backend": false,
+   "build": true,
+   "buildDomain": "t.co",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "t.me",
+   "backend": true,
+   "build": true,
+   "buildDomain": "t.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "telegram.org",
+   "backend": false,
+   "build": true,
+   "buildDomain": "telegram.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "telkom.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "telkom.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "telkomsel.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "telkomsel.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tempo.co",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tempo.co",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "theguardian.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "theguardian.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tiket.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tiket.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tiki.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tiki.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tiktok.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tiktok.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tinyurl.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tinyurl.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "tokopedia.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tokopedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tokopedia.link",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tokopedia.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "translate.goog",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "traveloka.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "traveloka.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "traveloka.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "traveloka.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tribunnews.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tribunnews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "tripadvisor.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tripadvisor.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "trycloudflare.com",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "tumblr.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tumblr.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "twitch.tv",
+   "backend": false,
+   "build": true,
+   "buildDomain": "twitch.tv",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "twitter.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "twitter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "typedream.app",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "uber.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "uber.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "uob.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "uob.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "vercel.app",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "wa.me",
+   "backend": true,
+   "build": true,
+   "buildDomain": "wa.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "web.app",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "web.id",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "webflow.io",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "webwave.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "webwave.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "weebly.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "weebly.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "whatsapp.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "whatsapp.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "wikipedia.org",
+   "backend": true,
+   "build": true,
+   "buildDomain": "wikipedia.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "windows.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "windows.net",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "wix.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wix.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "wixsite.com",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "wordpress.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "wordpress.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "workers.dev",
+   "backend": true,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.000webhostapp.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "000webhostapp.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.1drv.ms",
+   "backend": null,
+   "build": false,
+   "buildDomain": "1drv.ms",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ac.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.ac.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.acrobat.adobe.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.adobe.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.agoda.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "agoda.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.agoda.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "agoda.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.airbnb.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "airbnb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.akamaihd.net",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.akamaihd.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.alodokter.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "alodokter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.amazon.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "amazon.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.amazonaws.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "amazonaws.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.antaranews.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "antaranews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.anteraja.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "anteraja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.anthropic.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "anthropic.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.apple.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "apple.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.appspot.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.appspot.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.azurewebsites.net",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.azurewebsites.net",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.bankbsi.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bankbsi.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bankjago.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "bankjago.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bankmandiri.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bankmandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bankmega.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "bankmega.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bbc.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bbc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bca.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bca.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bi.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bi.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bing.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bing.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bit.ly",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bit.ly",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.biz.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.biz.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.blibli.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "blibli.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.blogger.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "blogger.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.blogspot.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.blogspot.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.blubybcadigital.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "blubybcadigital.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bni.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bni.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.booking.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "booking.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bpjs-kesehatan.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bpjs-kesehatan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bpjsketenagakerjaan.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bpjsketenagakerjaan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bri.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.btn.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "btn.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.btpn.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "btpn.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.bukalapak.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "bukalapak.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.canva.site",
+   "backend": null,
+   "build": true,
+   "buildDomain": "canva.site",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.carrd.co",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.carrd.co",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.cimbniaga.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "cimbniaga.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.cloud.microsoft",
+   "backend": null,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.cloudflare.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "cloudflare.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.cloudfront.net",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.cloudfront.net",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.cnn.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "cnn.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.cnnindonesia.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "cnnindonesia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.in",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.in",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.jp",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.jp",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.kr",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.kr",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.nz",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.nz",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.th",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.th",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.co.uk",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.co.uk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.au",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.au",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.br",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.br",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.cn",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.hk",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.hk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.my",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.my",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.ph",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.ph",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.sg",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.sg",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.tw",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.tw",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.com.vn",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.com.vn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.cutt.ly",
+   "backend": null,
+   "build": true,
+   "buildDomain": "cutt.ly",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.dana.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "dana.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.danamon.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "danamon.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.desa.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.desa.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.detik.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "detik.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.dhl.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "dhl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.dhl.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "dhl.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.discord.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "discord.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.docs.google.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.doku.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "doku.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.drive.google.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.dropbox.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.duckdns.org",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.duckdns.org",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.duckduckgo.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "duckduckgo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ebay.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "ebay.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.express.adobe.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.facebook.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "facebook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.fastly.net",
+   "backend": null,
+   "build": true,
+   "buildDomain": "fastly.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.fb.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "fb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.fb.me",
+   "backend": null,
+   "build": true,
+   "buildDomain": "fb.me",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.fbcdn.net",
+   "backend": null,
+   "build": true,
+   "buildDomain": "fbcdn.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.firebaseapp.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.firebaseapp.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.firebasestorage.googleapis.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "firebasestorage.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "www.fly.dev",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.fly.dev",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.forms.cloud.microsoft",
+   "backend": null,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.forms.gle",
+   "backend": null,
+   "build": true,
+   "buildDomain": "forms.gle",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.forms.microsoft.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.forms.office.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.framer.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.framer.app",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.framer.website",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.framer.website",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.gist.github.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.github.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.github.io",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.github.io",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.githubusercontent.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.githubusercontent.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.gitlab.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "gitlab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.gitlab.io",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.gitlab.io",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.glitch.me",
+   "backend": null,
+   "build": true,
+   "buildDomain": "glitch.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.gmail.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "gmail.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "www.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.godaddysites.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "godaddysites.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.gojek.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "gojek.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.goo.gl",
+   "backend": null,
+   "build": true,
+   "buildDomain": "goo.gl",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.google.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "google.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.google.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.googleapis.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "www.googleapis.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.googleusercontent.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "googleusercontent.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.gopay.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "gopay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.grab.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "grab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.gramedia.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "gramedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.gstatic.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "gstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.halodoc.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "halodoc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.herokuapp.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.herokuapp.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.icloud.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "icloud.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.idntimes.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "idntimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.in.th",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.in.th",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.indihome.co.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "indihome.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.indonesia.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "indonesia.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.indosatooredoo.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "indosatooredoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.infinityfreeapp.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "infinityfreeapp.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.instagram.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "instagram.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.is.gd",
+   "backend": null,
+   "build": true,
+   "buildDomain": "is.gd",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.jd.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "jd.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.jenius.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "jenius.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.jet.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "jet.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.jimdofree.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "jimdofree.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.jne.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "jne.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.jntexpress.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "jntexpress.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kai.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "kai.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kaskus.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kaskus.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kemdikbud.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kemdikbud.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kemenkeu.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kemenkeu.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kemensos.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kemensos.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kemkes.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kemkes.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.klikbca.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "klikbca.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kominfo.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kominfo.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kompas.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kompas.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.kumparan.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "kumparan.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.lazada.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "lazada.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.lazada.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "lazada.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.linkaja.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "linkaja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.linkedin.cn",
+   "backend": null,
+   "build": true,
+   "buildDomain": "linkedin.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.linkedin.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "linkedin.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.linktr.ee",
+   "backend": null,
+   "build": true,
+   "buildDomain": "linktr.ee",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.liputan6.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "liputan6.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.live.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.live.net",
+   "backend": null,
+   "build": true,
+   "buildDomain": "live.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.livin.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "livin.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.lps.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "lps.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.mandiri.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "mandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.maybank.co.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "maybank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.mediafire.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "mediafire.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.medium.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "medium.com",
+   "official": true,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.mega.nz",
+   "backend": null,
+   "build": true,
+   "buildDomain": "mega.nz",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.meta.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "meta.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.microsoft.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.microsoftonline.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "microsoftonline.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.midtrans.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "midtrans.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.mil.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.mil.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.mozilla.org",
+   "backend": null,
+   "build": true,
+   "buildDomain": "mozilla.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.my.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.my.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.myshopify.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.myshopify.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.mystrikingly.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "mystrikingly.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.mzstatic.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "mzstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.net.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.net.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.netflix.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "netflix.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.netlify.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.netlify.app",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.ngrok-free.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.ngrok-free.app",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.ngrok.io",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.ngrok.io",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.notion.site",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.notion.site",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.nytimes.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "nytimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ocbc.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "ocbc.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.office.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.office365.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "office365.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ojk.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "ojk.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.olx.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "olx.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.onedrive.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "onedrive.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.onedrive.live.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.onrender.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.onrender.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.openai.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "openai.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.or.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.or.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.org.uk",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.org.uk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.outlook.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "outlook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ovo.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "ovo.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.page.link",
+   "backend": null,
+   "build": false,
+   "buildDomain": "page.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.pages.dev",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.pages.dev",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.pajak.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "pajak.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.panin.co.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "panin.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.paper.dropbox.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.paypal.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "paypal.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.permatabank.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "permatabank.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.pertamina.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "pertamina.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.pinterest.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "pinterest.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.pln.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "pln.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.polri.go.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "polri.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ponpes.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.ponpes.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.pos.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "pos.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.posindonesia.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "posindonesia.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.r2.dev",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.r2.dev",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.rebrand.ly",
+   "backend": null,
+   "build": true,
+   "buildDomain": "rebrand.ly",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.reddit.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "reddit.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.repl.co",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.repl.co",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.replit.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.replit.app",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.ruangguru.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "ruangguru.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.s.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "s.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.s3.amazonaws.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "www.s3.amazonaws.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.sch.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.sch.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.script.google.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.seabank.co.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "seabank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.sharepoint.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "sharepoint.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.shopee.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "shopee.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.shopee.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "shopee.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.shopeepay.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "shopeepay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.sicepat.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "sicepat.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.sites.google.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.sites.live.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.smartfren.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "smartfren.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.sociolla.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "sociolla.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.spark.adobe.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.spotify.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "spotify.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.square.site",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.square.site",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.squarespace.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "squarespace.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.stackoverflow.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "stackoverflow.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.storage.googleapis.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "storage.googleapis.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.sway.office.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.t.co",
+   "backend": null,
+   "build": true,
+   "buildDomain": "t.co",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.t.me",
+   "backend": null,
+   "build": true,
+   "buildDomain": "t.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.telegram.org",
+   "backend": null,
+   "build": true,
+   "buildDomain": "telegram.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.telkom.co.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "telkom.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.telkomsel.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "telkomsel.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tempo.co",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tempo.co",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.theguardian.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "theguardian.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tiket.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tiket.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tiki.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tiki.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tiktok.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tiktok.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tinyurl.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tinyurl.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.tokopedia.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tokopedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tokopedia.link",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tokopedia.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.translate.goog",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.translate.goog",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.traveloka.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "traveloka.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.traveloka.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "traveloka.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tribunnews.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tribunnews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.tripadvisor.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tripadvisor.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.trycloudflare.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.trycloudflare.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.tumblr.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "tumblr.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.twitch.tv",
+   "backend": null,
+   "build": true,
+   "buildDomain": "twitch.tv",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.twitter.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "twitter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.typedream.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.typedream.app",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.uber.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "uber.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.uob.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "uob.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.vercel.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.vercel.app",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.wa.me",
+   "backend": null,
+   "build": true,
+   "buildDomain": "wa.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.web.app",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.web.app",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.web.id",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.web.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.webflow.io",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.webflow.io",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.webwave.me",
+   "backend": null,
+   "build": true,
+   "buildDomain": "webwave.me",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.weebly.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "weebly.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.whatsapp.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "whatsapp.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.wikipedia.org",
+   "backend": null,
+   "build": true,
+   "buildDomain": "wikipedia.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.windows.net",
+   "backend": null,
+   "build": true,
+   "buildDomain": "windows.net",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.wix.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "wix.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.wixsite.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.wixsite.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.wordpress.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "wordpress.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.workers.dev",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.workers.dev",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.x.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "x.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.xendit.co",
+   "backend": null,
+   "build": false,
+   "buildDomain": "xendit.co",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.xl.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "xl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.yahoo.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "yahoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.yolasite.com",
+   "backend": null,
+   "build": false,
+   "buildDomain": "www.yolasite.com",
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "www.youtu.be",
+   "backend": null,
+   "build": true,
+   "buildDomain": "youtu.be",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.youtube.com",
+   "backend": null,
+   "build": true,
+   "buildDomain": "youtube.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.zalora.co.id",
+   "backend": null,
+   "build": true,
+   "buildDomain": "zalora.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "www.zoom.us",
+   "backend": null,
+   "build": true,
+   "buildDomain": "zoom.us",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.000webhostapp.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "000webhostapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.1drv.ms",
+   "backend": false,
+   "build": false,
+   "buildDomain": "1drv.ms",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ac.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "x.ac.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.acrobat.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.agoda.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "agoda.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.agoda.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "agoda.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.airbnb.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "airbnb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.akamaihd.net",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.akamaihd.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.alodokter.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "alodokter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.amazon.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "amazon.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.amazonaws.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "amazonaws.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.antaranews.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "antaranews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.anteraja.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "anteraja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.anthropic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "anthropic.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.apple.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "apple.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.appspot.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.appspot.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.azurewebsites.net",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.azurewebsites.net",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.bankbsi.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bankbsi.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bankjago.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "bankjago.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bankmandiri.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bankmandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bankmega.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "bankmega.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bbc.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bbc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bca.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bca.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bi.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bi.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bing.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bing.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bit.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "bit.ly",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.biz.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.biz.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.blibli.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "blibli.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.blogger.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "blogger.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.blogspot.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.blogspot.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.blubybcadigital.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "blubybcadigital.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bni.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bni.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.booking.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "booking.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bpjs-kesehatan.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bpjs-kesehatan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bpjsketenagakerjaan.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bpjsketenagakerjaan.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bri.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.btn.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "btn.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.btpn.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "btpn.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.bukalapak.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "bukalapak.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.canva.site",
+   "backend": false,
+   "build": true,
+   "buildDomain": "canva.site",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.carrd.co",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.carrd.co",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.cimbniaga.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "cimbniaga.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.cloud.microsoft",
+   "backend": false,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.cloudflare.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cloudflare.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.cloudfront.net",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.cloudfront.net",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.cnn.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cnn.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.cnnindonesia.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "cnnindonesia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.in",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.in",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.jp",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.jp",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.kr",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.kr",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.nz",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.nz",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.th",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.th",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.co.uk",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.co.uk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "x.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.au",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.au",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.br",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.br",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.cn",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.hk",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.hk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.my",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.my",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.ph",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.ph",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.sg",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.sg",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.tw",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.tw",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.com.vn",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.com.vn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.cutt.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "cutt.ly",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.dana.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dana.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.danamon.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "danamon.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.desa.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "x.desa.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.detik.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "detik.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.dhl.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dhl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.dhl.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "dhl.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.discord.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "discord.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.docs.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.doku.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "doku.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.drive.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.dropbox.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.duckdns.org",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.duckdns.org",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.duckduckgo.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "duckduckgo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ebay.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "ebay.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.example.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "example.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.express.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.facebook.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "facebook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.fastly.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fastly.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.fb.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "fb.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.fb.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fb.me",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.fbcdn.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "fbcdn.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.firebaseapp.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.firebaseapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.firebasestorage.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "firebasestorage.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.fly.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.fly.dev",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.forms.cloud.microsoft",
+   "backend": false,
+   "build": false,
+   "buildDomain": "cloud.microsoft",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.forms.gle",
+   "backend": false,
+   "build": true,
+   "buildDomain": "forms.gle",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.forms.microsoft.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.forms.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.framer.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.framer.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.framer.website",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.framer.website",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.gist.github.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.github.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "github.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.github.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.github.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.githubusercontent.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.githubusercontent.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.gitlab.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gitlab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.gitlab.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.gitlab.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.glitch.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "glitch.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.gmail.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gmail.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "x.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.godaddysites.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "godaddysites.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.gojek.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gojek.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.goo.gl",
+   "backend": false,
+   "build": true,
+   "buildDomain": "goo.gl",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.google.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "x.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.googleusercontent.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "googleusercontent.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.gopay.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "gopay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.grab.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "grab.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.gramedia.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gramedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.gstatic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "gstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.halodoc.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "halodoc.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.herokuapp.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.herokuapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.icloud.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "icloud.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.idntimes.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "idntimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.in.th",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.in.th",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.indihome.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "indihome.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.indonesia.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "indonesia.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.indosatooredoo.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "indosatooredoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.infinityfreeapp.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "infinityfreeapp.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.instagram.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "instagram.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.is.gd",
+   "backend": false,
+   "build": true,
+   "buildDomain": "is.gd",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.jd.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "jd.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.jenius.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jenius.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.jet.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jet.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.jimdofree.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "jimdofree.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.jne.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "jne.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.jntexpress.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "jntexpress.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kai.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "kai.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kaskus.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "kaskus.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kemdikbud.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemdikbud.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kemenkeu.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemenkeu.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kemensos.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemensos.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kemkes.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kemkes.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.klikbca.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "klikbca.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kominfo.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kominfo.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kompas.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kompas.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.kumparan.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "kumparan.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.lazada.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lazada.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.lazada.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lazada.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.linkaja.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linkaja.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.linkedin.cn",
+   "backend": false,
+   "build": true,
+   "buildDomain": "linkedin.cn",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.linkedin.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "linkedin.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.linktr.ee",
+   "backend": false,
+   "build": true,
+   "buildDomain": "linktr.ee",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.liputan6.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "liputan6.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.live.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "live.net",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.livin.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "livin.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.lps.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "lps.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.mandiri.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mandiri.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.maybank.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "maybank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.mediafire.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mediafire.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.medium.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "medium.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.mega.nz",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mega.nz",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.meta.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "meta.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.microsoft.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoft.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.microsoftonline.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "microsoftonline.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.midtrans.com",
+   "backend": true,
+   "build": false,
+   "buildDomain": "midtrans.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.mil.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "x.mil.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.mozilla.org",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mozilla.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.my.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.my.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.myshopify.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.myshopify.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.mystrikingly.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mystrikingly.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.mzstatic.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "mzstatic.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.net.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.net.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.netflix.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "netflix.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.netlify.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.netlify.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.ngrok-free.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.ngrok-free.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.ngrok.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.ngrok.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.notion.site",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.notion.site",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.nytimes.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "nytimes.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ocbc.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ocbc.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.office365.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "office365.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ojk.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ojk.go.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.olx.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "olx.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.onedrive.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "onedrive.com",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.onedrive.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.onrender.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.onrender.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.openai.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "openai.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.or.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.or.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.org.uk",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.org.uk",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.outlook.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "outlook.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ovo.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "ovo.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.page.link",
+   "backend": false,
+   "build": false,
+   "buildDomain": "page.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.pages.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.pages.dev",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.pajak.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pajak.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.panin.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "panin.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.paper.dropbox.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "dropbox.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.paypal.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "paypal.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.permatabank.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "permatabank.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.pertamina.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pertamina.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.pinterest.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "pinterest.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.pln.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "pln.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.polri.go.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "polri.go.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ponpes.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.ponpes.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.pos.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "pos.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.posindonesia.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "posindonesia.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.r2.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.r2.dev",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.rebrand.ly",
+   "backend": false,
+   "build": true,
+   "buildDomain": "rebrand.ly",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.reddit.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "reddit.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.repl.co",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.repl.co",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.replit.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.replit.app",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.ruangguru.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "ruangguru.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.s.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "s.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.s3.amazonaws.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "x.s3.amazonaws.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.sch.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "x.sch.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.script.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.seabank.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "seabank.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.sharepoint.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sharepoint.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.shopee.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopee.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.shopee.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopee.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.shopeepay.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "shopeepay.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.sicepat.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sicepat.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.sites.google.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "google.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.sites.live.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "live.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.smartfren.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "smartfren.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.sociolla.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "sociolla.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.spark.adobe.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "adobe.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.spotify.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "spotify.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.square.site",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.square.site",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.squarespace.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "squarespace.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.stackoverflow.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "stackoverflow.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.storage.googleapis.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "storage.googleapis.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.sway.office.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "office.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.t.co",
+   "backend": false,
+   "build": true,
+   "buildDomain": "t.co",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.t.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "t.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.telegram.org",
+   "backend": false,
+   "build": true,
+   "buildDomain": "telegram.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.telkom.co.id",
+   "backend": true,
+   "build": false,
+   "buildDomain": "telkom.co.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.telkomsel.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "telkomsel.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tempo.co",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tempo.co",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.theguardian.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "theguardian.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tiket.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tiket.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tiki.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tiki.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tiktok.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tiktok.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tinyurl.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tinyurl.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.tokopedia.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tokopedia.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tokopedia.link",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tokopedia.link",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.translate.goog",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.translate.goog",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.traveloka.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "traveloka.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.traveloka.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "traveloka.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tribunnews.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "tribunnews.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.tripadvisor.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tripadvisor.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.trycloudflare.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.trycloudflare.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.tumblr.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "tumblr.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.twitch.tv",
+   "backend": false,
+   "build": true,
+   "buildDomain": "twitch.tv",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.twitter.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "twitter.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.typedream.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.typedream.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.uber.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "uber.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.uob.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "uob.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.vercel.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.vercel.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.wa.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wa.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.web.app",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.web.app",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.web.id",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.web.id",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.webflow.io",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.webflow.io",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.webwave.me",
+   "backend": false,
+   "build": true,
+   "buildDomain": "webwave.me",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.weebly.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "weebly.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.whatsapp.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "whatsapp.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.wikipedia.org",
+   "backend": true,
+   "build": true,
+   "buildDomain": "wikipedia.org",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.windows.net",
+   "backend": false,
+   "build": true,
+   "buildDomain": "windows.net",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.wix.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wix.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.wixsite.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.wixsite.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.wordpress.com",
+   "backend": false,
+   "build": true,
+   "buildDomain": "wordpress.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.workers.dev",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.workers.dev",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.x.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "x.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.xendit.co",
+   "backend": true,
+   "build": false,
+   "buildDomain": "xendit.co",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.xl.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "xl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.yahoo.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "yahoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.yolasite.com",
+   "backend": false,
+   "build": false,
+   "buildDomain": "x.yolasite.com",
+   "official": false,
+   "blockMemory": "host"
+  },
+  {
+   "host": "x.youtu.be",
+   "backend": false,
+   "build": true,
+   "buildDomain": "youtu.be",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.youtube.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "youtube.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.zalora.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "zalora.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "x.zoom.us",
+   "backend": true,
+   "build": true,
+   "buildDomain": "zoom.us",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "xendit.co",
+   "backend": true,
+   "build": false,
+   "buildDomain": "xendit.co",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "xl.co.id",
+   "backend": true,
+   "build": true,
+   "buildDomain": "xl.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "yahoo.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "yahoo.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "yolasite.com",
+   "backend": false,
+   "build": null,
+   "buildDomain": null,
+   "official": false,
+   "blockMemory": "host_path"
+  },
+  {
+   "host": "youtu.be",
+   "backend": false,
+   "build": true,
+   "buildDomain": "youtu.be",
+   "official": false,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "youtube.com",
+   "backend": true,
+   "build": true,
+   "buildDomain": "youtube.com",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "zalora.co.id",
+   "backend": false,
+   "build": true,
+   "buildDomain": "zalora.co.id",
+   "official": true,
+   "blockMemory": "registrable"
+  },
+  {
+   "host": "zoom.us",
+   "backend": true,
+   "build": true,
+   "buildDomain": "zoom.us",
+   "official": true,
+   "blockMemory": "registrable"
+  }
+ ]
+}
