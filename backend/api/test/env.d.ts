@@ -34,3 +34,9 @@ declare namespace Cloudflare {
 declare module "node:child_process" {
   export function execSync(command: string, options?: { cwd?: string; stdio?: unknown }): { toString(): string };
 }
+
+// Vite `?raw` imports: a file's text, for tests that check other folders stay in sync (app-config-sync.test.ts).
+declare module "*?raw" {
+  const text: string;
+  export default text;
+}

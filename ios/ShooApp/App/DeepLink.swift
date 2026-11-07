@@ -13,7 +13,7 @@ enum DeepLink: Equatable {
     case unknown
 
     /// Hosts whose `/j/<code>` page is ours: the backend this build talks to, and the cloud Worker.
-    static let inviteHosts: Set<String> = Set([AppConfig.apiBaseURL.host(), "shoo-api.afindo-mi01.workers.dev"].compactMap { $0 })
+    static let inviteHosts: Set<String> = Set([AppConfig.apiBaseURL.host(), AppConfig.publicBaseURL.host()].compactMap { $0 })
 
     init(url: URL, inviteHosts: Set<String> = DeepLink.inviteHosts) {
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
