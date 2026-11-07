@@ -67,6 +67,9 @@ final class LiveReplicaUITests: XCTestCase {
             .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4)))
         XCTAssertEqual(app.webViews.count, 0, app.debugDescription)
         shot(app, "live-replica-se")
+        // Back to the top: after the drag the header with Back is scrolled away (run 8 without this
+        // could not leave Detail).
+        app.swipeDown()
 
         // Back from a link lands on Activity (DeepLinkUITests); Profile opens from Shield.
         app.buttons["detail.back"].tapWhenHittable()
