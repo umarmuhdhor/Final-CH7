@@ -70,12 +70,17 @@ Verifikasi 1–2 file fase (`wrangler dev --test-scheduled` + curl lokal) belum 
 
 ## LANGKAH MANUAL (setelah PR 21a merge dan CI deploy)
 
-- [ ] 1. **(Alief)** `openssl rand -base64 32` → simpan di password manager → dari `backend/api/`: `npx wrangler secret put OPS_STATUS_TOKEN` (di luar 18:30–19:30 UTC). Uji: `read -rs OPS_STATUS_TOKEN`, lalu `curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" https://shoo-api.afindo-mi01.workers.dev/ops/status` → 200; tanpa header → 404. Catat hasil (tanpa token) di sini. Sebelum run cron pertama, `failing` memuat `retention_stale`/`notifications_stale` (belum ada baris `ops_jobs`): normal.
+- [~] 1. **(Alief)** `openssl rand -base64 32` → simpan di password manager → dari `backend/api/`: `npx wrangler secret put OPS_STATUS_TOKEN` (di luar 18:30–19:30 UTC). Uji: `read -rs OPS_STATUS_TOKEN`, lalu `curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" https://shoo-api.afindo-mi01.workers.dev/ops/status` → 200; tanpa header → 404. Catat hasil (tanpa token) di sini. Sebelum run cron pertama, `failing` memuat `retention_stale`/`notifications_stale` (belum ada baris `ops_jobs`): normal.
+  - **7 Nov 2026, 17:11 UTC** (`wrangler secret list`, hanya nama): `OPS_STATUS_TOKEN` **sudah ada** di Worker (ada 3 deploy "Secret Change" 6 Nov ±06:24 UTC). Sesi ini tidak membuat atau menimpa token. `GET /ops/status` tanpa header → 404; `Bearer wrong` → 404. **Belum:** uji 200 dengan token asli (sesi tidak memegang nilainya). Alief: pastikan nilai token ada di password manager; kalau tidak, rotasi (`wrangler secret put`, di luar 18:30–19:30 UTC) lalu uji 200.
 - [ ] 2. **(Alief, D10)** Cloudflare → Notifications → Usage Based Billing → R2 Class A ambang 500 000 dan Class B ambang 5 000 000, email pemilik akun. Kalau tidak bisa dipilih: catat di sini.
+  - **7 Nov 2026:** tidak bisa lewat API: token OAuth wrangler tanpa scope Notifications (`available_alerts` → `10000 Authentication error`, hanya baca, tidak ada create). Tetap langkah dashboard Alief (atau token API terpisah dengan scope Notifications).
 - [ ] 3. **(Alief)** Catat pemilik email notifikasi Supabase (pause/kuota) dan Cloudflare (billing).
+  - **7 Nov 2026:** Supabase `shoo-demo` dan Worker `shoo-api` sama-sama diakses lewat login CLI Alief, jadi pemilik notifikasi = akun Alief. Alamat email sengaja tidak ditulis (repo publik). Alief konfirmasi; mailbox tim K10 = fase 24 LANGKAH MANUAL 1.
 - [ ] 4–8. Sesuai `fase-21-monitoring.md` LANGKAH MANUAL 4–8 (spike GraphQL, custom alert, Environment `ops` oleh Umar, TestFlight crash, cek Senin). 4–6 baru perlu sebelum 21b.
 
 Verifikasi cloud setelah butir 1: pagi setelah run 19:00 UTC pertama → `jobs.retention.failed = 0`, `ageHours < 12`; satu jam setelah deploy → `jobs.notifications.ageHours < 1.2`.
+
+- **7 Nov 2026, 17:11 UTC** (SQL baca saja ke `ops_jobs`, setara isi `/ops/status`): `notifications` failed 0, umur 0,1 jam (< 1,2 ✓). `retention` failed 0, umur 22,2 jam (run 6 Nov 19:00; cek `< 12` berlaku pagi setelah run 19:00, belum waktunya).
 
 ## Placeholder aktif
 

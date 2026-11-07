@@ -40,7 +40,8 @@ Cherry-pick `b9987db` dari #210 supaya CI hijau.
 
 ## LANGKAH MANUAL
 
-- [ ] 1. **(Alief, Supabase SQL editor, baca saja)** M5 sebaran waktu reaksi Guardian (query di `fase-25-realtime-verdict.md` LANGKAH MANUAL 1), hasil agregat saja ke log ini.
+- [x] 1. **(Alief, Supabase SQL editor, baca saja)** M5 sebaran waktu reaksi Guardian (query di `fase-25-realtime-verdict.md` LANGKAH MANUAL 1), hasil agregat saja ke log ini.
+  - **7 Nov 2026, 17:11 UTC** (`supabase db query --linked`, query M5 persis): n = 1, p50 = p90 = p95 = 80,3 s. Sampel terlalu kecil untuk sebaran (retensi 14 hari); ulangi setelah M1.
 - [ ] 2. **(Alief + 1 penguji, 2 iPhone)** M1: tap Aman → halaman terbuka, rekam 60 fps, 20×; p50/p95 ke log.
 - [ ] 3. **(Alief, Mac + iPhone)** M2/M4: hitung `GET /verdicts` per 10 menit layar blokir (Safari Develop), Energy Impact indikatif.
 - [ ] 4. ~~Issue Umar~~ — ditanyakan di PR 25a-be (`## Questions for Umar`, D-alief-C29).
