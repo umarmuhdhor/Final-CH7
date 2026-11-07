@@ -223,10 +223,11 @@ export async function deleteDevice(sql: Sql, id: string, opts?: DeleteDeviceOpti
       // recheck and the delete. FOR SHARE does not block the FOR KEY SHARE of foreign-key inserts.
       await tx`
         select d.id from devices d
-        where d.id = ${id}
-           or d.id = (select guardian_id from family_links where protected_id = ${id})
-           or d.id in (select m.protected_id from family_links m
-                       where m.guardian_id = coalesce((select guardian_id from family_links where protected_id = ${id}), ${id}))
+        where d.id in (
+          select ${id}::text
+          union select guardian_id from family_links where protected_id = ${id}
+          union select m.protected_id from family_links m
+                where m.guardian_id = coalesce((select guardian_id from family_links where protected_id = ${id}), ${id}))
         order by d.id for share of d`;
       const still = await inactiveCandidates(tx, opts.onlyIfInactive, id);
       if (still.length === 0) return null;
