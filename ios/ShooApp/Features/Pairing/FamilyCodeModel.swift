@@ -18,7 +18,8 @@ final class FamilyCodeModel {
     }
 
     /// Longest a code lives (contracts/api.md). A device clock far from the server's never makes
-    /// the countdown longer than this or stuck at zero.
+    /// the countdown longer than this or stuck at zero. Must equal `CODE_TTL_SECONDS` in
+    /// backend/api/src/db/repo/codes.ts (checked by backend/api/test/family-code-sync.test.ts).
     nonisolated static let codeLifetime: TimeInterval = 30 * 60
     /// After "Refresh code", the button waits this long (issue #227). It works at any other time, so a
     /// code sent to the wrong person can be killed at once, and stays far under `/family/code`'s 6 a minute.
