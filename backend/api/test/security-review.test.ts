@@ -10,6 +10,7 @@ import { screenshotUrl } from "../src/services/scans";
 import { abandonUpload, type ScreenshotStore } from "../src/services/screenshots";
 import { b64, jpeg } from "./helpers/images";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
+import { seedScreenshot } from "./helpers/screenshots";
 import { call, createDevice } from "./helpers/seed";
 
 // Fase 12 security review fixes (D-alief-B12).
@@ -98,8 +99,10 @@ describe("storage tombstones (M3, database review M1–M3, SECURITY §3 P13)", (
 
   it("an upload is tombstoned before it starts; the cron leaves it while its scan points at it", async () => {
     const p = await createDevice("Mom");
-    const res = await call("/scans", { method: "POST", token: p.token, json: scanBody({ screenshotBase64: b64(jpeg(100, 100)) }) });
+    const res = await call("/scans", { method: "POST", token: p.token, json: scanBody() });
     const { id } = (await res.json()) as { id: string };
+    // Fase 20a: POST /scans ignores screenshotBase64; the upload goes through the service directly.
+    await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(100, 100)));
     expect(await tombstones()).toEqual([`${p.deviceId}/${id}.jpg`]);
     await age(60);
     vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -121,8 +124,10 @@ describe("storage tombstones (M3, database review M1–M3, SECURITY §3 P13)", (
 
   it("DELETE /devices/me removes the objects and drops their (settled) tombstones", async () => {
     const p = await createDevice("Mom");
-    const res = await call("/scans", { method: "POST", token: p.token, json: scanBody({ screenshotBase64: b64(jpeg(100, 100)) }) });
+    const res = await call("/scans", { method: "POST", token: p.token, json: scanBody() });
     const { id } = (await res.json()) as { id: string };
+    // Fase 20a: POST /scans ignores screenshotBase64; the upload goes through the service directly.
+    await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(100, 100)));
     await age(60);
     expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
     await vi.waitFor(async () => expect(await tombstones()).toEqual([]));
@@ -264,10 +269,11 @@ describe("global caps (M5)", () => {
     const res = await call("/scans", { method: "POST", token: p.token, json: {
       url: blocked92.url, domain: blocked92.domain, pageTitle: blocked92.pageTitle, faviconUrl: blocked92.faviconUrl,
       score: blocked92.score, status: blocked92.status, signals: blocked92.signals, detectedAt: blocked92.detectedAt,
-      screenshotBase64: b64(jpeg(100, 100)),
     } });
     expect(res.status).toBe(201);
     const { id } = (await res.json()) as { id: string };
+    // Fase 20a: POST /scans ignores screenshotBase64; the quota is checked by the service.
+    await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(100, 100)));
     expect((await sql`select screenshot_path from scans where id = ${id}`)[0]!.screenshot_path).toBeNull();
     expect(log.mock.calls.flat().join(" ")).toContain("global_quota");
   });

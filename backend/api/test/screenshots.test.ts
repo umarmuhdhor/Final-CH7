@@ -4,6 +4,7 @@ import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { screenshotLink } from "../src/services/screenshotLinks";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
+import { seedScreenshot } from "./helpers/screenshots";
 import { call, callWithEnv, createDevice, type Created, denyingLimiter } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 useRateKeySecret(env.RATE_KEY_SECRET);
@@ -13,13 +14,16 @@ beforeEach(() => resetDb(sql));
 
 const body = (extra: Record<string, unknown> = {}) =>
   ({ ...blocked92, id: undefined, verdict: undefined, screenshotUrl: undefined, ...extra });
+/** A scan with a screenshot. Fase 20a: POST /scans ignores screenshotBase64, so it is seeded through the service. */
 const postShot = async (d: Created, image = jpeg(320, 240, 500), domain = blocked92.domain) => {
   const res = await call("/scans", {
     method: "POST", token: d.token,
-    json: body({ domain, url: `https://${domain}/login`, screenshotBase64: b64(image) }),
+    json: body({ domain, url: `https://${domain}/login` }),
   });
   expect(res.status).toBe(201);
-  return ((await res.json()) as { id: string }).id;
+  const { id } = (await res.json()) as { id: string };
+  await seedScreenshot(sql, { id, ownerId: d.deviceId, domain }, b64(image));
+  return id;
 };
 /** The screenshotUrl from GET /scans/{id}, as path + query for call(). */
 const linkFor = async (viewer: Created, id: string) => {

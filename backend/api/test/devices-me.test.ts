@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { b64, jpeg } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
+import { seedScreenshot } from "./helpers/screenshots";
 import { call, createDevice, type Created } from "./helpers/seed";
 
 const sql = testSql();
@@ -107,8 +108,10 @@ describe("DELETE /devices/me (proposal C19)", () => {
     const p = await createDevice("Mom");
     const { id } = (await (await call("/scans", {
       method: "POST", token: p.token,
-      json: { ...blocked92, id: undefined, verdict: undefined, screenshotUrl: undefined, screenshotBase64: b64(jpeg(100, 100)) },
+      json: { ...blocked92, id: undefined, verdict: undefined, screenshotUrl: undefined },
     })).json()) as { id: string };
+    // Fase 20a: POST /scans ignores screenshotBase64; an older screenshot is seeded through the service.
+    await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(100, 100)));
     const info = () =>
       fetch(`${env.SUPABASE_URL}/storage/v1/object/info/screenshots/${p.deviceId}/${id}.jpg`, {
         headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY!, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
