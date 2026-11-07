@@ -82,7 +82,7 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
 | `ops_jobs` | one row per cron job (`retention`, `notifications`): last start, last finish, last clean finish (`ok_at`), failed steps, backlog. Read by `GET /ops/status`; `shoo_api` cannot delete rows |
 | `push_log` | one row per push: guardian, scan, result code (`sent`, `logged`, `failed:<status> <reason>`, `failed:timeout\|network\|config`; CHECK). No notification text (D-alief-B11) |
-| `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP |
+| `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP. Not used by `GET /verdicts`, `/screenshots`, `/favicons` and the per-minute `/replicas` limit: those go through the Rate Limiting bindings in `wrangler.jsonc` (`hitEdge`, same HMAC key), and only fall back to this table without a binding |
 
 Access: role `shoo_api` (no password in migrations) has CRUD on these tables only. `anon`/`authenticated` have no grants; RLS is on everywhere with a single `shoo_api` policy. No RPCs: the Worker uses plain SQL through postgres.js tagged templates.
 
@@ -198,7 +198,7 @@ still runs. The workflow (fase 21b) adds `healthz_down`, `ops_status_unreachable
 
 ## Quota (Supabase Free + R2)
 
-`db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); one block screen polling `GET /verdicts` all day ≈ 17k `rate_limit_hits` rows ≈ 4 MB (kept 1 day).
+`db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); polling `GET /verdicts` writes no `rate_limit_hits` row since the Rate Limiting binding (before: ≈ 17k rows ≈ 4 MB per block screen open all day, kept 1 day).
 - DB 500 MB: ≈ 300k scans alive (14 days) ≈ 20k scans/day.
 - Supabase Storage 1 GB: screenshots only from older builds (≤ 150 KB, ≤ 50 per device and 300 in total per day, kept 14 days) and favicons stored before fase 18a (`-favicon.`, gone within 15 days). Both are removed in 18c.
 - Supabase egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB.

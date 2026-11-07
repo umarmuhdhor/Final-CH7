@@ -3,7 +3,7 @@ import type { AppEnv } from "../env";
 import { screenshotPathForViewer } from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { errors } from "../http/errors";
-import { hit, limits } from "../http/rateLimit";
+import { hit, hitEdge, limits } from "../http/rateLimit";
 import { UUID } from "../http/validate";
 import { verifyScreenshotLink } from "../services/screenshotLinks";
 import { screenshotStore } from "../services/screenshots";
@@ -25,7 +25,7 @@ screenshots.get("/screenshots/:id", async (c) => {
   if (!secret || !UUID.test(id)) throw errors.notFound();
   const viewerId = await verifyScreenshotLink(secret, id, c.req.query(), Date.now() / 1000);
   if (!viewerId) throw errors.notFound();
-  await hit(c.get("sql"), limits.viewScreenshot, viewerId);
+  await hitEdge(c.env.SCREENSHOTS_VIEW_LIMITER, c.get("sql"), limits.viewScreenshot, viewerId, hit);
 
   const path = await screenshotPathForViewer(c.get("sql"), id, viewerId);
   const store = screenshotStore(c.env);
