@@ -41,7 +41,11 @@
     "SCREENSHOT_MAX_BYTES": "153600",
     // EX-07 kill-switch (D-alief-C25 d, not a secret): "false" stops storing and serving page
     // replicas at once. Retention and DELETE /devices/me still remove R2 objects either way.
-    "REPLICAS_ENABLED": "true"
+    "REPLICAS_ENABLED": "true",
+    // E7 (fase 24a, K8, not a secret): the daily retention step for devices unused for 90 days
+    // (registrations never used again: 30 days). "dry_run" only counts candidates and logs the number;
+    // "delete" deletes them (24a-2, after 7 clean dry runs); "off" or any other value skips the step.
+    "INACTIVE_DEVICES": "dry_run"
   },
   // EX-07 page replicas and PR-05 favicons (D-alief-C23, C27): private bucket, no r2.dev, no custom
   // domain, no CORS, 17-day lifecycle rule as a safety net (fase 18 LANGKAH MANUAL 1). Tests and

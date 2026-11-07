@@ -35,6 +35,8 @@ export interface Env {
   SCREENSHOT_URL_SECRET?: string;
   /** Secret: bearer for GET /ops/status (fase 21a). Unset or < 32 characters → the route is a 404. */
   OPS_STATUS_TOKEN?: string;
+  /** E7 retention step (fase 24a, K8): "off" | "dry_run" | "delete". Unset or any other value → off. */
+  INACTIVE_DEVICES?: string;
 }
 
 export type DeviceMode = "guardian" | "protected";
