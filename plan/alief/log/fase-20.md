@@ -1,6 +1,6 @@
 # Log fase 20 — Pensiun screenshot (EX-07)
 
-- **Status:** [x] 20a **kode selesai, review pending** (8 Nov 2026, G2 lulus) · pertanyaan K7 belum diajukan (wajib sebelum merge 20a) · 20b/20c belum · 20d milik track app.
+- **Status:** [r] 20a **kode + review selesai, PR menunggu Umar** (8 Nov 2026, G2 lulus) · pertanyaan K7 diajukan di PR 20a (`## Questions for Umar`), wajib dijawab sebelum merge · 20b/20c belum · 20d milik track app.
 - **Model:** Claude Opus 5.5, sesi track be. 1 Nov 2026.
 - **Rencana:** `fase-20-screenshot-sunset.md` (PR #207).
 - **Keputusan:** brief koordinator: 20a hanya kalau G2 dicentang; kalau tidak, tulis LANGKAH MANUAL dan lewati. Tidak ada kode di PR ini.
@@ -25,7 +25,7 @@
     ```
   - Kalau > 0: lihat nama device di SQL editor (jangan disalin ke log/chat), minta pemiliknya update, ulangi.
   - Catat di sini: tanggal, angka (0), tanpa id/nama.
-- [ ] **2. Pertanyaan K7 ke Umar** (R8 §b #1, wajib sebelum merge 20a): diajukan di PR ini (`## Questions for Umar`, D-alief-C29), bukan issue.
+- [x] **2. Pertanyaan K7 ke Umar** (R8 §b #1, wajib sebelum merge 20a): diajukan di PR 20a (`## Questions for Umar`, D-alief-C29), bukan issue. Jawaban belum.
 - [ ] **3. Setelah 1 + 2:** sesi berikut menjalankan 20a (`fix/EX-07-ignore-screenshot-upload`) sesuai Langkah kerja 20a di file fase (TDD, review security → TypeScript, merge di menit :10–:40, tidak di 18:30–19:30 UTC; jam deploy CI = awal jam G1).
 
 ## Catatan handoff
@@ -34,8 +34,8 @@
 
 ## 20a — `fix/EX-07-ignore-screenshot-upload` (8 Nov 2026)
 
-- **Gerbang:** G2 lulus 8 Nov 2026, SQL `devices_on_old_build` = 0 di cloud (read-only, dijalankan Alief). Pertanyaan K7 (LANGKAH MANUAL 2) belum diajukan: wajib sebelum merge.
-- **Model:** Claude Opus 5.5. Review (`ecc:security-reviewer` → `ecc:typescript-reviewer`) dilakukan Alief, belum.
+- **Gerbang:** G2 lulus 8 Nov 2026, SQL `devices_on_old_build` = 0 di cloud (read-only, dijalankan sesi ini atas permintaan Alief). Pertanyaan K7 (LANGKAH MANUAL 2) diajukan di PR 20a: wajib dijawab sebelum merge.
+- **Model:** Claude Opus 5.5. Review `ecc:security-reviewer` → `ecc:typescript-reviewer` (satu per satu), lihat tabel Review.
 
 ### Checklist
 
@@ -45,8 +45,9 @@
 - [x] `backend/API.md`: `screenshotBase64` "ignored since fase 20a (7 Nov 2026)" di tabel body, Screenshot rules, dan dua catatan Deprecated; rujukan "fase 18c" → "fase 20b".
 - [x] Test lama yang membuat screenshot lewat POST /scans sekarang men-seed lewat `attachScreenshot` (helper `test/helpers/screenshots.ts` `seedScreenshot`), cakupan serving / 404 setelah hapus atau disconnect / cache header / tombstone / kuota tetap.
 - [x] Tanpa migrasi.
-- [ ] Review security → TypeScript (Alief).
-- [ ] Pertanyaan K7 ke Umar sebelum merge; PR, merge di menit :10–:40 (tidak di 18:30–19:30 UTC); jam deploy CI = awal jam G1.
+- [x] Review security → TypeScript.
+- [x] Pertanyaan K7 di PR (`## Questions for Umar`).
+- [ ] Jawaban Umar sebelum merge; PR, merge di menit :10–:40 (tidak di 18:30–19:30 UTC); jam deploy CI = awal jam G1.
 
 ### File
 
@@ -64,11 +65,20 @@
 
 ### Adaptasi test lama
 
-- `scans.test.ts`: blok "POST /scans screenshot" dipecah. "POST /scans screenshotBase64 (ignored since fase 20a)": screenshot valid → 201, `screenshot_path` null, tidak ada objek di Storage lokal, tidak ada tombstone, tepat satu log `{"event":"screenshot_ignored"}` tanpa id/device/domain; nilai number/object/array/`true` → 201; `""`/`null` → tanpa log; kunjungan ulang mempertahankan screenshot lama. "attachScreenshot (until fase 20b)": JPEG/PNG tersimpan, 6 alasan drop, dedupe 24 jam, kuota paralel, kuota 50/24 jam, lewat service. List dan detail `GET /scans` men-seed screenshot lewat service.
+- `scans.test.ts`: blok "POST /scans screenshot" dipecah. "POST /scans screenshotBase64 (ignored since fase 20a)": screenshot valid → 201, `screenshot_path` null, tidak ada objek di Storage lokal, tidak ada tombstone, tepat satu log `{"event":"screenshot_ignored"}` tanpa id/device/domain; nilai number/object/array/`true` → 201; `""`/`null`/`0`/`false` → tanpa log; kunjungan ulang mempertahankan screenshot lama. "attachScreenshot (until fase 20b)": JPEG/PNG tersimpan, 6 alasan drop, dedupe 24 jam, kuota paralel, kuota 50/24 jam, lewat service. List dan detail `GET /scans` men-seed screenshot lewat service.
 - `screenshots.test.ts`: `postShot` membuat scan tanpa screenshot lalu `seedScreenshot`; semua test serving, 404, `Cache-Control`, rate limit tetap.
 - `devices-me.test.ts`: hapus objek Storage saat `DELETE /devices/me` memakai seed.
 - `security-review.test.ts`: tombstone sebelum upload, `DELETE /devices/me` menghapus objek, dan kuota global memakai seed.
 - `log-hygiene.test.ts`: alur penuh mengirim `screenshotBase64` → tepat satu `screenshot_ignored`, ikut cek kebocoran; screenshot scan di-seed supaya link screenshot (sekarang wajib 200) dan penghapusannya tetap ada di alur.
+
+### Review
+
+| Reviewer | Hasil | Tindakan |
+|---|---|---|
+| `ecc:security-reviewer` | Tidak ada temuan di atas LOW. Body POST /scans dibatasi 1 MiB (`app.ts:40`, `validate.ts` streaming), `z.unknown()` tidak menambah biaya; log konstan (P6); tidak ada jalur yang masih menyimpan screenshot; auth/`Cache-Control` tidak tersentuh; helper test tidak ikut bundle. LOW: satu log per request ber-screenshot (konstan, rate limit tetap berlaku); nilai apa pun diterima (disengaja, K3a). | Tidak ada; log dibuang di 20b. |
+| `ecc:typescript-reviewer` | Tidak ada temuan di atas LOW; `tsc --noEmit` bersih. LOW: test tanpa-log belum mencakup `0`/`false`; spy `console.log` tanpa mock (kosmetik); prasyarat `log-hygiene` implisit. | `0`/`false` ditambahkan ke test tanpa-log. Dua LOW lain dibiarkan. |
+
+Setelah review: `vitest run` 5 file yang disentuh (tanpa `.dev.vars`) → 107 lulus; `typecheck` bersih.
 
 ### Deviasi
 

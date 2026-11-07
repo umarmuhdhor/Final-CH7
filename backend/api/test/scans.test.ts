@@ -273,11 +273,14 @@ describe("POST /scans screenshotBase64 (ignored since fase 20a, K3 a)", () => {
     expect(ignoredLines(log)).toHaveLength(1);
   });
 
-  it("an empty or null screenshotBase64 logs nothing", async () => {
+  it("an empty, null, 0 or false screenshotBase64 logs nothing", async () => {
     const log = vi.spyOn(console, "log");
     const p = await createDevice("Mom");
     await postOk(p, extensionBody(blocked92, { screenshotBase64: "" }));
     await postOk(p, extensionBody(warning41, { screenshotBase64: null }));
+    // Repeat visits: still 201, still no log line.
+    await postOk(p, extensionBody(blocked92, { screenshotBase64: 0 }));
+    await postOk(p, extensionBody(warning41, { screenshotBase64: false }));
     expect(ignoredLines(log)).toHaveLength(0);
   });
 
