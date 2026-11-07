@@ -126,14 +126,22 @@ final class CachedFaviconLoader: FaviconLoading, @unchecked Sendable {
         }
     }
 
-    /// `host/<id>` for `https://host/favicons/<id>?v=…&exp=…&sig=…`; `nil` for any other path.
+    /// `host[:port]/<id>` for `https://host/favicons/<id>?v=…&exp=…&sig=…`; `nil` for any other path.
+    /// The host is lowercased and the port kept, so two local Workers never share an entry.
     static func key(for url: URL) -> NSString? {
         let prefix = "/favicons/"
         let path = url.path(percentEncoded: true)
-        guard let host = url.host(), path.hasPrefix(prefix) else { return nil }
+        guard let host = url.host()?.lowercased(), path.hasPrefix(prefix) else { return nil }
         let id = path.dropFirst(prefix.count)
         guard !id.isEmpty, !id.contains("/") else { return nil }
-        return "\(host)/\(id)" as NSString
+        let origin = url.port.map { "\(host):\($0)" } ?? host
+        return "\(origin)/\(id)" as NSString
+    }
+
+    /// Same scan on the same Worker: only the signature differs.
+    static func sameFavicon(_ a: URL, _ b: URL) -> Bool {
+        guard let ka = key(for: a), let kb = key(for: b) else { return a == b }
+        return ka == kb
     }
 }
 
@@ -152,11 +160,11 @@ struct SiteIcon: View {
     /// keeps the old icon.
     @State private var loaded: (url: URL, image: UIImage)?
 
-    /// The loaded image for this exact link, else a cache hit for the same scan (a reload signed the link
-    /// again): shown in the first frame, without the grey flash.
+    /// The loaded image for this scan's link (also after a reload signed it again), else a cache hit:
+    /// shown in the first frame, without the grey flash.
     private var image: UIImage? {
         guard let url else { return nil }
-        if let loaded, loaded.url == url { return loaded.image }
+        if let loaded, CachedFaviconLoader.sameFavicon(loaded.url, url) { return loaded.image }
         return loader.cachedImage(at: url)
     }
 
@@ -177,6 +185,7 @@ struct SiteIcon: View {
             .task(id: url) { await load() }
     }
 
+    @MainActor
     private func load() async {
         guard let url else {
             loaded = nil
@@ -186,7 +195,9 @@ struct SiteIcon: View {
             loaded = (url, cached)
             return
         }
-        loaded = nil
+        // Same scan already on screen (the cache was emptied, e.g. by a memory warning): keep it while
+        // the new link loads. Another scan's icon is never shown, see `image`.
+        if let loaded, !CachedFaviconLoader.sameFavicon(loaded.url, url) { self.loaded = nil }
         do {
             let image = try await loader.image(at: url)
             // `.task(id:)` cancelled this load for a newer link: that load sets the image.

@@ -121,6 +121,17 @@ struct FaviconCacheTests {
         #expect(cache.cachedImage(at: Self.link(Self.scanA, exp: 1000, host: "evil.example")) == nil)
     }
 
+    /// Host case does not split entries; the port does (two local Workers, Debug only).
+    @Test func theKeyFoldsHostCaseAndKeepsThePort() throws {
+        let a = try #require(URL(string: "https://API.shoo.test/favicons/\(Self.scanA)?exp=1"))
+        let b = try #require(URL(string: "https://api.shoo.test/favicons/\(Self.scanA)?exp=2"))
+        let c = try #require(URL(string: "http://localhost:8787/favicons/\(Self.scanA)?exp=1"))
+        let d = try #require(URL(string: "http://localhost:8789/favicons/\(Self.scanA)?exp=1"))
+        #expect(CachedFaviconLoader.sameFavicon(a, b))
+        #expect(!CachedFaviconLoader.sameFavicon(c, d))
+        #expect(!CachedFaviconLoader.sameFavicon(b, c))
+    }
+
     /// Not a favicon link: passed straight to the loader (which refuses it), nothing kept.
     @Test func otherPathsAreNeverCached() async throws {
         let loader = CountingLoader()
