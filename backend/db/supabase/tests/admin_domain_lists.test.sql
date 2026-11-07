@@ -5,7 +5,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(92);
+select plan(95);
 
 -- One SELECT as shoo_admin: its first column, or 'ERR <sqlstate> <message>' (as admin_schema.test.sql).
 create function pg_temp.as_admin(q text) returns text language plpgsql as $$
@@ -216,6 +216,14 @@ select is(pg_temp.as_admin($$select admin.vote('antre-dl.test', 'approve', 'phis
   'vote approve on an unprotected domain still works');
 select is(pg_temp.as_admin($$select admin.add_domain('evil.github.io', 'phishing_bank', 'tambah manual oleh admin', 'a@test')$$), '',
   'add_domain on a tenant of a subdomains row still works');
+
+-- A parent of a hard_locked row stays unblockable even after its own row is removed (security review).
+select is(pg_temp.as_admin($$select admin.domain_remove('co.id', 'hapus suffix untuk uji', 'a@test', 'co.id')$$), '',
+  'a locked suffix row can be removed with confirm');
+select is(pg_temp.as_admin($$select admin.add_domain('co.id', 'phishing_bank', 'tambah manual oleh admin', 'a@test')$$),
+  'ERR SA019 allowlisted', 'add_domain refuses a parent of a hard_locked row (co.id above bca.co.id)');
+select is(pg_temp.as_admin($$select admin.vote('co.id', 'approve', 'phishing_bank', 'disetujui oleh admin', 'a@test')$$),
+  'ERR SA019 allowlisted', 'vote refuses a parent of a hard_locked row');
 
 -- ---------------------------------------------------------------- review_due / ai_dataset (K11)
 

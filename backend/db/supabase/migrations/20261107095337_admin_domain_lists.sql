@@ -539,6 +539,16 @@ $$;
 
 -- ---------------------------------------------------------------- vote / add_domain (K10)
 
+-- True when p_domain must not be blocked: domain_match protects it, or it is a parent of a
+-- hard_locked row (security review 10a: after an admin removes the co.id row, co.id still cannot
+-- be approved above bca.co.id). Exact suffix comparison, no LIKE: vote's domain check is loose.
+create function admin._refuses_block(p_domain text) returns boolean
+language sql stable set search_path = admin, pg_temp as $$
+  select (select m.protected from admin.domain_match(p_domain) m)
+      or exists (select 1 from admin.domain_lists r
+                  where r.hard_locked and p_domain = any((admin._suffixes(r.domain))[2:]))
+$$;
+
 -- 02a admin.vote (20261103020918_admin_domain_intel.sql) + the allowlisted check after the lock. Nothing
 -- else changed. The Worker checks first (friendly message); this is the line that holds (SECURITY A5).
 create or replace function admin.vote(p_domain text, p_action text, p_category text, p_note text, p_actor text)
@@ -560,7 +570,7 @@ begin
   perform pg_advisory_xact_lock(7, 1);
   if p_action = 'approve' then
     -- 10a K10: after the lock, which domain_set takes too, so a row added meanwhile is seen.
-    if (select m.protected from admin.domain_match(p_domain) m) then
+    if admin._refuses_block(p_domain) then
       raise exception using errcode = 'SA019', message = 'allowlisted';
     end if;
     perform admin._check_publish_cap();
@@ -604,7 +614,7 @@ begin
   perform admin._check_category(p_category);
   perform admin._require_read_committed();
   perform pg_advisory_xact_lock(7, 1);
-  if (select m.protected from admin.domain_match(p_domain) m) then   -- 10a K10, as vote
+  if admin._refuses_block(p_domain) then   -- 10a K10, as vote
     raise exception using errcode = 'SA019', message = 'allowlisted';
   end if;
   perform admin._check_publish_cap();
@@ -626,7 +636,8 @@ end $$;
 
 -- ---------------------------------------------------------------- shared hosts (K11)
 
--- L5 review_due (20261104133527_l5_review_data.sql) reading v_shared_hosts. Nothing else changed.
+-- L5 review_due (20261104133527_l5_review_data.sql) reading v_shared_hosts by exact suffix (primary key
+-- lookups instead of a LIKE join over up to 5000 rows; same result). Nothing else changed.
 create or replace function admin.review_due(p_limit int)
 returns table (domain text, input jsonb)
 language sql stable security definer set search_path = admin, pg_temp as $$
@@ -642,8 +653,7 @@ language sql stable security definer set search_path = admin, pg_temp as $$
   left join admin.domain_intel d on d.domain = b.domain
   left join admin.domain_intel_label l on l.domain = b.domain
   where b.approved_at is null and b.rejected_at is null and b.removed_at is null and b.families > 0
-    and not exists (select 1 from admin.v_shared_hosts h
-                     where b.domain = h.host or b.domain like '%.' || h.host)
+    and not exists (select 1 from admin.v_shared_hosts h where h.host = any(admin._suffixes(b.domain)))
     and not exists (select 1 from admin.domain_review r
                      where r.domain = b.domain
                        and r.reviewed_at >= coalesce((select max(x.created_at) from admin.domain_labels x
@@ -733,6 +743,7 @@ revoke all on admin.domain_lists, admin.domain_lists_meta, admin.v_domain_lists,
   admin.v_shared_hosts
   from public, anon, authenticated, service_role, shoo_api, shoo_admin, shoo_ai;
 revoke all on function admin._domain_lists_bump(), admin._suffixes(text), admin._check_list_note(text),
+  admin._refuses_block(text),
   admin.domain_match(text),
   admin.domain_set(text, text, boolean, text, boolean, text, text, text, int),
   admin.domain_remove(text, text, text, text),
