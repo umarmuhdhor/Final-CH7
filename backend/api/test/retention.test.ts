@@ -450,12 +450,46 @@ describe("inactive devices (E7)", () => {
       await held;
     });
     await isLocked;
-    const r = await runRetention(sql, env, { inactiveMode: "delete", lockTimeoutMs: 200 });
-    release();
-    await holder;
+    let r;
+    try {
+      r = await runRetention(sql, env, { inactiveMode: "delete", lockTimeoutMs: 200 });
+    } finally {
+      release();
+      await holder;
+    }
     expect(r).toMatchObject({ inactiveDevices: 1, inactiveSkipped: 1 });
     expect(await deviceIds()).toEqual(["a_locked"]);
     expect(inactiveLine(lines)).toMatchObject({ deleted: 1, skipped: 1, failed: 0 });
+  });
+
+  it("race: a family member's uncommitted request holds the family lock, so the guardian is not deleted under it", async () => {
+    quiet();
+    await aged("g_91", "guardian", 91);
+    await aged("p_91", "protected", 91);
+    await link("g_91", "p_91");
+    // touchLastSeen on p_91 is in flight (row locked, not committed). Deleting g_91 alone never touches
+    // the p_91 row, so only the FOR SHARE family lock makes the cron wait for it and skip.
+    const other = testSql();
+    let release!: () => void;
+    const held = new Promise<void>((r) => (release = r));
+    let locked!: () => void;
+    const isLocked = new Promise<void>((r) => (locked = r));
+    const holder = other.begin(async (tx) => {
+      await tx`update devices set last_seen_at = now() where id = 'p_91'`;
+      locked();
+      await held;
+    });
+    await isLocked;
+    let r;
+    try {
+      r = await runRetention(sql, env, { inactiveMode: "delete", lockTimeoutMs: 200 });
+    } finally {
+      release();
+      await holder;
+    }
+    expect(r).toMatchObject({ inactiveCandidates: 2, inactiveDevices: 0, inactiveSkipped: 2 });
+    expect(await deviceIds()).toEqual(["g_91", "p_91"]);
+    expect((await sql`select 1 from family_links`).length).toBe(1);
   });
 
   it("any other error stops the step; the run still finishes, counts it in failed and rethrows", async () => {
@@ -473,12 +507,19 @@ describe("inactive devices (E7)", () => {
       await held;
     });
     await isLocked;
-    // statement_timeout below lock_timeout: the wait ends in 57014, not 55P03.
+    // statement_timeout below lock_timeout: the wait ends in 57014, not 55P03. Set only after the
+    // candidate SELECT, so no earlier step can hit it first on a slow CI machine.
     const slow = testSql();
-    await slow`set statement_timeout = '200ms'`;
-    await expect(runRetention(slow, env, { inactiveMode: "delete", lockTimeoutMs: 5000 })).rejects.toMatchObject({ code: "57014" });
-    release();
-    await holder;
+    try {
+      await expect(runRetention(slow, env, {
+        inactiveMode: "delete",
+        lockTimeoutMs: 5000,
+        afterInactiveSelect: async () => void (await slow`set statement_timeout = '200ms'`),
+      })).rejects.toMatchObject({ code: "57014" });
+    } finally {
+      release();
+      await holder;
+    }
     // Stopped at the first device: the second is left for tomorrow.
     expect(await deviceIds()).toEqual(["a_locked", "b_free"]);
     expect(inactiveLine(lines)).toEqual({ event: "inactive_devices", mode: "delete", candidates: 2, deleted: 0, skipped: 0, failed: 1 });

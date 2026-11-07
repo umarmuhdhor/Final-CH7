@@ -221,6 +221,8 @@ export async function deleteDevice(sql: Sql, id: string, opts?: DeleteDeviceOpti
       // Lock the device and every member of its family (in id order) before the recheck: until
       // commit, touchLastSeen on any of them waits, so nobody can become active between the
       // recheck and the delete. FOR SHARE does not block the FOR KEY SHARE of foreign-key inserts.
+      // So a join that lands after the recheck is not blocked; it needs a live family code, which an
+      // inactive guardian cannot have, and the cascade would only drop that brand-new link (accepted).
       await tx`
         select d.id from devices d
         where d.id in (

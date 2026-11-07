@@ -336,6 +336,7 @@ async function deleteInactiveDevices(sql: Sql, mode: InactiveMode, opts: Retenti
         else result.inactiveDevices++;
       } catch (err) {
         const code = err instanceof postgres.PostgresError ? err.code : undefined;
+        // 40001 is not skipped on purpose: it stops the step like any other error (the route retries it).
         if (code === "40P01" || code === "55P03") {
           result.inactiveSkipped++;
           continue;
