@@ -10,7 +10,7 @@
 | Sub-fase | Branch | PR | Status |
 |---|---|---|---|
 | 22b | `fix/DT-04-snapshot-perf` | lihat PR | [r] PR terbuka |
-| 22c favicon cache | `fix/PR-05-favicon-cache` | – | [~] kode selesai, review menyusul |
+| 22c favicon cache | `fix/PR-05-favicon-cache` | lihat PR | [r] PR terbuka |
 
 ## Spike (simulator sendiri: "Shoo Track App SE" iPhone SE 3 iOS 26.5, "Shoo Track App Pro Max" iPhone 17 Pro Max iOS 26.5)
 
@@ -146,9 +146,18 @@ Test baru: dua link bertanda tangan beda untuk scan sama → 1 unduhan (gambar i
 
 - Kunci = host + id (spec: id saja). Host ditambahkan supaya hit tidak pernah menjawab link yang ditolak loader asli; tetap tanpa query bertanda tangan.
 - `leaveDemo`: fixture demo (`MockRepository`) semua `faviconUrl: nil`, jadi cache tidak pernah terisi di demo; `clear()` tetap dipanggil sebagai pengaman.
-- Tidak dikosongkan: retensi 14 hari dan sisi guardian saat anggota memutus sendiri. Scan itu tidak lagi muncul di `GET /scans`, jadi entrinya tak terjangkau sampai tergusur (≤ 100) atau app ditutup; tidak ada jalur di app yang menampilkannya.
+- Tidak dikosongkan: retensi 14 hari dan sisi guardian saat anggota memutus sendiri. Scan itu tidak lagi muncul di `GET /scans`, jadi entrinya tak terjangkau; sejak review security entri juga kedaluwarsa setelah 1 jam (`maxAge` = umur link bertanda tangan), jadi tidak ada ikon yang bertahan lebih lama dari izin Worker.
 - Toggle Pribadi ↔ Guardian (`setFamilyMode`) tidak mengosongkan: anggota tetap terhubung, datanya tidak hilang.
 - Dua `SiteIcon` yang memuat scan yang sama bersamaan tetap bisa mengunduh 2× (tidak ada penggabungan request in-flight); tidak terjadi dalam satu list.
+
+### Review (berurutan)
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:swift-reviewer` | MEDIUM: `load()` mengosongkan ikon scan yang sama sebelum unduh ulang (setelah memory warning → kedip/abu-abu kalau link sudah kedaluwarsa). MEDIUM: `image` membandingkan URL lengkap, jadi scan sama dengan tanda tangan baru jatuh ke cache tiap render. MEDIUM (opsional): tanpa penggabungan unduhan in-flight. LOW: kunci tanpa port + host beda huruf; `load()` tanpa `@MainActor`; test `countLimit` hanya properti; `removeMember` mengosongkan semua | Perbandingan lewat `sameFavicon` (kunci), ikon scan yang sama dipertahankan saat link baru dimuat, kunci = host huruf kecil + port, `@MainActor` (1201689) + test kunci. Penggabungan in-flight tidak dibuat (tidak terjadi dalam satu list). LOW lain diterima |
+| `ecc:security-reviewer` | MEDIUM (P13): tanpa TTL, ikon bisa dilayani dari cache setelah link 1 jam kedaluwarsa / scan dihapus server. MEDIUM (P13): sisi guardian tanpa pemicu saat anggota memutus sendiri. LOW: `@State loaded` bertahan sampai view hilang; tidak dikosongkan saat background. P9 host/`isAllowed`, memori saja, kunci: OK | TTL `maxAge` 3600 s = `LINK_TTL_SECONDS` backend (89a8b64) + test jam; ini juga menutup kasus guardian (entri tak terjangkau dan kedaluwarsa ≤ 1 jam). LOW diterima: baris yang datanya hilang ikut hilang dari layar |
+
+Setelah review: `-only-testing:ShooAppTests` 513 test di 49 suite lulus.
 
 ### Screenshot (UI gate)
 
