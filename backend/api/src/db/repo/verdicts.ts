@@ -1,5 +1,5 @@
 import type { Sql, TransactionSql } from "postgres";
-import { neverQueue } from "../../data/allowlist";
+import { isProtected } from "./domainLists";
 import { ISO_MS } from "./scans";
 
 export type VerdictValue = "safe" | "not_safe";
@@ -48,7 +48,8 @@ export async function decideVerdict(
     }
     // Warning scans take a verdict too (GD-07, Figma "Detail Aktivitas Waspada", issue #176 comment).
 
-    let eligible = value === "not_safe" && scan.ownerMode === "protected" && linked && !neverQueue(scan.domain);
+    let eligible = value === "not_safe" && scan.ownerMode === "protected" && linked;
+    if (eligible && (await isProtected(tx, scan.domain))) eligible = false;
     // Serializes this guardian's queue count, so parallel verdicts cannot pass the daily cap.
     if (eligible) await tx`select pg_advisory_xact_lock(5, hashtext(${guardian.deviceId}))`;
     await lockDomain(tx, scan.domain);

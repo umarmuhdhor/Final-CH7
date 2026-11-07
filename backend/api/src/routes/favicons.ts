@@ -4,7 +4,7 @@ import { faviconPathForViewer } from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { errors } from "../http/errors";
 import { errorInfo } from "../http/logError";
-import { hit, limits } from "../http/rateLimit";
+import { hit, hitEdge, limits } from "../http/rateLimit";
 import { UUID } from "../http/validate";
 import { faviconContentType } from "../services/favicons";
 import { verifyFaviconLink } from "../services/screenshotLinks";
@@ -26,7 +26,7 @@ favicons.get("/favicons/:id", async (c) => {
   if (!secret || !UUID.test(id)) throw errors.notFound();
   const viewerId = await verifyFaviconLink(secret, id, c.req.query(), Date.now() / 1000);
   if (!viewerId) throw errors.notFound();
-  await hit(c.get("sql"), limits.viewFavicon, viewerId);
+  await hitEdge(c.env.FAVICONS_VIEW_LIMITER, c.get("sql"), limits.viewFavicon, viewerId, hit);
 
   const path = await faviconPathForViewer(c.get("sql"), id, viewerId);
   // New favicons in R2, old ones in Supabase until they expire (D-alief-C27).

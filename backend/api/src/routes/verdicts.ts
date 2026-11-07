@@ -5,7 +5,7 @@ import type { AppEnv } from "../env";
 import { decideVerdict, findVerdict, type VerdictResult } from "../db/repo/verdicts";
 import { requireDevice, requireMode } from "../http/auth";
 import { errors } from "../http/errors";
-import { hit, hitLight, limits } from "../http/rateLimit";
+import { hit, hitEdge, limits } from "../http/rateLimit";
 import { DOMAIN, parse, readJson, UUID } from "../http/validate";
 
 const MAX_BODY = 1024;
@@ -58,7 +58,7 @@ const VERDICT_SEEN_WINDOW_MS = 120_000;
 verdicts.get("/verdicts", async (c) => {
   const sql = c.get("sql");
   const principal = c.get("principal");
-  await hitLight(sql, limits.getVerdict, principal.deviceId);
+  await hitEdge(c.env.VERDICTS_GET_LIMITER, sql, limits.getVerdict, principal.deviceId);
   const { domain } = parse(lookupQuery, { domain: c.req.query("domain") });
   const verdict = await findVerdict(sql, principal.deviceId, domain);
   if (verdict) logFreshVerdict(verdict);

@@ -41,7 +41,11 @@
     "SCREENSHOT_MAX_BYTES": "153600",
     // EX-07 kill-switch (D-alief-C25 d, not a secret): "false" stops storing and serving page
     // replicas at once. Retention and DELETE /devices/me still remove R2 objects either way.
-    "REPLICAS_ENABLED": "true"
+    "REPLICAS_ENABLED": "true",
+    // E7 (fase 24a, K8, not a secret): the daily retention step for devices unused for 90 days
+    // (registrations never used again: 30 days). "dry_run" only counts candidates and logs the number;
+    // "delete" deletes them (24a-2, after 7 clean dry runs); "off" or any other value skips the step.
+    "INACTIVE_DEVICES": "dry_run"
   },
   // EX-07 page replicas and PR-05 favicons (D-alief-C23, C27): private bucket, no r2.dev, no custom
   // domain, no CORS, 17-day lifecycle rule as a safety net (fase 18 LANGKAH MANUAL 1). Tests and
@@ -57,5 +61,14 @@
   "triggers": { "crons": ["0 19 * * *", "5 * * * *"] },
   // Run the Worker near the database it talks to (D-alief-B10 g: several DB round trips per
   // request). Reversible; measured in fase 12 LANGKAH MANUAL.
-  "placement": { "mode": "smart" }
+  "placement": { "mode": "smart" },
+  // Polling and anti-scraping limits without a DB row per request (hitEdge, src/http/rateLimit.ts).
+  // Same max and window as `limits` there; period can only be 10 or 60. namespace_id is unique per
+  // account: shoo-ai (same account since #258) uses 1001 and 1002. Removing one → the DB counter again.
+  "ratelimits": [
+    { "name": "VERDICTS_GET_LIMITER", "namespace_id": "2001", "simple": { "limit": 30, "period": 10 } },
+    { "name": "SCREENSHOTS_VIEW_LIMITER", "namespace_id": "2002", "simple": { "limit": 120, "period": 60 } },
+    { "name": "FAVICONS_VIEW_LIMITER", "namespace_id": "2003", "simple": { "limit": 600, "period": 60 } },
+    { "name": "REPLICAS_VIEW_LIMITER", "namespace_id": "2004", "simple": { "limit": 10, "period": 60 } }
+  ]
 }
