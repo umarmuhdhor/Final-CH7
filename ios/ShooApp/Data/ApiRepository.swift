@@ -120,6 +120,8 @@ final class ApiRepository: ShooRepository {
     }
 
     func removeMember(deviceId: String) async throws {
+        // P13: their icons go from memory whatever the answer (a failed call only costs a download).
+        defer { session.forgetCachedData() }
         let _: OkResponse = try await client.send(.init(method: .delete, path: ["family", "members", deviceId]))
     }
 
