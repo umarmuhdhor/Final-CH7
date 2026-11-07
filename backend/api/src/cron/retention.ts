@@ -1,5 +1,6 @@
-import type { Sql } from "postgres";
+import postgres, { type Sql } from "postgres";
 import type { Env } from "../env";
+import { countInactiveDevices, deleteDevice, inactiveDeviceIds, type InactiveCutoffs } from "../db/repo/devices";
 import { errorInfo } from "../http/logError";
 import { opsWriter, type OpsWriter } from "../db/repo/ops";
 import { addTombstones, dueTombstones } from "../db/repo/tombstones";
@@ -40,6 +41,21 @@ const TOMBSTONES = 500;
 /** rate_limit_hits per run: 50 × 20000 = 1 M rows, ~30 days of GET /verdicts polling at 1 rps. */
 const HIT_CHUNK = 20000;
 const HIT_CHUNKS = 50;
+/**
+ * E7 (fase 24a): K1 = 90 days without a request (a family counts as one unit, K3 b), K4 = 30 days
+ * for a registration never used again. At most INACTIVE_MAX deletes per run (K6): one transaction
+ * each, and the Cron's CPU for the new step is not measured yet.
+ */
+const INACTIVE: InactiveCutoffs = { inactiveDays: 90, unusedDays: 30 };
+const INACTIVE_MAX = 50;
+
+/** K8: "off" (code default), "dry_run" (count only), "delete". */
+export type InactiveMode = "off" | "dry_run" | "delete";
+
+/** Anything but the two exact values is "off": a typo never starts deleting (fail closed). */
+export function parseInactiveMode(value: string | undefined): InactiveMode {
+  return value === "dry_run" || value === "delete" ? value : "off";
+}
 
 export interface RetentionResult {
   scans: number;
@@ -51,6 +67,12 @@ export interface RetentionResult {
   joinAttempts: number;
   pushLog: number;
   rateLimitHits: number;
+  /** E7: all candidates (no cap), in dry_run and delete mode. */
+  inactiveCandidates: number;
+  /** E7: devices deleted this run. */
+  inactiveDevices: number;
+  /** E7: candidates kept because they came back or were locked (40P01/55P03); retried tomorrow. */
+  inactiveSkipped: number;
 }
 
 export interface RetentionOptions {
@@ -71,6 +93,12 @@ export interface RetentionOptions {
   lockTimeoutMs?: number;
   /** Overrides the ops_jobs writer (fase 21a); tests only. */
   ops?: OpsWriter;
+  /** Overrides env.INACTIVE_DEVICES (E7); tests only. */
+  inactiveMode?: InactiveMode;
+  /** Deletes per run for the inactive-devices step (K6); tests only. */
+  inactiveMax?: number;
+  /** Runs between the candidate SELECT and the deletes (race tests, K7); tests only. */
+  afterInactiveSelect?: (ids: string[]) => Promise<void>;
 }
 
 /**
@@ -82,6 +110,7 @@ export interface RetentionOptions {
 export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = {}): Promise<RetentionResult> {
   const result: RetentionResult = {
     scans: 0, plainScans: 0, objects: 0, backlog: false, tombstones: 0, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0,
+    inactiveCandidates: 0, inactiveDevices: 0, inactiveSkipped: 0,
   };
   const errors: unknown[] = [];
   const step = async (name: string, run: () => Promise<void>) => {
@@ -160,6 +189,9 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
       if (n < HIT_CHUNK) break;
     }
   });
+  // E7: after every other step, before ops_finish, so its failure counts in `failed` (fase 21 K2).
+  const mode = opts.inactiveMode ?? parseInactiveMode(env.INACTIVE_DEVICES);
+  await step("inactive_devices", () => deleteInactiveDevices(sql, mode, opts, result));
 
   // failed = the steps that failed before this one (fase 21 K2); its own failure is logged and rethrown.
   await step("ops_finish", () => ops.finish(sql, "retention", { failed: errors.length, backlog: result.backlog }));
@@ -278,4 +310,48 @@ async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra =
     await tx`select 1 from scans where id in ${tx(ids)} order by id for update`;
     return (await tx`delete from scans where id in ${tx(ids)} and created_at < now() - interval '14 days' ${extra}`).count;
   });
+}
+
+/**
+ * E7 (fase 24a): devices nobody used for K1 days, and registrations never used again, go through
+ * the same delete as DELETE /devices/me (deleteDevice), with a recheck inside the transaction (K7).
+ * No Storage/R2 call here: their paths are tombstoned and the tombstone step removes them on a
+ * later run (such devices sent no scan for 90 days, so retention already took nearly all of them).
+ * A deadlock or lock timeout skips that device until tomorrow; any other error stops the step.
+ * The log line has the mode and counts only, never an id (ids are in object paths, P6).
+ */
+async function deleteInactiveDevices(sql: Sql, mode: InactiveMode, opts: RetentionOptions, result: RetentionResult): Promise<void> {
+  let failed = 0;
+  try {
+    if (mode === "off") return;
+    result.inactiveCandidates = await countInactiveDevices(sql, INACTIVE);
+    if (mode !== "delete" || result.inactiveCandidates === 0) return;
+    const max = opts.inactiveMax ?? INACTIVE_MAX;
+    const ids = await inactiveDeviceIds(sql, INACTIVE, max);
+    await opts.afterInactiveSelect?.(ids);
+    for (const id of ids) {
+      try {
+        const paths = await deleteDevice(sql, id, { onlyIfInactive: INACTIVE, lockTimeoutMs: opts.lockTimeoutMs ?? 3000 });
+        if (paths === null) result.inactiveSkipped++;
+        else result.inactiveDevices++;
+      } catch (err) {
+        const code = err instanceof postgres.PostgresError ? err.code : undefined;
+        if (code === "40P01" || code === "55P03") {
+          result.inactiveSkipped++;
+          continue;
+        }
+        throw err;
+      }
+    }
+    // More candidates than one run may delete: the rest goes tomorrow (fase 21 alert retention_backlog).
+    if (result.inactiveCandidates > max) result.backlog = true;
+  } catch (err) {
+    failed = 1;
+    throw err;
+  } finally {
+    console.log(JSON.stringify({
+      event: "inactive_devices", mode, candidates: result.inactiveCandidates,
+      deleted: result.inactiveDevices, skipped: result.inactiveSkipped, failed,
+    }));
+  }
 }

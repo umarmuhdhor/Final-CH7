@@ -81,6 +81,8 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
       expect(info.ok).toBe(false);
     });
     await runRetention(sql, env);
+    // E7 (fase 24a-1): the inactive-devices step runs in dry_run (wrangler.jsonc) and logs counts only.
+    expect(lines.some((l) => l.includes('"event":"inactive_devices"') && l.includes('"mode":"dry_run"'))).toBe(true);
     // Fase 21a: the ops status endpoint, with and without the token.
     await call("/ops/status", { headers: { authorization: `Bearer ${env.OPS_STATUS_TOKEN}` } });
     await call("/ops/status", { headers: { authorization: "Bearer wrong-ops-token-wrong-ops-token-x" } });
@@ -92,6 +94,33 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
       "shoo_wrong", code, ip, "sig=", "ab".repeat(32), env.SCREENSHOT_URL_SECRET!, env.RATE_KEY_SECRET!,
       "replica.html.gz", "other-private", "quota-private", "third-private", env.OPS_STATUS_TOKEN!, "wrong-ops-token",
     ]) {
+      expect(all, `log contains ${leak.slice(0, 12)}`).not.toContain(leak);
+    }
+  });
+});
+
+describe("inactive devices log counts only (E7, fase 24a-1)", () => {
+  it("dry_run and delete log the mode and counts, never ids, names or push tokens", async () => {
+    const lines: string[] = [];
+    for (const m of ["log", "info", "warn", "error", "debug"] as const) {
+      vi.spyOn(console, m).mockImplementation((...a: unknown[]) => void lines.push(a.map(String).join(" ")));
+    }
+    const g = await createDevice("Adhella Secret", "guardian");
+    const p = await createDevice("Mom Secret");
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: "cd".repeat(32) } });
+    await sql`insert into family_links (protected_id, guardian_id) values (${p.deviceId}, ${g.deviceId})`;
+    await sql`update devices set last_seen_at = now() - interval '100 days', created_at = now() - interval '200 days'`;
+
+    await runRetention(sql, env);
+    await runRetention(sql, env, { inactiveMode: "delete" });
+    expect((await sql`select 1 from devices`).length).toBe(0);
+    const events = lines.filter((l) => l.includes('"event":"inactive_devices"'));
+    expect(events.map((l) => JSON.parse(l))).toEqual([
+      { event: "inactive_devices", mode: "dry_run", candidates: 2, deleted: 0, skipped: 0, failed: 0 },
+      { event: "inactive_devices", mode: "delete", candidates: 2, deleted: 2, skipped: 0, failed: 0 },
+    ]);
+    const all = lines.join("\n");
+    for (const leak of [g.token, p.token, g.deviceId, p.deviceId, "Adhella", "Mom Secret", "cd".repeat(32)]) {
       expect(all, `log contains ${leak.slice(0, 12)}`).not.toContain(leak);
     }
   });
