@@ -37,6 +37,11 @@ export interface Env {
   OPS_STATUS_TOKEN?: string;
   /** E7 retention step (fase 24a, K8): "off" | "dry_run" | "delete". Unset or any other value → off. */
   INACTIVE_DEVICES?: string;
+  /** Rate Limiting bindings (hitEdge): same max and window as `limits` in http/rateLimit.ts. Unset → DB counter. */
+  VERDICTS_GET_LIMITER?: RateLimit;
+  SCREENSHOTS_VIEW_LIMITER?: RateLimit;
+  FAVICONS_VIEW_LIMITER?: RateLimit;
+  REPLICAS_VIEW_LIMITER?: RateLimit;
 }
 
 export type DeviceMode = "guardian" | "protected";
