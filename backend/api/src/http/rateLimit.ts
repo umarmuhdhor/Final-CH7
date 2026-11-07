@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import { keyHash } from "./keyHash";
 import { errors } from "./errors";
+import { errorInfo } from "./logError";
 
 export interface Limit {
   bucket: string;
@@ -74,6 +75,36 @@ export async function hitLight(sql: Sql, limit: Limit, key: string): Promise<voi
     select n, retry from recent`;
   if (row && row.n >= limit.max) throw errors.rateLimited(Math.max(1, row.retry ?? limit.windowSeconds));
 }
+
+/**
+ * Polling and anti-scraping limits (nothing to guess behind them) through a Workers Rate Limiting
+ * binding: no DB round trip and no rate_limit_hits row per request. Counts are per Cloudflare
+ * location and approximate (Cloudflare docs); Smart Placement keeps the Worker near the DB in one
+ * place. The binding knows only 10 s and 60 s windows and gives no retry time, so `limit` must use
+ * one of those windows, the binding in wrangler.jsonc must have the same max, and Retry-After is
+ * the whole window. Without the binding, or when it fails, the DB counter `fallback` applies, as
+ * before. The binding sees the same HMAC key as rate_limit_hits, never the raw id.
+ */
+export async function hitEdge(
+  limiter: RateLimit | undefined,
+  sql: Sql,
+  limit: Limit,
+  key: string,
+  fallback: (sql: Sql, limit: Limit, key: string) => Promise<void> = hitLight,
+): Promise<void> {
+  if (!limiter) return fallback(sql, limit, key);
+  const keyHashed = await keyHash(`${limit.bucket}:${key}`);
+  let success: boolean;
+  try {
+    ({ success } = await limiter.limit({ key: encodeHex(keyHashed) }));
+  } catch (err) {
+    console.error(JSON.stringify({ event: "rate_limit_binding_failed", bucket: limit.bucket, error: errorInfo(err) }));
+    return fallback(sql, limit, key);
+  }
+  if (!success) throw errors.rateLimited(limit.windowSeconds);
+}
+
+const encodeHex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 
 /**
  * Sliding-window counter in Postgres (R3 §5). Only keyHash('<bucket>:<key>') (HMAC, D-alief-B12)

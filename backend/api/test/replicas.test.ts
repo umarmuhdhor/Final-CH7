@@ -746,8 +746,11 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
 
   it("per viewer: 10 per minute, then 500 per day → 429; no global cap", async () => {
     const { g, p, id } = await setup();
-    await fill(limits.viewReplica, p.deviceId);
-    expect((await call(await linkFor(p, id))).status).toBe(429);
+    // 10 per minute through the binding (wrangler.jsonc): real requests, no rate_limit_hits row.
+    const link = await linkFor(p, id);
+    for (let i = 0; i < limits.viewReplica.max; i++) expect((await call(link)).status).toBe(200);
+    expect((await call(link)).status).toBe(429);
+    expect(await sql`select 1 from rate_limit_hits where bucket = ${limits.viewReplica.bucket}`).toHaveLength(0);
     // Another viewer is not affected.
     expect((await call(await linkFor(g, id))).status).toBe(200);
     await fill(limits.viewReplicaDay, g.deviceId);
