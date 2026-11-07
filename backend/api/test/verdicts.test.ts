@@ -252,14 +252,13 @@ describe("GET /verdicts?domain=", () => {
     expect((await call("/verdicts?domain=example.com")).status).toBe(401);
   });
 
-  it("rate limits 30 per 10 s per device with Retry-After", async () => {
+  it("rate limits 30 per 10 s per device with Retry-After, through the binding: no rate_limit_hits row", async () => {
     const p = await createDevice("Mom");
-    const hash = await keyHash(`verdicts_get:${p.deviceId}`);
-    await sql`insert into rate_limit_hits (bucket, key_hash) select 'verdicts_get', ${hash} from generate_series(1, 29)`;
-    expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
+    for (let i = 0; i < 30; i++) expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
     const res = await call("/verdicts?domain=a.example", { token: p.token });
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect(await sql`select 1 from rate_limit_hits where bucket = 'verdicts_get'`).toHaveLength(0);
   });
 });
 

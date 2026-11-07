@@ -1,10 +1,11 @@
 -- ADM-01 admin dashboard: privileges of schema `admin` (I1, I2; dashboard plan R2 §1, §7).
 -- I2 is a list of objects per dashboard phase: a later phase adds its objects here. Phase 05 added the
--- one allowed exception, `select` on admin.public_config for shoo_api.
+-- one allowed exception, `select` on admin.public_config for shoo_api; phase 10a (ADM-09) the second,
+-- `select` on admin.v_domain_lists_public (backend verdicts, W16).
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(89);
+select plan(101);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -26,7 +27,8 @@ select is(
 select table_privs_are('admin', t, r, array[]::text[], r || ' has no privileges on admin.' || t)
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions',
                   'domain_intel', 'domain_intel_label', 'domain_labels', 'label_forget', 'domain_dirty',
-                  'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons', 'api_keys']) as t
+                  'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons', 'api_keys',
+                  'domain_lists', 'domain_lists_meta']) as t
 cross join unnest(array['shoo_admin', 'shoo_api']) as r;
 
 -- Views: SELECT for shoo_admin only.
@@ -35,22 +37,26 @@ from unnest(array['v_review_queue', 'v_blocklist', 'v_scans', 'v_ops_snapshot',
                   'v_audit', 'v_config', 'v_categories', 'v_feed',
                   'v_domain_intel', 'v_labels', 'v_analysis_runs', 'v_stats_daily',
                   'v_eval_summary', 'v_eval_curve', 'v_eval_labels', 'v_eval_signals', 'v_eval_targets',
-                  'v_cases', 'v_lessons', 'v_thresholds', 'v_api_keys']) as v;
+                  'v_cases', 'v_lessons', 'v_thresholds', 'v_api_keys',
+                  'v_domain_lists', 'v_domain_lists_public', 'v_shared_hosts']) as v;
 
 -- public_config: SELECT for shoo_api only (phase 05, GET /config/public), I2's one exception.
 select table_privs_are('admin', 'public_config', 'shoo_admin', array[]::text[], 'shoo_admin has no privileges on admin.public_config');
 select table_privs_are('admin', 'public_config', 'shoo_api', array['SELECT'], 'shoo_api SELECT only on admin.public_config');
+-- v_domain_lists_public: SELECT for shoo_api too (phase 10a K8, backend isProtected), I2's second exception.
+select table_privs_are('admin', 'v_domain_lists_public', 'shoo_api', array['SELECT'], 'shoo_api SELECT only on admin.v_domain_lists_public');
 
 -- No other role (PostgREST roles, shoo_api, PUBLIC) holds any privilege on an admin table, view or
--- sequence, apart from shoo_api on public_config.
+-- sequence, apart from shoo_api on public_config and v_domain_lists_public.
 select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
     cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
     where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)
       and not (c.relname = 'public_config' and a.grantee = 'shoo_api'::regrole)
+      and not (c.relname = 'v_domain_lists_public' and a.grantee = 'shoo_api'::regrole and a.privilege_type = 'SELECT')
       -- Layer 5 (#241): Team AI's read-only role, SELECT on ai_dataset only (l5_review_data.test.sql).
       and not (c.relname = 'ai_dataset' and a.grantee = 'shoo_ai'::regrole and a.privilege_type = 'SELECT')),
-  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config, shoo_ai on ai_dataset)');
+  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config + v_domain_lists_public, shoo_ai on ai_dataset)');
 
 -- Functions: EXECUTE for shoo_admin on the API functions, nobody else; internal helpers for nobody.
 select function_privs_are('admin', f, a, 'shoo_admin', array['EXECUTE'], 'shoo_admin EXECUTE on admin.' || f)
@@ -75,7 +81,11 @@ from (values
   ('usage_record', array['text', 'bigint', 'integer', 'integer', 'integer']),
   ('api_key_create', array['text', 'text', 'text', 'integer', 'text']),
   ('api_key_revoke', array['bigint', 'text']),
-  ('api_key_use', array['text'])
+  ('api_key_use', array['text']),
+  ('domain_match', array['text']),
+  ('domain_set', array['text', 'text', 'boolean', 'text', 'boolean', 'text', 'text', 'text', 'integer']),
+  ('domain_remove', array['text', 'text', 'text', 'text']),
+  ('domain_lists_version', array[]::text[])
 ) as x(f, a);
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace

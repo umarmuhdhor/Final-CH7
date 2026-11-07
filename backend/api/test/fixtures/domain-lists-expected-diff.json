@@ -1,0 +1,3045 @@
+{
+ "source": "origin/main ce137f9 (7 Nov 2026)",
+ "diffs": [
+  {
+   "host": "1drv.ms",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "1drv.ms",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "1drv.ms",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.1drv.ms",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "a.b.1drv.ms",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.ac.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "a.b.acrobat.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.airbnb.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.akamaihd.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.alodokter.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.antaranews.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.anteraja.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.anthropic.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.appspot.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.bankjago.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.bankmega.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.bbc.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.bing.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.blubybcadigital.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.booking.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.btpn.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "a.b.cloud.microsoft",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.cloudflare.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.cnn.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.desa.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "a.b.discord.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.doku.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.dropbox.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.duckdns.org",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.duckduckgo.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.ebay.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.express.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.fastly.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.fb.me",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.fbcdn.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.forms.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "a.b.framer.website",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.gitlab.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.googleapis.com",
+   "reader": "build",
+   "old": true,
+   "new": false,
+   "category": "d",
+   "reason": "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)"
+  },
+  {
+   "host": "a.b.gramedia.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.gstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.halodoc.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.idntimes.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.indihome.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.jd.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.jntexpress.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.kai.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.kaskus.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.linkedin.cn",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.live.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.livin.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.mandiri.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.maybank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.medium.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.midtrans.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.mil.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "a.b.mozilla.org",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.myshopify.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.mzstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.nytimes.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.office365.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.olx.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.onedrive.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.openai.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.page.link",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "a.b.page.link",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.panin.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.paper.dropbox.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.pinterest.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.pos.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.r2.dev",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.reddit.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.replit.app",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.ruangguru.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.s.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "a.b.s.id",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.s3.amazonaws.com",
+   "reader": "build",
+   "old": true,
+   "new": false,
+   "category": "d",
+   "reason": "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)"
+  },
+  {
+   "host": "a.b.sch.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "a.b.seabank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.sicepat.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.smartfren.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.sociolla.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.spark.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.square.site",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.stackoverflow.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.telegram.org",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.telkom.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.theguardian.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.tiki.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.tokopedia.link",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.translate.goog",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.traveloka.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.tripadvisor.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.twitch.tv",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.uber.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.uob.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "a.b.xendit.co",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "a.b.youtu.be",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "a.b.zalora.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "acrobat.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "airbnb.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "akamaihd.net",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "akamaihd.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "alodokter.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "amazonaws.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "antaranews.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "anteraja.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "anthropic.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "appspot.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "bankjago.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "bankmega.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "bbc.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "bing.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "blogger.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "blubybcadigital.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "booking.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "btpn.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "canva.site",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "cloud.microsoft",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "cloud.microsoft",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "cloudflare.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "cnn.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "cutt.ly",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "discord.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "doku.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "dropbox.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "duckdns.org",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "duckduckgo.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "ebay.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "express.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "fastly.net",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "fastly.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "fb.me",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "fb.me",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "fbcdn.net",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "fbcdn.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "firebasestorage.googleapis.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "firebasestorage.googleapis.com",
+   "reader": "blockMemory",
+   "old": "host",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "fly.dev",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "forms.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "forms.gle",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "framer.app",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "framer.website",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "githubusercontent.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "gitlab.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "goo.gl",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "googleapis.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "googleusercontent.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "gramedia.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "gstatic.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "gstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "halodoc.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "idntimes.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "indihome.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "infinityfreeapp.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "is.gd",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "jd.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "jimdofree.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "jntexpress.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "kai.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "kaskus.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "linkedin.cn",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "linkedin.cn",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "live.net",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "live.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "livin.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "mandiri.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "maybank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "mediafire.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "medium.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "mega.nz",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "midtrans.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "mozilla.org",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "myshopify.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "mystrikingly.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "mzstatic.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "mzstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "nytimes.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "office365.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "olx.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "onedrive.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "onedrive.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "openai.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "org.uk",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "page.link",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "page.link",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "panin.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "paper.dropbox.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "pinterest.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "pos.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "r2.dev",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "rebrand.ly",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "reddit.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "repl.co",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "replit.app",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "ruangguru.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "s.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "s.id",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "s3.amazonaws.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "seabank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "sharepoint.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "sicepat.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "smartfren.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "sociolla.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "spark.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "square.site",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "squarespace.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "stackoverflow.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "storage.googleapis.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "t.co",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "telegram.org",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "telkom.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "theguardian.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "tiki.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "tinyurl.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "tokopedia.link",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "translate.goog",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "traveloka.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "tripadvisor.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "trycloudflare.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "tumblr.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "twitch.tv",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "typedream.app",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "uber.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "uob.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "webwave.me",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "windows.net",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "wix.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "www.1drv.ms",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "www.1drv.ms",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.akamaihd.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.appspot.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.bankjago.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.bankmega.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.blubybcadigital.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.btpn.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "www.cloud.microsoft",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.doku.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.duckdns.org",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.fastly.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.fb.me",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.fbcdn.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.firebasestorage.googleapis.com",
+   "reader": "blockMemory",
+   "old": "host",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.forms.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "www.framer.website",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.googleapis.com",
+   "reader": "build",
+   "old": true,
+   "new": false,
+   "category": "d",
+   "reason": "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)"
+  },
+  {
+   "host": "www.gstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.indihome.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.jntexpress.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.kai.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.linkedin.cn",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.live.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.livin.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.maybank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.midtrans.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.myshopify.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.mzstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.onedrive.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.page.link",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "www.page.link",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.panin.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.r2.dev",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.replit.app",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.s.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "www.s.id",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.s3.amazonaws.com",
+   "reader": "build",
+   "old": true,
+   "new": false,
+   "category": "d",
+   "reason": "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)"
+  },
+  {
+   "host": "www.seabank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.square.site",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.telkom.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.translate.goog",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "www.xendit.co",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "www.youtu.be",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.1drv.ms",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "x.1drv.ms",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.ac.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "x.acrobat.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.airbnb.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.akamaihd.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.alodokter.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.antaranews.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.anteraja.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.anthropic.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.appspot.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.bankjago.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.bankmega.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.bbc.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.bing.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.blubybcadigital.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.booking.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.btpn.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "x.cloud.microsoft",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.cloudflare.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.cnn.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.desa.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "x.discord.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.doku.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.dropbox.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.duckdns.org",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.duckduckgo.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.ebay.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.express.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.fastly.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.fb.me",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.fbcdn.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.forms.cloud.microsoft",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "g",
+   "reason": "multi-tenant host row is protected as apex (D-dash-22 #7)"
+  },
+  {
+   "host": "x.framer.website",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.gitlab.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.googleapis.com",
+   "reader": "build",
+   "old": true,
+   "new": false,
+   "category": "d",
+   "reason": "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)"
+  },
+  {
+   "host": "x.gramedia.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.gstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.halodoc.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.idntimes.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.indihome.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.jd.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.jntexpress.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.kai.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.kaskus.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.linkedin.cn",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.live.net",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.livin.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.mandiri.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.maybank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.medium.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.midtrans.com",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.mil.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "x.mozilla.org",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.myshopify.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.mzstatic.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.nytimes.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.office365.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.olx.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.onedrive.com",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.openai.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.page.link",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "x.page.link",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.panin.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.paper.dropbox.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.pinterest.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.pos.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.r2.dev",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.reddit.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.replit.app",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.ruangguru.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.s.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "e",
+   "reason": "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)"
+  },
+  {
+   "host": "x.s.id",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.s3.amazonaws.com",
+   "reader": "build",
+   "old": true,
+   "new": false,
+   "category": "d",
+   "reason": "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)"
+  },
+  {
+   "host": "x.sch.id",
+   "reader": "backend",
+   "old": true,
+   "new": false,
+   "category": "c",
+   "reason": "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)"
+  },
+  {
+   "host": "x.seabank.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.sicepat.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.smartfren.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.sociolla.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.spark.adobe.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.square.site",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.stackoverflow.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.telegram.org",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.telkom.co.id",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.theguardian.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.tiki.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.tokopedia.link",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.translate.goog",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.traveloka.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.tripadvisor.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.twitch.tv",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.uber.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.uob.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "x.xendit.co",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "x.youtu.be",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "x.zalora.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "xendit.co",
+   "reader": "build",
+   "old": false,
+   "new": true,
+   "category": "b",
+   "reason": "L4-only domain: protect only (trusted = false) until X10"
+  },
+  {
+   "host": "yolasite.com",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "youtu.be",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  },
+  {
+   "host": "youtu.be",
+   "reader": "blockMemory",
+   "old": "registrable",
+   "new": "host_path",
+   "category": "blockMemory-10c",
+   "reason": "Safari block-memory key mode differs (L6 is narrower than L2/L4); decided and tested in 10c"
+  },
+  {
+   "host": "zalora.co.id",
+   "reader": "backend",
+   "old": false,
+   "new": true,
+   "category": "a",
+   "reason": "backend now protects L1, L2 apex, brands and suffix rows it did not list"
+  }
+ ]
+}

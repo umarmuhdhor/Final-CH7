@@ -22,7 +22,7 @@ end $$;
 -- ---------------------------------------------------------------- objects and privileges
 
 select has_table('admin', 'domain_review', 'admin.domain_review exists');
-select has_table('admin', 'shared_hosts', 'admin.shared_hosts exists');
+select has_view('admin', 'v_shared_hosts', 'admin.v_shared_hosts exists (replaced the shared_hosts table, ADM-09)');
 select has_view('admin', 'ai_dataset', 'admin.ai_dataset exists');
 select has_column('admin', 'domain_labels', 'scan_id', 'domain_labels.scan_id exists');
 select has_column('admin', 'scan_archive', 'host', 'scan_archive.host exists');
@@ -117,8 +117,10 @@ select is((select count(*)::int from admin.ai_dataset where domain = 'penipu-l5.
 
 -- ---------------------------------------------------------------- review_due / review_record / vote
 
-select is(pg_temp.as_role('shoo_admin', $$select admin.shared_hosts_set(array['hosting-l5.test', 'Bad Host!', 'www.x.test'], 'dev', 'dari ai/data')::text$$),
-  '1', 'shared_hosts_set keeps valid hosts only');
+-- Shared hosts come from admin.domain_lists (hosting <> 'none', ADM-09); written directly here.
+insert into admin.domain_lists (domain, protect, hosting, updated_by) values ('hosting-l5.test', 'apex', 'subdomains', 'test');
+select is(pg_temp.as_role('shoo_admin', $$select count(*)::text from admin.v_shared_hosts where host = 'hosting-l5.test'$$),
+  '1', 'a domain_lists row with hosting is a shared host');
 select is(pg_temp.as_role('shoo_admin', $$select string_agg(domain, ',' order by domain) from admin.review_due(100) where domain like '%-l5.test'$$),
   'penipu-l5.test,sites-l5.test', 'review_due: pending, not a shared host or a page on one');
 select is(pg_temp.as_role('shoo_admin', $$select input::text from admin.review_due(100) where domain = 'penipu-l5.test'$$)::jsonb - 'signal_counts',

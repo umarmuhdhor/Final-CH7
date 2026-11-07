@@ -1,4 +1,4 @@
-import type { Sql } from "postgres";
+import type { Sql, TransactionSql } from "postgres";
 import type { DeviceMode, Language } from "../../env";
 import { addTombstones } from "./tombstones";
 import { dropVerdicts } from "./verdicts";
@@ -147,13 +147,93 @@ export async function insertProtectedCopy(sql: Sql, fromId: string, tokenHash: U
   return row;
 }
 
+/** E7 (fase 24a-1) thresholds, in days: K1 inactive device, K4 registration never used again. */
+export interface InactiveCutoffs {
+  inactiveDays: number;
+  unusedDays: number;
+}
+
+/**
+ * Devices the retention step may delete (E7). Activity = last_seen_at only (K2: every request with
+ * a token moves it, push delivery does not).
+ * - K1 + K3 (b): a family is one unit. A device goes only when it and every other member of its
+ *   family (the guardian + all its protected devices) were last seen before the K1 cutoff. The family
+ *   root is coalesce(guardian_id, id): one guardian per protected device, and a guardian is never a
+ *   protected_id. A device without a family is judged alone.
+ * - K4 (b): a registration never used again (last seen within 1 hour of created_at), older than the
+ *   K4 cutoff, with no family link on either side.
+ * `only` limits the check to one device (the recheck inside deleteDevice, K7).
+ */
+function inactiveCandidates(sql: Sql | TransactionSql, c: InactiveCutoffs, only?: string) {
+  const inactiveBefore = sql`now() - make_interval(days => ${c.inactiveDays}::int)`;
+  const unusedBefore = sql`now() - make_interval(days => ${c.unusedDays}::int)`;
+  const one = only === undefined ? sql`` : sql`and d.id = ${only}`;
+  return sql`
+    select d.id from devices d left join family_links l on l.protected_id = d.id
+    where d.last_seen_at < ${inactiveBefore} ${one}
+      and not exists (select 1 from devices g
+        where g.id = coalesce(l.guardian_id, d.id) and g.last_seen_at >= ${inactiveBefore})
+      and not exists (select 1 from family_links m join devices p on p.id = m.protected_id
+        where m.guardian_id = coalesce(l.guardian_id, d.id) and p.last_seen_at >= ${inactiveBefore})
+    union
+    select d.id from devices d
+    -- The first condition follows from the next two; it is there so the planner can use devices_last_seen.
+    where d.last_seen_at < ${unusedBefore} + interval '1 hour' ${one}
+      and d.created_at < ${unusedBefore} and d.last_seen_at < d.created_at + interval '1 hour'
+      and not exists (select 1 from family_links f where f.protected_id = d.id or f.guardian_id = d.id)`;
+}
+
+/** Up to `limit` candidate ids in id order (K6 cap per run). */
+export async function inactiveDeviceIds(sql: Sql, c: InactiveCutoffs, limit: number): Promise<string[]> {
+  const rows = await sql<{ id: string }[]>`select id from (${inactiveCandidates(sql, c)}) c order by id limit ${limit}`;
+  return rows.map((r) => r.id);
+}
+
+/** All candidates, without the per-run cap (K8: the number the dry run reports). */
+export async function countInactiveDevices(sql: Sql, c: InactiveCutoffs): Promise<number> {
+  const [row] = await sql<{ n: number }[]>`select count(*)::int as n from (${inactiveCandidates(sql, c)}) c`;
+  return row!.n;
+}
+
+export interface DeleteDeviceOptions {
+  /**
+   * E7 retention (K7): delete only if the device is still a candidate inside the transaction, so a
+   * device (or a family member) that came back after the candidate SELECT is kept. Waits at most
+   * `lockTimeoutMs` for row locks (55P03), so the cron never queues behind a request.
+   */
+  onlyIfInactive: InactiveCutoffs;
+  lockTimeoutMs?: number;
+}
+
 /**
  * Deletes the device and, through `on delete cascade`, its family links (either side),
  * codes, join attempts, scans, verdicts on its scans or made by it, and push log rows.
  * Returns the screenshot, favicon and replica paths of its scans, to remove from Storage/R2 after commit.
+ * With `onlyIfInactive` (retention, E7): returns null and changes nothing when the device is no
+ * longer an inactive-device candidate (or is gone).
  */
-export async function deleteDevice(sql: Sql, id: string): Promise<string[]> {
+export async function deleteDevice(sql: Sql, id: string): Promise<string[]>;
+export async function deleteDevice(sql: Sql, id: string, opts: DeleteDeviceOptions): Promise<string[] | null>;
+export async function deleteDevice(sql: Sql, id: string, opts?: DeleteDeviceOptions): Promise<string[] | null> {
   return sql.begin(async (tx) => {
+    if (opts) {
+      await tx`select set_config('lock_timeout', ${`${opts.lockTimeoutMs ?? 3000}ms`}, true)`;
+      // Lock the device and every member of its family (in id order) before the recheck: until
+      // commit, touchLastSeen on any of them waits, so nobody can become active between the
+      // recheck and the delete. FOR SHARE does not block the FOR KEY SHARE of foreign-key inserts.
+      // So a join that lands after the recheck is not blocked; it needs a live family code, which an
+      // inactive guardian cannot have, and the cascade would only drop that brand-new link (accepted).
+      await tx`
+        select d.id from devices d
+        where d.id in (
+          select ${id}::text
+          union select guardian_id from family_links where protected_id = ${id}
+          union select m.protected_id from family_links m
+                where m.guardian_id = coalesce((select guardian_id from family_links where protected_id = ${id}), ${id}))
+        order by d.id for share of d`;
+      const still = await inactiveCandidates(tx, opts.onlyIfInactive, id);
+      if (still.length === 0) return null;
+    }
     // Links first, then verdicts under their domain locks (lock order of decideVerdict), so the
     // review queue counts drop with the device (D-alief-B10).
     await tx`delete from family_links where protected_id = ${id} or guardian_id = ${id}`;

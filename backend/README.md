@@ -77,12 +77,12 @@ Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_bl
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
-| `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not on `api/src/data/allowlist.ts`) |
+| `verdicts` | one per (owner, domain), last decision wins; `global_eligible` = blocklist eligibility snapshot taken at decision time (connected protected owner, not protected by `admin.domain_lists`) |
 | `blocklist_entries` | review queue + global list; only rows with `approved_at` (and no `removed_at`) are served. `rejected_at`/`rejected_by` = reviewer said no: out of the queue, cannot be approved until cleared, deleted like any undecided row when support ends |
 | `ops_heartbeat` | one row per writer (`healthz`, `cron`) |
 | `ops_jobs` | one row per cron job (`retention`, `notifications`): last start, last finish, last clean finish (`ok_at`), failed steps, backlog. Read by `GET /ops/status`; `shoo_api` cannot delete rows |
 | `push_log` | one row per push: guardian, scan, result code (`sent`, `logged`, `failed:<status> <reason>`, `failed:timeout\|network\|config`; CHECK). No notification text (D-alief-B11) |
-| `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP |
+| `rate_limit_hits` | sliding-window counters; key is sha256(`bucket:ip-or-device`), never a raw IP. Not used by `GET /verdicts`, `/screenshots`, `/favicons` and the per-minute `/replicas` limit: those go through the Rate Limiting bindings in `wrangler.jsonc` (`hitEdge`, same HMAC key), and only fall back to this table without a binding |
 
 Access: role `shoo_api` (no password in migrations) has CRUD on these tables only. `anon`/`authenticated` have no grants; RLS is on everywhere with a single `shoo_api` policy. No RPCs: the Worker uses plain SQL through postgres.js tagged templates.
 
@@ -111,9 +111,18 @@ Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<
 ### Layer 5 data (#241, migration `20261104133527_l5_review_data.sql`)
 
 - `admin.domain_review`: one row per LLM review of a queued domain. The dashboard cron calls `admin.review_due(limit)` (pending, not a shared host, no review since the last label change; counts only, no notes or page text) and stores `POST /review` answers with `admin.review_record(results, model, prompt, actor)`, which cleans model output and never touches `blocklist_entries`. `admin.vote` copies its decision to the latest review (trigger on `review_decisions`). Off until `review_enabled` (config, default `false`).
-- `admin.shared_hosts`: replaced as a whole by `admin.shared_hosts_set(hosts, actor, note)` from `ai/data/shared-hosts.json`; the backend keeps no list of its own.
+- Shared hosts: the view `admin.v_shared_hosts` (rows of `admin.domain_lists` with `hosting <> 'none'`, see below). The `admin.shared_hosts` table and `shared_hosts_set` were dropped in ADM-09.
 - `admin.ai_dataset` (view): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
 - Role `shoo_ai` (Team AI, login, read-only transactions, 3 connections): `select` on `admin.ai_dataset` only. Cloud setup (once, SQL editor as `postgres`): `alter role shoo_ai password '<from the password manager>';`.
+
+### Domain lists (ADM-09, migration `20261107095337_admin_domain_lists.sql`)
+
+`admin.domain_lists` is the one list of domains that must never be blocked (official banks, e-wallets, popular sites, public suffixes, shared hosting platforms). Each row has `protect` (`subtree` = the domain and its subdomains, `apex` = the exact name), `trusted` (official site, layer 3 stays quiet), `hosting` (`subdomains`: anyone gets a subdomain, `host_path`: anyone publishes under a path) and `public_suffix`. The matching rule is `admin.domain_match(host)`.
+
+- **Backend:** `POST /verdicts` asks `src/db/repo/domainLists.ts` `isProtected` in its own transaction (`admin.v_domain_lists_public`, the only `admin` object `shoo_api` reads besides `public_config`). A protected domain never enters the global review queue; the family's own verdict still applies. The backend keeps no list in code.
+- **Change it:** in the dashboard (page *Daftar domain*, phase 10b), which calls `admin.domain_set` / `admin.domain_remove` (note ≥ 10 characters, audited). Seed rows are `locked`: changing or removing one needs the domain typed again. Brand rows and 18 bank/payment rows are `hard_locked`: change them with a migration only. `admin.vote` (approve) and `admin.add_domain` refuse a protected domain (`SA019 allowlisted`).
+- **Seed:** generated once from the old lists by `db/scripts/domain-lists-seed.mjs`; `db/scripts/domain-lists-golden.mjs` recorded the old answers (`api/test/fixtures/domain-lists-golden.json`), and `api/test/domain-lists-golden.test.ts` proves the seed answers the same except the listed, categorized differences (`domain-lists-expected-diff.json`, summary in `db/scripts/domain-lists-diff.md`). `ai/` and the extensions keep their own lists until dashboard phase 10c.
+- **Rollback:** see the header of the migration (one transaction), then `git revert` the backend change.
 
 ## Env
 
@@ -137,6 +146,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | `APNS_TOPIC` | var | bundle ID of the build that receives pushes (B6); `""` until then |
 | `APNS_ENV` | var | `sandbox` (Debug builds) → `production` (TestFlight, fase 16) |
 | `OPS_STATUS_TOKEN` | secret | Bearer for `GET /ops/status` (`openssl rand -base64 32`, ≥ 32 characters, kept in the password manager). Unset or shorter → the route is a 404. Rotate with `wrangler secret put` + the GitHub Environment `ops` |
+| `INACTIVE_DEVICES` | var | `"dry_run"` (fase 24a-1, E7). Inactive-devices retention step: `dry_run` only counts candidates, `delete` deletes them (24a-2, after 7 clean dry runs), `off` or any other value skips the step (fail closed; the code default is `off`) |
 
 ## Retention (daily cron)
 
@@ -146,6 +156,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 - scans older than 14 days with a screenshot, favicon and/or page replica in the same chunks of 2000, max 25 per run, so dedupe reuses never hold other users' rows past day 14 (PR #20 review, HIGH). Each chunk tombstones its unshared paths (dedupe) and deletes the rows in one transaction, then removes the objects oldest first, grouped per store: at most 10 Supabase Storage DELETEs of 100 paths per run (50 external subrequests per Cron) and at most 40 R2 deletes of 100 keys per run (R2 binding, shared with the tombstone step; `backlog: true` in the log when rows are left). Paths over a budget, or left by a store failure, stay tombstoned; a failing store stops only its own calls; the rows are gone on day 14 either way. Verdicts stay with `scan_id` null (D-alief-14);
 - `storage_tombstones` (intent log of every screenshot, favicon and replica object, D-alief-B12): paths no scan points at, older than 10 min (retention's own are due at once: no upload can still land for a 14-day-old row), max 500 per run for Supabase plus what is left of the R2 budget. The store comes from the path: `-replica.html.gz` and `-icon.<ext>` are in R2, `<scan_id>.fragments.html.gz` (no `/`) in the archive bucket (tombstoned only by `DELETE /devices/me` for domains without scam evidence, from what is left of the R2 budget), everything else in Supabase Storage. `REPLICAS_ENABLED` never stops deletes;
 - `family_codes` expired > 1 h, `join_attempts` > 1 day, `push_log` > 14 days, `rate_limit_hits` > 1 day (chunks of 20000, max 50).
+- inactive devices (E7, fase 24a, mode `INACTIVE_DEVICES`), last: a device with no request for 90 days goes only when every member of its family (guardian + all its protected devices) has none either; a device without a family is judged alone; a registration never used again (last seen within 1 h of `created_at`, no family link) goes after 30 days. `dry_run` counts the candidates; `delete` deletes at most 50 per run through `deleteDevice` (same as `DELETE /devices/me`), rechecking the rule inside each transaction (`lock_timeout` 3 s, family rows locked); a device that came back or was locked (40P01/55P03) is skipped until tomorrow, any other error fails the step. More candidates than 50 → `backlog: true` (delete mode only). Object paths are tombstoned and removed by a later run's tombstone step. Log: `{"event":"inactive_devices","mode","candidates","deleted","skipped","failed"}`, counts only.
 
 `scheduled()` awaits the run, so a failed step fails the Cron event.
 
@@ -198,7 +209,7 @@ still runs. The workflow (fase 21b) adds `healthz_down`, `ops_status_unreachable
 
 ## Quota (Supabase Free + R2)
 
-`db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); one block screen polling `GET /verdicts` all day ≈ 17k `rate_limit_hits` rows ≈ 4 MB (kept 1 day).
+`db/scripts/quota-estimate.sql` (local, rolled back): 1000 realistic scans ≈ 1.4 MB with indexes (≈ 1.5 KB per scan); polling `GET /verdicts` writes no `rate_limit_hits` row since the Rate Limiting binding (before: ≈ 17k rows ≈ 4 MB per block screen open all day, kept 1 day).
 - DB 500 MB: ≈ 300k scans alive (14 days) ≈ 20k scans/day.
 - Supabase Storage 1 GB: screenshots only from older builds (≤ 150 KB, ≤ 50 per device and 300 in total per day, kept 14 days) and favicons stored before fase 18a (`-favicon.`, gone within 15 days). Both are removed in 18c.
 - Supabase egress 5 GB/month: every screenshot view streams from Storage (no cache, D-alief-B08) → ≈ 35k views/month at 150 KB.
