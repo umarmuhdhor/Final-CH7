@@ -35,6 +35,17 @@ struct FormatterTests {
             || Formatters.time(date, language: .english, timeZone: jakarta).hasPrefix("10:42 AM"))
     }
 
+    @Test func cachedFormatterIsReusedAndKeyedByLocaleAndTimeZone() throws {
+        let jakarta = try #require(TimeZone(identifier: "Asia/Jakarta"))
+        let makassar = try #require(TimeZone(identifier: "Asia/Makassar"))
+        let date = try #require(ISO8601DateFormatter().date(from: "2026-10-25T03:42:00Z"))
+        let first = Formatters.dateFormatter(template: "jmz", locale: AppLanguage.indonesian.locale, timeZone: jakarta)
+        #expect(Formatters.dateFormatter(template: "jmz", locale: AppLanguage.indonesian.locale, timeZone: jakarta) === first)
+        #expect(Formatters.time(date, language: .indonesian, timeZone: jakarta) == "10.42 WIB")
+        #expect(Formatters.time(date, language: .indonesian, timeZone: makassar) == "11.42 WITA")
+        #expect(Formatters.time(date, language: .english, timeZone: jakarta).hasPrefix("10:42"))
+    }
+
     @Test func activityDayAddsTheYearOnlyForPastYears() throws {
         let jakarta = try #require(TimeZone(identifier: "Asia/Jakarta"))
         let now = try #require(ISO8601DateFormatter().date(from: "2026-10-28T03:00:00Z"))
