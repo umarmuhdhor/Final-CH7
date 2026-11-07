@@ -16,6 +16,9 @@ final class SessionStore: @unchecked Sendable {
     private let lock = NSLock()
     private var _guardian: GuardianInfo?
     private var _onlineCheckAllowed: Bool
+    /// Empties in-memory copies of server data (the favicon cache, fase 22c) when what they show is no
+    /// longer this phone's to see (P13).
+    private let forgetCachedDataHandler: @Sendable () -> Void
 
     /// The keys this app writes. `extension.lastSeenAt` belongs to the extension and is left alone.
     static let appKeys = [
@@ -29,9 +32,11 @@ final class SessionStore: @unchecked Sendable {
         keychain: KeychainItem = .deviceSession,
         apiBaseURL: URL = AppConfig.apiBaseURL,
         aiBaseURL: URL? = AppConfig.aiBaseURL,
-        onlineCheckAllowed: Bool = false
+        onlineCheckAllowed: Bool = false,
+        forgetCachedData: @escaping @Sendable () -> Void = { CachedFaviconLoader.shared.clear() }
     ) {
         _onlineCheckAllowed = onlineCheckAllowed
+        forgetCachedDataHandler = forgetCachedData
         self.defaults = defaults
         self.keychain = keychain
         self.apiBaseURL = apiBaseURL
@@ -64,6 +69,8 @@ final class SessionStore: @unchecked Sendable {
             _guardian = nil
             writeBaseURLsLocked()
         }
+        // A new device (registration, guardian → protected) sees other scans.
+        forgetCachedData()
     }
 
     /// Also at every launch, so a new build's URLs reach the extension.
@@ -91,15 +98,20 @@ final class SessionStore: @unchecked Sendable {
 
     /// `nil` = no guardian (left, removed by the guardian, or never joined): EX-06 stops naming them.
     func setGuardian(_ guardian: GuardianInfo?) {
-        lock.withLock {
-            guard guardian == nil || hasSessionLocked else { return }
+        let lostGuardian = lock.withLock { () -> Bool in
+            guard guardian == nil || hasSessionLocked else { return false }
+            let hadGuardian = _guardian != nil || defaults.string(forKey: AppGroup.Key.guardianName) != nil
             _guardian = guardian
             if let guardian {
                 defaults.set(guardian.name, forKey: AppGroup.Key.guardianName)
             } else {
                 defaults.removeObject(forKey: AppGroup.Key.guardianName)
             }
+            return hadGuardian && guardian == nil
         }
+        // Left the family, or the guardian removed this phone. Not on a guardian's every
+        // `GET /devices/me` (never had one).
+        if lostGuardian { forgetCachedData() }
     }
 
     /// Delete my data, session expired: the extension loses its session at once (P3, P13).
@@ -109,7 +121,12 @@ final class SessionStore: @unchecked Sendable {
             for key in Self.appKeys { defaults.removeObject(forKey: key) }
             _guardian = nil
         }
+        forgetCachedData()
     }
+
+    /// Also from `ApiRepository.removeMember`. Outside `lock`: the
+    /// cache has its own.
+    func forgetCachedData() { forgetCachedDataHandler() }
 
     private var hasSessionLocked: Bool { defaults.string(forKey: AppGroup.Key.deviceId) != nil }
 
