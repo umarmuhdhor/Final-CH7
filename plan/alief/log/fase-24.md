@@ -1,6 +1,6 @@
 # Log fase 24 — Privasi dan data (E6, E7, C22)
 
-- **Status:** [r] 24a-1 PR `feat/E7-inactive-devices`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 24a-1 butir 1 (7 run dry-run setelah deploy CI)** · [r] 24c-1 PR `fix/E6-privacy-contact`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 1–2 (mailbox K10 belum ada)** · 24a-2 dan 24b belum (24b/24c-2 = app).
+- **Status:** [r] 24a-1 PR #312 `feat/E7-inactive-devices`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 24a-1 butir 1 (7 run dry-run setelah deploy CI)** · [r] 24c-1 PR `fix/E6-privacy-contact`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 1–2 (mailbox K10 belum ada)** · 24a-2 dan 24b belum (24b/24c-2 = app).
 - **Model:** Claude Opus 5.5, sesi track be. 1 Nov 2026.
 - **Rencana:** `fase-24-privacy-data.md` (PR #207).
 - **Keputusan K:** R8 §c (D-alief-C29): K10 (a) mailbox tim gratis (belum dibuat → LANGKAH MANUAL 1), K11 (a) tetap `workers.dev`, K12 isian App Privacy ditanyakan ke Umar (E6). Tidak ada D-alief baru.
