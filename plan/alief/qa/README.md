@@ -68,3 +68,7 @@ Retest: QA-<ronde>/P0-1_retest.png — <keterangan>
 
 ✓ lulus · △ lulus sebagian · ✗ gagal.
 ```
+
+## Live replica UI (fase 23c)
+
+`SHOO_SIM=<UDID> bash plan/alief/qa/replica-ui.sh` — prasyarat: `pnpm -C backend/api dev` (dengan `backend/api/.dev.vars`) dan `supabase start` jalan, Node 24, `xcodegen`; 2 device per run (`POST /devices` 10/jam/IP), dijalankan sebelum PR yang menyentuh `Features/Detail/Replica*` atau `backend/api/src/{routes/replicas,services/replicas}.ts`.
