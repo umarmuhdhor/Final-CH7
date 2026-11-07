@@ -12,7 +12,7 @@
 | 23a-0 repro | – | – | [x] (ringkas, lihat bawah) |
 | 23a | `fix/C2-test-flakes` | lihat PR | [r] PR terbuka |
 | 23b usulan CI | – | di PR 23a (`## Questions for Umar`) | [r] menunggu Umar |
-| 23c live replica UI | `feat/DT-04-live-replica-ui` | lihat PR | [r] PR terbuka |
+| 23c live replica UI | `feat/DT-04-live-replica-ui` | #317 | [r] PR terbuka |
 
 ## 23a-0 — repro (S1, ringkas)
 
