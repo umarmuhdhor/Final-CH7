@@ -73,9 +73,9 @@ Diubah: `backend/api/src/db/repo/scans.ts` (`ReplicaQuota`, `ReplicaQuotaReason`
   - **Hasil 7 Nov 2026, 17:11 UTC** (sesi Claude atas permintaan Alief, `supabase db query --linked`, baca saja): 16 scan ber-replica, rata-rata 21 844 B, p95 86 550 B (< 100 KB). Per akar keluarga per hari (3–7 Nov): upload tertinggi 8 dalam sehari (6 Nov), p95 upload ≤ 8 (< 30), byte tertinggi sehari 167 470 B. **Lulus:** angka K2 tidak perlu ditinjau.
 - [ ] 2. ~~Jawab K2/K3~~ — dijawab lewat D-alief-C29 (rekomendasi R8).
 - [ ] 3. **(Umar merge)** Merge di menit :10–:40, tidak di 18:30–19:30 UTC. Deploy hanya lewat CI.
-- [~] 4. **(Alief)** Uji asap cloud dengan `wrangler tail` terbuka: `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud` → replica tersimpan, `POST /scans` tanpa `exceededCpu`; tunggu cron `:05` → satu baris `replica_quota_usage`.
+- [x] 4. **(Alief)** Uji asap cloud dengan `wrangler tail` terbuka: `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud` → replica tersimpan, `POST /scans` tanpa `exceededCpu`; tunggu cron `:05` → satu baris `replica_quota_usage`.
   - **Hasil 7 Nov 2026, 17:13 UTC** (tail terbuka, tanpa `--bench`): `replica-e2e.sh --cloud` → **ALL PASS** (replica tersimpan, header aman, gzip sama, navigate/iframe 404, hapus → 404). Tail: `POST /scans` cpu 108 ms, wall 786 ms, `ok`; rute lain 9–25 ms; tanpa `exceededCpu`.
-  - Baris `replica_quota_usage` dari cron `:05`: lihat bawah (diisi setelah 18:05 UTC).
+  - Cron `5 * * * *` 7 Nov 18:05 UTC: cpu 28 ms, wall 1 804 ms, `ok`. Tepat satu baris `{"event":"replica_quota_usage","level":"ok","uploads":1,"bytes":84401,"uploadsMax":3000,"bytesMax":524288000,"families":1,"familiesAtCap":0,"topFamilyUploads":1,"topFamilyBytes":84401}` (tanpa id). Tanpa `replica_usage_failed`. **Lulus.**
 - [ ] 5. Fase 21c memakai `replicaUsage` (sudah dikerjakan stacked, lihat `log/fase-21.md`).
 
 ## Catatan handoff
