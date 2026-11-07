@@ -1003,11 +1003,7 @@ private struct NotificationsPage: View {
     /// "22:00" → "22.00" in Indonesian, "22:00" in English.
     static func clock(_ value: String, language: AppLanguage) -> String {
         guard let date = QuietHoursSheet.date(value) else { return value }
-        let formatter = DateFormatter()
-        formatter.locale = language.locale
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        formatter.setLocalizedDateFormatFromTemplate("HHmm")
-        return formatter.string(from: date)
+        return Formatters.dateFormatter(template: "HHmm", locale: language.locale, timeZone: .gmt).string(from: date)
     }
 }
 
@@ -1250,11 +1246,8 @@ private struct AccessibilityPage: View {
 
     /// "10.42" / "10:42".
     private static func sampleTime(locale: Locale) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        formatter.setLocalizedDateFormatFromTemplate("HHmm")
-        return formatter.string(from: Date(timeIntervalSince1970: 10 * 3600 + 42 * 60))
+        Formatters.dateFormatter(template: "HHmm", locale: locale, timeZone: .gmt)
+            .string(from: Date(timeIntervalSince1970: 10 * 3600 + 42 * 60))
     }
 }
 
