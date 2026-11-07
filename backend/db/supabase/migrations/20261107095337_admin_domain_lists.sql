@@ -449,6 +449,7 @@ begin
      or (p_protect = 'none' and not p_trusted and p_hosting = 'none') then
     raise exception using errcode = '22023', message = 'invalid_argument';
   end if;
+  perform admin._require_read_committed();   -- K7 must see approvals committed while it waited
   perform pg_advisory_xact_lock(7, 1);
   select * into v_old from admin.domain_lists where domain = p_domain for update;
   if v_old.hard_locked then
@@ -483,7 +484,7 @@ begin
         detail = jsonb_build_object('domains', to_jsonb(v_blocked[1:20]), 'total', v_total)::text;
     end if;
   end if;
-  if (v_old.locked
+  if (coalesce(v_old.locked, false)
       or (p_trusted and not coalesce(v_old.trusted, false))
       or (p_protect = 'subtree' and v_old.protect is distinct from 'subtree')
       or (p_public_suffix and not coalesce(v_old.public_suffix, false)))
@@ -516,6 +517,7 @@ begin
   perform admin._check_actor(p_actor);
   perform admin._check_domain(p_domain, false);
   perform admin._check_list_note(p_note);
+  perform admin._require_read_committed();
   perform pg_advisory_xact_lock(7, 1);
   select * into v_old from admin.domain_lists where domain = p_domain for update;
   if not found then

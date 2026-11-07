@@ -5,7 +5,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(95);
+select plan(97);
 
 -- One SELECT as shoo_admin: its first column, or 'ERR <sqlstate> <message>' (as admin_schema.test.sql).
 create function pg_temp.as_admin(q text) returns text language plpgsql as $$
@@ -177,6 +177,10 @@ update admin.domain_lists set note = note where domain = 'no-such-row.test';
 select is(pg_temp.version(), (select v + 1 from v0), 'I17: a statement that changes 0 rows does not change the version');
 update admin.domain_lists set note = note where domain in ('newpage.test', 'trusted-new.test');
 select is(pg_temp.version(), (select v + 2 from v0), 'I17: one statement over 2 rows = version + 1');
+do $d$ begin perform pg_temp.as_admin($$select admin.domain_set('version-new.test', 'apex', false, 'none', false, 'baris baru uji versi', 'a@test')$$); end $d$;
+select is(pg_temp.version(), (select v + 3 from v0), 'I17: a new row (insert path of the upsert) = version + 1');
+do $d$ begin perform pg_temp.as_admin($$select admin.domain_remove('version-new.test', 'hapus baris uji versi', 'a@test')$$); end $d$;
+select is(pg_temp.version(), (select v + 4 from v0), 'I17: domain_remove = version + 1');
 
 -- ---------------------------------------------------------------- domain_remove
 
