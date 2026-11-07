@@ -27,12 +27,24 @@ enum Formatters {
     /// "10.42 WIB" / "10:42 AM GMT+7": the hour in the language's style plus the time-zone
     /// abbreviation (Activity rows, PR-05/GD-05).
     static func time(_ date: Date, language: AppLanguage, timeZone: TimeZone = .current) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = language.locale
-        formatter.timeZone = timeZone
-        formatter.setLocalizedDateFormatFromTemplate("jmz")
-        return formatter.string(from: date)
+        dateFormatter(template: "jmz", locale: language.locale, timeZone: timeZone).string(from: date)
     }
+
+    /// One `DateFormatter` per template, locale and time zone. Building one and resolving its template
+    /// costs far more than formatting, and Activity formats a time for every row on every render.
+    /// `DateFormatter` is thread-safe once configured (never changed after this), and so is `NSCache`.
+    static func dateFormatter(template: String, locale: Locale, timeZone: TimeZone) -> DateFormatter {
+        let key = "\(template)|\(locale.identifier)|\(timeZone.identifier)" as NSString
+        if let cached = dateFormatters.object(forKey: key) { return cached }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.timeZone = timeZone
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        dateFormatters.setObject(formatter, forKey: key)
+        return formatter
+    }
+
+    private static let dateFormatters = NSCache<NSString, DateFormatter>()
 
     /// Activity day header: "25 Oktober" / "October 25", with the year when it isn't this year's.
     /// "Today" is the caller's (its wording differs per screen).
