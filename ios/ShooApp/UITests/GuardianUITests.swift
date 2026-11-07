@@ -24,9 +24,8 @@ final class GuardianUITests: XCTestCase {
     @MainActor
     func testFamilyModeIsRememberedAfterRelaunch() {
         var app = launch(familyMode: false)
-        // Guardian Home (GD-01): hero status, security strip, no "Protected by" row.
+        // Guardian Home (GD-01): hero status, no "Protected by" row.
         XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.descendants(matching: .any)["home.securityStatus"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["shield.guardian"].exists)
         app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
         // Family Home (Figma 435:20373): the fixture's sites are older than a day, so no card waits.

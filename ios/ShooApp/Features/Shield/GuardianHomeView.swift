@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// Guardian Home, both sides of the ⇆ switch (GD-01/02/03, Figma HOME page).
-/// `personal` (Family mode off, "Pribadi/Home" 435:20058): blue hero, security status, four tiles, own recent sites.
+/// `personal` (Family mode off, "Pribadi/Home" 957:10924, Waspada 955:10369, Bahaya 955:10467): the hero says how
+/// the last day went, then own recent sites and the latest scams.
 /// `family` ("Guardian/Home" 435:20373): teal hero, the people looked after, the site that waits for a verdict
-/// (435:20899), the family's recent sites; nobody yet → the invite code and how it works (435:20630).
+/// (957:11002, Bahaya 955:10565), the family's recent sites; nobody yet → the invite code and how it works (435:20630).
 struct GuardianHomeView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
@@ -31,16 +32,26 @@ struct GuardianHomeView: View {
             VStack(spacing: 0) {
                 hero
                     .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
-                VStack(spacing: 0) {
-                    strip
-                    sheet.homeSheet()
+                if isFamily {
+                    VStack(spacing: 0) {
+                        strip
+                        sheet.homeSheet()
+                    }
+                    VStack(spacing: 24) {
+                        below
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 24)
+                    .padding(.bottom, 32)
+                } else {
+                    // Figma "Status" 957:10957: no strip, the page itself rounds up over the hero.
+                    sheet
+                        .padding(.horizontal, 24)
+                        .padding(.top, 30)
+                        .padding(.bottom, 32)
+                        .frame(maxWidth: .infinity)
+                        .background(HomeTheme.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
-                VStack(spacing: 24) {
-                    below
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 32)
-                .padding(.bottom, 32)
             }
             // Light only, like the Figma; scoped to the page so the bars keep their own scheme.
             .environment(\.colorScheme, .light)
@@ -103,11 +114,17 @@ struct GuardianHomeView: View {
     private var hero: some View {
         if !isFamily {
             let isActive = model.extensionStatus.isActive
+            // The level reads the last day's sites: while they load (or never loaded) the hero only says Shoo is
+            // on, never "You're protected!" without the data behind it.
+            let isChecking = isActive && model.state != .loaded
+            // Shoo being off outranks what it saw while it was on.
+            let level = isActive && !isChecking ? model.level : .normal
             HomeHero(
-                style: .blue,
-                title: isActive ? "You're protected!" : "You're not protected yet",
-                titleIdentifier: isActive ? "home.status.active" : "home.status.off",
+                style: level.heroStyle,
+                title: !isActive ? "You're not protected yet" : isChecking ? "Shoo is on" : level.title,
+                titleIdentifier: !isActive ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier,
                 shieldOn: isActive,
+                shieldTint: level.shieldTint,
                 bottomPadding: isActive ? nil : 20
             ) {
                 if !isActive {
@@ -128,8 +145,9 @@ struct GuardianHomeView: View {
             HomeHero(style: .empty, title: "Protect your loved ones", titleIdentifier: "home.family.empty",
                      subtitle: "No one to protect yet", shieldTint: .teal, layout: .familyEmpty)
         } else if model.pendingScan != nil {
-            HomeHero(style: .teal, title: "Family needs confirmation", titleIdentifier: "home.family.pending", shieldTint: .orange,
-                     layout: .familyPending)
+            let isDanger = model.level == .danger
+            HomeHero(style: isDanger ? .crimson : .teal, title: isDanger ? "Family in danger" : "Family needs confirmation",
+                     titleIdentifier: "home.family.pending", shieldTint: isDanger ? .crimson : .orange, layout: .familyPending)
         } else {
             HomeHero(style: .teal, title: "Family protected!", titleColor: Color(red: 0x00 / 255, green: 0x38 / 255, blue: 0x3C / 255),
                      titleIdentifier: "home.family.protected", shieldTint: .teal, layout: .family)
@@ -138,11 +156,10 @@ struct GuardianHomeView: View {
 
     @ViewBuilder
     private var strip: some View {
-        if !isFamily {
-            StatusStrip(title: "Security status:", value: model.extensionStatus.isActive ? "Good!" : "Danger!", fill: StatusStrip.personal)
-        } else if model.hasNoFamily {
-            StatusStrip(title: "Family status:", value: "No members yet", fill: HomeTheme.navy,
-                        valueWeight: .regular, valueColor: StatusStrip.mutedValue)
+        if model.hasNoFamily {
+            StatusStrip(title: "Family status:", value: "No members yet", fill: HomeTheme.navy, valueColor: StatusStrip.mutedValue)
+        } else if model.level == .danger {
+            StatusStrip(title: "Family status:", value: "in danger", fill: StatusStrip.danger)
         } else {
             StatusStrip(title: "Family status:", value: model.pendingScan != nil ? "needs confirmation" : "All safe!", fill: StatusStrip.family)
         }
@@ -169,7 +186,17 @@ struct GuardianHomeView: View {
             .padding(16)
         case .loaded:
             if !isFamily {
-                StatsGrid(stats: model.stats)
+                VStack(spacing: 24) {
+                    RecentActivity(
+                        scans: model.recent,
+                        language: language,
+                        onOpen: { env.router.showDetail(scanId: $0.id) },
+                        onSeeAll: { env.router.selectedTab = .activity }
+                    )
+                    if !model.scamCases.isEmpty {
+                        LatestScamsCard(cases: model.scamCases)
+                    }
+                }
             } else if model.hasNoFamily {
                 // Figma "Konten" 435:20630: the card 16 under the sheet's top, 24 from its sides, 20 above its bottom.
                 InviteCodeCard(repository: env.repository) { Task { await model.refresh() } }
@@ -205,7 +232,7 @@ struct GuardianHomeView: View {
                 RecentActivity(
                     scans: model.recent,
                     language: language,
-                    showsOwner: isFamily,
+                    showsOwner: true,
                     onOpen: { env.router.showDetail(scanId: $0.id) },
                     onSeeAll: { env.router.selectedTab = .activity }
                 )
@@ -214,76 +241,39 @@ struct GuardianHomeView: View {
     }
 }
 
-// MARK: - Personal: four tiles
+// MARK: - Personal: the hero per level
 
-private struct StatsGrid: View {
-    let stats: GuardianHomeModel.Stats
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var body: some View {
-        // Figma: 191 × 98 tiles, 4 apart, 8 in from the sheet's edges.
-        let columns = dynamicTypeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)]
-        LazyVGrid(columns: columns, spacing: 4) {
-            StatTile(systemImage: "network.badge.shield.half.filled", value: stats.blocked, title: "Threats blocked")
-            StatTile(systemImage: "lock.open.trianglebadge.exclamationmark.fill", value: stats.warnings, title: "Security risks")
-            StatTile(systemImage: "hand.raised.fill", value: stats.suspiciousHosts, title: "Suspicious hosts")
-            // Figma glyph U+103477 is `macwindow.stack` (iOS 26).
-            StatTile(systemImage: UIImage(systemName: "macwindow.stack") != nil ? "macwindow.stack" : "rectangle.stack",
-                     value: stats.recentScans, title: "Recent scans")
+private extension GuardianHomeModel.Level {
+    var heroStyle: HomeHeroStyle {
+        switch self {
+        case .normal: .blue
+        case .warning: .amber
+        case .danger: .red
         }
-        .overlay {
-            if !dynamicTypeSize.isAccessibilitySize {
-                // Figma dividers: a vertical and a horizontal hairline that fade at the ends.
-                ZStack {
-                    LinearGradient(colors: [HomeTheme.divider, HomeTheme.divider.opacity(0)], startPoint: .top, endPoint: .bottom)
-                        .frame(width: 1)
-                        // Figma Line 13 sits at x 199, 2 pt left of the gap's centre.
-                        .offset(x: -2)
-                    FadingDivider()
-                        .padding(.horizontal, 16)
-                }
-                .padding(.vertical, 8)
-                .accessibilityHidden(true)
-            }
-        }
-        .padding(8)
-        .accessibilityIdentifier("home.stats")
     }
-}
 
-private struct StatTile: View {
-    let systemImage: String
-    let value: Int
-    let title: LocalizedStringKey
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            HStack {
-                Image(systemName: systemImage)
-                    .font(.system(size: 13.6))
-                    .foregroundStyle(HomeTheme.tileIcon)
-                    .frame(width: 30, height: 30)
-                    .background(HomeTheme.tileIconBackground, in: RoundedRectangle(cornerRadius: 9.1, style: .continuous))
-                    .accessibilityHidden(true)
-                Spacer()
-                Text(verbatim: "\(value)")
-                    .onboardingFont(23, weight: .bold, relativeTo: .title2)
-                    .monospacedDigit()
-                    .foregroundStyle(HomeTheme.ink)
-            }
-            Text(title)
-                .textCase(.uppercase)
-                .onboardingFont(13, weight: .medium, relativeTo: .footnote)
-                .foregroundStyle(HomeTheme.secondaryInk)
-                .fixedSize(horizontal: false, vertical: true)
+    var shieldTint: HalftoneShield.Tint {
+        switch self {
+        case .normal: .blue
+        case .warning: .amber
+        case .danger: .red
         }
-        // Figma: 16 all round on a 98 pt tile; SwiftUI's taller 13 pt line takes the last 1.6.
-        .padding([.horizontal, .top], 16)
-        .padding(.bottom, 14.4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(title))
-        .accessibilityValue(Text(verbatim: "\(value)"))
+    }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .normal: "You're protected!"
+        case .warning: "Stay alert!"
+        case .danger: "Danger detected!"
+        }
+    }
+
+    var titleIdentifier: String {
+        switch self {
+        case .normal: "home.status.active"
+        case .warning: "home.status.warning"
+        case .danger: "home.status.danger"
+        }
     }
 }
 
@@ -365,7 +355,7 @@ private struct MemberCell: View {
 
 // MARK: - Family: the site that waits
 
-/// Figma "Kartu Situs" (435:21036): who opened it and when, the site, the risk gauge, the reason in plain words,
+/// Figma "Kartu Situs" (957:11077): who opened what, the site and when, the risk gauge, the reason in plain words,
 /// then Bahaya / Aman under the card.
 private struct PendingSiteCard: View {
     let scan: ScanResult
@@ -384,29 +374,18 @@ private struct PendingSiteCard: View {
     private var reason: String? {
         Evidence.top(scan.signals, mode: .guardian, language: language, limit: 1).first?.text
     }
-    private var eyebrow: String {
-        // Figma: "DIBUKA SYAHNAZ · HARI INI, 10.42".
-        let opened = L10n.string("Opened by \(scan.ownerName)", language: language)
-        return "\(opened) · \(Formatters.dayAndTime(scan.detectedAt, language: language, compact: true))".uppercased(with: language.locale)
-    }
-
-    private var titleText: some View {
-        Text(verbatim: title)
-            .onboardingFont(18, weight: .semibold, relativeTo: .headline)
-            .tracking(-0.18)
-            .foregroundStyle(HomeTheme.bodyInk)
-    }
-
     private var domainChip: some View {
-        // Figma "Tag": 11 pt, 9 × 3 padding, #E6E8EC.
+        // Figma "Tag": 11 pt rounded, 9 × 3 padding, #E6E8EC, 1 pt stroke.
         Text(verbatim: scan.domain)
-            .onboardingFont(11, relativeTo: .caption)
+            .onboardingFont(11, design: .rounded, relativeTo: .caption)
+            .tracking(0.06)
             .foregroundStyle(HomeTheme.bodyInk)
             .lineLimit(1)
             .truncationMode(.middle)
             .padding(.horizontal, 9)
             .padding(.vertical, 3)
             .background(HomeTheme.quietFill, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color(red: 0xDC / 255, green: 0xDF / 255, blue: 0xE4 / 255), lineWidth: 1))
     }
 
     var body: some View {
@@ -414,21 +393,20 @@ private struct PendingSiteCard: View {
         VStack(spacing: 12) {
             Button(action: onOpen) {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(verbatim: eyebrow)
-                            .onboardingFont(11, relativeTo: .caption)
-                            .tracking(1.3)
-                            .foregroundStyle(Color(red: 0x6B / 255, green: 0x70 / 255, blue: 0x78 / 255))
-                        // Title and site side by side when both fit; otherwise the site goes under the title.
-                        ViewThatFits(in: .horizontal) {
-                            HStack(spacing: 8) {
-                                titleText.fixedSize()
-                                domainChip
-                            }
-                            VStack(alignment: .leading, spacing: 6) {
-                                titleText.lineLimit(2)
-                                domainChip
-                            }
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Figma: "Syahnaz" semibold, the rest regular, "Title 3".
+                        (Text(verbatim: scan.ownerName).fontWeight(.semibold) + Text(verbatim: " ") + Text("opened \(title)"))
+                            .onboardingFont(20, relativeTo: .title3)
+                            .tracking(-0.45)
+                            .foregroundStyle(HomeTheme.navy)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 8) {
+                            domainChip
+                            Text(verbatim: Formatters.dayAndTime(scan.detectedAt, language: language, compact: true))
+                                .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+                                .tracking(-0.08)
+                                .foregroundStyle(HomeTheme.secondaryInk)
+                                .fixedSize()
                         }
                     }
                     .padding(.trailing, 44)
@@ -438,8 +416,8 @@ private struct PendingSiteCard: View {
                         .frame(maxWidth: .infinity)
                     if let reason {
                         Text(verbatim: reason)
-                            .onboardingFont(15, relativeTo: .subheadline)
-                            .lineSpacing(4.6)
+                            .onboardingFont(17, design: .rounded, relativeTo: .subheadline)
+                            .lineSpacing(3.5)
                             .foregroundStyle(HomeTheme.secondaryInk)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.top, 8)
@@ -484,9 +462,9 @@ private struct PendingSiteCard: View {
             if canDecide {
                 let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
                 layout {
-                    DecisionButton(title: "Danger", systemImage: "exclamationmark.circle.fill", color: HomeTheme.dangerButton) { onDecide(.notSafe) }
+                    DecisionButton(title: "Danger", systemImage: "exclamationmark.circle.fill", colors: DecisionButton.danger) { onDecide(.notSafe) }
                         .accessibilityIdentifier("home.verdict.notSafe")
-                    DecisionButton(title: "Safe", systemImage: "checkmark.circle.fill", color: HomeTheme.navy) { onDecide(.safe) }
+                    DecisionButton(title: "Safe", systemImage: "checkmark.circle.fill", colors: DecisionButton.safe) { onDecide(.safe) }
                         .accessibilityIdentifier("home.verdict.safe")
                 }
                 .padding(.horizontal, 16)
@@ -512,21 +490,23 @@ private struct PendingSiteCard: View {
     }
 }
 
-/// Figma "Button" Red / Secondary: white capsule, 1 pt ring and a small shadow.
+/// Figma "Button" (957:11090, 957:11091): a filled gradient capsule, 1 pt ring and a small shadow.
 private struct DecisionButton: View {
+    static let danger = [Color(red: 0xF6 / 255, green: 0x47 / 255, blue: 0x47 / 255), Color(red: 0xBB / 255, green: 0x16 / 255, blue: 0x16 / 255)]
+    static let safe = [Color(red: 0x2F / 255, green: 0x84 / 255, blue: 0xCC / 255), HomeTheme.action]
+
     let title: LocalizedStringKey
     let systemImage: String
-    let color: Color
+    let colors: [Color]
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Label { Text(title) } icon: { Image(systemName: systemImage) }
                 .onboardingFont(17, weight: .semibold, relativeTo: .headline)
-                .tracking(-0.2)
-                .foregroundStyle(color)
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 46)
-                .background(.white, in: Capsule())
+                .background(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom), in: Capsule())
                 .overlay(Capsule().stroke(Color(red: 0xE3 / 255, green: 0xE3 / 255, blue: 0xE3 / 255), lineWidth: 1))
                 .figmaButtonShadow()
                 .contentShape(Capsule())

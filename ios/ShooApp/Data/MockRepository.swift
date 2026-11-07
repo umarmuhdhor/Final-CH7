@@ -148,6 +148,10 @@ actor MockRepository: ShooRepository {
         return DeviceRegistration(deviceId: profile.deviceId, token: "mock-\(UUID().uuidString)", avatarId: avatarId)
     }
 
+    func latestScams() async throws -> [ScamCase] {
+        scenario == .figma ? MockScenarios.scamCases : []
+    }
+
     func me() async throws -> DeviceProfile {
         try await pause()
         return profile

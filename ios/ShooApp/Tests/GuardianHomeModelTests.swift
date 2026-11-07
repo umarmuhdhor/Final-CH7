@@ -55,11 +55,33 @@ struct GuardianHomeModelTests {
         #expect(model.level == .normal)
     }
 
-    @Test func statsCountTheFamilyScans() async throws {
+    @Test func personalLevelFollowsTheLastDay() async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let scans = try await repository.scans(owner: .me, status: nil, cursor: nil).items
+        let warning = try #require(scans.first { $0.status == .warning })
+
+        let fresh = model(repository: repository, settings: try settings(), now: warning.detectedAt.addingTimeInterval(60), scope: .personal)
+        await fresh.refresh()
+        #expect(fresh.level == .warning)
+
+        let later = model(repository: repository, settings: try settings(), now: warning.detectedAt.addingTimeInterval(2 * 24 * 60 * 60), scope: .personal)
+        await later.refresh()
+        #expect(later.level == .normal)
+    }
+
+    @Test func scamCardOnlyOnThePersonalSide() async throws {
+        let repository = MockRepository(mode: .guardian, scenario: .figma, latency: .zero)
+        let personal = model(repository: repository, settings: try settings(), scope: .personal)
+        await personal.refresh()
+        #expect(personal.scamCases == MockScenarios.scamCases)
+        let family = model(repository: repository, settings: try settings(), scope: .family)
+        await family.refresh()
+        #expect(family.scamCases.isEmpty)
+    }
+
+    @Test func recentListsTheMembersSites() async throws {
         let model = model(settings: try settings())
         await model.refresh()
-        let lastDay = model.scans.filter { $0.detectedAt >= Self.fixtureNow.addingTimeInterval(-24 * 60 * 60) }.count
-        #expect(model.stats == .init(blocked: 3, warnings: 2, suspiciousHosts: 5, recentScans: lastDay))
         // Members' sites only, newest first (GD-05): the guardian's own scans stay on the personal side.
         let members = model.scans.filter { $0.ownerDeviceId != MockRepository.guardianProfile.deviceId }
         #expect(model.recent.map(\.id) == Array(members.prefix(GuardianHomeModel.recentCount)).map(\.id))
@@ -128,5 +150,32 @@ struct GuardianHomeModelTests {
         let model = model(settings: try settings(), extensionStatus: .off(lastSeen: nil, reason: .switchedOff))
         await model.refresh()
         #expect(!model.extensionStatus.isActive)
+    }
+
+    @Test func personalPagingStopsPastTheLastDayFamilyReadsAll() async throws {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let template = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
+        let now = Self.fixtureNow
+        // 60 scans an hour apart, 10 a page: the last day ends in the third page.
+        let scans = (0..<60).map { index in
+            var scan = template
+            scan.id = "scan-\(index)"
+            scan.detectedAt = now.addingTimeInterval(-Double(index + 1) * 3600)
+            return scan
+        }
+        func repository() -> CountingScansRepository {
+            let repository = CountingScansRepository(base: base)
+            for start in stride(from: 0, to: 60, by: 10) {
+                repository.pages[start == 0 ? "" : String(start)] =
+                    ScanPage(items: Array(scans[start..<start + 10]), nextCursor: start + 10 < 60 ? String(start + 10) : nil)
+            }
+            return repository
+        }
+        let personalRepository = repository()
+        await model(repository: personalRepository, settings: try settings(), now: now, scope: .personal).refresh()
+        #expect(personalRepository.scanCalls == 3)
+        let familyRepository = repository()
+        await model(repository: familyRepository, settings: try settings(), now: now, scope: .family).refresh()
+        #expect(familyRepository.scanCalls == 6)
     }
 }

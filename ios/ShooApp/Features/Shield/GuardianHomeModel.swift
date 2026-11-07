@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Guardian Home (GD-01/GD-03, Figma HOME page). `personal` (Family mode off, "Pribadi/Home"): extension
-/// status, the guardian's own numbers and recent sites, from `GET /scans?owner=me`. `family` ("Guardian/Home"):
+/// status, how the last day went and recent sites, from `GET /scans?owner=me`. `family` ("Guardian/Home"):
 /// the people looked after, the newest site that still waits for a verdict, and the family's recent sites,
 /// from `GET /scans?owner=family`.
 @MainActor
@@ -19,20 +19,12 @@ final class GuardianHomeModel {
         case failed
     }
 
-    /// Which Home is shown, from the pending scan's `status` (contracts: 30–79 warning, ≥ 80 blocked).
+    /// Which Home is shown (contracts: 30–79 warning, ≥ 80 blocked). Family: the pending scan's `status`.
+    /// Personal: the worst undecided site of the last 24 h.
     enum Level: Equatable {
         case normal
         case warning
         case danger
-    }
-
-    /// The four tiles, counted over the scans the server still keeps (14-day retention).
-    struct Stats: Equatable {
-        var blocked = 0
-        var warnings = 0
-        var suspiciousHosts = 0
-        /// Figma "Scan terakhir": scans of the last 24 h.
-        var recentScans = 0
     }
 
     /// A pending site gets a card for this long after it was detected.
@@ -49,6 +41,8 @@ final class GuardianHomeModel {
     private(set) var profile: DeviceProfile?
     private(set) var members: [FamilyMember] = []
     private(set) var scans: [ScanResult] = []
+    /// The card under the personal activity; empty hides it.
+    private(set) var scamCases: [ScamCase] = []
     private(set) var isSubmittingVerdict = false
     private(set) var verdictFailed = false
     /// The server refused this verdict (`verdict_not_allowed`), e.g. a warning site while the contract allows blocked only.
@@ -91,26 +85,28 @@ final class GuardianHomeModel {
     }
 
     var level: Level {
-        switch pendingScan?.status {
-        case nil: .normal
-        case .warning: .warning
-        case .blocked: .danger
+        switch scope {
+        case .family:
+            switch pendingScan?.status {
+            case nil: .normal
+            case .warning: .warning
+            case .blocked: .danger
+            }
+        case .personal:
+            personalLevel
         }
+    }
+
+    private var personalLevel: Level {
+        let since = now().addingTimeInterval(-Self.pendingWindow)
+        let open = scans.filter { $0.verdict == nil && $0.detectedAt >= since }
+        if open.contains(where: { $0.status == .blocked }) { return .danger }
+        return open.isEmpty ? .normal : .warning
     }
 
     var canDecide: Bool {
         guard let scan = pendingScan else { return false }
         return Self.verdictStatuses.contains(scan.status)
-    }
-
-    var stats: Stats {
-        let since = now().addingTimeInterval(-Self.pendingWindow)
-        return Stats(
-            blocked: scans.filter { $0.status == .blocked }.count,
-            warnings: scans.filter { $0.status == .warning }.count,
-            suspiciousHosts: Set(scans.map { $0.domain.lowercased() }).count,
-            recentScans: scans.filter { $0.detectedAt >= since }.count
-        )
     }
 
     /// Family Home lists the members' sites only, like Family Activity (GD-05).
@@ -148,7 +144,15 @@ final class GuardianHomeModel {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Guardian Home load failed", error)
             if state != .loaded { state = .failed }
+            return
         }
+        if scope == .personal { await refreshScamCases(request: request) }
+    }
+
+    /// A bonus on Home: loaded after the screen, never fails it, and a failed call keeps the card on screen.
+    private func refreshScamCases(request: Int) async {
+        guard let cases = try? await repository.latestScams(), request == generation else { return }
+        scamCases = cases
     }
 
     func retry() async {
@@ -186,14 +190,19 @@ final class GuardianHomeModel {
         }
     }
 
+    /// Pages arrive newest first. Personal needs only the last day (the hero) and the list's rows: it stops once
+    /// a page reaches past the window with enough rows. Family reads every page (members' sites, pending card).
     private func allScans() async throws -> [ScanResult] {
         let owner: ScanOwnerFilter = scope == .family ? .family : .me
+        let since = now().addingTimeInterval(-Self.pendingWindow)
         var items: [ScanResult] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {
             let page = try await repository.scans(owner: owner, status: nil, cursor: cursor)
             items += page.items
             guard let next = page.nextCursor else { break }
+            if scope == .personal, let oldest = page.items.last, oldest.detectedAt < since,
+               items.count >= Self.recentCount { break }
             cursor = next
         }
         return items

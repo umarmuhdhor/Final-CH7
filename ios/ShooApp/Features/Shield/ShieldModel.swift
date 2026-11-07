@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Protected Home (PR-04, Figma "protected/Home" 441:3800): extension status, the guardian, the site blocked
-/// in the last 24 h, the counts, and recent activity. All from `GET /scans?owner=me`.
+/// Protected Home (PR-04, Figma "protected/Home" 957:11102 / 957:11377): extension status, the guardian, the
+/// site blocked in the last 24 h, and recent activity. All from `GET /scans?owner=me`.
 @MainActor
 @Observable
 final class ShieldModel {
@@ -18,16 +18,10 @@ final class ShieldModel {
     private(set) var guardian: GuardianInfo?
     /// For the profile initial top right.
     private(set) var profileName: String?
-    /// This device's scans the server still keeps (14-day retention), newest first.
+    /// This device's scans of the last 24 h, and at least enough older ones to fill the list; newest first.
     private(set) var scans: [ScanResult] = []
-
-    /// The two Figma tiles; `verified` = how many of them the guardian already looked at.
-    struct Counts: Equatable {
-        var blocked = 0
-        var blockedVerified = 0
-        var warnings = 0
-        var warningsVerified = 0
-    }
+    /// The card under the activity; empty hides it.
+    private(set) var scamCases: [ScamCase] = []
 
     /// The blocked card shows a site for this long after it was blocked.
     static let blockedCardWindow: TimeInterval = 24 * 60 * 60
@@ -53,7 +47,7 @@ final class ShieldModel {
 
     // MARK: Derived
 
-    /// Newest `blocked` scan of this device.
+    /// Newest `blocked` scan among the loaded ones.
     var lastBlocked: ScanResult? {
         scans.filter { $0.status == .blocked }.max { $0.detectedAt < $1.detectedAt }
     }
@@ -64,18 +58,11 @@ final class ShieldModel {
         return scan
     }
 
-    var counts: Counts {
-        let blocked = scans.filter { $0.status == .blocked }
-        let warnings = scans.filter { $0.status == .warning }
-        return Counts(
-            blocked: blocked.count,
-            blockedVerified: blocked.filter { $0.verdict != nil }.count,
-            warnings: warnings.count,
-            warningsVerified: warnings.filter { $0.verdict != nil }.count
-        )
+    /// The site in the big card is not listed again (Figma 957:11377); the next site takes its row.
+    var recent: [ScanResult] {
+        let card = recentBlocked?.id
+        return Array(scans.lazy.filter { $0.id != card }.prefix(Self.recentCount))
     }
-
-    var recent: [ScanResult] { Array(scans.prefix(Self.recentCount)) }
 
     /// On appear and every time the app comes back to the foreground.
     /// Overlapping calls: only the newest one is applied.
@@ -99,7 +86,15 @@ final class ShieldModel {
             Log.ui.error("Shield load failed", error)
             // A failed foreground refresh keeps what is already on screen.
             if state != .loaded { state = .failed }
+            return
         }
+        await refreshScamCases(request: request)
+    }
+
+    /// A bonus on Home: loaded after the screen, never fails it, and a failed call keeps the card on screen.
+    private func refreshScamCases(request: Int) async {
+        guard let cases = try? await repository.latestScams(), request == generation else { return }
+        scamCases = cases
     }
 
     /// "Try again" on the error view: shows the spinner while it retries.
@@ -108,13 +103,17 @@ final class ShieldModel {
         await refresh()
     }
 
+    /// Pages arrive newest first: stop once a page reaches past the blocked card's window and the list
+    /// (plus the card's site) has its rows.
     private func allScans() async throws -> [ScanResult] {
+        let since = now().addingTimeInterval(-Self.blockedCardWindow)
         var items: [ScanResult] = []
         var cursor: String?
         for _ in 0..<Self.maxPages {
             let page = try await repository.scans(owner: .me, status: nil, cursor: cursor)
             items += page.items
             guard let next = page.nextCursor else { break }
+            if let oldest = page.items.last, oldest.detectedAt < since, items.count > Self.recentCount { break }
             cursor = next
         }
         return items
