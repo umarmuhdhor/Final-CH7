@@ -49,7 +49,7 @@ final class LiveReplicaUITests: XCTestCase {
         onboardAsGuardian(app)
         let scanId = try waitForScan()
 
-        openLink("shoo://scan/\(scanId)")
+        try openLink("shoo://scan/\(scanId)")
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         let caption = app.descendants(matching: .any)["detail.pageCopy"].firstMatch
         let shown = NSPredicate(
@@ -67,7 +67,6 @@ final class LiveReplicaUITests: XCTestCase {
             .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4)))
         XCTAssertEqual(app.webViews.count, 0, app.debugDescription)
         shot(app, "live-replica-se")
-        app.swipeDown()
 
         // Back from a link lands on Activity (DeepLinkUITests); Profile opens from Shield.
         app.buttons["detail.back"].tapWhenHittable()
@@ -128,21 +127,27 @@ final class LiveReplicaUITests: XCTestCase {
     private func waitForScan() throws -> String {
         let end = Date().addingTimeInterval(Self.scanTimeout)
         while Date() < end {
-            if let error = read("error.txt") { XCTFail("Host could not create the scan: \(error)") }
+            if let error = read("error.txt") { throw HostError("Host could not create the scan: \(error)") }
             if let id = read("scan.txt") { return id }
             Thread.sleep(forTimeInterval: 0.5)
         }
-        return try XCTUnwrap(nil as String?, "Host never wrote scan.txt within \(Int(Self.scanTimeout)) s")
+        throw HostError("Host never wrote scan.txt within \(Int(Self.scanTimeout)) s")
+    }
+
+    private struct HostError: Error, CustomStringConvertible {
+        let description: String
+        init(_ description: String) { self.description = description }
     }
 
     /// iOS asks "Open in “Shoo”?" for a custom scheme opened from outside the app (DeepLinkUITests).
     /// Not `app.open(_:)`: that launches the app again with its launch arguments, and `-UITestReset YES`
     /// would wipe the Guardian that just onboarded (mock tests get their state back from the arguments).
     @MainActor
-    private func openLink(_ link: String) {
-        XCUIDevice.shared.system.open(URL(string: link)!)
+    private func openLink(_ link: String) throws {
+        XCUIDevice.shared.system.open(try XCTUnwrap(URL(string: link), "Not a link: \(link)"))
+        // Live stack, no mock: the alert can be slower than in DeepLinkUITests.
         let open = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]
-        if open.waitForExistence(timeout: UITestTimeout.optional) { open.tap() }
+        if open.waitForExistence(timeout: UITestTimeout.screen) { open.tap() }
     }
 
     /// Profile → "Delete my data" → confirm: `DELETE /devices/me` from the app, back to the splash.
@@ -155,6 +160,11 @@ final class LiveReplicaUITests: XCTestCase {
         if strict {
             app.tap(button, until: delete)
         } else {
+            // Most failures leave the app on Detail (no copy): back out, then Shield has the Profile button.
+            let back = app.buttons["detail.back"]
+            if back.exists, back.isHittable { back.tap() }
+            let shield = app.tabBars.buttons["Shield"]
+            if shield.waitForExistence(timeout: UITestTimeout.optional) { shield.tap() }
             guard button.waitForExistence(timeout: UITestTimeout.optional) else { return }
             button.tap()
             guard delete.waitForExistence(timeout: UITestTimeout.screen) else { return }

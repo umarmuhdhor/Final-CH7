@@ -13,7 +13,7 @@
 #      SHOO_DD         -derivedDataPath (default: $TMPDIR/shoo-dd-replica-ui)
 #      SHOO_SHOT_DIR   where live-replica-se.png goes (default: plan/alief/qa/img/fase-23)
 # Every run registers 2 devices (POST /devices: 10 per hour per IP) and deletes both. No token is printed:
-# the Guardian's never leaves the app, the Protected's stays in this shell and a chmod 700 temp dir.
+# the Guardian's never leaves the app, the Protected's stays in a chmod 700 temp dir (curl -H @file).
 # Exit code = the exit code of xcodebuild (1 when the stack is not up or the build fails; 0/65 from the
 # log when xcodebuild had to be stopped after the tests ended).
 set -uo pipefail
@@ -27,19 +27,21 @@ DEST="platform=iOS Simulator,id=$SIM"
 # Simulator signing like CI (.github/workflows/ios-app.yml): ad hoc, no team, no profile.
 SIGN=(CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=)
 TEST=ShooAppUITests/LiveReplicaUITests
-W=$(mktemp -d); chmod 700 "$W"
+W=$(mktemp -d) && chmod 700 "$W" || { echo "mktemp failed"; exit 1; }
 LOG="$DD/replica-ui-test.log"
-P="" XB=""
+P="" XB="" HOST_FAIL=""
+# The Protected's token goes to curl as a header file, never in argv (ps) or on screen.
+AUTH="$W/auth.h"
 
 say() { echo "$(date '+%H:%M:%S') $*"; }
 json() { python3 -c 'import sys,json;d=json.load(sys.stdin);print(d.get(sys.argv[1]) or "")' "$1" 2>/dev/null; }
 devices() { docker exec supabase_db_shoo psql -U postgres -Atc "select count(*) from devices"; }
 # The test fails at once on error.txt instead of waiting for scan.txt.
-host_fail() { say "FAIL $*"; echo "$*" > "$W/error.txt"; }
+host_fail() { say "FAIL $*"; HOST_FAIL=1; echo "$*" > "$W/error.txt"; }
 delete_protected() {
   [ -n "$P" ] || return 0
   local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "$U/devices/me" -H "authorization: Bearer $P")
+  code=$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -X DELETE "$U/devices/me" -H @"$AUTH")
   [ "$code" = 200 ] && say "Protected deleted (DELETE /devices/me 200)" || say "WARN DELETE /devices/me (Protected) answered $code"
   P=""
 }
@@ -53,9 +55,10 @@ trap 'exit 130' INT TERM
 
 curl -s -o /dev/null --max-time 5 "$U/healthz" || { echo "$U not reachable: pnpm -C backend/api dev"; exit 1; }
 docker inspect supabase_db_shoo >/dev/null 2>&1 || { echo "local Supabase container not running: supabase start"; exit 1; }
+xcrun simctl list devices | grep -q "$SIM" || { echo "simulator $SIM not found: set SHOO_SIM"; exit 1; }
 if pgrep -f 'vitest|supabase test' >/dev/null; then say "WARN backend tests are running and may reset the shared DB mid-run"; fi
-mkdir -p "$DD" "$SHOT_DIR"
-BEFORE=$(devices)
+mkdir -p "$DD" "$SHOT_DIR" || exit 1
+BEFORE=$(devices) || { echo "cannot count devices in supabase_db_shoo"; exit 1; }
 T0=$(date +%s)
 
 (cd "$REPO/ios" && xcodegen -q) || { echo "xcodegen failed"; exit 1; }
@@ -70,6 +73,8 @@ TEST_RUNNER_SHOO_REPLICA_DIR="$W" TEST_RUNNER_SHOO_SHOT_DIR="$SHOT_DIR" \
   xcodebuild test-without-building -project "$REPO/ios/Shoo.xcodeproj" -scheme Shoo -destination "$DEST" \
   -derivedDataPath "$DD" -only-testing:"$TEST" "${SIGN[@]}" > "$LOG" 2>&1 &
 XB=$!
+# The watchdog counts from here, not from T0: a cold build must not eat the test's time.
+T1=$(date +%s)
 
 # --- the Guardian's code (the app registers and opens the invite sheet) ------------------------------
 CODE=""
@@ -82,11 +87,12 @@ done
 if [ ${#CODE} = 6 ]; then
   say "family code on screen after $(($(date +%s) - T0)) s"
   # --- Protected joins and posts a scan with a replica ---------------------------------------------
-  curl -s -X POST "$U/devices" -H 'content-type: application/json' -d '{"name":"Mom","mode":"protected"}' > "$W/dev.json"
+  curl -s --max-time 10 -X POST "$U/devices" -H 'content-type: application/json' -d '{"name":"Mom","mode":"protected"}' > "$W/dev.json"
   P=$(json token < "$W/dev.json"); rm -f "$W/dev.json"
+  [ -n "$P" ] && printf 'authorization: Bearer %s\n' "$P" > "$AUTH"
   if [ -z "$P" ]; then
     host_fail "POST /devices (Protected) refused: rate limit 10/hour per IP?"
-  elif [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$U/family/join" -H "authorization: Bearer $P" \
+  elif [ "$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -X POST "$U/family/join" -H @"$AUTH" \
           -H 'content-type: application/json' -d "{\"code\":\"$CODE\"}")" != 200 ]; then
     host_fail "POST /family/join did not answer 200"
   elif ! node --no-warnings "$REPO/plan/alief/qa/replica-input.mjs" sample "$W" > /dev/null; then
@@ -103,7 +109,7 @@ f["domain"] = sys.argv[2]
 f["pageReplicaBase64"] = open(sys.argv[3]).read()
 print(json.dumps(f))
 PY
-    ST=$(curl -s -o "$W/scan.resp" -w '%{http_code}' -X POST "$U/scans" -H "authorization: Bearer $P" \
+    ST=$(curl -s --max-time 30 -o "$W/scan.resp" -w '%{http_code}' -X POST "$U/scans" -H @"$AUTH" \
       -H 'content-type: application/json' --data-binary "@$W/scan.json")
     ID=$(json id < "$W/scan.resp")
     if [ "$ST" != 201 ] || [ -z "$ID" ]; then
@@ -113,29 +119,31 @@ PY
       # Detail does not depend on its own retry window (DetailModel.copyRetryDelays).
       URL=""
       for ((i = 0; i < 80; i++)); do
-        URL=$(curl -s "$U/scans/$ID" -H "authorization: Bearer $P" | json pageReplicaUrl)
+        URL=$(curl -s --max-time 2 "$U/scans/$ID" -H @"$AUTH" | json pageReplicaUrl)
         [ -n "$URL" ] && break
         sleep 0.25
       done
       if [ -n "$URL" ]; then
-        echo "$ID" > "$W/scan.txt"
+        echo "$ID" > "$W/scan.txt.tmp" && mv "$W/scan.txt.tmp" "$W/scan.txt"
         say "scan with a stored copy ready after $(($(date +%s) - T0)) s"
       else
         host_fail "pageReplicaUrl still null 20 s after POST /scans"
       fi
     fi
   fi
+elif kill -0 "$XB" 2>/dev/null; then
+  host_fail "the app wrote no family code within 120 s"
 else
-  say "FAIL the app never wrote a family code (log: $LOG)"
+  say "FAIL the app never wrote a family code (log: $LOG)"; HOST_FAIL=1
 fi
 
 # xcodebuild once hung for hours after the test had ended (simulator gone while it collected results):
-# 180 s after the suite ended, or 15 min after the start, stop it and take the result from the log.
+# 180 s after the suite ended, or 15 min after the test started, stop it and take the result from the log.
 ENDED=""
 while kill -0 "$XB" 2>/dev/null; do
   if [ -z "$ENDED" ] && grep -qE "^Test Suite 'Selected tests' (passed|failed)" "$LOG"; then ENDED=$(date +%s); fi
   NOW=$(date +%s)
-  if { [ -n "$ENDED" ] && [ $((NOW - ENDED)) -gt 180 ]; } || [ $((NOW - T0)) -gt 900 ]; then
+  if { [ -n "$ENDED" ] && [ $((NOW - ENDED)) -gt 180 ]; } || [ $((NOW - T1)) -gt 900 ]; then
     say "WARN xcodebuild did not exit on its own: stopping it"
     kill "$XB" 2>/dev/null; break
   fi
@@ -145,6 +153,11 @@ wait "$XB"; STATUS=$?; XB=""
 if [ $STATUS -gt 128 ]; then
   if grep -qE "^Test Suite 'Selected tests' passed" "$LOG"; then STATUS=0; else STATUS=65; fi
 fi
+# A skipped test (env vars lost) or a host-side failure is never a PASS.
+if [ $STATUS = 0 ] && ! grep -qE "^Test Case .*testGuardianSeesThePageCopyOfALiveScan.* passed" "$LOG"; then
+  say "FAIL the live test did not pass (skipped?)"; STATUS=1
+fi
+[ -z "$HOST_FAIL" ] || [ $STATUS != 0 ] || STATUS=1
 delete_protected
 grep -E "^Test Case .*(passed|failed|skipped)|: error: |XCTAssert|Test Suite .* (passed|failed)" "$LOG" | tail -15
 AFTER=$(devices)
