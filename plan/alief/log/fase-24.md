@@ -1,6 +1,6 @@
 # Log fase 24 — Privasi dan data (E6, E7, C22)
 
-- **Status:** [~] 24a-1 `feat/E7-inactive-devices` sedang dikerjakan (kode + test selesai, review langkah 8 menyusul, belum PR) · [r] 24c-1 PR `fix/E6-privacy-contact`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 1–2 (mailbox K10 belum ada)** · 24a-2 dan 24b belum (24b/24c-2 = app).
+- **Status:** [r] 24a-1 PR `feat/E7-inactive-devices`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 24a-1 butir 1 (7 run dry-run setelah deploy CI)** · [r] 24c-1 PR `fix/E6-privacy-contact`, reviewer @umarmuhdhor, **pending LANGKAH MANUAL 1–2 (mailbox K10 belum ada)** · 24a-2 dan 24b belum (24b/24c-2 = app).
 - **Model:** Claude Opus 5.5, sesi track be. 1 Nov 2026.
 - **Rencana:** `fase-24-privacy-data.md` (PR #207).
 - **Keputusan K:** R8 §c (D-alief-C29): K10 (a) mailbox tim gratis (belum dibuat → LANGKAH MANUAL 1), K11 (a) tetap `workers.dev`, K12 isian App Privacy ditanyakan ke Umar (E6). Tidak ada D-alief baru.
@@ -47,7 +47,7 @@ Keputusan yang dipakai (dari brief, belum tercatat sebagai D-alief): K1 = 90 har
 - [x] 5. Merah — balapan: device kandidat lalu `touchLastSeen` di antara SELECT dan hapus → `skipped = 1`, scan utuh, device lain tetap terhapus; Guardian keluarga kandidat menjadi aktif → Protected (dan Guardian) dilewati, link utuh; baris device dikunci transaksi lain → `55P03` → dilewati, device berikutnya tetap terhapus; error lain (`57014`, `statement_timeout` < `lock_timeout`) → langkah berhenti di device pertama, `failed: 1` di log + `ops_jobs`, run tetap selesai lalu melempar. `deleteDevice` tanpa opsi tetap menghapus; dengan opsi pada device bukan kandidat / tidak ada → `null`.
 - [x] 6. Hijau: `deleteDevice(sql, id, { onlyIfInactive, lockTimeoutMs })` (overload; tanpa opsi kode lama persis sama, `devices-me.test.ts` hijau tanpa diubah): `set_config('lock_timeout', '3000ms', true)`, kunci baris device + Guardian + semua Protected keluarganya `order by id for share`, lalu cek ulang SQL kandidat yang sama untuk id itu; tidak ada baris → `null`. Retensi: `40P01`/`55P03` → `skipped`, lanjut; error lain → lempar.
 - [x] 7. Migrasi `20261107100000_inactive_devices.sql` (`create index devices_last_seen on devices(last_seen_at)`, add-only, `set local lock_timeout 5s`) + pgTAP `tests/inactive_devices.test.sql` (`has_index`, tidak parsial, valid). Merah 3/3 sebelum migrasi, hijau sesudah.
-- [ ] 8. Review `ecc:database-reviewer` → `ecc:typescript-reviewer` → `ecc:security-reviewer`: menyusul.
+- [x] 8. Review `ecc:database-reviewer` → `ecc:typescript-reviewer` → `ecc:security-reviewer` (berurutan, 7 Nov 2026): 0 CRITICAL/HIGH, lihat tabel Review.
 
 ### File
 
@@ -96,7 +96,30 @@ Tidak ada.
 
 ### Review (langkah 8)
 
-Menyusul.
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:database-reviewer` | MEDIUM: index `devices_last_seen` mematikan HOT update `touchLastSeen` (maks 1×/5 menit per device). MEDIUM: kunci keluarga `id = … or … in (subselect)` tidak bisa memakai `devices_pkey` (seq scan per hapus). LOW: cron ringkasan mingguan `notifications.ts` mengunci baris device tanpa urutan, jendela deadlock sempit dengan retensi. LOW: urutan kunci, SQL K3/K4, migrasi aman | Index **tetap** (spec C7; EXPLAIN 50 000 baris memakai index; biaya HOT kecil di volume ini, dicek ulang di LANGKAH MANUAL 1). Kunci keluarga ditulis ulang `id in (… union …)` (6f50456). Deadlock ringkasan: sisi retensi aman (40P01 → skip); catatan handoff |
+| `ecc:typescript-reviewer` | MEDIUM: test balapan tidak membuktikan kunci `for share` keluarga. MEDIUM: `statement_timeout` test 57014 berlaku untuk semua langkah retensi (bisa kena langkah lain di CI lambat). LOW: holder transaksi tidak dilepas kalau `runRetention` melempar. LOW: komentar join setelah cek ulang, 40001 sengaja tidak di-skip | Test baru "uncommitted request holds the family lock" (merah tanpa `for share`, dicek mutasi); timeout dipasang lewat `afterInactiveSelect`; `try/finally`; dua komentar (9ef3fea) |
+| `ecc:security-reviewer` | MEDIUM (P12): `/privacy` masih "not deleted automatically yet": benar selama `dry_run`, salah begitu `delete`. LOW: query kandidat tanpa `statement_timeout`. LOW: hook test di `RetentionOptions` tidak terjangkau produksi (`index.ts` tanpa opsi). Fail-closed env, injeksi SQL, aturan keluarga: aman | P12 = gerbang 24a-2: teks `/privacy` EN/ID wajib di PR yang sama atau sebelum `INACTIVE_DEVICES = delete` (catatan handoff). LOW lain diterima: kegagalan terisolasi `step`, tidak ada risiko hapus |
+
+Verifikasi setelah review: typecheck bersih; `vitest run retention devices-me log-hygiene` 34/34 lulus.
+
+### Privasi Apple (SECURITY §3)
+
+- P2: tidak ada data baru. P3: jalur hapus pengguna (`DELETE /devices/me`) tidak berubah (`devices-me.test.ts` tanpa perubahan).
+- P6: log `inactive_devices` hanya mode + hitungan (`log-hygiene.test.ts`).
+- P12: teks `/privacy` belum berubah (benar untuk `dry_run`); 24a-2 wajib menggantinya.
+- P13: hapus lewat `deleteDevice` yang sama: cascade 6 tabel, trigger `admin.on_device_delete`, path R2/Storage ditombstone dalam transaksi (objek 404 seketika, dihapus fisik run berikutnya).
+
+### LANGKAH MANUAL 24a-1 (setelah PR merge + deploy CI)
+
+- [ ] 1. **(Alief, cloud, baca saja)** = butir 3 file fase: 7 run cron berturut-turut (19:00 UTC), baca `npx wrangler tail shoo-api --format json` atau Workers Logs: `retention` `failed: 0`, `inactive_devices` `mode: dry_run`. Bandingkan `candidates` dengan query kandidat (langkah 2 file fase, 90/30 hari) di SQL editor (`supabase db query --linked`), plus `over_k1` dan `total`; hanya angka, tanpa id. Catat `cpuTime` cron. Setelah 7 run bersih: 24a-2 boleh mulai.
+
+## Catatan handoff 24a
+
+- 24a-2 (ganti var ke `delete`) **wajib** membawa teks `/privacy` EN/ID baru + `privacy.test.ts` di PR yang sama (review security P12).
+- Cron ringkasan mingguan (`cron/notifications.ts`, `update devices … from unnest(...)`) mengunci baris tanpa urutan; kalau muncul 40P01 di sisi notifikasi, tambahkan `order by id … for update` (review database LOW).
+- Index `devices_last_seen`: kalau tabel `devices` membesar dan bloat terlihat, pertimbangkan `fillfactor` lebih rendah (review database MEDIUM, diterima).
 
 ## LANGKAH MANUAL
 
