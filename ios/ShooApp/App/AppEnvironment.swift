@@ -298,6 +298,8 @@ final class AppEnvironment {
         guard settings.demoMode else { return }
         router.reset()
         settings.reset()
+        // The demo's fixtures have no favicon links today; emptied anyway so nothing from it stays (P13).
+        CachedFaviconLoader.shared.clear()
         if let backend = makeLiveBackend?() {
             repository = backend.repository
             session = backend.session

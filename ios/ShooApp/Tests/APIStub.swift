@@ -98,13 +98,15 @@ final class StubServer: @unchecked Sendable {
     private let lock = NSLock()
     private var _unauthorizedCount = 0
 
-    init(token: String? = "shoo_test_token_123") {
+    /// `forgetCachedData`: tests never empty the app's shared favicon cache (fase 22c).
+    init(token: String? = "shoo_test_token_123", forgetCachedData: @escaping @Sendable () -> Void = {}) {
         let defaults = UserDefaults(suiteName: suiteName)!
         session = SessionStore(
             defaults: defaults,
             keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
             apiBaseURL: URL(string: "https://api.shoo.test")!,
-            aiBaseURL: nil
+            aiBaseURL: nil,
+            forgetCachedData: forgetCachedData
         )
         if let token {
             // A Keychain the test host can't write would fail every later expectation confusingly.
