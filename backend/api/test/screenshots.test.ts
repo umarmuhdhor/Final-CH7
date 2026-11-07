@@ -4,7 +4,7 @@ import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { screenshotLink } from "../src/services/screenshotLinks";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
-import { call, createDevice, type Created } from "./helpers/seed";
+import { call, callWithEnv, createDevice, type Created, denyingLimiter } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 useRateKeySecret(env.RATE_KEY_SECRET);
 
@@ -117,15 +117,25 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     expect((await get(`${u.pathname}${u.search}`)).status).toBe(404);
   });
 
-  it("rate limits 120 per minute per viewer", async () => {
+  it("rate limits per viewer through the binding (120 per minute in wrangler.jsonc), no rate_limit_hits row", async () => {
+    const p = await createDevice("Mom");
+    const id = await postShot(p);
+    const link = await linkFor(p, id);
+    expect((await get(link)).status).toBe(200);
+    expect(await sql`select 1 from rate_limit_hits where bucket = 'screenshots_view'`).toHaveLength(0);
+    const res = await callWithEnv({ SCREENSHOTS_VIEW_LIMITER: denyingLimiter }, link);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("60");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("without the binding the DB counter applies, as before (120 per minute)", async () => {
     const p = await createDevice("Mom");
     const id = await postShot(p);
     const link = await linkFor(p, id);
     const hash = await keyHash(`screenshots_view:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select 'screenshots_view', ${hash} from generate_series(1, 120)`;
-    const res = await get(link);
-    expect(res.status).toBe(429);
-    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect((await callWithEnv({ SCREENSHOTS_VIEW_LIMITER: undefined }, link)).status).toBe(429);
   });
 
   it("expired link → 404", async () => {

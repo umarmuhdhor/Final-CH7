@@ -4,7 +4,7 @@ import { replicaPathForViewer } from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { errors } from "../http/errors";
 import { errorInfo } from "../http/logError";
-import { hit, limits } from "../http/rateLimit";
+import { hit, hitEdge, limits } from "../http/rateLimit";
 import { UUID } from "../http/validate";
 import { replicasEnabled } from "../services/replicas";
 import { verifyReplicaLink } from "../services/screenshotLinks";
@@ -40,7 +40,8 @@ replicas.get("/replicas/:id", async (c) => {
   const viewerId = await verifyReplicaLink(secret, id, c.req.query(), Date.now() / 1000);
   if (!viewerId) throw errors.notFound();
   const sql = c.get("sql");
-  await hit(sql, limits.viewReplica, viewerId);
+  await hitEdge(c.env.REPLICAS_VIEW_LIMITER, sql, limits.viewReplica, viewerId, hit);
+  // A day is not a window the binding knows: this one stays in Postgres.
   await hit(sql, limits.viewReplicaDay, viewerId);
 
   const path = await replicaPathForViewer(sql, id, viewerId);

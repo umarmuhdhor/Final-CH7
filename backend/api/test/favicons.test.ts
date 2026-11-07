@@ -11,7 +11,7 @@ import { screenshotStore } from "../src/services/screenshots";
 import { jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
-import { call, createDevice, type Created } from "./helpers/seed";
+import { call, callWithEnv, createDevice, type Created, denyingLimiter } from "./helpers/seed";
 useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
@@ -619,11 +619,20 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
     expect((await call(await linkFor(p, younger))).status).toBe(200);
   });
 
-  it("rate limits 600 per minute per viewer", async () => {
+  it("rate limits per viewer through the binding (600 per minute in wrangler.jsonc), no rate_limit_hits row", async () => {
+    const { p, id } = await setup();
+    expect((await call(await linkFor(p, id))).status).toBe(200);
+    expect(await sql`select 1 from rate_limit_hits where bucket = ${limits.viewFavicon.bucket}`).toHaveLength(0);
+    const res = await callWithEnv({ FAVICONS_VIEW_LIMITER: denyingLimiter }, await linkFor(p, id));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("60");
+  });
+
+  it("without the binding the DB counter applies, as before (600 per minute)", async () => {
     const { p, id } = await setup();
     const k = await keyHash(`${limits.viewFavicon.bucket}:${p.deviceId}`);
     await sql`insert into rate_limit_hits (bucket, key_hash) select ${limits.viewFavicon.bucket}, ${k} from generate_series(1, ${limits.viewFavicon.max})`;
-    expect((await call(await linkFor(p, id))).status).toBe(429);
+    expect((await callWithEnv({ FAVICONS_VIEW_LIMITER: undefined }, await linkFor(p, id))).status).toBe(429);
   });
 });
 

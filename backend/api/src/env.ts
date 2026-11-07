@@ -35,6 +35,11 @@ export interface Env {
   SCREENSHOT_URL_SECRET?: string;
   /** Secret: bearer for GET /ops/status (fase 21a). Unset or < 32 characters → the route is a 404. */
   OPS_STATUS_TOKEN?: string;
+  /** Rate Limiting bindings (hitEdge): same max and window as `limits` in http/rateLimit.ts. Unset → DB counter. */
+  VERDICTS_GET_LIMITER?: RateLimit;
+  SCREENSHOTS_VIEW_LIMITER?: RateLimit;
+  FAVICONS_VIEW_LIMITER?: RateLimit;
+  REPLICAS_VIEW_LIMITER?: RateLimit;
 }
 
 export type DeviceMode = "guardian" | "protected";
