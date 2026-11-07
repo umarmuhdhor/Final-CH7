@@ -115,7 +115,10 @@ Verifikasi setelah review: typecheck bersih; `vitest run retention devices-me lo
 
 - [~] 1. **(Alief, cloud, baca saja)** = butir 3 file fase: 7 run cron berturut-turut (19:00 UTC), baca `npx wrangler tail shoo-api --format json` atau Workers Logs: `retention` `failed: 0`, `inactive_devices` `mode: dry_run`. Bandingkan `candidates` dengan query kandidat (langkah 2 file fase, 90/30 hari) di SQL editor (`supabase db query --linked`), plus `over_k1` dan `total`; hanya angka, tanpa id. Catat `cpuTime` cron. Setelah 7 run bersih: 24a-2 boleh mulai.
   - **Pembanding SQL, 7 Nov 2026, 17:11 UTC** (baca saja, perkiraan, bukan fragmen `inactiveCandidates` persis): `total` 18, `over_k1` 0, `unused_30` 0 → `candidates` yang diharapkan 0. Index `devices_last_seen` ada di cloud (migrasi 24a-1 terpasang). Run `retention` yang terlihat di `ops_jobs` (6 Nov 19:00) **sebelum** deploy 24a-1, jadi bukan dry run.
-  - Run 1 (7 Nov 19:00 UTC): diisi setelah run.
+  - **Run 1/7, 7 Nov 2026 19:00 UTC** (`wrangler tail`): cron `0 19 * * *` cpu 24 ms, wall 5 828 ms, `ok`.
+    - `{"event":"inactive_devices","mode":"dry_run","candidates":0,"deleted":0,"skipped":0,"failed":0}` → sama dengan pembanding SQL (0).
+    - `retention`: `failed` 0, `backlog` false, `inactiveCandidates` 0, `inactiveDevices` 0, `tombstones` 1, `rateLimitHits` 415, lainnya 0.
+  - Run 2–7 (8–13 Nov 19:00 UTC): Alief, baris sama dari tail atau Workers Logs.
 
 ## Catatan handoff 24a
 
