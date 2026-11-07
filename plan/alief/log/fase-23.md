@@ -12,7 +12,7 @@
 | 23a-0 repro | – | – | [x] (ringkas, lihat bawah) |
 | 23a | `fix/C2-test-flakes` | lihat PR | [r] PR terbuka |
 | 23b usulan CI | – | di PR 23a (`## Questions for Umar`) | [r] menunggu Umar |
-| 23c live replica UI | `feat/DT-04-live-replica-ui` | – | [~] kode selesai, review menyusul |
+| 23c live replica UI | `feat/DT-04-live-replica-ui` | lihat PR | [r] PR terbuka |
 
 ## 23a-0 — repro (S1, ringkas)
 
@@ -116,6 +116,15 @@ Sisa: 2 device Guardian dari run 1 dan 2 (test gagal sebelum langkah hapus; toke
 - Watchdog di skrip: 180 s setelah "Test Suite 'Selected tests' passed/failed", atau 15 menit sejak mulai, xcodebuild dihentikan dan hasil diambil dari log (run 2).
 - Screenshot diambil setelah drag (tanpa momentum) supaya baris "Copy of the page" dan gambar salinan sama-sama terlihat di SE; `webViews.count == 0` dicek sebelum dan sesudah drag.
 - Tanggal di kartu ("Opened October 21", "Copy of the page · Oct 21, 2026") berasal dari `detectedAt` fixture `blocked-92.json` dan `capturedAt` replica; tidak memengaruhi test.
+
+### Review (berurutan, 7 Nov 2026)
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:swift-reviewer` | HIGH: PASS palsu: test yang di-skip (variabel hilang) atau gagal di sisi host tetap `PASS` exit 0. MEDIUM: watchdog 900 s dihitung dari sebelum build; tanpa `error.txt` saat kode tidak muncul; teardown dari Detail tidak sampai Profile (Guardian tertinggal); alert "Open" hanya 3 s; `curl` tanpa `--max-time`. LOW: `mktemp`/`devices` tanpa cek, `scan.txt` tidak atomik, token di argv, UDID tidak dicek, `URL(...)!`, `XCTFail` + `return`, `swipeDown()` tak perlu | Semua diperbaiki kecuali dua LOW gaya (predikat NOT berlebih, `assumeIsolated`) (2a1f78d): `HOST_FAIL` memaksa gagal, test case live wajib `passed`, watchdog dari mulai test, `--max-time`, token lewat `-H @file`, `scan.txt` lewat `mv`, cek simulator, teardown mundur dari Detail ke Shield, tunggu "Open" 10 s, error dilempar |
+| `ecc:security-reviewer` | MEDIUM: tidak ada cek bahwa Worker dev memakai DB/Storage lokal (`.dev.vars` atau `--remote` bisa mengarah ke cloud). LOW: kode keluarga di argv; log DerivedData bisa world-readable kalau `SHOO_DD` di luar `$TMPDIR`; `REPO` kosong; Guardian tertinggal tanpa petunjuk. Token, trap, `rm -rf`, skip CI, `psql` baca saja, screenshot (data fixture saja): OK | Preflight: `localConnectionString` 127.0.0.1, `SUPABASE_URL` `.dev.vars` lokal, tolak `wrangler dev --remote`; body join dari file; `chmod 700` DerivedData; cek `REPO`; peringatan sisa Guardian + petunjuk `supabase db reset` (26b9514) |
+
+Setelah review: tanpa variabel → "1 test skipped, 0 failures". Satu run live 22:51 WITA: `POST /devices` 429 (kuota lokal 10/jam/IP habis oleh sesi lain, 12 hit 14:38–14:46 UTC) → skrip melapor `FAIL` dengan exit 65, jalur gagal baru terbukti. Run live ulang setelah jendela kuota: lihat di bawah.
 
 ### Privasi (SECURITY §3)
 
