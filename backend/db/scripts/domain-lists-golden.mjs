@@ -80,7 +80,7 @@ const REASON = {
   b: "L4-only domain: protect only (trusted = false) until X10",
   c: "ac.id/sch.id/mil.id/desa.id are apex: names under them can be queued (D-dash-22 #3)",
   d: "L1 ∩ L2 are apex: tenants under them can be published after 10c (D-dash-22 #2)",
-  e: "SHARED_ROOTS-only platform apex is now protected in the ai/ build (after 10c)",
+  e: "platform apex only the backend listed (shared roots) is now protected in the ai/ build (after 10c)",
   g: "multi-tenant host row is protected as apex (D-dash-22 #7)",
 };
 
