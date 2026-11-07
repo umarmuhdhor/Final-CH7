@@ -8,7 +8,8 @@ import type { TransactionSql } from "postgres";
  * Runs in the verdict's transaction, without a cache: a domain the dashboard adds counts at once.
  * A family's own not_safe verdict still applies to that family.
  */
-export async function isProtected(tx: TransactionSql, domain: string): Promise<boolean> {
+export async function isProtected(tx: TransactionSql, rawDomain: string): Promise<boolean> {
+  const domain = rawDomain.toLowerCase(); // as domain_match; /scans already stores lowercase
   const labels = domain.split(".");
   const suffixes = labels.map((_, i) => labels.slice(i).join(".")); // a.b.c.id → a.b.c.id, b.c.id, c.id, id
   const [row] = await tx<{ hit: boolean }[]>`

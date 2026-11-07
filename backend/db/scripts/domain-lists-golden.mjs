@@ -20,9 +20,8 @@ import { isAllowlisted } from "../../../ai/src/blocklist/build.js";
 import { toRegistrable } from "../../../ai/src/blocklist/domains.js";
 import { isOfficialHost } from "../../../ai/src/layer3/official.js";
 import { memoryKey } from "../../../ios/ShooExtension/Resources/block-memory.js";
-import {
-  AC4, L1, L1_L2, L2, L4, L4_ONLY, L4_SHARED, L4_SHARED_ONLY, buildSeed, match, protectingRow,
-} from "./domain-lists-seed.mjs";
+import { match, protectingRow } from "./domain-lists-match.mjs";
+import { AC4, L1, L1_L2, L2, L4, L4_ONLY, L4_SHARED, L4_SHARED_ONLY, buildSeed } from "./domain-lists-seed.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, "../../api/test/fixtures");

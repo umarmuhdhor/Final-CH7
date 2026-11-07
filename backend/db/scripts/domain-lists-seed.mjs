@@ -5,12 +5,13 @@
 //   L3 ai/src/layer3/official.js USER_CONTENT + USER_SUBDOMAINS
 //   L4 backend/api/src/data/allowlist.ts ALLOWLIST + SHARED_ROOTS      brands detector/data/brands.json
 //
-//   node backend/db/scripts/domain-lists-seed.mjs                         writes domain-lists-seed.sql
-//   node backend/db/scripts/domain-lists-seed.mjs --check-approved <file> approved domains (one per line)
-//                                                                         the seed would protect (LM 0b)
+//   node backend/db/scripts/domain-lists-seed.mjs        writes domain-lists-seed.sql
+// Which approved domains the seed would protect (LM 0b): domain-lists-check-approved.mjs (reads the
+// committed SQL, so it still runs after the old lists are gone).
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parents } from "./domain-lists-match.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "../../..");
@@ -90,7 +91,6 @@ function classify(d) {
   throw new Error(`no K3 rule for ${d}`);
 }
 
-const parents = (host) => host.split(".").map((_, i, l) => l.slice(i).join(".")); // host first, then each parent
 
 /** Same rules as the table checks and admin.domain_set (K1, K6, D-dash-24). */
 export function validate(rows) {
@@ -114,25 +114,6 @@ export function buildSeed() {
   return rows;
 }
 
-/** K2 in JS, the reference admin.domain_match is tested against (golden). */
-export function match(byDomain, host) {
-  const chain = parents(host).map((d, depth) => ({ depth, r: byDomain.get(d) })).filter((x) => x.r);
-  const isProtected = chain.some(({ depth, r }) => r.protect === "subtree" || (r.protect === "apex" && depth === 0));
-  const isWww = (depth) => depth === 1 && host.startsWith("www.");
-  let trusted;
-  if (chain.some(({ r }) => r.hosting === "host_path")) trusted = false;
-  else if (chain.some(({ depth, r }) => r.hosting === "subdomains" && depth > 0 && !isWww(depth))) trusted = false;
-  else trusted = chain.some(({ r }) => r.trusted);
-  const hosting = chain.find(({ r }) => r.hosting !== "none")?.r.hosting ?? "none";
-  return { protected: isProtected, trusted, hosting };
-}
-
-/** The row that makes `host` protected (nearest first), for K12 labels. */
-export function protectingRow(byDomain, host) {
-  return parents(host).map((d, depth) => ({ depth, r: byDomain.get(d) }))
-    .find(({ depth, r }) => r && (r.protect === "subtree" || (r.protect === "apex" && depth === 0)))?.r ?? null;
-}
-
 const sqlText = (s) => (s === null ? "null" : `'${s.replaceAll("'", "''")}'`);
 
 export function seedSql(rows) {
@@ -146,18 +127,9 @@ export function seedSql(rows) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const rows = buildSeed();
-  const i = process.argv.indexOf("--check-approved");
-  if (i > 0) {
-    const byDomain = new Map(rows.map((r) => [r.domain, r]));
-    const approved = readFileSync(process.argv[i + 1], "utf8").split(/\s+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
-    const hit = approved.filter((d) => match(byDomain, d).protected);
-    console.log(`${hit.length} of ${approved.length} approved domains become protected:`);
-    for (const d of hit) console.log(`  ${d}  (row ${protectingRow(byDomain, d).domain})`);
-  } else {
-    writeFileSync(join(HERE, "domain-lists-seed.sql"), seedSql(rows));
-    const count = (f) => rows.filter(f).length;
-    console.log(`${rows.length} rows: subtree ${count((r) => r.protect === "subtree")}, apex ${count((r) => r.protect === "apex")}, ` +
-      `trusted ${count((r) => r.trusted)}, hosting ${count((r) => r.hosting !== "none")}, public_suffix ${count((r) => r.public_suffix)}, ` +
-      `hard_locked ${count((r) => r.hard_locked)}`);
-  }
+  writeFileSync(join(HERE, "domain-lists-seed.sql"), seedSql(rows));
+  const count = (f) => rows.filter(f).length;
+  console.log(`${rows.length} rows: subtree ${count((r) => r.protect === "subtree")}, apex ${count((r) => r.protect === "apex")}, ` +
+    `trusted ${count((r) => r.trusted)}, hosting ${count((r) => r.hosting !== "none")}, public_suffix ${count((r) => r.public_suffix)}, ` +
+    `hard_locked ${count((r) => r.hard_locked)}`);
 }
