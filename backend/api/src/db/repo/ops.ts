@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import { errorInfo } from "../../http/logError";
 import { replicaUsage, type ReplicaQuota, type ReplicaUsage } from "./scans";
+import { RETENTION_DAYS } from "../../policy";
 
 export type OpsJob = "retention" | "notifications";
 
@@ -32,7 +33,7 @@ export const opsWriter: OpsWriter = { start: startJob, finish: finishJob };
 export interface OpsSnapshot {
   retention: { okAgeHours: number | null; ageHours: number | null; failed: number; backlog: boolean };
   notifications: { okAgeHours: number | null; ageHours: number | null };
-  /** A scan older than 15 days 6 hours exists (retention promises 14 days; 6 h margin for a late Cron). */
+  /** A scan older than RETENTION_DAYS + 1 day 6 hours exists (1 day 6 h margin for a late Cron). */
   scansOverdue: boolean;
   /** Tombstones older than 2 days: objects retention keeps failing to remove. */
   tombstonesStuck: number;
@@ -65,7 +66,7 @@ export async function opsSnapshot(sql: Sql, replica: { quota: ReplicaQuota; maxB
       r.failed as "rFailed", r.backlog as "rBacklog",
       (extract(epoch from now() - n.ok_at) / 3600)::float8 as "nOk",
       (extract(epoch from now() - n.finished_at) / 3600)::float8 as "nAge",
-      exists (select 1 from scans where created_at < now() - interval '15 days 6 hours') as overdue,
+      exists (select 1 from scans where created_at < now() - make_interval(days => ${RETENTION_DAYS + 1}, hours => 6)) as overdue,
       (select count(*)::int from storage_tombstones where created_at < now() - interval '2 days') as stuck,
       pg_database_size(current_database())::float8 as "dbBytes",
       q.n as queue, (extract(epoch from now() - q.oldest) / 3600)::float8 as oldest,
