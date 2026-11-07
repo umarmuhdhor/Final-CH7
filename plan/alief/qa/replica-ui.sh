@@ -20,6 +20,7 @@ set -uo pipefail
 
 U=http://localhost:8787
 REPO=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
+[ -n "$REPO" ] || { echo "not inside the repo"; exit 1; }
 SIM=${SHOO_SIM:-483B28B6-913A-4C3A-8A4C-0C7219022682}
 DD=${SHOO_DD:-${TMPDIR:-/tmp}/shoo-dd-replica-ui}
 SHOT_DIR=${SHOO_SHOT_DIR:-$REPO/plan/alief/qa/img/fase-23}
@@ -56,8 +57,15 @@ trap 'exit 130' INT TERM
 curl -s -o /dev/null --max-time 5 "$U/healthz" || { echo "$U not reachable: pnpm -C backend/api dev"; exit 1; }
 docker inspect supabase_db_shoo >/dev/null 2>&1 || { echo "local Supabase container not running: supabase start"; exit 1; }
 xcrun simctl list devices | grep -q "$SIM" || { echo "simulator $SIM not found: set SHOO_SIM"; exit 1; }
+# Local stack only: the dev Worker's DB, Storage and R2 must be this machine's, never a shared or cloud one.
+grep -q '"localConnectionString": "postgres://[^"]*@127\.0\.0\.1:' "$REPO/backend/api/wrangler.jsonc" \
+  || { echo "wrangler.jsonc localConnectionString is not 127.0.0.1"; exit 1; }
+sb_host=$(sed -n 's/^SUPABASE_URL=//p' "$REPO/backend/api/.dev.vars" 2>/dev/null | sed -E 's#^[a-z]+://([^/:]+).*#\1#')
+case "$sb_host" in 127.0.0.1|localhost) ;; *) echo "backend/api/.dev.vars SUPABASE_URL is not local"; exit 1 ;; esac
+if pgrep -fl 'wrangler.* dev' | grep -q -- '--remote'; then echo "wrangler dev runs with --remote: local only"; exit 1; fi
 if pgrep -f 'vitest|supabase test' >/dev/null; then say "WARN backend tests are running and may reset the shared DB mid-run"; fi
-mkdir -p "$DD" "$SHOT_DIR" || exit 1
+# The test log can hold app.debugDescription (family code, test names): owner only.
+mkdir -p "$DD" "$SHOT_DIR" && chmod 700 "$DD" || exit 1
 BEFORE=$(devices) || { echo "cannot count devices in supabase_db_shoo"; exit 1; }
 T0=$(date +%s)
 
@@ -92,8 +100,9 @@ if [ ${#CODE} = 6 ]; then
   [ -n "$P" ] && printf 'authorization: Bearer %s\n' "$P" > "$AUTH"
   if [ -z "$P" ]; then
     host_fail "POST /devices (Protected) refused: rate limit 10/hour per IP?"
-  elif [ "$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -X POST "$U/family/join" -H @"$AUTH" \
-          -H 'content-type: application/json' -d "{\"code\":\"$CODE\"}")" != 200 ]; then
+  elif ! printf '{"code":"%s"}' "$CODE" > "$W/join.json" \
+       || [ "$(curl -s --max-time 10 -o /dev/null -w '%{http_code}' -X POST "$U/family/join" -H @"$AUTH" \
+          -H 'content-type: application/json' --data-binary @"$W/join.json")" != 200 ]; then
     host_fail "POST /family/join did not answer 200"
   elif ! node --no-warnings "$REPO/plan/alief/qa/replica-input.mjs" sample "$W" > /dev/null; then
     host_fail "replica-input.mjs failed"
@@ -162,7 +171,7 @@ delete_protected
 grep -E "^Test Case .*(passed|failed|skipped)|: error: |XCTAssert|Test Suite .* (passed|failed)" "$LOG" | tail -15
 AFTER=$(devices)
 say "devices before=$BEFORE after=$AFTER (Guardian is deleted by the test, Protected by this script)"
-[ "$BEFORE" = "$AFTER" ] || say "WARN device count changed: a leftover, or another session used the shared DB"
+[ "$BEFORE" = "$AFTER" ] || say "WARN device count changed by $((AFTER - BEFORE)): a Guardian left behind by a failed test (its token is only in the simulator; \`supabase db reset\` when no other session uses the DB), or another session used the shared DB"
 [ -f "$SHOT_DIR/live-replica-se.png" ] && say "screenshot: $SHOT_DIR/live-replica-se.png"
 if [ $STATUS = 0 ]; then say "PASS in $(($(date +%s) - T0)) s"; else say "FAIL (xcodebuild exit $STATUS, log: $LOG)"; fi
 exit $STATUS
