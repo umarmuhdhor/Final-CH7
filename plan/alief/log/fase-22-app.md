@@ -10,7 +10,7 @@
 | Sub-fase | Branch | PR | Status |
 |---|---|---|---|
 | 22b | `fix/DT-04-snapshot-perf` | lihat PR | [r] PR terbuka |
-| 22c favicon cache | `fix/PR-05-favicon-cache` | lihat PR | [r] PR terbuka |
+| 22c favicon cache | `fix/PR-05-favicon-cache` | #314 | [r] PR terbuka |
 
 ## Spike (simulator sendiri: "Shoo Track App SE" iPhone SE 3 iOS 26.5, "Shoo Track App Pro Max" iPhone 17 Pro Max iOS 26.5)
 
