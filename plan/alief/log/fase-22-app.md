@@ -10,7 +10,7 @@
 | Sub-fase | Branch | PR | Status |
 |---|---|---|---|
 | 22b | `fix/DT-04-snapshot-perf` | lihat PR | [r] PR terbuka |
-| 22c favicon cache | – | – | opsional, tidak dikerjakan sesi ini |
+| 22c favicon cache | `fix/PR-05-favicon-cache` | – | [~] kode selesai, review menyusul |
 
 ## Spike (simulator sendiri: "Shoo Track App SE" iPhone SE 3 iOS 26.5, "Shoo Track App Pro Max" iPhone 17 Pro Max iOS 26.5)
 
@@ -81,3 +81,76 @@ Simulator "Shoo Track App 19-26" (iPhone 17, iOS 26.5), build `fix/DT-04-snapsho
 - Ukur S6/S7 di iPhone fisik dengan Instruments (Allocations + VM Tracker, "All Processes") sebelum menyimpulkan K8.
 - `DetailView.prepare` bergantung pada `nonisolated async` = global executor (Swift 5). Saat proyek menyalakan `NonisolatedNonsendingByDefault` / Swift 6.2, tandai `@concurrent` supaya tidak pindah ke main.
 - `DetailPerfTests`: `TEST_RUNNER_SHOO_PERF=1 xcodebuild test -only-testing:ShooAppTests/DetailPerfTests …`.
+
+## 22c — `fix/PR-05-favicon-cache` (7 Nov 2026)
+
+Model: Claude Opus 5.5. Spec: `fase-22-performance.md` C17, K10 (a), langkah 23. Branch dari `origin/main` ce137f9. Simulator sendiri "Shoo 22c" (iPhone SE 3, iOS 26.5, `B0000628-E9FE-4CC1-A00C-6152B48303DD`), DerivedData `/private/tmp/claude-501/dd-22c`.
+
+### Checklist
+
+- [x] Test hitungan unduhan dulu (merah: `CachedFaviconLoader` belum ada, build gagal)
+- [x] `CachedFaviconLoader` (`NSCache`, ≤ 100 entri, memori saja) jadi loader default di environment
+- [x] Kunci = host + id scan dari `/favicons/<id>`, bukan URL bertanda tangan (query `v`/`exp`/`sig` diabaikan)
+- [x] Gagal tidak disimpan; unduhan yang masih jalan saat `clear()` tidak disimpan (penghitung `generation`)
+- [x] Hook pengosongan (P13) + memory warning
+- [x] `SiteIcon` tanpa kedip abu-abu saat hit cache; situs lain tidak pernah dapat ikon lama
+- [x] Unit + UI test, screenshot before/after
+- [ ] Review berurutan `ecc:swift-reviewer` → `ecc:security-reviewer` (menyusul), PR
+
+### File
+
+- `ios/ShooApp/Components/SiteIcon.swift`: `FaviconLoading.cachedImage(at:)` (default `nil`), `CachedFaviconLoader` (`shared` membungkus `URLSessionFaviconLoader.shared`), `@Entry faviconLoader` = `CachedFaviconLoader.shared`. `SiteIcon` menyimpan `(url, image)`; body memakai gambar milik link yang sama, kalau tidak ada lookup sinkron ke cache.
+- `ios/ShooApp/Data/SessionStore.swift`: parameter init `forgetCachedData` (default `CachedFaviconLoader.shared.clear()`), dipanggil dari `clear()`, `save()`, dan `setGuardian(nil)` saat sebelumnya ada guardian. Dipanggil di luar `lock`.
+- `ios/ShooApp/Data/ApiRepository.swift`: `removeMember` → `session.forgetCachedData()` (lewat `defer`, juga saat gagal).
+- `ios/ShooApp/App/AppEnvironment.swift`: `leaveDemo` → `CachedFaviconLoader.shared.clear()`.
+- `ios/ShooApp/Tests/FaviconCacheTests.swift` (baru): `FaviconCacheTests` (11 test) + `FaviconCacheHookTests` (7 test).
+- `ios/ShooApp/Tests/APIStub.swift`: `StubServer(forgetCachedData:)` (default kosong, supaya test tidak menyentuh cache bersama app).
+
+### Titik hook (sesedikit mungkin)
+
+| Kejadian | Hook | Lewat |
+|---|---|---|
+| Hapus data saya | `SessionStore.clear()` | `ApiRepository.deleteMe` (sukses dan 404/401) |
+| Sesi kedaluwarsa / dibersihkan | `SessionStore.clear()` | `markSessionExpired`, `checkStoredSession`, gagal simpan saat `register` |
+| Mulai ulang (start over) | `SessionStore.clear()` | `restartOnboarding` |
+| Ganti mode (guardian → protected) / registrasi baru | `SessionStore.save()` | `becomeProtected`, `register` |
+| Protected keluar dari guardian | `SessionStore.setGuardian(nil)` (ada → tidak ada) | `ApiRepository.leaveGuardian` (sukses dan 404) |
+| Guardian menghapus protected ini (sisi protected) | `SessionStore.setGuardian(nil)` (ada → tidak ada) | `ApiRepository.me()` tanpa guardian |
+| Guardian menghapus anggota | `ApiRepository.removeMember` | `session.forgetCachedData()` |
+| Keluar dari demo | `AppEnvironment.leaveDemo` | langsung `CachedFaviconLoader.shared.clear()` |
+| Memory warning | `CachedFaviconLoader` sendiri | observer `UIApplication.didReceiveMemoryWarningNotification` |
+
+Guardian yang memang tidak punya guardian memanggil `setGuardian(nil)` di tiap `GET /devices/me`; itu tidak mengosongkan cache (test `noGuardianBeforeAndAfterKeepsIt`).
+
+### Test
+
+| Perintah | Hasil |
+|---|---|
+| Build sebelum implementasi | merah: `cannot find 'CachedFaviconLoader' in scope` |
+| `-only-testing:` FaviconCache/FaviconCacheHook/FaviconLoader/SessionStore/ApiRepository | 55 test di 5 suite lulus |
+| `-only-testing:ShooAppTests` | 511 test di 49 suite lulus; `DetailPerfTests` 3 skip (tanpa `SHOO_PERF`) |
+| `-only-testing:ShooAppUITests` | 85 test: 74 lulus, 10 skip, 1 gagal (`DetailUITests.testScreenshotZoomHasNoShareOrSave`, `waitForExistence` zoom di SE). Diulang sendiri: lulus. Detail tidak memakai `SiteIcon`; dianggap flaky |
+
+Test baru: dua link bertanda tangan beda untuk scan sama → 1 unduhan (gambar identik); id beda → 2; setelah `clear()` → unduh lagi; gagal → panggilan berikut mencoba lagi; notifikasi memory warning (pada `NotificationCenter` milik test) mengosongkan; unduhan yang selesai setelah `clear()` tidak disimpan; `cachedImage` sinkron dan per scan; host lain dengan id sama = kunci lain; path selain `/favicons/` tidak pernah di-cache; `countLimit == 100`; loader default = `CachedFaviconLoader`. Hook: `clear`, `save`, `deleteMe`, `removeMember`, `leaveGuardian`, `me()` tanpa guardian masing-masing tepat 1×; guardian tanpa guardian 0×.
+
+### Privasi Apple (SECURITY §3 P9/P13)
+
+| Butir | Hasil |
+|---|---|
+| P9 memori saja | `NSCache` di proses app, tidak ada `URLCache`/file; sesi `URLSession` ephemeral tetap sama. Maksimal 100 ikon (downsample 144 px), hilang saat app ditutup |
+| P9 host | Kunci memuat host: link host lain dengan id sama tidak pernah mendapat hit; miss tetap lewat `URLSessionFaviconLoader.isAllowed` |
+| P13 hapus/putus | Dikosongkan di semua titik di atas; unduhan yang sedang jalan saat itu tidak mengisi ulang cache |
+| Log | Tidak ada log baru |
+
+### Penyimpangan / catatan
+
+- Kunci = host + id (spec: id saja). Host ditambahkan supaya hit tidak pernah menjawab link yang ditolak loader asli; tetap tanpa query bertanda tangan.
+- `leaveDemo`: fixture demo (`MockRepository`) semua `faviconUrl: nil`, jadi cache tidak pernah terisi di demo; `clear()` tetap dipanggil sebagai pengaman.
+- Tidak dikosongkan: retensi 14 hari dan sisi guardian saat anggota memutus sendiri. Scan itu tidak lagi muncul di `GET /scans`, jadi entrinya tak terjangkau sampai tergusur (≤ 100) atau app ditutup; tidak ada jalur di app yang menampilkannya.
+- Toggle Pribadi ↔ Guardian (`setFamilyMode`) tidak mengosongkan: anggota tetap terhubung, datanya tidak hilang.
+- Dua `SiteIcon` yang memuat scan yang sama bersamaan tetap bisa mengunduh 2× (tidak ada penggabungan request in-flight); tidak terjadi dalam satu list.
+
+### Screenshot (UI gate)
+
+`plan/alief/qa/img/ui-22c/before.png` (build `origin/main` ce137f9 di worktree sementara, DerivedData sendiri) dan `after.png` (branch ini): Activity, EN terang, SE 3 iOS 26.5, `-UITestMock YES -settings.mode guardian -settings.familyModeOn YES -settings.onboardingCompleted YES -debug.tab activity`, status bar 9:41. Kedua PNG identik byte-per-byte. Fixture mock tidak punya `faviconUrl`, jadi ikon tetap lingkaran abu-abu di keduanya; bukti yang dicari adalah "tidak ada regresi".
+
