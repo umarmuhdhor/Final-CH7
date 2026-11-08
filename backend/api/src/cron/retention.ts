@@ -8,6 +8,7 @@ import {
   byStore, r2Store, removeTombstoned, type ScreenshotStore, screenshotStore, type StoreKind, type Stores,
 } from "../services/screenshots";
 import { archiveStore } from "../services/fragments";
+import { RETENTION_DAYS } from "../policy";
 
 /**
  * 100 paths per Storage DELETE (REMOVE_BATCH); 10 DELETEs keep a run far under the 50 subrequests
@@ -177,7 +178,7 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
   });
   await step("push_log", async () => {
     // The push cap (notify.ts PUSH_CAP) only looks back 10 minutes.
-    result.pushLog = (await sql`delete from push_log where created_at < now() - interval '14 days'`).count;
+    result.pushLog = (await sql`delete from push_log where created_at < now() - make_interval(days => ${RETENTION_DAYS})`).count;
   });
   await step("rate_limit_hits", async () => {
     // The longest window in limits is 24 h (devices_create_all). Chunked: GET /verdicts polling writes many rows.
@@ -216,7 +217,7 @@ async function deleteOldScans(
     // No transaction is open across the Storage call. Oldest first (index scans_shot_created).
     // Screenshot, favicon (PR-05) and/or page replica (EX-07): all are stored objects.
     const ids = (await sql<{ id: string }[]>`
-      select id from scans where created_at < now() - interval '14 days'
+      select id from scans where created_at < now() - make_interval(days => ${RETENTION_DAYS})
         and (screenshot_path is not null or favicon_path is not null or replica_path is not null)
       order by created_at, id limit ${chunk}`).map((r) => r.id);
     if (ids.length === 0) break;
@@ -283,7 +284,7 @@ async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: Ret
   for (let i = 0; i < PLAIN_CHUNKS; i++) {
     const ids = (await sql<{ id: string }[]>`
       select id from scans
-      where created_at < now() - interval '14 days' and screenshot_path is null and favicon_path is null and replica_path is null
+      where created_at < now() - make_interval(days => ${RETENTION_DAYS}) and screenshot_path is null and favicon_path is null and replica_path is null
       order by created_at, id limit ${chunk}`).map((r) => r.id);
     if (ids.length === 0) return;
     result.plainScans += await deleteScans(
@@ -308,7 +309,7 @@ async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra =
     await tx`select 1 from verdicts where scan_id in ${tx(ids)} order by owner_id, domain for update`;
     await tx`update verdicts set scan_id = null where scan_id in ${tx(ids)}`;
     await tx`select 1 from scans where id in ${tx(ids)} order by id for update`;
-    return (await tx`delete from scans where id in ${tx(ids)} and created_at < now() - interval '14 days' ${extra}`).count;
+    return (await tx`delete from scans where id in ${tx(ids)} and created_at < now() - make_interval(days => ${RETENTION_DAYS}) ${extra}`).count;
   });
 }
 
