@@ -47,7 +47,9 @@ final class LivePairingUITests: XCTestCase {
         app.buttons["name.continue"].tap()
         app.buttons["mode.\(mode)"].tap()
         app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.staticTexts["Hi, \(name)!"].waitForExistence(timeout: 15), app.debugDescription)
+        // A real POST /devices: the next step only shows after the server answered (the "Hi, name!" step is gone).
+        let next = mode == "guardian" ? "invite.skip" : "connect.skip"
+        XCTAssertTrue(app.buttons[next].waitForExistence(timeout: 15), app.debugDescription)
         if mode == "guardian" {
             XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
             app.buttons["invite.skip"].tap()
@@ -80,6 +82,8 @@ final class LivePairingUITests: XCTestCase {
         if app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5) { app.buttons["safariDefault.alreadyUsing"].tap() }
         if app.buttons["extensionOn.continue"].waitForExistence(timeout: 5) { app.buttons["extensionOn.continue"].tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
+        // GD-01: notifications are not allowed on this simulator, so Home opens with the reminder popup.
+        app.dismissNotificationsReminder()
         app.buttons["profileButton"].tap()
         let open = app.buttons["profile.invite"]
         XCTAssertTrue(open.waitForExistence(timeout: 10), app.debugDescription)
@@ -101,12 +105,16 @@ final class LivePairingUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.5)
         }
         XCTAssertNotNil(read("done"), "Protected run never finished")
-        // Members are re-read every 5 s while the code is on screen.
-        let members = app.descendants(matching: .any)["familyCode.members"].firstMatch
-        let predicate = NSPredicate(format: "label CONTAINS '2 of 3'")
-        let found = expectation(for: predicate, evaluatedWith: members)
-        wait(for: [found], timeout: 15)
-        XCTAssertTrue(app.staticTexts["Mom"].exists && app.staticTexts["Dad"].exists, app.debugDescription)
+        // The invite sheet has no member list (FamilyCodeView is gone). Members show on the Family Shield
+        // (GD-03), which needs Family mode on: a new Guardian starts in Personal (GD-02).
+        let done = app.buttons["invite.done"].exists ? app.buttons["invite.done"] : app.buttons["invite.close"]
+        done.tap()
+        app.buttons["profile.back"].firstMatch.tap()
+        let toggle = app.descendants(matching: .any)["familyModeToggle"].firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10), app.debugDescription)
+        toggle.tap()
+        XCTAssertTrue(app.staticTexts["Mom"].firstMatch.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Dad"].firstMatch.exists, app.debugDescription)
         shot(app, "pair-guardian-2-two-connected")
     }
 
@@ -135,8 +143,8 @@ final class LivePairingUITests: XCTestCase {
         write("link-ready", "1")
         // The host opens shoo://join?code=… now; iOS asks "Open in “Shoo”?" first.
         let open = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]
-        XCTAssertTrue(open.waitForExistence(timeout: 60), "Host never opened the link")
-        open.tap()
+        // The prompt shows only the first time on a simulator; iOS remembers the answer after that.
+        if open.waitForExistence(timeout: 20) { open.tap() }
         // T11: the code is filled, nothing joins on its own.
         let filled = NSPredicate(format: "value MATCHES '[0-9]{6}'")
         wait(for: [expectation(for: filled, evaluatedWith: linkField)], timeout: 60)
