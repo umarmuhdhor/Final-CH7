@@ -200,8 +200,9 @@ async function until(done: () => Promise<boolean> | boolean): Promise<void> {
   }
   throw new Error("timed out waiting for waitUntil work");
 }
+/** Stored = the put finished and the row is marked ready (fase 22 fix): only then is there a link. */
 const stored = async (id: string) => {
-  await until(async () => (await row(id))?.path != null);
+  await until(async () => (await sql`select 1 from scans where id = ${id} and replica_ready_at is not null`).length === 1);
   return (await row(id))!;
 };
 const droppedFor = (reason: string) =>
@@ -927,10 +928,11 @@ describe("retention and tombstones with replicas (K6)", () => {
     const { p } = await family();
     const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
     const { path } = await stored(first);
-    // A younger row of the same site from before one row per site (it reused the replica).
+    // A younger row of the same site from before one row per site (it reused the replica, so it is
+    // ready like every reuse row, reserveReplica).
     const [{ id: younger }] = await sql<[{ id: string }]>`
-      insert into scans (owner_id, url, domain, score, status, detected_at, replica_path)
-      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}) returning id`;
+      insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_ready_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}, now()) returning id`;
     await sql`update scans set created_at = now() - interval '15 days' where id = ${first}`;
     await runRetention(sql, env);
     expect(await env.REPLICAS.head(path!)).not.toBeNull();

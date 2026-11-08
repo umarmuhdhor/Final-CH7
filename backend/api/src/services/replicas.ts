@@ -1,7 +1,7 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
 import {
-  clearReplicaPath, precheckReplica, type ReplicaQuota, type ReplicaQuotaReason, replicaUsage, reserveReplica, scanExists,
+  clearReplicaPath, markReplicaReady, precheckReplica, type ReplicaQuota, type ReplicaQuotaReason, replicaUsage, reserveReplica,
 } from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { ApiError } from "../http/errors";
@@ -77,7 +77,9 @@ export async function logReplicaUsage(sql: Sql): Promise<void> {
  * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse
  * or a full quota burns neither the IP slot nor inflate CPU. Kill-switch →
  * reuse/quota pre-check (fase 22 K12) → per-IP limit → decode → reserve (per-owner lock,
- * quotas again as the final word, tombstone) → R2 put.
+ * quotas again as the final word, tombstone) → R2 put → mark ready. The reserved path counts for the
+ * quotas from the reserve on, but the scan gets a link (and is a reuse source) only once marked
+ * ready after the put (fase 22 fix, 8 Nov 2026: the link showed 379 ms before a 307 KB put landed).
  * Any failure drops the replica only; the scan is already stored and answered.
  */
 export async function attachReplica(
@@ -128,7 +130,15 @@ export async function attachReplica(
     return;
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
-  if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
+  // A failed mark leaves the row unready (no link, no reuse) and the object for retention to remove.
+  let ready: boolean;
+  try {
+    ready = await markReplicaReady(sql, scan.id, path);
+  } catch (err) {
+    console.error(JSON.stringify({ event: "replica_ready_failed", error: errorInfo(err) }));
+    return;
+  }
+  if (!ready) await abandonUpload(sql, store, path);
 }
 
 /**

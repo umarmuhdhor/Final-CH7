@@ -44,7 +44,8 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: "very-private-domain.example" }, b64(jpeg(50, 50)));
     expect((await sql`select screenshot_path from scans where id = ${id}`)[0]?.screenshot_path).toBeTruthy();
     // EX-07: the replica is stored in waitUntil after the push.
-    await vi.waitFor(async () => expect((await sql`select replica_path from scans where id = ${id}`)[0]?.replica_path).toBeTruthy());
+    // Ready = the put finished; only then does Detail below get a pageReplicaUrl (fase 22 fix, 8 Nov 2026).
+    await vi.waitFor(async () => expect((await sql`select replica_ready_at from scans where id = ${id}`)[0]?.replica_ready_at).toBeTruthy());
     // A broken replica on a second scan: the drop is logged with its reason only.
     await call("/scans", {
       method: "POST", token: p.token, ip,
