@@ -119,6 +119,7 @@ Verifikasi setelah review: typecheck bersih; `vitest run retention devices-me lo
     - `{"event":"inactive_devices","mode":"dry_run","candidates":0,"deleted":0,"skipped":0,"failed":0}` → sama dengan pembanding SQL (0).
     - `retention`: `failed` 0, `backlog` false, `inactiveCandidates` 0, `inactiveDevices` 0, `tombstones` 1, `rateLimitHits` 415, lainnya 0.
   - Run 2–7 (8–13 Nov 19:00 UTC): Alief, baris sama dari tail atau Workers Logs.
+  - **Pembanding SQL ulang, 8 Nov 2026, 17:48 UTC** (`supabase db query --linked`, baca saja): `total` 21, `over_k1` 0. `ops_jobs.retention` terakhir masih run 7 Nov 19:00 (`failed` 0); run 2 jatuh 8 Nov 19:00 UTC.
 
 ## Catatan handoff 24a
 
