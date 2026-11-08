@@ -5,6 +5,8 @@
 -- replica_ready_at = when the object was confirmed in R2 (the original's put, or the reuse of a ready
 -- original). Links, GET /replicas/{id} and reuse need it; quotas, retention, tombstones and
 -- DELETE /devices/me keep reading replica_path, so in-flight uploads still count and are deleted.
+-- admin.* functions/views (lead-owned, e.g. admin.replica_for, has_replica) still read replica_path
+-- only and are deliberately not changed here (question to the lead in the PR).
 
 -- `set local`: only this migration's transaction (see 20261029100000_page_replicas.sql). 1 s as
 -- 20261104132829: add column locks public.scans; a short wait keeps POST /scans from queueing behind
