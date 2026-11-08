@@ -611,6 +611,73 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
   });
 });
 
+// Cloud 8 Nov 2026 (replica-e2e.sh --cloud --bench): a 307 KB replica showed pageReplicaUrl 379 ms
+// after the 201 while the R2 put was still running, and the link 404'd. The path is reserved (and
+// tombstoned) before the put; the link and a reuse may only follow a finished put.
+describe("replica link only after the upload (fase 22, 8 Nov 2026)", () => {
+  /** Holds every R2 put until release(); the reservation commits first, as in production. */
+  const holdPuts = () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const real = R2ReplicaStore.prototype.put;
+    vi.spyOn(R2ReplicaStore.prototype, "put").mockImplementation(async function (this: R2ReplicaStore, ...args) {
+      await gate;
+      return real.apply(this, args);
+    });
+    return release;
+  };
+
+  it("pageReplicaUrl stays null while the put is pending, the replica link 404s; a working link once stored", async () => {
+    const release = holdPuts();
+    const { g, p } = await family();
+    const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    const path = `${p.deviceId}/${id}-replica.html.gz`;
+    await until(async () => (await row(id))?.path === path);
+    for (const viewer of [p, g]) expect((await detail(viewer, id)).pageReplicaUrl).toBeNull();
+    // A link signed by hand (the way an old Detail response would hold one) opens nothing yet.
+    const early = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    expect((await call(`/replicas/${id}${early.search}`)).status).toBe(404);
+
+    release();
+    await until(async () => (await detail(p, id)).pageReplicaUrl !== null);
+    expect(await r2Keys(`${p.deviceId}/`)).toEqual([path]);
+    for (const viewer of [p, g]) expect((await call(await linkFor(viewer, id))).status).toBe(200);
+  });
+
+  it("a reuse never picks an upload still in flight; it does once the put finished", async () => {
+    const release = holdPuts();
+    const { p } = await family();
+    const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    const path = `${p.deviceId}/${first}-replica.html.gz`;
+    await until(async () => (await row(first))?.path === path);
+    // A younger row of the same site (from before one row per site), as in the family-quota reuse test.
+    const younger = async () => (await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now()) returning id`)[0].id;
+    const early = await younger();
+    expect(await reserveReplica(sql, { id: early, ownerId: p.deviceId, domain }, null, REPLICA_QUOTA)).toEqual({ none: true });
+    expect(await row(early)).toEqual({ path: null, bytes: null });
+
+    release();
+    await until(async () => (await detail(p, first)).pageReplicaUrl !== null);
+    const late = await younger();
+    expect(await reserveReplica(sql, { id: late, ownerId: p.deviceId, domain }, null, REPLICA_QUOTA)).toEqual({ reuse: path });
+    // The reuse row points at a stored object, so its link works at once.
+    expect((await call(await linkFor(p, late))).status).toBe(200);
+  });
+
+  it("a failed put leaves no path, no link and no object", async () => {
+    vi.spyOn(R2ReplicaStore.prototype, "put").mockRejectedValue(new Error("r2 down"));
+    const { p } = await family();
+    const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("upload_failed");
+    await until(async () => (await row(id))?.path === null &&
+      (await sql`select 1 from storage_tombstones where path = ${`${p.deviceId}/${id}-replica.html.gz`}`).length === 1);
+    expect((await detail(p, id)).pageReplicaUrl).toBeNull();
+    expect(await r2Keys(`${p.deviceId}/`)).toEqual([]);
+  });
+});
+
 describe("kill-switch REPLICAS_ENABLED (K21)", () => {
   const off = { REPLICAS_ENABLED: "false" };
 
