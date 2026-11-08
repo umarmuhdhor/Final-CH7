@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import type { AppEnv } from "../env";
 
 // Privacy policy (SECURITY §3 P12): what Shoo stores, for how long, and how to delete it.
-// Static, no auth, no DB. Must match the backend: 14-day retention (src/cron/retention.ts),
+// Static, no auth, no DB. Must match the backend: 14-day retention (RETENTION_DAYS, src/policy.ts),
 // DELETE /devices/me, verdicts deleted on disconnect (D-alief-B10), push_log without text (B11),
 // dedupe reuse bounded to 15 days and storage tombstones (D-alief-B12), and what AI layer 4 sends to a
 // third-party LLM provider (ai/src/layer4/reality.js buildInput, issue #97), and the RDAP domain-age lookup with its

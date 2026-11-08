@@ -188,7 +188,7 @@ actor MockRepository: ShooRepository {
         let fresh = FamilyCode(
             code: code,
             expiresAt: now().addingTimeInterval(FamilyCodeModel.codeLifetime),
-            inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/j/\(code)")!
+            inviteUrl: AppConfig.publicBaseURL.appending(path: "j/\(code)")
         )
         familyCode = fresh
         return fresh

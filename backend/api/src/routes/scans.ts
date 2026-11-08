@@ -15,7 +15,7 @@ import { pushSender } from "../services/push/sender";
 import { attachFavicon, faviconUrl } from "../services/favicons";
 import { attachFragments } from "../services/fragments";
 import { attachReplica, replicaUrl } from "../services/replicas";
-import { attachScreenshot, screenshotUrl, toScanResult } from "../services/scans";
+import { screenshotUrl, toScanResult } from "../services/scans";
 import { errorInfo } from "../http/logError";
 
 const FUTURE_SKEW_MS = 5 * 60 * 1000;
@@ -57,7 +57,9 @@ const scanBody = z
     status: z.enum(["warning", "blocked"]),
     signals: z.array(signal).max(20),
     detectedAt: isoTime.refine((v) => Date.parse(v) <= Date.now() + FUTURE_SKEW_MS, "must not be in the future"),
-    screenshotBase64: z.string().nullish(),
+    // Fase 20a (K3 a): ignored. Older builds still send it; any value is accepted (no .max(), no type
+    // check) because a 422 would make the extension drop the whole scan. 20b drops the key.
+    screenshotBase64: z.unknown().optional(),
     // EX-07: gzip + base64 page replica. No .max(): an oversized replica is dropped by
     // decodeReplica, while a 422 would make the extension drop the whole scan.
     pageReplicaBase64: z.string().nullish(),
@@ -150,6 +152,8 @@ scans.post("/scans", async (c) => {
   }
   // After validation, so rejected bodies spend no global budget (accepted trade-off, D-alief-B12 i).
   await hitLight(sql, limits.createScanAll, "all");
+  // Fase 20a: proof that an old build is still in use (G2). The event only: no id, domain or content (P6).
+  if (body.screenshotBase64) console.log(JSON.stringify({ event: "screenshot_ignored" }));
 
   const iconUrl = favicon(body.faviconUrl);
   const { id, created, escalated } = await recordScan(sql, {
@@ -168,14 +172,6 @@ scans.post("/scans", async (c) => {
   // The site already has its Activity row: no second row, push or evidence for a repeat visit,
   // except the push when a warned site is now blocked. Its evidence stays the first visit's.
   if (!created && !escalated) return c.json({ id }, 201);
-  if (created && body.screenshotBase64) {
-    try {
-      await attachScreenshot(sql, c.env, { id, ownerId: principal.deviceId, domain: body.domain }, body.screenshotBase64);
-    } catch (err) {
-      // The scan is stored; a screenshot problem must not turn into a 500 that the extension retries.
-      console.error(JSON.stringify({ event: "screenshot_dropped", reason: "error", error: errorInfo(err) }));
-    }
-  }
   // PR-05: the Worker downloads the favicon once, after the response (a slow scam host never delays
   // or fails the scan), so the app never contacts the scam host (SECURITY P9).
   if (created && iconUrl) {
@@ -188,7 +184,7 @@ scans.post("/scans", async (c) => {
   // Guardian lookup now; the send, the token clear and the push_log row run in waitUntil after the
   // response. The Hyperdrive connection lives for the whole invocation, waitUntil included (checked
   // locally with wrangler dev; cloud check in fase 11 LANGKAH MANUAL step 6).
-  // Like the screenshot, a push problem never fails a stored scan (a retry would duplicate it).
+  // A push problem never fails a stored scan (a retry would duplicate it).
   const deliveries: Promise<unknown>[] = [];
   try {
     const scan = { id, status: body.status, score: body.score };
