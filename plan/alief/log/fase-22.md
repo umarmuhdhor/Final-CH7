@@ -142,4 +142,4 @@ Diubah (juga cherry-pick `b9987db` dari #210 supaya CI hijau): `backend/api/src/
 | Reviewer | Temuan | Tindakan |
 |---|---|---|
 | security | tidak ada di atas LOW; LOW: mark ready gagal meninggalkan path + objek | diperbaiki di `4e88168` (mark gagal → `clearReplicaPath` + `abandonUpload`) |
-| typescript | 3 MEDIUM / 3 LOW | Ditindaklanjuti di sini — MEDIUM: cabang mark gagal kini dites (trigger, merah → hijau); `holdPuts` selalu dilepas (`afterEach`). LOW: cleanup ganda jadi `dropUpload` + log `reason: "ready_failed"`; komentar `admin.*` di migrasi |
+| typescript | Tidak ada CRITICAL/HIGH. MEDIUM: (1) cabang mark gagal tanpa test; (2) `holdPuts` bisa menggantung kalau assertion gagal sebelum `release`; (3) fungsi/view `admin.*` (`admin.replica_for`, `has_replica`, review L5) masih membaca `replica_path` saja. LOW: cleanup ganda; event log mark gagal beda dari `replica_dropped`; backfill migrasi tanpa batch | (1) test trigger, merah → hijau; (2) `afterEach` selalu melepas; (3) milik lead: komentar di migrasi + pertanyaan di PR. LOW: `dropUpload` + `reason: "ready_failed"`; backfill dibiarkan (tabel kecil, retensi 14 hari) |
