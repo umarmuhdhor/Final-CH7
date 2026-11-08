@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Fase 15 step 4: host side of LivePushUITests against wrangler dev (localhost:8787) + local Supabase.
-# Needs a prior `xcodebuild build-for-testing` into $SP/dd. Usage: SP=<work dir> GUARD_UDID=<udid> zsh plan/alief/qa/push-e2e.sh
+# Needs a prior `xcodebuild build-for-testing` into $SP/dd. Usage: SP=<work dir> GUARD_UDID=<udid> [BUNDLE_ID=<app bundle id, default com.shoo.app>] zsh plan/alief/qa/push-e2e.sh
 set -u
 SP=${SP:?set SP to a work dir holding dd/ (derivedData)}
 case "$SP" in /|"$HOME"|"$HOME"/) echo "refusing SP=$SP"; exit 1;; esac
@@ -46,7 +46,7 @@ for S in foreground background terminated; do
   for i in {1..20}; do R=$(psql1 "select result from push_log where scan_id='$ID'"); [ -n "$R" ] && break; sleep 0.5; done
   say "$S: scan $ID push_log=${R:-none} after $(( $(now) - T0 )) ms"
   python3 -c 'import json,sys;json.dump({"aps":{"alert":{"body":"Mom hit a blocked site · 92%"},"sound":"default"},"scanId":sys.argv[1]},open(sys.argv[2],"w"),ensure_ascii=False)' "$ID" "$D/$S.apns"
-  T1=$(now); xcrun simctl push $G com.shoo.app $D/$S.apns >> $LOG 2>&1
+  T1=$(now); xcrun simctl push $G ${BUNDLE_ID:-com.shoo.app} $D/$S.apns >> $LOG 2>&1
   echo $ID > $D/pushed-$S
   waitf detail-$S || break
   say "$S: push to Detail $(( $(cut -d' ' -f1 $D/detail-$S) - T1 )) ms (tap included)"

@@ -25,9 +25,11 @@ Laporan: [`qa/QA-A-2026-10-22.md`](qa/QA-A-2026-10-22.md). P0 = 0, P1 = 0; P2 ke
 
 ## Ronde QA-E2E (fase 16)
 
+Laporan: [`qa/QA-E2E-2026-11-09.md`](qa/QA-E2E-2026-11-09.md) (simulator + stack lokal). P0 = 0, P1 = 0. Ronde iPhone fisik (TestFlight) belum.
+
 | ID | Prio | Area | Temuan singkat | Test | Branch | Status |
 |---|---|---|---|---|---|---|
-| | | | | | | [ ] |
+| P2-1 | P2 | GD-02 / PF-01 | Guardian dengan anggota tetap "Personal" + kartu "Become a Guardian" sampai Family mode dinyalakan | – | – | [ ] menunggu keputusan desain |
 
 ## Diteruskan ke tim lain
 

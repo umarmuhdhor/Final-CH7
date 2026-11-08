@@ -71,21 +71,28 @@ final class LiveBackendUITests: XCTestCase {
                       app.debugDescription)
         shot(app, "guardian-3-activity-empty")
 
+        // The Profile button lives on Shield only (Activity has none since the Figma revision).
+        app.tabBars.buttons["Shield"].tap()
+        XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["profileButton"].tap()
         let manage = app.buttons["profile.manage"]
         XCTAssertTrue(manage.waitForExistence(timeout: 10), app.debugDescription)
         for _ in 0..<6 where !manage.isHittable { app.swipeUp() }
         manage.tap()
+        // Manage account lists the display name as a row; the field is one page deeper.
+        XCTAssertTrue(app.buttons["profile.displayName"].waitForExistence(timeout: 10), app.debugDescription)
+        app.buttons["profile.displayName"].tap()
         let field = app.textFields["profile.name"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertEqual(field.value as? String, "Rina")
         // Cursor at the end of "Rina".
         field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         field.typeText(" B")
         app.buttons["profile.saveName"].tap()
         XCTAssertFalse(app.descendants(matching: .any)["profile.error"].waitForExistence(timeout: 3), app.debugDescription)
-        app.buttons["profile.back"].firstMatch.tap()
         let language = app.buttons["profile.language"]
+        // Back out of the name page and Manage account to Profile.
+        for _ in 0..<3 where !language.waitForExistence(timeout: 2) { app.buttons["profile.back"].firstMatch.tap() }
         for _ in 0..<6 where !language.isHittable { app.swipeUp() }
         language.tap()
         app.buttons["language.id"].tap()
