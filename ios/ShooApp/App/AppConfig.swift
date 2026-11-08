@@ -3,13 +3,17 @@ import Foundation
 /// Build-time configuration (plan/alief/ref/R5 §6). Not in Info.plist: that file is generated
 /// from ios/project.yml (lead-owned).
 enum AppConfig {
+    /// The cloud Worker (shoo-api) deployed from `main` (fase 12, TODO D8): the one host of every public
+    /// link (invite `/j/<code>`, share `/get`). Must equal `INVITE_BASE_URL` in backend/api/wrangler.jsonc
+    /// (checked by backend/api/test/app-config-sync.test.ts).
+    static let publicBaseURL = URL(string: "https://shoo-api.afindo-mi01.workers.dev")!
+
     #if DEBUG && targetEnvironment(simulator)
     /// `wrangler dev` (`pnpm -C backend/api dev`); the simulator reaches the Mac at localhost.
     static let apiBaseURL = URL(string: "http://localhost:8787")!
     #else
-    /// Cloudflare Worker deployed from `main` (fase 12, TODO D8). Also Debug builds on a real iPhone,
-    /// where localhost is the phone itself.
-    static let apiBaseURL = URL(string: "https://shoo-api.afindo-mi01.workers.dev")!
+    /// The cloud Worker. Also Debug builds on a real iPhone, where localhost is the phone itself.
+    static let apiBaseURL = publicBaseURL
     #endif
 
     /// Team AI service (`POST /analyze`, `GET /public-blocklist`). `nil` = not written to the App Group,
@@ -26,7 +30,8 @@ enum AppConfig {
 
     /// PF-01 Tentang Shoo: share link and support address, always the public ones (also in Debug,
     /// where `apiBaseURL` may be localhost). `/get` redirects to TestFlight or the App Store.
-    static let shareURL = URL(string: "https://shoo-api.afindo-mi01.workers.dev/get")!
+    static let shareURL = publicBaseURL.appending(path: "get")
+    /// Must equal `CONTACT` in backend/api/src/routes/privacy.ts (checked by app-config-sync.test.ts).
     static let supportEmail = "Apple.a.day.bali@gmail.com"
     /// App Store id for "Beri nilai di App Store". `nil` until the app is listed: the system review
     /// prompt is asked for instead.
