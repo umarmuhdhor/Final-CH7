@@ -17,7 +17,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Page replicas](#page-replicas): `GET /replicas/{scanId}`
 - [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 20b)
 - [Favicons](#favicons): `GET /favicons/{scanId}`
-- [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
+- [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts?url=&domain=`
 - [Blocklist](#blocklist): `GET /blocklist`
 - [Config](#config): `GET /config/public`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
@@ -49,7 +49,7 @@ Authorization: Bearer shoo_<43 characters>
 ### Request format
 
 - JSON bodies with `Content-Type: application/json`, UTF-8.
-- Maximum body size: 16 KB (most endpoints), 256 KB for `POST /scans`, 1 KB for `POST /verdicts`.
+- Maximum body size: 16 KB (most endpoints), 256 KB for `POST /scans`, 4 KB for `POST /verdicts`.
   A larger body returns `413 too_large`.
 - Times are ISO 8601 with an offset, e.g. `2026-10-22T03:05:00Z`, between 1970 and 2100.
 - Names are 1–20 characters after trimming, without control or bidi-override characters.
@@ -607,7 +607,7 @@ GET /scans?owner=family&status=blocked&limit=20
   open the scan to get them.
 - `faviconUrl` is a link made for you to the stored icon (see [Favicons](#favicons)), valid for 1 hour,
   or `null` when no icon was stored. It is never the site's own favicon URL.
-- `verdict` is the Guardian's decision for that owner and domain, or `null`.
+- `verdict` is the Guardian's decision for this scan's link, by the rule of [`GET /verdicts?url=`](#get-verdictsurldomain), or `null`.
 
 | Error | When |
 |---|---|
@@ -715,8 +715,10 @@ exactly like a screenshot link.
 
 ## Verdicts
 
-A **verdict** is the Guardian's decision on a flagged domain (warning or blocked): `safe` ("Aman") or
-`not_safe` ("Bahaya"). It applies per owner and domain, so it covers every visit by that person to that site.
+A **verdict** is the Guardian's decision on a flagged page (warning or blocked): `safe` ("Aman") or
+`not_safe` ("Bahaya"). It applies per owner and **link** (#241): origin + path, without query or fragment
+(`shareableUrl` in the extension). A `safe` opens only that link; a `not_safe` also covers the other links
+of the domain, except on a shared host.
 
 ### `POST /verdicts`
 
@@ -725,7 +727,7 @@ confirmation step.
 
 - **Auth:** Bearer, **guardian** only
 - **Rate limit:** 60 per minute per device
-- **Body limit:** 1 KB
+- **Body limit:** 4 KB
 
 **Request body**
 
@@ -733,9 +735,10 @@ confirmation step.
 |---|---|---|
 | `scanId` | string | The warning or blocked scan the Guardian is looking at |
 | `value` | `"safe"` \| `"not_safe"` | |
+| `notes` | string, optional | Why the Guardian decided. At most 280 characters after trim; line breaks become spaces, control and bidi characters are removed; empty = no note. The app requires it on `not_safe`; the backend does not (older builds send none) |
 
 ```json
-{ "scanId": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "value": "not_safe" }
+{ "scanId": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "value": "not_safe", "notes": "Minta kode OTP lewat WA" }
 ```
 
 **Response 200**
@@ -744,10 +747,14 @@ confirmation step.
 { "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
 ```
 
-- A new verdict replaces the previous one for that owner and domain.
+- The verdict is stored for the scan's link (its `url` as origin + path). A new verdict on that link
+  replaces the previous one, its note included.
+- `notes` is never returned and never logged. It is cleared after 14 days; the decision stays, otherwise the
+  link would be blocked again on day 15. A copy, masked (e-mail addresses and digit runs of 8 or more), goes
+  to the admin label and archive row (`admin.mask_note`).
 - A Guardian can decide on its own scans and on its members' scans, warning or blocked (Figma "Detail
   Aktivitas Waspada"; before GD-07 warning scans answered `409`).
-- Every scan of that owner and domain then carries the verdict, warning or blocked.
+- Every scan of that owner then carries it by the lookup rule below, warning or blocked.
 - A `not_safe` on a connected member's scan also queues the domain for **manual** review before it can
   enter the global blocklist (at most 10 new domains per Guardian per 24 h). Government, education and bank domains, and
   shared roots such as `co.id` or `vercel.app`, are never queued.
@@ -757,7 +764,7 @@ confirmation step.
 | `404 not_found` | Unknown scan id |
 | `403 verdict_not_allowed` | Not your scan and not one of your members' scans |
 
-### `GET /verdicts?domain=`
+### `GET /verdicts?url=&domain=`
 
 **For:** the extension's block screen (EX-06). While it is open, the extension polls this every
 5 seconds; when the Guardian taps "It's safe" the page opens.
@@ -765,8 +772,11 @@ confirmation step.
 - **Auth:** Bearer, either mode (a Guardian's own extension polls for pages it blocked itself)
 - **Rate limit:** 30 per 10 seconds per device. On 429, wait `Retry-After` and poll again; it does not
   mean "no verdict".
-- **Query:** `domain`, the registrable domain. Case, surrounding spaces, a trailing dot and a leading
-  `www.` are tolerated.
+- **Query:** `url`, the page (an http(s) URL; query and fragment are ignored), and `domain`, its
+  registrable domain. Case, surrounding spaces, a trailing dot and a leading `www.` are tolerated in
+  `domain`. The url's host must be the domain or a subdomain of it, else `422`.
+- **Deprecated:** `?domain=` alone, for builds from before #241: any `not_safe` on that domain, else the
+  newest `safe`. It goes once the last older build is gone.
 
 **Response 200**
 
@@ -774,8 +784,15 @@ confirmation step.
 { "verdict": { "value": "safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
 ```
 
-`verdict` is `null` when there is no decision for (this device, this domain). When a member
-disconnects or is removed, the old Guardian's verdicts for that member are deleted.
+Lookup, first match wins:
+1. A verdict on exactly this link, `safe` or `not_safe`.
+2. A `not_safe` by this owner on another link of the same domain, unless the link is on a shared host:
+   its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
+   `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). A
+   tenant domain such as `evil.github.io` is one owner, so its pages share step 2.
+3. Otherwise `null`. A `safe` never reaches past its own link.
+
+When a member disconnects or is removed, the old Guardian's verdicts for that member are deleted.
 
 **Log (fase 25 K7):** when the verdict was decided at most 120 s ago, the Worker logs one line
 `{"event":"verdict_seen","ageMs":…,"value":"safe"}`: the time from the Guardian's tap to this poll,
