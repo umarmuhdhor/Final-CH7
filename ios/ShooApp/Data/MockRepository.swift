@@ -183,11 +183,11 @@ actor MockRepository: ShooRepository {
         try await pause()
         try require(.guardian)
         // Same code while more than 5 min is left, like the server (contracts/api.md).
-        if !refresh, let familyCode, familyCode.expiresAt.timeIntervalSince(now()) > 5 * 60 { return familyCode }
+        if !refresh, let familyCode, familyCode.expiresAt.timeIntervalSince(now()) > ApiRepository.codeReuseSeconds { return familyCode }
         let code = String(format: "%06d", Int.random(in: 100_000...599_999))
         let fresh = FamilyCode(
             code: code,
-            expiresAt: now().addingTimeInterval(30 * 60),
+            expiresAt: now().addingTimeInterval(FamilyCodeModel.codeLifetime),
             inviteUrl: AppConfig.publicBaseURL.appending(path: "j/\(code)")
         )
         familyCode = fresh

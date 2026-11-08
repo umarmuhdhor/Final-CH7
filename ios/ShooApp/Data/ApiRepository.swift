@@ -86,8 +86,8 @@ final class ApiRepository: ShooRepository {
         return code
     }
 
-    /// Same as the server's `REUSE_MIN_SECONDS`.
-    static let codeReuseSeconds: TimeInterval = 5 * 60
+    /// Same as the server's `REUSE_MIN_SECONDS` (checked by backend/api/test/family-code-sync.test.ts).
+    nonisolated static let codeReuseSeconds: TimeInterval = 5 * 60
 
     struct CachedCode: Sendable {
         var deviceId: String
