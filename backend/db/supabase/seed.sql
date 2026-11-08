@@ -38,10 +38,13 @@ insert into scans (id, owner_id, url, domain, score, status, signals, detected_a
   ('6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e13', 'dev_mom', 'https://contoh-c.test/', 'contoh-c.test', 45, 'warning', '[]'::jsonb,
    now() - interval '1 day');
 
-insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name, global_eligible) values
-  ('dev_mom', 'contoh-a.test', 'not_safe', '6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e11', 'dev_me', 'Adhella', true),
-  ('dev_dad', 'contoh-b.test', 'not_safe', '6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e12', 'dev_me', 'Adhella', true),
-  ('dev_mom', 'contoh-c.test', 'not_safe', '6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e13', 'dev_me', 'Adhella', true);
+insert into verdicts (owner_id, url, domain, value, notes, scan_id, by_device_id, by_name, global_eligible) values
+  ('dev_mom', 'https://contoh-a.test/masuk', 'contoh-a.test', 'not_safe', null,
+   '6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e11', 'dev_me', 'Adhella', true),
+  ('dev_dad', 'https://contoh-b.test/hadiah', 'contoh-b.test', 'not_safe', null,
+   '6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e12', 'dev_me', 'Adhella', true),
+  ('dev_mom', 'https://contoh-c.test/', 'contoh-c.test', 'not_safe', null,
+   '6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e13', 'dev_me', 'Adhella', true);
 
 insert into blocklist_entries (domain, families) values
   ('contoh-a.test', 1), ('contoh-b.test', 1), ('contoh-c.test', 1);

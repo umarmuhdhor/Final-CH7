@@ -42,6 +42,9 @@ const TOMBSTONES = 500;
 /** rate_limit_hits per run: 50 × 20000 = 1 M rows, ~30 days of GET /verdicts polling at 1 rps. */
 const HIT_CHUNK = 20000;
 const HIT_CHUNKS = 50;
+/** verdict notes per run: 20 × 5000 = 100k rows, far above one day of decisions. */
+const NOTE_CHUNK = 5000;
+const NOTE_CHUNKS = 20;
 /**
  * E7 (fase 24a): K1 = 90 days without a request (a family counts as one unit, K3 b), K4 = 30 days
  * for a registration never used again. At most INACTIVE_MAX deletes per run (K6): one transaction
@@ -68,6 +71,8 @@ export interface RetentionResult {
   joinAttempts: number;
   pushLog: number;
   rateLimitHits: number;
+  /** #241: verdict notes cleared after 14 days. */
+  verdictNotes: number;
   /** E7: all candidates (no cap), in dry_run and delete mode. */
   inactiveCandidates: number;
   /** E7: devices deleted this run. */
@@ -104,13 +109,13 @@ export interface RetentionOptions {
 
 /**
  * Daily retention (R4 §5, R2 §6): scans + screenshots + favicons + replicas after 14 days, then the small tables.
- * Verdicts stay (D-alief-14). The heartbeat is written first, so the anti-pause signal never
+ * Verdicts stay (D-alief-14); only their notes go after 14 days (#241). The heartbeat is written first, so the anti-pause signal never
  * depends on retention succeeding. Each step runs on its own; the first error is rethrown at the
  * end so the Cron event shows the failure. Logs carry counts only.
  */
 export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = {}): Promise<RetentionResult> {
   const result: RetentionResult = {
-    scans: 0, plainScans: 0, objects: 0, backlog: false, tombstones: 0, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0,
+    scans: 0, plainScans: 0, objects: 0, backlog: false, tombstones: 0, familyCodes: 0, joinAttempts: 0, pushLog: 0, rateLimitHits: 0, verdictNotes: 0,
     inactiveCandidates: 0, inactiveDevices: 0, inactiveSkipped: 0,
   };
   const errors: unknown[] = [];
@@ -169,6 +174,22 @@ export async function runRetention(sql: Sql, env: Env, opts: RetentionOptions = 
       }
     }
     if (error) throw error;
+  });
+  await step("verdict_notes", async () => {
+    // #241: the Guardian's reason goes after 14 days, the decision stays (else the link is blocked
+    // again on day 15). Batched by the partial index verdicts_notes_due. Rows a verdict request holds
+    // are skipped (lock order owner_id, url as everywhere) and cleared on the next run.
+    for (let i = 0; i < NOTE_CHUNKS; i++) {
+      const n = (await sql`
+        update verdicts set notes = null
+        where (owner_id, url) in (
+          select owner_id, url from verdicts
+          where notes is not null and decided_at < now() - make_interval(days => ${RETENTION_DAYS})
+          order by owner_id, url limit ${NOTE_CHUNK}
+          for update skip locked)`).count;
+      result.verdictNotes += n;
+      if (n < NOTE_CHUNK) break;
+    }
   });
   await step("family_codes", async () => {
     result.familyCodes = (await sql`delete from family_codes where expires_at < now() - interval '1 hour'`).count;
@@ -296,7 +317,7 @@ async function deleteOldPlainScans(sql: Sql, opts: RetentionOptions, result: Ret
 }
 
 /**
- * One transaction per batch. Rows are locked in a fixed order — verdicts by (owner_id, domain),
+ * One transaction per batch. Rows are locked in a fixed order — verdicts by (owner_id, url),
  * then scans by id — the same order deleteDevice uses, so the two cannot deadlock on each other
  * (database review fase 12). Verdicts keep their row with scan_id null (D-alief-14).
  */
@@ -306,7 +327,7 @@ async function deleteScans(sql: Sql, ids: string[], lockTimeout: string, extra =
     // step may remove the paths this run, and a remove here drops the tombstone at once (fase 12 LOW 6).
     await addTombstones(tx, paths, { settled: true });
     await tx`select set_config('lock_timeout', ${lockTimeout}, true), set_config('statement_timeout', '20s', true)`;
-    await tx`select 1 from verdicts where scan_id in ${tx(ids)} order by owner_id, domain for update`;
+    await tx`select 1 from verdicts where scan_id in ${tx(ids)} order by owner_id, url for update`;
     await tx`update verdicts set scan_id = null where scan_id in ${tx(ids)}`;
     await tx`select 1 from scans where id in ${tx(ids)} order by id for update`;
     return (await tx`delete from scans where id in ${tx(ids)} and created_at < now() - make_interval(days => ${RETENTION_DAYS}) ${extra}`).count;
