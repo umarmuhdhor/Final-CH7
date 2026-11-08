@@ -160,6 +160,20 @@ export function queries() {
 const num = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 const account = (data) => data?.viewer?.accounts?.[0] ?? {};
 
+/**
+ * True when both answers have the expected shape. A wrong or unauthorised account id answers 200
+ * with `accounts: []` and no error: without this check every count is 0 and the run looks green.
+ * shoo-api always has rows (this run's own /healthz calls), so none means the data is not there.
+ */
+export function analyticsUsable({ workers, r2 }) {
+  const w = workers?.viewer?.accounts;
+  const r = r2?.viewer?.accounts;
+  if (!Array.isArray(w) || w.length !== 1 || !Array.isArray(r) || r.length !== 1) return false;
+  const rows = w[0].workersInvocationsAdaptive;
+  if (!Array.isArray(rows) || !Array.isArray(r[0].ops) || !Array.isArray(r[0].storage)) return false;
+  return rows.some((x) => x?.dimensions?.scriptName === SCRIPT);
+}
+
 /** K3 workflow checks from the two GraphQL answers (`data` of each). */
 export function evaluateAnalytics({ workers, r2 }) {
   const out = [];
@@ -174,7 +188,8 @@ export function evaluateAnalytics({ workers, r2 }) {
     if (r?.dimensions?.scriptName !== SCRIPT) continue;
     apiRequests += requests;
     apiErrors += num(r?.sum?.errors);
-    if (r?.dimensions?.status === "exceededResources") exceeded += requests;
+    // "exceededResources", and the newer "exceededCpu" / "exceededMemory".
+    if (String(r?.dimensions?.status ?? "").startsWith("exceeded")) exceeded += requests;
   }
   if (exceeded > 0) out.push(code("worker_exceeded_cpu"));
   if (apiRequests >= LIMITS.workerErrorMinRequests && apiErrors / apiRequests > LIMITS.workerErrorRatio) out.push(code("worker_errors"));
@@ -204,7 +219,8 @@ export async function checkDaily({ base, cfToken, accountId, fetchImpl, now }) {
 
   if (!cfToken || !/^[0-9a-f]{32}$/.test(accountId ?? "")) return [...out, code("cf_analytics_unavailable")];
   const end = now.toISOString();
-  const dayStart = new Date(now.getTime() - 24 * 3600_000).toISOString();
+  // 24 h minus a minute: the Workers dataset rejects ranges longer than a day.
+  const dayStart = new Date(now.getTime() - 24 * 3600_000 + 60_000).toISOString();
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const q = queries();
   const ask = (query, variables) =>
@@ -219,7 +235,9 @@ export async function checkDaily({ base, cfToken, accountId, fetchImpl, now }) {
   ]);
   const good = (x) => x.status === 200 && x.json?.data && !(x.json.errors?.length > 0);
   if (!good(w) || !good(r)) return [...out, code("cf_analytics_unavailable")];
-  return [...out, ...evaluateAnalytics({ workers: w.json.data, r2: r.json.data })];
+  const data = { workers: w.json.data, r2: r.json.data };
+  if (!analyticsUsable(data)) return [...out, code("cf_analytics_unavailable")];
+  return [...out, ...evaluateAnalytics(data)];
 }
 
 /** OPS_SIMULATE: known codes only (it ends up in a public issue). */
@@ -230,10 +248,10 @@ export function parseSimulate(raw) {
 const MARKER_RE = /<!-- ops-watch (\{[^\n]*?\}) -->/;
 const codeList = (v) => Array.isArray(v) && v.every((c) => typeof c === "string" && CODE_RE.test(c));
 
-/** Last state written by the workflow itself: issue body, then its comments, newest wins. */
-function lastState(view) {
-  const texts = [view, ...(view.comments ?? [])].filter((t) => TRUSTED_AUTHORS.has(t?.author?.login));
-  for (const t of texts.reverse()) {
+/** Last state written by the workflow itself: `texts` = issue body, then comments, oldest first; newest wins. */
+function lastState(texts) {
+  const trusted = texts.filter((t) => TRUSTED_AUTHORS.has(t?.login));
+  for (const t of trusted.reverse()) {
     const m = MARKER_RE.exec(t.body ?? "");
     if (!m) continue;
     try {
@@ -271,7 +289,14 @@ export async function syncIssue({ quick, daily, mode, gh, now }) {
     .filter((i) => TRUSTED_AUTHORS.has(i?.author?.login) && Number.isInteger(i.number))
     .map((i) => i.number)
     .sort((a, b) => a - b)[0];
-  const prev = number ? lastState(JSON.parse(await gh(["issue", "view", String(number), "--json", "author,body,comments"]))) : null;
+  let prev = null;
+  if (number) {
+    const issue = JSON.parse(await gh(["issue", "view", String(number), "--json", "author,body"]));
+    // Every page of comments (REST, oldest first): `issue view` may return only the first page.
+    const pages = JSON.parse(await gh(["api", "--paginate", "--slurp", `repos/{owner}/{repo}/issues/${number}/comments?per_page=100`]));
+    const comments = pages.flat().map((c) => ({ login: c?.user?.login, body: c?.body }));
+    prev = lastState([{ login: issue?.author?.login, body: issue?.body }, ...comments]);
+  }
   const blind = [...quick, ...daily].some((c) => BLIND.has(c.code));
 
   let dailyAlerts = mode === "daily" ? alertsOf(daily) : (prev?.daily ?? []);
@@ -291,17 +316,21 @@ export async function syncIssue({ quick, daily, mode, gh, now }) {
       const create = ["issue", "create", "--title", `ops-alert: ${alerts.join(", ")}`, "--label", LABEL, "--body", body];
       try {
         await gh([...create, "--assignee", ASSIGNEE]);
-      } catch {
-        // Assignee no longer assignable: the alert still needs its issue.
+      } catch (err) {
+        // Assignee no longer assignable: the alert still needs its issue. Any other error stays an error.
+        if (!/assign/i.test(String(err?.message ?? "") + String(err?.stderr ?? ""))) throw err;
         await gh(create);
       }
       return "opened";
     }
     if (prev && prev.green === 0 && sameSet(prev.alerts, alerts) && sameSet(prev.daily, dailyAlerts)) return "unchanged";
     const added = alerts.some((c) => !(prev?.alerts ?? []).includes(c));
-    if (prev && prev.green === 0 && !added && now.getTime() - prev.at < QUIET_MS) return "unchanged";
+    // Quiet hour: only for codes of quick runs going away. A daily set always gets written, or the next
+    // quick run would carry the stale daily codes again.
+    if (prev && prev.green === 0 && !added && sameSet(prev.daily, dailyAlerts) && now.getTime() - prev.at < QUIET_MS) return "unchanged";
     const body = `Alert codes at ${utc(now)} (${mode} run):\n\n${bullets(alerts)}\n\n${markerOf(state)}`;
     await gh(["issue", "comment", String(number), "--body", body]);
+    await gh(["issue", "edit", String(number), "--title", `ops-alert: ${alerts.join(", ")}`]);
     return "updated";
   }
 

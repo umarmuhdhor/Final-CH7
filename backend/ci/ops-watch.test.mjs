@@ -126,6 +126,9 @@ describe("evaluateAnalytics", () => {
   it("worker_exceeded_cpu from 1 exceededResources invocation of shoo-api", () => {
     assert.deepEqual(codesOf(evaluateAnalytics(analytics({ workers: [w("shoo-api", "success", 100), w("shoo-api", "exceededResources", 1, 1)] }))), ["worker_exceeded_cpu"]);
     assert.deepEqual(evaluateAnalytics(analytics({ workers: [w("shoo-ai", "exceededResources", 3, 3)] })), []);
+    for (const status of ["exceededCpu", "exceededMemory"]) {
+      assert.deepEqual(codesOf(evaluateAnalytics(analytics({ workers: [w("shoo-api", "success", 100), w("shoo-api", status, 1, 1)] }))), ["worker_exceeded_cpu"]);
+    }
   });
 
   it("worker_errors above 1 % with at least 50 requests", () => {
@@ -186,7 +189,17 @@ describe("checkDaily", () => {
     assert.equal(f.calls.filter((c) => c.url.endsWith("/healthz/db")).length, 1);
     const vars = JSON.parse(f.calls.find((c) => c.url.includes("graphql") && c.init.body.includes("r2")).init.body).variables;
     assert.equal(vars.monthStart, "2026-11-01T00:00:00.000Z");
-    assert.equal(vars.dayStart, "2026-11-08T20:41:00.000Z");
+    assert.equal(vars.dayStart, "2026-11-08T20:42:00.000Z");
+  });
+
+  it("cf_analytics_unavailable when the account is not visible (200 with accounts: []) or shoo-api has no rows", async () => {
+    for (const data of [{ viewer: { accounts: [] } }, analytics({ workers: [w("shoo-ai", "success", 10)] }).workers]) {
+      const f = fakeFetch({
+        "/healthz/db": json(200, {}),
+        "/client/v4/graphql": (init) => json(200, { data: JSON.parse(init.body).query.includes("workersInvocationsAdaptive") ? data : analytics().r2 }),
+      });
+      assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW }), [{ code: "cf_analytics_unavailable", level: "warn" }]);
+    }
   });
 
   it("healthz_db_failed when /healthz/db is not 200", async () => {
@@ -223,7 +236,12 @@ function fakeGh({ open = [], view = { author: BOT, body: "", comments: [] }, fai
     const cmd = args.slice(0, 2).join(" ");
     if (cmd === "issue list") return JSON.stringify(open.map((o) => ({ author: BOT, ...o })));
     if (cmd === "issue create" && failAssignee && args.includes("--assignee")) throw new Error("could not assign");
-    if (cmd === "issue view") return JSON.stringify(view);
+    if (cmd === "issue view") return JSON.stringify({ author: view.author, body: view.body });
+    if (args[0] === "api") {
+      // REST comments, one page; the bot's REST login differs from its GraphQL login.
+      const rest = (view.comments ?? []).map((c) => ({ user: { login: c.author.login === "github-actions" ? "github-actions[bot]" : c.author.login }, body: c.body }));
+      return JSON.stringify([rest]);
+    }
     if (cmd === "issue create") return "https://github.example/issues/7\n";
     return "";
   };
@@ -319,6 +337,26 @@ describe("syncIssue", () => {
     assert.ok(!creates[1].includes("--assignee"));
   });
 
+  it("any other create error is not swallowed", async () => {
+    const gh = async (args) => {
+      if (args[1] === "list") return "[]";
+      if (args[1] === "create" && args[0] === "issue") throw new Error("HTTP 502");
+      return "";
+    };
+    await assert.rejects(syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), /502/);
+  });
+
+  it("the oldest open workflow issue wins when there are two", async () => {
+    const gh = fakeGh({ open: [{ number: 9 }, { number: 7 }] });
+    await syncIssue({ quick: [], daily: [], mode: "quick", gh, now: NOW });
+    assert.ok(gh.calls.some((a) => a[0] === "issue" && a[1] === "view" && a[2] === "7"));
+  });
+
+  it("a blind run with no open issue does nothing", async () => {
+    const gh = fakeGh();
+    assert.equal(await syncIssue({ quick: [{ code: "ops_status_limited", level: "warn" }], daily: [], mode: "quick", gh, now: NOW }), "none");
+  });
+
   it("a blind run (429, no analytics) is not green and never closes", async () => {
     const view = { author: BOT, body: marker({ alerts: [], daily: [], green: 1 }), comments: [] };
     const gh = fakeGh({ open: [{ number: 7 }], view });
@@ -341,6 +379,11 @@ describe("syncIssue", () => {
     const view = { author: BOT, body: marker({ alerts: ["healthz_down", "retention_failed"], daily: [], green: 0, at: recent }), comments: [] };
     assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh: fakeGh({ open: [{ number: 7 }], view }), now: NOW }), "unchanged");
     assert.equal(await syncIssue({ quick: alertCodes("retention_failed", "notifications_stale"), daily: [], mode: "quick", gh: fakeGh({ open: [{ number: 7 }], view }), now: NOW }), "updated");
+    // A daily run that clears a daily code always writes, quiet hour or not.
+    const dview = { author: BOT, body: marker({ alerts: ["retention_failed", "worker_errors"], daily: ["worker_errors"], green: 0, at: recent }), comments: [] };
+    const dgh = fakeGh({ open: [{ number: 7 }], view: dview });
+    assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "daily", gh: dgh, now: NOW }), "updated");
+    assert.ok(dgh.calls.some((a) => a[1] === "edit" && a.includes("ops-alert: retention_failed")));
     const later = new Date(NOW.getTime() + 41 * 60_000);
     assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh: fakeGh({ open: [{ number: 7 }], view }), now: later }), "updated");
   });
@@ -366,13 +409,28 @@ describe("main", () => {
 
   it("prints codes only: no numbers from the response, no URL, no token", async () => {
     const lines = [];
-    const body = { ok: false, failing: [{ code: "db_size_high", level: "alert" }], dbBytes: 471859200, blocklistQueue: 12 };
+    const body = { ok: false, failing: [{ code: "db_size_high", level: "alert" }], dbBytes: 471859200, blocklistQueue: 987654321 };
     const f = fakeFetch({ "/healthz": json(200, {}), "/ops/status": json(200, body) });
     await main({ argv: ["--quick"], env, fetchImpl: f, gh: fakeGh(), sleep: noSleep, log: (l) => lines.push(l), now: NOW });
     const out = lines.join("\n");
     assert.match(out, /alert db_size_high/);
     assert.match(out, /issue: opened/);
-    for (const leak of [TOKEN, "https://", "471859200", "12", "example.workers.dev"]) assert.ok(!out.includes(leak), leak);
+    for (const leak of [TOKEN, "https://", "471859200", "987654321", "example.workers.dev"]) assert.ok(!out.includes(leak), leak);
+  });
+
+  it("--daily end to end: keep-alive, analytics, one issue", async () => {
+    const f = fakeFetch({
+      "/healthz": json(200, {}),
+      "/ops/status": okStatus,
+      "/healthz/db": json(200, {}),
+      "/client/v4/graphql": (init) => {
+        const d = analytics({ workers: [w("shoo-api", "exceededCpu", 2, 2), w("shoo-api", "success", 100)] });
+        return json(200, { data: JSON.parse(init.body).query.includes("workersInvocationsAdaptive") ? d.workers : d.r2 });
+      },
+    });
+    const r = await main({ argv: ["--daily"], env, fetchImpl: f, gh: fakeGh(), sleep: noSleep, log: () => {}, now: NOW });
+    assert.deepEqual(codesOf(r.codes), ["worker_exceeded_cpu", "worker_errors"]);
+    assert.equal(r.action, "opened");
   });
 
   it("simulate adds a known code without touching the backend's answer", async () => {
