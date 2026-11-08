@@ -102,11 +102,14 @@ Diubah (juga cherry-pick `b9987db` dari #210 supaya CI hijau): `backend/api/src/
 
 ## LANGKAH MANUAL
 
-- [ ] 1. **(Alief, lokal)** S1 + S3: `supabase start`, `pnpm -C backend/api dev`, `d` → DevTools → Profiler, jalankan `replica-e2e.sh --bench` + `cpu-bench.sh` (dibuat di PR plan, bukan sesi ini), di `main` lalu di cabang 22a-1. Catat 10 fungsi teratas per rute + porsi `postgres` di `POST /devices` di sini. Kalau porsi postgres ≥ 20 %: buka 22a-3 (K5 a).
+- [~] 1. **(Alief, lokal)** S1 + S3: `supabase start`, `pnpm -C backend/api dev`, `d` → DevTools → Profiler, jalankan `replica-e2e.sh --bench` + `cpu-bench.sh` (dibuat di PR plan, bukan sesi ini), di `main` lalu di cabang 22a-1. Catat 10 fungsi teratas per rute + porsi `postgres` di `POST /devices` di sini. Kalau porsi postgres ≥ 20 %: buka 22a-3 (K5 a).
+  - **8 Nov 2026:** profiler lokal (DevTools) belum dijalankan. Pengganti untuk keputusan K5: flamegraph produksi di butir 3 menunjukkan konstruksi klien postgres (`createSql`) 21 % dari profil, juga di rute tanpa DB → di atas ambang 20 % → **22a-3 dibuka** (klien postgres dibuat malas, hanya saat rute butuh DB).
 - [~] 2. **(Alief, cloud)** S2 sebelum dan sesudah deploy 22a-1: diam ≥ 10 menit, `npx wrangler tail shoo-api --format json` + 10× `curl -s https://shoo-api.afindo-mi01.workers.dev/healthz`. Salin hanya `cpuTime`, `wallTime`, `outcome`.
   - **Sesudah 22a-1, 7 Nov 2026, 17:12 UTC:** 10× `/healthz` → semua 200, `ok`. cpuTime (ms): 1, 10, 1, 6, 5, 1, 6, 6, 12, 1 (median 5,5, maks 12). wallTime (ms): 2, 11, 1, 7, 5, 1, 6, 7, 12, 2. Syarat diam ≥ 10 menit tidak dicek. **Sebelum** tidak bisa diukur lagi: 22a-1 (#212) sudah ter-deploy sejak 1 Nov 07:47 UTC.
-- [ ] 3. **(Alief, dashboard)** Flamegraph CPU produksi 10 s (Workers & Pages → `shoo-api` → Observability → Flamegraph) sebelum dan sesudah 22a-1. Setelah 22a-1 nama fungsi harus terbaca (source map).
-- [~] 4. **(Alief, cloud)** GraphQL `workersInvocationsAdaptive` 24 jam sebelum dan sesudah deploy: `cpuTimeP50`, `cpuTimeP99`, status. Plus `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud --bench` dengan `wrangler tail` terbuka → tanpa 1102/`exceededCpu`.
+- [x] 3. **(Alief, dashboard)** Flamegraph CPU produksi 10 s (Workers & Pages → `shoo-api` → Observability → Flamegraph) sebelum dan sesudah 22a-1. Setelah 22a-1 nama fungsi harus terbaca (source map).
+  - **Sesudah 22a-1, 8 Nov 2026 ±07:45 UTC** (Observability → Flamegraph, CPU 10 s, traffic `/privacy` + `/support`): nama fungsi terbaca dengan path sumber (`src/db/client.ts:9`, `src/routes/privacy.ts:192`, `hono/dist/compose.js:24`) → source map jalan. **Sebelum** tidak bisa diukur lagi (22a-1 sudah ter-deploy).
+  - Isi profil (33 sampel): GC 54,5 %, `dispatch` hono 36,4 %, di dalamnya **`createSql` 21,2 %** (`Postgres` + `parseOptions` + `Subscribe`), padahal `/privacy` dan `/support` tidak memakai DB. Render halaman sendiri 3 %.
+- [x] 4. **(Alief, cloud)** GraphQL `workersInvocationsAdaptive` 24 jam sebelum dan sesudah deploy: `cpuTimeP50`, `cpuTimeP99`, status. Plus `SHOO_API=https://shoo-api.afindo-mi01.workers.dev bash plan/alief/qa/replica-e2e.sh --cloud --bench` dengan `wrangler tail` terbuka → tanpa 1102/`exceededCpu`.
   - **7 Nov 2026, 17:13 UTC**, GraphQL `workersInvocationsAdaptive`, `shoo-api`, per status (ms):
 
     | Jendela (UTC) | status | request | error | cpu p50 | cpu p99 |
@@ -118,7 +121,9 @@ Diubah (juga cherry-pick `b9987db` dari #210 supaya CI hijau): `backend/api/src/
     | 24 jam terakhir | clientDisconnected | 271 | 0 | 6,30 | 18,91 |
 
   - 22a-1: p50 −23 %, p99 −33 %. Tidak ada status `exceededCpu`/`exceededResources` di jendela mana pun. p50 24 jam terakhir 12,89 ms > target K1 10 ms, tapi angka ini gabungan semua rute dengan volume kecil (148), bukan per rute DB.
-  - **Belum:** `replica-e2e.sh --cloud --bench` (fase 19 butir 4 jalan tanpa `--bench`).
+  - **`--bench`, 8 Nov 2026 07:38 UTC** (`replica-e2e.sh --cloud --bench`, tail terbuka): worst case (409 600 karakter, 3 145 728 byte inflate) → `POST /scans` 201 dalam 959 ms, cpu 80 ms; bom gzip nol → 201, cpu 90 ms, replica ditolak (`replica_dropped` `too_large`), tanpa `exceededCpu`/1102. Semua rute lain 1–64 ms cpu.
+  - **Temuan (bug, belum diperbaiki):** `GET pageReplicaUrl` worst case → **404**, padahal link sudah muncul 379 ms setelah 201. Sebab: `attachReplica` (`services/replicas.ts`) mengisi `replica_path` lewat `reserveReplica` **sebelum** `store.put` ke R2 selesai, jadi selama upload Guardian sudah dapat link ke objek yang belum ada. Replica kecil (sampel) tidak kena karena upload-nya cepat. Perbaikan diusulkan di PR terpisah (link hanya dikirim setelah upload selesai).
+  - `replica-input.mjs worst` sesekali gagal ("no worst-case replica found", pencarian ukuran acak); ulangi sekali cukup.
 - [ ] 5. **(Umar)** K11 gerbang ukuran bundle di CI: ditanyakan di PR 22a-1 (`## Questions for Umar`), bukan issue (D-alief-C29). Merge di menit :10–:40, deploy lewat CI.
 
 ## Catatan handoff

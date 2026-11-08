@@ -118,7 +118,7 @@ Verifikasi setelah review: typecheck bersih; `vitest run retention devices-me lo
   - **Run 1/7, 7 Nov 2026 19:00 UTC** (`wrangler tail`): cron `0 19 * * *` cpu 24 ms, wall 5 828 ms, `ok`.
     - `{"event":"inactive_devices","mode":"dry_run","candidates":0,"deleted":0,"skipped":0,"failed":0}` → sama dengan pembanding SQL (0).
     - `retention`: `failed` 0, `backlog` false, `inactiveCandidates` 0, `inactiveDevices` 0, `tombstones` 1, `rateLimitHits` 415, lainnya 0.
-  - Run 2–7 (8–13 Nov 19:00 UTC): Alief, baris sama dari tail atau Workers Logs.
+  - Run 2–7 (8–13 Nov 19:00 UTC): dicatat otomatis oleh tugas terjadwal lokal `shoo-inactive-devices-dryrun` (02:45 WITA, tail + SQL pembanding); run 7 membuka PR log.
 
 ## Catatan handoff 24a
 
