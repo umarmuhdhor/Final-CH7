@@ -131,7 +131,7 @@ export async function checkQuick({ base, token, fetchImpl, sleep }) {
   return out;
 }
 
-/** GraphQL documents. R2 is grouped by action type only: never objectName (keys carry device ids, P6). */
+/** GraphQL documents. R2 is grouped by action type only: never the object key dimension (keys carry device ids, P6). */
 export function queries() {
   return {
     workers: `query OpsWorkers($account: String!, $dayStart: Time!, $end: Time!) {
