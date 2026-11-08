@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(28);
+select plan(29);
 
 select has_table('public', t, 'table ' || t || ' exists')
 from unnest(array[
@@ -91,9 +91,13 @@ select ok((select approved_at > now() - interval '1 minute' from blocklist_entri
 insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name)
 values ('t_p1', 'a.example', 'not_safe', 't_s1', 't_g1', 'Guardian');
 select throws_ok(
-  $$insert into verdicts (owner_id, domain, value, by_device_id, by_name)
-    values ('t_p1', 'a.example', 'safe', 't_g1', 'Guardian')$$,
-  '23505', null, 'I6: one verdict per (owner, domain)');
+  $$insert into verdicts (owner_id, url, domain, value, by_device_id, by_name)
+    values ('t_p1', (select url from verdicts where owner_id = 't_p1' and domain = 'a.example'), 'a.example', 'safe', 't_g1', 'Guardian')$$,
+  '23505', null, 'I6: one verdict per (owner, link) (#241)');
+select lives_ok(
+  $$insert into verdicts (owner_id, url, domain, value, by_device_id, by_name)
+    values ('t_p1', 'https://a.example/other', 'a.example', 'safe', 't_g1', 'Guardian')$$,
+  'I6: another link of the same domain is its own verdict (#241)');
 
 -- name length
 select throws_ok(

@@ -448,8 +448,9 @@ export interface ScanRow {
 
 export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
-// Columns shared by list and detail. ownerName is the owner's current name; the verdict
-// (per owner + domain) is joined for warning and blocked scans alike (GD-07).
+// Columns shared by list and detail. ownerName is the owner's current name; the verdict is joined
+// for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
+// else a not_safe on the domain unless the link is on a shared host.
 function selectScans(sql: Sql) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
@@ -464,7 +465,14 @@ function selectScans(sql: Sql) {
            ) end as verdict
     from scans s
     join devices d on d.id = s.owner_id
-    left join verdicts v on v.owner_id = s.owner_id and v.domain = s.domain`;
+    left join lateral (
+      select v.* from (select public.verdict_link(s.url) as link) k, verdicts v
+      where v.owner_id = s.owner_id
+        and (v.url = k.link
+             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
+      order by (v.url = k.link) desc, v.decided_at desc
+      limit 1
+    ) v on true`;
 }
 
 export interface ListQuery {
