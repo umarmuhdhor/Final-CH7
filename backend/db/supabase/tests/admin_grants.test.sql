@@ -5,7 +5,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(101);
+select plan(110);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -23,12 +23,12 @@ select is(
     where n.nspname = 'public' and has_function_privilege('shoo_admin', p.oid, 'EXECUTE')),
   0, 'I1: shoo_admin cannot execute any public function');
 
--- I2: the 01a + 02a + 04a objects. Tables: nobody but postgres.
+-- I2: the 01a + 02a + 04a (+ 10a, 11) objects. Tables: nobody but postgres.
 select table_privs_are('admin', t, r, array[]::text[], r || ' has no privileges on admin.' || t)
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions',
                   'domain_intel', 'domain_intel_label', 'domain_labels', 'label_forget', 'domain_dirty',
                   'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons', 'api_keys',
-                  'domain_lists', 'domain_lists_meta']) as t
+                  'domain_lists', 'domain_lists_meta', 'worker_secrets']) as t
 cross join unnest(array['shoo_admin', 'shoo_api']) as r;
 
 -- Views: SELECT for shoo_admin only.
@@ -85,7 +85,14 @@ from (values
   ('domain_match', array['text']),
   ('domain_set', array['text', 'text', 'boolean', 'text', 'boolean', 'text', 'text', 'text', 'integer']),
   ('domain_remove', array['text', 'text', 'text', 'text']),
-  ('domain_lists_version', array[]::text[])
+  ('domain_lists_version', array[]::text[]),
+  ('worker_secrets_list', array[]::text[]),
+  ('worker_secret_lock', array['text']),
+  ('worker_secret_begin', array['text', 'text[]', 'boolean', 'text']),
+  ('worker_secret_set', array['text', 'text[]', 'bytea', 'bytea', 'integer', 'text', 'boolean', 'uuid', 'text', 'text']),
+  ('worker_secret_read', array['text', 'text', 'text']),
+  ('worker_secret_flag_resave', array['text', 'text[]', 'boolean', 'text']),
+  ('worker_secret_apns_gate', array['text', 'text'])
 ) as x(f, a);
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
