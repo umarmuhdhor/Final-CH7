@@ -18,7 +18,30 @@ try {
 } catch (error) {
     if (error?.code !== "ENOENT") throw error; // a broken .env must be loud, a missing one means layer 4 off
 }
-const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_")));
+// POST /review (layer 5) reads AI_REVIEW_SECRET and REVIEW_DAILY_CAP from the same env object as the LLM settings.
+const llmEnv = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.startsWith("LLM_") || k === "AI_REVIEW_SECRET" || k === "REVIEW_DAILY_CAP"));
+// REVIEW_MOCK=1: POST /review is answered by a fake model (no provider, no key, no cost) so ai/eval/dataset/review-loop.mjs
+// can be run end to end. Rules like the dashboard would expect: >= 2 not_safe families and avg score >= 50 -> scam, >= 2 safe and
+// none not_safe -> legit, otherwise unsure. Layer 4 calls get a 500 here, so /analyze behaves as if layer 4 were off.
+const REVIEW_MOCK = process.env.REVIEW_MOCK === "1";
+function mockLlmFetch(url, init) {
+    let messages;
+    try {
+        messages = JSON.parse(init.body).messages;
+    } catch {
+        return Promise.resolve(new Response("bad request", { status: 400 }));
+    }
+    if (!String(messages?.[0]?.content).startsWith("Kamu menilai apakah sebuah domain")) return Promise.resolve(new Response("mock: layer 4 off", { status: 500 }));
+    const { domains } = JSON.parse(messages[1].content);
+    const results = domains.map((d) => {
+        if (d.families_not_safe >= 2 && (d.avg_score ?? 0) >= 50) return { index: d.index, result: "scam", confidence: 0.85, reason: "Several families flagged it and the average score is high." };
+        if (d.families_safe >= 2 && d.families_not_safe === 0) return { index: d.index, result: "legit", confidence: 0.8, reason: "Families say it is safe and nobody flagged it." };
+        return { index: d.index, result: "unsure", confidence: 0.4, reason: "The numbers point both ways." };
+    });
+    const content = JSON.stringify({ results });
+    return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content } }], usage: { prompt_tokens: 0, completion_tokens: 0 } })));
+}
+if (REVIEW_MOCK) Object.assign(llmEnv, { LLM_API_KEY: "mock", LLM_MODEL: "mock-review", LLM_BASE_URL: "https://mock-llm.example.com/v1" });
 // Layer 4 case library (layer4/cases.js) for a local eval before a set goes live: CASES_FILE=eval/private-out/cases-<v>.json
 // (from ai/scripts/build-cases.mjs). Off when unset. A file that does not parse stops the server: an eval "with cases"
 // that silently ran without them would be a wrong before/after.
@@ -39,7 +62,7 @@ const devLimits = process.env.SHOO_DEV_RATE_LIMIT === "1" ? {} : { rateLimit: NO
 const app = createApp({
     ...devLimits,
     blocklistSource: fixtureSource,
-    llmFetch: (...args) => fetch(...args),
+    llmFetch: REVIEW_MOCK ? mockLlmFetch : (...args) => fetch(...args),
     llmClientCallsPerHour: Number.isInteger(clientCalls) && clientCalls > 0 ? clientCalls : Infinity,
     devStats: true,
     cases,
