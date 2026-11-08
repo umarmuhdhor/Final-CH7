@@ -68,6 +68,46 @@ Verifikasi 1–2 file fase (`wrangler dev --test-scheduled` + curl lokal) belum 
 - Alasan: rekomendasi file fase; satu query; logika ambang dites.
 - Catatan untuk koordinator: entri ini dipindah ke `log/DECISIONS.md` di PR plan (#207) supaya PR fase tidak bentrok di file yang sama.
 
+## 21b — skrip + workflow (`feat/B9-ops-watch`, dari `origin/main` 7dc0caa)
+
+- **Status:** [r] PR (lihat PROGRESS), reviewer @umarmuhdhor. Urutan dibalik atas instruksi Alief 9 Nov 2026: kode + workflow dulu, lalu satu issue ke Umar (K7) yang berisi PR + setup environment `ops`. Workflow tidak jalan sebelum `vars.OPS_WATCH_ENABLED == 'true'`.
+- **Model:** Claude Opus 5.5, 9 Nov 2026.
+
+### Checklist langkah
+
+- [x] 1. Merah: `backend/ci/ops-watch.test.mjs` (`node:test`, `fetch`/`gh`/`sleep` palsu) → `ERR_MODULE_NOT_FOUND`.
+- [x] 2. Hijau: `backend/ci/ops-watch.mjs` (Node 24, tanpa dependency). `--quick`: `/healthz` 3× jeda 20 s → `healthz_down`; `/ops/status` Bearer → `failing[]` diteruskan (bentuk ketat), non-200/3xx/tanpa token → `ops_status_unreachable`, 429 → `ops_status_limited` (warn, catatan handoff 21a). `--daily`: + `/healthz/db` (`healthz_db_failed`) + GraphQL (`worker_exceeded_cpu`, `worker_errors`, `worker_requests_high`, `r2_class_a_high`, `r2_class_b_high`, `r2_storage_high`, `cf_analytics_unavailable`). R2 per `actionType` saja (tanpa `objectName`). Issue `ops-alert`: buat (assign `aliefauzan`), comment kalau kode berubah, tutup setelah 2 run hijau; `simulate` hanya kode yang dikenal.
+- [x] 3. `node --test 'backend/ci/*.test.mjs'` hijau; `backend/ci/README.md` bagian ops-watch, `backend/README.md` baris runbook kode workflow.
+- [x] 4. `.github/workflows/ops-watch.yml` (jadwal K1, `concurrency: ops-watch`, `timeout-minutes: 5`, `permissions: contents: read, issues: write`, `environment: ops`, skip sampai variable, action di-pin SHA, input lewat `env:`) + langkah `backend/ci tests` di `backend.yml`.
+
+### Deviasi
+
+- `node --test backend/ci/` (Verifikasi fase) di Node 24 menganggap folder sebagai file → dipakai `node --test 'backend/ci/*.test.mjs'` (workflow + README).
+- Kode tambahan di luar K3: `ops_status_limited` (warn, 429) dan `cf_analytics_unavailable` (warn). Keduanya "buta": run dengan kode ini tidak dihitung hijau dan tidak menghapus kode lama (review security MEDIUM).
+- Status issue di marker tersembunyi pada komentar bot (bukan label): hanya penulis `github-actions` dipercaya (repo publik).
+- Langkah `bundle-size.mjs` di `backend.yml` (K7 pertanyaan 4, fase 22 K11) tidak ikut: di luar 21b.
+
+### Review (berurutan)
+
+| Reviewer | Temuan | Tindakan |
+|---|---|---|
+| `ecc:security-reviewer` | HIGH: workflow terjadwal mati sendiri setelah 60 hari repo sepi, tanpa alert. MEDIUM: kode "buta" dihitung hijau; `issue list` memercayai issue berlabel dari siapa saja; `--assignee` gagal = alert hilang; komentar flapping tiap 15 menit. LOW: host `OPS_API_URL` bebas, redirect diikuti, ringkasan blocklist salah saat `/ops/status` mati, concurrency daily, marker bisa diedit pemilik akses write | HIGH diterima (fase 21 "Risiko & rollback": cron Worker tetap menjaga Supabase; dicatat di README). Semua MEDIUM diperbaiki (`BLIND`, `--author app/github-actions` + filter penulis, retry tanpa assignee, jam tenang 60 menit). LOW host (`*.workers.dev` saja), redirect (`manual`), ringkasan (`unknown`) diperbaiki; concurrency + marker write diterima, dicatat di README |
+| `ecc:typescript-reviewer` | HIGH: GraphQL 200 dengan `accounts: []` (akun salah) = hijau selamanya. MEDIUM: jam tenang menelan perubahan set daily; status `exceededCpu`/`exceededMemory`; komentar hanya halaman pertama; cron daily dicocokkan dengan string. LOW: jendela 24 jam di batas dataset, judul issue tidak ikut, retry assignee untuk semua error, test kurang | Semua HIGH/MEDIUM diperbaiki (`analyticsUsable`, jam tenang hanya untuk kode quick, `startsWith("exceeded")`, `gh api --paginate --slurp`, komentar di cron). LOW: jendela 24 j − 1 menit, `gh issue edit --title`, retry hanya error assign, test baru (49) |
+
+### Verifikasi (9 Nov 2026)
+
+| Perintah | Hasil |
+|---|---|
+| `node --test 'backend/ci/*.test.mjs'` | 49/49 |
+| `git grep -n "objectName" backend/ci/ops-watch.mjs` | 0 hasil |
+| Dry-run cloud `OPS_DRY_RUN=1 node backend/ci/ops-watch.mjs --quick` (token dari Keychain) | `warn tombstones_stuck`, `warn blocklist_queue`, `issue: dry-run`; tanpa angka/URL/token di output |
+| Dry-run cloud `--daily` (token Analytics dari Keychain, akun Shoo) | `warn tombstones_stuck`, `warn blocklist_queue`, `issue: dry-run`: `/healthz/db` 200, GraphQL dua query sah (tanpa `cf_analytics_unavailable`) |
+
+### Privasi (SECURITY §3)
+
+- P6: output publik (stdout, job summary, issue) hanya kode + level + waktu UTC (test `main` memaku: tanpa token, URL, angka respons). R2 tanpa `objectName` (test + `git grep`).
+- §1: token hanya di header; error cetak teks tetap; token tidak pernah di argv `gh`. `OPS_STATUS_TOKEN` + `CF_ANALYTICS_TOKEN` di environment `ops` (bukan `production`).
+
 ## LANGKAH MANUAL (setelah PR 21a merge dan CI deploy)
 
 - [x] 1. **(Alief)** `openssl rand -base64 32` → simpan di password manager → dari `backend/api/`: `npx wrangler secret put OPS_STATUS_TOKEN` (di luar 18:30–19:30 UTC). Uji: `read -rs OPS_STATUS_TOKEN`, lalu `curl -s -H "Authorization: Bearer $OPS_STATUS_TOKEN" https://shoo-api.afindo-mi01.workers.dev/ops/status` → 200; tanpa header → 404. Catat hasil (tanpa token) di sini. Sebelum run cron pertama, `failing` memuat `retention_stale`/`notifications_stale` (belum ada baris `ops_jobs`): normal.
@@ -77,7 +117,15 @@ Verifikasi 1–2 file fase (`wrangler dev --test-scheduled` + curl lokal) belum 
   - **7 Nov 2026:** tidak bisa lewat API: token OAuth wrangler tanpa scope Notifications (`available_alerts` → `10000 Authentication error`, hanya baca, tidak ada create). Tetap langkah dashboard Alief (atau token API terpisah dengan scope Notifications).
 - [ ] 3. **(Alief)** Catat pemilik email notifikasi Supabase (pause/kuota) dan Cloudflare (billing).
   - **7 Nov 2026:** Supabase `shoo-demo` dan Worker `shoo-api` sama-sama diakses lewat login CLI Alief, jadi pemilik notifikasi = akun Alief. Alamat email sengaja tidak ditulis (repo publik). Alief konfirmasi; mailbox tim K10 = fase 24 LANGKAH MANUAL 1.
-- [ ] 4–8. Sesuai `fase-21-monitoring.md` LANGKAH MANUAL 4–8 (spike GraphQL, custom alert, Environment `ops` oleh Umar, TestFlight crash, cek Senin). 4–6 baru perlu sebelum 21b.
+- [x] 4. **(Alief, spike, 9 Nov 2026 ±17:00 UTC)** Token API "shoo ops-watch analytics read (fase 21b)": hanya Account → Account Analytics → Read, akun Afindo.mi01 (Shoo) saja, kedaluwarsa 9 Nov 2027, dibuat dari profil Cloudflare pemilik akun; disimpan di Keychain Mac Alief (`Shoo OPS_CF_ANALYTICS_TOKEN`), `/user/tokens/verify` → active. Hasil (tanpa angka, repo publik):
+  - (a) GraphQL Analytics jalan di plan Free: `workersInvocationsAdaptive` (filter `scriptName`, `datetime_geq/lt`, 24 j − 1 menit), `r2OperationsAdaptiveGroups` (`actionType`), `r2StorageAdaptiveGroups` (`max { payloadSize metadataSize }`, `bucketName`) menjawab tanpa error.
+  - (b) Nilai `status` `shoo-api` dalam 24 jam: `success`, `clientDisconnected`. Skrip menghitung semua `exceeded*` (`exceededResources`, `exceededCpu`, `exceededMemory`).
+  - (c) `workersInvocationsScheduled` ada (field langsung `cron`, `status`, tanpa `dimensions`), tetapi 0 baris untuk `shoo-api` dalam 24 jam walau cron jalan tiap jam: invocation Cron tidak terlihat di sini. Status cron tetap dari `ops_jobs` (`/ops/status`), sesuai K2.
+  - (d) 500 dari `onError` di `errors`: **belum terverifikasi** (tidak ada baris dengan `errors > 0` dalam 24 jam). `worker_errors` tetap memakai `errors`; 5xx `onError` dicari di Query Builder (C16).
+  - Token yang sempat dibuat dari profil Cloudflare lain di Chrome (nilai tidak tersimpan, belum pernah dipakai) dihapus.
+- [ ] 5. Custom alert Workers Observability (C7): belum.
+- [ ] 6. **(Umar, setelah issue K7)** Environment `ops` + 3 secret + variable `OPS_WATCH_ENABLED=true`, merge PR 21b, Run workflow `daily` sekali. Nilai dari Alief lewat jalur privat (Keychain: `Shoo OPS_STATUS_TOKEN`, `Shoo OPS_CF_ANALYTICS_TOKEN`; account id sama dengan secret `CLOUDFLARE_ACCOUNT_ID` di `production`).
+- [ ] 7–8. Sesuai `fase-21-monitoring.md` LANGKAH MANUAL 7–8 (TestFlight crash, cek Senin).
 
 Verifikasi cloud setelah butir 1: pagi setelah run 19:00 UTC pertama → `jobs.retention.failed = 0`, `ageHours < 12`; satu jam setelah deploy → `jobs.notifications.ageHours < 1.2`.
 
