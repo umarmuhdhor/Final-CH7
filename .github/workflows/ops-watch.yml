@@ -1,0 +1,60 @@
+# Backend monitoring (fase 21b, TODO B9): uptime + GET /ops/status every 15 min, and once a day the
+# Supabase keep-alive (/healthz/db) + Cloudflare usage. Alerts go to one issue labelled `ops-alert`,
+# assigned to Alief; it closes itself after 2 green runs. Logic and tests: backend/ci/ops-watch.mjs.
+# Setup (environment `ops`, secrets, variable): backend/ci/README.md "ops-watch". Skipped until
+# vars.OPS_WATCH_ENABLED is 'true'. The repo is public: the script prints codes only, never numbers.
+name: ops-watch
+
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *" # quick: odd minutes, away from the :00 rush
+    - cron: "41 20 * * *" # daily: 04:41 WITA, ~1.5 h after the 19:00 UTC retention run
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: quick or daily
+        type: choice
+        options: [quick, daily]
+        default: quick
+      simulate:
+        description: "Alert test: comma-separated known codes, e.g. retention_failed (backend untouched)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ops-watch
+  # Two runs must not both open an issue; a waiting run is fine (each takes under a minute).
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    if: vars.OPS_WATCH_ENABLED == 'true'
+    # OPS_STATUS_TOKEN, CF_ANALYTICS_TOKEN (Account Analytics Read only), CLOUDFLARE_ACCOUNT_ID.
+    # Not `production`: this scheduled job never needs the deploy credentials.
+    environment: ops
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: backend/ci
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Check and update the ops-alert issue
+        env:
+          # Inputs go through env, never into the script text (no injection through workflow_dispatch).
+          OPS_MODE: ${{ github.event.schedule == '41 20 * * *' && 'daily' || inputs.mode || 'quick' }}
+          OPS_SIMULATE: ${{ inputs.simulate }}
+          OPS_STATUS_TOKEN: ${{ secrets.OPS_STATUS_TOKEN }}
+          CF_ANALYTICS_TOKEN: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OPS_API_URL: ${{ vars.OPS_API_URL }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: node backend/ci/ops-watch.mjs
