@@ -86,3 +86,11 @@ Setelah review: `vitest run` 5 file yang disentuh (tanpa `.dev.vars`) → 107 lu
 - Selain `API.md:446,483` dari rencana: dua catatan Deprecated dan daftar isi juga diperbarui (rujukan "fase 18c" sudah usang).
 - Test tambahan di luar Output: nilai non-string, `""`/`null` tanpa log, kunjungan ulang.
 - Local Supabase mati saat sesi mulai (Docker Desktop tidak jalan); Docker dinyalakan, container `supabase_*_shoo` jalan lagi tanpa reset.
+
+## G6 (cloud, baca saja, 8 Nov 2026 17:48 UTC)
+
+`supabase db query --linked`, dua query LANGKAH MANUAL 6:
+- `storage.buckets` punya trigger `protect_buckets_delete` (plus trigger bawaan Supabase: `enforce_bucket_name_length_trigger`, `enforce_versioning_status_transition`, `protect_active_lifecycle_states`, `protect_bucket_control_insert`, `protect_bucket_control_update`, `protect_bucket_control_update_role`, `wake_lifecycle_on_policy_write`, `wake_lifecycle_on_versioning_enable`).
+- `protect_delete.prosrc` memuat `storage.allow_delete_query` → true.
+
+Lulus untuk K4 (a). Belum dibandingkan dengan stack lokal (Supabase lokal mati saat cek); bandingkan daftar trigger lokal sebelum merge 20c. 20b/20c/20d tetap menunggu deploy 20a + 15 hari dan jawaban K7.
