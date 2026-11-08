@@ -8,6 +8,7 @@ import { PUSH_CAP } from "../src/services/push/notify";
 import { b64, jpeg } from "./helpers/images";
 import { gzipBase64 } from "./helpers/replica";
 import { resetDb, testSql } from "./helpers/resetDb";
+import { seedScreenshot } from "./helpers/screenshots";
 import { call, createDevice } from "./helpers/seed";
 
 const sql = testSql();
@@ -37,6 +38,11 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
       },
     });
     const { id } = (await scanRes.json()) as { id: string };
+    // Fase 20a (K3 a): the screenshot above is ignored with one bare event, no id or domain.
+    expect(lines.filter((l) => l.includes("screenshot_ignored")).map((l) => JSON.parse(l))).toEqual([{ event: "screenshot_ignored" }]);
+    // An older scan's screenshot, seeded through the service, so its serving and deletion stay in the flow.
+    await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: "very-private-domain.example" }, b64(jpeg(50, 50)));
+    expect((await sql`select screenshot_path from scans where id = ${id}`)[0]?.screenshot_path).toBeTruthy();
     // EX-07: the replica is stored in waitUntil after the push.
     await vi.waitFor(async () => expect((await sql`select replica_path from scans where id = ${id}`)[0]?.replica_path).toBeTruthy());
     // A broken replica on a second scan: the drop is logged with its reason only.
@@ -58,7 +64,8 @@ describe("logs carry no personal data (SECURITY §3 P6, D-alief-40)", () => {
     await logReplicaUsage(sql);
     expect(lines.some((l) => l.includes('"event":"replica_quota_usage"'))).toBe(true);
     const detail = (await (await call(`/scans/${id}`, { token: g.token })).json()) as { screenshotUrl: string | null; pageReplicaUrl: string | null };
-    if (detail.screenshotUrl) await call(new URL(detail.screenshotUrl).pathname + new URL(detail.screenshotUrl).search, { token: g.token });
+    expect(detail.screenshotUrl).toBeTruthy();
+    expect((await call(new URL(detail.screenshotUrl!).pathname + new URL(detail.screenshotUrl!).search, { token: g.token })).status).toBe(200);
     expect(detail.pageReplicaUrl).toBeTruthy();
     await call(new URL(detail.pageReplicaUrl!).pathname + new URL(detail.pageReplicaUrl!).search);
     await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "not_safe" } });

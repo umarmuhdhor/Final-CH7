@@ -15,7 +15,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Family](#family): `POST /family/code`, `POST /family/join`, `GET /family/members`, `PATCH /family/members/{deviceId}`, `POST /family/members/{deviceId}/remind`, `DELETE /family/members/{deviceId}`, `DELETE /family/guardian`
 - [Scans](#scans): `POST /scans`, `GET /scans`, `GET /scans/{id}`
 - [Page replicas](#page-replicas): `GET /replicas/{scanId}`
-- [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 18c)
+- [Screenshots](#screenshots): `GET /screenshots/{scanId}` (deprecated, removed in fase 20b)
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts`
 - [Blocklist](#blocklist): `GET /blocklist`
@@ -477,7 +477,7 @@ every scan. Once retention deletes the row (14 days after the first visit), the 
 - **Body limit:** 512 KB (this path only; everything else 256 KB or less)
 
 **Request body:** a `ScanResult` without `id`, `verdict`, `screenshotUrl` and `pageReplicaUrl`, plus an
-optional page replica (and, from older builds, a screenshot).
+optional page replica. Older builds may still send a screenshot, which is ignored since fase 20a.
 
 | Field | Type | Required | Rules |
 |---|---|---|---|
@@ -492,7 +492,7 @@ optional page replica (and, from older builds, a screenshot).
 | `signals` | array | yes | At most 20 items, see below |
 | `detectedAt` | ISO time | yes | Not in the future (5 min tolerance) |
 | `pageReplicaBase64` | string \| null | no | The page as static HTML, gzip, then base64 without a `data:` prefix (see Page replica rules) |
-| `screenshotBase64` | string \| null | no | **Deprecated** (see Screenshot rules). JPEG or PNG, base64 without a `data:` prefix |
+| `screenshotBase64` | any | no | **Ignored since fase 20a (7 Nov 2026).** Accepted with any value and never stored (see Screenshot rules) |
 
 Each signal:
 
@@ -540,7 +540,7 @@ an extension that sends version 0 is held to the old 30/80 rule.
 
 **Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03" }`
 
-> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. `screenshotBase64` and `GET /screenshots/{scanId}` stay only for older builds and for scans already stored, and are removed in fase 18c (plan/alief, D-alief-C24/C27).
+> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored and is removed in fase 20b (plan/alief, D-alief-C24/C27).
 
 **Page replica rules (EX-07).** The replica is optional, and a bad replica never fails the scan: the
 scan is stored, the answer is 201 and the push goes out first; the replica is handled after the
@@ -555,10 +555,11 @@ kept for families with fewer than 10 uploads in the last 24 h. A full device, fa
 is checked before the replica is decompressed and before it counts against the IP's 300. A second
 scan of the same domain within 24 h reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
 
-**Screenshot rules.** The screenshot is optional, and a bad screenshot never fails the scan: the scan
-is still stored and the answer is still 201. It is dropped when it is not JPEG/PNG, is over 150 KB or
-1280 px on its longest side, or the device already sent 50 in the last 24 h. A second scan of the same
-domain within 24 h reuses the earlier screenshot.
+**Screenshot rules.** `screenshotBase64` is ignored since fase 20a (7 Nov 2026): any value (string or
+not) is accepted, the scan is stored and the answer is 201, but no screenshot is stored. A non-empty
+value only logs `{"event":"screenshot_ignored"}` (no id, domain or content). Scans stored before fase 20a
+keep their screenshot, and `GET /scans/{id}` still returns its `screenshotUrl`, until retention deletes
+the scan or fase 20b removes the screenshot path.
 
 **Favicon rules.** When `faviconUrl` is set, the server downloads the icon once, after the response, and
 stores it like the screenshot; the app never contacts the scam site (SECURITY P9). A favicon problem
@@ -676,7 +677,7 @@ yourself (JavaScript off, no network, see `contracts/api.md` "Page replica").
 
 ## Screenshots
 
-> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. `screenshotBase64` and `GET /screenshots/{scanId}` stay only for older builds and for scans already stored, and are removed in fase 18c (plan/alief, D-alief-C24/C27).
+> **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored and is removed in fase 20b (plan/alief, D-alief-C24/C27).
 
 ### `GET /screenshots/{scanId}?v=&exp=&sig=`
 

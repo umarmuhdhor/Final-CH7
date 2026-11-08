@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import activityFamily from "../../../contracts/fixtures/activity-family.json";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import markedSafe from "../../../contracts/fixtures/blocked-marked-safe.json";
@@ -10,6 +10,7 @@ import { clearScreenshotPath } from "../src/db/repo/scans";
 import { sha256 } from "../src/http/crypto";
 import { b64, jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
+import { seedScreenshot } from "./helpers/screenshots";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
@@ -17,6 +18,7 @@ useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
 beforeEach(() => resetDb(sql));
+afterEach(() => vi.restoreAllMocks());
 
 type Fixture = {
   id: string; url: string; domain: string; pageTitle: string; faviconUrl: string | null; score: number;
@@ -240,19 +242,91 @@ describe("POST /scans: one Activity row per site", () => {
   });
 });
 
-describe("POST /scans screenshot", () => {
-  it("stores a valid JPEG at <owner>/<scan>.jpg in the private bucket", async () => {
+describe("POST /scans screenshotBase64 (ignored since fase 20a, K3 a)", () => {
+  const ignoredLines = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.map((a) => a.map(String).join(" ")).filter((l) => l.includes("screenshot_ignored"));
+
+  it("a valid screenshot → 201, nothing stored, one screenshot_ignored log line without id or domain", async () => {
+    const log = vi.spyOn(console, "log");
     const p = await createDevice("Mom");
     const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(800, 600, 1000)) }));
-    const path = await pathOf(id);
-    expect(path).toBe(`${p.deviceId}/${id}.jpg`);
+    expect(await pathOf(id)).toBeNull();
+    expect(await storageHas(`${p.deviceId}/${id}.jpg`)).toBe(false);
+    // No reservation either: a reserved upload always leaves a tombstone (D-alief-B12).
+    expect(await sql`select path from storage_tombstones`).toHaveLength(0);
+    const lines = ignoredLines(log);
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]!)).toEqual({ event: "screenshot_ignored" });
+    for (const leak of [id, p.deviceId, blocked92.domain]) expect(lines[0]).not.toContain(leak);
+  });
+
+  it.each([
+    ["a number", 12345],
+    ["an object", { image: "abc" }],
+    ["an array", ["abc"]],
+    ["true", true],
+  ])("a non-string screenshotBase64 (%s) → 201, nothing stored", async (_name, shot) => {
+    const log = vi.spyOn(console, "log");
+    const p = await createDevice("Mom");
+    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: shot }));
+    expect(await pathOf(id)).toBeNull();
+    expect(ignoredLines(log)).toHaveLength(1);
+  });
+
+  it("an empty, null, 0 or false screenshotBase64 logs nothing", async () => {
+    const log = vi.spyOn(console, "log");
+    const p = await createDevice("Mom");
+    await postOk(p, extensionBody(blocked92, { screenshotBase64: "" }));
+    await postOk(p, extensionBody(warning41, { screenshotBase64: null }));
+    // Repeat visits: still 201, still no log line.
+    await postOk(p, extensionBody(blocked92, { screenshotBase64: 0 }));
+    await postOk(p, extensionBody(warning41, { screenshotBase64: false }));
+    expect(ignoredLines(log)).toHaveLength(0);
+  });
+
+  it("a repeat visit keeps the screenshot stored before fase 20a", async () => {
+    const p = await createDevice("Mom");
+    const first = await postOk(p, extensionBody(blocked92));
+    await seedScreenshot(sql, { id: first, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(100, 100)));
+    expect(await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(200, 200)) }))).toBe(first);
+    expect(await pathOf(first)).toBe(`${p.deviceId}/${first}.jpg`);
+    expect((await sql`select count(*)::int as n from scans where owner_id = ${p.deviceId}`)[0]!.n).toBe(1);
+  });
+
+  it("control and bidi characters are stripped from page text", async () => {
+    const p = await createDevice("Mom");
+    const sig = { ...blocked92.signals[0]!, evidence: "pin\u202E\u0007", label: { en: "A\u202Eb", id: "c" } };
+    const id = await postOk(p, extensionBody(blocked92, { pageTitle: "Klik\u202EBCA\u0000\u0007 ", signals: [sig] }));
+    const [row] = await sql`select page_title, signals from scans where id = ${id}`;
+    expect(row!.page_title).toBe("KlikBCA");
+    expect(row!.signals[0].evidence).toBe("pin");
+    expect(row!.signals[0].label.en).toBe("Ab");
+  });
+});
+
+// The service POST /scans called until fase 20a. It still stores the seeds that the screenshot
+// serving, deletion and retention tests use; 20b removes it with this block.
+describe("attachScreenshot (until fase 20b)", () => {
+  /** A scan without a screenshot, as POST /scans stores it now. */
+  const scanOf = async (p: Created, extra: Record<string, unknown> = {}) => {
+    const body = extensionBody(blocked92, extra);
+    return { id: await postOk(p, body), ownerId: p.deviceId, domain: body.domain as string };
+  };
+
+  it("stores a valid JPEG at <owner>/<scan>.jpg in the private bucket", async () => {
+    const p = await createDevice("Mom");
+    const scan = await scanOf(p);
+    await seedScreenshot(sql, scan, b64(jpeg(800, 600, 1000)));
+    const path = await pathOf(scan.id);
+    expect(path).toBe(`${p.deviceId}/${scan.id}.jpg`);
     expect(await storageHas(path!)).toBe(true);
   });
 
   it("stores a PNG as .png", async () => {
     const p = await createDevice("Mom");
-    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(png(390, 844)) }));
-    expect(await pathOf(id)).toBe(`${p.deviceId}/${id}.png`);
+    const scan = await scanOf(p);
+    await seedScreenshot(sql, scan, b64(png(390, 844)));
+    expect(await pathOf(scan.id)).toBe(`${p.deviceId}/${scan.id}.png`);
   });
 
   it.each([
@@ -262,18 +336,23 @@ describe("POST /scans screenshot", () => {
     ["broken base64", () => "!!!not-base64!!!"],
     ["longest side over 1280 px", () => b64(jpeg(1281, 400))],
     ["PNG over 1280 px", () => b64(png(400, 2000))],
-  ])("drops the screenshot (%s) and still stores the scan", async (_name, shot) => {
+  ])("drops the screenshot (%s); the scan stays", async (_name, shot) => {
     const p = await createDevice("Mom");
-    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: shot() }));
-    expect(await pathOf(id)).toBeNull();
+    const scan = await scanOf(p);
+    await seedScreenshot(sql, scan, shot());
+    expect(await pathOf(scan.id)).toBeNull();
   });
 
-  it("dedupe: a repeat visit of the site keeps the first screenshot", async () => {
+  it("dedupe: a second scan of the site within 24 h reuses the first screenshot", async () => {
     const p = await createDevice("Mom");
-    const first = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
-    expect(await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(200, 200)) }))).toBe(first);
-    expect(await pathOf(first)).toBe(`${p.deviceId}/${first}.jpg`);
-    expect((await sql`select count(*)::int as n from scans where owner_id = ${p.deviceId}`)[0]!.n).toBe(1);
+    const scan = await scanOf(p);
+    await seedScreenshot(sql, scan, b64(jpeg(100, 100)));
+    // A second row of the same site from before one row per site.
+    const [{ id: b }] = await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, ${blocked92.url}, ${blocked92.domain}, 92, 'blocked', now()) returning id`;
+    await seedScreenshot(sql, { ...scan, id: b }, b64(jpeg(200, 200)));
+    expect([await pathOf(scan.id), await pathOf(b)]).toEqual([`${p.deviceId}/${scan.id}.jpg`, `${p.deviceId}/${scan.id}.jpg`]);
   });
 
   it("a failed upload clears the path on every scan that reused it (dedupe)", async () => {
@@ -296,25 +375,12 @@ describe("POST /scans screenshot", () => {
       select 'seed' || g, ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
              ${p.deviceId} || '/seed' || g || '.jpg'
       from generate_series(1, 48) g`;
-    const ids = await Promise.all(
-      Array.from({ length: 6 }, (_, i) =>
-        postOk(p, extensionBody(blocked92, {
-          url: `https://p${i}.example/`, domain: `p${i}.example`, screenshotBase64: b64(jpeg(100, 100)),
-        })),
-      ),
+    const scans = await Promise.all(
+      Array.from({ length: 6 }, (_, i) => scanOf(p, { url: `https://p${i}.example/`, domain: `p${i}.example` })),
     );
-    const paths = await Promise.all(ids.map(pathOf));
+    await Promise.all(scans.map((s) => seedScreenshot(sql, s, b64(jpeg(100, 100)))));
+    const paths = await Promise.all(scans.map((s) => pathOf(s.id)));
     expect(paths.filter(Boolean)).toHaveLength(2);
-  });
-
-  it("control and bidi characters are stripped from page text", async () => {
-    const p = await createDevice("Mom");
-    const sig = { ...blocked92.signals[0]!, evidence: "pin\u202E\u0007", label: { en: "A\u202Eb", id: "c" } };
-    const id = await postOk(p, extensionBody(blocked92, { pageTitle: "Klik\u202EBCA\u0000\u0007 ", signals: [sig] }));
-    const [row] = await sql`select page_title, signals from scans where id = ${id}`;
-    expect(row!.page_title).toBe("KlikBCA");
-    expect(row!.signals[0].evidence).toBe("pin");
-    expect(row!.signals[0].label.en).toBe("Ab");
   });
 
   it("quota: at most 50 uploads per owner per 24 h", async () => {
@@ -324,8 +390,9 @@ describe("POST /scans screenshot", () => {
       select 'seed' || g, ${p.deviceId}, 'https://d' || g || '.example/', 'd' || g || '.example', 85, 'blocked', now(),
              ${p.deviceId} || '/seed' || g || '.jpg'
       from generate_series(1, 50) g`;
-    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
-    expect(await pathOf(id)).toBeNull();
+    const scan = await scanOf(p);
+    await seedScreenshot(sql, scan, b64(jpeg(100, 100)));
+    expect(await pathOf(scan.id)).toBeNull();
   });
 });
 
@@ -333,7 +400,9 @@ describe("GET /scans", () => {
   it("owner=me (default): newest first, schema-valid, screenshotUrl null in lists", async () => {
     const p = await createDevice("Mom");
     await postOk(p, extensionBody(warning41));
-    await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(100, 100)) }));
+    const shot = await postOk(p, extensionBody(blocked92));
+    await seedScreenshot(sql, { id: shot, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(100, 100)));
+    expect(await pathOf(shot)).not.toBeNull();
     await postOk(p, extensionBody(warning63));
     const { res, body } = await list(p);
     expect(res.status).toBe(200);
@@ -504,7 +573,8 @@ describe("GET /scans", () => {
 describe("GET /scans/{id}", () => {
   it("owner gets a 1-hour Worker URL for the screenshot (D-alief-B08)", async () => {
     const p = await createDevice("Mom");
-    const id = await postOk(p, extensionBody(blocked92, { screenshotBase64: b64(jpeg(320, 240, 500)) }));
+    const id = await postOk(p, extensionBody(blocked92));
+    await seedScreenshot(sql, { id, ownerId: p.deviceId, domain: blocked92.domain }, b64(jpeg(320, 240, 500)));
     const res = await call(`/scans/${id}`, { token: p.token });
     expect(res.status).toBe(200);
     const item = (await res.json()) as Item;
