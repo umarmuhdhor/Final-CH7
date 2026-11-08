@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shoo layer test results</title>
+<style>
+  :root {
+    --ink: #0f1b33;
+    --muted: #5b6b86;
+    --line: #d6e0f0;
+    --card: #ffffffcc;
+    --ext: #2f9e6b;
+    --ext-bg: #dff5ea;
+    --srv: #4a55d6;
+    --srv-bg: #e4e7ff;
+    --bar-ink: #1f3f86;
+    --green: #2fae6d;
+    --yellow: #f2b11d;
+    --orange: #ef8a2c;
+    --red: #e0454a;
+    --red-bg: #fdecec;
+    --page: #eaf2fd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 48px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 500px at 90% -10%, #cfe3ff 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #dbe9ff 0%, transparent 60%),
+      var(--page);
+  }
+  .slide {
+    max-width: 1280px;
+    margin: 0 auto 28px;
+    background: linear-gradient(180deg, #ffffffee, #f4f8ffee);
+    border: 1px solid #ffffff;
+    border-radius: 28px;
+    box-shadow: 0 10px 40px #2a4a8a22;
+    padding: 28px 30px 26px;
+  }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .sec { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; margin: 0 0 12px; }
+  .num { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 14px; flex: none; }
+
+  .cols { display: grid; grid-template-columns: 1fr 2fr; gap: 0; }
+  .col-l { padding-right: 22px; border-right: 1px dashed #b9c6de; }
+  .col-r { padding-left: 22px; }
+  .cards-r { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 2px 10px #2a4a8a14;
+  }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .pill.ext { background: var(--ext-bg); color: #1d6e49; }
+  .pill.srv { background: var(--srv-bg); color: #3640b0; }
+  .card h3 { margin: 8px 0 12px; font-size: 18px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .kpi { background: #eef4ff; border-radius: 12px; padding: 8px 10px; }
+  .kpi b { display: block; font-size: 22px; line-height: 1.1; color: var(--bar-ink); font-variant-numeric: tabular-nums; }
+  .kpi b small { font-size: 12px; font-weight: 600; }
+  .kpi span { font-size: 11px; color: var(--muted); }
+  .kpi.hot { background: var(--red-bg); }
+  .kpi.hot b { color: #b32a2f; }
+  .kpi.ok { background: #e3f6ec; }
+  .kpi.ok b { color: #1d7a4d; }
+  .gap10 { margin-bottom: 10px; }
+
+  .note { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 8px 0 0; }
+  .note strong { color: var(--ink); }
+
+  .score-row { position: relative; margin: 14px 0 6px; }
+  .score-row .lab { font-size: 12px; font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 8px; }
+  .score-row .lab em { font-style: normal; color: var(--muted); font-weight: 500; text-align: right; }
+  .track { position: relative; height: 22px; border-radius: 999px; background: linear-gradient(90deg, #bfe8d1 0 30%, #fbe3a3 30% 50%, #f9cfa0 50% 80%, #f4b6b8 80% 100%); }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: #1f3f86; opacity: .9; min-width: 4px; }
+  .val { position: absolute; top: 50%; transform: translateY(-50%); font-size: 11px; font-weight: 800; color: #fff; padding-left: 8px; font-variant-numeric: tabular-nums; }
+  .val.out { color: var(--ink); padding-left: 6px; }
+  .ticks { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+  .tbar { margin: 9px 0; }
+  .tbar .lab { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 3px; gap: 8px; }
+  .tbar .lab em { font-style: normal; font-weight: 700; color: var(--bar-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .tt { position: relative; height: 12px; background: #e3ebf8; border-radius: 999px; }
+  .tt .f { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--ext); }
+  .tt .f.srv { background: var(--srv); }
+  .tt .p { position: absolute; top: -3px; bottom: -3px; width: 3px; border-radius: 2px; background: var(--ink); }
+  .logaxis { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  .total {
+    margin: 22px 0 14px;
+    background: #101a2f;
+    color: #fff;
+    border-radius: 999px;
+    padding: 14px 24px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 17px;
+  }
+  .stack { display: flex; height: 34px; border-radius: 12px; overflow: hidden; background: #e3ebf8; }
+  .stack div { display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+  .levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  .lvl { background: var(--card); border: 1px solid var(--line); border-left-width: 6px; border-radius: 14px; padding: 10px 12px; }
+  .lvl b { display: block; font-size: 14px; }
+  .lvl span { font-size: 12px; color: var(--muted); }
+  .lvl.n { border-left-color: var(--green); } .lvl.n b { color: #1d7a4d; }
+  .lvl.w1 { border-left-color: var(--yellow); } .lvl.w1 b { color: #8a6208; }
+  .lvl.w2 { border-left-color: var(--orange); } .lvl.w2 b { color: #a85a0d; }
+  .lvl.b { border-left-color: var(--red); } .lvl.b b { color: #b32a2f; }
+
+  .two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.mini th, table.mini td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  table.mini th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  table.mini td.r, table.mini th.r { text-align: right; }
+
+  .foot { max-width: 1280px; margin: 0 auto; color: var(--muted); font-size: 12px; line-height: 1.55; padding: 0 6px; }
+  .foot h4 { margin: 14px 0 4px; color: var(--ink); font-size: 13px; }
+  .foot code { background: #e1eaf8; padding: 1px 5px; border-radius: 5px; font-size: 11.5px; }
+  .foot ul { margin: 4px 0 0 18px; padding: 0; }
+
+  @media (max-width: 980px) {
+    .cols, .two { grid-template-columns: 1fr; }
+    .col-l { padding-right: 0; border-right: 0; border-bottom: 1px dashed #b9c6de; padding-bottom: 18px; margin-bottom: 18px; }
+    .col-r { padding-left: 0; }
+    .cards-r { grid-template-columns: 1fr; }
+    .levels { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .slide { padding: 20px 16px; border-radius: 20px; }
+    .kpis { grid-template-columns: 1fr 1fr; }
+    .levels { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: per layer -->
+<section class="slide">
+  <div class="head">
+    <h1>Layer test results: points and time</h1>
+    <div class="sub">25 scam pages + 10 to 23 legit pages per layer · averages computed from the result files in <code>ai/test-layer*</code></div>
+  </div>
+
+  <div class="cols">
+    <div class="col-l">
+      <h2 class="sec"><span class="num">1</span>On the iPhone</h2>
+      <div class="card">
+        <span class="pill ext">Shoo extension</span>
+        <h3>L2 · Link + brand</h3>
+        <div class="kpis">
+          <div class="kpi"><b>14.1</b><span>avg points, scam (25)</span></div>
+          <div class="kpi ok"><b>0</b><span>avg points, legit (23)</span></div>
+          <div class="kpi"><b>0.40<small> ms</small></b><span>per URL (legit 0.19)</span></div>
+        </div>
+        <div class="kpi hot gap10"><b>2 / 25</b><span>scam reach popup level (≥ 30) from L2 alone · 20 / 25 have any signal</span></div>
+        <p class="note">Reads the URL text only, no network call. <strong>9.9 ms for all 25 scam URLs</strong>, 4.5 ms for the 23 legit URLs. Highest single score: 34. Layer 1 (database) was off.</p>
+      </div>
+    </div>
+
+    <div class="col-r">
+      <h2 class="sec"><span class="num">2</span>On the server</h2>
+      <div class="cards-r">
+        <div class="card">
+          <span class="pill srv">Shoo server</span>
+          <h3>L3 · Forms + content</h3>
+          <div class="kpis">
+            <div class="kpi"><b>36.1</b><span>avg points, scam: fields + text</span></div>
+            <div class="kpi"><b>43.7</b><span>avg with domain age (frozen)</span></div>
+            <div class="kpi ok"><b>4.5</b><span>avg points, legit (10)</span></div>
+          </div>
+          <div class="kpi gap10"><b>0.05<small> ms</small></b><span>rules only, median (max 1.8 ms)</span></div>
+          <div class="kpi hot gap10"><b>1.13<small> s</small></b><span>median with a cold RDAP lookup · p95 1.51 s (1.5 s limit)</span></div>
+          <p class="note">Scam ≥ 30: <strong>19 / 25</strong> (frozen age), <strong>15–18 / 25</strong> with today's RDAP. Legit ≥ 30: <strong>0 / 10</strong>. The slow part is the RDAP age lookup, not the rules. Warm cache: 2.1 ms.</p>
+        </div>
+
+        <div class="card">
+          <span class="pill srv">Shoo server</span>
+          <h3>L4 · LLM check</h3>
+          <div class="kpis">
+            <div class="kpi"><b>26.4</b><span>avg points, scam (22 × 30 ÷ 25)</span></div>
+            <div class="kpi ok"><b>0</b><span>avg points, legit (11)</span></div>
+            <div class="kpi"><b>22 / 25</b><span>scam flagged (+30)</span></div>
+          </div>
+          <div class="kpi gap10"><b>1.20<small> s</small></b><span>median per call · p95 4.93 s · max 8.01 s</span></div>
+          <div class="kpi hot gap10"><b>4 / 108</b><span>calls over 6 s · 2 timeouts (8 s) · 2 bad_schema</span></div>
+          <p class="note">deepseek-v4-flash, 36 pages × 3 rounds. This run counted every flag as a fixed +30, so 26.4 is a floor: in the later live run a flag weighed up to +47 (avg 17.9 over all 20 pages, flagged or not). <strong>23 pages changed their answer between rounds</strong>, so the "no change" limit failed.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="total">Average points per scam page, on the 0–100 scale</div>
+  <div class="two">
+    <div>
+      <div class="score-row">
+        <div class="lab"><span>L2 · Link + brand</span><em>scam 14.1 · legit 0</em></div>
+        <div class="track"><div class="fill" style="width:14.1%"></div><span class="val out" style="left:14.1%">14.1</span></div>
+      </div>
+      <div class="score-row">
+        <div class="lab"><span>L3 · Forms + content</span><em>scam 36.1 (43.7 with age) · legit 4.5</em></div>
+        <div class="track"><div class="fill" style="width:36.1%"></div><span class="val" style="left:0">36.1</span></div>
+      </div>
+      <div class="score-row">
+        <div class="lab"><span>L4 · LLM check</span><em>scam 26.4 · legit 0</em></div>
+        <div class="track"><div class="fill" style="width:26.4%"></div><span class="val" style="left:0">26.4</span></div>
+      </div>
+      <div class="ticks"><span>0</span><span>30 warning</span><span>50 strong</span><span>80 blocked</span><span>100</span></div>
+      <p class="note">Each bar is one layer alone, so they do not add up here. The three layers were measured on different dates and with different settings (see the notes at the bottom).</p>
+    </div>
+
+    <div>
+      <div style="font-size:12px;font-weight:700;margin:2px 0 6px">Time per layer, median (log scale, black tick = p95)</div>
+      <div class="tbar"><div class="lab"><span>L3 rules (CPU)</span><em>0.05 ms</em></div><div class="tt"><div class="f srv" style="width:11.7%"></div></div></div>
+      <div class="tbar"><div class="lab"><span>L2 per URL</span><em>0.40 ms</em></div><div class="tt"><div class="f" style="width:26.6%"></div></div></div>
+      <div class="tbar"><div class="lab"><span>L3 /analyze, RDAP warm</span><em>2.1 ms</em></div><div class="tt"><div class="f srv" style="width:38.7%"></div><div class="p" style="left:40.9%"></div></div></div>
+      <div class="tbar"><div class="lab"><span>L3 /analyze, RDAP cold</span><em>1,132 ms</em></div><div class="tt"><div class="f srv" style="width:84.2%"></div><div class="p" style="left:86.3%"></div></div></div>
+      <div class="tbar"><div class="lab"><span>L4 LLM call</span><em>1,197 ms</em></div><div class="tt"><div class="f srv" style="width:84.6%"></div><div class="p" style="left:94.8%"></div></div></div>
+      <div class="logaxis"><span>0.01 ms</span><span>1 ms</span><span>100 ms</span><span>10 s</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 2: full pipeline on the simulator -->
+<section class="slide">
+  <div class="head">
+    <h1>All layers together: live run in the iPhone simulator</h1>
+    <div class="sub">3 Nov 2026 · iPhone 17 Pro, iOS 26.5, Safari with the Debug extension · L1 off · one visit per link</div>
+  </div>
+
+  <div class="cols" style="grid-template-columns:1.1fr 1fr">
+    <div class="col-l">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">Average points of the 20 scam pages that were scored</div>
+      <div class="stack">
+        <div style="width:14.8%;background:#2f9e6b">L2 14.8</div>
+        <div style="width:19.9%;background:#4a55d6">L3 19.9</div>
+        <div style="width:17.9%;background:#7b6bf0">L4 17.9</div>
+      </div>
+      <div class="legend"><span><i style="background:#2f9e6b"></i>L2 link + brand</span><span><i style="background:#4a55d6"></i>L3 forms + content</span><span><i style="background:#7b6bf0"></i>L4 LLM</span></div>
+      <div class="total" style="margin:14px 0 0;font-size:15px">Average total score: 52.1 · legit pages: 0</div>
+      <p class="note" style="margin-top:12px">Layers add up per page and each page's total is capped at 100: 14.8 + 19.9 + 17.9 = 52.6, and two pages (scam-03, scam-21) went from 104 to 100, which gives 52.1. A flag here weighs <strong>+30 up to +47</strong> (whatever reaches 80). <strong>Legit: 0 of 23</strong> pages got any sign. 4 scam sites were already gone and 1 page was held by a JavaScript dialog.</p>
+    </div>
+
+    <div class="col-r">
+      <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+        <div class="kpi hot"><b>10 / 21</b><span>scam blocked (≥ 80) · target 70%: failed</span></div>
+        <div class="kpi ok"><b>0 / 23</b><span>legit with a sign · target 0: passed</span></div>
+        <div class="kpi"><b>1.4 s</b><span>LLM call median (12 calls) · slowest 4.5 s</span></div>
+        <div class="kpi"><b>1.39 s</b><span>whole /analyze, median · max 5.34 s</span></div>
+      </div>
+      <p class="note">Server errors: 0. L1 was off, so scam pages that a list would catch score lower than in production.</p>
+    </div>
+  </div>
+
+  <div class="levels">
+    <div class="lvl n"><b>0–29% · Normal</b><span>Nothing shown, nothing stored</span></div>
+    <div class="lvl w1"><b>30–49% · Warning</b><span>Popup + highlight</span></div>
+    <div class="lvl w2"><b>50–79% · Strong warning</b><span>Second popup + sensitive fields struck out</span></div>
+    <div class="lvl b"><b>≥80% · Blocked</b><span>Cannot be bypassed</span></div>
+  </div>
+
+  <div style="margin-top:18px">
+    <div style="font-size:13px;font-weight:700;margin-bottom:6px">Old vs new architecture on 75 links (2 Nov 2026, prompt reality-check.v4)</div>
+    <table class="mini">
+      <thead><tr><th>Scam by level</th><th class="r">Normal</th><th class="r">Warning</th><th class="r">Strong</th><th class="r">Blocked</th></tr></thead>
+      <tbody>
+        <tr><td>Old (26 scam)</td><td class="r">1</td><td class="r">2</td><td class="r">6</td><td class="r">17</td></tr>
+        <tr><td>New A (26 scam)</td><td class="r">2</td><td class="r">1</td><td class="r">0</td><td class="r">23</td></tr>
+        <tr><td>Legit blocked, old / new</td><td class="r" colspan="4">0 / 49 and 0 / 49 · LLM call median 1,343 ms · p95 5,209 ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="foot">
+  <h4>Where the numbers come from</h4>
+  <ul>
+    <li><strong>L2:</strong> <code>ai/test-layer2/REPORT.md</code> (25 scam) and <code>REPORT-legit.md</code> (23 legit). Average = mean of the per-URL score column.</li>
+    <li><strong>L3:</strong> <code>ai/test-layer3/HASIL-L3-PENUH.md</code> (25 scam + 10 legit, 29 Oct 2026). "Fields + text" = the field + teks column. Time from section 4.</li>
+    <li><strong>L4:</strong> <code>ai/test-layer4/HASIL.md</code> (25 scam + 10 legit + 1 trap, 108 calls, 30 Oct 2026). Average points = flags × 30 ÷ pages, from the +30 rule in <code>reality.js</code>.</li>
+    <li><strong>Live run:</strong> <code>ai/test-layer-live/v1/HASIL.md</code>. <strong>Old vs new:</strong> <code>ai/test-layer-update-full/HASIL.md</code>.</li>
+  </ul>
+  <h4>Read with care</h4>
+  <ul>
+    <li>Times are measured on a Mac over 127.0.0.1, not from a phone and not from Cloudflare. Real latency will differ.</li>
+    <li>L3's slow time is RDAP. At the 1.5 s limit the age signal is dropped, so the "today" scores move between runs (15–18 of 25 scam ≥ 30).</li>
+    <li>Settings differ per test: L3 ran with L4 off, L4 ran with the production gate skipped, the live run had L1 off. The layers were not measured in one single run.</li>
+    <li>Only 25 scam pages, and several share one kit (for example 12, 13, 16). Do not read 14.1 or 36.1 as a rate for real traffic.</li>
+  </ul>
+</div>
+
+</body>
+</html>
