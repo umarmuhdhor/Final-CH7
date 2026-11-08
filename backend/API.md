@@ -645,7 +645,8 @@ GET /scans?owner=family&status=blocked&limit=20
 - `pageTitle` is left out when there is none.
 - `pageReplicaUrl` is a link made for you to the page replica, valid for 1 hour, or `null` when there
   is none (or replicas are switched off). Right after a push the replica may still be saving: it can
-  appear a few seconds later.
+  appear a few seconds later. The link appears only after the copy is stored, so a link never 404s
+  because the upload is still running (fase 22 fix, 8 Nov 2026).
 - `screenshotUrl` is a link made for you, valid for 1 hour, or `null` when there is no screenshot
   (only older scans have one).
 - `faviconUrl` is the same kind of link to the stored icon, or `null` when there is none. The site's
