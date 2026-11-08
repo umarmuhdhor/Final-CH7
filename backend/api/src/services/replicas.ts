@@ -9,7 +9,7 @@ import { errorInfo } from "../http/logError";
 import { hit, limits } from "../http/rateLimit";
 import { decodeBase64 } from "./images";
 import { replicaLink } from "./screenshotLinks";
-import { abandonUpload, r2Store } from "./screenshots";
+import { abandonUpload, r2Store, type ScreenshotStore } from "./screenshots";
 
 /** contracts/api.md "Page replica" = replica-build.js MAX_BASE64 (400 KB of base64). */
 export const MAX_REPLICA_BASE64 = 409_600;
@@ -46,7 +46,7 @@ export type ReplicaDrop = "invalid" | "too_large" | "not_gzip";
 type Drop =
   | ReplicaDrop
   | "disabled" | "no_storage" | "ip_quota" | "quota" | "family_quota" | "family_bytes" | "reserve"
-  | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
+  | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed" | "ready_failed";
 
 // Reason only: never the scan id, URL, path or device (SECURITY §3 P6). One level for every drop,
 // so a log filter on the event sees them all.
@@ -122,12 +122,7 @@ export async function attachReplica(
   try {
     await store.put(path, decoded.bytes, "application/gzip");
   } catch (err) {
-    console.error(JSON.stringify({ event: "replica_dropped", reason: "upload_failed", error: errorInfo(err) }));
-    // Left set, the path would be reused for 24 hours as a link that always 404s: say so in the log.
-    await clearReplicaPath(sql, scan.ownerId, path).catch((e: unknown) =>
-      console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
-    await abandonUpload(sql, store, path);
-    return;
+    return dropUpload(sql, store, scan.ownerId, path, "upload_failed", err);
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
   // A failed mark is handled like a failed put (security review LOW): an unready row would keep the
@@ -136,13 +131,23 @@ export async function attachReplica(
   try {
     ready = await markReplicaReady(sql, scan.id, path);
   } catch (err) {
-    console.error(JSON.stringify({ event: "replica_ready_failed", error: errorInfo(err) }));
-    await clearReplicaPath(sql, scan.ownerId, path).catch((e: unknown) =>
-      console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
-    await abandonUpload(sql, store, path);
-    return;
+    return dropUpload(sql, store, scan.ownerId, path, "ready_failed", err);
   }
   if (!ready) await abandonUpload(sql, store, path);
+}
+
+/**
+ * A failed put or ready mark: one `replica_dropped` line (reason + errorInfo, no ids, P6), then the
+ * path is cleared and the object removed. Left set, the path would be reused for 24 hours as a link
+ * that always 404s, so a failed clear is logged too.
+ */
+async function dropUpload(
+  sql: Sql, store: ScreenshotStore, ownerId: string, path: string, reason: "upload_failed" | "ready_failed", err: unknown,
+): Promise<void> {
+  console.error(JSON.stringify({ event: "replica_dropped", reason, error: errorInfo(err) }));
+  await clearReplicaPath(sql, ownerId, path).catch((e: unknown) =>
+    console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
+  await abandonUpload(sql, store, path);
 }
 
 /**

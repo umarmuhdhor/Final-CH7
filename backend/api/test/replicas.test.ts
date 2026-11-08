@@ -617,9 +617,11 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
 // tombstoned) before the put; the link and a reuse may only follow a finished put.
 describe("replica link only after the upload (fase 22, 8 Nov 2026)", () => {
   /** Holds every R2 put until release(); the reservation commits first, as in production. */
+  let held: (() => void) | undefined;
   const holdPuts = () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
+    held = release;
     const real = R2ReplicaStore.prototype.put;
     vi.spyOn(R2ReplicaStore.prototype, "put").mockImplementation(async function (this: R2ReplicaStore, ...args) {
       await gate;
@@ -627,6 +629,11 @@ describe("replica link only after the upload (fase 22, 8 Nov 2026)", () => {
     });
     return release;
   };
+  // Also after a failed assertion: a put still held would keep its waitUntil work hanging into later tests.
+  afterEach(() => {
+    held?.();
+    held = undefined;
+  });
 
   it("pageReplicaUrl stays null while the put is pending, the replica link 404s; a working link once stored", async () => {
     const release = holdPuts();
@@ -676,6 +683,38 @@ describe("replica link only after the upload (fase 22, 8 Nov 2026)", () => {
       (await sql`select 1 from storage_tombstones where path = ${`${p.deviceId}/${id}-replica.html.gz`}`).length === 1);
     expect((await detail(p, id)).pageReplicaUrl).toBeNull();
     expect(await r2Keys(`${p.deviceId}/`)).toEqual([]);
+  });
+
+  it("a failed ready mark (after the put) leaves no path, no ready, no link and no object; the path stays tombstoned", async () => {
+    const { p } = await family();
+    // No module mock: a trigger (role postgres) fails only the ready mark, only for this owner.
+    expect(p.deviceId).toMatch(/^[0-9a-f-]{36}$/);
+    const fn = `test_fail_ready_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+    await quotaFiller.unsafe(`create function public.${fn}() returns trigger language plpgsql as $$
+      begin raise exception 'ready mark down'; end $$`);
+    await quotaFiller.unsafe(`create trigger ${fn} before update of replica_ready_at on public.scans for each row
+      when (new.replica_ready_at is not null and old.replica_ready_at is null and new.owner_id = '${p.deviceId}')
+      execute function public.${fn}()`);
+    try {
+      const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+      const path = `${p.deviceId}/${id}-replica.html.gz`;
+      await droppedFor("ready_failed");
+      // The put had finished (the object existed); cleared and removed after the failed mark.
+      await until(async () => (await row(id))?.path === null && (await r2Keys(`${p.deviceId}/`)).length === 0);
+      const [r] = await sql<[{ path: string | null; ready: Date | null }]>`
+        select replica_path as path, replica_ready_at as ready from scans where id = ${id}`;
+      expect(r).toEqual({ path: null, ready: null });
+      expect((await sql`select 1 from storage_tombstones where path = ${path}`).length).toBe(1);
+      expect((await detail(p, id)).pageReplicaUrl).toBeNull();
+      // Same line shape as upload_failed: reason + errorInfo, never an id (P6).
+      const line = logs.find((l) => l.includes(`"reason":"ready_failed"`))!;
+      expect(JSON.parse(line)).toEqual({ event: "replica_dropped", reason: "ready_failed", error: expect.any(Object) });
+      expect(line).not.toContain(p.deviceId);
+      expect(line).not.toContain(id);
+    } finally {
+      await quotaFiller.unsafe(`drop trigger if exists ${fn} on public.scans`);
+      await quotaFiller.unsafe(`drop function if exists public.${fn}()`);
+    }
   });
 });
 
