@@ -21,6 +21,7 @@ import { gzip, gzipBase64, SAMPLE_HTML, zeroBomb } from "./helpers/replica";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created, freshIp } from "./helpers/seed";
+import { atWindowStart } from "./helpers/rateWindow";
 useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
@@ -855,6 +856,7 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
     const { g, p, id } = await setup();
     // 10 per minute through the binding (wrangler.jsonc): real requests, no rate_limit_hits row.
     const link = await linkFor(p, id);
+    await atWindowStart(60); // all 11 requests in one 60 s window of the binding
     for (let i = 0; i < limits.viewReplica.max; i++) expect((await call(link)).status).toBe(200);
     expect((await call(link)).status).toBe(429);
     expect(await sql`select 1 from rate_limit_hits where bucket = ${limits.viewReplica.bucket}`).toHaveLength(0);
@@ -865,7 +867,7 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
     expect(limits.viewReplica).toMatchObject({ max: 10, windowSeconds: 60 });
     expect(limits.viewReplicaDay).toMatchObject({ max: 500, windowSeconds: 86400 });
     expect(Object.values(limits).some((l) => l.bucket.startsWith("replicas_view_all"))).toBe(false);
-  });
+  }, 15_000);
 
   it("an object that is not gzip is never sent with Content-Encoding: gzip → 404", async () => {
     const { p, id } = await setup();
