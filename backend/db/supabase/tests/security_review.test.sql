@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(19);
+select plan(23);
 
 select is(
   (select count(*)::int from information_schema.role_table_grants
@@ -29,6 +29,12 @@ select throws_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', 
 select throws_ok($$update scans set replica_bytes = 10 where id = 't_rs'$$, '23514', null, 'replica_bytes needs replica_path');
 select lives_ok($$update scans set replica_path = 't_rp/t_rs-replica.html.gz', replica_bytes = 307200 where id = 't_rs'$$, 'an original upload of 307 200 bytes');
 select lives_ok($$update scans set replica_bytes = null where id = 't_rs'$$, 'a reuse row keeps the path without bytes');
+
+-- Fase 22 fix (8 Nov 2026): replica_ready_at marks a finished R2 put; it never outlives the path.
+select has_column('public', 'scans', 'replica_ready_at', 'scans.replica_ready_at exists');
+select col_is_null('public', 'scans', 'replica_ready_at', 'replica_ready_at is nullable (null = upload in flight)');
+select lives_ok($$update scans set replica_ready_at = now() where id = 't_rs'$$, 'a row with a path can be marked ready');
+select throws_ok($$update scans set replica_path = null where id = 't_rs'$$, '23514', null, 'clearing the path needs clearing replica_ready_at too');
 
 -- The test runner cannot switch to shoo_api, so the policies are checked in the catalog.
 select policies_are('public', 'blocklist_entries',

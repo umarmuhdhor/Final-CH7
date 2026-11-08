@@ -142,7 +142,7 @@ update verdicts set value = 'not_safe' where owner_id = 't_p1' and domain = 'pen
 select admin.run_analysis('manual', 'test@local');
 insert into verdicts (owner_id, domain, value, scan_id, by_device_id, by_name) values
   ('t_p1', 'penipu.test', 'not_safe', 't_s1', 't_g1', 'Guardian Satu')
-  on conflict (owner_id, domain) do update set value = excluded.value, decided_at = clock_timestamp();
+  on conflict (owner_id, url) do update set value = excluded.value, decided_at = clock_timestamp();
 select is(pg_temp.labels('penipu.test'), 1, 'C2: upsert with the same value adds no row');
 update verdicts set value = 'safe' where owner_id = 't_p1' and domain = 'penipu.test';
 select is((select (is_scam, analyzed_at is null, revision_of is not null)::text from admin.domain_labels

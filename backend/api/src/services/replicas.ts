@@ -1,7 +1,7 @@
 import type { Sql } from "postgres";
 import type { Env } from "../env";
 import {
-  clearReplicaPath, precheckReplica, type ReplicaQuota, type ReplicaQuotaReason, replicaUsage, reserveReplica, scanExists,
+  clearReplicaPath, markReplicaReady, precheckReplica, type ReplicaQuota, type ReplicaQuotaReason, replicaUsage, reserveReplica,
 } from "../db/repo/scans";
 import { usableSecret } from "../http/crypto";
 import { ApiError } from "../http/errors";
@@ -9,7 +9,7 @@ import { errorInfo } from "../http/logError";
 import { hit, limits } from "../http/rateLimit";
 import { decodeBase64 } from "./images";
 import { replicaLink } from "./screenshotLinks";
-import { abandonUpload, r2Store } from "./screenshots";
+import { abandonUpload, r2Store, type ScreenshotStore } from "./screenshots";
 
 /** contracts/api.md "Page replica" = replica-build.js MAX_BASE64 (400 KB of base64). */
 export const MAX_REPLICA_BASE64 = 409_600;
@@ -46,7 +46,7 @@ export type ReplicaDrop = "invalid" | "too_large" | "not_gzip";
 type Drop =
   | ReplicaDrop
   | "disabled" | "no_storage" | "ip_quota" | "quota" | "family_quota" | "family_bytes" | "reserve"
-  | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed";
+  | "global_quota" | "global_bytes" | "scan_gone" | "upload_failed" | "ready_failed";
 
 // Reason only: never the scan id, URL, path or device (SECURITY §3 P6). One level for every drop,
 // so a log filter on the event sees them all.
@@ -77,7 +77,9 @@ export async function logReplicaUsage(sql: Sql): Promise<void> {
  * EX-07, after the response and after the scan's pushes were sent (K2): cheap checks first so a reuse
  * or a full quota burns neither the IP slot nor inflate CPU. Kill-switch →
  * reuse/quota pre-check (fase 22 K12) → per-IP limit → decode → reserve (per-owner lock,
- * quotas again as the final word, tombstone) → R2 put.
+ * quotas again as the final word, tombstone) → R2 put → mark ready. The reserved path counts for the
+ * quotas from the reserve on, but the scan gets a link (and is a reuse source) only once marked
+ * ready after the put (fase 22 fix, 8 Nov 2026: the link showed 379 ms before a 307 KB put landed).
  * Any failure drops the replica only; the scan is already stored and answered.
  */
 export async function attachReplica(
@@ -120,15 +122,32 @@ export async function attachReplica(
   try {
     await store.put(path, decoded.bytes, "application/gzip");
   } catch (err) {
-    console.error(JSON.stringify({ event: "replica_dropped", reason: "upload_failed", error: errorInfo(err) }));
-    // Left set, the path would be reused for 24 hours as a link that always 404s: say so in the log.
-    await clearReplicaPath(sql, scan.ownerId, path).catch((e: unknown) =>
-      console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
-    await abandonUpload(sql, store, path);
-    return;
+    return dropUpload(sql, store, scan.ownerId, path, "upload_failed", err);
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
-  if (!(await scanExists(sql, scan.id))) await abandonUpload(sql, store, path);
+  // A failed mark is handled like a failed put (security review LOW): an unready row would keep the
+  // object (the tombstone sweep skips a referenced path) and its quota share until retention.
+  let ready: boolean;
+  try {
+    ready = await markReplicaReady(sql, scan.id, path);
+  } catch (err) {
+    return dropUpload(sql, store, scan.ownerId, path, "ready_failed", err);
+  }
+  if (!ready) await abandonUpload(sql, store, path);
+}
+
+/**
+ * A failed put or ready mark: one `replica_dropped` line (reason + errorInfo, no ids, P6), then the
+ * path is cleared and the object removed. Left set, the path would be reused for 24 hours as a link
+ * that always 404s, so a failed clear is logged too.
+ */
+async function dropUpload(
+  sql: Sql, store: ScreenshotStore, ownerId: string, path: string, reason: "upload_failed" | "ready_failed", err: unknown,
+): Promise<void> {
+  console.error(JSON.stringify({ event: "replica_dropped", reason, error: errorInfo(err) }));
+  await clearReplicaPath(sql, ownerId, path).catch((e: unknown) =>
+    console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
+  await abandonUpload(sql, store, path);
 }
 
 /**

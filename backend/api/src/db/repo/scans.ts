@@ -300,9 +300,11 @@ export async function reserveReplica(
       if (full) return { quota: full };
     }
     // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
+    // A reuse source is ready (recentReplicaQuery), so the reuse row is ready at once; a new upload
+    // becomes ready only after its put (markReplicaReady, fase 22 fix 8 Nov 2026).
     const updated = reuse
-      ? await tx`update scans set replica_path = ${reuse}, replica_bytes = null where id = ${scan.id} returning id`
-      : await tx`update scans set replica_path = ${upload!.path}, replica_bytes = ${upload!.bytes} where id = ${scan.id} returning id`;
+      ? await tx`update scans set replica_path = ${reuse}, replica_bytes = null, replica_ready_at = now() where id = ${scan.id} returning id`
+      : await tx`update scans set replica_path = ${upload!.path}, replica_bytes = ${upload!.bytes}, replica_ready_at = null where id = ${scan.id} returning id`;
     if (updated.length === 0) return { gone: true };
     if (reuse) return { reuse };
     await addTombstones(tx, [upload!.path]);
@@ -405,11 +407,14 @@ export async function replicaUsage(sql: Sql, q: ReplicaQuota, maxBytes: number):
 /**
  * Reuse source: the newest original replica (replica_bytes set) of the owner + domain from the last
  * 24 h. Only originals count, so reuse never chains and an object is gone 15 days after upload.
+ * Only a stored one (replica_ready_at): an upload still in flight is no source (fase 22 fix, 8 Nov
+ * 2026); a scan of the same site meanwhile uploads its own copy, counted by the quotas as usual.
  */
 function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
   return sql`
     select replica_path from scans
     where owner_id = ${ownerId} and domain = ${domain} and replica_bytes is not null
+      and replica_ready_at is not null
       and created_at > now() - interval '24 hours'
     order by created_at desc limit 1`;
 }
@@ -421,8 +426,20 @@ function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
 export async function clearReplicaPath(sql: Sql, ownerId: string, path: string): Promise<void> {
   await sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(6, hashtext(${ownerId}))`;
-    await tx`update scans set replica_path = null, replica_bytes = null where owner_id = ${ownerId} and replica_path = ${path}`;
+    await tx`update scans set replica_path = null, replica_bytes = null, replica_ready_at = null
+             where owner_id = ${ownerId} and replica_path = ${path}`;
   });
+}
+
+/**
+ * After the R2 put succeeded (fase 22 fix, 8 Nov 2026): from now on the scan gets a pageReplicaUrl,
+ * GET /replicas/{id} serves it and a later scan may reuse it. Only while the row still holds this
+ * path; false when the scan was deleted meanwhile (DELETE /devices/me) or its path was cleared, so
+ * the caller removes the object no row points at.
+ */
+export async function markReplicaReady(sql: Sql, id: string, path: string): Promise<boolean> {
+  const rows = await sql`update scans set replica_ready_at = now() where id = ${id} and replica_path = ${path} returning id`;
+  return rows.length > 0;
 }
 
 export interface ScanRow {
@@ -438,7 +455,7 @@ export interface ScanRow {
   screenshotPath: string | null;
   /** The stored favicon (PR-05). The scam site's own favicon_url is never read back. */
   faviconPath: string | null;
-  /** The stored page replica (EX-07), in R2. */
+  /** The stored page replica (EX-07), in R2. Null until its upload finished (replica_ready_at). */
   replicaPath: string | null;
   detectedAt: string;
   /** detected_at with microseconds, for the cursor. */
@@ -448,14 +465,15 @@ export interface ScanRow {
 
 export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
-// Columns shared by list and detail. ownerName is the owner's current name; the verdict
-// (per owner + domain) is joined for warning and blocked scans alike (GD-07).
+// Columns shared by list and detail. ownerName is the owner's current name; the verdict is joined
+// for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
+// else a not_safe on the domain unless the link is on a shared host.
 function selectScans(sql: Sql) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
            s.page_title as "pageTitle", s.score, s.status, s.signals,
            s.screenshot_path as "screenshotPath", s.favicon_path as "faviconPath",
-           s.replica_path as "replicaPath",
+           case when s.replica_ready_at is not null then s.replica_path end as "replicaPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
            case when v.owner_id is not null then json_build_object(
@@ -464,7 +482,14 @@ function selectScans(sql: Sql) {
            ) end as verdict
     from scans s
     join devices d on d.id = s.owner_id
-    left join verdicts v on v.owner_id = s.owner_id and v.domain = s.domain`;
+    left join lateral (
+      select v.* from (select public.verdict_link(s.url) as link) k, verdicts v
+      where v.owner_id = s.owner_id
+        and (v.url = k.link
+             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
+      order by (v.url = k.link) desc, v.decided_at desc
+      limit 1
+    ) v on true`;
 }
 
 export interface ListQuery {
@@ -520,11 +545,14 @@ export async function faviconPathForViewer(sql: Sql, id: string, viewerId: strin
   return row?.path;
 }
 
-/** The replica path while the viewer owns the scan or is the owner's current guardian (as screenshots). */
+/**
+ * The replica path while the viewer owns the scan or is the owner's current guardian (as screenshots),
+ * once its upload finished (replica_ready_at, fase 22 fix 8 Nov 2026).
+ */
 export async function replicaPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select s.replica_path as path from scans s
-    where s.id = ${id} and s.replica_path is not null
+    where s.id = ${id} and s.replica_path is not null and s.replica_ready_at is not null
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
   return row?.path;

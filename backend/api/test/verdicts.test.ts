@@ -6,6 +6,7 @@ import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json
 import warning41 from "../../../contracts/fixtures/warning-41.json";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
+import { atWindowStart } from "./helpers/rateWindow";
 import { call, createDevice, type Created } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 useRateKeySecret(env.RATE_KEY_SECRET);
@@ -254,12 +255,13 @@ describe("GET /verdicts?domain=", () => {
 
   it("rate limits 30 per 10 s per device with Retry-After, through the binding: no rate_limit_hits row", async () => {
     const p = await createDevice("Mom");
+    await atWindowStart(10); // all 31 requests in one 10 s window of the binding
     for (let i = 0; i < 30; i++) expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
     const res = await call("/verdicts?domain=a.example", { token: p.token });
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
     expect(await sql`select 1 from rate_limit_hits where bucket = 'verdicts_get'`).toHaveLength(0);
-  });
+  }, 15_000);
 });
 
 describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () => {
@@ -467,5 +469,154 @@ describe("GET /verdicts logs verdict_seen for fresh verdicts (EX-06, fase 25 K7)
     expect(await lookup(p, "old.example")).toMatchObject({ value: "not_safe" });
     expect(await lookup(p, "never-decided.example")).toBeNull();
     expect(lines()).toEqual([]);
+  });
+});
+
+describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
+  /**
+   * One scan row per page. POST /scans keeps one row per owner + domain (recordScan), so a second
+   * page of a domain is written directly, as the rows a Guardian would decide on.
+   */
+  let seq = 0;
+  const scanAt = async (d: Created, url: string, domain: string) => {
+    const [r] = await sql<{ id: string }[]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${d.deviceId}, ${url}, ${domain}, 92, 'blocked', now() - make_interval(secs => ${++seq}))
+      returning id`;
+    return r!.id;
+  };
+  const lookupLink = async (d: Created, url: string, domain: string) => {
+    const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+    expect(res.status, await res.clone().text()).toBe(200);
+    return ((await res.json()) as VerdictBody).verdict;
+  };
+  const decide = (g: Created, scanId: string, value: "safe" | "not_safe", notes?: unknown) =>
+    call("/verdicts", { method: "POST", token: g.token, json: notes === undefined ? { scanId, value } : { scanId, value, notes } });
+  const row = async (owner: string) =>
+    (await sql<{ url: string; notes: string | null; value: string }[]>`
+      select url, notes, value from verdicts where owner_id = ${owner} order by url`);
+
+  it("stores the scan's link (origin + path, no query or fragment) and keeps one row per link", async () => {
+    const { g, p } = await family();
+    const a = await scanAt(p, "https://Login.Penipu.test/akun/masuk?ref=wa#top", "penipu.test");
+    const b = await scanAt(p, "https://penipu.test/hadiah", "penipu.test");
+    expect((await decide(g, a, "not_safe")).status).toBe(200);
+    expect((await decide(g, b, "safe")).status).toBe(200);
+    expect((await decide(g, a, "not_safe")).status).toBe(200); // the same link again: still one row
+    expect((await row(p.deviceId)).map((r) => [r.url, r.value])).toEqual([
+      ["https://login.penipu.test/akun/masuk", "not_safe"],
+      ["https://penipu.test/hadiah", "safe"],
+    ]);
+  });
+
+  it("safe opens only its own link", async () => {
+    const { g, p } = await family();
+    const a = await scanAt(p, "https://sites.example/a", "sites.example");
+    expect((await decide(g, a, "safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://sites.example/a?utm=1#x", "sites.example")).toMatchObject({ value: "safe", byName: "Adhella" });
+    expect(await lookupLink(p, "https://sites.example/b", "sites.example")).toBeNull();
+    expect(await lookupLink(g, "https://sites.example/a", "sites.example")).toBeNull(); // another owner
+  });
+
+  it("not_safe on one link covers the other links of the domain; an exact verdict wins", async () => {
+    const { g, p } = await family();
+    const a = await scanAt(p, "https://evil.test/a", "evil.test");
+    const b = await scanAt(p, "https://evil.test/b", "evil.test");
+    expect((await decide(g, a, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://evil.test/c", "evil.test")).toMatchObject({ value: "not_safe" });
+    expect(await lookupLink(p, "https://www.evil.test/c", "evil.test")).toMatchObject({ value: "not_safe" });
+    expect((await decide(g, b, "safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://evil.test/b", "evil.test")).toMatchObject({ value: "safe" });
+    expect(await lookupLink(p, "https://evil.test/c", "evil.test")).toMatchObject({ value: "not_safe" });
+  });
+
+  it("on a shared host one page says nothing about the others (admin.domain_lists hosting)", async () => {
+    const { g, p } = await family();
+    // host_path: anyone publishes under a path of sites.google.com (registrable domain google.com).
+    const page = await scanAt(p, "https://sites.google.com/view/hadiah", "google.com");
+    expect((await decide(g, page, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://sites.google.com/view/hadiah", "google.com")).toMatchObject({ value: "not_safe" });
+    expect(await lookupLink(p, "https://sites.google.com/view/sekolah", "google.com")).toBeNull();
+    // subdomains: a tenant (evil.github.io) is one owner, so its pages share the fallback.
+    const tenant = await scanAt(p, "https://evil.github.io/a", "evil.github.io");
+    expect((await decide(g, tenant, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://evil.github.io/b", "evil.github.io")).toMatchObject({ value: "not_safe" });
+    expect(await lookupLink(p, "https://other.github.io/b", "other.github.io")).toBeNull();
+  });
+
+  it("?url= needs a domain it belongs to, and an http(s) URL", async () => {
+    const { p } = await family();
+    const status = async (q: string) => (await call(`/verdicts?${q}`, { token: p.token })).status;
+    expect(await status(`url=${encodeURIComponent("https://a.test/x")}`)).toBe(422);
+    expect(await status(`url=${encodeURIComponent("https://a.test/x")}&domain=b.test`)).toBe(422);
+    expect(await status(`url=${encodeURIComponent("https://nota.test/x")}&domain=a.test`)).toBe(422);
+    expect(await status(`url=${encodeURIComponent("ftp://a.test/x")}&domain=a.test`)).toBe(422);
+    expect(await status(`url=not-a-url&domain=a.test`)).toBe(422);
+    expect(await status(`url=${encodeURIComponent("https://a.test/x")}&domain=A.test`)).toBe(200);
+  });
+
+  it("deprecated ?domain= alone: any not_safe on the domain, else the newest safe", async () => {
+    const { g, p } = await family();
+    const a = await scanAt(p, "https://old.test/a", "old.test");
+    const b = await scanAt(p, "https://old.test/b", "old.test");
+    expect((await decide(g, a, "safe")).status).toBe(200);
+    expect(await lookup(p, "old.test")).toMatchObject({ value: "safe" });
+    expect((await decide(g, b, "not_safe")).status).toBe(200);
+    expect((await decide(g, a, "safe")).status).toBe(200); // newer, but a not_safe wins
+    expect(await lookup(p, "old.test")).toMatchObject({ value: "not_safe" });
+  });
+
+  it("Activity shows each scan the verdict of the same rule", async () => {
+    const { g, p } = await family();
+    const a = await scanAt(p, "https://act.test/a", "act.test");
+    const b = await scanAt(p, "https://act.test/b", "act.test");
+    const c = await scanAt(p, "https://act.test/c", "act.test");
+    expect((await decide(g, a, "safe")).status).toBe(200);
+    const items = async () => {
+      const body = (await (await call(`/scans?owner=${p.deviceId}`, { token: g.token })).json()) as {
+        items: { id: string; verdict: { value: string } | null }[];
+      };
+      return Object.fromEntries(body.items.map((i) => [i.id, i.verdict?.value ?? null]));
+    };
+    expect(await items()).toEqual({ [a]: "safe", [b]: null, [c]: null });
+    expect((await decide(g, b, "not_safe")).status).toBe(200);
+    expect(await items()).toEqual({ [a]: "safe", [b]: "not_safe", [c]: "not_safe" });
+  });
+
+  describe("notes", () => {
+    it("are stored, never returned, and replaced by the next decision", async () => {
+      const { g, p } = await family();
+      const a = await scanAt(p, "https://note.test/a", "note.test");
+      const res = await decide(g, a, "not_safe", "  Minta kode OTP\nlewat WA ‮ ");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { verdict: Record<string, unknown> };
+      expect(Object.keys(body.verdict).sort()).toEqual(["byDeviceId", "byName", "decidedAt", "value"]);
+      expect((await row(p.deviceId))[0]!.notes).toBe("Minta kode OTP lewat WA");
+      expect(await lookupLink(p, "https://note.test/a", "note.test")).not.toHaveProperty("notes");
+      expect((await decide(g, a, "safe")).status).toBe(200); // older builds send none
+      expect((await row(p.deviceId))[0]!.notes).toBeNull();
+      expect((await decide(g, a, "safe", "   ")).status).toBe(200);
+      expect((await row(p.deviceId))[0]!.notes).toBeNull();
+    });
+
+    it("at most 280 characters (code points); not a string → 422", async () => {
+      const { g, p } = await family();
+      const a = await scanAt(p, "https://note.test/a", "note.test");
+      expect((await decide(g, a, "not_safe", "😀".repeat(280))).status).toBe(200);
+      expect(await errorCode(await decide(g, a, "not_safe", "x".repeat(281)))).toBe("invalid_body");
+      expect(await errorCode(await decide(g, a, "not_safe", 42))).toBe("invalid_body");
+      expect((await decide(g, a, "not_safe", null)).status).toBe(200);
+    });
+
+    it("reach the admin label and archive masked (admin.mask_note), never raw", async () => {
+      const { g, p } = await family();
+      const a = await scanAt(p, "https://note.test/a", "note.test");
+      expect((await decide(g, a, "not_safe", "Telepon 081234567890 atau a@b.co")).status).toBe(200);
+      const [label] = await admin<{ note: string }[]>`
+        select note from admin.domain_labels where domain = 'note.test' order by id desc limit 1`;
+      expect(label!.note).toBe("Telepon [nomor] atau [email]");
+      const [archived] = await admin<{ note: string | null }[]>`select note from admin.scan_archive where scan_id = ${a}`;
+      expect(archived?.note).toBe("Telepon [nomor] atau [email]");
+    });
   });
 });

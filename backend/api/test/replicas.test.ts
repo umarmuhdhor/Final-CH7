@@ -21,6 +21,7 @@ import { gzip, gzipBase64, SAMPLE_HTML, zeroBomb } from "./helpers/replica";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
 import { call, createDevice, type Created, freshIp } from "./helpers/seed";
+import { atWindowStart } from "./helpers/rateWindow";
 useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
@@ -200,8 +201,9 @@ async function until(done: () => Promise<boolean> | boolean): Promise<void> {
   }
   throw new Error("timed out waiting for waitUntil work");
 }
+/** Stored = the put finished and the row is marked ready (fase 22 fix): only then is there a link. */
 const stored = async (id: string) => {
-  await until(async () => (await row(id))?.path != null);
+  await until(async () => (await sql`select 1 from scans where id = ${id} and replica_ready_at is not null`).length === 1);
   return (await row(id))!;
 };
 const droppedFor = (reason: string) =>
@@ -611,6 +613,112 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
   });
 });
 
+// Cloud 8 Nov 2026 (replica-e2e.sh --cloud --bench): a 307 KB replica showed pageReplicaUrl 379 ms
+// after the 201 while the R2 put was still running, and the link 404'd. The path is reserved (and
+// tombstoned) before the put; the link and a reuse may only follow a finished put.
+describe("replica link only after the upload (fase 22, 8 Nov 2026)", () => {
+  /** Holds every R2 put until release(); the reservation commits first, as in production. */
+  let held: (() => void) | undefined;
+  const holdPuts = () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    held = release;
+    const real = R2ReplicaStore.prototype.put;
+    vi.spyOn(R2ReplicaStore.prototype, "put").mockImplementation(async function (this: R2ReplicaStore, ...args) {
+      await gate;
+      return real.apply(this, args);
+    });
+    return release;
+  };
+  // Also after a failed assertion: a put still held would keep its waitUntil work hanging into later tests.
+  afterEach(() => {
+    held?.();
+    held = undefined;
+  });
+
+  it("pageReplicaUrl stays null while the put is pending, the replica link 404s; a working link once stored", async () => {
+    const release = holdPuts();
+    const { g, p } = await family();
+    const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    const path = `${p.deviceId}/${id}-replica.html.gz`;
+    await until(async () => (await row(id))?.path === path);
+    for (const viewer of [p, g]) expect((await detail(viewer, id)).pageReplicaUrl).toBeNull();
+    // A link signed by hand (the way an old Detail response would hold one) opens nothing yet.
+    const early = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    expect((await call(`/replicas/${id}${early.search}`)).status).toBe(404);
+
+    release();
+    await until(async () => (await detail(p, id)).pageReplicaUrl !== null);
+    expect(await r2Keys(`${p.deviceId}/`)).toEqual([path]);
+    for (const viewer of [p, g]) expect((await call(await linkFor(viewer, id))).status).toBe(200);
+  });
+
+  it("a reuse never picks an upload still in flight; it does once the put finished", async () => {
+    const release = holdPuts();
+    const { p } = await family();
+    const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    const path = `${p.deviceId}/${first}-replica.html.gz`;
+    await until(async () => (await row(first))?.path === path);
+    // A younger row of the same site (from before one row per site), as in the family-quota reuse test.
+    const younger = async () => (await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now()) returning id`)[0].id;
+    const early = await younger();
+    expect(await reserveReplica(sql, { id: early, ownerId: p.deviceId, domain }, null, REPLICA_QUOTA)).toEqual({ none: true });
+    expect(await row(early)).toEqual({ path: null, bytes: null });
+
+    release();
+    await until(async () => (await detail(p, first)).pageReplicaUrl !== null);
+    const late = await younger();
+    expect(await reserveReplica(sql, { id: late, ownerId: p.deviceId, domain }, null, REPLICA_QUOTA)).toEqual({ reuse: path });
+    // The reuse row points at a stored object, so its link works at once.
+    expect((await call(await linkFor(p, late))).status).toBe(200);
+  });
+
+  it("a failed put leaves no path, no link and no object", async () => {
+    vi.spyOn(R2ReplicaStore.prototype, "put").mockRejectedValue(new Error("r2 down"));
+    const { p } = await family();
+    const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    await droppedFor("upload_failed");
+    await until(async () => (await row(id))?.path === null &&
+      (await sql`select 1 from storage_tombstones where path = ${`${p.deviceId}/${id}-replica.html.gz`}`).length === 1);
+    expect((await detail(p, id)).pageReplicaUrl).toBeNull();
+    expect(await r2Keys(`${p.deviceId}/`)).toEqual([]);
+  });
+
+  it("a failed ready mark (after the put) leaves no path, no ready, no link and no object; the path stays tombstoned", async () => {
+    const { p } = await family();
+    // No module mock: a trigger (role postgres) fails only the ready mark, only for this owner.
+    expect(p.deviceId).toMatch(/^[0-9a-f-]{36}$/);
+    const fn = `test_fail_ready_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+    await quotaFiller.unsafe(`create function public.${fn}() returns trigger language plpgsql as $$
+      begin raise exception 'ready mark down'; end $$`);
+    await quotaFiller.unsafe(`create trigger ${fn} before update of replica_ready_at on public.scans for each row
+      when (new.replica_ready_at is not null and old.replica_ready_at is null and new.owner_id = '${p.deviceId}')
+      execute function public.${fn}()`);
+    try {
+      const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+      const path = `${p.deviceId}/${id}-replica.html.gz`;
+      await droppedFor("ready_failed");
+      // The put had finished (the object existed); cleared and removed after the failed mark.
+      await until(async () => (await row(id))?.path === null && (await r2Keys(`${p.deviceId}/`)).length === 0);
+      const [r] = await sql<[{ path: string | null; ready: Date | null }]>`
+        select replica_path as path, replica_ready_at as ready from scans where id = ${id}`;
+      expect(r).toEqual({ path: null, ready: null });
+      expect((await sql`select 1 from storage_tombstones where path = ${path}`).length).toBe(1);
+      expect((await detail(p, id)).pageReplicaUrl).toBeNull();
+      // Same line shape as upload_failed: reason + errorInfo, never an id (P6).
+      const line = logs.find((l) => l.includes(`"reason":"ready_failed"`))!;
+      expect(JSON.parse(line)).toEqual({ event: "replica_dropped", reason: "ready_failed", error: expect.any(Object) });
+      expect(line).not.toContain(p.deviceId);
+      expect(line).not.toContain(id);
+    } finally {
+      await quotaFiller.unsafe(`drop trigger if exists ${fn} on public.scans`);
+      await quotaFiller.unsafe(`drop function if exists public.${fn}()`);
+    }
+  });
+});
+
 describe("kill-switch REPLICAS_ENABLED (K21)", () => {
   const off = { REPLICAS_ENABLED: "false" };
 
@@ -748,6 +856,7 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
     const { g, p, id } = await setup();
     // 10 per minute through the binding (wrangler.jsonc): real requests, no rate_limit_hits row.
     const link = await linkFor(p, id);
+    await atWindowStart(60); // all 11 requests in one 60 s window of the binding
     for (let i = 0; i < limits.viewReplica.max; i++) expect((await call(link)).status).toBe(200);
     expect((await call(link)).status).toBe(429);
     expect(await sql`select 1 from rate_limit_hits where bucket = ${limits.viewReplica.bucket}`).toHaveLength(0);
@@ -758,7 +867,7 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
     expect(limits.viewReplica).toMatchObject({ max: 10, windowSeconds: 60 });
     expect(limits.viewReplicaDay).toMatchObject({ max: 500, windowSeconds: 86400 });
     expect(Object.values(limits).some((l) => l.bucket.startsWith("replicas_view_all"))).toBe(false);
-  });
+  }, 15_000);
 
   it("an object that is not gzip is never sent with Content-Encoding: gzip → 404", async () => {
     const { p, id } = await setup();
@@ -860,10 +969,11 @@ describe("retention and tombstones with replicas (K6)", () => {
     const { p } = await family();
     const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
     const { path } = await stored(first);
-    // A younger row of the same site from before one row per site (it reused the replica).
+    // A younger row of the same site from before one row per site (it reused the replica, so it is
+    // ready like every reuse row, reserveReplica).
     const [{ id: younger }] = await sql<[{ id: string }]>`
-      insert into scans (owner_id, url, domain, score, status, detected_at, replica_path)
-      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}) returning id`;
+      insert into scans (owner_id, url, domain, score, status, detected_at, replica_path, replica_ready_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}, now()) returning id`;
     await sql`update scans set created_at = now() - interval '15 days' where id = ${first}`;
     await runRetention(sql, env);
     expect(await env.REPLICAS.head(path!)).not.toBeNull();
