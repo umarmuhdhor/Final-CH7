@@ -205,8 +205,21 @@ The `replica` numbers (fase 21c) describe families, even without ids: with one a
 Actions log or any other public place; public places get codes only.
 
 `healthzAgeHours` (last `/healthz/db`) is a number only: it shows whether the ops-watch keep-alive
-still runs. The workflow (fase 21b) adds `healthz_down`, `ops_status_unreachable`, `healthz_db_failed`,
-`worker_*` and `r2_*`; their rows join this table with it.
+still runs.
+
+The `ops-watch` workflow (fase 21b, [backend/ci/README.md](ci/README.md#ops-watch-fase-21b-todo-b9)) calls
+`/healthz` and `/ops/status` every 15 minutes and, once a day, `/healthz/db` and Cloudflare analytics. Alert
+codes open one issue labelled `ops-alert`, assigned to Alief; it closes itself after 2 green runs. Its own codes:
+
+| Code | Level | When | First step | Next step |
+|---|---|---|---|---|
+| `healthz_down` / `ops_status_unreachable` | alert | `/healthz` failed 3 times / `/ops/status` not 200 | Open `https://shoo-api.afindo-mi01.workers.dev/healthz`; Workers dashboard → Deployments. `ops_status_unreachable` alone: the `ops` environment token no longer matches the Worker secret | Broken deploy → `npx wrangler rollback`, then fix forward through a PR ([Rollback](#rollback)). Cloudflare down → wait, note it |
+| `ops_status_limited` | warn | `/ops/status` answered 429 | Someone with the token used up the 30/h | Nothing, unless it repeats: then rotate `OPS_STATUS_TOKEN` (Worker + environment `ops`) |
+| `healthz_db_failed` | alert | the daily `/healthz/db` was not 200 | Supabase dashboard: paused or over quota? | Restore the project; the cron Worker is the main keep-alive |
+| `worker_exceeded_cpu` / `worker_errors` | alert | `shoo-api` hit the CPU limit / errors above 1 % (24 h) | Workers dashboard → Metrics; Query Builder `error.name`, `route` | `wrangler tail --status error` on your Mac (never copy URLs out of it) |
+| `worker_requests_high` | warn | ≥ 80 000 requests/day on the account | Workers dashboard → which Worker | Find the source; lower a quota through a PR |
+| `r2_class_a_high` / `r2_class_b_high` / `r2_storage_high` | warn | R2 month-to-date operations or storage near the Free tier | R2 → `shoo-replicas` → Metrics | Replica quota or kill-switch ([Page replicas](#page-replicas-kill-switch-and-takedown)) |
+| `cf_analytics_unavailable` | warn | the analytics token is missing or GraphQL failed | Token still valid? (`CF_ANALYTICS_TOKEN`, Account Analytics Read) | Roll it and update the `ops` environment |
 
 ## Quota (Supabase Free + R2)
 
