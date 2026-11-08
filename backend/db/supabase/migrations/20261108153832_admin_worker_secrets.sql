@@ -78,12 +78,17 @@ declare
 begin
   perform admin._check_actor(p_actor);
   perform admin._worker_secret_check(p_name, p_workers, p_sensitive);
+  -- Also taken here, not only by worker_secret_lock: a call outside that transaction still serialises.
+  perform pg_advisory_xact_lock(9, hashtext(p_name));
   insert into admin.worker_secrets as s (name, workers, sensitive, needs_resave, save_token, updated_by)
   values (p_name, p_workers, p_sensitive, true, v_token, p_actor)
   on conflict (name) do update set
     workers = excluded.workers,
     sensitive = excluded.sensitive,
     hint = case when excluded.sensitive then s.hint end,
+    -- A sensitive row turned plain would hand its ciphertext to worker_secrets_list (no audit): drop it.
+    ciphertext = case when s.sensitive and not excluded.sensitive then null else s.ciphertext end,
+    iv = case when s.sensitive and not excluded.sensitive then null else s.iv end,
     needs_resave = true,
     save_token = case when s.save_token is null then excluded.save_token end;
   return v_token;
@@ -104,6 +109,7 @@ begin
   perform admin._check_actor(p_actor);
   perform admin._worker_secret_check(p_name, p_workers, p_sensitive);
   perform admin._check_text(p_note, 1000, true);
+  perform pg_advisory_xact_lock(9, hashtext(p_name));
   if p_save_token is null
      or p_ciphertext is null or octet_length(p_ciphertext) not between 16 and 16384
      or p_iv is null or octet_length(p_iv) <> 12
@@ -151,6 +157,7 @@ language plpgsql security definer set search_path = admin, pg_temp as $$
 begin
   perform admin._check_actor(p_actor);
   perform admin._worker_secret_check(p_name, p_workers, p_sensitive);
+  perform pg_advisory_xact_lock(9, hashtext(p_name));
   insert into admin.worker_secrets as s (name, workers, sensitive, needs_resave, save_token, updated_by)
   values (p_name, p_workers, p_sensitive, true, null, p_actor)
   on conflict (name) do update set needs_resave = true, save_token = null;

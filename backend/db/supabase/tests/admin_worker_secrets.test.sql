@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(48);
+select plan(50);
 
 create function pg_temp.as_admin(q text) returns text language plpgsql as $$
 declare
@@ -170,6 +170,15 @@ select is(
   ],
   array_fill('ERR SA009'::text, array[11]),
   'bad key id, purpose, worker, empty workers, name, actor, hint > 4, hint on a plain row, iv length, null token, empty note → SA009');
+
+-- review fix: a sensitive row begun as plain loses its ciphertext, so worker_secrets_list never returns it unaudited
+insert into tok select 'f1', pg_temp.begin_('SCREENSHOT_URL_SECRET');
+select pg_temp.set_('SCREENSHOT_URL_SECRET', (select v from tok where k = 'f1'));
+select pg_temp.begin_('SCREENSHOT_URL_SECRET', false);
+select is((select ciphertext is null and iv is null and hint is null from admin.worker_secrets where name = 'SCREENSHOT_URL_SECRET'),
+  true, 'begin turning a sensitive row plain drops ciphertext, iv and hint');
+select is(pg_temp.as_admin($q$select count(*)::text from admin.worker_secrets_list() where name = 'SCREENSHOT_URL_SECRET' and ciphertext is not null$q$),
+  '0', 'the list returns no ciphertext for that row');
 
 select lives_ok($q$select pg_temp.as_admin('select admin.worker_secret_lock(''LLM_API_KEY'')')$q$, 'lock runs for shoo_admin');
 select is(pg_temp.as_admin($q$select admin.worker_secret_lock('LLM_API_KEY')::text$q$), '', 'lock returns nothing');
