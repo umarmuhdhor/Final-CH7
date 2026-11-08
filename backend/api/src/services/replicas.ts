@@ -130,12 +130,16 @@ export async function attachReplica(
     return;
   }
   // The scan may have been deleted meanwhile (DELETE /devices/me): never leave an orphan object.
-  // A failed mark leaves the row unready (no link, no reuse) and the object for retention to remove.
+  // A failed mark is handled like a failed put (security review LOW): an unready row would keep the
+  // object (the tombstone sweep skips a referenced path) and its quota share until retention.
   let ready: boolean;
   try {
     ready = await markReplicaReady(sql, scan.id, path);
   } catch (err) {
     console.error(JSON.stringify({ event: "replica_ready_failed", error: errorInfo(err) }));
+    await clearReplicaPath(sql, scan.ownerId, path).catch((e: unknown) =>
+      console.error(JSON.stringify({ event: "replica_clear_failed", error: errorInfo(e) })));
+    await abandonUpload(sql, store, path);
     return;
   }
   if (!ready) await abandonUpload(sql, store, path);
