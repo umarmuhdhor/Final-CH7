@@ -6,6 +6,7 @@ import verifiedScam from "../../../contracts/fixtures/blocked-verified-scam.json
 import warning41 from "../../../contracts/fixtures/warning-41.json";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { expectScanResult } from "./helpers/schema";
+import { atWindowStart } from "./helpers/rateWindow";
 import { call, createDevice, type Created } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 useRateKeySecret(env.RATE_KEY_SECRET);
@@ -254,12 +255,13 @@ describe("GET /verdicts?domain=", () => {
 
   it("rate limits 30 per 10 s per device with Retry-After, through the binding: no rate_limit_hits row", async () => {
     const p = await createDevice("Mom");
+    await atWindowStart(10); // all 31 requests in one 10 s window of the binding
     for (let i = 0; i < 30; i++) expect((await call("/verdicts?domain=a.example", { token: p.token })).status).toBe(200);
     const res = await call("/verdicts?domain=a.example", { token: p.token });
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
     expect(await sql`select 1 from rate_limit_hits where bucket = 'verdicts_get'`).toHaveLength(0);
-  });
+  }, 15_000);
 });
 
 describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () => {
