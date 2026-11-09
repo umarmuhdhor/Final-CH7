@@ -32,7 +32,8 @@ const QUIET_MS = 60 * 60_000;
 // cf_analytics_unavailable is not here: it is an `alert` of its own (PR #340 review 3), so the issue
 // says why the daily checks are blind instead of keeping their old codes.
 const BLIND = new Set(["ops_status_limited"]);
-// Retries for a Cloudflare GraphQL answer that looks transient (network, 429, 5xx); config errors are not retried.
+// Retries for a Cloudflare GraphQL answer that is not clearly a config error: network, 429, 5xx, and a
+// 200 with errors[] (Cloudflare reports query timeouts and budget limits that way). 400/401/403 are not retried.
 const GRAPHQL_ATTEMPTS = 3;
 const GRAPHQL_GAP_MS = 20_000;
 // gh stderr that means "the issue could be created, only the assignee failed" (PR #340 review 1).
@@ -240,8 +241,8 @@ export async function checkDaily({ base, cfToken, accountId, fetchImpl, now, sle
       body: JSON.stringify({ query, variables }),
     });
   const good = (x) => x.status === 200 && x.json?.data && !(x.json.errors?.length > 0);
-  // A 401/403/400 or a GraphQL error is a config problem: retrying does not help.
-  const transient = (x) => x.status === 0 || x.status === 429 || x.status >= 500;
+  // 400/401/403 = bad query, token revoked or wrong scope: retrying does not help.
+  const transient = (x) => ![400, 401, 403].includes(x.status);
   let w;
   let r;
   for (let i = 0; i < GRAPHQL_ATTEMPTS; i++) {
@@ -290,16 +291,18 @@ const bullets = (codes) => codes.map((c) => `- \`${c}\``).join("\n");
 const FOOTER =
   "Runbook: backend/README.md, section \"Monitoring and alerts\". Numbers are only in GET /ops/status " +
   "(token holders): this repository is public, so this issue carries codes only. It closes itself after " +
-  `${GREEN_RUNS_TO_CLOSE} green runs in a row once every code is gone. Codes from the daily run ` +
+  `${GREEN_RUNS_TO_CLOSE} green runs in a row once every code is gone (a run that got a 429 from ` +
+  "/ops/status neither counts nor resets). Codes from the daily run " +
   "(worker_*, r2_*, cf_analytics_unavailable) are only re-checked by the next daily run, about 24 h later " +
   "(healthz_db_failed is re-checked every 15 min); after a fix, dispatch the workflow with mode daily.";
 const titleOf = (alerts) => `ops-alert: ${alerts.join(", ")}`;
 
 /**
  * Open `ops-alert` issues the workflow opened, oldest first. REST /issues, not `gh issue list`:
- * gh issue list goes through the search index (lags right after a create), and its
- * `--author app/github-actions` returns nothing for the bot's issues (checked 9 Nov, PR #340 review 2).
- * REST reports the bot as `github-actions[bot]`.
+ * with `--label`, gh issue list goes through the search index (GH_DEBUG=api shows
+ * `search(type: ISSUE_ADVANCED)`), which can lag right after a create, and a missed issue means a
+ * new one every 15 min (PR #340 review 2). REST reads the issues directly and reports the bot as
+ * `github-actions[bot]` (checked 9 Nov against a public repo with open bot `ops-alert` issues).
  */
 async function openIssues(gh) {
   const pages = JSON.parse(await gh(["api", "--paginate", "--slurp", `repos/{owner}/{repo}/issues?labels=${LABEL}&state=open&per_page=100`]));
@@ -339,7 +342,8 @@ export async function syncIssue({ quick, daily, mode, gh, now, recheckDb }) {
   } else {
     dailyAlerts = prev?.daily ?? [];
     // /healthz/db is cheap to ask again: a fixed database must not hold the issue for a day (review 5).
-    if (dailyAlerts.includes("healthz_db_failed") && recheckDb && (await recheckDb())) {
+    // Not on a blind run: it writes no state, so the result would be lost and asked again every run.
+    if (!blind && dailyAlerts.includes("healthz_db_failed") && recheckDb && (await recheckDb())) {
       dailyAlerts = dailyAlerts.filter((c) => c !== "healthz_db_failed");
     }
   }

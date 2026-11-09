@@ -229,6 +229,14 @@ describe("checkDaily", () => {
     assert.deepEqual(down.waits, [20_000, 20_000]);
   });
 
+  it("retries a 200 with errors[] (Cloudflare query timeout / budget), then gives up", async () => {
+    const sleep = Object.assign(async (ms) => sleep.waits.push(ms), { waits: [] });
+    const timeout = json(200, { data: null, errors: [{ message: "query timeout" }] });
+    const f = fakeFetch({ "/healthz/db": json(200, {}), "/client/v4/graphql": (init, n) => (n <= 2 ? timeout : graphql(init)) });
+    assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW, sleep }), []);
+    assert.deepEqual(sleep.waits, [20_000]);
+  });
+
   it("does not retry a 401/403 (token revoked or wrong scope)", async () => {
     const sleep = Object.assign(async (ms) => sleep.waits.push(ms), { waits: [] });
     const f = fakeFetch({ "/healthz/db": json(200, {}), "/client/v4/graphql": json(403, { errors: [{ message: "x" }] }) });
@@ -487,6 +495,12 @@ describe("syncIssue", () => {
 
     const still = fakeGh({ open: [{ number: 7 }], view });
     assert.equal(await syncIssue({ quick: [], daily: [], mode: "quick", gh: still, now: NOW, recheckDb: async () => false }), "unchanged");
+
+    // A blind run (429) does not re-check: it writes no state, so the answer would be lost.
+    let basked = 0;
+    const bgh = fakeGh({ open: [{ number: 7 }], view });
+    assert.equal(await syncIssue({ quick: [{ code: "ops_status_limited", level: "warn" }], daily: [], mode: "quick", gh: bgh, now: NOW, recheckDb: async () => (basked++, true) }), "blind");
+    assert.equal(basked, 0);
 
     // Analytics codes are not re-checked by quick runs.
     const wview = { author: BOT, body: marker({ alerts: ["worker_errors"], daily: ["worker_errors"], green: 0 }), comments: [] };
