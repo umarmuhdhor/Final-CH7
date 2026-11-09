@@ -29,7 +29,15 @@ const GREEN_RUNS_TO_CLOSE = 2;
 // Comments only drop codes at most once an hour: a flapping check must not mail the assignee every 15 min.
 const QUIET_MS = 60 * 60_000;
 // Codes that mean "the monitor could not see", not "healthy": they never count as a green run.
-const BLIND = new Set(["ops_status_limited", "cf_analytics_unavailable"]);
+// cf_analytics_unavailable is not here: it is an `alert` of its own (PR #340 review 3), so the issue
+// says why the daily checks are blind instead of keeping their old codes.
+const BLIND = new Set(["ops_status_limited"]);
+// Retries for a Cloudflare GraphQL answer that looks transient (network, 429, 5xx); config errors are not retried.
+const GRAPHQL_ATTEMPTS = 3;
+const GRAPHQL_GAP_MS = 20_000;
+// gh stderr that means "the issue could be created, only the assignee failed" (PR #340 review 1).
+// Matched against stderr only: err.message also carries the command line, which contains --assignee.
+const ASSIGN_ERROR_RE = /could not assign|assignee|could not resolve to a user|cannot be assigned/i;
 // Comment authors whose ops-watch marker is trusted (the workflow's GITHUB_TOKEN). Anyone can comment
 // on a public repo; a forged marker must not close or silence the issue.
 const TRUSTED_AUTHORS = new Set(["github-actions", "github-actions[bot]", "app/github-actions"]);
@@ -60,7 +68,9 @@ export const CODES = Object.freeze({
   r2_class_a_high: "warn",
   r2_class_b_high: "warn",
   r2_storage_high: "warn",
-  cf_analytics_unavailable: "warn",
+  // Token expired or revoked, wrong account id, or Cloudflare down for every retry: the daily
+  // Worker/R2 checks are off, so it must reach a person (PR #340 review 3, same pattern as #335).
+  cf_analytics_unavailable: "alert",
 });
 
 /** Fase 21 K3 limits (Free plan: 100k Worker requests/day, R2 1M class A + 10M class B per month). */
@@ -212,7 +222,7 @@ export function evaluateAnalytics({ workers, r2 }) {
 }
 
 /** Keep-alive + Cloudflare analytics (once a day). Returns `{code, level}[]`. */
-export async function checkDaily({ base, cfToken, accountId, fetchImpl, now }) {
+export async function checkDaily({ base, cfToken, accountId, fetchImpl, now, sleep = async () => {} }) {
   const out = [];
   // Writes ops_heartbeat('healthz'): the second, independent Supabase keep-alive (fase 21 K1).
   if ((await request(fetchImpl, `${base}/healthz/db`)).status !== 200) out.push(code("healthz_db_failed"));
@@ -229,11 +239,19 @@ export async function checkDaily({ base, cfToken, accountId, fetchImpl, now }) {
       headers: { authorization: `Bearer ${cfToken}`, "content-type": "application/json" },
       body: JSON.stringify({ query, variables }),
     });
-  const [w, r] = await Promise.all([
-    ask(q.workers, { account: accountId, dayStart, end }),
-    ask(q.r2, { account: accountId, monthStart, dayStart, end }),
-  ]);
   const good = (x) => x.status === 200 && x.json?.data && !(x.json.errors?.length > 0);
+  // A 401/403/400 or a GraphQL error is a config problem: retrying does not help.
+  const transient = (x) => x.status === 0 || x.status === 429 || x.status >= 500;
+  let w;
+  let r;
+  for (let i = 0; i < GRAPHQL_ATTEMPTS; i++) {
+    if (i > 0) await sleep(GRAPHQL_GAP_MS);
+    [w, r] = await Promise.all([
+      ask(q.workers, { account: accountId, dayStart, end }),
+      ask(q.r2, { account: accountId, monthStart, dayStart, end }),
+    ]);
+    if ((good(w) || !transient(w)) && (good(r) || !transient(r))) break;
+  }
   if (!good(w) || !good(r)) return [...out, code("cf_analytics_unavailable")];
   const data = { workers: w.json.data, r2: r.json.data };
   if (!analyticsUsable(data)) return [...out, code("cf_analytics_unavailable")];
@@ -272,40 +290,68 @@ const bullets = (codes) => codes.map((c) => `- \`${c}\``).join("\n");
 const FOOTER =
   "Runbook: backend/README.md, section \"Monitoring and alerts\". Numbers are only in GET /ops/status " +
   "(token holders): this repository is public, so this issue carries codes only. It closes itself after " +
-  `${GREEN_RUNS_TO_CLOSE} green runs in a row.`;
+  `${GREEN_RUNS_TO_CLOSE} green runs in a row once every code is gone. Codes from the daily run ` +
+  "(worker_*, r2_*, cf_analytics_unavailable) are only re-checked by the next daily run, about 24 h later " +
+  "(healthz_db_failed is re-checked every 15 min); after a fix, dispatch the workflow with mode daily.";
+const titleOf = (alerts) => `ops-alert: ${alerts.join(", ")}`;
+
+/**
+ * Open `ops-alert` issues the workflow opened, oldest first. REST /issues, not `gh issue list`:
+ * gh issue list goes through the search index (lags right after a create), and its
+ * `--author app/github-actions` returns nothing for the bot's issues (checked 9 Nov, PR #340 review 2).
+ * REST reports the bot as `github-actions[bot]`.
+ */
+async function openIssues(gh) {
+  const pages = JSON.parse(await gh(["api", "--paginate", "--slurp", `repos/{owner}/{repo}/issues?labels=${LABEL}&state=open&per_page=100`]));
+  return pages
+    .flat()
+    .filter((i) => i && !i.pull_request && Number.isInteger(i.number) && TRUSTED_AUTHORS.has(i.user?.login))
+    .sort((a, b) => a.number - b.number);
+}
 
 /**
  * Opens / updates / closes the one open `ops-alert` issue. Only `alert` codes count. Quick runs keep
- * the alert codes of the last daily run (they cannot see Cloudflare analytics); a daily run replaces
- * them. A run with a BLIND code changes nothing except to add new alert codes. Returns what it did:
+ * the alert codes of the last daily run (they cannot see Cloudflare analytics), except
+ * healthz_db_failed, which `recheckDb` re-checks; a daily run replaces them. A run with a BLIND code
+ * (429 from /ops/status) keeps the last quick codes and only adds. Returns what it did:
  * opened | updated | unchanged | blind | green | closed | none.
  */
-export async function syncIssue({ quick, daily, mode, gh, now }) {
+export async function syncIssue({ quick, daily, mode, gh, now, recheckDb }) {
   const alertsOf = (list) => [...new Set(list.filter((c) => c.level === "alert").map((c) => c.code))].sort();
   const union = (a, b) => [...new Set([...a, ...b])].sort();
   // Only issues the workflow opened: a labelled issue from someone else must not hide the real one.
-  const listed = JSON.parse(await gh(["issue", "list", "--label", LABEL, "--state", "open", "--author", "app/github-actions", "--json", "number,author", "--limit", "20"]));
-  const number = listed
-    .filter((i) => TRUSTED_AUTHORS.has(i?.author?.login) && Number.isInteger(i.number))
-    .map((i) => i.number)
-    .sort((a, b) => a - b)[0];
+  const issue = (await openIssues(gh))[0];
+  const number = issue?.number;
   let prev = null;
-  if (number) {
-    const issue = JSON.parse(await gh(["issue", "view", String(number), "--json", "author,body"]));
-    // Every page of comments (REST, oldest first): `issue view` may return only the first page.
+  if (issue) {
+    // Every page of comments (REST, oldest first).
     const pages = JSON.parse(await gh(["api", "--paginate", "--slurp", `repos/{owner}/{repo}/issues/${number}/comments?per_page=100`]));
     const comments = pages.flat().map((c) => ({ login: c?.user?.login, body: c?.body }));
-    prev = lastState([{ login: issue?.author?.login, body: issue?.body }, ...comments]);
+    prev = lastState([{ login: issue.user?.login, body: issue.body }, ...comments]);
   }
   const blind = [...quick, ...daily].some((c) => BLIND.has(c.code));
 
-  let dailyAlerts = mode === "daily" ? alertsOf(daily) : (prev?.daily ?? []);
+  let dailyAlerts;
+  if (mode === "daily") {
+    // A daily run sees every daily check (an unreadable Cloudflare is cf_analytics_unavailable itself),
+    // so its set replaces the old one: no stale worker_* / r2_* code can stay (PR #340 review 4).
+    dailyAlerts = alertsOf(daily);
+  } else {
+    dailyAlerts = prev?.daily ?? [];
+    // /healthz/db is cheap to ask again: a fixed database must not hold the issue for a day (review 5).
+    if (dailyAlerts.includes("healthz_db_failed") && recheckDb && (await recheckDb())) {
+      dailyAlerts = dailyAlerts.filter((c) => c !== "healthz_db_failed");
+    }
+  }
   let alerts = union(alertsOf(quick), dailyAlerts);
   if (blind && number) {
-    // Half-blind run: keep what was known, only add.
-    dailyAlerts = union(prev?.daily ?? [], dailyAlerts);
-    alerts = union(prev?.alerts ?? [], alerts);
-    if (prev && prev.green === 0 && sameSet(prev.alerts, alerts) && sameSet(prev.daily, dailyAlerts)) return "blind";
+    // Half-blind run (/ops/status said 429): keep the last quick codes, only add. Daily codes come from dailyAlerts.
+    const prevQuick = (prev?.alerts ?? []).filter((c) => !(prev?.daily ?? []).includes(c));
+    alerts = union(prevQuick, alerts);
+    if (prev && prev.green === 0 && sameSet(prev.alerts, alerts) && sameSet(prev.daily, dailyAlerts)) {
+      await fixTitle(gh, issue, alerts);
+      return "blind";
+    }
   }
 
   if (alerts.length > 0) {
@@ -313,24 +359,31 @@ export async function syncIssue({ quick, daily, mode, gh, now }) {
     if (!number) {
       await gh(["label", "create", LABEL, "--force", "--color", "B60205", "--description", "ops-watch alert (backend/ci/ops-watch.mjs)"]);
       const body = `ops-watch found alert codes at ${utc(now)} (${mode} run):\n\n${bullets(alerts)}\n\n${FOOTER}\n\n${markerOf(state)}`;
-      const create = ["issue", "create", "--title", `ops-alert: ${alerts.join(", ")}`, "--label", LABEL, "--body", body];
+      const create = ["issue", "create", "--title", titleOf(alerts), "--label", LABEL, "--body", body];
       try {
         await gh([...create, "--assignee", ASSIGNEE]);
       } catch (err) {
+        // A timeout or 5xx can come after GitHub already created the issue: never open a second one.
+        if ((await openIssues(gh)).length > 0) return "opened";
         // Assignee no longer assignable: the alert still needs its issue. Any other error stays an error.
-        if (!/assign/i.test(String(err?.message ?? "") + String(err?.stderr ?? ""))) throw err;
+        if (!ASSIGN_ERROR_RE.test(String(err?.stderr ?? ""))) throw err;
         await gh(create);
       }
       return "opened";
     }
-    if (prev && prev.green === 0 && sameSet(prev.alerts, alerts) && sameSet(prev.daily, dailyAlerts)) return "unchanged";
+    if (prev && prev.green === 0 && sameSet(prev.alerts, alerts) && sameSet(prev.daily, dailyAlerts)) {
+      await fixTitle(gh, issue, alerts);
+      return "unchanged";
+    }
     const added = alerts.some((c) => !(prev?.alerts ?? []).includes(c));
     // Quiet hour: only for codes of quick runs going away. A daily set always gets written, or the next
     // quick run would carry the stale daily codes again.
     if (prev && prev.green === 0 && !added && sameSet(prev.daily, dailyAlerts) && now.getTime() - prev.at < QUIET_MS) return "unchanged";
+    // Title first, then the comment that carries the new marker: if the edit fails, the next run still
+    // reads the old marker and tries again (PR #340 review 8).
+    await gh(["issue", "edit", String(number), "--title", titleOf(alerts)]);
     const body = `Alert codes at ${utc(now)} (${mode} run):\n\n${bullets(alerts)}\n\n${markerOf(state)}`;
     await gh(["issue", "comment", String(number), "--body", body]);
-    await gh(["issue", "edit", String(number), "--title", `ops-alert: ${alerts.join(", ")}`]);
     return "updated";
   }
 
@@ -346,6 +399,11 @@ export async function syncIssue({ quick, daily, mode, gh, now }) {
   const body = `Green run ${green} of ${GREEN_RUNS_TO_CLOSE} at ${utc(now)} (${mode} run).\n\n${markerOf(state)}`;
   await gh(["issue", "comment", String(number), "--body", body]);
   return "green";
+}
+
+/** A title that no longer matches the marker (an earlier edit failed) is fixed on the next quiet run. */
+async function fixTitle(gh, issue, alerts) {
+  if (alerts.length > 0 && issue?.title !== titleOf(alerts)) await gh(["issue", "edit", String(issue.number), "--title", titleOf(alerts)]);
 }
 
 /** Job summary (markdown): codes, levels and the time only. */
@@ -384,7 +442,7 @@ export async function main({
   if (!/^https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev$/i.test(base)) throw new Error("ops-watch: OPS_API_URL must be https://<name>.<account>.workers.dev");
 
   const quick = await checkQuick({ base, token: env.OPS_STATUS_TOKEN, fetchImpl, sleep });
-  const daily = mode === "daily" ? await checkDaily({ base, cfToken: env.CF_ANALYTICS_TOKEN, accountId: env.CLOUDFLARE_ACCOUNT_ID, fetchImpl, now }) : [];
+  const daily = mode === "daily" ? await checkDaily({ base, cfToken: env.CF_ANALYTICS_TOKEN, accountId: env.CLOUDFLARE_ACCOUNT_ID, fetchImpl, now, sleep }) : [];
   const simulated = parseSimulate(env.OPS_SIMULATE);
   if (env.OPS_SIMULATE && simulated.length === 0) log("ops-watch: simulate ignored (no known code)");
 
@@ -394,7 +452,9 @@ export async function main({
   for (const c of codes) log(`ops-watch ${mode}: ${c.level} ${c.code}`);
   if (env.GITHUB_STEP_SUMMARY) appendSummary(env.GITHUB_STEP_SUMMARY, summary({ mode, codes, now }));
 
-  const action = env.OPS_DRY_RUN === "1" ? "dry-run" : await syncIssue({ quick: [...quick, ...simulated], daily, mode, gh, now });
+  // Quick runs: re-ask /healthz/db only when the open issue still carries healthz_db_failed.
+  const recheckDb = async () => (await request(fetchImpl, `${base}/healthz/db`)).status === 200;
+  const action = env.OPS_DRY_RUN === "1" ? "dry-run" : await syncIssue({ quick: [...quick, ...simulated], daily, mode, gh, now, recheckDb });
   log(`ops-watch ${mode}: issue: ${action}`);
   return { mode, codes, action };
 }

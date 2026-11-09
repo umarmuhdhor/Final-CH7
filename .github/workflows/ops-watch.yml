@@ -37,7 +37,11 @@ jobs:
     if: vars.OPS_WATCH_ENABLED == 'true'
     # OPS_STATUS_TOKEN, CF_ANALYTICS_TOKEN (Account Analytics Read only), CLOUDFLARE_ACCOUNT_ID.
     # Not `production`: this scheduled job never needs the deploy credentials.
-    environment: ops
+    # deployment: false = secrets only, no deployment record per run (~97 a day would bury the real
+    # deploy history; PR #340 review 7). Needs an environment without custom protection rules.
+    environment:
+      name: ops
+      deployment: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -209,7 +209,10 @@ still runs.
 
 The `ops-watch` workflow (fase 21b, [backend/ci/README.md](ci/README.md#ops-watch-fase-21b-todo-b9)) calls
 `/healthz` and `/ops/status` every 15 minutes and, once a day, `/healthz/db` and Cloudflare analytics. Alert
-codes open one issue labelled `ops-alert`, assigned to Alief; it closes itself after 2 green runs. Its own codes:
+codes open one issue labelled `ops-alert`, assigned to Alief; it closes itself after 2 green runs in a row
+once every code is gone. Daily codes (`worker_*`, `cf_analytics_unavailable`) are only re-checked by the
+next daily run, about 24 h later; `healthz_db_failed` is re-checked every 15 minutes. After a fix, run the
+workflow by hand with mode `daily` (Actions → ops-watch → Run workflow). Its own codes:
 
 | Code | Level | When | First step | Next step |
 |---|---|---|---|---|
@@ -219,7 +222,7 @@ codes open one issue labelled `ops-alert`, assigned to Alief; it closes itself a
 | `worker_exceeded_cpu` / `worker_errors` | alert | `shoo-api` hit the CPU limit / errors above 1 % (24 h) | Workers dashboard → Metrics; Query Builder `error.name`, `route` | `wrangler tail --status error` on your Mac (never copy URLs out of it) |
 | `worker_requests_high` | warn | ≥ 80 000 requests/day on the account | Workers dashboard → which Worker | Find the source; lower a quota through a PR |
 | `r2_class_a_high` / `r2_class_b_high` / `r2_storage_high` | warn | R2 month-to-date operations or storage near the Free tier | R2 → `shoo-replicas` → Metrics | Replica quota or kill-switch ([Page replicas](#page-replicas-kill-switch-and-takedown)) |
-| `cf_analytics_unavailable` | warn | the analytics token is missing or GraphQL failed | Token still valid? (`CF_ANALYTICS_TOKEN`, Account Analytics Read) | Roll it and update the `ops` environment |
+| `cf_analytics_unavailable` | alert | the analytics token is missing, expired or revoked, the account id is wrong, or GraphQL failed 3 times: the Worker and R2 checks are off | Token still valid? (`CF_ANALYTICS_TOKEN`, Account Analytics Read; it expires 9 Nov 2027) | Roll it and update the `ops` environment, then run `daily` by hand |
 
 ## Quota (Supabase Free + R2)
 

@@ -198,7 +198,7 @@ describe("checkDaily", () => {
         "/healthz/db": json(200, {}),
         "/client/v4/graphql": (init) => json(200, { data: JSON.parse(init.body).query.includes("workersInvocationsAdaptive") ? data : analytics().r2 }),
       });
-      assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW }), [{ code: "cf_analytics_unavailable", level: "warn" }]);
+      assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW }), [{ code: "cf_analytics_unavailable", level: "alert" }]);
     }
   });
 
@@ -207,11 +207,34 @@ describe("checkDaily", () => {
     assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW }), [{ code: "healthz_db_failed", level: "alert" }]);
   });
 
-  it("cf_analytics_unavailable (warn) without token, with a bad account id, or on GraphQL errors", async () => {
+  it("cf_analytics_unavailable is an alert without token, with a bad account id, or on GraphQL errors (PR #340 review 3)", async () => {
     const f = fakeFetch({ "/healthz/db": json(200, {}), "/client/v4/graphql": json(200, { data: null, errors: [{ message: "x" }] }) });
     for (const [cfToken, accountId] of [["", ACCOUNT], [CF_TOKEN, "nope"], [CF_TOKEN, ACCOUNT]]) {
-      assert.deepEqual(await checkDaily({ base: BASE, cfToken, accountId, fetchImpl: f, now: NOW }), [{ code: "cf_analytics_unavailable", level: "warn" }]);
+      assert.deepEqual(await checkDaily({ base: BASE, cfToken, accountId, fetchImpl: f, now: NOW }), [{ code: "cf_analytics_unavailable", level: "alert" }]);
     }
+  });
+
+  it("retries a transient GraphQL answer (5xx, network) 20 s apart, then gives up", async () => {
+    const sleep = Object.assign(async (ms) => sleep.waits.push(ms), { waits: [] });
+    const flaky = (init, n) => (n <= 2 ? json(503, {}) : graphql(init));
+    const f = fakeFetch({ "/healthz/db": json(200, {}), "/client/v4/graphql": flaky });
+    // Both queries share the path counter: calls 1-2 are attempt 1, 3-4 attempt 2.
+    assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW, sleep }), []);
+    assert.deepEqual(sleep.waits, [20_000]);
+
+    const down = Object.assign(async (ms) => down.waits.push(ms), { waits: [] });
+    const g = fakeFetch({ "/healthz/db": json(200, {}), "/client/v4/graphql": new Error("ECONNRESET") });
+    assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: g, now: NOW, sleep: down }), [{ code: "cf_analytics_unavailable", level: "alert" }]);
+    assert.equal(g.calls.filter((c) => c.url.includes("graphql")).length, 6);
+    assert.deepEqual(down.waits, [20_000, 20_000]);
+  });
+
+  it("does not retry a 401/403 (token revoked or wrong scope)", async () => {
+    const sleep = Object.assign(async (ms) => sleep.waits.push(ms), { waits: [] });
+    const f = fakeFetch({ "/healthz/db": json(200, {}), "/client/v4/graphql": json(403, { errors: [{ message: "x" }] }) });
+    assert.deepEqual(await checkDaily({ base: BASE, cfToken: CF_TOKEN, accountId: ACCOUNT, fetchImpl: f, now: NOW, sleep }), [{ code: "cf_analytics_unavailable", level: "alert" }]);
+    assert.equal(f.calls.filter((c) => c.url.includes("graphql")).length, 2);
+    assert.deepEqual(sleep.waits, []);
   });
 });
 
@@ -228,19 +251,41 @@ describe("parseSimulate", () => {
 
 const BOT = { login: "github-actions" };
 
-/** gh fake: answers per subcommand, records every call. */
-function fakeGh({ open = [], view = { author: BOT, body: "", comments: [] }, failAssignee = false } = {}) {
+/** The bot as REST reports it (`user.login`), and as the GraphQL fixtures below name it. */
+const restLogin = (login) => (login === "github-actions" ? "github-actions[bot]" : login);
+
+/**
+ * Error shaped like the one promisify(execFile) rejects with: `message` carries the whole command
+ * line (so it always contains --assignee), the gh output is in `stderr`.
+ */
+function execError(args, stderr) {
+  return Object.assign(new Error(`Command failed: gh ${args.join(" ")}\n${stderr}`), { code: 1, stderr, stdout: "" });
+}
+
+/**
+ * gh fake: answers per subcommand, records every call. `open` = open issues (REST /issues);
+ * `createFails` = stderr of a failing `issue create --assignee`; `createdAnyway` = GitHub created
+ * the issue although gh failed (timeout).
+ */
+function fakeGh({ open = [], view = { author: BOT, body: "", comments: [] }, createFails = null, createdAnyway = false } = {}) {
   const calls = [];
+  let created = false;
   const gh = async (args) => {
     calls.push(args);
     const cmd = args.slice(0, 2).join(" ");
-    if (cmd === "issue list") return JSON.stringify(open.map((o) => ({ author: BOT, ...o })));
-    if (cmd === "issue create" && failAssignee && args.includes("--assignee")) throw new Error("could not assign");
-    if (cmd === "issue view") return JSON.stringify({ author: view.author, body: view.body });
+    if (args[0] === "api" && args.some((a) => a.includes("/issues?labels=ops-alert&state=open"))) {
+      const list = open.map((o) => ({ number: o.number, user: { login: restLogin((o.author ?? view.author ?? BOT).login) }, body: view.body, title: o.title ?? "" }));
+      if (created) list.push({ number: 7, user: { login: "github-actions[bot]" }, body: "", title: "" });
+      return JSON.stringify([list]);
+    }
     if (args[0] === "api") {
       // REST comments, one page; the bot's REST login differs from its GraphQL login.
-      const rest = (view.comments ?? []).map((c) => ({ user: { login: c.author.login === "github-actions" ? "github-actions[bot]" : c.author.login }, body: c.body }));
+      const rest = (view.comments ?? []).map((c) => ({ user: { login: restLogin(c.author.login) }, body: c.body }));
       return JSON.stringify([rest]);
+    }
+    if (cmd === "issue create" && createFails && args.includes("--assignee")) {
+      if (createdAnyway) created = true;
+      throw execError(args, createFails);
     }
     if (cmd === "issue create") return "https://github.example/issues/7\n";
     return "";
@@ -323,33 +368,76 @@ describe("syncIssue", () => {
     assert.ok(!gh.calls.some((a) => a[1] === "close"));
   });
 
-  it("only trusts issues the workflow opened", async () => {
+  it("only trusts issues the workflow opened, read from REST (not the search index, PR #340 review 2)", async () => {
     const gh = fakeGh({ open: [{ number: 3, author: { login: "someone" } }] });
     assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), "opened");
-    assert.ok(gh.calls[0].includes("--author") && gh.calls[0].includes("app/github-actions"));
+    assert.deepEqual(gh.calls[0], ["api", "--paginate", "--slurp", "repos/{owner}/{repo}/issues?labels=ops-alert&state=open&per_page=100"]);
+    assert.ok(!gh.calls.some((a) => a[0] === "issue" && a[1] === "list"));
+  });
+
+  it("finds the bot's issue under its REST login github-actions[bot]", async () => {
+    const gh = fakeGh({ open: [{ number: 7 }], view: { author: BOT, body: marker({ alerts: ["retention_failed"], daily: [], green: 0 }), comments: [] } });
+    assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), "unchanged");
+    assert.ok(!gh.calls.some((a) => a[1] === "create"));
   });
 
   it("still opens the issue when the assignee cannot be assigned", async () => {
-    const gh = fakeGh({ failAssignee: true });
+    const gh = fakeGh({ createFails: "could not assign user: 'aliefauzan' not found\n" });
     assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), "opened");
     const creates = gh.calls.filter((a) => a[0] === "issue" && a[1] === "create");
     assert.equal(creates.length, 2);
     assert.ok(!creates[1].includes("--assignee"));
   });
 
-  it("any other create error is not swallowed", async () => {
-    const gh = async (args) => {
-      if (args[1] === "list") return "[]";
-      if (args[1] === "create" && args[0] === "issue") throw new Error("HTTP 502");
-      return "";
-    };
-    await assert.rejects(syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), /502/);
+  it("any other create error is not swallowed, although err.message contains --assignee (PR #340 review 1)", async () => {
+    const gh = fakeGh({ createFails: "HTTP 502: Bad Gateway (https://api.github.com/graphql)\n" });
+    await assert.rejects(syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), (err) => /--assignee/.test(err.message) && /502/.test(err.stderr));
+    assert.equal(gh.calls.filter((a) => a[0] === "issue" && a[1] === "create").length, 1);
+  });
+
+  it("a create that failed after GitHub made the issue opens no second one", async () => {
+    const gh = fakeGh({ createFails: "could not assign user: timeout\n", createdAnyway: true });
+    assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh, now: NOW }), "opened");
+    assert.equal(gh.calls.filter((a) => a[0] === "issue" && a[1] === "create").length, 1);
   });
 
   it("the oldest open workflow issue wins when there are two", async () => {
     const gh = fakeGh({ open: [{ number: 9 }, { number: 7 }] });
     await syncIssue({ quick: [], daily: [], mode: "quick", gh, now: NOW });
-    assert.ok(gh.calls.some((a) => a[0] === "issue" && a[1] === "view" && a[2] === "7"));
+    assert.ok(gh.calls.some((a) => a[0] === "api" && a.includes("repos/{owner}/{repo}/issues/7/comments?per_page=100")));
+  });
+
+  it("edits the title before writing the new marker (PR #340 review 8)", async () => {
+    const gh = fakeGh({ open: [{ number: 7 }], view: { author: BOT, body: marker({ alerts: ["retention_failed"], daily: [], green: 0 }), comments: [] } });
+    assert.equal(await syncIssue({ quick: alertCodes("healthz_down", "retention_failed"), daily: [], mode: "quick", gh, now: NOW }), "updated");
+    const edit = gh.calls.findIndex((a) => a[1] === "edit");
+    const comment = gh.calls.findIndex((a) => a[1] === "comment");
+    assert.ok(edit >= 0 && edit < comment);
+    assert.ok(gh.calls[edit].includes("ops-alert: healthz_down, retention_failed"));
+  });
+
+  it("a failed title edit is fixed by the next run, which still sees the old marker", async () => {
+    const view = { author: BOT, body: marker({ alerts: ["retention_failed"], daily: [], green: 0 }), comments: [] };
+    const failing = fakeGh({ open: [{ number: 7, title: "ops-alert: retention_failed" }], view });
+    const gh = async (args) => {
+      if (args[1] === "edit") throw new Error("HTTP 502");
+      return failing(args);
+    };
+    await assert.rejects(syncIssue({ quick: alertCodes("healthz_down", "retention_failed"), daily: [], mode: "quick", gh, now: NOW }));
+    assert.ok(!failing.calls.some((a) => a[1] === "comment"));
+    // Next run: same marker, so it updates again (edit + comment).
+    const again = fakeGh({ open: [{ number: 7, title: "ops-alert: retention_failed" }], view });
+    assert.equal(await syncIssue({ quick: alertCodes("healthz_down", "retention_failed"), daily: [], mode: "quick", gh: again, now: NOW }), "updated");
+  });
+
+  it("an unchanged run fixes a title that does not match the marker", async () => {
+    const view = { author: BOT, body: marker({ alerts: ["retention_failed"], daily: [], green: 0 }), comments: [] };
+    const stale = fakeGh({ open: [{ number: 7, title: "ops-alert: healthz_down" }], view });
+    assert.equal(await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh: stale, now: NOW }), "unchanged");
+    assert.ok(stale.calls.some((a) => a[1] === "edit" && a.includes("ops-alert: retention_failed")));
+    const fine = fakeGh({ open: [{ number: 7, title: "ops-alert: retention_failed" }], view });
+    await syncIssue({ quick: alertCodes("retention_failed"), daily: [], mode: "quick", gh: fine, now: NOW });
+    assert.ok(!fine.calls.some((a) => a[1] === "edit"));
   });
 
   it("a blind run with no open issue does nothing", async () => {
@@ -364,14 +452,47 @@ describe("syncIssue", () => {
     assert.ok(!gh.calls.some((a) => a[1] === "close" || a[1] === "comment"));
   });
 
-  it("a blind daily run keeps the last daily alert codes and still adds new ones", async () => {
+  it("a daily run without analytics replaces the old daily codes with cf_analytics_unavailable (PR #340 review 3 + 4)", async () => {
     const view = { author: BOT, body: marker({ alerts: ["worker_errors"], daily: ["worker_errors"], green: 0 }), comments: [] };
-    const same = fakeGh({ open: [{ number: 7 }], view });
-    assert.equal(await syncIssue({ quick: [], daily: [{ code: "cf_analytics_unavailable", level: "warn" }], mode: "daily", gh: same, now: NOW }), "blind");
-    const more = fakeGh({ open: [{ number: 7 }], view });
-    assert.equal(await syncIssue({ quick: [], daily: alertCodes("healthz_db_failed", "cf_analytics_unavailable"), mode: "daily", gh: more, now: NOW }), "updated");
-    const c = more.calls.find((a) => a[1] === "comment");
-    assert.match(c[c.indexOf("--body") + 1], /"alerts":\["healthz_db_failed","worker_errors"\]/);
+    const gh = fakeGh({ open: [{ number: 7 }], view });
+    assert.equal(await syncIssue({ quick: [], daily: alertCodes("cf_analytics_unavailable"), mode: "daily", gh, now: NOW }), "updated");
+    const c = gh.calls.find((a) => a[1] === "comment");
+    assert.match(c[c.indexOf("--body") + 1], /"alerts":\["cf_analytics_unavailable"\],"daily":\["cf_analytics_unavailable"\]/);
+    assert.ok(gh.calls.some((a) => a[1] === "edit" && a.includes("ops-alert: cf_analytics_unavailable")));
+  });
+
+  it("an expired Cloudflare token opens an issue on its own", async () => {
+    const gh = fakeGh();
+    assert.equal(await syncIssue({ quick: [], daily: alertCodes("cf_analytics_unavailable"), mode: "daily", gh, now: NOW }), "opened");
+  });
+
+  it("a 429 run keeps the last quick codes but not stale daily ones", async () => {
+    const view = { author: BOT, body: marker({ alerts: ["retention_failed", "worker_errors"], daily: ["worker_errors"], green: 0 }), comments: [] };
+    const gh = fakeGh({ open: [{ number: 7 }], view });
+    // Daily run: /ops/status said 429 (blind for quick codes), analytics are clean now.
+    assert.equal(await syncIssue({ quick: [{ code: "ops_status_limited", level: "warn" }], daily: [], mode: "daily", gh, now: NOW }), "updated");
+    const c = gh.calls.find((a) => a[1] === "comment");
+    assert.match(c[c.indexOf("--body") + 1], /"alerts":\["retention_failed"\],"daily":\[\]/);
+  });
+
+  it("a quick run re-checks /healthz/db and drops healthz_db_failed once it passes (PR #340 review 5)", async () => {
+    const view = { author: BOT, body: marker({ alerts: ["healthz_db_failed"], daily: ["healthz_db_failed"], green: 0 }), comments: [] };
+    let asked = 0;
+    const ok = async () => (asked++, true);
+    const gh = fakeGh({ open: [{ number: 7 }], view });
+    assert.equal(await syncIssue({ quick: [], daily: [], mode: "quick", gh, now: NOW, recheckDb: ok }), "green");
+    assert.equal(asked, 1);
+    const c = gh.calls.find((a) => a[1] === "comment");
+    assert.match(c[c.indexOf("--body") + 1], /"daily":\[\],"green":1/);
+
+    const still = fakeGh({ open: [{ number: 7 }], view });
+    assert.equal(await syncIssue({ quick: [], daily: [], mode: "quick", gh: still, now: NOW, recheckDb: async () => false }), "unchanged");
+
+    // Analytics codes are not re-checked by quick runs.
+    const wview = { author: BOT, body: marker({ alerts: ["worker_errors"], daily: ["worker_errors"], green: 0 }), comments: [] };
+    let wasked = 0;
+    await syncIssue({ quick: [], daily: [], mode: "quick", gh: fakeGh({ open: [{ number: 7 }], view: wview }), now: NOW, recheckDb: async () => (wasked++, true) });
+    assert.equal(wasked, 0);
   });
 
   it("dropping a code comments at most once an hour; a new code comments at once", async () => {

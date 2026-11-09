@@ -28,7 +28,7 @@ Manual deploys from Alief's Mac still work as a fallback (backend/README.md).
 - **quick**, cron `7,22,37,52 * * * *`: `GET /healthz` (3 tries, 20 s apart), then `GET /ops/status` with `Authorization: Bearer $OPS_STATUS_TOKEN`. The codes in its `failing[]` are passed on as they are.
 - **daily**, cron `41 20 * * *` (04:41 WITA, ~1.5 h after retention): the quick checks, `GET /healthz/db` (writes `ops_heartbeat('healthz')`, the second Supabase keep-alive next to the cron Worker) and Cloudflare GraphQL analytics for the last 24 h (Workers) and the current month (R2).
 
-Alert codes open one issue labelled `ops-alert`, assigned to `aliefauzan`; GitHub emails the assignee. A new alert code adds one comment at once; a code that went away is noted at most once an hour, so a flapping check does not send a mail every 15 minutes. The issue closes itself after 2 green runs in a row. `warn` codes only go to the job summary. Quick runs keep the alert codes of the last daily run until the next daily run. `ops_status_limited` and `cf_analytics_unavailable` mean the monitor could not see: such a run never counts as green and never drops a code, it can only add one. The issue state is a hidden marker in the workflow's own comments; only issues and comments by `github-actions` count, so a public commenter cannot close or silence it (people with write access can, as they can anyway). The token is only sent to `https://<name>.<account>.workers.dev`, and redirects are not followed.
+Alert codes open one issue labelled `ops-alert`, assigned to `aliefauzan`; GitHub emails the assignee. A new alert code adds one comment at once; a code that went away is noted at most once an hour, so a flapping check does not send a mail every 15 minutes. The issue closes itself after 2 green runs in a row once every code is gone. `warn` codes only go to the job summary. Quick runs keep the alert codes of the last daily run until the next daily run (about 24 h; after a fix, Run workflow with mode `daily`), except `healthz_db_failed`, which a quick run asks `/healthz/db` again for. A daily run replaces the daily codes; when Cloudflare cannot be read, they become `cf_analytics_unavailable` (an alert of its own, so the issue says the daily checks are blind instead of keeping old codes). `ops_status_limited` (429) means the monitor could not see `/ops/status`: such a run never counts as green and keeps the last quick codes, it can only add one. The issue state is a hidden marker in the workflow's own comments; the title is edited before that comment is written, so a failed edit is tried again. The open issue is found through REST `/issues` (not `gh issue list`, which goes through the search index); only issues and comments by `github-actions[bot]` count, so a public commenter cannot close or silence it (people with write access can, as they can anyway). The token is only sent to `https://<name>.<account>.workers.dev`, and redirects are not followed.
 
 The repo is public: the script prints codes and levels only. No numbers (DB size, queue length, request counts), no URLs, no tokens, no response bodies, in the log, the job summary or the issue. The numbers stay behind `GET /ops/status` (token holders). R2 metrics are grouped by `actionType` only, never `objectName` (object keys carry device ids).
 
@@ -43,11 +43,11 @@ The repo is public: the script prints codes and levels only. No numbers (DB size
 | `worker_requests_high` | warn | all Workers of the account ≥ 80 000 requests in 24 h (Free: 100 000/day per account) |
 | `r2_class_a_high` / `r2_class_b_high` | warn | ≥ 500 000 class A / ≥ 5 000 000 class B operations this month |
 | `r2_storage_high` | warn | ≥ 5 GB stored |
-| `cf_analytics_unavailable` | warn | no token/account id, or GraphQL answered with an error |
+| `cf_analytics_unavailable` | alert | no token/account id, 401/403, a GraphQL error, or a network/429/5xx answer 3 times (20 s apart) |
 
 Setup (lead, once; values from Alief through the password manager, never chat or git):
 
-1. Settings → Environments → New environment `ops`, deployment branches: `main` only.
+1. Settings → Environments → New environment `ops`, deployment branches: `main` only. No custom deployment protection rules: the job uses `deployment: false` (secrets only, no deployment record per run), which fails on an environment with such rules.
 2. Environment secrets:
    - `OPS_STATUS_TOKEN`: the same value as the `shoo-api` Worker secret.
    - `CF_ANALYTICS_TOKEN`: API token with only Account → Account Analytics → Read, Shoo account only.
@@ -55,7 +55,13 @@ Setup (lead, once; values from Alief through the password manager, never chat or
 3. Repository variable `OPS_WATCH_ENABLED` = `true` (set it to `false` to stop the workflow without a PR). Optional variable `OPS_API_URL` (default `https://shoo-api.afindo-mi01.workers.dev`).
 4. Actions → ops-watch → Run workflow, mode `daily`: the run should end with `issue: none`.
 
-Alert test (backend untouched): Run workflow with `simulate` = `retention_failed` → an `ops-alert` issue opens; two normal runs close it.
+Alert test (backend untouched): Run workflow with `simulate` = `retention_failed` → an `ops-alert` issue opens; two normal runs close it. While the test issue is open, check that the lookup finds it (paste the output in `plan/alief/log/fase-21.md`):
+
+```bash
+gh api "repos/{owner}/{repo}/issues?labels=ops-alert&state=open&per_page=100" --jq '.[] | {number, login: .user.login}'
+```
+
+It must show the test issue with `login` `github-actions[bot]`, and the second run must comment on it instead of opening another issue.
 
 Locally, without touching GitHub: `OPS_DRY_RUN=1 OPS_STATUS_TOKEN=… node backend/ci/ops-watch.mjs --quick` (token from the password manager through `read -rs`, never as an argument). Tests: `node --test 'backend/ci/*.test.mjs'` (also run by `backend.yml`).
 
