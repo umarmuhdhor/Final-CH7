@@ -41,6 +41,9 @@ jobs:
       - run: pnpm -C backend/api install --frozen-lockfile
       - run: pnpm -C backend/api typecheck
       - run: pnpm -C backend/api test
+      # Scripts in backend/ci (ops-watch, fase 21b): node:test, no dependencies.
+      - name: backend/ci tests
+        run: node --test 'backend/ci/*.test.mjs'
       # Bundles the Worker exactly as a deploy would (config, cron trigger, bindings), without uploading.
       - name: Worker build check
         working-directory: backend/api
