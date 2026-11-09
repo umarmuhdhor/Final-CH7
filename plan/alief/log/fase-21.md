@@ -129,7 +129,17 @@ Verifikasi 1–2 file fase (`wrangler dev --test-scheduled` + curl lokal) belum 
   - (d) 500 dari `onError` di `errors`: **belum terverifikasi** (tidak ada baris dengan `errors > 0` dalam 24 jam). `worker_errors` tetap memakai `errors`; 5xx `onError` dicari di Query Builder (C16).
   - Token yang sempat dibuat dari profil Cloudflare lain di Chrome (nilai tidak tersimpan, belum pernah dipakai) dihapus.
 - [ ] 5. Custom alert Workers Observability (C7): belum.
-- [ ] 6. **(Umar, setelah issue K7)** Environment `ops` (tanpa custom protection rule, job memakai `deployment: false`) + 3 secret + variable `OPS_WATCH_ENABLED=true`, merge PR 21b, Run workflow `daily` sekali. Lalu alert test `simulate` = `retention_failed` dan perintah REST di `backend/ci/README.md` (review #340 butir 2): tempel output (nomor + `github-actions[bot]`) di sini. Nilai dari Alief lewat jalur privat (Keychain: `Shoo OPS_STATUS_TOKEN`, `Shoo OPS_CF_ANALYTICS_TOKEN`; account id sama dengan secret `CLOUDFLARE_ACCOUNT_ID` di `production`).
+- [x] 6. **(Umar, setelah issue K7)** Environment `ops` (tanpa custom protection rule, job memakai `deployment: false`) + 3 secret + variable `OPS_WATCH_ENABLED=true`, merge PR 21b, Run workflow `daily` sekali. Lalu alert test `simulate` = `retention_failed` dan perintah REST di `backend/ci/README.md` (review #340 butir 2): tempel output (nomor + `github-actions[bot]`) di sini. Nilai dari Alief lewat jalur privat (Keychain: `Shoo OPS_STATUS_TOKEN`, `Shoo OPS_CF_ANALYTICS_TOKEN`; account id sama dengan secret `CLOUDFLARE_ACCOUNT_ID` di `production`).
+  - **9 Nov 2026, ±03:22–03:28 UTC (Umar, #341):** environment `ops` (deployment branches `main` saja, tanpa protection rule) + `OPS_STATUS_TOKEN`, `CF_ANALYTICS_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; variable `OPS_WATCH_ENABLED` = `true`. PR #340 merged (76aaab0).
+  - `daily` (run 42556059739): `issue: none`, warn yang diharapkan saja (`tombstones_stuck`, `blocklist_queue`).
+  - `simulate` = `retention_failed` (run 42556198280): `issue: opened` → #345, di-assign `aliefauzan`. Dua run quick berikutnya: "Green run 1 of 2" (03:24 UTC), lalu "2 green runs in a row … closing" (03:25 UTC). Tidak ada issue kedua: label `ops-alert` (state all) hanya punya #345.
+  - Lookup REST saat #345 masih open (review #340 butir 2, perintah di `backend/ci/README.md`), output dari Umar:
+
+    ```json
+    {"assignees":["aliefauzan"],"login":"github-actions[bot]","number":345,"title":"ops-alert: retention_failed"}
+    ```
+
+  - `deployment: false` (review #340 butir 7): `GET /repos/…/deployments?environment=ops` → 0 record setelah run `daily`, `simulate` dan dua run quick.
 - [ ] 7–8. Sesuai `fase-21-monitoring.md` LANGKAH MANUAL 7–8 (TestFlight crash, cek Senin).
 
 Verifikasi cloud setelah butir 1: pagi setelah run 19:00 UTC pertama → `jobs.retention.failed = 0`, `ageHours < 12`; satu jam setelah deploy → `jobs.notifications.ageHours < 1.2`.
