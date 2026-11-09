@@ -1,0 +1,6 @@
+https://example.com/
+https://example.com/login/verify.php?id=123&token=abc#top
+https://en.wikipedia.org/wiki/Phishing?action=info
+http://example.org/account/update
+https://user@example.com/secure/
+https://httpbin.org/redirect-to?url=https%3A%2F%2Fexample.com%2Flanded
