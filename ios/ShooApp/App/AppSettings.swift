@@ -36,11 +36,13 @@ final class AppSettings {
 
         static let dismissedHomeScanIds = "settings.dismissedHomeScanIds"
         static let guardianCardDismissed = "settings.guardianCardDismissed"
+        static let supervisedCardDismissed = "settings.supervisedCardDismissed"
+        static let guardianIntroSeen = "settings.guardianIntroSeen"
 
         static let all = [
             language, mode, onboardingCompleted, familyModeOn, onboardingConnectPassed, dataConsent, largeText,
             theme, textSize, boldText, highContrast, reduceMotion, reduceGlass, haptics, readAloud,
-            dismissedHomeScanIds, guardianCardDismissed, demoMode,
+            dismissedHomeScanIds, guardianCardDismissed, supervisedCardDismissed, guardianIntroSeen, demoMode,
         ]
     }
 
@@ -122,6 +124,16 @@ final class AppSettings {
         didSet { defaults.set(guardianCardDismissed, forKey: Keys.guardianCardDismissed) }
     }
 
+    /// Home Pribadi: the "Mode Terawasi" card was closed with X (Figma 1253:8630).
+    var supervisedCardDismissed: Bool {
+        didSet { defaults.set(supervisedCardDismissed, forKey: Keys.supervisedCardDismissed) }
+    }
+
+    /// Figma "To be guardian" was passed with "Mulai" once; Family mode then turns on without it.
+    var guardianIntroSeen: Bool {
+        didSet { defaults.set(guardianIntroSeen, forKey: Keys.guardianIntroSeen) }
+    }
+
     /// "Try the demo": sample data on this phone, no device on the server. Read at launch (`AppEnvironment.live`).
     private(set) var demoMode: Bool {
         didSet { defaults.set(demoMode, forKey: Keys.demoMode) }
@@ -151,6 +163,8 @@ final class AppSettings {
         readAloud = defaults.bool(forKey: Keys.readAloud)
         dismissedHomeScanIds = defaults.stringArray(forKey: Keys.dismissedHomeScanIds) ?? []
         guardianCardDismissed = defaults.bool(forKey: Keys.guardianCardDismissed)
+        supervisedCardDismissed = defaults.bool(forKey: Keys.supervisedCardDismissed)
+        guardianIntroSeen = defaults.bool(forKey: Keys.guardianIntroSeen)
         demoMode = defaults.bool(forKey: Keys.demoMode)
     }
 
@@ -165,6 +179,7 @@ final class AppSettings {
         demoMode = true
         mode = .guardian
         familyModeOn = true
+        guardianIntroSeen = true
         dataConsent = .granted
         onboardingCompleted = true
     }
@@ -212,5 +227,7 @@ final class AppSettings {
         demoMode = false
         dismissedHomeScanIds = []
         guardianCardDismissed = false
+        supervisedCardDismissed = false
+        guardianIntroSeen = false
     }
 }

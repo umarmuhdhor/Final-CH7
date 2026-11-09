@@ -49,20 +49,19 @@ final class PairingGateUITests: XCTestCase {
             for (size, suffix) in sizes {
                 let tag = "\(language)-\(appearance)\(suffix)"
                 var app = launch(["-UITestReset", "YES"], language: language, size: size)
-                // Registered through ON-03 so the mock Protected has no guardian yet.
+                // Connect inside onboarding only comes from an invite link (Figma 1205:4696 has no mode choice).
                 XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10), app.debugDescription)
-                app.buttons["splash.skip"].tap()
+                app.open(URL(string: "shoo://join?code=000000")!)
+                let openPrompt = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]
+                if openPrompt.waitForExistence(timeout: 3) { openPrompt.tap() }
+                tap(app.buttons["splash.skip"], in: app)
                 let name = app.textFields["name.field"]
                 XCTAssertTrue(name.waitForExistence(timeout: 5))
                 name.tap()
                 name.typeText("Mom")
                 tap(app.buttons["name.continue"], in: app)
-                tap(app.buttons["mode.protected"], in: app)
-                tap(app.buttons["mode.continue"], in: app)
                 let field = app.textFields["connect.code"]
                 XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
-                field.tap()
-                field.typeText("000000")
                 shot(app, "connect-\(tag)")
                 let join = app.buttons["connect.join"]
                 if !join.isHittable { app.swipeUp() }

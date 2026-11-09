@@ -44,28 +44,16 @@ final class PairingUITests: XCTestCase {
         if open.waitForExistence(timeout: 3) { open.tap() }
     }
 
+    /// Connect inside onboarding only comes from an invite link (Figma "Flow" has no mode choice).
     @MainActor
     func testOnboardingConnectShowsErrorsThenWhoProtectsMe() {
         let app = launch(mode: "protected", onboarded: false)
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let name = app.textFields["name.field"]
-        XCTAssertTrue(name.waitForExistence(timeout: 10))
-        name.tap()
-        name.typeText("Mom")
-        app.buttons["name.continue"].tap()
-        // Same steps as OnboardingUITests: the CI runner is slow, so wait for each screen before tapping.
-        let protected = app.buttons["mode.protected"]
-        XCTAssertTrue(protected.waitForExistence(timeout: 10), app.debugDescription)
-        protected.tap()
-        let next = app.buttons["mode.continue"]
-        let enabled = NSPredicate(format: "isEnabled == true")
-        wait(for: [expectation(for: enabled, evaluatedWith: next)], timeout: 5)
-        next.tap()
+        openLink("shoo://join?code=482193", in: app)
+        app.onboardName("Mom")
 
         let join = app.buttons["connect.join"]
         XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertFalse(join.isEnabled)
         // K17: told about the page copy before joining.
         let copyNote = app.descendants(matching: .any)["connect.copyNote"].firstMatch
         XCTAssertTrue(copyNote.exists, app.debugDescription)
@@ -88,8 +76,8 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Adhella"), title.label)
         app.buttons["protectedBy.continue"].tap()
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 10), app.debugDescription)
-        app.buttons["safariDefault.alreadyUsing"].tap()
+        // Registered by the join, consent already given (mock) and Shoo on: Aktifkan Ekstensi passes by itself.
+        app.passSafariDefault()
         XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["extensionOn.continue"].tap()
     }
@@ -100,12 +88,7 @@ final class PairingUITests: XCTestCase {
         let app = launch(mode: "protected", onboarded: false)
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
         openLink("shoo://join?code=482193", in: app)
-        app.buttons["splash.skip"].tap()
-        let name = app.textFields["name.field"]
-        XCTAssertTrue(name.waitForExistence(timeout: 10))
-        name.tap()
-        name.typeText("Mom")
-        app.buttons["name.continue"].tap()
+        app.onboardName("Mom")
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.buttons["mode.protected"].exists)

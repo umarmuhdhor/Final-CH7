@@ -90,19 +90,6 @@ struct SplashView: View {
 
             Spacer()
 
-            Button { model.startDemo() } label: {
-                Text("Try the demo")
-                    .onboardingFont(17, design: .rounded, relativeTo: .body)
-                    .foregroundStyle(OnboardingTheme.ink)
-                    .underline()
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("splash.demo")
-
-            Spacer()
-
             Button {
                 if isLast {
                     model.skipSplash()

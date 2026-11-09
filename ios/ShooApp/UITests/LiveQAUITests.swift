@@ -26,9 +26,11 @@ final class LiveQAUITests: XCTestCase {
     func testGuardianPairs() {
         // The Guardian simulator never browses here, so its Safari extension counts as on; the Protected one is real.
         let app = launch(extensionActive: true)
-        register(app, name: "Adhella", mode: "guardian")
+        register(app, name: "Adhella")
         finishOnboarding(app)
-        app.buttons["profileButton"].tap()
+        // Onboarding ends as Pribadi (Figma 1205:4696); Family mode on makes the Guardian (GD-02).
+        app.becomeGuardian()
+        app.buttons["profileButton"].tapWhenHittable()
         let open = app.buttons["profile.invite"]
         XCTAssertTrue(open.waitForExistence(timeout: 10), app.debugDescription)
         open.tap()
@@ -50,15 +52,18 @@ final class LiveQAUITests: XCTestCase {
     @MainActor
     func testProtectedJoins() throws {
         let app = launch()
-        register(app, name: "Maria", mode: "protected")
+        register(app, name: "Maria")
+        finishOnboarding(app)
+        // Terawasi from Home: the "Mode Terawasi" card opens Connect (Figma 1205:4696).
+        app.openSupervisedConnect()
         let field = app.textFields["connect.code"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
         let code = try XCTUnwrap(waitFor("code.txt", timeout: 180), "Guardian never showed a code")
         field.tap()
         field.typeText(code)
         app.buttons["connect.join"].tap()
         XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 15), app.debugDescription)
-        finishOnboarding(app)
+        app.buttons["protectedBy.continue"].tapWhenHittable()
+        XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)
         write("done", "1")
     }
 
@@ -74,34 +79,32 @@ final class LiveQAUITests: XCTestCase {
     }
 
     @MainActor
-    private func register(_ app: XCUIApplication, name: String, mode: String) {
+    private func register(_ app: XCUIApplication, name: String) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText(name)
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.\(mode)"].tap()
-        app.buttons["mode.continue"].tap()
+        app.onboardName(name)
     }
 
     /// Taps through the remaining onboarding steps, whichever come, and allows notifications for real.
+    /// Steps that open Settings come back to Shoo right away.
     @MainActor
     private func finishOnboarding(_ app: XCUIApplication) {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let steps = [
-            "invite.skip", "protectedBy.continue", "extension.skipCheck", "safariDefault.alreadyUsing", "extensionOn.continue",
-            "reminder.notNow",
+            "extension.continue", "extension.skipCheck", "safariDefault.continue", "extensionOn.continue", "reminder.notNow",
         ]
+        let opensSettings = ["extension.turnOn", "safariDefault.open"]
         let end = Date().addingTimeInterval(90)
         while Date() < end, !app.buttons["profileButton"].exists {
             for label in ["Allow", "Izinkan"] where springboard.alerts.buttons[label].exists {
                 springboard.alerts.buttons[label].tap()
             }
-            for id in steps where app.buttons[id].exists && app.buttons[id].isHittable {
+            let consent = app.buttons["extension.consent"]
+            if consent.exists, consent.isHittable, !consent.isSelected { consent.tap() }
+            if let id = steps.first(where: { app.buttons[$0].exists && app.buttons[$0].isHittable }) {
                 app.buttons[id].tap()
-                break
+            } else if let id = opensSettings.first(where: { app.buttons[$0].exists && app.buttons[$0].isHittable }) {
+                app.buttons[id].tap()
+                app.activate()
             }
             Thread.sleep(forTimeInterval: 0.7)
         }

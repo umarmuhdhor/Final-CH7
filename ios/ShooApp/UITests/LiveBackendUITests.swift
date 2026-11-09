@@ -34,35 +34,21 @@ final class LiveBackendUITests: XCTestCase {
         try? app.screenshot().pngRepresentation.write(to: url)
     }
 
+    /// ON (Figma 1205:4696): a real POST /devices once the consent box is ticked on Aktifkan Ekstensi.
+    /// Guardian = Pribadi, then Family mode on (GD-02).
     @MainActor
     private func register(_ app: XCUIApplication, name: String, mode: String) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText(name)
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.\(mode)"].tap()
-        app.buttons["mode.continue"].tap()
-        // A real POST /devices: the next step only shows after the server answered.
-        let next = mode == "guardian" ? "invite.skip" : "connect.skip"
-        XCTAssertTrue(app.buttons[next].waitForExistence(timeout: 15), app.debugDescription)
+        app.onboardPersonal(name)
+        XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 15), app.debugDescription)
         shot(app, "\(mode)-1-registered")
-        if mode == "guardian" {
-            XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 5), app.debugDescription)
-            app.buttons["invite.skip"].tap()
-        }
+        if mode == "guardian" { app.becomeGuardian() }
     }
 
     @MainActor
     func testGuardianOnboardingActivityAndProfile() {
         let app = launch()
         register(app, name: "Rina", mode: "guardian")
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5))
-        app.buttons["safariDefault.alreadyUsing"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
-        app.buttons["extensionOn.continue"].tap()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
         shot(app, "guardian-2-shield")
 
@@ -105,22 +91,10 @@ final class LiveBackendUITests: XCTestCase {
 
     @MainActor
     func testProtectedOnboardingInIndonesian() {
+        // A Protected without a guardian is no longer an onboarding choice (Figma): "Nanti saja" ends as Pribadi.
         let app = launch(language: "id")
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText("Mom")
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.protected"].tap()
-        app.buttons["mode.continue"].tap()
-        XCTAssertTrue(app.buttons["connect.skip"].waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["connect.skip"].tap()
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5))
-        app.buttons["safariDefault.alreadyUsing"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5))
-        app.buttons["extensionOn.continue"].tap()
+        app.onboardPersonal("Mom")
         XCTAssertTrue(app.tabBars.buttons["Perisai"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["shield.nothingBlocked"].firstMatch.waitForExistence(timeout: 10),
                       app.debugDescription)

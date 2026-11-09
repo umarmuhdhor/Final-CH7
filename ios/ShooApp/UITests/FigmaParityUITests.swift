@@ -25,7 +25,7 @@ final class FigmaParityUITests: XCTestCase {
         settle()
         shot("on-splash-2")
 
-        for step in ["name", "mode", "connect", "invite", "turnOnExtension", "safariDefault", "extensionOn"] {
+        for step in ["name", "connect", "turnOnExtension", "safariDefault", "extensionOn"] {
             // "Aktifkan Ekstensi" only shows while the extension is still off.
             app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step], onboarded: false, extensionActive: step != "turnOnExtension")
             shot("on-\(step)")
@@ -43,11 +43,6 @@ final class FigmaParityUITests: XCTestCase {
                     dismissKeyboard(app)
                     settle()
                     shot("on-name-tooLong")
-                }
-            case "mode":
-                for mode in ["guardian", "protected"] where app.buttons["mode.\(mode)"].exists {
-                    app.buttons["mode.\(mode)"].tap()
-                    shot("on-mode-\(mode)")
                 }
             case "connect":
                 // Figma 141:5887 "Connect with Guardian · Kode" (keyboard down) and 140:5762 "· Pindai QR".
@@ -90,12 +85,13 @@ final class FigmaParityUITests: XCTestCase {
                     settle()
                     shot("on-connected")
                 }
-            case "invite":
-                // Figma 110:4817 "Kirim Undangan (sheet)".
-                if tapIfExists(app.buttons["invite.open"]) {
-                    _ = app.buttons["invite.close"].waitForExistence(timeout: 5)
+            case "turnOnExtension":
+                // Figma 1328:13415 (box ticked) and 1328:13313 "Data yang dikirim".
+                if tapIfExists(app.buttons["extension.consent"]) { shot("on-turnOnExtension-agreed") }
+                if tapIfExists(app.buttons["extension.dataSent"]) {
+                    _ = app.buttons["dataSent.done"].waitForExistence(timeout: 5)
                     settle()
-                    shot("on-invite-sheet")
+                    shot("on-dataSent-sheet")
                 }
             default: break
             }

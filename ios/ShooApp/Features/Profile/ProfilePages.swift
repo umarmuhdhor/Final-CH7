@@ -217,7 +217,7 @@ private struct ModePage: View {
 
             if choice != current {
                 Button {
-                    model.setFamilyMode(choice == .guardian)
+                    if choice == .guardian { env.requestFamilyMode() } else { model.setFamilyMode(false) }
                     selected = nil
                     AccessibilityNotification.Announcement(L10n.string(
                         choice == .guardian ? "Switched to Guardian" : "Switched to Personal", language: AppLanguage(locale: locale)
@@ -333,8 +333,9 @@ private struct AvatarStack: View {
     }
 }
 
-/// "Punya kode undangan?": the Connect screen, joining as protected (a new device on the server).
-private struct JoinAnotherFamilySheet: View {
+/// "Punya kode undangan?" and Home Pribadi "Mode Terawasi": the Connect screen, joining as protected (a new
+/// device on the server). An empty `name` is read from the server first.
+struct JoinAnotherFamilySheet: View {
     let name: String
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
@@ -352,7 +353,8 @@ private struct JoinAnotherFamilySheet: View {
         .onAppear {
             guard model == nil else { return }
             model = ConnectModel(repository: env.repository) { [env, name] code in
-                try await env.becomeProtected(code: code, name: name)
+                let name = name.isEmpty ? try await env.repository.me().name : name
+                return try await env.becomeProtected(code: code, name: name)
             }
         }
         // Once joined the old device is gone: no swipe back to a screen that no longer exists.

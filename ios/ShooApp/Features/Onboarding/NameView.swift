@@ -124,19 +124,20 @@ struct NameView: View {
             .contentShape(Rectangle())
             .onTapGesture { focused = true }
 
-            // Figma "Atur Nama · nama terlalu panjang": too long shows the limit as a plain note under the
-            // field (no red); while typing within the limit there is no note ("Atur Nama · mengetik").
-            if visibleProblem == .tooLong {
-                Text("*Your name can be up to 20 characters")
-                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
-                    .foregroundStyle(OnboardingTheme.noteInk)
-                    .opacity(0.7)
-                    .accessibilityIdentifier("name.error")
-            } else if let message = problemMessage {
+            // Figma "Atur Profilmu" (1205:4697): the limit is always shown as a plain note under the field;
+            // spaces only is the one real error.
+            if visibleProblem == .empty, let message = problemMessage {
                 Label { Text(message) } icon: { Image(systemName: "exclamationmark.circle.fill") }
                     .onboardingFont(13, design: .rounded, relativeTo: .footnote)
                     .foregroundStyle(.red)
                     .accessibilityIdentifier("name.error")
+            } else {
+                Text("*Your name can be up to 20 characters")
+                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                    // Figma "Atur Nama · nama terlalu panjang": still the plain note, no red.
+                    .foregroundStyle(OnboardingTheme.noteInk)
+                    .opacity(0.7)
+                    .accessibilityIdentifier(visibleProblem == .tooLong ? "name.error" : "name.note")
             }
         }
     }

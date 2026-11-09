@@ -101,7 +101,7 @@ struct GuardianHomeView: View {
     }
 
     private func switchSide() {
-        env.settings.familyModeOn = !isFamily
+        if isFamily { env.settings.familyModeOn = false } else { env.requestFamilyMode() }
         AccessibilityNotification.Announcement(
             L10n.string(isFamily ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
                         language: env.settings.language)
@@ -187,6 +187,14 @@ struct GuardianHomeView: View {
         case .loaded:
             if !isFamily {
                 VStack(spacing: 24) {
+                    // Figma "Pribadi/Home kalau belum setting guardian" (1253:8630): above the recent sites.
+                    if !env.settings.supervisedCardDismissed {
+                        SupervisedModeCard(onConnect: { env.router.isJoinFamilyPresented = true }) {
+                            withAnimation(.snappy) { env.settings.supervisedCardDismissed = true }
+                        }
+                        .padding(.bottom, 13)
+                        .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                    }
                     RecentActivity(
                         scans: model.recent,
                         language: language,
@@ -228,6 +236,9 @@ struct GuardianHomeView: View {
         if model.state == .loaded {
             if model.hasNoFamily {
                 HowItWorks()
+                // Figma "Guardian/Home · Belum ada orang" (1253:2381): 42 under How it works.
+                SupervisedModeCard(action: "Become supervised") { env.router.isJoinFamilyPresented = true }
+                    .padding(.top, 18)
             } else {
                 RecentActivity(
                     scans: model.recent,

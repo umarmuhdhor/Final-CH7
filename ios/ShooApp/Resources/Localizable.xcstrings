@@ -1,6 +1,186 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "I agree to pages being checked online." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya setuju halaman dicek secara online."
+          }
+        }
+      }
+    },
+    "See what is sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat data yang dikirim"
+          }
+        }
+      }
+    },
+    "What is sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data yang dikirim"
+          }
+        }
+      }
+    },
+    "When the online check is on." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saat cek online menyala."
+          }
+        }
+      }
+    },
+    "Page text, form field names and the address. What you type is not sent." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teks halaman, nama kolom formulir, dan alamat. Ketikanmu tidak dikirim."
+          }
+        }
+      }
+    },
+    "The address and a copy are kept. Some of it stays after the account is deleted." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alamat dan salinannya disimpan. Sebagian tetap ada setelah akun dihapus."
+          }
+        }
+      }
+    },
+    "A summary of a suspicious page is sent to DeepSeek, an AI from China." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringkasan halaman mencurigakan dikirim ke DeepSeek, AI asal Tiongkok."
+          }
+        }
+      }
+    },
+    "Without the online check" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanpa cek online"
+          }
+        }
+      }
+    },
+    "Shoo checks on your iPhone only, with less protection." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo hanya cek di iPhone, perlindungan lebih terbatas."
+          }
+        }
+      }
+    },
+    "Got it" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengerti"
+          }
+        }
+      }
+    },
+    "Switch on the Shoo extension." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nyalakan ekstensi Shoo."
+          }
+        }
+      }
+    },
+    "Come back to Shoo and get protected." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke aplikasi Shoo dan terima perlindungan"
+          }
+        }
+      }
+    },
+    "Protect the people\nclosest to you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lindungi\norang terdekat"
+          }
+        }
+      }
+    },
+    "Protect them by double-checking what Shoo finds for the people closest to you!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melindungi dengan mengecek kembali hasil kalkulasi Shoo milik orang terdekat anda!"
+          }
+        }
+      }
+    },
+    "SUPERVISED MODE" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MODE TERAWASI"
+          }
+        }
+      }
+    },
+    "Not sure?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak yakin?"
+          }
+        }
+      }
+    },
+    "Connect so someone you love can double-check for you" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungi agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+          }
+        }
+      }
+    },
+    "Become supervised" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjadi yang Terawasi"
+          }
+        }
+      }
+    },
     "Danger detected!" : {
       "localizations" : {
         "id" : {
@@ -244,7 +424,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pemeriksaan AI oleh DeepSeek"
+            "value" : "Cek AI oleh DeepSeek"
           }
         }
       }
