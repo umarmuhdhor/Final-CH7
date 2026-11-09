@@ -120,6 +120,13 @@ Verifikasi setelah review: typecheck bersih; `vitest run retention devices-me lo
     - `retention`: `failed` 0, `backlog` false, `inactiveCandidates` 0, `inactiveDevices` 0, `tombstones` 1, `rateLimitHits` 415, lainnya 0.
   - Run 2–7 (8–13 Nov 19:00 UTC): Alief, baris sama dari tail atau Workers Logs.
   - **Pembanding SQL ulang, 8 Nov 2026, 17:48 UTC** (`supabase db query --linked`, baca saja): `total` 21, `over_k1` 0. `ops_jobs.retention` terakhir masih run 7 Nov 19:00 (`failed` 0); run 2 jatuh 8 Nov 19:00 UTC.
+  - **Run 2/7, 8 Nov 2026 19:00 UTC** (`/ops/status`, 9 Nov ±05:20 UTC): `retention` `failed` 0, `backlog` false, umur 10,3 j. Baris `inactive_devices` run ini tidak ada di Workers Logs: dataset itu di-sampling (± 1 dari 10 baris tersimpan), jadi hitungan run dan `candidates` per run diambil dari `/ops/status` + `wrangler tail`, bukan dari Workers Logs. Sejak 9 Nov ops-watch juga membuka issue `ops-alert` kalau `retention` gagal.
+  - Sisa: run 3–7 (9–13 Nov 19:00 UTC). Run ke-7 jatuh 13 Nov 19:00 UTC; 24a-2 mulai sesudahnya.
+
+### Review antrean blocklist (D9)
+
+- **9 Nov 2026, ±05:20 UTC** (`supabase db query --linked`): antrean 1 domain, `edgeone.dev` (1 keluarga, sejak 3 Nov, `blocklist_queue` warn di `/ops/status`). 23 scan `blocked` skor 100, semuanya di subdomain acak (`<nama>-<hash>.edgeone.dev`, satu `www`). `edgeone.dev` = platform hosting Tencent EdgeOne: approve root-nya memblokir semua situs di platform itu. **Ditolak** (`rejected_at`, `rejected_by = 'alief'`). Antrean 0. Disetujui 0, ditolak 1.
+  - Tindak lanjut: `edgeone.dev` belum ada di `admin.v_domain_lists`. Kalau ditandai `hosting = subdomains` (dashboard, halaman *Daftar domain*), subdomain diperlakukan terpisah dan root tidak masuk antrean lagi.
 
 ## Catatan handoff 24a
 
