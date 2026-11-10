@@ -15,6 +15,7 @@ enum LaunchSplashPhase {
 struct LaunchSplash: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.shooReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     /// The logo has sprung in by then (spring response 0.6 s); the band is all but settled.
     private static let hold = 0.8
@@ -29,12 +30,18 @@ struct LaunchSplash: View {
                 .allowsHitTesting(env.launchSplash == .showing)
                 // VoiceOver stays on the splash until it goes.
                 .accessibilityAddTraits(env.launchSplash == .showing ? .isModal : [])
-                .task { await play() }
+                // Timed from when the app is active: before that iOS may still show its own launch screen.
+                .task(id: scenePhase == .active) {
+                    guard scenePhase == .active else { return }
+                    await play()
+                }
         }
     }
 
     private func play() async {
         try? await Task.sleep(for: .seconds(env.launchSplashHold ?? (reduceMotion ? 0.4 : Self.hold)))
+        // Sent to the background meanwhile: the splash starts over when the app is back.
+        guard !Task.isCancelled else { return }
         let fade = reduceMotion ? 0.2 : Self.fade
         withAnimation(.easeOut(duration: fade)) {
             env.launchSplash = .leaving
