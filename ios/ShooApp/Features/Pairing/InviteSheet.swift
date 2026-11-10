@@ -9,6 +9,7 @@ struct InviteSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: FamilyCodeModel
     /// Text for the system share sheet ("More", or WhatsApp / Messages when they can't open).
     @State private var shareText: ShareText?
@@ -105,6 +106,10 @@ struct InviteSheet: View {
                 // Figma "SF Pro Text Bold 20", -2 %.
                 .onboardingFont(20, weight: .bold, tracking: -0.4, family: .text, relativeTo: .title3)
                 .monospacedDigit()
+                // "Refresh code": the digits roll to the new code (a cross-fade with Reduce Motion). Only the code;
+                // the "Valid for" countdown under it ticks every second and stays still.
+                .contentTransition(reduceMotion ? .opacity : .numericText())
+                .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.3), value: code.code)
                 .foregroundStyle(OnboardingTheme.ink)
                 .frame(maxWidth: .infinity, minHeight: 56)
                 .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -241,6 +246,7 @@ private struct ShareTile: View {
     let systemImage: String
     let style: Style
     let action: () -> Void
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
@@ -262,7 +268,11 @@ private struct ShareTile: View {
 
     @ViewBuilder
     private var icon: some View {
+        // Copy → checkmark: the symbol morphs (a cross-fade with Reduce Motion). The tile owns the image, so the
+        // transition and its animation live here, keyed on the symbol name.
         let symbol = Image(systemName: systemImage).font(.system(size: 25))
+            .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+            .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.3), value: systemImage)
         switch style {
         case .plain:
             symbol
