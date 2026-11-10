@@ -187,6 +187,7 @@ final class AppEnvironment {
     /// device (the mock adopts the name, avatar and mode; the API knows them from the token).
     @MainActor
     func register(name: String, mode: UserMode, avatarId: String? = nil) async throws -> DeviceRegistration {
+        await deletePreviousInstall()
         let registration = try await repository.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: nil)
         // Keychain + App Group before the mode is saved: a relaunch never finds a mode without a session.
         do {
@@ -213,6 +214,25 @@ final class AppEnvironment {
             }
         }
         return registration
+    }
+
+    /// A Keychain token with no mode saved: Shoo was deleted and installed again. The Keychain item outlives
+    /// the app, the settings don't. That old device is still on the server, linked to the family, shown as
+    /// "Aktif" and holding one of the 3 places (QA 2026-11-11 #6). It goes first (`DELETE /devices/me` with
+    /// its own token, as "Delete my data" would): nothing of the old install stays behind (SECURITY §3).
+    /// Best effort: if it fails, the new device registers anyway, as before.
+    @MainActor
+    private func deletePreviousInstall() async {
+        guard settings.mode == nil, let session, session.token != nil else { return }
+        Log.app.info("Token from an earlier install found: deleting that device")
+        do {
+            try await repository.deleteMe()
+        } catch {
+            // Already gone (`deleteMe` cleared the session) or the server refused: the new token replaces it.
+            session.clear()
+            guard !error.isCancellation else { return }
+            Log.app.error("Deleting the earlier install failed", error)
+        }
     }
 
     /// Every time the app comes to the foreground (contracts/api.md `extensionLastSeenAt`): tells the
