@@ -21,13 +21,21 @@ final class LiveReinstallUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += [
             "-settings.dataConsent", "granted",
-            "-settings.language", "id",
+            "-settings.language", "en",
             "-UITestNotifications", "denied",
             "-UITestExtensionActive", "YES",
         ]
         app.launch()
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10), app.debugDescription)
-        app.onboardPersonal("Bu Sari")
+        // `onboardPersonal`, with Shoo brought back to the front once more before Safari Default: after a
+        // reinstall Settings can stay in front a moment longer.
+        app.onboardName("Bu Sari")
+        app.passTurnOnExtension()
+        let skip = app.buttons["extension.skipCheck"]
+        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable() }
+        if !app.buttons["safariDefault.open"].waitForExistence(timeout: 10) { app.activate() }
+        app.passSafariDefault()
+        app.buttons["extensionOn.continue"].tapWhenHittable()
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)
         app.dismissNotificationsReminder()
         app.openSupervisedConnect()
