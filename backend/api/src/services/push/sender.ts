@@ -26,6 +26,8 @@ export interface LiveMessage {
   /** Push-to-start token for `start`, the activity's update token for `update`/`end`. */
   token: string;
   priority: 5 | 10;
+  /** apns-expiration from now: how long APNs keeps it for an offline phone. */
+  expiresInSeconds: number;
   payload: unknown;
 }
 

@@ -971,14 +971,15 @@ The in-page pill stays the offline, instant score; the island is extra.
 for the app's update token). Answered after the push, so one device's calls stay in order.
 
 **What the backend sends** (`apns-push-type: liveactivity`, topic `<bundle id>.push-type.liveactivity`,
-`apns-expiration` +60 s):
+`apns-expiration` +60 s, +1 h for `end` so it still arrives after a short offline spell):
 
 | Situation | Event | Token | Priority |
 |---|---|---|---|
 | `open: true`, no running activity, start token known | `start` | push-to-start | 10 |
 | same, but a start went out < 30 s ago and no update token arrived yet | nothing | | |
-| `open: true`, update token known | `update` | update | 5 for `normal`, 10 for `warning` / `blocked` |
+| `open: true`, update token known | `update` | update | 5 only for a settled `normal` page; 10 while `analyzing` (a new page, so a domain change shows at once) or for `warning` / `blocked` |
 | `open: false`, update token known | `end` with `dismissal-date` now | update | 10 |
+| `open: false`, no update token yet | nothing; logged as `kind: "none"`, `reason: "no_update_token"`. The app ends older islands itself when a new one starts | | |
 
 `content-state` is `{ domain, score, isAnalyzing, isBlocked }` (`isBlocked` = `status == "blocked"`).
 `start` also carries `"attributes-type": "ScoreActivityAttributes"` and `attributes: { domain }`.

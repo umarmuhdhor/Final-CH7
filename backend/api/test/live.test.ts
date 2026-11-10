@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LIVE_STALE_SECONDS, relayLive, type LiveUpdate } from "../src/services/push/live";
+import { LIVE_END_EXPIRY_SECONDS, LIVE_EXPIRY_SECONDS, LIVE_STALE_SECONDS, relayLive, type LiveUpdate } from "../src/services/push/live";
 import type { LiveMessage, LiveSender, SendResult } from "../src/services/push/sender";
 import { atWindowStart } from "./helpers/rateWindow";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -75,7 +75,7 @@ describe("relayLive: start / update / end (#49)", () => {
   it("no tokens: nothing is sent", async () => {
     const d = await createDevice();
     const s = new Recorder();
-    expect(await relayLive(sql, s, d.deviceId, page(), NOW)).toEqual({ kind: "none" });
+    expect(await relayLive(sql, s, d.deviceId, page(), NOW)).toEqual({ kind: "none", reason: "no_start_token" });
     expect(s.sent).toHaveLength(0);
   });
 
@@ -86,7 +86,7 @@ describe("relayLive: start / update / end (#49)", () => {
     expect(await relayLive(sql, s, d.deviceId, page({ status: "warning", score: 64, analyzing: true }), NOW))
       .toEqual({ kind: "start", result: "sent" });
     expect(s.sent).toEqual([{
-      token: START, priority: 10,
+      token: START, priority: 10, expiresInSeconds: LIVE_EXPIRY_SECONDS,
       payload: { aps: {
         timestamp: T, event: "start",
         "content-state": { domain: "very-private-domain.example", score: 64, isAnalyzing: true, isBlocked: false },
@@ -130,14 +130,18 @@ describe("relayLive: start / update / end (#49)", () => {
     expect(await tokens(d)).toMatchObject({ start: null, startedAt: null });
   });
 
-  it("update with the activity's token: priority 5 for a normal page, 10 for warning/blocked", async () => {
+  it("update: priority 5 only for a settled normal page; 10 while analyzing (new page) or warning/blocked", async () => {
     const d = await createDevice();
     await patch(d, { liveActivityStartToken: START, liveActivityUpdateToken: { activityId: ACTIVITY, token: UPDATE } });
     const s = new Recorder();
     expect(await relayLive(sql, s, d.deviceId, page({ score: 12 }), NOW)).toEqual({ kind: "update", result: "sent" });
     await relayLive(sql, s, d.deviceId, page({ score: 81, status: "warning" }), NOW);
     await relayLive(sql, s, d.deviceId, page({ score: 95, status: "blocked" }), NOW);
-    expect(s.sent.map((m) => [m.token, m.priority])).toEqual([[UPDATE, 5], [UPDATE, 10], [UPDATE, 10]]);
+    // A new page (other domain) starts analyzing: priority 10, so the old risky domain goes away at once.
+    await relayLive(sql, s, d.deviceId, page({ domain: "next.example", score: 0, analyzing: true }), NOW);
+    expect(s.sent.map((m) => [m.token, m.priority, m.expiresInSeconds])).toEqual([
+      [UPDATE, 5, LIVE_EXPIRY_SECONDS], [UPDATE, 10, LIVE_EXPIRY_SECONDS], [UPDATE, 10, LIVE_EXPIRY_SECONDS], [UPDATE, 10, LIVE_EXPIRY_SECONDS],
+    ]);
     expect(s.sent[2]!.payload).toEqual({ aps: {
       timestamp: T, event: "update",
       "content-state": { domain: "very-private-domain.example", score: 95, isAnalyzing: false, isBlocked: true },
@@ -159,10 +163,10 @@ describe("relayLive: start / update / end (#49)", () => {
     await patch(d, { liveActivityStartToken: START, liveActivityUpdateToken: { activityId: ACTIVITY, token: UPDATE } });
     const s = new Recorder();
     expect(await relayLive(sql, s, d.deviceId, page({ open: false }), NOW)).toEqual({ kind: "end", result: "sent" });
-    expect(s.sent[0]).toMatchObject({ token: UPDATE, priority: 10, payload: { aps: { event: "end", "dismissal-date": T } } });
+    expect(s.sent[0]).toMatchObject({ token: UPDATE, priority: 10, expiresInSeconds: LIVE_END_EXPIRY_SECONDS, payload: { aps: { event: "end", "dismissal-date": T } } });
     expect(await tokens(d)).toMatchObject({ start: START, update: null, activity: null });
 
-    expect(await relayLive(sql, s, d.deviceId, page({ open: false }), NOW)).toEqual({ kind: "none" });
+    expect(await relayLive(sql, s, d.deviceId, page({ open: false }), NOW)).toEqual({ kind: "none", reason: "no_update_token" });
     expect(s.sent).toHaveLength(1);
   });
 
@@ -221,6 +225,7 @@ describe("POST /live (#49)", () => {
 
     const log = lines.join("\n");
     expect(log).toContain('"event":"live_push"');
+    expect(log).toContain('"kind":"end"');
     for (const secret of ["very-private-domain", START, UPDATE, ACTIVITY, d.deviceId, d.token]) expect(log).not.toContain(secret);
 
     // No scan, verdict or push_log row: the live score is not history.

@@ -25,6 +25,16 @@ export const LIVE_STALE_SECONDS = 600;
 /** What happened, for the log line. `none`: no token to push to; `waiting`: a start is in flight. */
 export type LiveKind = "start" | "update" | "end" | "none" | "waiting";
 
+/** Why nothing was sent (`kind: "none"`), so the device test shows how often an island could not be ended (#356 review). */
+export type LiveNoneReason = "no_update_token" | "no_start_token" | "no_device";
+
+/**
+ * An end must still arrive after the phone was offline for a while, or the island stays (#356
+ * review): APNs keeps it for an hour. Starts and updates are useless after a minute.
+ */
+export const LIVE_END_EXPIRY_SECONDS = 3600;
+export const LIVE_EXPIRY_SECONDS = 60;
+
 interface Tokens {
   startToken: string | null;
   updateToken: string | null;
@@ -53,18 +63,21 @@ export async function relayLive(
   deviceId: string,
   u: LiveUpdate,
   nowMs = Date.now(),
-): Promise<{ kind: LiveKind; result?: string }> {
+): Promise<{ kind: LiveKind; result?: string; reason?: LiveNoneReason }> {
   const [d] = await sql<Tokens[]>`
     select live_start_token as "startToken", live_update_token as "updateToken"
     from devices where id = ${deviceId}`;
-  if (!d) return { kind: "none" };
+  if (!d) return { kind: "none", reason: "no_device" };
   const timestamp = Math.floor(nowMs / 1000);
 
   if (!u.open) {
-    if (!d.updateToken) return { kind: "none" };
+    // Before the app sent the update token there is no way to end the island from here; the app
+    // ends older activities itself when a new one starts (#356 review, app PR).
+    if (!d.updateToken) return { kind: "none", reason: "no_update_token" };
     const r = await sender.sendLive({
       token: d.updateToken,
       priority: 10,
+      expiresInSeconds: LIVE_END_EXPIRY_SECONDS,
       payload: { aps: { timestamp, event: "end", "content-state": contentState(u), "dismissal-date": timestamp } },
     });
     // Ended or gone either way: the next page starts a new island.
@@ -75,9 +88,11 @@ export async function relayLive(
   if (d.updateToken) {
     const r = await sender.sendLive({
       token: d.updateToken,
-      // Score-only changes on a normal page are the bulk of updates: low priority keeps them within
-      // Apple's budget. Warnings and blocks go out right away.
-      priority: u.status === "normal" ? 5 : 10,
+      // Score-only changes on a settled normal page are the bulk of updates: low priority keeps them
+      // within Apple's budget. A new page always starts with analyzing, so a domain change goes out
+      // right away without storing the last domain (#356 review); warnings and blocks too.
+      priority: u.status === "normal" && !u.analyzing ? 5 : 10,
+      expiresInSeconds: LIVE_EXPIRY_SECONDS,
       payload: {
         aps: { timestamp, event: "update", "content-state": contentState(u), "stale-date": timestamp + LIVE_STALE_SECONDS },
       },
@@ -86,7 +101,7 @@ export async function relayLive(
     return { kind: "update", result: r.result };
   }
 
-  if (!d.startToken) return { kind: "none" };
+  if (!d.startToken) return { kind: "none", reason: "no_start_token" };
   // Claim the start atomically: two parallel requests must not both start an island.
   const claimed = await sql`
     update devices set live_started_at = now()
@@ -98,6 +113,7 @@ export async function relayLive(
   const r = await sender.sendLive({
     token: d.startToken,
     priority: 10,
+    expiresInSeconds: LIVE_EXPIRY_SECONDS,
     payload: {
       aps: {
         timestamp,

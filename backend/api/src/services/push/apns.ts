@@ -101,15 +101,15 @@ export class ApnsSender implements PushSender, LiveSender {
 
   /**
    * EX-03 (#49): a Live Activity start/update/end. Own topic suffix and push type (Apple, "Starting
-   * and updating Live Activities with ActivityKit push notifications"). A live score older than a
-   * minute is useless, so APNs drops it instead of delivering it late.
+   * and updating Live Activities with ActivityKit push notifications"). The caller picks the expiry:
+   * a live score is useless after a minute, an end must still arrive (services/push/live.ts).
    */
   async sendLive(message: LiveMessage): Promise<SendResult> {
     return this.post(message.token, {
       pushType: "liveactivity",
       topic: `${this.config.topic}.push-type.liveactivity`,
       priority: message.priority,
-      expiresInSeconds: 60,
+      expiresInSeconds: message.expiresInSeconds,
       body: message.payload,
     });
   }

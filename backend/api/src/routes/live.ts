@@ -33,7 +33,7 @@ live.post("/live", requireDevice, async (c) => {
   // Ending the island is never rate limited: a dropped end would leave a stale score on screen.
   // It is cheap to allow: only one end per activity ever reaches APNs (the update token is cleared).
   if (body.open) await hitEdge(c.env.LIVE_PUSH_LIMITER, sql, limits.livePush, deviceId);
-  const { kind, result } = await relayLive(sql, liveSender(c.env), deviceId, body);
-  console.log(JSON.stringify({ event: "live_push", kind, ...(result ? { result } : {}) }));
+  const { kind, result, reason } = await relayLive(sql, liveSender(c.env), deviceId, body);
+  console.log(JSON.stringify({ event: "live_push", kind, ...(result ? { result } : {}), ...(reason ? { reason } : {}) }));
   return c.json({ ok: true }, 202);
 });
