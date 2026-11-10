@@ -49,6 +49,8 @@ final class GuardianHomeModel {
     private(set) var verdictFailed = false
     /// The server refused this verdict (`verdict_not_allowed`), e.g. a warning site while the contract allows blocked only.
     private(set) var verdictNotAllowed = false
+    /// Counts Home verdicts the server confirmed: drives the success haptic and the card's hand-over animation.
+    private(set) var verdictSaves = 0
 
     let scope: Scope
     @ObservationIgnored private let repository: any ShooRepository
@@ -205,6 +207,7 @@ final class GuardianHomeModel {
             for index in scans.indices where scans[index].domain == scan.domain && scans[index].ownerDeviceId == scan.ownerDeviceId {
                 scans[index].verdict = verdict
             }
+            verdictSaves += 1
         } catch RepositoryError.api(.verdictNotAllowed, _) {
             verdictNotAllowed = true
         } catch {

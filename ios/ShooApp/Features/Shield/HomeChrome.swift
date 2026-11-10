@@ -180,6 +180,8 @@ struct HomeHero<Accessory: View>: View {
                     .tracking(-0.56)
                     .foregroundStyle(titleColor)
                     .multilineTextAlignment(.center)
+                    // A new headline in an animated update cross-fades (e.g. "You're protected!"); no effect otherwise.
+                    .contentTransition(.opacity)
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier(titleIdentifier)
                 if let subtitle {
