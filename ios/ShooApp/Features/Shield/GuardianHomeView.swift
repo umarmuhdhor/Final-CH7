@@ -12,7 +12,12 @@ struct GuardianHomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: GuardianHomeModel
+    /// Someone joined from the invite card: the refresh that follows hands the sheet over with an animation.
+    @State private var joinAnimates = false
+    /// Bumped when that refresh shows the family: one success tap, the guardian's "connected" moment.
+    @State private var joined = 0
     /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
     @State private var isHeroHidden = false
 
@@ -27,6 +32,8 @@ struct GuardianHomeView: View {
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
     private var isFamily: Bool { model.scope == .family }
+    /// Card to card, card to members, invite to family: a soft ease; a short cross-fade with Reduce Motion.
+    private var handOver: Animation { reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3) }
     private var scrim: Color { colorScheme == .dark ? HomeTheme.navy : HomeTheme.background }
 
     var body: some View {
@@ -52,6 +59,11 @@ struct GuardianHomeView: View {
                         .background(HomeTheme.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }
             }
+            // A verdict from the pending card: the next card (or the members row) and the headline ease in instead of
+            // jumping. Keyed on the saved verdict, so loads and refreshes stay instant.
+            .animation(handOver, value: model.verdictSaves)
+            // Someone joined from the invite card: the family replaces the invite the same way. Only that refresh.
+            .animation(joinAnimates ? handOver : nil, value: model.hasNoFamily)
             // Light only, like the Figma; scoped to the page so the bars keep their own scheme.
             .environment(\.colorScheme, .light)
         }
@@ -83,6 +95,13 @@ struct GuardianHomeView: View {
             guard scenePhase == .active else { return }
             await model.refresh()
         }
+        .onChange(of: model.hasNoFamily) { hadNoFamily, hasNoFamily in
+            if joinAnimates, hadNoFamily, !hasNoFamily { joined += 1 }
+            joinAnimates = false
+        }
+        // Same haptic as a verdict saved on Detail (DetailView).
+        .sensoryFeedback(.success, trigger: model.verdictSaves)
+        .sensoryFeedback(.success, trigger: joined)
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded, !isFamily else { return }
             AccessibilityNotification.Announcement(
@@ -213,7 +232,10 @@ struct GuardianHomeView: View {
                 }
             } else if model.hasNoFamily {
                 // Figma "Konten" 1382:10499: the card 16 under the sheet's top, 24 from its sides, 20 above its bottom.
-                InviteCodeCard(repository: env.repository) { Task { await model.refresh() } }
+                InviteCodeCard(repository: env.repository) {
+                    joinAnimates = true
+                    Task { await model.refresh() }
+                }
                     .padding(.horizontal, 24)
                     .padding(.top, 16)
                     .padding(.bottom, 20)
@@ -229,7 +251,7 @@ struct GuardianHomeView: View {
                     onDecide: { value in Task { await model.decide(value) } }
                 )
                 .id(scan.id)
-                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
             } else {
                 // Figma "Status" 435:20432: the title 24 under the sheet's top, the row 8 under it, 16 above the bottom.
                 VStack(alignment: .leading, spacing: 8) {
