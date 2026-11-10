@@ -68,6 +68,8 @@ final class DeepLinkUITests: XCTestCase {
             XCTAssertTrue(safe.waitForExistence(timeout: 10), app.debugDescription)
             XCTAssertTrue(app.tabBars.firstMatch.waitForNonExistence(timeout: 5), "tab bar still shown, round \(round)")
             XCTAssertTrue(safe.isHittable, "Aman covered, round \(round)")
+            // Figma: the buttons end 34 pt above the screen's bottom edge.
+            XCTAssertEqual(app.windows.firstMatch.frame.maxY - safe.frame.maxY, 34, accuracy: 1.5, "round \(round)")
             app.buttons["detail.back"].tap()
             XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5), app.debugDescription)
             app.tabBars.buttons["Shield"].tap()
