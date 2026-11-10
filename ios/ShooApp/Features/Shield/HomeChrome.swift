@@ -108,9 +108,12 @@ struct HomeHeroLayout {
     var showsRings = true
     /// The background runs on under the strip (or the sheet), to the end of the Figma "box" fade.
     var backgroundOverhang: CGFloat = 72
+    /// Where the frame puts the gradient and the "box" fade, when they don't follow the sheet (nil: they end
+    /// `backgroundOverhang` under it).
+    var backdrop: HeroBackdrop?
 
-    /// Pribadi/Home 435:20058 and protected/Home 441:3800.
-    static let personal = HomeHeroLayout()
+    /// Pribadi/Home 435:20058 / 1382:10567: the gradient at y −7.08, the "box" fade 323…443, the sheet at 372.
+    static let personal = HomeHeroLayout(backdrop: HeroBackdrop(boxTop: 323))
     /// Guardian/Home 435:20373: no strip, the white sheet starts at y 374; the "box" fade ends at 443.
     /// `titleTop` 309 and `bottomGap` 32.67: Figma's 308 and 32, measured against the simulator (the 28 pt glyphs
     /// sit 1 pt higher in SwiftUI's box).
@@ -130,6 +133,17 @@ struct HomeHeroLayout {
     fileprivate static let kacaRise: CGFloat = 61.3
     /// SwiftUI's text box for 28 pt starts 1.4 pt above Figma's (34 pt lines) for the same glyphs.
     fileprivate static let titleBoxShift: CGFloat = 1.4
+    /// The headline's text box ends here on the frame (`titleTop` + one 34 pt line).
+    var titleBottom: CGFloat { titleTop + 34 }
+}
+
+/// Figma "Gradient-classic-2 lighter" and "box" in points from the top of the 402 × 874 frame.
+struct HeroBackdrop {
+    /// Top of the 450 pt gradient.
+    var imageTop: CGFloat = -7.08
+    /// Top and height of the "box" fade into the page (#F3F6F8, clear to solid).
+    var boxTop: CGFloat
+    var boxHeight: CGFloat = 120
 }
 
 /// Rings, glass shield, headline (and an optional line or link under it). `accessory` sits under the text,
@@ -186,11 +200,51 @@ struct HomeHero<Accessory: View>: View {
         .frame(maxWidth: .infinity)
         // Reaches up under the navigation bar, the status bar and the pull-to-refresh overscroll, and down
         // under the strip.
-        .background(alignment: .bottom) {
-            HeroBackground(style: style)
-                .padding(.top, -400)
-                .padding(.bottom, -layout.backgroundOverhang)
+        .background(alignment: layout.backdrop == nil ? .bottom : .top) {
+            if let backdrop = layout.backdrop {
+                AnchoredHeroBackground(style: style, backdrop: backdrop)
+                    .padding(.top, backdrop.imageTop - HomeHeroLayout.heroTop - AnchoredHeroBackground.overscroll)
+            } else {
+                HeroBackground(style: style)
+                    .padding(.top, -400)
+                    .padding(.bottom, -layout.backgroundOverhang)
+            }
         }
+    }
+}
+
+/// The hero background at fixed frame positions (`HeroBackdrop`): the top colour above, the gradient, the page
+/// colour under it where the "box" runs on, and the box fade over both.
+private struct AnchoredHeroBackground: View {
+    /// Room above the frame for the status bar and the pull-to-refresh overscroll.
+    static let overscroll: CGFloat = 400
+    let style: HomeHeroStyle
+    let backdrop: HeroBackdrop
+
+    var body: some View {
+        let boxTop = backdrop.boxTop - backdrop.imageTop
+        let below = max(0, boxTop + backdrop.boxHeight - 450)
+        VStack(spacing: 0) {
+            style.topColor.frame(height: Self.overscroll)
+            Image(style.gradientImage)
+                .resizable()
+                .frame(height: 450)
+                .overlay {
+                    if style.needsGrain {
+                        Image("HeroTexture")
+                            .resizable(resizingMode: .tile)
+                            .blendMode(.multiply)
+                            .opacity(0.35)
+                    }
+                }
+            HomeTheme.background.frame(height: below)
+        }
+        .overlay(alignment: .top) {
+            LinearGradient(colors: [HomeTheme.fade.opacity(0), HomeTheme.fade], startPoint: .top, endPoint: .bottom)
+                .frame(height: backdrop.boxHeight)
+                .padding(.top, Self.overscroll + boxTop)
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -266,9 +320,10 @@ struct HomeTopBar: View {
     static let figmaTop: CGFloat = 40.7
     /// An inline navigation bar's height: Home has none, so its page keeps this room (`HomeHeroLayout.heroTop`).
     static let barHeight: CGFloat = 54
-    let isFamilyShown: Bool
+    var isFamilyShown = false
     let name: String?
-    let onSwitch: () -> Void
+    /// nil: no ⇆ (protected/Home 1115:17282 has the profile circle only).
+    let onSwitch: (() -> Void)?
     let onProfile: () -> Void
 
     var body: some View {
@@ -276,7 +331,9 @@ struct HomeTopBar: View {
             // The reader sits at the status bar's bottom edge: move up to y 40 of the screen, never above it.
             let top = proxy.safeAreaInsets.top
             HStack(alignment: .top) {
-                HomeSwitchButton(isFamilyShown: isFamilyShown, action: onSwitch)
+                if let onSwitch {
+                    HomeSwitchButton(isFamilyShown: isFamilyShown, action: onSwitch)
+                }
                 Spacer(minLength: 16)
                 ProfileInitialButton(name: name, action: onProfile)
             }
@@ -308,26 +365,6 @@ private struct HomeSwitchButton: View {
         .accessibilityAddTraits(.isToggle)
         .accessibilityHint(Text("Switches between your own Shield and your family's"))
         .accessibilityIdentifier("familyModeToggle")
-    }
-}
-
-/// Profile circle as a toolbar item (protected/Home).
-struct HomeProfileToolbarItem: ToolbarContent {
-    let name: String?
-    let action: () -> Void
-
-    var body: some ToolbarContent {
-        if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .topBarTrailing) { button }
-                .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .topBarTrailing) { button }
-        }
-    }
-
-    private var button: some View {
-        // Figma: 24 pt from the screen edge; the bar puts the item at 21.
-        ProfileInitialButton(name: name, action: action).padding(.trailing, 3)
     }
 }
 
@@ -484,6 +521,238 @@ struct FittedScoreGauge: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("Risk score"))
             .accessibilityValue(Text(verbatim: Formatters.percent(scan.score, language: AppLanguage(locale: locale))))
+    }
+}
+
+/// Figma "Frame 1618872237": the white 70 % risk panel (338 × 211) with the alert shield, "Situs Mencurigakan!" /
+/// "Situs Berbahaya!" and the bar with the score. Guardian/Home draws a second panel inset in it (328 × 205);
+/// protected/Home 1115:17294 one.
+struct HomeRiskPanel: View {
+    let scan: ScanResult
+    /// Red "Situs Berbahaya!" (blocked, or marked not safe); otherwise orange "Situs Mencurigakan!".
+    let isDanger: Bool
+    var layered = false
+
+    private static let titleTop: CGFloat = 129.5
+
+    /// Figma "Kaca": orange 71.6 pt wide 27.1 under the panel's top (Guardian 1382:10989, protected 1363:12167);
+    /// red 67.8 at 28.5 on protected/Home 1115:17294. Guardian's blocked frame (1382:10314) is the warning card
+    /// scaled to 97 %, so it keeps the orange numbers.
+    private var kaca: (width: CGFloat, top: CGFloat) {
+        isDanger && !layered ? (67.83, 28.46) : (71.6, 27.1)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Figma: SF Pro Display Semibold 28, +2 %, 34 pt lines, #191D2F.
+            Text(isDanger ? "Dangerous site!" : "Suspicious site!")
+                .onboardingFont(28, weight: .semibold, tracking: 0.56, relativeTo: .title)
+                .figmaLineHeight(34, relativeTo: .title)
+                .foregroundStyle(HomeTheme.navy)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.7)
+                .padding(.horizontal, 16)
+                .padding(.top, Self.titleTop)
+            HomeRiskBar(scan: scan)
+                .padding(.top, 6.7)
+                .padding(.bottom, 6.8)
+        }
+        .frame(maxWidth: .infinity)
+        .background(alignment: .top) { shield }
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22.9, style: .continuous).fill(.white.opacity(0.7))
+                if layered {
+                    RoundedRectangle(cornerRadius: 22.3, style: .continuous).fill(.white.opacity(0.7))
+                        .padding(EdgeInsets(top: 3.1, leading: 4.9, bottom: 3, trailing: 4.9))
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The Home shield at Figma's size: "Kaca" `kaca.width` wide (104 pt at scale 1), its top `kaca.top` down.
+    private var shield: some View {
+        let scale = kaca.width / 104
+        let size = HalftoneShield.size
+        return HalftoneShield(tint: isDanger ? .redAlert : .orange)
+            .scaleEffect(scale)
+            .frame(width: size.width * scale, height: size.height * scale)
+            .padding(.top, kaca.top - (size.height * scale / 2 - 61.3 * scale))
+            .accessibilityHidden(true)
+    }
+}
+
+/// Figma "Bar" (1382:10996): one capsule per reason, by weight and scaled to the score, 1.5 pt apart; a 2 pt
+/// tick at the score; the hatched grey track for the rest. 153 pt, the score 8 pt beside it.
+struct HomeRiskBar: View {
+    let scan: ScanResult
+
+    private static let width: CGFloat = 153
+    private static let gap: CGFloat = 1.5
+    private static let tickWidth: CGFloat = 2
+    private static let colors = [Color(hex: 0xFF9500), Color(hex: 0xF87541), Color(hex: 0xE5483B)]
+    private static let tick = Color(hex: 0xE5483B)
+
+    /// Segment widths: the weights, heaviest first, sharing the score's part of the bar.
+    private var segments: [CGFloat] {
+        let score = CGFloat(min(max(scan.score, 0), 100)) / 100
+        let weights = scan.signals.map { CGFloat(max($0.weight, 0)) }.filter { $0 > 0 }.sorted(by: >)
+        let parts = weights.isEmpty ? [1] : weights
+        let total = parts.reduce(0, +)
+        let usable = Self.width - CGFloat(parts.count + 1) * Self.gap - Self.tickWidth
+        return parts.map { usable * score * $0 / total }
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: Self.gap) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { index, width in
+                    HatchedBar(fill: Self.colors[min(index, Self.colors.count - 1)], hatch: .white.opacity(0.3))
+                        .frame(width: width)
+                        .shadow(color: Self.tick.opacity(0.35), radius: 2, y: 1.5)
+                }
+                RoundedRectangle(cornerRadius: 0.6)
+                    .fill(Self.tick)
+                    .frame(width: Self.tickWidth, height: 16)
+                HatchedBar(fill: Color(hex: 0xE9ECF1), hatch: Color(hex: 0xCFD5DD))
+            }
+            .frame(width: Self.width, height: 18)
+            // Figma: SF Pro Display Semibold 15, +2 %, in a 34 pt line.
+            Text(verbatim: "\(scan.score)/100")
+                .onboardingFont(15, weight: .semibold, tracking: 0.3, relativeTo: .subheadline)
+                .foregroundStyle(HomeTheme.navy)
+                .frame(minHeight: 34)
+                .fixedSize()
+        }
+        // Figma "Frame 1618872328" sits 4.5 pt left of the panel's centre.
+        .padding(.trailing, 9)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Risk score"))
+        .accessibilityValue(Text(verbatim: "\(scan.score)/100"))
+    }
+}
+
+/// 10 pt capsule with 0.6 pt 45° hatching every 2.48 pt (Figma "Hatch").
+private struct HatchedBar: View {
+    let fill: Color
+    let hatch: Color
+
+    var body: some View {
+        Capsule()
+            .fill(fill)
+            .overlay {
+                Canvas { context, size in
+                    var path = Path()
+                    var x: CGFloat = -size.height
+                    while x < size.width + size.height {
+                        path.move(to: CGPoint(x: x, y: size.height))
+                        path.addLine(to: CGPoint(x: x + size.height, y: 0))
+                        x += 2.48
+                    }
+                    context.stroke(path, with: .color(hatch), lineWidth: 0.6)
+                }
+            }
+            .clipShape(Capsule())
+            .frame(height: 10)
+    }
+}
+
+// MARK: - Supervised mode
+
+/// Figma "CTA Jadi Guardian" with the "MODE TERAWASI" copy (Pribadi 1382:10600, protected/Home 1382:2393): asks to
+/// connect so someone close can check sites again. 354 × 205, 24 pt corners; the teal shield (exported from Figma,
+/// 145 × 177 at 209, 19) is clipped by the card. X hides it on this iPhone.
+struct SupervisedModeCard: View {
+    let onConnect: () -> Void
+    let onDismiss: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private static let fill = LinearGradient(colors: [Color(hex: 0xF3F8FF), Color(hex: 0xE2F8F5)], startPoint: .leading, endPoint: .trailing)
+    /// Figma "Tombol / Jadi Guardian": #214889 three quarters down, #446EB4 just above the top.
+    private static let button = LinearGradient(colors: [Color(hex: 0x214889), Color(hex: 0x446EB4)],
+                                               startPoint: UnitPoint(x: 0.5, y: 0.75), endPoint: UnitPoint(x: 0.5, y: -0.05))
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if !dynamicTypeSize.isAccessibilitySize {
+                Image("HomeSupervisedShield")
+                    .resizable()
+                    .frame(width: 145, height: 177)
+                    .padding(.top, 19)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                // Figma: SF Pro Rounded Semibold 11, 13 pt lines, 0.06 tracking, #0D8F93.
+                Text("SUPERVISED MODE")
+                    .onboardingFont(11, weight: .semibold, design: .rounded, tracking: 0.06, relativeTo: .caption2)
+                    .figmaLineHeight(13, relativeTo: .caption2)
+                    .foregroundStyle(Color(hex: 0x0D8F93))
+                    .padding(.top, 22)
+                // SF Pro Display Semibold 20, 25 pt lines, -0.45, #151617.
+                Text("Not sure?")
+                    .onboardingFont(20, weight: .semibold, tracking: -0.45, relativeTo: .title3)
+                    .figmaLineHeight(25, relativeTo: .title3)
+                    .foregroundStyle(HomeTheme.ink)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.top, 7)
+                // SF Pro Rounded 16, 21 pt lines, -0.31, #6A717E, 206 wide.
+                Text("Connect so someone you love can check it again")
+                    .onboardingFont(16, design: .rounded, tracking: -0.31, relativeTo: .callout)
+                    .figmaLineHeight(21, relativeTo: .callout)
+                    .foregroundStyle(OnboardingTheme.bodyInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 206, alignment: .leading)
+                    .padding(.top, 5)
+                Button(action: onConnect) {
+                    // SF Pro Display Semibold 17, 22 pt line; 38 pt capsule, 18 pt sides.
+                    Text("Connect")
+                        .onboardingFont(17, weight: .semibold, relativeTo: .headline)
+                        .figmaLineHeight(22, relativeTo: .headline)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .frame(minHeight: 38)
+                        .background(Self.button, in: Capsule())
+                        // A 38 pt capsule; the touch area still reaches 44.
+                        .contentShape(Rectangle().inset(by: -3))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.supervised.connect")
+                .padding(.top, 10)
+            }
+            .padding(.leading, 20)
+            .padding(.trailing, 20)
+            .padding(.bottom, 22)
+
+            // Figma "Tutup": 28 pt, white 75 % with a white ring, a 9 pt × in 1.6 pt #6A717E strokes; 12 from the corner.
+            Button(action: onDismiss) {
+                Path { path in
+                    path.move(to: .zero); path.addLine(to: CGPoint(x: 9, y: 9))
+                    path.move(to: CGPoint(x: 9, y: 0)); path.addLine(to: CGPoint(x: 0, y: 9))
+                }
+                .stroke(HomeTheme.secondaryInk, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+                .frame(width: 9, height: 9)
+                .frame(width: 28, height: 28)
+                .background(.white.opacity(0.75), in: Circle())
+                .overlay(Circle().strokeBorder(.white, lineWidth: 1))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Close"))
+            .accessibilityIdentifier("home.supervised.close")
+            .frame(maxWidth: .infinity, alignment: .topTrailing)
+            .padding(.top, 4)
+            .padding(.trailing, 4)
+        }
+        .frame(minHeight: 205)
+        .background(Self.fill)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(.white.opacity(0.9), lineWidth: 1))
+        .figmaCardShadow()
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.supervised")
     }
 }
 

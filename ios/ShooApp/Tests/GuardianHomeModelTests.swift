@@ -94,8 +94,21 @@ struct GuardianHomeModelTests {
         #expect(!model.scans.isEmpty)
         #expect(model.scans.allSatisfy { $0.ownerDeviceId == MockRepository.guardianProfile.deviceId })
         #expect(model.pendingScan == nil)
-        #expect(model.members.isEmpty)
         #expect(!model.hasNoFamily)
+        // Someone is looked after: no "Mode Terawasi" card.
+        #expect(!model.members.isEmpty)
+        #expect(!model.showsSupervisedCard)
+    }
+
+    @Test func personalHomeOffersSupervisedModeUntilClosed() async throws {
+        let settings = try settings()
+        let model = model(repository: MockRepository(mode: .guardian, scenario: .homePribadiAlone, latency: .zero),
+                          settings: settings, scope: .personal)
+        await model.refresh()
+        #expect(model.showsSupervisedCard)
+        model.dismissSupervisedCard()
+        #expect(!model.showsSupervisedCard)
+        #expect(settings.supervisedCardDismissed)
     }
 
     @Test func familyHomeShowsAtMostThreePeople() async throws {

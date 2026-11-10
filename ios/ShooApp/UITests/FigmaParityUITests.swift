@@ -128,6 +128,36 @@ final class FigmaParityUITests: XCTestCase {
         shot("home-guardian-members")
     }
 
+    /// Home parity (Pribadi 435:20058 / 1382:10567, protected/Home 1115:17162 … 1373:12752): one launch per frame,
+    /// the top of the page, then two fixed drags (held, so no momentum) for what is under it.
+    @MainActor
+    func testHomeStates() {
+        guard scenario == "figma" else { return }
+        let states: [(String, [String])] = [
+            ("pribadi", guardian(family: false, scenario: "homePribadi")),
+            ("pribadi-cta", guardian(family: false, scenario: "homePribadiAlone")),
+            ("prot-quiet", protected(scenario: "protectedQuiet")),
+            ("prot-blocked", protected(scenario: "protectedBlocked")),
+            ("prot-blocked-scam", protected(scenario: "protectedBlockedScam")),
+            ("prot-warning-scam", protected(scenario: "protectedWarningScam")),
+            ("prot-warning", protected(scenario: "protectedWarning")),
+            ("prot-alone", protected(scenario: "protectedAlone")),
+            ("prot-warning-safe", protected(scenario: "protectedWarningSafe")),
+            ("prot-blocked-safe", protected(scenario: "protectedBlockedSafe")),
+        ]
+        for (name, arguments) in states {
+            let app = launch(arguments + ["-debug.tab", "shield", "-UITestReduceMotion", "YES"])
+            shot("hs-\(name)-0")
+            for page in 1...2 {
+                let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+                let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+                start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.6)
+                Thread.sleep(forTimeInterval: 1)
+                shot("hs-\(name)-\(page)")
+            }
+        }
+    }
+
     // MARK: Activity
 
     @MainActor

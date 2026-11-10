@@ -71,12 +71,72 @@
         }
       }
     },
+    "SUPERVISED MODE" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MODE TERAWASI"
+          }
+        }
+      }
+    },
+    "Not sure?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak yakin?"
+          }
+        }
+      }
+    },
+    "Connect so someone you love can check it again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungi agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+          }
+        }
+      }
+    },
+    "%@ will check it again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akan mengecek kembali"
+          }
+        }
+      }
+    },
+    "%@ marked it dangerous" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandai berbahaya"
+          }
+        }
+      }
+    },
+    "%@ marked it safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandai aman"
+          }
+        }
+      }
+    },
     "Latest scams among Shoo users" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scam terbaru di pengguna Shoo"
+            "value" : "Scam Terbaru Pengguna Shoo"
           }
         }
       }
