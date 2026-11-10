@@ -65,6 +65,7 @@ struct TurnOnExtensionView: View {
                 if !showsStatusNote || nextStep?.opensSafariFirst != true {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         OnboardingStepRow(number: index + 1, text: step.text)
+                            .accessibilityIdentifier("extension.step.\(index + 1)")
                     }
                 }
                 if let consent, consent.failed {
