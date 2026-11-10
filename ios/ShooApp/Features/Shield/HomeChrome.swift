@@ -311,13 +311,11 @@ private struct HeroBackground: View {
 
 // MARK: - Top bar
 
-/// Figma "Top Bar" (435:20380): ⇆ and the profile circle, 50 pt each, 24 pt in from the sides, at y 40 under the
-/// Dynamic Island. Drawn over the page (not as toolbar items, which the bar puts 20 pt lower). The navigation bar is
+/// Figma "Top Bar" (435:20380): ⇆ and the profile circle, 50 pt each, 24 pt in from the sides. Figma puts them at
+/// y 40, over the clock and battery; here they sit right under the status bar. Drawn over the page (not as toolbar items, which the bar puts 20 pt lower). The navigation bar is
 /// hidden on Home: a see-through bar still takes every tap from y 62 to 116, over these buttons. Place as an overlay
 /// of the scroll view; it starts at the status bar's bottom edge.
 struct HomeTopBar: View {
-    /// The buttons' top on the 402 × 874 frame.
-    static let figmaTop: CGFloat = 40.7
     /// An inline navigation bar's height: Home has none, so its page keeps this room (`HomeHeroLayout.heroTop`).
     static let barHeight: CGFloat = 54
     var isFamilyShown = false
@@ -327,19 +325,15 @@ struct HomeTopBar: View {
     let onProfile: () -> Void
 
     var body: some View {
-        GeometryReader { proxy in
-            // The reader sits at the status bar's bottom edge: move up to y 40 of the screen, never above it.
-            let top = proxy.safeAreaInsets.top
-            HStack(alignment: .top) {
-                if let onSwitch {
-                    HomeSwitchButton(isFamilyShown: isFamilyShown, action: onSwitch)
-                }
-                Spacer(minLength: 16)
-                ProfileInitialButton(name: name, action: onProfile)
+        // Right under the status bar (Figma's y 40 put the circles over the clock and battery).
+        HStack(alignment: .top) {
+            if let onSwitch {
+                HomeSwitchButton(isFamilyShown: isFamilyShown, action: onSwitch)
             }
-            .padding(.horizontal, 24)
-            .offset(y: -max(0, top - Self.figmaTop))
+            Spacer(minLength: 16)
+            ProfileInitialButton(name: name, action: onProfile)
         }
+        .padding(.horizontal, 24)
         .frame(height: 50, alignment: .top)
     }
 }

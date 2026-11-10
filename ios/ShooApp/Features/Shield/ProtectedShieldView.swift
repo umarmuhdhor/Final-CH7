@@ -54,7 +54,7 @@ struct ProtectedShieldView: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        // Figma "Top Bar" 1115:17282: the profile circle only, at y 40.
+        // Figma "Top Bar" 1115:17282: the profile circle only, right under the status bar.
         .overlay(alignment: .top) {
             HomeTopBar(name: model.profileName, onSwitch: nil) { env.router.openProfile() }
         }

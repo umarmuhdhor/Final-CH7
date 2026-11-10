@@ -71,7 +71,7 @@ struct GuardianHomeView: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        // Switch and profile at Figma's y 40, over the (see-through) navigation bar.
+        // Switch and profile right under the status bar, where the (hidden) navigation bar would be.
         .overlay(alignment: .top) {
             HomeTopBar(isFamilyShown: isFamily, name: model.profile?.name, onSwitch: switchSide) { env.router.openProfile() }
         }
