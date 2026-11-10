@@ -14,6 +14,8 @@ struct HalftoneShield: View {
         case amber
         case red
         case crimson
+        /// Red core with "!" in the dots: the blocked site waiting on Guardian Home (Figma 1382:3248).
+        case redAlert
     }
 
     var isOn = true
@@ -253,6 +255,11 @@ private struct ShieldPalette {
         coreBottom: ActivityStyle.hex(0xB00F1A), coreStroke: ActivityStyle.hex(0xB01E28),
         dots: on.dots
     )
+    /// Figma "Guardian/Home/blocked" 1382:3248: the red core, "!" in the dots.
+    static let redAlert = ShieldPalette(
+        glow: red.glow, coreTop: red.coreTop, coreBottom: red.coreBottom, coreStroke: red.coreStroke,
+        dots: decode(alertDots)
+    )
     static let crimson = ShieldPalette(
         glow: ActivityStyle.hex(0xFF0011), coreTop: ActivityStyle.hex(0xFF7A83),
         coreBottom: ActivityStyle.hex(0xE0000F), coreStroke: ActivityStyle.hex(0xC4000D),
@@ -267,6 +274,7 @@ private struct ShieldPalette {
         case .amber: amber
         case .red: red
         case .crimson: crimson
+        case .redAlert: redAlert
         }
     }
 

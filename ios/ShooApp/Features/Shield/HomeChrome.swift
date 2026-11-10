@@ -37,6 +37,10 @@ enum HomeTheme {
     static let offline = Color(red: 0x8E / 255, green: 0x93 / 255, blue: 0x9C / 255)
     /// Figma "Kartu/Scam Terbaru" icon circle, State/Danger/Background.
     static let scamIconFill = Color(red: 0xFD / 255, green: 0xEC / 255, blue: 0xEA / 255)
+    /// Figma "Aktif" under a family member: Labels/Secondary, #3C3C43 at 60 %.
+    static let memberStatus = Color(red: 0x3C / 255, green: 0x3C / 255, blue: 0x43 / 255).opacity(0.6)
+    /// Figma "icon/switch" stroke and the "Lihat Semua" glass button text.
+    static let glassInk = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255)
 }
 
 // MARK: - Hero
@@ -69,11 +73,12 @@ enum HomeHeroStyle {
         }
     }
 
-    /// Blue, teal and empty were exported without the film grain; the others carry it in the image.
+    /// Blue and empty were exported without the film grain; the others carry it in the image (teal re-exported
+    /// with its "texture" from Guardian/Home 435:20374).
     var needsGrain: Bool {
         switch self {
-        case .blue, .teal, .empty: true
-        case .amber, .red, .crimson: false
+        case .blue, .empty: true
+        case .teal, .amber, .red, .crimson: false
         }
     }
 
@@ -98,26 +103,29 @@ struct HomeHeroLayout {
     var shieldScale: CGFloat = 1.25
     /// Top of the headline's text box.
     var titleTop: CGFloat = 290
-    /// From the bottom of the last line of text to the top of the status strip.
+    /// From the bottom of the last line of text to the top of the status strip (or the sheet).
     var bottomGap: CGFloat = 49
     var showsRings = true
-    /// The background runs on under the strip, to Figma y 443 (end of the "box" fade).
+    /// The background runs on under the strip (or the sheet), to the end of the Figma "box" fade.
     var backgroundOverhang: CGFloat = 72
 
     /// Pribadi/Home 435:20058 and protected/Home 441:3800.
     static let personal = HomeHeroLayout()
-    /// Guardian/Home 435:20373.
-    static let family = HomeHeroLayout(shieldTop: 130, titleTop: 308, bottomGap: 31)
-    /// Guardian/Home · Keluarga butuh konfirmasi 435:20899.
-    static let familyPending = HomeHeroLayout(shieldTop: 126, shieldScale: 1.25 * 133 / 130, titleTop: 308, bottomGap: 31)
-    /// Guardian/Home · Belum ada orang 435:20630: no rings, bold headline and a line under it.
-    static let familyEmpty = HomeHeroLayout(shieldTop: 104, shieldScale: 1.25 * 133 / 130, titleTop: 284, bottomGap: 32,
-                                            showsRings: false)
+    /// Guardian/Home 435:20373: no strip, the white sheet starts at y 374; the "box" fade ends at 443.
+    /// `titleTop` 309 and `bottomGap` 32.67: Figma's 308 and 32, measured against the simulator (the 28 pt glyphs
+    /// sit 1 pt higher in SwiftUI's box).
+    static let family = HomeHeroLayout(shieldTop: 130, titleTop: 309, bottomGap: 32.67, backgroundOverhang: 69)
+    /// Guardian/Home/warning 1382:2599 and /blocked 1382:10314: Kaca 130 wide at y 126.
+    static let familyPending = HomeHeroLayout(shieldTop: 126, titleTop: 309, bottomGap: 32.67, backgroundOverhang: 69)
+    /// Guardian/Home · Belum ada orang 1382:10466: no rings, a line under the headline; sheet at 377, fade to 436.
+    /// `titleTop` 284: Figma's 283, measured against the simulator.
+    static let familyEmpty = HomeHeroLayout(shieldTop: 104, shieldScale: 1.25 * 133 / 130, titleTop: 284, bottomGap: 34,
+                                            showsRings: false, backgroundOverhang: 59)
 
     // The ring centre is 204 pt from the top of the frame; the hero itself starts under the navigation bar,
     // 115 pt down on this 402 × 874 screen.
     fileprivate static let ringCenter: CGFloat = 204
-    fileprivate static let heroTop: CGFloat = 115.3
+    static let heroTop: CGFloat = 115.3
     /// Kaca top above the shield's centre at scale 1.
     fileprivate static let kacaRise: CGFloat = 61.3
     /// SwiftUI's text box for 28 pt starts 1.4 pt above Figma's (34 pt lines) for the same glyphs.
@@ -161,11 +169,13 @@ struct HomeHero<Accessory: View>: View {
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier(titleIdentifier)
                 if let subtitle {
+                    // Figma "Sub" (1382:10498): SF Pro Rounded 17, 140 % lines, 4 under the headline.
                     Text(subtitle)
-                        .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
-                        .tracking(-0.15)
-                        .foregroundStyle(titleColor.opacity(0.85))
+                        .onboardingFont(17, design: .rounded, relativeTo: .body)
+                        .figmaLineHeight(23.8, relativeTo: .body)
+                        .foregroundStyle(titleColor)
                         .multilineTextAlignment(.center)
+                        .padding(.top, -3)
                 }
             }
             .padding(.horizontal, 24)
@@ -247,32 +257,52 @@ private struct HeroBackground: View {
 
 // MARK: - Top bar
 
-/// Top-left ⇆ glass circle: switches between the guardian's own Home and the family's (GD-02).
-struct HomeSwitchToolbarItem: ToolbarContent {
+/// Figma "Top Bar" (435:20380): ⇆ and the profile circle, 50 pt each, 24 pt in from the sides, at y 40 under the
+/// Dynamic Island. Drawn over the page (not as toolbar items, which the bar puts 20 pt lower). The navigation bar is
+/// hidden on Home: a see-through bar still takes every tap from y 62 to 116, over these buttons. Place as an overlay
+/// of the scroll view; it starts at the status bar's bottom edge.
+struct HomeTopBar: View {
+    /// The buttons' top on the 402 × 874 frame.
+    static let figmaTop: CGFloat = 40.7
+    /// An inline navigation bar's height: Home has none, so its page keeps this room (`HomeHeroLayout.heroTop`).
+    static let barHeight: CGFloat = 54
+    let isFamilyShown: Bool
+    let name: String?
+    let onSwitch: () -> Void
+    let onProfile: () -> Void
+
+    var body: some View {
+        GeometryReader { proxy in
+            // The reader sits at the status bar's bottom edge: move up to y 40 of the screen, never above it.
+            let top = proxy.safeAreaInsets.top
+            HStack(alignment: .top) {
+                HomeSwitchButton(isFamilyShown: isFamilyShown, action: onSwitch)
+                Spacer(minLength: 16)
+                ProfileInitialButton(name: name, action: onProfile)
+            }
+            .padding(.horizontal, 24)
+            .offset(y: -max(0, top - Self.figmaTop))
+        }
+        .frame(height: 50, alignment: .top)
+    }
+}
+
+/// The ⇆ glass circle on its own (the top bar's left button).
+private struct HomeSwitchButton: View {
     let isFamilyShown: Bool
     let action: () -> Void
 
-    var body: some ToolbarContent {
-        if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .topBarLeading) { button }
-                .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .topBarLeading) { button }
-        }
-    }
-
-    private var button: some View {
+    var body: some View {
         Button(action: action) {
-            // Figma "icon/switch": 14 × 12 inside an 18 pt box.
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(HomeTheme.navy)
+            // Figma "icon/switch" (435:20383): the exported 18 pt vector, #1A1A1A 1.65 pt strokes.
+            Image("HomeSwitch")
+                .resizable()
+                .frame(width: 18, height: 18)
+                .foregroundStyle(HomeTheme.glassInk)
                 .frame(width: 50, height: 50)
                 .modifier(HomeGlassCircle())
         }
         .buttonStyle(.plain)
-        // Figma: 24 pt from the screen edge; the bar puts the item at 20.
-        .padding(.leading, 4)
         .accessibilityLabel(Text("Family mode"))
         .accessibilityValue(Text(isFamilyShown ? "On" : "Off"))
         .accessibilityAddTraits(.isToggle)
@@ -281,17 +311,23 @@ struct HomeSwitchToolbarItem: ToolbarContent {
     }
 }
 
+/// Profile circle as a toolbar item (protected/Home).
 struct HomeProfileToolbarItem: ToolbarContent {
     let name: String?
     let action: () -> Void
 
     var body: some ToolbarContent {
         if #available(iOS 26.0, *) {
-            ToolbarItem(placement: .topBarTrailing) { ProfileInitialButton(name: name, action: action) }
+            ToolbarItem(placement: .topBarTrailing) { button }
                 .sharedBackgroundVisibility(.hidden)
         } else {
-            ToolbarItem(placement: .topBarTrailing) { ProfileInitialButton(name: name, action: action) }
+            ToolbarItem(placement: .topBarTrailing) { button }
         }
+    }
+
+    private var button: some View {
+        // Figma: 24 pt from the screen edge; the bar puts the item at 21.
+        ProfileInitialButton(name: name, action: action).padding(.trailing, 3)
     }
 }
 
@@ -322,13 +358,13 @@ private struct ProfileInitialButton: View {
 
     var body: some View {
         Button(action: action) {
-            InitialAvatar(name: name, size: 50, gradient: [HomeTheme.heroLight, HomeTheme.heroDark], fontSize: 20)
+            // Figma "Profile": SF Pro Display Semibold 20, -0.45.
+            InitialAvatar(name: name, size: 50, gradient: [HomeTheme.heroLight, HomeTheme.heroDark], fontSize: 20,
+                          design: .default, tracking: -0.45)
                 .overlay(Circle().stroke(.white, lineWidth: 2))
                 .shadow(color: HomeTheme.heroDark.opacity(0.18), radius: 6, y: 4)
         }
         .buttonStyle(.plain)
-        // Figma: 24 pt from the screen edge; the bar puts the item at 21.
-        .padding(.trailing, 3)
         .accessibilityLabel(Text("Profile"))
         .accessibilityIdentifier("profileButton")
     }
@@ -340,6 +376,9 @@ struct InitialAvatar: View {
     var size: CGFloat = 44
     var gradient: [Color] = InitialAvatar.gradients[0]
     var fontSize: CGFloat?
+    /// Members are SF Pro Rounded (Figma "S" / "B"), the profile button SF Pro Display.
+    var design: Font.Design = .rounded
+    var tracking: CGFloat = 0
 
     /// Syahnaz, Bayu, Renatta in the Figma family row; the first one also for the guardian.
     static let gradients: [[Color]] = [
@@ -360,7 +399,9 @@ struct InitialAvatar: View {
             if initial.isEmpty {
                 Image(systemName: "person.fill").font(.system(size: (fontSize ?? size * 0.4), weight: .semibold))
             } else {
-                Text(verbatim: initial).font(FigmaFont.font(size: fontSize ?? size * 0.41, weight: .semibold, design: .rounded))
+                Text(verbatim: initial)
+                    .font(FigmaFont.font(size: fontSize ?? size * 0.41, weight: .semibold, design: design))
+                    .tracking(tracking)
             }
         }
         .foregroundStyle(.white)
@@ -369,53 +410,13 @@ struct InitialAvatar: View {
     }
 }
 
-// MARK: - Status strip and sheet
-
-/// Coloured strip under the hero ("Status Keluarga : perlu konfirmasi"); the white sheet below overlaps its lower part.
-struct StatusStrip: View {
-    let title: LocalizedStringKey
-    let value: LocalizedStringKey
-    let fill: Color
-    var valueColor: Color = .white
-
-    static let family = Color(red: 0x00 / 255, green: 0x9F / 255, blue: 0xA3 / 255)
-    /// Figma "Guardian/Home · Bahaya".
-    static let danger = Color(red: 0xA3 / 255, green: 0x00 / 255, blue: 0x0B / 255)
-    /// Figma "Belum ada anggota" #C7C7CE on navy.
-    static let mutedValue = Color(red: 0xC7 / 255, green: 0xC7 / 255, blue: 0xCE / 255)
-    /// Figma "Frame 1618872173": 80 pt tall; the sheet covers all but its top 44.
-    static let height: CGFloat = 80
-    static let visibleHeight: CGFloat = 44
-
-    /// Figma glyph U+102DF8 is `app.background.dotted` (iOS 26); older systems get the closest dot grid.
-    private static let symbol = UIImage(systemName: "app.background.dotted") != nil ? "app.background.dotted" : "circle.grid.3x3.fill"
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: Self.symbol)
-                .font(.system(size: 15))
-                .foregroundStyle(Color(red: 0xFA / 255, green: 0xF9 / 255, blue: 0xFB / 255))
-                .accessibilityHidden(true)
-            (Text(title).foregroundStyle(Color(red: 0xFA / 255, green: 0xF9 / 255, blue: 0xFB / 255))
-                + Text(verbatim: " ") + Text(value).foregroundStyle(valueColor))
-                .onboardingFont(17, design: .rounded, relativeTo: .body)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 12)
-        // 12 + the 20 pt line + 48 = 80; larger text grows the strip, the sheet keeps covering only the bottom.
-        .padding(.bottom, Self.height - Self.visibleHeight + 12)
-        .background(fill, in: UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("home.securityStatus")
-    }
-}
+// MARK: - Sheet
 
 extension View {
-    /// The white Figma "Status" sheet: 22 pt corners, pulled up over the strip so 37 pt of it shows.
+    /// The white Figma "Status" / "Konten" sheet over the bottom of the hero: 22 pt corners all round.
     func homeSheet() -> some View {
         frame(maxWidth: .infinity)
             .background(.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .padding(.top, StatusStrip.visibleHeight - StatusStrip.height)
     }
 
     /// Figma "Update card": white, 20 pt corners, a hairline of light and a very soft shadow.
@@ -443,7 +444,7 @@ struct FadingDivider: View {
     }
 }
 
-/// "Aktivitas Terakhir", "Cara Kerja".
+/// "Aktivitas Terakhir", "Orang yang dilindungi", "Cara Kerja": SF Pro Rounded 17, -1 %, 22 pt lines, #6A717E.
 struct HomeSectionTitle: View {
     let title: LocalizedStringKey
 
@@ -451,9 +452,9 @@ struct HomeSectionTitle: View {
 
     var body: some View {
         Text(title)
-            .onboardingFont(17, weight: .medium, relativeTo: .headline)
-            .tracking(-0.17)
-            .foregroundStyle(HomeTheme.secondaryInk)
+            .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+            .figmaLineHeight(22, relativeTo: .body)
+            .foregroundStyle(OnboardingTheme.bodyInk)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
     }
@@ -488,17 +489,26 @@ struct FittedScoreGauge: View {
 
 // MARK: - Recent activity
 
-/// Figma "Aktivitas Terakhir": the title with "Lihat Semua" beside it, then the cards. Family Home adds whose
-/// site it was.
+/// Figma "Aktivitas Terakhir": the title, then the cards. "Lihat Semua" sits beside the title on your own Home
+/// (Pribadi/Home 435:20058) and under the cards as a glass button on the family's (Guardian/Home/warning 1382:2644).
+/// Family Home adds whose site it was.
 struct RecentActivity: View {
+    enum SeeAllPlacement {
+        case header
+        case below
+    }
+
     let scans: [ScanResult]
     let language: AppLanguage
     var showsOwner = false
     /// The only sites are already on Home above the list (Protected's blocked card): no "nothing yet" message,
     /// but "See all" still leads to Activity.
     var hasSitesAbove = false
+    var seeAllPlacement: SeeAllPlacement = .header
     let onOpen: (ScanResult) -> Void
     let onSeeAll: () -> Void
+
+    private var hasSeeAll: Bool { !scans.isEmpty || hasSitesAbove }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -523,27 +533,31 @@ struct RecentActivity: View {
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("home.recent.\(scan.id)")
                     }
+                    if seeAllPlacement == .below {
+                        GlassSeeAllButton(action: onSeeAll)
+                    }
                 }
             }
         }
     }
 
-    /// Figma "Header Aktivitas" 957:10959: "Title 3/Emphasized" and "Subhead/Emphasized".
+    /// Figma "Aktivitas Terakhir" / "Lihat Semua" (1253:8664, 1253:8665): SF Pro Rounded 17, -1 %, 22 pt lines;
+    /// the title grey regular, the link blue bold.
     private var header: some View {
         HStack(spacing: 12) {
             Text("Recent activity")
-                .onboardingFont(20, weight: .semibold, relativeTo: .title3)
-                .tracking(-0.45)
-                .foregroundStyle(HomeTheme.navy)
+                .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                .figmaLineHeight(22, relativeTo: .body)
+                .foregroundStyle(OnboardingTheme.bodyInk)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-            if !scans.isEmpty || hasSitesAbove {
+            if hasSeeAll, seeAllPlacement == .header {
                 Button(action: onSeeAll) {
                     Text("See all")
-                        .onboardingFont(15, weight: .semibold, design: .rounded, relativeTo: .subheadline)
-                        .tracking(-0.23)
-                        .foregroundStyle(HomeTheme.action)
-                        // A 20 pt line in Figma; the touch area still reaches 44.
+                        .onboardingFont(17, weight: .bold, design: .rounded, tracking: -0.17, relativeTo: .body)
+                        .figmaLineHeight(22, relativeTo: .body)
+                        .foregroundStyle(Color.dynamic(0x175CD3, dark: 0x5EAAF0))
+                        // A 22 pt line in Figma; the touch area still reaches 44.
                         .contentShape(Rectangle().inset(by: -12))
                 }
                 .buttonStyle(.plain)
@@ -553,6 +567,43 @@ struct RecentActivity: View {
     }
 }
 
+/// Figma "Button - Liquid Glass - Text" (1382:2644): 130 × 50 capsule, 20 × 16 padding, SF Pro Medium 17
+/// (-1 %, 18 pt line), #1A1A1A, centred under the cards.
+private struct GlassSeeAllButton: View {
+    let action: () -> Void
+    @Environment(\.shooReduceGlass) private var reduceGlass
+
+    var body: some View {
+        Button(action: action) {
+            Text("See all")
+                .onboardingFont(17, weight: .medium, tracking: -0.17, relativeTo: .body)
+                .figmaLineHeight(18, relativeTo: .body)
+                .foregroundStyle(HomeTheme.glassInk)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .frame(minWidth: 130, minHeight: 50)
+                .background { background }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("home.seeAll")
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        if reduceGlass {
+            Capsule().fill(.white)
+        } else if #available(iOS 26.0, *) {
+            Capsule().fill(.clear).glassEffect(.regular.interactive(), in: Capsule())
+        } else {
+            Capsule().fill(.ultraThinMaterial)
+        }
+    }
+}
+
+/// Figma "Update card" (1128:18725): 48 pt icon, the site in SF Pro Rounded 17 and the time in 13 under it,
+/// the chip top right; 82 pt tall.
 private struct RecentRow: View {
     let scan: ScanResult
     let showsOwner: Bool
@@ -560,7 +611,7 @@ private struct RecentRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var badge: ScanBadge { ScanBadge(scan: scan) }
-    /// Beside the 20 pt site name these would squeeze it to a few letters ("Penipuan terverifikasi").
+    /// Beside the site name these would squeeze it to a few letters ("Penipuan terverifikasi").
     private var badgeGoesBelow: Bool { badge == .verifiedScam || badge == .markedSafe }
 
     private var subtitle: String {
@@ -573,15 +624,18 @@ private struct RecentRow: View {
         HStack(alignment: .top, spacing: 12) {
             SiteIcon(url: scan.faviconUrl)
             VStack(alignment: .leading, spacing: 0) {
+                // Figma: a 24 pt row holding the 22 pt line, then the 18 pt line.
                 Text(verbatim: scan.domain)
-                    .onboardingFont(20, relativeTo: .title3)
-                    .tracking(-0.45)
+                    .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
+                    .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(HomeTheme.navy)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                     .truncationMode(.middle)
+                    .padding(.vertical, 1)
                 Text(verbatim: subtitle)
-                    .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-                    .tracking(-0.08)
+                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                    // The exact 18 pt line puts the glyphs 1 pt higher than Figma does.
+                    .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
                     .foregroundStyle(HomeTheme.rowSubtitle)
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
                 if badgeGoesBelow {
@@ -623,13 +677,18 @@ struct HomeStatusChip: View {
 
     var body: some View {
         let colors = colors
-        // Figma "Button": 13 pt rounded text, 13 pt icon, 4 gap, 8 × 6 padding, 0.75 inside stroke;
+        // Figma "Button" (1128:18733): the exported 16 pt alert icon, 4 gap, SF Pro Rounded 13 (120 %, -0.04),
+        // 8 × 6 padding, 0.75 inside stroke, 28 pt tall;
         // the large "Status Badge" on protected/Home: 14 pt semibold, 18 pt icon, 13.3 × 10 padding.
         HStack(spacing: large ? 6.6 : 4) {
-            Image(systemName: "exclamationmark.circle.fill").font(.system(size: large ? 18.2 : 13)).accessibilityHidden(true)
+            Image("HomeAlertCircle")
+                .resizable()
+                .frame(width: large ? 18.2 : 16, height: large ? 18.2 : 16)
+                .accessibilityHidden(true)
             Text(title)
-                .onboardingFont(large ? 14 : 13, weight: large ? .semibold : .regular, design: large ? .default : .rounded, relativeTo: .footnote)
-                .tracking(-0.04)
+                .onboardingFont(large ? 14 : 13, weight: large ? .semibold : .regular, design: large ? .default : .rounded,
+                                tracking: -0.04, relativeTo: .footnote)
+                .figmaLineHeight(large ? 18.2 : 15.6, relativeTo: .footnote)
                 .lineLimit(1)
         }
         .foregroundStyle(colors.text)
