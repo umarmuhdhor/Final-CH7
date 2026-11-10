@@ -3,6 +3,8 @@ name: iOS app
 
 on:
   pull_request:
+    # ready_for_review: a draft PR skips the suite (below), so it must run once the PR is marked ready.
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "ios/ShooApp/**"
       - "ios/ShooShared/**"
@@ -16,8 +18,10 @@ concurrency:
 
 jobs:
   test:
+    # Only 5 macOS runners: a draft PR does not take one on every push. Mark it ready to run the suite.
+    if: github.event.pull_request.draft == false
     runs-on: macos-26 # Xcode 26.x: the app uses iOS 26.2 SDK APIs (SFSafariSettings)
-    timeout-minutes: 45 # the suite takes about 32 minutes on this runner
+    timeout-minutes: 45 # the suite took about 31 minutes on this runner before parallel workers
     steps:
       - uses: actions/checkout@v4
 
@@ -39,8 +43,12 @@ jobs:
       # Keychain tests work. CODE_SIGNING_ALLOWED=NO strips them and Keychain calls fail with -34018.
       # The full log is too long to read; keep its tail plus every assertion line, so a failing
       # test shows why it failed and not only its name. Each finished test is printed as it happens,
-      # so a run that gets cancelled still shows how far it got and what took the time.
+      # so a run that gets cancelled still shows how far it got and what took the time. With parallel workers
+      # xcodebuild prints "Test case '…' passed on 'Clone 1 of …' (… seconds)", hence -i and "on".
       # FigmaParityUITests only takes QA screenshots and is not a gate; it took 17 of the 47 test minutes.
+      # Two parallel workers (each a cloned simulator) split the UI test classes (one worker alone ran them in about
+      # 27 minutes). A failing test runs once more before it fails the job, so one flaky run does not cost
+      # a whole new 30-minute run; a test that fails twice still fails the job.
       - name: Test
         run: |
           set +e
@@ -49,12 +57,14 @@ jobs:
             -scheme Shoo \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -skip-testing:ShooAppUITests/FigmaParityUITests \
+            -parallel-testing-enabled YES -parallel-testing-worker-count 2 \
+            -retry-tests-on-failure -test-iterations 2 \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-            2>&1 | tee xcodebuild.log | grep --line-buffered -E "^Test Case .* (passed|failed|skipped) \("
+            2>&1 | tee xcodebuild.log | grep --line-buffered -iE "^Test case .* (passed|failed|skipped) (on|\()"
           status=${PIPESTATUS[0]}
           set -e
           tail -40 xcodebuild.log
           echo "::group::Assertion failures"
-          grep -E ": error: |\] failed \(|recorded an issue|Expectation failed" xcodebuild.log | cut -c1-600 | head -60 || true
+          grep -E ": error: |\] failed \(|' failed on |recorded an issue|Expectation failed" xcodebuild.log | cut -c1-600 | head -60 || true
           echo "::endgroup::"
           exit $status
