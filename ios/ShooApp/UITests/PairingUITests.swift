@@ -36,6 +36,21 @@ final class PairingUITests: XCTestCase {
         field.typeText(code)
     }
 
+    /// Connect puts the keyboard away, so the next `enter` brings it back and the button rides up with it.
+    /// On a slow runner a tap can land mid-move; wait until the button stops.
+    @MainActor
+    private func tapWhenSettled(_ button: XCUIElement) {
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        var last = button.frame
+        for _ in 0..<20 {
+            Thread.sleep(forTimeInterval: 0.15)
+            let now = button.frame
+            if now == last, button.isHittable { break }
+            last = now
+        }
+        button.tap()
+    }
+
     /// iOS asks "Open in “Shoo”?" for a custom scheme opened from outside the app.
     @MainActor
     private func openLink(_ link: String, in app: XCUIApplication) {
@@ -59,19 +74,19 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(copyNote.exists, app.debugDescription)
         XCTAssertTrue(copyNote.label.contains("14 days"), copyNote.label)
         enter("000000", in: app)
-        join.tap()
+        tapWhenSettled(join)
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
 
         enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
-        join.tap()
+        tapWhenSettled(join)
         XCTAssertTrue(error.waitForExistence(timeout: 10))
         XCTAssertTrue(error.label.contains("expired"), error.label)
 
         enter("482193", in: app)
-        join.tap()
+        tapWhenSettled(join)
         let title = app.staticTexts["protectedBy.title"]
         XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(title.label.contains("Adhella"), title.label)
@@ -133,7 +148,7 @@ final class PairingUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(title.frame.minY, back.frame.minY, "Headline pushed under the top: \(title.frame) \(back.frame)")
 
         let join = app.buttons["connect.join"]
-        join.tap()
+        tapWhenSettled(join)
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(error.label.contains("Terlalu banyak percobaan"), error.label)
