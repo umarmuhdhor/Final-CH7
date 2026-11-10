@@ -32,7 +32,11 @@ struct MainTabView: View {
         .overlay(alignment: .top) {
             if env.settings.demoMode, router.shieldPath.isEmpty, router.activityPath.isEmpty { DemoBanner() }
         }
-        .sheet(isPresented: $router.isConnectPresented) {
+        // An invite link that started the app (PR-03): Connect comes up once the launch splash (ON-01) is gone.
+        .sheet(isPresented: Binding(
+            get: { router.isConnectPresented && env.launchSplash == .done },
+            set: { router.isConnectPresented = $0 }
+        )) {
             ConnectSheet()
                 .environment(\.locale, env.settings.language.locale)
         }

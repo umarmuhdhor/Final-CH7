@@ -54,7 +54,7 @@ final class DeepLinkUITests: XCTestCase {
     func testScanLinkFromHomeWithMotionShowsHittableVerdictButtons() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-UITestMock", "YES", "-UITestReset", "YES",
+            "-UITestMock", "YES", "-UITestReset", "YES", "-UITestSkipSplash", "YES",
             "-settings.onboardingCompleted", "YES", "-settings.onboardingConnectPassed", "YES",
             "-settings.mode", "guardian", "-settings.language", "en", "-settings.familyModeOn", "YES",
             "-UITestExtensionActive", "YES", "-UITestNotifications", "granted",

@@ -60,7 +60,10 @@ final class LivePushUITests: XCTestCase {
         // No `-UITestNotifications`: the real permission and the real APNs registration.
         // No `-settings.dataConsent` argument either: arguments are gone when the push cold-starts the app,
         // so the consent is answered on screen and saved like on a real phone.
-        app.launchArguments += ["-UITestReset", "YES", "-settings.language", "en", "-UITestExtensionActive", "YES"]
+        // `-UITestSkipSplash` holds only for this launch: a push that cold-starts the app shows the splash first (ON-01).
+        app.launchArguments += [
+            "-UITestReset", "YES", "-UITestSkipSplash", "YES", "-settings.language", "en", "-UITestExtensionActive", "YES",
+        ]
         app.launch()
         onboardAsGuardian(app)
         try pairWithTheHost(app)

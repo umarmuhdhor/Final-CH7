@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Onboarding until it is finished, then the two tabs. Applies the in-app language (PF-01).
+/// Onboarding until it is finished, then the two tabs, under the launch splash (ON-01). Applies the in-app language (PF-01).
 struct RootView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
@@ -23,6 +23,10 @@ struct RootView: View {
                 OnboardingFlow()
             }
         }
+        // ON-01: the screen is built and routed under the launch splash (its data loads, a push or link lands on
+        // Detail). Transparent while the splash shows; the two cross-fade.
+        .opacity(env.launchSplash == .showing ? 0 : 1)
+        .overlay { LaunchSplash() }
         .environment(\.locale, env.settings.language.locale)
         .environment(\.shooReduceMotion, env.settings.reduceMotion || systemReduceMotion || env.reducesMotionForUITests)
         .environment(\.shooReduceGlass, env.settings.reduceGlass || systemReduceTransparency)

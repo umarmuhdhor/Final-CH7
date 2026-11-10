@@ -88,6 +88,7 @@ final class LiveReplicaUITests: XCTestCase {
         app.launchArguments += [
             "-settings.dataConsent", "granted",
             "-UITestReset", "YES",
+            "-UITestSkipSplash", "YES",
             "-settings.language", "en",
             "-UITestNotifications", "denied",
             "-UITestExtensionActive", "YES",
