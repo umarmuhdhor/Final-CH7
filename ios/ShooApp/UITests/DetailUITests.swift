@@ -27,10 +27,18 @@ final class DetailUITests: XCTestCase {
     /// fase 18b: the page copy is drawn into the cards, with its line above them.
     @MainActor
     func testPageCopyShowsWithItsLine() {
-        let app = openDetail(Self.blocked92, pageCopy: true)
-        let line = app.descendants(matching: .any)["detail.pageCopy"].firstMatch
+        var app = openDetail(Self.blocked92, pageCopy: true)
+        var line = app.descendants(matching: .any)["detail.pageCopy"].firstMatch
         // The line shows only once WebKit has drawn the copy: up to `ReplicaSnapshot.loadTimeout` (10 s) plus
         // `snapshotTimeout` (5 s). A busy CI runner used all of it (#354, #363), so 15 s was too tight.
+        // Past that the app has given up and shows the screenshot, so waiting longer can't help. A cold WebKit
+        // content process on CI can still miss `loadTimeout` (#402): one fresh launch gets a second draw, as
+        // `PageCopyTests` tries the render three times. A copy that never draws still fails below.
+        if !line.waitForExistence(timeout: 30) {
+            app.terminate()
+            app = openDetail(Self.blocked92, pageCopy: true)
+            line = app.descendants(matching: .any)["detail.pageCopy"].firstMatch
+        }
         XCTAssertTrue(line.waitForExistence(timeout: 30), app.debugDescription)
         XCTAssertTrue(line.label.contains("Copy of the page"), line.label)
         XCTAssertTrue(line.label.contains("Copied from bca-verifikasi.site/login/pin"), line.label)
