@@ -1,0 +1,432 @@
+{
+  "110:3585": {
+    "shot": null,
+    "status": "notshot",
+    "note": "Built: the app has a launch screen with the shield logo. Not captured by the UI test, so it cannot be compared with Figma's blue gradient splash."
+  },
+  "1352:4375": {
+    "shot": "app/on-splash-1",
+    "status": "clear",
+    "note": "Same: title, body text, Lewati and arrow button. Different: the top illustration is grey placeholder cards. Figma shows two phone mockups (Anda Terlindungi home and a 72% warning)."
+  },
+  "1352:4039": {
+    "shot": "app/on-splash-2",
+    "status": "clear",
+    "note": "Same: title, body text, Lewati and arrow button. Different: the top illustration is grey placeholder cards. Figma shows a magnifier over a fake bank login page."
+  },
+  "110:3912": {
+    "shot": "app/on-name",
+    "status": "small",
+    "note": "Same: title, avatars, field, disabled button. Different: the app already shows the hint \"*Nama harus terdiri dari maksimal 20 karakter\" under the empty field. Figma shows no hint here."
+  },
+  "110:4023": {
+    "shot": "app/on-name-typed",
+    "status": "small",
+    "note": "Same: avatar row, field with clear button, hint. Different: with the keyboard up, the app scrolls the title and large avatar off screen and shows Selanjutnya above the keyboard. Figma keeps the title and hides the button."
+  },
+  "110:4271": {
+    "shot": "app/on-name-tooLong",
+    "status": "small",
+    "note": "Same: layout, long name, grey hint. Different: the app keeps Selanjutnya off for a name over 20 characters. Figma shows it on."
+  },
+  "140:5762": {
+    "shot": "app/on-connect-qr",
+    "status": "small",
+    "note": "Same: title, tabs, QR frame. Different: the simulator has no camera, so the frame says \"Pemindaian tidak tersedia di iPhone ini\". The app adds the 14-day copy note and a Nanti saja link."
+  },
+  "926:7974": {
+    "shot": "app/on-connect-expired-qr",
+    "status": "clear",
+    "note": "Same: QR tab layout. Different: the red \"Kode kadaluarsa\" error under the QR frame is not shown; the simulator shows its no-camera text instead. The app adds the 14-day note and Nanti saja. Check on a device."
+  },
+  "141:5887": {
+    "shot": "app/on-connect-typed",
+    "status": "small",
+    "note": "Same: title, tabs, code boxes. Different: the app has 6 boxes (Figma shows 5) and keeps Hubungkan off until all 6 digits are in. Figma shows it on. The app adds the 14-day note and Nanti saja."
+  },
+  "926:7992": {
+    "shot": "app/on-connect-expired",
+    "status": "small",
+    "note": "Same: code boxes, red error, Hubungkan button. Different: the app spells \"kedaluwarsa\" (Figma \"kadaluarsa\"), shows 6 boxes, and adds the 14-day note and Nanti saja."
+  },
+  "110:4440": {
+    "shot": "app/on-turnOnExtension",
+    "status": "same",
+    "note": "Same: Safari illustration, steps 01 to 03, ticked consent, Aktifkan Ekstensi button, Tonton Tutorial link."
+  },
+  "856:19332": {
+    "shot": "app/on-extensionOn",
+    "status": "same",
+    "note": "Same: glass shield, \"Yeay, kamu berhasil lebih terlindungi!\", body text, Selanjutnya button."
+  },
+  "1328:13421": {
+    "shot": "app/on-turnOnExtension-agreed",
+    "status": "same",
+    "note": "Same: unticked consent and grey disabled Aktifkan Ekstensi button. Note: the screenshot file name says agreed but it shows the not-agreed state."
+  },
+  "1328:13313": {
+    "shot": "app/on-dataSent-sheet",
+    "status": "small",
+    "note": "Same: title, four rows, texts, Mengerti button. Different: the iOS sheet is taller and inset with rounded corners, and the row icons are lighter outlines."
+  },
+  "846:7977": {
+    "shot": "app/on-safariDefault",
+    "status": "same",
+    "note": "Same: App Browser illustration, title, three steps, Jadikan Safari default button, Tonton Tutorial link."
+  },
+  "929:8067": {
+    "shot": "app/on-connected",
+    "status": "small",
+    "note": "Same: title, body text, shield with orbit, Selanjutnya. Different: the avatars sit in other spots and the guardian name chip (\"Nisrina · Guardian\") is missing. Only the \"Kamu · Dilindungi\" chip shows."
+  },
+  "1326:12651": {
+    "shot": null,
+    "status": "missing",
+    "note": "Not built as designed. The backend join page exists in a plain form. The redesign (two avatars, split code boxes, Salin kode, \"Berlaku 24 jam\", Buka di app Shoo button) is not built."
+  },
+  "1336:2677": {
+    "shot": "app/hs-pribadi-cta-0",
+    "status": "small",
+    "note": "Same: hero, MODE TERAWASI card, recent list, scam tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "435:20058": {
+    "shot": "app/hs-pribadi-0",
+    "status": "small",
+    "note": "Same: hero, recent list, Scam Terbaru tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1382:10567": {
+    "shot": "app/hs-pribadi-cta-0",
+    "status": "small",
+    "note": "Same frame as 1336:2677. Same: hero, MODE TERAWASI card, list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1382:11008": {
+    "shot": "e2e/g-switch",
+    "status": "same",
+    "note": "Same: family card illustration, \"Lindungi orang terdekat\", body text, Mulai button."
+  },
+  "1115:17162": {
+    "shot": "app/hs-prot-quiet-0",
+    "status": "small",
+    "note": "Same: hero, \"Terhubung dengan Virellia\" chip, list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1115:17294": {
+    "shot": "app/hs-prot-blocked-0",
+    "status": "small",
+    "note": "Same: hero, blocked card with 92/100 and \"Virellia akan mengecek kembali\", list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1373:13100": {
+    "shot": "app/hs-prot-blocked-scam-0",
+    "status": "small",
+    "note": "Same: blocked card, \"Virellia menandai berbahaya\" with badge avatar, list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1373:12752": {
+    "shot": "app/hs-prot-blocked-safe-0",
+    "status": "small",
+    "note": "Same: orange \"Situs Mencurigakan!\" card, \"Virellia menandai aman\", list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1363:12167": {
+    "shot": "app/hs-prot-warning-0",
+    "status": "small",
+    "note": "Same: warning card 70/100, \"Virellia akan mengecek kembali\", list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1382:2227": {
+    "shot": "app/hs-prot-warning-scam-0",
+    "status": "small",
+    "note": "Same: red card 70/100, \"Virellia menandai berbahaya\", list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1373:12376": {
+    "shot": "app/hs-prot-warning-safe-0",
+    "status": "small",
+    "note": "Same: orange card 70/100, \"Virellia menandai aman\", list, tiles. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity."
+  },
+  "1382:2393": {
+    "shot": "app/hs-prot-alone-0",
+    "status": "clear",
+    "note": "Same: hero, warning card, MODE TERAWASI card, list. Different: the warning card has no Aman / Bahaya buttons. Figma lets the user judge the site themself in this no-guardian mode."
+  },
+  "435:20373": {
+    "shot": "app/home-guardian-members",
+    "status": "small",
+    "note": "Same: teal hero, three members row, recent list. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity. Mock data adds \"Tidak terhubung\" and a \"Ditandai aman\" chip."
+  },
+  "1382:2599": {
+    "shot": "e2e/e-g-home-warning",
+    "status": "small",
+    "note": "Same: \"Keluarga Butuh Konfirmasi\" hero, warning card, name tag, Aman / Bahaya. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity. The reason line is the short detector text, not Figma's paragraph."
+  },
+  "1382:10314": {
+    "shot": "app/home-guardian",
+    "status": "small",
+    "note": "Same: \"Keluarga Dalam Ancaman\" hero, red card, Aman / Bahaya, list. Different: the top bar sits lower (iOS) and the tabs say Perisai / Aktivitas, not Shield / Activity. The reason is one short line, and the list ends with a Lihat Semua pill."
+  },
+  "1382:10466": {
+    "shot": "app/home-guardian-empty",
+    "status": "small",
+    "note": "Same: hero, QR invite card, Bagikan / Salin, Cara Kerja. Different: 6-digit code and a countdown (\"berlaku 29:56\") where Figma says 24 jam. The MODE TERAWASI card below the fold is not in the shot."
+  },
+  "480:5490": {
+    "shot": "app/act-empty-all",
+    "status": "same",
+    "note": "Same: tabs, shield, \"Belum ada aktivitas\", text, green status chip. Only the tab labels differ (Perisai / Aktivitas)."
+  },
+  "480:5520": {
+    "shot": "app/act-empty-warning",
+    "status": "same",
+    "note": "Same: Waspada tab, shield, \"Tidak ada yang mencurigakan\", text, status chip."
+  },
+  "480:5550": {
+    "shot": "app/act-empty-blocked",
+    "status": "same",
+    "note": "Same: Diblokir tab, shield, \"Belum ada situs yang diblokir\", text, status chip."
+  },
+  "480:5580": {
+    "shot": "app/act-off",
+    "status": "same",
+    "note": "Same: grey shield, \"Perlindungan sedang mati\", text, Aktifkan ekstensi button, \"Mati sejak 2 hari lalu\"."
+  },
+  "1115:15028": {
+    "shot": "app/act-pribadi",
+    "status": "small",
+    "note": "Same: tabs, date groups, rows. Different: the title sits lower, and the Diblokir badge is a solid red pill without icon. Figma uses a light red badge with an icon."
+  },
+  "1115:15424": {
+    "shot": "app/act-protected",
+    "status": "small",
+    "note": "Same: rows with guardian notes. Different: the app adds a note under every blocked row, and the texts differ: \"Menurut Virellia website ini berbahaya!\" where Figma says \"Virellia menandai bahaya\". Solid red Diblokir pill."
+  },
+  "450:8574": {
+    "shot": "app/act-protected-warning",
+    "status": "small",
+    "note": "Same: Waspada tab, date groups, Waspada badges. Different: the title sits lower, and the app adds a guardian note under one row. Figma's last row says \"Warning\" in English."
+  },
+  "1115:16415": {
+    "shot": "app/act-protected-blocked",
+    "status": "small",
+    "note": "Same: Diblokir tab, solid red pills, guardian notes. Different: the note text says \"Menurut Virellia website ini berbahaya!\" where Figma says \"Virellia menandai bahaya\". The title sits lower."
+  },
+  "1128:17741": {
+    "shot": "app/act-guardian",
+    "status": "small",
+    "note": "Same: avatar picker, rows with member name and time. Different: the third tab says \"Bahaya\" where Figma says \"Diblokir\". The title sits lower."
+  },
+  "1115:15897": {
+    "shot": "app/act-guardian-one",
+    "status": "small",
+    "note": "Same: \"Syahnaz\" picker chip, rows with name. Different: the third tab says \"Bahaya\" where Figma says \"Diblokir\". The title sits lower."
+  },
+  "487:4221": {
+    "shot": "app/dt-unchecked",
+    "status": "clear",
+    "note": "Older design: gauge with 92%, \"Virellia belum melihat link ini\" banner, contribution bars per reason. The app builds the newer PRU revision (1252:9851): shield hero, 92/100 score, Aman / Bahaya bar."
+  },
+  "487:5990": {
+    "shot": "app/dt-protected-warning",
+    "status": "clear",
+    "note": "Older design: orange gauge \"72% Risiko Tinggi\" with contribution bars. The app builds the PRU revision: orange shield hero, \"Situs Mencurigakan!\", 72/100 and Status situs."
+  },
+  "1187:3398": {
+    "shot": "app/dt-protected",
+    "status": "clear",
+    "note": "Older design: \"BAHAYA\" label with no score and a \"Virellia belum melihat link ini\" banner. The app shows the PRU revision: shield hero, 92/100 score, Diblokir chip."
+  },
+  "1196:3985": {
+    "shot": "app/dt-protected",
+    "status": "clear",
+    "note": "Older design: BAHAYA label, 92% and the not-checked banner. The app shows the PRU revision: shield hero, \"Situs Berbahaya!\", 92/100 and Diblokir chip."
+  },
+  "1196:4116": {
+    "shot": "app/dt-protected-safe",
+    "status": "clear",
+    "note": "Older design: green \"Virellia menyatakan aman\" banner and blokir terbuka / ditandai aman chips. The app shows the PRU revision: guardian avatar hero, \"Virellia Menandai ini Aman\", Ditandai aman chip."
+  },
+  "1252:9851": {
+    "shot": "app/dt-blocked",
+    "status": "clear",
+    "note": "Same: shield hero, title, 92/100, profile chip, Aman / Bahaya bar. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line."
+  },
+  "1252:11249": {
+    "shot": "app/dt-validated",
+    "status": "clear",
+    "note": "Same: hero, \"Situs Sudah Ditandai Blokir!\", score, profile chip. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line. The footer is a white bar, not Figma's red banner."
+  },
+  "1252:10337": {
+    "shot": "app/dt-warning",
+    "status": "clear",
+    "note": "Same: orange hero, \"Situs Mencurigakan!\", 72/100, Aman / Bahaya bar. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line."
+  },
+  "1375:9638": {
+    "shot": "app/dt-safe",
+    "status": "clear",
+    "note": "Same: hero, \"Anda Menandai ini Aman\", 72/100. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line. The app footer shows \"Diverifikasi aman · Ubah\"; Figma keeps Aman / Bahaya."
+  },
+  "1211:19925": {
+    "shot": "app/dt-protected-verdict",
+    "status": "clear",
+    "note": "Mapped by content: the frame shows the guardian avatar and \"dikonfirmasi Virellia\" despite its name. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line."
+  },
+  "1252:2346": {
+    "shot": "app/dt-protected",
+    "status": "clear",
+    "note": "Mapped by content: the frame shows the shield hero and \"ditandai oleh Shoo\" despite its name. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line."
+  },
+  "1252:2473": {
+    "shot": "e2e/e-p-detail-blocked-safe",
+    "status": "clear",
+    "note": "Same: guardian avatar with orange badge, \"Menandai ini Aman\" title, Blokir Dibuka chip, score. Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line."
+  },
+  "1252:2600": {
+    "shot": null,
+    "status": "notshot",
+    "note": "Waspada site that the guardian confirmed as scam: red shield, 72/100, Diblokir, \"dikonfirmasi Virellia\". The app has this state on Home but no detail screenshot."
+  },
+  "1211:20018": {
+    "shot": "app/dt-protected-warning",
+    "status": "clear",
+    "note": "Same: orange hero, \"Situs Mencurigakan!\", 72/100, Waspada chip, \"ditandai oleh Shoo\". Different: no numbered summary card (marked page copy, steps 1 to 3). Reason cards show \"Sinyal:\" instead of Figma's plain line."
+  },
+  "1211:20080": {
+    "shot": "app/dt-protected-safe",
+    "status": "clear",
+    "note": "Different: the app shows the guardian avatar hero and title \"Virellia Menandai ini Aman\". Figma keeps the orange shield, \"Situs Mencurigakan!\", and a \"Ditandai aman\" chip with V avatar. No numbered summary card."
+  },
+  "1115:14593": {
+    "shot": "app/pf-guardian",
+    "status": "small",
+    "note": "Same: header card, members list, Akun and Preferensi lists, Hapus Akun. Different: the app adds a Bagikan undangan button and a Privasi · Cek online section. The third stat says Peringatan, not Pemeriksaan."
+  },
+  "1115:14489": {
+    "shot": "app/pf-guardian-empty",
+    "status": "small",
+    "note": "Same: header card, empty state with Undang Keluarga, Akun list. Different: the app adds a Bagikan undangan button on the header card. The top bar sits lower."
+  },
+  "1115:14392": {
+    "shot": "app/pf-pribadi",
+    "status": "small",
+    "note": "Same: header card with stats, Perlindungan, Akun, Preferensi. Different: the app shows the MODE GUARDIAN \"Menjadi Guardian\" card (Figma has it only in 1115:14279) and a Bagikan undangan button."
+  },
+  "1115:14279": {
+    "shot": "app/pf-pribadi",
+    "status": "small",
+    "note": "Same: header card, MODE GUARDIAN card with Menjadi Guardian, Perlindungan, Akun, Preferensi. Different: the app adds a Bagikan undangan button on the header card."
+  },
+  "1115:14173": {
+    "shot": "e2e/e-p-delete-confirm",
+    "status": "small",
+    "note": "Same: Hapus akun? alert, Batal / Hapus buttons. Different: the app adds \"Adhella tidak akan menerima peringatanmu lagi.\" The alert sits higher because the page is scrolled."
+  },
+  "455:10275": {
+    "shot": "app/pf-protected",
+    "status": "small",
+    "note": "Same: header card with Terhubung chip, Terhubung row, Perlindungan, Akun, Preferensi. Different: the app adds a Privasi · Cek online section. The top bar sits lower."
+  },
+  "455:10571": {
+    "shot": "app/pf-protected",
+    "status": "small",
+    "note": "This frame is the top of the protected profile, so it maps to the top shot. Same: header card, Terhubung, Perlindungan, Akun. Different: the top bar sits lower."
+  },
+  "1128:18167": {
+    "shot": "app/pf-member",
+    "status": "small",
+    "note": "Same: header card, stats, Perlindungan, recent list, Putuskan koneksi. Different: the app adds a Perangkat row and a \"Perlindungan aktif\" chip. The toggle says \"Kabari saya\" where Figma says \"Pop up notification\"."
+  },
+  "1128:18472": {
+    "shot": "app/pf-member",
+    "status": "small",
+    "note": "Same frame as 1128:18167. Same: header card, Perlindungan, recent list, Putuskan koneksi. Different: extra Perangkat row and \"Perlindungan aktif\" chip; \"Kabari saya\" replaces \"Pop up notification\"."
+  },
+  "416:10676": {
+    "shot": "app/pf-member-disconnect",
+    "status": "same",
+    "note": "Same: avatar with red badge, \"Putuskan koneksi dengan Syahnaz?\", body text, red button, Batal. The iOS sheet is inset with rounded corners."
+  },
+  "455:9515": {
+    "shot": "app/pf-protected-connection",
+    "status": "clear",
+    "note": "Same: Akun Tertaut title, two avatars with dots, two toggles. Different: toggles say \"Segera hadir\" instead of Figma's descriptions. Putuskan koneksi is locked grey (\"Harus menggunakan akun Virellia\"), not red."
+  },
+  "457:10896": {
+    "shot": "app/pf-protected-connection",
+    "status": "clear",
+    "note": "Same: Akun Tertaut layout. Different: Figma has Kirim link off and an active red Putuskan koneksi. The app shows both toggles on as \"Segera hadir\" and locks Putuskan koneksi."
+  },
+  "1279:9348": {
+    "shot": null,
+    "status": "missing",
+    "note": "The protected side cannot disconnect: Putuskan koneksi is locked in Akun Tertaut, so this sheet (\"Putuskan koneksi dengan Adhella?\") is not built. Old map e2e/p-connect showed the Mode akun page."
+  },
+  "416:12854": {
+    "shot": "app/pf-manage",
+    "status": "small",
+    "note": "Same: avatar with edit badge, Ubah avatar, Info pribadi, Hapus akun. Different: the app has no Nomor HP row. Terhubung dengan lists the protected members."
+  },
+  "462:11043": {
+    "shot": "app/pf-protected-manage",
+    "status": "same",
+    "note": "Same: avatar, \"Aktif sejak\" chip, Nama field, Hapus akun card."
+  },
+  "1286:12383": {
+    "shot": null,
+    "status": "notshot",
+    "note": "Built (ProfileSheets.swift, Ubah avatar). No screenshot of the sheet."
+  },
+  "1286:12451": {
+    "shot": null,
+    "status": "notshot",
+    "note": "Built (ProfileSheets.swift, Ubah nama). No screenshot of the sheet."
+  },
+  "1286:12515": {
+    "shot": null,
+    "status": "missing",
+    "note": "Tambah nomor HP sheet is not built. The app also has no Nomor HP row in Kelola profil."
+  },
+  "1115:14717": {
+    "shot": "app/pf-notifications",
+    "status": "clear",
+    "note": "Different: Peringatan has two toggles (Situs berbahaya, Situs diblokir) where Figma has one Pop up notification. \"Perlindungan mati\" replaces \"Ekstensi keluarga dimatikan\". The app adds Ringkasan mingguan and Jam tenang."
+  },
+  "455:9627": {
+    "shot": "app/pf-protected-notifications",
+    "status": "clear",
+    "note": "Same: Situs berbahaya and Situs diblokir toggles. Different: the Akun Terhubung · Link terblokir toggle is missing. The app adds a \"Notifikasi mati · Nyalakan\" banner (simulator has notifications off)."
+  },
+  "416:12986": {
+    "shot": "app/pf-language",
+    "status": "same",
+    "note": "Same: Bahasa Indonesia and English rows, radio, footnote."
+  },
+  "455:9697": {
+    "shot": "app/pf-language",
+    "status": "same",
+    "note": "Same: Bahasa Indonesia and English rows, radio, footnote."
+  },
+  "416:13007": {
+    "shot": "app/pf-theme",
+    "status": "same",
+    "note": "Same: three theme cards, radios, footnote, Kurangi efek kaca toggle. Mock data selects Otomatis; Figma shows Terang."
+  },
+  "455:9718": {
+    "shot": "app/pf-theme",
+    "status": "same",
+    "note": "Same: three theme cards, Otomatis selected, footnote, Kurangi efek kaca toggle."
+  },
+  "1115:14753": {
+    "shot": "app/pf-accessibility",
+    "status": "small",
+    "note": "Same: preview card, slider, Tampilan and Saat ada peringatan toggles. Different: the Bacakan peringatan line says \"Skor dan alasan dibacakan lewat VoiceOver\"; Figma says Shoo reads it without VoiceOver. Settings values differ (mock)."
+  },
+  "455:9785": {
+    "shot": "app/pf-accessibility",
+    "status": "same",
+    "note": "Same: preview card, slider, toggles, Bacakan peringatan text. Only the setting values differ (Standar, Kurangi gerakan off)."
+  },
+  "416:13147": {
+    "shot": "app/pf-about",
+    "status": "small",
+    "note": "Same: logo, name, tagline, link rows, footer. Different: the app adds Lisensi pihak ketiga and says \"Hubungi kami\" where Figma says \"Kontak\". The long email wraps to two lines."
+  },
+  "455:9858": {
+    "shot": "app/pf-about",
+    "status": "small",
+    "note": "Same: logo, rows, footer. Different: the email is Apple.a.day.bali@gmail.com on two lines where Figma shows halo@shoo.id. Version reads \"1.0 (6)\"."
+  }
+}
