@@ -438,13 +438,10 @@ struct ActivityRow: View {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 12) {
                         statusBadge
-                        site
+                        site(badge: false)
                     }
                 } else {
-                    HStack(alignment: .top, spacing: 16) {
-                        site
-                        statusBadge
-                    }
+                    site(badge: true)
                 }
             }
             if let note {
@@ -492,18 +489,24 @@ struct ActivityRow: View {
 
 
     /// Icon + domain (host only, never the path) + subline. One line as in Figma: a long domain
-    /// ends in "…" to leave room for the badge; Detail shows the whole link.
-    private var site: some View {
+    /// ends in "…" to leave room for the badge; Detail shows the whole link. The badge shares its width
+    /// with the domain line only, so "name | time" runs on under it: next to a wide verdict badge
+    /// ("Penipuan terverifikasi") the name was cut to "M …" (QA 2026-11-10 #14).
+    private func site(badge: Bool) -> some View {
         HStack(spacing: 12) {
             SiteIcon(url: scan.faviconUrl)
             // Figma "stack": 2 pt between domain and the "avatar name | time" line, none above a bare time.
             VStack(alignment: .leading, spacing: owner == nil ? 0 : 2) {
-                Text(verbatim: scan.domain)
-                    .activityFont(17, tracking: -0.17)
-                    .foregroundStyle(ActivityStyle.ink)
-                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
-                    .truncationMode(.tail)
-                    .frame(minHeight: 24)
+                HStack(alignment: .top, spacing: 16) {
+                    Text(verbatim: scan.domain)
+                        .activityFont(17, tracking: -0.17)
+                        .foregroundStyle(ActivityStyle.ink)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
+                        .truncationMode(.tail)
+                        .frame(minHeight: 24)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if badge { statusBadge }
+                }
                 subline
                     .frame(minHeight: 20)
             }
