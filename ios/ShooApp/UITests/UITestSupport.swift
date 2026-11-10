@@ -12,14 +12,16 @@ enum UITestTimeout {
 
 extension XCUIApplication {
     /// Launches the app on `MockRepository` (`-UITestMock YES`) with the endless shield animations and
-    /// UIKit transitions off (`-UITestReduceMotion YES`, K2), from clean settings (`-UITestReset YES`).
+    /// UIKit transitions off (`-UITestReduceMotion YES`, K2), from clean settings (`-UITestReset YES`),
+    /// straight onto its first screen (`-UITestSkipSplash YES`, ON-01) unless `splash` is true.
     /// `reset: false` only for a relaunch inside the same test that checks what was saved.
     /// Not for screenshots or the accessibility audit: those need the real look.
     @MainActor
-    static func mock(_ arguments: [String] = [], reset: Bool = true) -> XCUIApplication {
+    static func mock(_ arguments: [String] = [], reset: Bool = true, splash: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-UITestMock", "YES", "-UITestReduceMotion", "YES"]
         if reset { app.launchArguments += ["-UITestReset", "YES"] }
+        if !splash { app.launchArguments += ["-UITestSkipSplash", "YES"] }
         app.launchArguments += arguments
         app.launch()
         return app

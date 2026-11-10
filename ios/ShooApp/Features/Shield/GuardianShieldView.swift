@@ -17,8 +17,8 @@ struct GuardianShieldView: View {
                 extensionStatus: env.extensionStatus
             )
         }
-        .task(id: scenePhase) {
-            guard scenePhase == .active else { return }
+        .task(id: canRemind) {
+            guard canRemind else { return }
             notificationStatus = await env.notifications.status()
             isReminderPresented = NotificationReminder.isShown(status: notificationStatus, mode: env.settings.mode)
                 && !env.router.notificationReminderShown
@@ -36,6 +36,11 @@ struct GuardianShieldView: View {
         .onChange(of: isReminderPresented) { _, isPresented in
             if isPresented { env.router.notificationReminderShown = true }
         }
+    }
+
+    /// In use, and the launch splash (ON-01) is gone: the popup never covers the brand.
+    private var canRemind: Bool {
+        scenePhase == .active && env.launchSplash == .done
     }
 
     /// Never asked yet: the system prompt. Denied: only Settings can change it.

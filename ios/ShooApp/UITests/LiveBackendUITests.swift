@@ -19,6 +19,7 @@ final class LiveBackendUITests: XCTestCase {
         app.launchArguments += [
             "-settings.dataConsent", "granted",
             "-UITestReset", "YES",
+            "-UITestSkipSplash", "YES",
             "-settings.language", language,
             "-UITestNotifications", "granted",
             "-UITestExtensionActive", "YES",

@@ -32,6 +32,11 @@ final class AppEnvironment {
     @ObservationIgnored private(set) var reducesMotionForUITests = false
     /// Builds the real backend when the demo ends. `nil` in previews and tests that don't leave a demo.
     @ObservationIgnored fileprivate var makeLiveBackend: (() -> (repository: any ShooRepository, session: SessionStore))?
+    /// ON-01: the brand splash over the first screen (`LaunchSplash`). It lives as long as the process, so a
+    /// cold launch shows it and a return from the background does not.
+    var launchSplash: LaunchSplashPhase = .showing
+    /// UI tests: how long the splash stays before it fades (`-UITestSplashSeconds`, Debug only).
+    @ObservationIgnored private(set) var launchSplashHold: Double?
 
     init(
         repository: any ShooRepository,
@@ -160,6 +165,10 @@ final class AppEnvironment {
             environment.router.openProfile()
             environment.router.show(.profilePage(page))
         }
+        // ON-01: UI tests that don't test the launch splash start on their screen (`-UITestSkipSplash YES`);
+        // the splash test holds it long enough to see (`-UITestSplashSeconds 5`).
+        if Self.value(after: "-UITestSkipSplash", in: arguments) == "YES" { environment.launchSplash = .done }
+        environment.launchSplashHold = Self.value(after: "-UITestSplashSeconds", in: arguments).flatMap(Double.init)
         if Self.value(after: "-UITestReduceMotion", in: arguments) == "YES" {
             environment.reducesMotionForUITests = true
             // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.
@@ -460,7 +469,9 @@ final class AppEnvironment {
         settings.language = language
         settings.onboardingCompleted = true
         settings.dataConsent = .granted
-        return AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+        let environment = AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+        environment.launchSplash = .done
+        return environment
     }
 
     private static func value(after flag: String, in arguments: [String]) -> String? {
