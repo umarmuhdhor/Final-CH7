@@ -151,6 +151,15 @@ final class AppEnvironment {
             environment.router.selectedTab = tab
         }
         if Self.value(after: "-debug.profile", in: arguments) == "YES" { environment.router.openProfile() }
+        // Figma parity screenshots of a Profile page: `-debug.profilePage editProfile|notifications|…`.
+        let pages: [String: ProfilePage] = [
+            "mode": .mode, "editProfile": .editProfile, "connection": .connection, "notifications": .notifications,
+            "language": .language, "theme": .theme, "accessibility": .accessibility, "about": .about,
+        ]
+        if let page = Self.value(after: "-debug.profilePage", in: arguments).flatMap({ pages[$0] }) {
+            environment.router.openProfile()
+            environment.router.show(.profilePage(page))
+        }
         if Self.value(after: "-UITestReduceMotion", in: arguments) == "YES" {
             environment.reducesMotionForUITests = true
             // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.

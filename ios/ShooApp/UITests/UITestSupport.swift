@@ -67,17 +67,19 @@ extension XCUIElement {
             XCTFail("\(self) never appeared", file: file, line: line)
             return
         }
-        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
-        if XCTWaiter().wait(for: [hittable], timeout: hittableWait) == .completed {
-            tap()
-            return
-        }
+        // The frame first: asking `isHittable` of a button with no frame yet records "Failed to determine
+        // hittability … Activation point invalid" as a test failure (CI on #362 and #363, `profileButton`).
         let laidOut = XCTNSPredicateExpectation(predicate: NSPredicate { element, _ in
             guard let element = element as? XCUIElement, element.exists else { return false }
             return element.frame.width > 0 && element.frame.height > 0
         }, object: self)
         guard XCTWaiter().wait(for: [laidOut], timeout: timeout) == .completed else {
             XCTFail("\(self) never got a frame to tap", file: file, line: line)
+            return
+        }
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: self)
+        if XCTWaiter().wait(for: [hittable], timeout: hittableWait) == .completed {
+            tap()
             return
         }
         XCTContext.runActivity(named: "\(identifier) not reported hittable, tapping its frame") { _ in }

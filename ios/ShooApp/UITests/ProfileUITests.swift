@@ -127,7 +127,9 @@ final class ProfileUITests: XCTestCase {
         reveal(manage, in: app)
         manage.tap()
         XCTAssertTrue(app.buttons["profile.changePhoto"].waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.descendants(matching: .any)["profile.username"].label.contains("@adhella"), app.debugDescription)
+        // Figma 416:12854: name and status, no username or phone number.
+        XCTAssertTrue(app.descendants(matching: .any)["profile.status"].label.contains("Personal user"), app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["profile.username"].exists)
         app.buttons["profile.displayName"].tap()
         let field = app.textFields["profile.name"]
         XCTAssertTrue(field.waitForExistence(timeout: 5), app.debugDescription)
@@ -206,6 +208,9 @@ final class ProfileUITests: XCTestCase {
         let avatar = app.buttons["avatar.avatar_02"]
         XCTAssertTrue(avatar.waitForExistence(timeout: 5), app.debugDescription)
         avatar.tap()
+        XCTAssertTrue(avatar.isSelected, avatar.debugDescription)
+        // Figma 1286:12383: picking marks the avatar, "Simpan" saves and closes the sheet.
+        app.buttons["profile.avatar.save"].tap()
         XCTAssertFalse(avatar.waitForExistence(timeout: 2), "The picker closes after a save")
     }
 
@@ -329,8 +334,8 @@ final class ProfileUITests: XCTestCase {
         app.buttons["profile.mode"].tap()
         let join = app.buttons["mode.joinFamily"]
         reveal(join, in: app)
-        join.tap()
-        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        // A tap right after the scroll could be lost (local run, 1 in 4): tapped again until the alert shows.
+        app.tap(join, until: app.alerts.firstMatch)
         XCTAssertFalse(app.textFields["connect.code"].exists)
     }
 }
