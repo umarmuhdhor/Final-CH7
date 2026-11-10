@@ -153,6 +153,28 @@ struct PushRoutingTests {
         #expect(environment(mode: mode, onboarded: onboarded).showsPushBanner == expected)
     }
 
+    /// QA 2026-11-11 #4: a push while Home is open bumps the counter Home reloads on.
+    @Test(arguments: [UserMode.guardian, .protected])
+    func pushWhileOpenAsksTheScreensToReload(mode: UserMode) {
+        let env = environment(mode: mode)
+        #expect(env.pushesWhileOpen == 0)
+        env.pushArrivedWhileOpen()
+        env.pushArrivedWhileOpen()
+        #expect(env.pushesWhileOpen == 2)
+    }
+
+    /// Onboarding or "Session expired" on screen: no Home to reload.
+    @Test func pushWhileOpenOutsideTheTabsChangesNothing() {
+        let onboarding = environment(mode: .guardian, onboarded: false)
+        onboarding.pushArrivedWhileOpen()
+        #expect(onboarding.pushesWhileOpen == 0)
+
+        let expired = environment(mode: .guardian)
+        expired.markSessionExpired()
+        expired.pushArrivedWhileOpen()
+        #expect(expired.pushesWhileOpen == 0)
+    }
+
     @Test func pushWithoutScanOpensShield() {
         let env = environment(mode: .guardian)
         env.router.selectedTab = .activity

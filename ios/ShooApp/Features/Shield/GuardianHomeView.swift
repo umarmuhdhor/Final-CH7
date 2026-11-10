@@ -83,6 +83,10 @@ struct GuardianHomeView: View {
             guard scenePhase == .active else { return }
             await model.refresh()
         }
+        // A push while Home is open (new scan, verdict, member change): reload, not just the banner.
+        .onChange(of: env.pushesWhileOpen) {
+            Task { await model.refresh() }
+        }
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded, !isFamily else { return }
             AccessibilityNotification.Announcement(

@@ -418,6 +418,17 @@ final class AppEnvironment {
     @MainActor
     var showsPushBanner: Bool { isInMainScreen }
 
+    /// Bumped by every push that arrives while the tabs are showing. Guardian Home reloads on it, so the
+    /// banner and the page under it tell the same story without a pull-to-refresh (QA 2026-11-11 #4).
+    private(set) var pushesWhileOpen = 0
+
+    /// A push arrived while Shoo is open (`willPresent`).
+    @MainActor
+    func pushArrivedWhileOpen() {
+        guard isInMainScreen else { return }
+        pushesWhileOpen += 1
+    }
+
     /// ON-05: both modes send their token. The Guardian gets scan pushes; the Protected device gets
     /// family pushes ("Ingatkan", disconnect, PF-01 proposed in backend/API.md).
     @MainActor
