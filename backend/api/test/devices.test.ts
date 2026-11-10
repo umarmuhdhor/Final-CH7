@@ -112,32 +112,33 @@ describe("POST /devices", () => {
   it("rate limit holds under parallel requests", async () => {
     const ip = "203.0.113.9";
     const results = await Promise.all(
-      Array.from({ length: 14 }, (_, i) =>
+      Array.from({ length: 34 }, (_, i) =>
         call("/devices", { method: "POST", ip, json: { name: `P${i}`, mode: "protected" } }).then((r) => r.status),
       ),
     );
-    expect(results.filter((s) => s === 201)).toHaveLength(10);
+    expect(results.filter((s) => s === 201)).toHaveLength(30);
     expect(results.filter((s) => s === 429)).toHaveLength(4);
   });
 
   it("IPv6 addresses in one /64 share a bucket", async () => {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
       const ip = `2001:db8:1:2::${(i + 1).toString(16)}`;
       expect((await call("/devices", { method: "POST", ip, json: { name: `V${i}`, mode: "protected" } })).status).toBe(201);
     }
-    const res = await call("/devices", { method: "POST", ip: "2001:db8:1:2:ffff::1", json: { name: "V10", mode: "protected" } });
+    const res = await call("/devices", { method: "POST", ip: "2001:db8:1:2:ffff::1", json: { name: "V30", mode: "protected" } });
     expect(res.status).toBe(429);
     const other = await call("/devices", { method: "POST", ip: "2001:db8:1:3::1", json: { name: "W", mode: "protected" } });
     expect(other.status).toBe(201);
   });
 
-  it("rate limits 10 per hour per IP with Retry-After", async () => {
+  // Edge-case QA 2026-11-11 #2: 10/h locked people behind one CGNAT IP out of onboarding.
+  it("rate limits 30 per hour per IP with Retry-After", async () => {
     const ip = "203.0.113.7";
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 30; i++) {
       const ok = await call("/devices", { method: "POST", ip, json: { name: `D${i}`, mode: "protected" } });
       expect(ok.status).toBe(201);
     }
-    const res = await call("/devices", { method: "POST", ip, json: { name: "D10", mode: "protected" } });
+    const res = await call("/devices", { method: "POST", ip, json: { name: "D30", mode: "protected" } });
     expect(res.status).toBe(429);
     expect(await errorCode(res)).toBe("rate_limited");
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
@@ -147,7 +148,7 @@ describe("POST /devices", () => {
     // Only keyHash('<bucket>:<ip>') (HMAC) is stored, never the raw IP.
     const hash = await keyHash("devices_create:203.0.113.7");
     const [row] = await sql<{ n: number }[]>`select count(*)::int as n from rate_limit_hits where key_hash = ${hash}`;
-    expect(row!.n).toBe(10);
+    expect(row!.n).toBe(30);
   });
 });
 
@@ -223,5 +224,48 @@ describe("PATCH /devices/me", () => {
 
     const small = new Date(Date.now() + 60_000).toISOString(); // within 5 min clock skew
     expect((await patch(me.token, { extensionLastSeenAt: small })).status).toBe(200);
+  });
+});
+
+// Edge-case QA 2026-11-11 #2: becoming protected replaces a device, so it is limited per device and
+// never spends the per-IP sign-up bucket of POST /devices (CGNAT).
+describe("POST /devices/me/protected rate limit", () => {
+  const codeOf = async (token: string) =>
+    ((await (await call("/family/code", { method: "POST", token })).json()) as { code: string }).code;
+
+  it("does not spend or need the POST /devices per-IP bucket", async () => {
+    const ip = "203.0.113.20";
+    const other = await createDevice("Budi", "guardian");
+    for (let i = 0; i < 29; i++) {
+      expect((await call("/devices", { method: "POST", ip, json: { name: `N${i}`, mode: "protected" } })).status).toBe(201);
+    }
+    const me = await call("/devices", { method: "POST", ip, json: { name: "Sari", mode: "guardian" } });
+    expect(me.status).toBe(201);
+    const { token } = (await me.json()) as { token: string };
+    // The IP bucket is full now; the 10/h limit used to answer 429 here.
+    const res = await call("/devices/me/protected", { method: "POST", ip, token, json: { code: await codeOf(other.token) } });
+    expect(res.status).toBe(200);
+    const ipHash = await keyHash(`devices_create:${ip}`);
+    const [row] = await sql<{ n: number }[]>`select count(*)::int as n from rate_limit_hits where key_hash = ${ipHash}`;
+    expect(row!.n).toBe(30);
+  });
+
+  it("caps copies per device with too_many_attempts and Retry-After, keyed by device id", async () => {
+    const me = await createDevice("Sari", "guardian");
+    const other = await createDevice("Budi", "guardian");
+    const deviceHash = await keyHash(`devices_protected:${me.deviceId}`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select 'devices_protected', ${deviceHash} from generate_series(1, 30)`;
+    const before = (await sql<{ n: number }[]>`select count(*)::int as n from devices`)[0]!.n;
+
+    const res = await call("/devices/me/protected", { method: "POST", token: me.token, json: { code: await codeOf(other.token) } });
+    expect(res.status).toBe(429);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("too_many_attempts");
+    expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect((await sql<{ n: number }[]>`select count(*)::int as n from devices`)[0]!.n).toBe(before);
+
+    // Another guardian's bucket is separate.
+    const third = await createDevice("Dewi", "guardian");
+    const ok = await call("/devices/me/protected", { method: "POST", token: third.token, json: { code: await codeOf(other.token) } });
+    expect(ok.status).toBe(200);
   });
 });

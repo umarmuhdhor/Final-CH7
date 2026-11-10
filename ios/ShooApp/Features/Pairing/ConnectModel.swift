@@ -19,6 +19,9 @@ final class ConnectModel {
         case expired
         case full
         case tooManyAttempts
+        /// `rate_limited` from `POST /devices` (a join in onboarding registers first): too many new
+        /// devices from this IP, often a carrier's shared IP. No join was tried, and the wait can be an hour.
+        case signUpLimit
         case alreadyConnected
         /// "Punya kode undangan?" while still protecting someone (PF-01).
         case hasMembers
@@ -30,7 +33,8 @@ final class ConnectModel {
             case .codeInvalid?: self = .invalid
             case .codeExpired?: self = .expired
             case .familyFull?: self = .full
-            case .tooManyAttempts?, .rateLimited?: self = .tooManyAttempts
+            case .tooManyAttempts?: self = .tooManyAttempts
+            case .rateLimited?: self = .signUpLimit
             case .alreadyConnected?: self = .alreadyConnected
             case .hasMembers?: self = .hasMembers
             case nil where (error as? RepositoryError) == .network: self = .offline
@@ -44,6 +48,7 @@ final class ConnectModel {
             case .expired: "That code has expired. Ask your guardian for the new code."
             case .full: "This family already has 3 people. Ask your guardian to remove someone first."
             case .tooManyAttempts: "Too many tries. Wait a few minutes, then try again."
+            case .signUpLimit: "Too many new sign-ups from this network. Wait up to an hour, then try again."
             case .alreadyConnected: "You're already connected to a guardian. Only they can disconnect you: ask them first."
             case .hasMembers: "You still protect someone. Disconnect them in Profile first."
             case .offline: "No connection. Check your internet and try again."
