@@ -239,11 +239,14 @@ struct ProfileModelTests {
         for key in LinkedAccountSettings.Key.all { #expect(defaults.object(forKey: key) == nil) }
     }
 
-    /// People, days since the earliest member still connected, the members' blocked total (Mom 3 + Dad 1).
+    /// Days since the earliest member still connected, the members' blocked total (Mom 3 + Dad 1) and
+    /// warning total (Figma 1115:14611).
     @Test func guardianStatsSumTheMembers() async {
         let model = redesignModel(mode: .guardian, familyMode: true)
         await model.load()
-        #expect(model.stats(language: .english).map(\.value) == ["2", "3", "4"])
+        let stats = model.stats(language: .english)
+        #expect(stats.count == 3)
+        #expect(stats.dropFirst().map(\.value) == ["4", "5"])
     }
 
     @Test func guardianWithoutMemberListShowsNoStats() async {
@@ -261,15 +264,16 @@ struct ProfileModelTests {
         #expect(model.days(since: Self.start.addingTimeInterval(10 * 86_400)) == 1)
     }
 
-    @Test func handleIsTheNameInLowerCaseWithTheMode() async {
+    @Test func handleIsTheMode() async {
         let personal = redesignModel(mode: .guardian)
         await personal.load()
-        #expect(personal.handle(language: .english) == "@adhella · Personal")
-        #expect(personal.handle(language: .indonesian) == "@adhella · Pribadi")
+        #expect(personal.handle(language: .english) == "Personal mode")
+        #expect(personal.handle(language: .indonesian) == "Mode Pribadi")
 
         let guardian = redesignModel(mode: .guardian, familyMode: true)
         await guardian.load()
-        #expect(guardian.handle(language: .english) == "@adhella · Guardian")
+        #expect(guardian.handle(language: .english) == "Guardian mode")
+        #expect(guardian.handle(language: .indonesian) == "Mode Guardian")
 
         let protected = redesignModel(mode: .protected)
         await protected.load()
@@ -287,7 +291,8 @@ struct ProfileModelTests {
 
         let empty = redesignModel(mode: .guardian, repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero))
         await empty.load()
-        #expect(empty.deleteMessage(language: .english).hasSuffix("This can't be undone."))
+        #expect(empty.deleteMessage(language: .english).hasSuffix("can't be recovered."))
+        #expect(empty.deleteMessage(language: .indonesian).hasPrefix("Semua data yang ada di aplikasi ini"))
     }
 
     final class StubNotifications: NotificationPermission, @unchecked Sendable {

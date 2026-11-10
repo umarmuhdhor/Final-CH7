@@ -13,13 +13,16 @@ struct ConnectedPillButtonStyle: ButtonStyle {
             .init(color: Color(hex: 0xFD8F7F), location: 0.68),
             .init(color: Color(hex: 0xFF6F5B), location: 0.99),
         ],
-        startPoint: .leading, endPoint: .trailing
+        // Figma's transform stretches the gradient to 2.67 × the pill (x scale 0.374): only its
+        // orange-to-salmon start shows.
+        startPoint: .leading, endPoint: UnitPoint(x: 1 / 0.37387, y: 0.5)
     )
 
-    /// Figma 131 × 35: 5 / 15 inside a 3.5 pt white ring that counts in the layout.
+    /// Figma 455:10289, 138.6 × 41: 5 / 15 inside a 3.5 pt white ring that counts in the layout,
+    /// "Terhubung" in SF Pro Rounded 17 on a 140 % line.
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .profileFont(15, .medium, tracking: -0.15)
+            .profileValue()
             .foregroundStyle(.white)
             .padding(.horizontal, 18.5)
             .padding(.vertical, 8.5)
@@ -30,9 +33,14 @@ struct ConnectedPillButtonStyle: ButtonStyle {
             .contentShape(Rectangle())
     }
 
-    /// Figma's glyph is a phone beside a stack; `iphone.motion` is the closest SF Symbol on iOS 17.
-    static var symbol: String {
-        UIImage(systemName: "iphone.motion") != nil ? "iphone.motion" : "iphone"
+    /// Figma's glyph (455:10401), exported from the design: a phone beside a stack.
+    static var glyph: some View {
+        Image("ProfileConnectedGlyph")
+            .renderingMode(.template)
+            .resizable()
+            .frame(width: 44 / 3, height: 47 / 3)
+            .frame(width: 19, height: 18)
+            .accessibilityHidden(true)
     }
 }
 
@@ -105,8 +113,11 @@ struct ModeOfferCard: View {
         startPoint: .leading, endPoint: .trailing
     )
     private static let eyebrowInk = Color.dynamic(0x0D8F93, dark: 0x4FD1D1, contrastLight: 0x08686B, contrastDark: 0x7FE3E3)
-    /// Figma style "Gradient/Dark Button".
-    private static let button = LinearGradient(colors: [Color(hex: 0x214889), Color(hex: 0x446EB4)], startPoint: .leading, endPoint: .trailing)
+    /// Figma "Tombol / Jadi Guardian" (1115:14386): #446EB4 at the top to #214889 three quarters down.
+    static let button = LinearGradient(
+        colors: [Color(hex: 0x446EB4), Color(hex: 0x214889)],
+        startPoint: UnitPoint(x: 0.5, y: -0.05), endPoint: UnitPoint(x: 0.5, y: 0.75)
+    )
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -117,12 +128,15 @@ struct ModeOfferCard: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 .accessibilityHidden(true)
 
+            // Figma 1115:14373: eyebrow, title 7 under it, body 5 under the title, the button 16 under the body.
             VStack(alignment: .leading, spacing: 0) {
                 Text(eyebrow)
-                    .profileFont(11, .semibold, tracking: 0.66)
+                    .profileFont(11, .semibold, rounded: true, tracking: 0.06)
+                    .figmaLineHeight(13, relativeTo: .caption2)
                     .foregroundStyle(Self.eyebrowInk)
                 Text(title)
-                    .profileFont(20, .semibold, tracking: -0.2)
+                    .profileFont(20, .semibold, tracking: -0.45)
+                    .figmaLineHeight(25, relativeTo: .title3)
                     .foregroundStyle(ProfileStyle.nameInk)
                     // One line in Figma; may reach under the shield's glow rather than wrap early.
                     .frame(width: 230, alignment: .leading)
@@ -130,16 +144,17 @@ struct ModeOfferCard: View {
                     .accessibilityAddTraits(.isHeader)
                     .padding(.top, 7)
                 Text(message)
-                    .profileFont(16)
+                    .profileFont(16, rounded: true, tracking: -0.31)
+                    .figmaLineHeight(21, relativeTo: .callout)
                     .foregroundStyle(ProfileStyle.secondary)
-                    .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 206, alignment: .leading)
                     .padding(.top, 5)
-                Spacer(minLength: 10)
+                Spacer(minLength: 13)
                 Button(action: onAction) {
                     Text(action)
                         .profileFont(17, .semibold)
+                        .figmaLineHeight(22, relativeTo: .body)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 18)
                         .frame(minHeight: 38)
@@ -193,7 +208,11 @@ struct FamilyEmptyCard: View {
     private static let slotPerson = Color.dynamic(0xCDD5DF, dark: 0x5B6470)
     private static let teal = Color.dynamic(0x0FB3B5, dark: 0x3FD3D4)
     private static let tealFill = Color.dynamic(0xE6F9F8, dark: 0x123332)
-    private static let button = LinearGradient(colors: [Color(hex: 0x136CB7), Color(hex: 0x68CDFA)], startPoint: .leading, endPoint: .trailing)
+    /// Figma "Button" (1115:14537): #68CDFA at the top to #136CB7 three quarters down.
+    private static let button = LinearGradient(
+        colors: [Color(hex: 0x68CDFA), Color(hex: 0x136CB7)],
+        startPoint: UnitPoint(x: 0.5, y: -0.05), endPoint: UnitPoint(x: 0.5, y: 0.75)
+    )
 
     var body: some View {
         VStack(spacing: 0) {
@@ -216,27 +235,28 @@ struct FamilyEmptyCard: View {
             // Figma "Slot Kosong" is 64 pt tall with the circles centred.
             .frame(height: 64)
             .accessibilityHidden(true)
+            // Figma 1115:14533: SF Pro Display Semibold 17, then SF Pro Rounded 17 at 140 %.
             Text("No one protected yet")
-                .profileFont(18, .semibold, tracking: -0.18)
+                .profileFont(17, .semibold)
+                .figmaLineHeight(22, relativeTo: .body)
                 .foregroundStyle(ProfileStyle.nameInk)
                 .multilineTextAlignment(.center)
                 .padding(.top, 14)
             Text("Send an invite to your family. Once they join, their status shows up here.")
-                .profileFont(14)
+                .profileValue()
                 .foregroundStyle(ProfileStyle.secondary)
                 .multilineTextAlignment(.center)
-                .lineSpacing(3)
-                // Figma's 140 % line height also pads above the first and below the last line.
-                .padding(.vertical, 1.5)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 280)
                 .padding(.top, 6)
             Button(action: onInvite) {
                 Text("Invite family")
-                    .profileFont(15, .semibold, tracking: -0.19)
+                    .profileFont(17, .semibold)
+                    .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.2), radius: 2, y: 4)
                     .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                     .frame(minHeight: 46)
                     .background(Self.button, in: Capsule())
                     .overlay(Capsule().stroke(Color(hex: 0x0098D7), lineWidth: 1.5))
@@ -258,10 +278,20 @@ struct FamilyEmptyCard: View {
         ZStack {
             Circle().fill(ProfileStyle.background)
             Circle().strokeBorder(Self.slotStroke, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
-            Image(systemName: "person.fill")
-                .font(.system(size: 17))
-                .foregroundStyle(Self.slotPerson)
+            SlotPerson().fill(Self.slotPerson).frame(width: 20, height: 20)
         }
         .frame(width: 48, height: 48)
+    }
+}
+
+/// Figma "Ikon Orang" (1115:14523), 20 pt: an 8.4 pt head over a 15.2 × 8.8 body (radius 7.6 on top, 1.6 below).
+private struct SlotPerson: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = rect.width / 20
+        var path = Path(ellipseIn: CGRect(x: 5.8 * s, y: 0.8 * s, width: 8.4 * s, height: 8.4 * s))
+        path.addPath(UnevenRoundedRectangle(
+            topLeadingRadius: 7.6 * s, bottomLeadingRadius: 1.6 * s, bottomTrailingRadius: 1.6 * s, topTrailingRadius: 7.6 * s
+        ).path(in: CGRect(x: 2.4 * s, y: 11.2 * s, width: 15.2 * s, height: 8.8 * s)))
+        return path
     }
 }

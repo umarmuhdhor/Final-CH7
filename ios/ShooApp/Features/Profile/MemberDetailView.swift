@@ -14,7 +14,7 @@ struct MemberDetailView: View {
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     var body: some View {
-        ProfileScreen(title: "Protected person") {
+        ProfileScreen(title: "Protected person", titleSize: 17) {
             switch model.state {
             case .loading:
                 ShieldPulseLoader()

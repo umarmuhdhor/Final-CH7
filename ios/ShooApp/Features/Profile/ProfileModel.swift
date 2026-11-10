@@ -38,7 +38,8 @@ final class ProfileModel {
     private(set) var languageTask: Task<Void, Never>?
     /// "Hapus akun" sheet: who loses what.
     func deleteMessage(language: AppLanguage) -> String {
-        var text = L10n.string("Your name, family link and history are deleted right away. This can't be undone.", language: language)
+        // Figma 1115:14271 "Hapus akun?".
+        var text = L10n.string("Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered.", language: language)
         switch variant {
         case .guardian, .personal:
             if !members.isEmpty {
@@ -104,7 +105,8 @@ final class ProfileModel {
     }
 
     /// Pribadi and Protected: days protected, blocked, sites checked ("—" until the extension counts them).
-    /// Guardian: members, days since the earliest member still connected, the members' blocked total.
+    /// Guardian (Figma 1115:14611): days since the earliest member still connected, the members' blocked
+    /// and warning totals.
     /// Empty when the server sends no stats, or a guardian protects nobody yet (the strip is hidden).
     func stats(language: AppLanguage) -> [ProfileStat] {
         let number = { (n: Int) in n.formatted(.number.locale(language.locale)) }
@@ -120,9 +122,9 @@ final class ProfileModel {
             guard !membersFailed, !members.isEmpty, members.allSatisfy({ $0.stats != nil }) else { return [] }
             let since = members.compactMap(\.connectedAt).min()
             return [
-                ProfileStat(value: number(members.count), label: "People protected"),
-                ProfileStat(value: since.map { number(days(since: $0)) } ?? number(0), label: "Days as guardian"),
+                ProfileStat(value: since.map { number(days(since: $0)) } ?? number(0), label: "Days protecting"),
                 ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.blocked ?? 0) }), label: "Sites blocked"),
+                ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.warnings ?? 0) }), label: "Warnings"),
             ]
         }
     }
@@ -132,12 +134,21 @@ final class ProfileModel {
         "@" + (profile?.name ?? "").lowercased().filter { !$0.isWhitespace }
     }
 
-    /// "@adhella · Pribadi" (Figma "Handle"): the username, then the mode. Protected has none (Figma).
+    /// "Mode Pribadi" / "Mode Guardian" (Figma 1115:14409 "Handle"). Protected has none (Figma).
     func handle(language: AppLanguage) -> String {
         switch variant {
         case .protected: return ""
-        case .personal: return username + " · " + L10n.string("Personal", language: language)
-        case .guardian: return username + " · " + L10n.string("Guardian", language: language)
+        case .personal: return L10n.string("Personal mode", language: language)
+        case .guardian: return L10n.string("Guardian mode", language: language)
+        }
+    }
+
+    /// Kelola profil "Status" (Figma 1278:12092 "Pengguna pengawas").
+    var statusTitle: String.LocalizationValue {
+        switch variant {
+        case .guardian: "Guardian user"
+        case .personal: "Personal user"
+        case .protected: "Protected user"
         }
     }
 
