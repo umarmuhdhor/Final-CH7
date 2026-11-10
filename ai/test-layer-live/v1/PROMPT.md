@@ -5,7 +5,7 @@ Kerjakan tes live L2-L4 versi 1 di simulator iPhone, repo Shoo, folder `ai/test-
 2. `ai/test-layer-live/README.md` dan `ai/test-layer-live/v1/PLAN.md`: ini spesifikasinya. Keputusan K1-K9 sudah final, jangan ditanya ulang
 3. `ai/src/dev-server.mjs`, `ai/src/app.js`, `ai/src/analyze.js`, `ai/src/layer4/reality.js`
 4. `ios/ShooExtension/Resources/pipeline.js` dan `ios/ShooExtension/SafariWebExtensionHandler.swift`
-5. Contoh pola: `plan/alief/qa/live-visit.sh`, `plan/alief/qa/corpus-dns.mjs`, `ai/test-layer-update-full/run.mjs`, dan tabel "Scam links" di `plan/alief/qa/figma-parity-2026-10-31.md`
+5. Contoh pola: `plan/alief/qa/live-visit.sh`, `plan/alief/qa/corpus-dns.mjs`, `ai/test-layer-update-full/v1-2026-11-02/run.mjs`, dan tabel "Scam links" di `plan/alief/qa/figma-parity-2026-10-31.md`
 
 ## Yang harus dikerjakan
 1. Pastikan branch `feat/AI-M4-thinking-off-asks-otp-boxes` dan commit `2c51aee` ada di riwayat
