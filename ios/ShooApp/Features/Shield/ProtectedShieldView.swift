@@ -9,7 +9,10 @@ struct ProtectedShieldView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ShieldModel
+    /// Bumped when Shoo turns on while the page is up (back from Settings): one success tap.
+    @State private var turnedOn = 0
     /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
     @State private var isHeroHidden = false
 
@@ -28,6 +31,12 @@ struct ProtectedShieldView: View {
         ScrollView {
             VStack(spacing: 0) {
                 hero
+                    // Off ↔ on (back from Settings): the headline cross-fades and the shield eases over, not a jump.
+                    // Not on the first load: the status is read before the page counts as loaded.
+                    .animation(
+                        isLoaded ? (reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.35)) : nil,
+                        value: model.extensionStatus.isActive
+                    )
                     .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
                 // Figma "Status": the page itself rounds up over the hero; one 354 pt column, 24 from the edges.
                 VStack(spacing: 0) {
@@ -65,6 +74,7 @@ struct ProtectedShieldView: View {
         // Coming back from Settings can flip Off → Active: say it (not on the first load).
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded else { return }
+            if isActive { turnedOn += 1 }
             AccessibilityNotification.Announcement(
                 L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
             ).post()
@@ -88,6 +98,8 @@ struct ProtectedShieldView: View {
         ) {
             TurnOnExtensionSheet()
         }
+        // Only off → on, never the other way round.
+        .sensoryFeedback(.success, trigger: turnedOn)
     }
 
     // MARK: Hero
@@ -245,6 +257,7 @@ private struct ProtectedSiteCard: View {
     let guardian: GuardianInfo?
     let language: AppLanguage
     let onOpen: () -> Void
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private static let space = "protectedSiteCard"
 
@@ -273,6 +286,8 @@ private struct ProtectedSiteCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The guardian's answer arrives while the card is up: badge, line and colour ease over instead of jumping.
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3), value: decision)
         .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Opens the details"))
         .accessibilityIdentifier("shield.lastBlocked")
@@ -345,6 +360,8 @@ private struct ProtectedSiteCard: View {
                     let size: CGFloat = decision == .notSafe ? 11.55 : 11
                     Image(systemName: decision == .notSafe ? "exclamationmark" : "checkmark")
                         .font(.system(size: decision == .notSafe ? 5.43 : 5.17, weight: .heavy, design: .rounded))
+                        // Safe ↔ dangerous: the mark morphs (a cross-fade with Reduce Motion).
+                        .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
                         .foregroundStyle(.white)
                         .frame(width: size, height: size)
                         .background(Color(hex: decision == .notSafe ? 0xE5483B : 0x2E90FA), in: Circle())
