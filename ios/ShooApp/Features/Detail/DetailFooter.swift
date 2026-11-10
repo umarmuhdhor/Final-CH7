@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Figma "Footer" of Detail (416:9255 / 416:9362 / 480:5768): the guardian's question with Aman / Bahaya
 /// (GD-07, warning and blocked alike), or the card saying who verified it. "Ubah" on a safe verdict
@@ -17,11 +18,18 @@ struct DetailFooter: View {
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var isChanging = false
-    /// Home indicator area under the footer; Figma's 34 pt bottom padding includes it.
-    @State private var bottomInset: CGFloat = 0
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
+
+    /// The window's home indicator inset (34 on Face ID iPhones, 0 with a Home button). Read from the window,
+    /// never from this footer's own geometry: that safe area moves while the tab bar hides, and feeding it
+    /// back into the padding re-ran the layout inside `UITabBarController` forever (QA 2026-11-10 #1,
+    /// 100 % CPU after a push tap).
+    private static var homeIndicatorInset: CGFloat {
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        return (windows.first(where: \.isKeyWindow) ?? windows.first)?.safeAreaInsets.bottom ?? 0
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -64,7 +72,7 @@ struct DetailFooter: View {
         .padding(.horizontal, 24)
         .padding(.top, 28)
         // Figma: 34 pt from the screen's bottom edge, i.e. right on the home indicator area.
-        .padding(.bottom, max(0, 34 - bottomInset))
+        .padding(.bottom, max(0, 34 - Self.homeIndicatorInset))
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
@@ -77,7 +85,6 @@ struct DetailFooter: View {
             )
             .ignoresSafeArea(edges: .bottom)
         )
-        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
         // A saved choice from the server closes "Ubah".
         .onChange(of: verdict) { _, _ in isChanging = false }
     }
