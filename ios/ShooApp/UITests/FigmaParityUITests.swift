@@ -25,7 +25,7 @@ final class FigmaParityUITests: XCTestCase {
         settle()
         shot("on-splash-2")
 
-        for step in ["name", "mode", "connect", "invite", "turnOnExtension", "safariDefault", "extensionOn"] {
+        for step in ["name", "connect", "turnOnExtension", "safariDefault", "extensionOn"] {
             // "Aktifkan Ekstensi" only shows while the extension is still off.
             app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step], onboarded: false, extensionActive: step != "turnOnExtension")
             shot("on-\(step)")
@@ -43,11 +43,6 @@ final class FigmaParityUITests: XCTestCase {
                     dismissKeyboard(app)
                     settle()
                     shot("on-name-tooLong")
-                }
-            case "mode":
-                for mode in ["guardian", "protected"] where app.buttons["mode.\(mode)"].exists {
-                    app.buttons["mode.\(mode)"].tap()
-                    shot("on-mode-\(mode)")
                 }
             case "connect":
                 // Figma 141:5887 "Connect with Guardian · Kode" (keyboard down) and 140:5762 "· Pindai QR".
@@ -90,12 +85,13 @@ final class FigmaParityUITests: XCTestCase {
                     settle()
                     shot("on-connected")
                 }
-            case "invite":
-                // Figma 110:4817 "Kirim Undangan (sheet)".
-                if tapIfExists(app.buttons["invite.open"]) {
-                    _ = app.buttons["invite.close"].waitForExistence(timeout: 5)
+            case "turnOnExtension":
+                // Figma 1328:13415 (box ticked) and 1328:13313 "Data yang dikirim".
+                if tapIfExists(app.buttons["extension.consent"]) { shot("on-turnOnExtension-agreed") }
+                if tapIfExists(app.buttons["extension.dataSent"]) {
+                    _ = app.buttons["dataSent.done"].waitForExistence(timeout: 5)
                     settle()
-                    shot("on-invite-sheet")
+                    shot("on-dataSent-sheet")
                 }
             default: break
             }
@@ -126,6 +122,36 @@ final class FigmaParityUITests: XCTestCase {
         // Every family site decided: no card, the people row shows (435:20373).
         launch(guardian(family: true, scenario: "allSafe") + ["-debug.tab", "shield"])
         shot("home-guardian-members")
+    }
+
+    /// Home parity (Pribadi 435:20058 / 1382:10567, protected/Home 1115:17162 … 1373:12752): one launch per frame,
+    /// the top of the page, then two fixed drags (held, so no momentum) for what is under it.
+    @MainActor
+    func testHomeStates() {
+        guard scenario == "figma" else { return }
+        let states: [(String, [String])] = [
+            ("pribadi", guardian(family: false, scenario: "homePribadi")),
+            ("pribadi-cta", guardian(family: false, scenario: "homePribadiAlone")),
+            ("prot-quiet", protected(scenario: "protectedQuiet")),
+            ("prot-blocked", protected(scenario: "protectedBlocked")),
+            ("prot-blocked-scam", protected(scenario: "protectedBlockedScam")),
+            ("prot-warning-scam", protected(scenario: "protectedWarningScam")),
+            ("prot-warning", protected(scenario: "protectedWarning")),
+            ("prot-alone", protected(scenario: "protectedAlone")),
+            ("prot-warning-safe", protected(scenario: "protectedWarningSafe")),
+            ("prot-blocked-safe", protected(scenario: "protectedBlockedSafe")),
+        ]
+        for (name, arguments) in states {
+            let app = launch(arguments + ["-debug.tab", "shield", "-UITestReduceMotion", "YES"])
+            shot("hs-\(name)-0")
+            for page in 1...2 {
+                let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+                let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+                start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.6)
+                Thread.sleep(forTimeInterval: 1)
+                shot("hs-\(name)-\(page)")
+            }
+        }
     }
 
     // MARK: Activity

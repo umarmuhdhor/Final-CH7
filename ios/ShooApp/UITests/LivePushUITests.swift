@@ -72,26 +72,14 @@ final class LivePushUITests: XCTestCase {
     @MainActor
     private func onboardAsGuardian(_ app: XCUIApplication) {
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        app.buttons["splash.skip"].tap()
-        if app.buttons["consent.allow"].waitForExistence(timeout: 5) { app.buttons["consent.allow"].tap() }
-        let field = app.textFields["name.field"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        field.tap()
-        field.typeText("Rina")
-        app.buttons["name.continue"].tap()
-        app.buttons["mode.guardian"].tap()
-        app.buttons["mode.continue"].tap()
-        // A real POST /devices: the invite step only shows after the server answered.
-        XCTAssertTrue(app.buttons["invite.skip"].waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["invite.skip"].tap()
-        XCTAssertTrue(app.buttons["safariDefault.alreadyUsing"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["safariDefault.alreadyUsing"].tap()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["extensionOn.continue"].tap()
+        // The consent is the box on Aktifkan Ekstensi now (Figma 1205:4696), ticked on screen.
+        app.onboardPersonal("Rina")
         // ON-05: the system alert.
         let systemAllow = springboard.alerts.buttons["Allow"]
         if systemAllow.waitForExistence(timeout: 5) { systemAllow.tap() }
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 10), app.debugDescription)
+        // Onboarding ends as Pribadi; Family mode on makes the Guardian (GD-02).
+        app.becomeGuardian()
     }
 
     /// Shows a family code; the host joins it with a Protected device made by curl.

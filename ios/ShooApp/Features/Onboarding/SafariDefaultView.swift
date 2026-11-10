@@ -87,9 +87,6 @@ struct SafariDefaultView: View {
                 }
                 .buttonStyle(OnboardingCapsuleButtonStyle())
                 .accessibilityIdentifier("safariDefault.open")
-                Button("I already use Safari", action: onContinue)
-                    .buttonStyle(OnboardingLinkButtonStyle())
-                    .accessibilityIdentifier("safariDefault.alreadyUsing")
             }
             OnboardingTutorialLink { isVideoPresented = true }
                 .accessibilityIdentifier("safariDefault.video")

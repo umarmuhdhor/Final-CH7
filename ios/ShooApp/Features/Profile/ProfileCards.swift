@@ -57,16 +57,62 @@ struct GuardianBadge: View {
 
 // MARK: Mode Guardian (Pribadi)
 
-/// Figma "CTA Jadi Guardian": invites a Pribadi user to protect their family. X hides it for good.
+/// Figma "CTA Jadi Guardian" (1205:6288): invites a Pribadi user to protect their family. X hides it for good.
 struct GuardianModeCard: View {
     let onBecomeGuardian: () -> Void
     let onDismiss: () -> Void
+
+    var body: some View {
+        ModeOfferCard(
+            eyebrow: "GUARDIAN MODE",
+            title: "Protect the people closest to you",
+            message: "Help check suspicious sites your family opens.",
+            action: "Become a Guardian",
+            identifier: "profile.guardianCard",
+            onAction: onBecomeGuardian,
+            onDismiss: onDismiss
+        )
+        .padding(.horizontal, ProfileStyle.margin)
+        .padding(.top, 32)
+    }
+}
+
+/// Figma "Mode Terawasi" (Home Pribadi 1253:8803, Guardian Home 1279:9544): connect to a guardian, who then
+/// double-checks risky sites. On Home Pribadi X hides it for good; the Guardian Home one has no X.
+struct BecomeSupervisedCard: View {
+    /// "Hubungkan" on Home Pribadi, "Menjadi yang Terawasi" on the empty Guardian Home.
+    var action: LocalizedStringKey = "Connect"
+    let onConnect: () -> Void
+    var onDismiss: (() -> Void)?
+
+    var body: some View {
+        ModeOfferCard(
+            eyebrow: "SUPERVISED MODE",
+            title: "Not sure?",
+            message: "Connect so someone you love can double-check for you",
+            action: action,
+            identifier: "home.becomeSupervised",
+            onAction: onConnect,
+            onDismiss: onDismiss
+        )
+    }
+}
+
+/// The card both offers share: eyebrow, title, two lines, a dark pill, the teal glass shield on the right.
+struct ModeOfferCard: View {
+    let eyebrow: LocalizedStringKey
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    let action: LocalizedStringKey
+    let identifier: String
+    let onAction: () -> Void
+    var onDismiss: (() -> Void)?
 
     private static let fill = LinearGradient(
         colors: [Color.dynamic(0xF3F8FF, dark: 0x16222E), Color.dynamic(0xE2F8F5, dark: 0x12302E)],
         startPoint: .leading, endPoint: .trailing
     )
-    private static let eyebrow = Color.dynamic(0x0D8F93, dark: 0x4FD1D1, contrastLight: 0x08686B, contrastDark: 0x7FE3E3)
+    private static let eyebrowInk = Color.dynamic(0x0D8F93, dark: 0x4FD1D1, contrastLight: 0x08686B, contrastDark: 0x7FE3E3)
     /// Figma "Tombol / Jadi Guardian" (1115:14386): #446EB4 at the top to #214889 three quarters down.
     static let button = LinearGradient(
         colors: [Color(hex: 0x446EB4), Color(hex: 0x214889)],
@@ -84,11 +130,11 @@ struct GuardianModeCard: View {
 
             // Figma 1115:14373: eyebrow, title 7 under it, body 5 under the title, the button 16 under the body.
             VStack(alignment: .leading, spacing: 0) {
-                Text("GUARDIAN MODE")
+                Text(eyebrow)
                     .profileFont(11, .semibold, rounded: true, tracking: 0.06)
                     .figmaLineHeight(13, relativeTo: .caption2)
-                    .foregroundStyle(Self.eyebrow)
-                Text("Protect the people closest to you")
+                    .foregroundStyle(Self.eyebrowInk)
+                Text(title)
                     .profileFont(20, .semibold, tracking: -0.45)
                     .figmaLineHeight(25, relativeTo: .title3)
                     .foregroundStyle(ProfileStyle.nameInk)
@@ -97,7 +143,7 @@ struct GuardianModeCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                     .padding(.top, 7)
-                Text("Help check suspicious sites your family opens.")
+                Text(message)
                     .profileFont(16, rounded: true, tracking: -0.31)
                     .figmaLineHeight(21, relativeTo: .callout)
                     .foregroundStyle(ProfileStyle.secondary)
@@ -105,8 +151,8 @@ struct GuardianModeCard: View {
                     .frame(maxWidth: 206, alignment: .leading)
                     .padding(.top, 5)
                 Spacer(minLength: 13)
-                Button(action: onBecomeGuardian) {
-                    Text("Become a Guardian")
+                Button(action: onAction) {
+                    Text(action)
                         .profileFont(17, .semibold)
                         .figmaLineHeight(22, relativeTo: .body)
                         .foregroundStyle(.white)
@@ -117,38 +163,38 @@ struct GuardianModeCard: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("profile.guardianCard.become")
+                .accessibilityIdentifier(identifier + ".action")
             }
             .padding(.leading, 20)
             .padding(.top, 22)
-            .padding(.bottom, 17)
+            .padding(.bottom, 19)
 
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(ProfileStyle.secondary)
-                    .frame(width: 28, height: 28)
-                    .background(ProfileStyle.card.opacity(0.75), in: Circle())
-                    .overlay(Circle().stroke(ProfileStyle.card))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(ProfileStyle.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(ProfileStyle.card.opacity(0.75), in: Circle())
+                        .overlay(Circle().stroke(ProfileStyle.card))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Close"))
+                .accessibilityIdentifier(identifier + ".close")
+                .frame(maxWidth: .infinity, alignment: .topTrailing)
+                .padding(.top, 4)
+                .padding(.trailing, 4)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Close"))
-            .accessibilityIdentifier("profile.guardianCard.close")
-            .frame(maxWidth: .infinity, alignment: .topTrailing)
-            .padding(.top, 4)
-            .padding(.trailing, 4)
         }
-        .frame(minHeight: 188)
+        .frame(minHeight: 205)
         .background(Self.fill)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(ProfileStyle.card.opacity(0.9)))
         .figmaCardShadow()
-        .padding(.horizontal, ProfileStyle.margin)
-        .padding(.top, 32)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("profile.guardianCard")
+        .accessibilityIdentifier(identifier)
     }
 }
 

@@ -157,9 +157,11 @@ private struct GlassCircle: ViewModifier {
 /// Blue gradient behind the title that fades into the page colour (Figma "Gradient-classic-2 lighter" + "box").
 struct OnboardingHeaderBackground: View {
     var height: CGFloat = 252
+    /// `OnboardingHeaderGradientTeal` on Figma "To be guardian".
+    var image = "OnboardingHeaderGradient"
 
     var body: some View {
-        Image("OnboardingHeaderGradient")
+        Image(image)
             .resizable()
             .scaledToFill()
             .frame(height: height, alignment: .bottom)
@@ -195,6 +197,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     private var largeHeadline = false
     private var messageLineHeight: CGFloat = 23.8
     private var messageSpacing: CGFloat?
+    private var headerImage = "OnboardingHeaderGradient"
 
     init(
         title: LocalizedStringKey,
@@ -262,7 +265,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
         }
         .background(alignment: .top) {
             // Figma "box": 252 pt, 345 where an illustration sits on it.
-            OnboardingHeaderBackground(height: Hero.self == EmptyView.self ? 252 : 345).ignoresSafeArea(edges: .top)
+            OnboardingHeaderBackground(height: Hero.self == EmptyView.self ? 252 : 345, image: headerImage).ignoresSafeArea(edges: .top)
         }
         .background(OnboardingTheme.background.ignoresSafeArea())
         // Outside the scroll view: with the keyboard up the page scrolls and Back has to stay reachable.
@@ -341,6 +344,13 @@ extension OnboardingFormPage {
         var page = self
         page.messageSpacing = spacing
         return page
+    }
+
+    /// The teal header of Figma "To be guardian" (1229:1904).
+    func tealHeader() -> Self {
+        var copy = self
+        copy.headerImage = "OnboardingHeaderGradientTeal"
+        return copy
     }
 
     /// The 34 pt headline and 22 pt message lines of "Lindungi dirimu dan orang terdekat".

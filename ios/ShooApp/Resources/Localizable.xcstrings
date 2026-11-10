@@ -1,172 +1,182 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%lld of %lld characters" : {
+    "I agree to pages being checked online." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld dari %lld karakter"
+            "value" : "Saya setuju halaman dicek secara online."
           }
         }
       }
     },
-    "Change avatar" : {
+    "See what is sent" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ubah avatar"
+            "value" : "Lihat data yang dikirim"
           }
         }
       }
     },
-    "Change name" : {
+    "What is sent" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ubah nama"
+            "value" : "Data yang dikirim"
           }
         }
       }
     },
-    "Connected with" : {
+    "When the online check is on." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Terhubung dengan"
+            "value" : "Saat cek online menyala."
           }
         }
       }
     },
-    "Days protecting" : {
+    "Page text, form field names and the address. What you type is not sent." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hari melindungi"
+            "value" : "Teks halaman, nama kolom formulir, dan alamat. Ketikanmu tidak dikirim."
           }
         }
       }
     },
-    "Delete" : {
+    "The address and a copy are kept. Some of it stays after the account is deleted." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hapus"
+            "value" : "Alamat dan salinannya disimpan. Sebagian tetap ada setelah akun dihapus."
           }
         }
       }
     },
-    "Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered." : {
+    "A summary of a suspicious page is sent to DeepSeek, an AI from China." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Semua data yang ada di aplikasi ini termasuk profil, riwayat, dan koneksi keluarga hilang permanen dan tidak bisa dipulihkan."
+            "value" : "Ringkasan halaman mencurigakan dikirim ke DeepSeek, AI asal Tiongkok."
           }
         }
       }
     },
-    "Guardian mode" : {
+    "Without the online check" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mode Guardian"
+            "value" : "Tanpa cek online"
           }
         }
       }
     },
-    "Guardian user" : {
+    "Shoo checks on your iPhone only, with less protection." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pengguna pengawas"
+            "value" : "Shoo hanya cek di iPhone, perlindungan lebih terbatas."
           }
         }
       }
     },
-    "Personal mode" : {
+    "Got it" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mode Pribadi"
+            "value" : "Mengerti"
           }
         }
       }
     },
-    "Personal user" : {
+    "Switch on the Shoo extension." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pengguna pribadi"
+            "value" : "Nyalakan ekstensi Shoo."
           }
         }
       }
     },
-    "Pick a character." : {
+    "Come back to Shoo and get protected." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pilih karakter."
+            "value" : "Kembali ke aplikasi Shoo dan terima perlindungan"
           }
         }
       }
     },
-    "Protected since %@" : {
+    "Protect the people\nclosest to you" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dilindungi sejak %@"
+            "value" : "Lindungi\norang terdekat"
           }
         }
       }
     },
-    "Protected user" : {
+    "Protect them by double-checking what Shoo finds for the people closest to you!" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pengguna dilindungi"
+            "value" : "Melindungi dengan mengecek kembali hasil kalkulasi Shoo milik orang terdekat anda!"
           }
         }
       }
     },
-    "Status" : {
+    "SUPERVISED MODE" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Status"
+            "value" : "MODE TERAWASI"
           }
         }
       }
     },
-    "This name shows in %@'s app." : {
+    "Not sure?" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nama ini terlihat di app %@."
+            "value" : "Tidak yakin?"
           }
         }
       }
     },
-    "Your family sees this name." : {
+    "Connect so someone you love can double-check for you" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nama ini terlihat oleh keluarga Anda."
+            "value" : "Hubungi agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+          }
+        }
+      }
+    },
+    "Become supervised" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menjadi yang Terawasi"
           }
         }
       }
@@ -241,12 +251,52 @@
         }
       }
     },
+    "Connect so someone you love can check it again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungi agar orang terkasih Anda dapat melakukan pemeriksaan ulang"
+          }
+        }
+      }
+    },
+    "%@ will check it again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akan mengecek kembali"
+          }
+        }
+      }
+    },
+    "%@ marked it dangerous" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandai berbahaya"
+          }
+        }
+      }
+    },
+    "%@ marked it safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ menandai aman"
+          }
+        }
+      }
+    },
     "Latest scams among Shoo users" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scam terbaru di pengguna Shoo"
+            "value" : "Scam Terbaru Pengguna Shoo"
           }
         }
       }
@@ -444,7 +494,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pemeriksaan AI oleh DeepSeek"
+            "value" : "Cek AI oleh DeepSeek"
           }
         }
       }
@@ -2512,12 +2562,11 @@
       }
     },
     "Invite your family" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Undang keluargamu"
+            "value" : "Undang keluarga"
           }
         }
       }
@@ -5793,16 +5842,6 @@
         }
       }
     },
-    "Invite your family" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Undang keluarga"
-          }
-        }
-      }
-    },
     "Go back to Shoo, then tap Keep going." : {
       "localizations" : {
         "id" : {
@@ -6119,6 +6158,176 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Apakah situs ini berbahaya?"
+          }
+        }
+      }
+    },
+    "%lld of %lld characters" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dari %lld karakter"
+          }
+        }
+      }
+    },
+    "Change avatar" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah avatar"
+          }
+        }
+      }
+    },
+    "Change name" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah nama"
+          }
+        }
+      }
+    },
+    "Connected with" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung dengan"
+          }
+        }
+      }
+    },
+    "Days protecting" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari melindungi"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus"
+          }
+        }
+      }
+    },
+    "Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua data yang ada di aplikasi ini termasuk profil, riwayat, dan koneksi keluarga hilang permanen dan tidak bisa dipulihkan."
+          }
+        }
+      }
+    },
+    "Guardian mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Guardian"
+          }
+        }
+      }
+    },
+    "Guardian user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna pengawas"
+          }
+        }
+      }
+    },
+    "Personal mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Pribadi"
+          }
+        }
+      }
+    },
+    "Personal user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna pribadi"
+          }
+        }
+      }
+    },
+    "Pick a character." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih karakter."
+          }
+        }
+      }
+    },
+    "Protected since %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dilindungi sejak %@"
+          }
+        }
+      }
+    },
+    "Protected user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna dilindungi"
+          }
+        }
+      }
+    },
+    "Status" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
+          }
+        }
+      }
+    },
+    "This name shows in %@'s app." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama ini terlihat di app %@."
+          }
+        }
+      }
+    },
+    "Your family sees this name." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama ini terlihat oleh keluarga Anda."
           }
         }
       }

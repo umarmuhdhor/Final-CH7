@@ -115,7 +115,7 @@ struct ProfileView: View {
 
         if model.showsGuardianCard {
             GuardianModeCard {
-                model.becomeGuardian()
+                env.requestFamilyMode()
             } onDismiss: {
                 model.dismissGuardianCard()
             }

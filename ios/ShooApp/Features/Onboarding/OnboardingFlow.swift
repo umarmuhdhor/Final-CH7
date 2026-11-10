@@ -19,6 +19,8 @@ struct OnboardingFlow: View {
             #if DEBUG
             if let step = Self.screenshotStep { model.showForScreenshot(step) }
             if UserDefaults.standard.string(forKey: "debug.onboardingStep") == "connected" { model.connect().showJoinedForScreenshot() }
+            // The splash has no demo link in Figma: the sample family opens from a launch argument.
+            if UserDefaults.standard.bool(forKey: "debug.demo") { model.startDemo() }
             #endif
             if model.step == .done { env.finishOnboarding() }
             self.model = model
@@ -28,13 +30,11 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|mode|connect|connected|invite|turnOnExtension|safariDefault|extensionOn`
+    /// `-debug.onboardingStep name|connect|connected|turnOnExtension|safariDefault|extensionOn`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
-        case "mode": .mode
         case "connect", "connected": .connect
-        case "invite": .invite
         case "turnOnExtension": .turnOnExtension
         case "safariDefault": .safariDefault
         case "extensionOn": .extensionOn
@@ -52,17 +52,9 @@ private struct OnboardingStepView: View {
         Group {
             switch model.step {
             case .splash: SplashView(model: model)
-            case .dataConsent: DataConsentView(onBack: model.goBack, onAnswer: model.answerDataConsent)
             case .name: NameView(model: model)
-            case .mode: ModeView(model: model)
             case .connect: OnboardingConnectStep(model: model)
-            case .invite: InviteFamilyView(model: model)
-            case .turnOnExtension:
-                TurnOnExtensionView(
-                    refreshStatus: model.refreshExtensionStatus,
-                    onBack: model.goBack,
-                    onSkipCheck: model.skipExtensionCheck
-                )
+            case .turnOnExtension: OnboardingExtensionStep(model: model)
             case .safariDefault: SafariDefaultView(onBack: model.goBack, onContinue: model.continueFromSafariDefault)
             case .extensionOn: ExtensionOnView { Task { await model.requestNotifications() } }
             case .done: Color(.systemBackground)
@@ -160,7 +152,7 @@ private struct OnboardingConnectStep: View {
     var body: some View {
         ConnectView(
             model: model.connect(),
-            onBack: model.canGoBackToMode ? { model.goBack() } as (() -> Void)? : nil,
+            onBack: model.canGoBackToName ? { model.goBack() } as (() -> Void)? : nil,
             onSkip: { Task { await model.skipConnect() } },
             onFinish: model.continueFromConnect
         )
@@ -169,5 +161,24 @@ private struct OnboardingConnectStep: View {
             guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
             model.connect().prefill(pending)
         }
+    }
+}
+
+/// ON-04 inside onboarding: the consent checkbox gates the button, and the first tap registers the device.
+private struct OnboardingExtensionStep: View {
+    @Bindable var model: OnboardingModel
+
+    var body: some View {
+        TurnOnExtensionView(
+            refreshStatus: model.refreshExtensionStatus,
+            onBack: model.canGoBackFromExtension ? { model.goBack() } as (() -> Void)? : nil,
+            onSkipCheck: { Task { await model.skipExtensionCheck() } },
+            consent: OnboardingExtensionConsent(
+                isChecked: $model.consentChecked,
+                isWorking: model.isWorking,
+                failed: model.registrationFailed,
+                prepare: model.activateExtension
+            )
+        )
     }
 }

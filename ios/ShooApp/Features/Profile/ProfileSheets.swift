@@ -79,7 +79,7 @@ struct ProfileSaveButtonStyle: ButtonStyle {
         .foregroundStyle(isEnabled ? Color.white : ProfileStyle.secondary)
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity, minHeight: 54)
-        .background(isEnabled ? AnyShapeStyle(GuardianModeCard.button) : AnyShapeStyle(ProfileStyle.disabledFill), in: Capsule())
+        .background(isEnabled ? AnyShapeStyle(ModeOfferCard.button) : AnyShapeStyle(ProfileStyle.disabledFill), in: Capsule())
         .overlay(Capsule().strokeBorder(isEnabled ? Color(hex: 0x191D2F) : .clear, lineWidth: 1.5))
         .opacity(configuration.isPressed ? 0.85 : 1)
         .contentShape(Capsule())

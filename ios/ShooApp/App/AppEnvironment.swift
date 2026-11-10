@@ -325,6 +325,26 @@ final class AppEnvironment {
         DeliveredPushes.clear()
     }
 
+    /// Family mode on (Pribadi → Guardian). The first time, Figma "To be guardian" shows first and its
+    /// "Mulai" turns it on (`startGuardian`).
+    @MainActor
+    func requestFamilyMode() {
+        guard settings.mode == .guardian, !settings.familyModeOn else { return }
+        if settings.guardianIntroSeen {
+            settings.familyModeOn = true
+        } else {
+            router.isGuardianIntroPresented = true
+        }
+    }
+
+    /// "Mulai" on Figma "To be guardian".
+    @MainActor
+    func startGuardian() {
+        settings.guardianIntroSeen = true
+        settings.familyModeOn = true
+        router.isGuardianIntroPresented = false
+    }
+
     /// PF-01 "Punya kode undangan?": a guardian without members joins another family. The server
     /// replaces this device with a protected one; its session and the mode take over here at once
     /// (the old token is dead). The caller closes its screens afterwards (`router.reset()`).

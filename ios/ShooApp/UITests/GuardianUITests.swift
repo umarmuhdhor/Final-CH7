@@ -27,7 +27,8 @@ final class GuardianUITests: XCTestCase {
         // Guardian Home (GD-01): hero status, no "Protected by" row.
         XCTAssertTrue(app.descendants(matching: .any)["home.status.active"].waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["shield.guardian"].exists)
-        app.descendants(matching: .any)["familyModeToggle"].firstMatch.tap()
+        // The first time, "To be guardian" (Figma 1229:1904) comes before Family mode.
+        app.becomeGuardian()
         // Family Home (Figma 435:20373): the fixture's sites are older than a day, so no card waits.
         XCTAssertTrue(app.descendants(matching: .any)["home.family.protected"].waitForExistence(timeout: 5), app.debugDescription)
 

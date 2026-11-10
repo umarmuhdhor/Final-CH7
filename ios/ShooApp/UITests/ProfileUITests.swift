@@ -62,6 +62,7 @@ final class ProfileUITests: XCTestCase {
         let switchButton = app.buttons["mode.switch"]
         XCTAssertTrue(switchButton.waitForExistence(timeout: 5), app.debugDescription)
         switchButton.tap()
+        app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertFalse(switchButton.waitForExistence(timeout: 1), "Nothing left to switch")
         app.buttons["profile.back"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
@@ -70,9 +71,11 @@ final class ProfileUITests: XCTestCase {
     @MainActor
     func testGuardianCardTurnsOnFamilyModeOrCloses() {
         let app = openProfile(mode: "guardian")
-        let become = app.buttons["profile.guardianCard.become"]
+        let become = app.buttons["profile.guardianCard.action"]
         XCTAssertTrue(become.waitForExistence(timeout: 5), app.debugDescription)
         become.tap()
+        // Figma "To be guardian" comes first, the first time.
+        app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertTrue(app.descendants(matching: .any)["profile.member.dev_mom"].waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["profile.guardianCard"].exists)
 

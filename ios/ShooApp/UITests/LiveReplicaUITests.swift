@@ -96,21 +96,21 @@ final class LiveReplicaUITests: XCTestCase {
         return app
     }
 
-    /// ON-01 … ON-05 as Guardian. The first tap on Invite registers the device (`POST /devices`); the sheet
-    /// then asks for the family code (`POST /family/code`), which goes to `code.txt` for the host.
+    /// ON (Figma 1205:4696) as Pribadi: ticking the consent box registers the device (`POST /devices`).
+    /// Family mode on makes the Guardian (GD-02); Profile's Invite asks for the family code
+    /// (`POST /family/code`), which goes to `code.txt` for the host.
     @MainActor
     private func onboardAsGuardian(_ app: XCUIApplication) {
-        app.buttons["splash.skip"].tapWhenHittable()
-        let field = app.textFields["name.field"]
-        field.tapWhenHittable()
-        field.typeText("Rina")
-        app.buttons["name.continue"].tapWhenHittable()
-        app.buttons["mode.guardian"].tapWhenHittable()
-        app.buttons["mode.continue"].tapWhenHittable()
-        app.buttons["invite.open"].tapWhenHittable()
+        // Aktifkan Ekstensi has Next at once (the extension counts as on), then Safari Default and Yeay.
+        app.onboardPersonal("Rina")
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.dismissNotificationsReminder()
+        app.becomeGuardian()
 
+        app.buttons["profileButton"].tapWhenHittable()
+        app.buttons["profile.invite"].tapWhenHittable()
         let code = app.descendants(matching: .any)["invite.code"].firstMatch
-        XCTAssertTrue(code.waitForExistence(timeout: 30), "Invite sheet never showed a code (POST /devices failed?)\n\(app.debugDescription)")
+        XCTAssertTrue(code.waitForExistence(timeout: 30), "Invite sheet never showed a code (POST /family/code failed?)\n\(app.debugDescription)")
         let sixDigits = NSPredicate { element, _ in
             ((element as? XCUIElement)?.label.filter(\.isNumber).count ?? 0) == 6
         }
@@ -118,12 +118,10 @@ final class LiveReplicaUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [ready], timeout: 15), .completed, "No 6-digit code: '\(code.label)'")
         write("code.txt", String(code.label.filter(\.isNumber)))
 
-        app.buttons["invite.done"].tapWhenHittable()
-        // ON-04 passes on its own (the extension counts as on), then the Safari default and ON-05.
-        app.buttons["safariDefault.alreadyUsing"].tapWhenHittable()
-        app.buttons["extensionOn.continue"].tapWhenHittable()
+        let done = app.buttons["invite.done"].exists ? app.buttons["invite.done"] : app.buttons["invite.close"]
+        done.tapWhenHittable()
+        app.buttons["profile.back"].firstMatch.tapWhenHittable()
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        app.dismissNotificationsReminder()
     }
 
     /// The id the host wrote to `scan.txt`; fails at once when it wrote `error.txt` instead.

@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Guardian Home, both sides of the ⇆ switch (GD-01/02/03, Figma HOME page).
-/// `personal` (Family mode off, "Pribadi/Home" 957:10924, Waspada 955:10369, Bahaya 955:10467): the hero says how
-/// the last day went, then own recent sites and the latest scams.
+/// `personal` (Family mode off, "Pribadi/Home" 435:20058, Waspada 955:10369, Bahaya 955:10467): the hero says how
+/// the last day went, then own recent sites and the latest scams; with nobody to look after, the "Mode Terawasi"
+/// card first (1382:10567).
 /// `family` ("Guardian/Home/ no recently blocked or warning" 435:20373): teal hero, the people looked after, the site
 /// that waits for a verdict (warning 1382:2599, blocked 1382:10314), the family's recent sites; nobody yet → the invite
 /// code and how it works (1382:10466). No status strip any more: the white sheet sits right on the hero.
@@ -70,7 +71,7 @@ struct GuardianHomeView: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        // Switch and profile at Figma's y 40, over the (see-through) navigation bar.
+        // Switch and profile right under the status bar, where the (hidden) navigation bar would be.
         .overlay(alignment: .top) {
             HomeTopBar(isFamilyShown: isFamily, name: model.profile?.name, onSwitch: switchSide) { env.router.openProfile() }
         }
@@ -100,7 +101,7 @@ struct GuardianHomeView: View {
     }
 
     private func switchSide() {
-        env.settings.familyModeOn = !isFamily
+        if isFamily { env.settings.familyModeOn = false } else { env.requestFamilyMode() }
         AccessibilityNotification.Announcement(
             L10n.string(isFamily ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
                         language: env.settings.language)
@@ -183,15 +184,31 @@ struct GuardianHomeView: View {
             .padding(16)
         case .loaded:
             if !isFamily {
-                VStack(spacing: 24) {
+                // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts the "Mode Terawasi" card first and
+                // 37 pt between the three.
+                let showsCard = model.showsSupervisedCard
+                VStack(spacing: 0) {
+                    if showsCard {
+                        // "Hubungkan": joining a family as protected lives in Profile › Account mode
+                        // ("Have an invite code?"), which checks that nobody is looked after first.
+                        SupervisedModeCard(onConnect: { env.router.show(.profilePage(.mode)) }) {
+                            withAnimation(.easeOut(duration: 0.2)) { model.dismissSupervisedCard() }
+                        }
+                        .padding(.top, 1)
+                        .padding(.bottom, 37)
+                        .transition(.opacity)
+                    }
                     RecentActivity(
                         scans: model.recent,
                         language: language,
                         onOpen: { env.router.showDetail(scanId: $0.id) },
                         onSeeAll: { env.router.selectedTab = .activity }
                     )
+                    // Figma: the title 32 under the sheet's top (the card sits 31 under it).
+                    .padding(.top, showsCard ? 0 : 3)
                     if !model.scamCases.isEmpty {
                         LatestScamsCard(cases: model.scamCases)
+                            .padding(.top, showsCard ? 37 : 35)
                     }
                 }
             } else if model.hasNoFamily {
@@ -231,6 +248,9 @@ struct GuardianHomeView: View {
         if model.state == .loaded {
             if model.hasNoFamily {
                 HowItWorks()
+                // Figma "Guardian/Home · Belum ada orang" (1253:2381): 42 under How it works.
+                BecomeSupervisedCard(action: "Become supervised") { env.router.isJoinFamilyPresented = true }
+                    .padding(.top, 18)
             } else {
                 RecentActivity(
                     scans: model.recent,
@@ -393,7 +413,7 @@ private struct PendingSiteCard: View {
                 VStack(spacing: 0) {
                     header
                     // Figma: the panel 16.1 / 11.9 in from the card's sides, i.e. centred on the screen.
-                    RiskPanel(scan: scan)
+                    HomeRiskPanel(scan: scan, isDanger: isBlocked, layered: true)
                         .padding(.leading, 16.1)
                         .padding(.trailing, 11.9)
                         .padding(.top, 11.8)
@@ -519,107 +539,6 @@ private struct PendingSiteCard: View {
     }
 }
 
-/// Figma "Frame 1618872237": two white 70 % panels (338 × 211 and 328 × 205), the alert shield, "Situs
-/// Mencurigakan!" / "Situs Berbahaya!" and the bar with the score.
-private struct RiskPanel: View {
-    let scan: ScanResult
-
-    private var isBlocked: Bool { scan.status == .blocked }
-    /// Figma "Kaca" (warning 1382:10989): 71.6 pt wide, 27.1 under the panel's top; the title 129.5 under it.
-    /// The blocked frame (1382:10314) is the same card scaled to 97 %, so both use these.
-    private static let kacaWidth: CGFloat = 71.6
-    private static let kacaTop: CGFloat = 27.1
-    private static let titleTop: CGFloat = 129.5
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Figma: SF Pro Display Semibold 28, +2 %, 34 pt lines, #191D2F.
-            Text(isBlocked ? "Dangerous site!" : "Suspicious site!")
-                .onboardingFont(28, weight: .semibold, tracking: 0.56, relativeTo: .title)
-                .figmaLineHeight(34, relativeTo: .title)
-                .foregroundStyle(HomeTheme.navy)
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.7)
-                .padding(.horizontal, 16)
-                .padding(.top, Self.titleTop)
-            HomeRiskBar(scan: scan)
-                .padding(.top, 6.7)
-                .padding(.bottom, 6.8)
-        }
-        .frame(maxWidth: .infinity)
-        .background(alignment: .top) { shield }
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: 22.9, style: .continuous).fill(.white.opacity(0.7))
-                RoundedRectangle(cornerRadius: 22.3, style: .continuous).fill(.white.opacity(0.7))
-                    .padding(EdgeInsets(top: 3.1, leading: 4.9, bottom: 3, trailing: 4.9))
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    /// The Home shield at Figma's size: "Kaca" top `kacaTop`, `kacaWidth` wide (104 pt at scale 1).
-    private var shield: some View {
-        let scale = Self.kacaWidth / 104
-        let size = HalftoneShield.size
-        return HalftoneShield(tint: isBlocked ? .redAlert : .orange)
-            .scaleEffect(scale)
-            .frame(width: size.width * scale, height: size.height * scale)
-            .padding(.top, Self.kacaTop - (size.height * scale / 2 - 61.3 * scale))
-            .accessibilityHidden(true)
-    }
-}
-
-/// Figma "Bar" (1382:10996): one capsule per reason, by weight and scaled to the score, 1.5 pt apart; a 2 pt
-/// tick at the score; the hatched grey track for the rest. 153 pt, the score 8 pt beside it.
-private struct HomeRiskBar: View {
-    let scan: ScanResult
-
-    private static let width: CGFloat = 153
-    private static let gap: CGFloat = 1.5
-    private static let tickWidth: CGFloat = 2
-    private static let colors = [Color(hex: 0xFF9500), Color(hex: 0xF87541), Color(hex: 0xE5483B)]
-    private static let tick = Color(hex: 0xE5483B)
-
-    /// Segment widths: the weights, heaviest first, sharing the score's part of the bar.
-    private var segments: [CGFloat] {
-        let score = CGFloat(min(max(scan.score, 0), 100)) / 100
-        let weights = scan.signals.map { CGFloat(max($0.weight, 0)) }.filter { $0 > 0 }.sorted(by: >)
-        let parts = weights.isEmpty ? [1] : weights
-        let total = parts.reduce(0, +)
-        let usable = Self.width - CGFloat(parts.count + 1) * Self.gap - Self.tickWidth
-        return parts.map { usable * score * $0 / total }
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: Self.gap) {
-                ForEach(Array(segments.enumerated()), id: \.offset) { index, width in
-                    HatchedBar(fill: Self.colors[min(index, Self.colors.count - 1)], hatch: .white.opacity(0.3))
-                        .frame(width: width)
-                        .shadow(color: Self.tick.opacity(0.35), radius: 2, y: 1.5)
-                }
-                RoundedRectangle(cornerRadius: 0.6)
-                    .fill(Self.tick)
-                    .frame(width: Self.tickWidth, height: 16)
-                HatchedBar(fill: Color(hex: 0xE9ECF1), hatch: Color(hex: 0xCFD5DD))
-            }
-            .frame(width: Self.width, height: 18)
-            // Figma: SF Pro Display Semibold 15, +2 %, in a 34 pt line.
-            Text(verbatim: "\(scan.score)/100")
-                .onboardingFont(15, weight: .semibold, tracking: 0.3, relativeTo: .subheadline)
-                .foregroundStyle(HomeTheme.navy)
-                .frame(minHeight: 34)
-                .fixedSize()
-        }
-        // Figma "Frame 1618872328" sits 4.5 pt left of the panel's centre.
-        .padding(.trailing, 9)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Risk score"))
-        .accessibilityValue(Text(verbatim: "\(scan.score)/100"))
-    }
-}
-
 /// Lays its children side by side at widths in proportion to `weights` (Figma's fixed button widths).
 private struct ProportionalRow: Layout {
     let weights: [CGFloat]
@@ -645,31 +564,6 @@ private struct ProportionalRow: Layout {
         let sum = used.reduce(0, +)
         let free = max(0, total - spacing * CGFloat(max(count - 1, 0)))
         return used.map { sum > 0 ? free * $0 / sum : free / CGFloat(count) }
-    }
-}
-
-/// 10 pt capsule with 0.6 pt 45° hatching every 2.48 pt (Figma "Hatch").
-private struct HatchedBar: View {
-    let fill: Color
-    let hatch: Color
-
-    var body: some View {
-        Capsule()
-            .fill(fill)
-            .overlay {
-                Canvas { context, size in
-                    var path = Path()
-                    var x: CGFloat = -size.height
-                    while x < size.width + size.height {
-                        path.move(to: CGPoint(x: x, y: size.height))
-                        path.addLine(to: CGPoint(x: x + size.height, y: 0))
-                        x += 2.48
-                    }
-                    context.stroke(path, with: .color(hatch), lineWidth: 0.6)
-                }
-            }
-            .clipShape(Capsule())
-            .frame(height: 10)
     }
 }
 

@@ -36,6 +36,16 @@ struct MainTabView: View {
             ConnectSheet()
                 .environment(\.locale, env.settings.language.locale)
         }
+        // Pribadi "Mode Terawasi" → Hubungkan (Figma 1253:8630).
+        .sheet(isPresented: $router.isJoinFamilyPresented) {
+            JoinAnotherFamilySheet(name: "")
+                .environment(\.locale, env.settings.language.locale)
+        }
+        // Figma "To be guardian" (1229:1904).
+        .fullScreenCover(isPresented: $router.isGuardianIntroPresented) {
+            GuardianIntroView(onBack: { router.isGuardianIntroPresented = false }, onStart: env.startGuardian)
+                .environment(\.locale, env.settings.language.locale)
+        }
     }
 
     @ViewBuilder
@@ -94,7 +104,7 @@ private struct FamilyModeToggle: ToolbarContent {
             ToolbarItem(placement: .topBarLeading) {
                 let isOn = env.settings.familyModeOn
                 Button {
-                    env.settings.familyModeOn.toggle()
+                    if isOn { env.settings.familyModeOn = false } else { env.requestFamilyMode() }
                     AccessibilityNotification.Announcement(
                         L10n.string(isOn ? "Family mode off. Showing your Shield." : "Family mode on. Showing your family.",
                                     language: env.settings.language)

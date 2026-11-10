@@ -81,14 +81,25 @@ struct OnboardingModelTests {
 
     func model() -> OnboardingModel { OnboardingModel(environment: env) }
 
-    func registered(_ mode: UserMode) async -> OnboardingModel {
+    /// Pribadi: name, then ON-04 with the box ticked and the first tap (registers).
+    func registeredPersonal() async -> OnboardingModel {
         let model = model()
         model.skipSplash()
         model.name = "Rina"
         model.submitName()
-        model.selectedMode = mode
-        model.continueFromMode()
-        try? await model.ensureRegistered()
+        model.consentChecked = true
+        _ = await model.activateExtension()
+        return model
+    }
+
+    /// Protected from an invite link: name, Connect, join.
+    func joinedProtected() async -> OnboardingModel {
+        env.router.pendingJoinCode = "482193"
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        await model.connect().join()
         return model
     }
 
@@ -96,23 +107,14 @@ struct OnboardingModelTests {
         #expect(model().step == .splash)
     }
 
-    @Test func withoutAnAnswerSkipGoesToConsentFirst() {
+    @Test func skipGoesStraightToName() {
+        // Figma "Flow": no separate consent screen and no mode choice.
         settings.dataConsent = nil
         let model = model()
         model.skipSplash()
-        #expect(model.step == .dataConsent)
+        #expect(model.step == .name)
         model.goBack()
         #expect(model.step == .splash)
-    }
-
-    @Test(arguments: [DataConsent.granted, .declined])
-    func answeringConsentMovesToNameAndIsKept(answer: DataConsent) {
-        settings.dataConsent = nil
-        let model = model()
-        model.skipSplash()
-        model.answerDataConsent(answer)
-        #expect(model.step == .name)
-        #expect(settings.dataConsent == answer)
     }
 
     @Test func aRegisteredDeviceWithoutAnAnswerIsAskedOnce() {
@@ -124,13 +126,7 @@ struct OnboardingModelTests {
         #expect(!env.needsDataConsent)
     }
 
-    @Test func skipGoesToName() {
-        let model = model()
-        model.skipSplash()
-        #expect(model.step == .name)
-    }
-
-    @Test func invalidNameStaysOnNameStep() async {
+    @Test func invalidNameStaysOnNameStep() {
         let model = model()
         model.skipSplash()
         model.name = "   "
@@ -140,66 +136,94 @@ struct OnboardingModelTests {
         model.name = "Rina"
         #expect(model.canSubmitName)
         model.submitName()
-        #expect(model.step == .mode)
-    }
-
-    @Test func guardianPath() async {
-        let model = await registered(.guardian)
-        #expect(model.step == .invite)
-        #expect(model.avatarId.map(AvatarCatalog.ids.contains) == true)
-        #expect(settings.mode == .guardian)
-        #expect(!settings.onboardingCompleted)
-        model.continueFromInvite()
         #expect(model.step == .turnOnExtension)
-        // Back to the invite screen is allowed; the mode stays saved.
-        model.goBack()
-        #expect(model.step == .invite)
-        #expect(settings.mode == .guardian)
+        #expect(settings.mode == nil)
     }
 
-    @Test func protectedPathGoesThroughConnect() async {
-        let model = await registered(.protected)
-        #expect(model.step == .connect)
-        model.continueFromConnect()
-        #expect(model.step == .turnOnExtension)
-        // Figma: Back from ON-04 is Connect for a Protected, the mode stays saved.
-        model.goBack()
-        #expect(model.step == .connect)
-        #expect(settings.mode == .protected)
-    }
-
-    @Test(arguments: [UserMode.guardian, .protected])
-    func backReachesModeUntilTheDeviceIsRegistered(mode: UserMode) async throws {
+    @Test func turnOnNeedsTheConsentBox() async {
+        settings.dataConsent = nil
         let model = model()
         model.skipSplash()
         model.name = "Rina"
         model.submitName()
-        model.selectedMode = mode
-        model.continueFromMode()
-        #expect(model.step == (mode == .guardian ? .invite : .connect))
+        #expect(!model.consentChecked)
+        #expect(!(await model.activateExtension()))
         #expect(settings.mode == nil)
-        #expect(model.canGoBackToMode)
+        #expect(settings.dataConsent == nil)
+    }
+
+    @Test func firstTapSavesConsentAndRegistersPersonal() async {
+        settings.dataConsent = nil
+        let model = await registeredPersonal()
+        #expect(settings.dataConsent == .granted)
+        #expect(settings.mode == .guardian)
+        #expect(!settings.familyModeOn)
+        #expect(model.avatarId.map(AvatarCatalog.ids.contains) == true)
+        #expect(!settings.onboardingCompleted)
+        // Registered: no way back to the name any more.
+        #expect(!model.canGoBackFromExtension)
         model.goBack()
-        #expect(model.step == .mode)
-        model.continueFromMode()
-        try await model.ensureRegistered()
-        #expect(settings.mode == mode)
-        #expect(!model.canGoBackToMode)
-        let stuck = model.step
+        #expect(model.step == .turnOnExtension)
+    }
+
+    @Test func backReachesNameUntilTheDeviceIsRegistered() {
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        #expect(model.canGoBackFromExtension)
         model.goBack()
-        #expect(model.step == stuck)
+        #expect(model.step == .name)
+    }
+
+    @Test func registrationErrorStaysOnTurnOn() async throws {
+        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
+        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let env = AppEnvironment(
+            repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
+        )
+        let model = OnboardingModel(environment: env)
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        model.consentChecked = true
+        #expect(!(await model.activateExtension()))
+        #expect(model.step == .turnOnExtension)
+        #expect(model.registrationFailed)
+        #expect(settings.mode == nil)
+    }
+
+    @Test func inviteLinkGoesThroughConnect() {
+        env.router.pendingJoinCode = "482193"
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        #expect(model.step == .connect)
+        #expect(model.selectedMode == .protected)
+        // Connect still gets the code: nothing joins until the user taps Connect (T11).
+        #expect(model.connect().code == "482193")
+        #expect(model.connect().state == .entering)
+        #expect(model.canGoBackToName)
+        model.goBack()
+        #expect(model.step == .name)
+    }
+
+    @Test func notNowOnConnectContinuesAsPersonal() async {
+        env.router.pendingJoinCode = "482193"
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        await model.skipConnect()
+        #expect(model.step == .turnOnExtension)
+        #expect(model.selectedMode == .guardian)
+        #expect(settings.mode == nil)
     }
 
     @Test func joiningRegistersFirstAndStaysPassedAfterRelaunch() async {
-        let model = model()
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        model.selectedMode = .protected
-        model.continueFromMode()
+        let model = await joinedProtected()
         let connect = model.connect()
-        connect.code = "482193"
-        await connect.join()
         #expect(settings.mode == .protected)
         guard case .joined = connect.state else {
             Issue.record("expected joined, got \(connect.state)")
@@ -213,86 +237,13 @@ struct OnboardingModelTests {
         #expect(model.connect() === connect)
     }
 
-    @Test func modeStepNeedsAMode() {
-        let model = model()
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        model.continueFromMode()
-        #expect(model.step == .mode)
-        #expect(settings.mode == nil)
-    }
-
-    @Test func registrationErrorStaysOnInvite() async throws {
-        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
-        settings.dataConsent = .granted
-        let env = AppEnvironment(
-            repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
-        )
-        let model = OnboardingModel(environment: env)
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        model.selectedMode = .guardian
-        model.continueFromMode()
-        await model.skipInvite()
-        #expect(model.step == .invite)
-        #expect(model.registrationFailed)
-        #expect(settings.mode == nil)
-    }
-
-    @Test func registrationErrorStaysOnConnect() async throws {
-        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
-        settings.dataConsent = .granted
-        let env = AppEnvironment(
-            repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
-        )
-        let model = OnboardingModel(environment: env)
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        model.selectedMode = .protected
-        model.continueFromMode()
-        await model.skipConnect()
-        #expect(model.step == .connect)
-        #expect(model.connect().problem != nil)
-        #expect(settings.mode == nil)
-    }
-
-    @Test func inviteLinkSkipsMode() async {
-        env.router.pendingJoinCode = "482193"
-        let model = model()
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        #expect(model.step == .connect)
-        #expect(model.selectedMode == .protected)
-        // Connect still gets the code: nothing joins until the user taps Connect (T11).
-        #expect(model.connect().code == "482193")
-        #expect(model.connect().state == .entering)
-    }
-
-    @Test func modeIsPermanentAfterRegistration() async {
-        _ = await registered(.protected)
-        #expect(!settings.chooseMode(.guardian))
-        #expect(settings.mode == .protected)
-        // Relaunch before onboarding finished: never back to ON-03 (Protected resumes at Connect).
-        let relaunched = model()
-        #expect(relaunched.step == .connect)
-    }
-
-    @Test func protectedRelaunchResumesAtConnectUntilPassed() async {
-        let first = await registered(.protected)
-        #expect(model().step == .connect)
-        first.continueFromConnect()
+    @Test func personalRelaunchGoesHome() async {
+        _ = await registeredPersonal()
         #expect(model().step == .done)
     }
 
     @Test func extensionOffStaysActiveContinues() async {
-        let model = await registered(.guardian)
-        model.continueFromInvite()
+        let model = await registeredPersonal()
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
         box.status = .active(lastSeen: Date())
@@ -302,9 +253,23 @@ struct OnboardingModelTests {
         #expect(model.step == .extensionOn)
     }
 
+    @Test func extensionAlreadyOnWaitsForTheFirstTap() async {
+        // Switched on before (reinstall): the status alone never registers the device.
+        box.status = .active(lastSeen: Date())
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        await model.refreshExtensionStatus()
+        #expect(model.step == .turnOnExtension)
+        model.consentChecked = true
+        await model.skipExtensionCheck()
+        #expect(model.step == .safariDefault)
+        #expect(settings.mode == .guardian)
+    }
+
     @Test func backFromSafariDefaultStaysOnTurnOn() async {
-        let model = await registered(.guardian)
-        model.continueFromInvite()
+        let model = await registeredPersonal()
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
         model.goBack()
@@ -312,25 +277,23 @@ struct OnboardingModelTests {
         // The screen re-reads the status on appear: Shoo is on, but Back must not bounce forward.
         await model.refreshExtensionStatus()
         #expect(model.step == .turnOnExtension)
-        model.skipExtensionCheck()
+        await model.skipExtensionCheck()
         #expect(model.step == .safariDefault)
     }
 
     @Test func switchOnWithoutAPageWaitsForTheCheckOrASkip() async {
-        let model = await registered(.guardian)
-        model.continueFromInvite()
+        let model = await registeredPersonal()
         // #135: Safari's switch is on, but no page has said whether Shoo may read every site.
         box.status = .active(lastSeen: nil)
         let status = await model.refreshExtensionStatus()
         #expect(status == .active(lastSeen: nil))
         #expect(model.step == .turnOnExtension)
-        model.skipExtensionCheck()
+        await model.skipExtensionCheck()
         #expect(model.step == .safariDefault)
     }
 
     @Test func narrowedAccessStaysOnTurnOn() async {
-        let model = await registered(.guardian)
-        model.continueFromInvite()
+        let model = await registeredPersonal()
         box.status = .off(lastSeen: Date(), reason: .someSitesOnly)
         #expect(await model.refreshExtensionStatus()?.nextStep == .allowEveryWebsite)
         #expect(model.step == .turnOnExtension)
@@ -341,21 +304,16 @@ struct OnboardingModelTests {
 
     /// Through ON-04 and Safari Default to the success screen.
     func reachSuccess(_ model: OnboardingModel) async {
-        if model.mode == .guardian { model.continueFromInvite() } else { model.continueFromConnect() }
+        if model.step == .connect { model.continueFromConnect() }
+        model.consentChecked = true
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
         model.continueFromSafariDefault()
     }
 
-    @Test func guardianRelaunchGoesHome() async {
-        let first = await registered(.guardian)
-        #expect(first.step == .invite)
-        #expect(model().step == .done)
-    }
-
-    @Test func guardianFinishesEvenWhenPermissionIsDenied() async {
+    @Test func personalFinishesEvenWhenPermissionIsDenied() async {
         notifications.answer = .denied
-        let model = await registered(.guardian)
+        let model = await registeredPersonal()
         await reachSuccess(model)
         await model.requestNotifications()
         #expect(notifications.requestCount == 1)
@@ -365,7 +323,7 @@ struct OnboardingModelTests {
     }
 
     @Test func protectedIsAskedForNotificationsToo() async {
-        let model = await registered(.protected)
+        let model = await joinedProtected()
         await reachSuccess(model)
         await model.requestNotifications()
         #expect(notifications.requestCount == 1)
@@ -373,7 +331,7 @@ struct OnboardingModelTests {
     }
 
     @Test func notificationsAreOnlyAskedFromTheSuccessScreen() async {
-        let model = await registered(.guardian)
+        let model = await registeredPersonal()
         await model.requestNotifications()
         #expect(notifications.requestCount == 0)
         #expect(!settings.onboardingCompleted)
@@ -381,11 +339,25 @@ struct OnboardingModelTests {
 
     @Test func alreadyDecidedPermissionIsNotAskedAgain() async {
         notifications.current = .authorized
-        let model = await registered(.guardian)
+        let model = await registeredPersonal()
         await reachSuccess(model)
         await model.requestNotifications()
         #expect(notifications.requestCount == 0)
         #expect(settings.onboardingCompleted)
+    }
+
+    @Test func familyModeShowsTheGuardianIntroOnce() async {
+        _ = await registeredPersonal()
+        env.requestFamilyMode()
+        #expect(env.router.isGuardianIntroPresented)
+        #expect(!settings.familyModeOn)
+        env.startGuardian()
+        #expect(settings.familyModeOn)
+        #expect(!env.router.isGuardianIntroPresented)
+        settings.familyModeOn = false
+        env.requestFamilyMode()
+        #expect(settings.familyModeOn)
+        #expect(!env.router.isGuardianIntroPresented)
     }
 
     @Test(arguments: [
@@ -417,12 +389,12 @@ struct SafariDefaultSetupTests {
 
 struct ExtensionSetupTests {
     @Test(arguments: [
-        (17, 5, [ExtensionSetup.Step.openSettingsLegacy, .switchOn, .allowEveryWebsite, .openAWebsite]),
-        (18, 0, [.openSettingsModern, .switchOn, .allowEveryWebsite, .openAWebsite]),
-        (26, 1, [.openSettingsModern, .switchOn, .allowEveryWebsite, .openAWebsite]),
-        // iOS 26.2+ reads Safari's switch directly: no website visit needed to be detected.
-        (26, 2, [.tapTurnOn, .switchOn, .allowEveryWebsite]),
-        (27, 0, [.tapTurnOn, .switchOn, .allowEveryWebsite]),
+        // Figma "Aktifkan Ekstensi": three steps; what Safari still needs shows as a note once back (#135).
+        (17, 5, [ExtensionSetup.Step.openSettingsLegacy, .switchOn, .comeBack]),
+        (18, 0, [.openSettingsModern, .switchOn, .comeBack]),
+        (26, 1, [.openSettingsModern, .switchOn, .comeBack]),
+        (26, 2, [.tapTurnOn, .switchOn, .comeBack]),
+        (27, 0, [.tapTurnOn, .switchOn, .comeBack]),
     ])
     func stepsFollowIOSVersion(major: Int, minor: Int, expected: [ExtensionSetup.Step]) {
         #expect(ExtensionSetup.steps(for: OperatingSystemVersion(majorVersion: major, minorVersion: minor, patchVersion: 0)) == expected)
