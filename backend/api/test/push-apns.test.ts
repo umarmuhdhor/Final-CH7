@@ -90,6 +90,34 @@ describe("ApnsSender request (R3 §6, contracts/api.md Push payloads)", () => {
   });
 });
 
+describe("ApnsSender.sendLive (EX-03, #49)", () => {
+  const payload = { aps: { timestamp: 1, event: "update", "content-state": { domain: "a.example", score: 5, isAnalyzing: false, isBlocked: false } } };
+
+  it("liveactivity push type, .push-type.liveactivity topic, the given priority and expiry, payload as is", async () => {
+    const { config } = await setup();
+    const { fetch, calls } = fakeFetch(apns(200));
+    expect(await new ApnsSender(config, { fetch }).sendLive({ token: TOKEN, priority: 5, expiresInSeconds: 60, payload })).toEqual({ result: "sent" });
+    expect(calls[0]!.url).toBe(`https://api.sandbox.push.apple.com/3/device/${TOKEN}`);
+    const h = headers(calls[0]!);
+    expect(h.get("apns-push-type")).toBe("liveactivity");
+    expect(h.get("apns-topic")).toBe("com.example.shoo.push-type.liveactivity");
+    expect(h.get("apns-priority")).toBe("5");
+    const exp = Number(h.get("apns-expiration"));
+    expect(exp).toBeGreaterThan(Date.now() / 1000 + 50);
+    expect(exp).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 60);
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual(payload);
+  });
+
+  it("410 asks to clear the token; a non-hex token never reaches APNs", async () => {
+    const { config } = await setup();
+    const { fetch, calls } = fakeFetch(apns(410, "Unregistered"));
+    const sender = new ApnsSender(config, { fetch });
+    expect(await sender.sendLive({ token: TOKEN, priority: 10, expiresInSeconds: 3600, payload })).toEqual({ result: "failed:410 Unregistered", clearToken: true });
+    expect(await sender.sendLive({ token: "../x", priority: 10, expiresInSeconds: 3600, payload })).toEqual({ result: "failed:400 BadDeviceToken" });
+    expect(calls).toHaveLength(1);
+  });
+});
+
 describe("ApnsSender results", () => {
   it.each([
     [410, "Unregistered", { result: "failed:410 Unregistered", clearToken: true }],

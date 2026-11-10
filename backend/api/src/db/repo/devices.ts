@@ -64,6 +64,10 @@ export interface DevicePatch {
   /** IANA zone, for quiet hours and the weekly summary. */
   timeZone?: string;
   notifications?: Partial<NotificationSettings>;
+  /** EX-03 (#49): push-to-start token of the Live Activity; null clears it. */
+  liveActivityStartToken?: string | null;
+  /** EX-03 (#49): update token of the running activity; null clears it (the island ended). */
+  liveActivityUpdateToken?: { activityId: string; token: string } | null;
 }
 
 /** Only columns present in the patch change. ext_last_seen_at never moves backwards. */
@@ -89,6 +93,9 @@ export async function updateDevice(sql: Sql, id: string, p: DevicePatch): Promis
       language         = case when ${has("language")} then ${p.language ?? null}::text else language end,
       device_model     = case when ${has("deviceModel")} then ${p.deviceModel ?? null}::text else device_model end,
       os_version       = case when ${has("osVersion")} then ${p.osVersion ?? null}::text else os_version end,
+      live_start_token  = case when ${has("liveActivityStartToken")} then ${p.liveActivityStartToken ?? null}::text else live_start_token end,
+      live_update_token = case when ${has("liveActivityUpdateToken")} then ${p.liveActivityUpdateToken?.token ?? null}::text else live_update_token end,
+      live_activity_id  = case when ${has("liveActivityUpdateToken")} then ${p.liveActivityUpdateToken?.activityId ?? null}::text else live_activity_id end,
       ext_last_seen_at = case when ${has("extensionLastSeenAt")}
                               then greatest(ext_last_seen_at, ${p.extensionLastSeenAt ?? null}::timestamptz)
                               else ext_last_seen_at end
