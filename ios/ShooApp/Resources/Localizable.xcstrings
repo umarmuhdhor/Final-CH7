@@ -5732,6 +5732,226 @@
           }
         }
       }
+    },
+    "detail.title.dangerous" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title of a blocked site",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dangerous Site!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Berbahaya!"
+          }
+        }
+      }
+    },
+    "detail.title.suspicious" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title of a warning",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suspicious Site!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Mencurigakan!"
+          }
+        }
+      }
+    },
+    "detail.title.markedBlocked" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title once the guardian confirmed a scam",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site Marked as Blocked!"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Sudah Ditandai Blokir!"
+          }
+        }
+      }
+    },
+    "detail.title.youMarkedSafe" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title once the viewer marked it safe",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You Marked This Safe"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda Menandai ini Aman"
+          }
+        }
+      }
+    },
+    "%@ marked this safe" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): title once a guardian marked it safe. %@ = guardian's name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Marked This Safe"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Menandai ini Aman"
+          }
+        }
+      }
+    },
+    "detail.riskScore" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): label over 92/100",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo risk score"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penilaian Risiko Shoo"
+          }
+        }
+      }
+    },
+    "detail.openedBy" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): label over the chip of the person who opened the site",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opened by"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil yang mengakses"
+          }
+        }
+      }
+    },
+    "detail.siteStatus" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): label over the status chip",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site status"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status situs"
+          }
+        }
+      }
+    },
+    "detail.status.warning" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): status chip of a warning",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warning"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waspada"
+          }
+        }
+      }
+    },
+    "detail.status.unblocked" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): status chip of a blocked site a guardian marked safe",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unblocked"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blokir Dibuka"
+          }
+        }
+      }
+    },
+    "detail.flaggedByShoo" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): no guardian decided yet",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "flagged by Shoo"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ditandai oleh Shoo"
+          }
+        }
+      }
+    },
+    "confirmed by %@ · %@" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): who decided and when. %1$@ = name, %2$@ = time",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dikonfirmasi %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "confirmed by you · %@" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): the viewer decided. %@ = time",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dikonfirmasi Anda · %@"
+          }
+        }
+      }
+    },
+    "Is this site dangerous?" : {
+      "comment" : "Detail REVISI PRU (Figma 1252:9850 / 1211:19924): question over Aman / Bahaya on a blocked site",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apakah situs ini berbahaya?"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

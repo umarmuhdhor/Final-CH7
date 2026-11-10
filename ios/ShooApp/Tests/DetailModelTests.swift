@@ -277,6 +277,44 @@ struct DetailModelTests {
         #expect(await loaded(FixtureScan.blocked92).verdictNote(language: .english) == nil)
     }
 
+    // MARK: Hero avatar (Figma "Guardian Virellia", 1211:19925)
+
+    @Test func protectedHeroShowsTheGuardianWhoDecided() async {
+        let model = await loaded(FixtureScan.markedSafe, mode: .protected)
+        #expect(model.isOwnScan)
+        #expect(model.deciderAvatarId == MockRepository.fixtureGuardian.avatarId)
+    }
+
+    @Test func heroKeepsTheShieldWithoutAGuardianVerdict() async {
+        // Nobody decided yet: the big shield.
+        #expect(await loaded(FixtureScan.blocked92, mode: .protected).deciderAvatarId == nil)
+        // The guardian's own view never shows the circle (Figma 1252:9850).
+        #expect(await loaded(FixtureScan.verifiedScam).deciderAvatarId == nil)
+        #expect(await loaded(FixtureScan.markedSafe).deciderAvatarId == nil)
+    }
+
+    @Test(arguments: [
+        (92, [30, 25, 22], 92),
+        (72, [40, 40], 72),
+        (100, [70, 50], 100),
+        (50, [], 0),
+    ])
+    func scoreBarAddsUpToTheScore(score: Int, weights: [Int], total: Int) {
+        let scaled = RiskScoreBar.scaled(score: score, weights: weights)
+        #expect(abs(scaled.reduce(0, +) - total) <= 1)
+        #expect(scaled.count == weights.count)
+    }
+
+    @Test func detailLookFollowsTheVerdict() async {
+        #expect(DetailLook(scan: FixtureLoader.scan("blocked-verified-scam")) == .danger)
+        var scan = FixtureLoader.scan("blocked-verified-scam")
+        scan.verdict?.value = .safe
+        #expect(DetailLook(scan: scan) == .caution)
+        scan.verdict = nil
+        scan.status = .warning
+        #expect(DetailLook(scan: scan) == .caution)
+    }
+
     // MARK: DT-03 owner
 
     @Test func ownerShownForFamilyItemsOnly() async {
