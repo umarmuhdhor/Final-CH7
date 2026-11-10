@@ -155,10 +155,12 @@ extension XCUIApplication {
         if start.waitForExistence(timeout: UITestTimeout.optional) { start.tapWhenHittable(file: file, line: line) }
     }
 
-    /// PR-01: Pribadi to Terawasi from Home: the "Mode Terawasi" card opens the Connect sheet.
+    /// PR-01: Pribadi to Terawasi from Home: the "Mode Terawasi" card opens Profile › Account mode, whose
+    /// "Have an invite code?" opens the Connect sheet.
     @MainActor
     func openSupervisedConnect(file: StaticString = #filePath, line: UInt = #line) {
-        buttons["home.supervisedCard.action"].tapWhenHittable(file: file, line: line)
+        buttons["home.supervised.connect"].tapWhenHittable(file: file, line: line)
+        buttons["mode.joinFamily"].tapWhenHittable(file: file, line: line)
         XCTAssertTrue(textFields["connect.code"].waitForExistence(timeout: UITestTimeout.screen), debugDescription,
                       file: file, line: line)
     }

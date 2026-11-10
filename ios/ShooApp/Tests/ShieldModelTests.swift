@@ -40,15 +40,32 @@ struct ShieldModelTests {
         #expect(model.state == .loaded)
     }
 
-    @Test func lastBlockedIsTheNewestBlockedScanOfThisDevice() async throws {
+    @Test func lastScanIsTheNewestScanOfThisDevice() async throws {
         let repository = MockRepository(mode: .protected, latency: .zero)
         let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
         await model.refresh()
-        let blocked = try await repository.scans(owner: .me, status: .blocked, cursor: nil).items
-        let card = try #require(model.lastBlocked)
-        #expect(card.id == blocked.max(by: { $0.detectedAt < $1.detectedAt })?.id)
-        #expect(card.status == .blocked)
+        let own = try await repository.scans(owner: .me, status: nil, cursor: nil).items
+        let card = try #require(model.lastScan)
+        #expect(card.id == own.max(by: { $0.detectedAt < $1.detectedAt })?.id)
         #expect(card.ownerDeviceId == "dev_mom")
+    }
+
+    /// protected/Home/warning 1363:12167 and the decided frames (1373:13100, 1373:12376): a warning or a site the
+    /// guardian already decided still takes the card for a day.
+    @Test(arguments: [MockRepository.Scenario.protectedWarning, .protectedWarningSafe, .protectedBlockedScam])
+    func cardTakesWarningsAndDecidedSites(_ scenario: MockRepository.Scenario) async throws {
+        let model = model(scenario: scenario)
+        await model.refresh()
+        let card = try #require(model.cardScan)
+        #expect(card.id == "home-card")
+        #expect(!model.recent.contains { $0.id == card.id })
+    }
+
+    @Test func noCardWhenNothingHappenedToday() async {
+        let model = model(scenario: .protectedQuiet)
+        await model.refresh()
+        #expect(model.cardScan == nil)
+        #expect(model.recent.count == 3)
     }
 
     @Test func recentComesFromOwnScans() async throws {
@@ -60,27 +77,27 @@ struct ShieldModelTests {
         #expect(model.recent.map(\.detectedAt) == model.recent.map(\.detectedAt).sorted(by: >))
     }
 
-    @Test func blockedCardOnlyForTheLastDay() async throws {
+    @Test func cardOnlyForTheLastDay() async throws {
         let repository = MockRepository(mode: .protected, latency: .zero)
         let probe = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
         await probe.refresh()
-        let blocked = try #require(probe.lastBlocked)
+        let blocked = try #require(probe.lastScan)
         let soon = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) }, now: { blocked.detectedAt.addingTimeInterval(60) })
         await soon.refresh()
-        #expect(soon.recentBlocked?.id == blocked.id)
+        #expect(soon.cardScan?.id == blocked.id)
         // The big card's site is not listed twice.
         #expect(!soon.recent.contains { $0.id == blocked.id })
         let later = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) },
-                                now: { blocked.detectedAt.addingTimeInterval(ShieldModel.blockedCardWindow + 60) })
+                                now: { blocked.detectedAt.addingTimeInterval(ShieldModel.cardWindow + 60) })
         await later.refresh()
-        #expect(later.recentBlocked == nil)
+        #expect(later.cardScan == nil)
     }
 
     @Test func nothingBlockedYet() async {
         let model = model(scenario: .empty)
         await model.refresh()
         #expect(model.state == .loaded)
-        #expect(model.lastBlocked == nil)
+        #expect(model.lastScan == nil)
     }
 
     @Test func noGuardianAfterDisconnect() async throws {
@@ -102,11 +119,11 @@ struct ShieldModelTests {
         let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
         let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) })
         await model.refresh()
-        let blocked = try #require(model.lastBlocked)
+        let blocked = try #require(model.lastScan)
         repository.failure = RepositoryError.network
         await model.refresh()
         #expect(model.state == .loaded)
-        #expect(model.lastBlocked == blocked)
+        #expect(model.lastScan == blocked)
         #expect(model.guardian?.name == "Adhella")
     }
 
@@ -147,7 +164,7 @@ struct ShieldModelTests {
         let now = now
         let model = ShieldModel(repository: try await repository(scans: 10), extensionStatus: { .off(lastSeen: nil) }, now: { now })
         await model.refresh()
-        #expect(model.recentBlocked?.id == "scan-0")
+        #expect(model.cardScan?.id == "scan-0")
         #expect(model.recent.map(\.id) == ["scan-1", "scan-2", "scan-3"])
     }
 
@@ -155,7 +172,7 @@ struct ShieldModelTests {
         let now = now
         let model = ShieldModel(repository: try await repository(scans: 1), extensionStatus: { .off(lastSeen: nil) }, now: { now })
         await model.refresh()
-        #expect(model.recentBlocked?.id == "scan-0")
+        #expect(model.cardScan?.id == "scan-0")
         #expect(model.recent.isEmpty)
     }
 

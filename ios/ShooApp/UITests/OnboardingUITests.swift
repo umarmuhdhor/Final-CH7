@@ -99,7 +99,7 @@ final class OnboardingUITests: XCTestCase {
         reminder.buttons["Not now"].firstMatch.tap()
         XCTAssertFalse(reminder.waitForExistence(timeout: 2))
         // Pribadi Home offers to connect to a guardian (Figma 1253:8630).
-        XCTAssertTrue(app.descendants(matching: .any)["home.supervisedCard"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["home.supervised"].waitForExistence(timeout: 5), app.debugDescription)
     }
 
     @MainActor
@@ -189,10 +189,10 @@ final class OnboardingUITests: XCTestCase {
         // Back keeps Pribadi.
         app.buttons["onboarding.back"].tap()
         XCTAssertTrue(start.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["home.supervisedCard"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["home.supervised"].exists)
         toggle.tapWhenHittable()
         app.buttons["guardianIntro.start"].tapWhenHittable()
         XCTAssertTrue(start.waitForNonExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any)["home.supervisedCard"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["home.supervised"].exists)
     }
 }

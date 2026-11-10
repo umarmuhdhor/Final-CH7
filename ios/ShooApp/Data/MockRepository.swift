@@ -26,6 +26,27 @@ actor MockRepository: ShooRepository {
         case allBlocked
         /// Imelda's eval corpus with the detector's real results (`Fixtures/corpus-scans.json`).
         case corpus
+        // Home parity QA (`MockScenarios.home`): one state per Figma HOME frame (Pribadi, protected/Home).
+        case homePribadi
+        case homePribadiAlone
+        case protectedQuiet
+        case protectedBlocked
+        case protectedBlockedScam
+        case protectedBlockedSafe
+        case protectedWarning
+        case protectedWarningScam
+        case protectedWarningSafe
+        case protectedAlone
+
+        /// Draws the Figma "Scam Terbaru" cards on Home.
+        var hasScamCases: Bool {
+            switch self {
+            case .standard, .empty, .unpaired, .oneMember, .threeMembers, .mixedVerdicts, .heavy, .edge, .allSafe,
+                 .allBlocked, .corpus: false
+            case .figma, .homePribadi, .homePribadiAlone, .protectedQuiet, .protectedBlocked, .protectedBlockedScam,
+                 .protectedBlockedSafe, .protectedWarning, .protectedWarningScam, .protectedWarningSafe, .protectedAlone: true
+            }
+        }
     }
 
     /// Not in contracts/fixtures: only the 3-member UI gate uses it.
@@ -122,7 +143,9 @@ actor MockRepository: ShooRepository {
         case .empty, .unpaired:
             allScans = []
             members = []
-        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus:
+        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus, .homePribadi, .homePribadiAlone,
+             .protectedQuiet, .protectedBlocked, .protectedBlockedScam, .protectedBlockedSafe, .protectedWarning,
+             .protectedWarningScam, .protectedWarningSafe, .protectedAlone:
             allScans = dataset?.scans ?? []
             members = dataset?.members ?? []
         }
@@ -149,7 +172,7 @@ actor MockRepository: ShooRepository {
     }
 
     func latestScams() async throws -> [ScamCase] {
-        scenario == .figma ? MockScenarios.scamCases : []
+        scenario.hasScamCases ? MockScenarios.scamCases : []
     }
 
     func me() async throws -> DeviceProfile {

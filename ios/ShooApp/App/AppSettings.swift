@@ -124,7 +124,7 @@ final class AppSettings {
         didSet { defaults.set(guardianCardDismissed, forKey: Keys.guardianCardDismissed) }
     }
 
-    /// Home Pribadi: the "Mode Terawasi" card was closed with X (Figma 1253:8630).
+    /// Home's "Mode Terawasi" card (Pribadi without family, protected without a guardian) was closed with X.
     var supervisedCardDismissed: Bool {
         didSet { defaults.set(supervisedCardDismissed, forKey: Keys.supervisedCardDismissed) }
     }
