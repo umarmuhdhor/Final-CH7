@@ -44,7 +44,7 @@ final class ConnectModel {
             case .expired: "That code has expired. Ask your guardian for the new code."
             case .full: "This family already has 3 people. Ask your guardian to remove someone first."
             case .tooManyAttempts: "Too many tries. Wait a few minutes, then try again."
-            case .alreadyConnected: "You're already connected to a guardian. Disconnect in Profile first."
+            case .alreadyConnected: "You're already connected to a guardian. Only they can disconnect you: ask them first."
             case .hasMembers: "You still protect someone. Disconnect them in Profile first."
             case .offline: "No connection. Check your internet and try again."
             case .other: "Something went wrong. Try again."
