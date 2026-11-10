@@ -224,5 +224,10 @@ A real host sits right on an edge: `login.klikbca.com.verifikasi-akun.xyz` = 29 
 
 ## Follow-ups
 
-- Question issues for lead-owned and AI-owned work: #1 (extension + AI), #3 (contract field for extension status), #8–#11 (detector and block page), #12 (thresholds in ShooShared).
+- Question issues for lead-owned and AI-owned work:
+  - [#379](https://github.com/umarmuhdhor/Final-CH7/issues/379): problem 1, what a scan shows when `/analyze` fails (Lead + AI)
+  - [#380](https://github.com/umarmuhdhor/Final-CH7/issues/380): problem 3, a contract field for extension status
+  - [#381](https://github.com/umarmuhdhor/Final-CH7/issues/381): problem 8, detector domain scores
+  - [#382](https://github.com/umarmuhdhor/Final-CH7/issues/382): problems 9–11, block page copy and chip
+  - [#383](https://github.com/umarmuhdhor/Final-CH7/issues/383): problem 12, `ScoreThreshold` vs `/config/public`
 - The rest is Team App (`ios/ShooApp/`, `backend/`).
