@@ -20,6 +20,10 @@ struct DetailView: View {
     @State private var loadAttempt = 0
     @State private var isZoomed = false
     @State private var copied = false
+    /// The material under the status bar shows once the hero has scrolled away.
+    @State private var statusBarShade = 0.0
+    /// The link pill grows with Dynamic Type; the title keeps clear of it.
+    @State private var pillHeight: CGFloat = 34
 
     init(scanId: String, repository: any ShooRepository) {
         _model = State(initialValue: DetailModel(scanId: scanId, repository: repository))
@@ -109,55 +113,42 @@ struct DetailView: View {
 
     private func loaded(_ scan: ScanResult) -> some View {
         let reasons = model.evidence(language: language)
-        let markedSafe = scan.verdict?.value == .safe
+        let look = DetailLook(scan: scan)
         return ScrollView {
             VStack(spacing: 0) {
-                topBar(owner: ownerName(scan))
-                scoreCard(scan)
-                    .padding(.horizontal, 16)
-                    // Figma: Back 40–90, Score Card at 114.
-                    .padding(.top, 24)
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(markedSafe ? "What the AI flagged" : "Reasons detected")
-                        .activityFont(17, .medium, tracking: -0.17)
-                        .foregroundStyle(DetailStyle.secondary)
-                        .accessibilityAddTraits(.isHeader)
-                    PageCopyCaption(
-                        state: model.isSavingCopy ? .saving : copyState,
-                        meta: pageCopy?.meta,
-                        scan: scan,
-                        hasScreenshot: screenshot != nil || screenshotLoading
-                    )
-                    ForEach(reasons) { reason in
-                        EvidenceCard(
-                            reason: reason,
-                            image: pageImage,
-                            isLoadingImage: screenshotLoading || copyState == .loading || model.isSavingCopy,
-                            pageCSSWidth: model.pageCSSWidth,
-                            onOpenImage: { isZoomed = true }
-                        )
+                DetailHero(look: look, guardianAvatarId: model.deciderAvatarId) { env.router.pop() }
+                sheet(scan, reasons: reasons, look: look)
+            }
+            .background(alignment: .top) {
+                // Figma "Hero BG" (402 × 360, rings in it); its top colour carries on when pulled down.
+                DetailHeroBackground(look: look)
+                    .background(alignment: .bottom) {
+                        look.topColor.frame(height: 400).offset(y: -DetailHeroLayout.imageHeight)
                     }
-                }
-                .padding(.horizontal, ActivityStyle.margin)
-                // Figma: "Alasan Terdeteksi" 24 pt under the Score Card; the last card ends 12 pt above the footer.
-                .padding(.top, 24)
-                .padding(.bottom, 12)
+                    .accessibilityHidden(true)
             }
         }
         .scrollIndicators(.hidden)
-        // Cards scrolling under the status bar stay readable; over the header gradient it barely shows.
-        .safeAreaInset(edge: .top, spacing: 0) {
+        // Figma lays the hero out from the top of the screen, under the status bar.
+        .ignoresSafeArea(edges: .top)
+        .background(Color.white)
+        // Cards scrolling under the status bar stay readable once the hero has gone up.
+        .overlay(alignment: .top) {
             Color.clear.frame(height: 0)
-                .background(.ultraThinMaterial.opacity(0.9), ignoresSafeAreaEdges: .top)
+                .background(.ultraThinMaterial.opacity(statusBarShade), ignoresSafeAreaEdges: .top)
         }
+        .onScrollOffset { statusBarShade = $0 > DetailHeroLayout.sheetTop - 60 ? 0.9 : 0 }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if model.canValidate || scan.verdict != nil {
+            // Only the guardian answers here; the protected person reads the decision in "Status situs"
+            // (the Ortu frames of 1211:19924 have no footer).
+            if model.canValidate {
                 DetailFooter(
                     verdict: scan.verdict,
                     viewerDeviceId: model.viewer?.deviceId,
                     canValidate: model.canValidate,
                     failed: model.verdictFailed,
                     ownerName: ownerName(scan),
+                    isBlocked: scan.status == .blocked,
                     onDecide: { value in
                         Task {
                             let outcome = await model.setVerdict(value)
@@ -170,157 +161,234 @@ struct DetailView: View {
         .sensoryFeedback(.success, trigger: model.verdictSaves)
     }
 
-    // MARK: Header
-
-    /// Back button at the left, the owner chip in the middle (Figma "Profil Dilindungi").
-    private func topBar(owner: String?) -> some View {
-        ZStack {
-            if let owner {
-                HStack(spacing: 8) {
-                    ActivityAvatar(name: owner, avatarId: model.ownerAvatarId ?? "1", size: 24)
-                    Text(verbatim: owner)
-                        .activityFont(16, .semibold, tracking: -0.16)
-                        .foregroundStyle(DetailStyle.title)
-                        .lineLimit(1)
-                }
-                .padding(.leading, 8)
-                .padding(.trailing, 16)
-                .padding(.vertical, 8)
-                .background(.white.opacity(0.7), in: Capsule())
-                .overlay(Capsule().stroke(.white.opacity(0.9)))
-                .figmaCardShadow()
-                .padding(.horizontal, 84)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(Text("Opened by \(owner)"))
-                .accessibilityIdentifier("detail.owner")
-            }
-            HStack {
-                OnboardingBackButton(identifier: "detail.back") { env.router.pop() }
-                Spacer()
-            }
-        }
-        .padding(.horizontal, ActivityStyle.margin)
-        .padding(.top, 4)
-    }
-
-    /// DT-01 gauge, DT-02 badge, DT-03 link and time (Figma "Score Card").
-    private func scoreCard(_ scan: ScanResult) -> some View {
-        let unseenBy = unseenGuardian(scan)
-        return VStack(spacing: 10) {
-            if let unseenBy {
-                UnseenBanner(guardianName: unseenBy)
-            }
-            VStack(spacing: 10) {
-                gauge(scan, cropped: unseenBy != nil)
-                badges(scan)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("Risk score"))
-            .accessibilityValue(Text(verbatim: headerValue(scan)))
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityIdentifier("detail.header")
-            // Verbatim: never turned into a tappable link (D-alief-A31). Copy from the menu.
-            Text(verbatim: Self.shownLink(scan.url))
-                .activityFont(18, .semibold, tracking: -0.18)
-                .foregroundStyle(DetailStyle.link)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-                .truncationMode(.middle)
+    /// Figma "Sheet": white from y 284 with 32 pt corners; the link pill sits on its top edge.
+    private func sheet(_ scan: ScanResult, reasons: [Evidence], look: DetailLook) -> some View {
+        VStack(spacing: 0) {
+            summary(scan, look: look)
+            DetailStyle.divider
+                .frame(height: 1)
                 .padding(.horizontal, 24)
+                // Figma: the score row ends at 500, the divider is at 516, "Alasan Terdeteksi" at 541.
+                .padding(.top, 16)
+                .padding(.bottom, 24)
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Reasons detected")
+                    .activityFont(20, .semibold, tracking: -0.45)
+                    .figmaLineHeight(25, relativeTo: .title2)
+                    .foregroundStyle(DetailStyle.title)
+                    .accessibilityAddTraits(.isHeader)
+                PageCopyCaption(
+                    state: model.isSavingCopy ? .saving : copyState,
+                    meta: pageCopy?.meta,
+                    scan: scan,
+                    hasScreenshot: screenshot != nil || screenshotLoading
+                )
+                ForEach(reasons) { reason in
+                    EvidenceCard(
+                        reason: reason,
+                        image: pageImage,
+                        isLoadingImage: screenshotLoading || copyState == .loading || model.isSavingCopy,
+                        pageCSSWidth: model.pageCSSWidth,
+                        onOpenImage: { isZoomed = true }
+                    )
+                }
+            }
+            .padding(.horizontal, ActivityStyle.margin)
+            .padding(.bottom, 24)
+        }
+        // Figma: the title starts 32 pt into the sheet (y 316), 15 pt under the 34 pt pill.
+        .padding(.top, max(32, pillHeight / 2 - 1 + 16))
+        .frame(maxWidth: .infinity)
+        .background(
+            .white,
+            in: UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous)
+        )
+        .overlay(alignment: .top) {
+            // Verbatim: never turned into a tappable link (D-alief-A31). Copy from the menu.
+            DetailLinkPill(look: look, text: Self.shownLink(scan.url))
                 .contextMenu {
                     Button {
-                        LinkCopy.copy(scan.url)
-                        AccessibilityNotification.Announcement(L10n.string("Copied", language: language)).post()
+                        copyLink(scan.url)
                     } label: {
                         Label("Copy link", systemImage: "doc.on.doc")
                     }
                 }
-                .accessibilityAction(named: Text("Copy link")) {
-                    LinkCopy.copy(scan.url)
-                    AccessibilityNotification.Announcement(L10n.string("Copied", language: language)).post()
-                }
+                .accessibilityAction(named: Text("Copy link")) { copyLink(scan.url) }
                 .accessibilityIdentifier("detail.link")
-            Text(verbatim: openedText(scan.detectedAt))
-                .activityFont(13, rounded: true)
-                .foregroundStyle(DetailStyle.secondary)
-                // Figma "Waktu": 20 pt line.
-                .frame(minHeight: 20)
-                .accessibilityIdentifier("detail.time")
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pillHeight = $0 }
+                // Figma: 34 pt at y 266, i.e. its middle 1 pt above the sheet's top edge.
+                .alignmentGuide(.top) { $0.height / 2 + 1 }
         }
-        // The banner sits flush at the top, inside the 1 pt stroke (Figma 487:4221).
-        .padding(.top, unseenBy == nil ? 8 : 1)
-        .padding(.bottom, 24)
+    }
+
+    private func copyLink(_ url: URL) {
+        LinkCopy.copy(url)
+        AccessibilityNotification.Announcement(L10n.string("Copied", language: language)).post()
+    }
+
+    /// Title, when it was opened, then the score next to the site status (own scan) or who opened it.
+    private func summary(_ scan: ScanResult, look: DetailLook) -> some View {
+        // Figma 24; 22 here because the line above sits 2 pt lower to match.
+        VStack(spacing: 22) {
+            // Overlaid on the Figma export: title 1 pt low, the line under it 2 pt high with the 8 pt gap.
+            VStack(spacing: 10) {
+                Text(verbatim: title(scan))
+                    .activityFont(28, .medium, tracking: -0.56)
+                    // Figma 120 % (33.6 pt) is the font's own line; an exact height clipped a wrapped title
+                    // at large Dynamic Type (accessibility audit).
+                    .foregroundStyle(DetailStyle.title)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("detail.title")
+                Text(verbatim: openedText(scan.detectedAt))
+                    .activityFont(13, rounded: true, tracking: -0.08)
+                    .figmaLineHeight(18, relativeTo: .footnote)
+                    .foregroundStyle(DetailStyle.rowSubtitle)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("detail.time")
+            }
+            .padding(.horizontal, 16)
+            scoreRow(scan, look: look)
+        }
+    }
+
+    /// Figma "Frame 1618872308": two 181 pt columns either side of a 76 pt line. The red frames put it
+    /// at x 24–387 (line at 205.5), the orange ones at 16–386 (line at 201).
+    private func scoreRow(_ scan: ScanResult, look: DetailLook) -> some View {
+        let leading: CGFloat = look == .danger ? 24 : 16
+        let gap: CGFloat = look == .danger ? 0 : 3.5
+        return HStack(alignment: .top, spacing: 0) {
+            scoreColumn(scan)
+                .frame(width: 181)
+            DetailStyle.scoreLine
+                .frame(width: 1, height: 76)
+                .padding(.top, 12)
+                .padding(.horizontal, gap)
+            rightColumn(scan)
+                .frame(width: 181)
+        }
+        .padding(.leading, leading)
+        // 100 pt in Figma; grows with Dynamic Type instead of clipping.
+        .frame(width: DetailHeroLayout.width, alignment: .topLeading)
+        .frame(minHeight: 100, alignment: .top)
         .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(colors: [DetailStyle.cardTop, DetailStyle.background], startPoint: .top, endPoint: .bottom),
-            in: RoundedRectangle(cornerRadius: 32, style: .continuous)
-        )
-        // Figma: 1 pt white inside stroke on the top and sides, none at the bottom.
-        .overlay(
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .strokeBorder(.white)
-                .mask {
-                    VStack(spacing: 0) {
-                        Color.black
-                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: 32)
-                    }
-                }
-        )
-        .figmaCardShadow()
     }
 
-    /// The viewer's own blocked site their guardian hasn't decided on yet: "Virellia belum melihat link ini"
-    /// (Figma 487:4221). Same rule as the note under the Activity row (`ActivityNote.unseen`).
-    private func unseenGuardian(_ scan: ScanResult) -> String? {
-        guard model.isOwnScan,
-              case .unseen(let name)? = ActivityNote(
-                  scan: scan, guardianName: model.viewer?.guardian?.name, viewerDeviceId: model.viewer?.deviceId
-              )
-        else { return nil }
-        return name
-    }
-
-    /// 370 × 237 in Figma (219 when warning: the shorter label row; 213 under the "not seen" banner,
-    /// the halo cut at the bottom); scales down on narrower screens.
-    private func gauge(_ scan: ScanResult, cropped: Bool = false) -> some View {
-        let height: CGFloat = cropped ? 213 : scan.status == .blocked ? 237 : 219
-        return Color.clear
-            .aspectRatio(ScoreGauge.size.width / height, contentMode: .fit)
-            .frame(maxWidth: ScoreGauge.size.width)
-            .overlay(alignment: .topLeading) {
-                GeometryReader { proxy in
-                    ScoreGauge(score: scan.score, status: scan.status)
-                        .scaleEffect(proxy.size.width / ScoreGauge.size.width, anchor: .topLeading)
-                }
-            }
-    }
-
-    /// The AI's badge; greyed with a blue "Anda menandai ini aman" chip once marked safe (480:5780).
-    @ViewBuilder
-    private func badges(_ scan: ScanResult) -> some View {
-        let status = ScanBadge(status: scan.status)
-        if let verdict = scan.verdict, verdict.value == .safe {
-            // Figma 480:5780 "Status": 6 pt apart; the blue chip is 30 high, 1 pt inside stroke, 11 pt tick.
-            HStack(spacing: 6) {
-                GreyBadge(title: ActivityBadge(badge: status).title)
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .activityFont(10, .semibold)
-                        .accessibilityHidden(true)
-                    Text(verbatim: VerdictNote.markedSafeChip(for: verdict, viewerDeviceId: model.viewer?.deviceId, language: language))
-                        .activityFont(13)
-                }
-                .foregroundStyle(DetailStyle.markedText)
-                .padding(.leading, 8)
-                .padding(.trailing, 9)
-                .padding(.vertical, 6)
-                .frame(minHeight: 30)
-                .background(DetailStyle.markedFill, in: Capsule())
-                .overlay(Capsule().strokeBorder(DetailStyle.markedStroke))
-            }
-        } else {
-            ActivityBadge(badge: status)
+    /// "Penilaian Risiko Shoo", "92/100" and the bar (DT-01).
+    private func scoreColumn(_ scan: ScanResult) -> some View {
+        VStack(spacing: 6) {
+            Text("detail.riskScore")
+                .activityFont(13, rounded: true, tracking: -0.08)
+                .figmaLineHeight(18, glyphOffset: 2, relativeTo: .footnote)
+                .foregroundStyle(DetailStyle.rowSubtitle)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: "\(scan.score)/100")
+                .activityFont(28, .semibold, tracking: 0.56)
+                .figmaLineHeight(34, glyphOffset: -1, relativeTo: .title)
+                .foregroundStyle(DetailStyle.title)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            RiskScoreBar(score: scan.score, weights: scan.signals.map(\.weight))
         }
+        .padding(.top, 12)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Risk score"))
+        .accessibilityValue(Text(verbatim: headerValue(scan)))
+        .accessibilityIdentifier("detail.header")
+    }
+
+    /// Someone else's scan: "Profil yang mengakses" and their chip. Own scan: "Status situs", the chip and
+    /// who decided ("dikonfirmasi Virellia · 10.51", "ditandai oleh Shoo").
+    @ViewBuilder
+    private func rightColumn(_ scan: ScanResult) -> some View {
+        if let owner = ownerName(scan) {
+            VStack(spacing: 16) {
+                label("detail.openedBy")
+                DetailOwnerChip(name: owner, avatarId: model.ownerAvatarId)
+            }
+            .padding(.top, 12)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("Opened by \(owner)"))
+            .accessibilityIdentifier("detail.owner")
+        } else {
+            VStack(spacing: 6) {
+                label("detail.siteStatus")
+                DetailStatusChip(kind: statusKind(scan))
+                    .frame(maxWidth: .infinity)
+                Text(verbatim: decidedText(scan))
+                    .activityFont(13, rounded: true, tracking: -0.08)
+                    .figmaLineHeight(18, glyphOffset: 2, relativeTo: .footnote)
+                    .foregroundStyle(DetailStyle.rowSubtitle)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // Figma: 16 pt in on both sides (147 pt of 181).
+                    .padding(.horizontal, 16)
+                    .accessibilityIdentifier(scan.verdict == nil ? "detail.flagged" : "detail.verdictNote")
+            }
+            .padding(.top, 12)
+        }
+    }
+
+    private func label(_ key: LocalizedStringKey) -> some View {
+        Text(key)
+            .activityFont(13, rounded: true, tracking: -0.08)
+            .figmaLineHeight(18, glyphOffset: 1.5, relativeTo: .footnote)
+            .foregroundStyle(DetailStyle.rowSubtitle)
+            .multilineTextAlignment(.center)
+            .frame(width: 181)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func statusKind(_ scan: ScanResult) -> DetailStatusChip.Kind {
+        switch scan.verdict?.value {
+        case .notSafe: .blocked
+        case .safe: scan.status == .blocked ? .unblocked : .markedSafe
+        case nil: scan.status == .blocked ? .blocked : .warning
+        }
+    }
+
+    /// "dikonfirmasi Virellia · 10.51" once a guardian decided, "ditandai oleh Shoo" before.
+    private func decidedText(_ scan: ScanResult) -> String {
+        guard let verdict = scan.verdict else { return L10n.string("detail.flaggedByShoo", language: language) }
+        let time = Formatters.dateFormatter(template: "jm", locale: language.locale, timeZone: .current)
+            .string(from: verdict.decidedAt)
+        return verdict.byDeviceId == model.viewer?.deviceId
+            ? L10n.string("confirmed by you · \(time)", language: language)
+            : L10n.string("confirmed by \(verdict.byName) · \(time)", language: language)
+    }
+
+    /// "Situs Berbahaya!", "Situs Mencurigakan!", "Situs Sudah Ditandai Blokir!", "Anda Menandai ini Aman",
+    /// "Virellia Menandai ini Aman".
+    private func title(_ scan: ScanResult) -> String {
+        let byViewer = scan.verdict?.byDeviceId == model.viewer?.deviceId
+        switch scan.verdict?.value {
+        case .safe:
+            return byViewer
+                ? L10n.string("detail.title.youMarkedSafe", language: language)
+                : L10n.string("\(scan.verdict?.byName ?? "") marked this safe", language: language)
+        case .notSafe where model.viewer?.mode == .guardian:
+            return L10n.string("detail.title.markedBlocked", language: language)
+        case .notSafe:
+            return L10n.string("detail.title.dangerous", language: language)
+        case nil:
+            return scan.status == .blocked
+                ? L10n.string("detail.title.dangerous", language: language)
+                : L10n.string("detail.title.suspicious", language: language)
+        }
+    }
+
+    // MARK: Header
+
+    /// Back button only: the screens that have no hero (loading, gone, failed).
+    private func topBar(owner: String?) -> some View {
+        HStack {
+            OnboardingBackButton(identifier: "detail.back") { env.router.pop() }
+            Spacer()
+        }
+        .padding(.horizontal, ActivityStyle.margin)
+        .padding(.top, 4)
     }
 
     /// Figma shows host and path ("bca-verifikasi.site/login"); the full link is what "Copy link" copies.
@@ -473,62 +541,6 @@ private extension ScanBadge {
         case .verifiedScam: "Verified scam"
         case .markedSafe: "Marked safe"
         }
-    }
-}
-
-/// Grey strip across the top of the Score Card: the guardian hasn't looked at this blocked site yet
-/// (Figma 487:4221). Top corners follow the card, bottom corners 6 pt.
-private struct UnseenBanner: View {
-    let guardianName: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "eye.slash.fill")
-                .activityFont(24.35, .bold)
-                .foregroundStyle(DetailStyle.secondary)
-                .accessibilityHidden(true)
-            Text("detail.unseen \(guardianName)")
-                .activityFont(15, .bold, tracking: -0.15)
-                .foregroundStyle(DetailStyle.unseenText)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 17)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .frame(maxWidth: .infinity, minHeight: 57)
-        .background(
-            DetailStyle.unseenFill,
-            in: UnevenRoundedRectangle(
-                topLeadingRadius: 31, bottomLeadingRadius: 6, bottomTrailingRadius: 6, topTrailingRadius: 31,
-                style: .continuous
-            )
-        )
-        .padding(.horizontal, 1)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("detail.unseen")
-    }
-}
-
-/// The AI's badge once a guardian marked the site safe: same words, grey (Figma 480:5780).
-private struct GreyBadge: View {
-    let title: LocalizedStringKey
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .activityFont(10, .semibold)
-                .accessibilityHidden(true)
-            Text(title)
-                .activityFont(13, tracking: -0.1625)
-                .lineLimit(1)
-        }
-        .foregroundStyle(DetailStyle.secondary)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(minHeight: 23)
-        .background(DetailStyle.greyBadgeFill, in: Capsule())
-        .overlay(Capsule().strokeBorder(DetailStyle.greyBadgeStroke, lineWidth: 0.75))
-        .fixedSize()
     }
 }
 
