@@ -63,12 +63,28 @@ enum SignalKind: Equatable {
 /// Figma "Progres Risiko": one segment per reason up to this card, a tick at the running total, then
 /// the hatched rest. Widths follow the weights; the total never passes 100 % (`score = min(100, Σ)`).
 struct ContributionBar: View {
+    /// Spacing and hatching of the two Figma bars.
+    struct Style {
+        var gap: CGFloat
+        var tickWidth: CGFloat
+        var tickRadius: CGFloat
+        var hatchPitch: CGFloat
+        var hatchWidth: CGFloat
+        var shadowRadius: CGFloat
+        var shadowY: CGFloat
+
+        /// The evidence card's bar: 3 pt apart, 2.5 pt tick, hatching every 5 pt.
+        static let card = Style(gap: 3, tickWidth: 2.5, tickRadius: 1.25, hatchPitch: 5, hatchWidth: 1.2,
+                                shadowRadius: 4, shadowY: 3)
+        /// The "Penilaian Risiko Shoo" bar (1252:2047): 1.5 pt apart, 2 pt tick, 0.6 pt hatching every 2.48 pt,
+        /// shadow blur 4 at y 1.5.
+        static let score = Style(gap: 1.5, tickWidth: 2, tickRadius: 0.625, hatchPitch: 2.48, hatchWidth: 0.6,
+                                 shadowRadius: 2, shadowY: 1.5)
+    }
+
     /// Weights of this card's reason and every heavier one before it, in order.
     let weights: [Int]
-
-    private static let gap: CGFloat = 3
-    /// Figma "Tick": 2.5 × 16, centred on the 10 pt bar (3 pt over and under it).
-    private static let tickWidth: CGFloat = 2.5
+    var style: Style = .card
 
     /// Fractions of the bar per segment, capped so their sum is at most 1.
     static func fractions(_ weights: [Int]) -> [Double] {
@@ -83,21 +99,22 @@ struct ContributionBar: View {
     var body: some View {
         GeometryReader { proxy in
             let fractions = Self.fractions(weights)
-            let gaps = CGFloat(fractions.count + 1) * Self.gap + Self.tickWidth
+            let gaps = CGFloat(fractions.count + 1) * style.gap + style.tickWidth
             let usable = max(0, proxy.size.width - gaps)
-            HStack(spacing: Self.gap) {
+            HStack(spacing: style.gap) {
                 ForEach(Array(fractions.enumerated()), id: \.offset) { index, fraction in
                     HatchedCapsule(
                         fill: DetailStyle.segments[min(index, DetailStyle.segments.count - 1)],
-                        hatch: .white.opacity(0.3)
+                        hatch: .white.opacity(0.3), pitch: style.hatchPitch, lineWidth: style.hatchWidth
                     )
                     .frame(width: usable * fraction)
-                    .shadow(color: DetailStyle.barTick.opacity(0.35), radius: 4, y: 3)
+                    .shadow(color: DetailStyle.barTick.opacity(0.35), radius: style.shadowRadius, y: style.shadowY)
                 }
-                RoundedRectangle(cornerRadius: 1.25)
+                RoundedRectangle(cornerRadius: style.tickRadius)
                     .fill(DetailStyle.barTick)
-                    .frame(width: Self.tickWidth, height: 16)
-                HatchedCapsule(fill: DetailStyle.barTrack, hatch: DetailStyle.barTrackHatch)
+                    .frame(width: style.tickWidth, height: 16)
+                HatchedCapsule(fill: DetailStyle.barTrack, hatch: DetailStyle.barTrackHatch,
+                               pitch: style.hatchPitch, lineWidth: style.hatchWidth)
             }
             .frame(height: 16)
             .offset(y: -3)
@@ -108,10 +125,12 @@ struct ContributionBar: View {
     }
 }
 
-/// 10 pt capsule with 45° hatching every 5 pt (Figma "Hatch", 1.2 pt).
+/// 10 pt capsule with 45° hatching (Figma "Hatch").
 private struct HatchedCapsule: View {
     let fill: Color
     let hatch: Color
+    var pitch: CGFloat = 5
+    var lineWidth: CGFloat = 1.2
 
     var body: some View {
         Capsule()
@@ -119,13 +138,15 @@ private struct HatchedCapsule: View {
             .overlay {
                 Canvas { context, size in
                     var path = Path()
-                    var x: CGFloat = -size.height
-                    while x < size.width + size.height {
+                    // Figma draws each line over half the bar height ("M 0 10 L 4.96 0", every 2.48).
+                    let run = pitch == 5 ? size.height : pitch * 2
+                    var x: CGFloat = -run
+                    while x < size.width + run {
                         path.move(to: CGPoint(x: x, y: size.height))
-                        path.addLine(to: CGPoint(x: x + size.height, y: 0))
-                        x += 5
+                        path.addLine(to: CGPoint(x: x + run, y: 0))
+                        x += pitch
                     }
-                    context.stroke(path, with: .color(hatch), lineWidth: 1.2)
+                    context.stroke(path, with: .color(hatch), lineWidth: lineWidth)
                 }
             }
             .clipShape(Capsule())
@@ -267,7 +288,9 @@ private struct Spotlight: View {
     let tag: String?
 
     private var numbered: Bool { holes.count > 1 }
-    private var outline: Color { numbered ? DetailStyle.marker : .white }
+    /// Figma "Highlight" (1252:2138): #E5483B, 2 pt, with a white 55 % glow (blur 8).
+    private var outline: Color { numbered ? DetailStyle.marker : DetailStyle.barTick }
+    private var glow: Color { numbered ? DetailStyle.marker.opacity(0.5) : .white.opacity(0.55) }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -279,7 +302,7 @@ private struct Spotlight: View {
             ForEach(Array(holes.enumerated()), id: \.offset) { index, hole in
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(outline, lineWidth: 2)
-                    .shadow(color: outline.opacity(numbered ? 0.5 : 0.55), radius: 4)
+                    .shadow(color: glow, radius: 4)
                     .frame(width: hole.width, height: hole.height)
                     .offset(x: hole.minX, y: hole.minY)
                 if numbered {
@@ -297,8 +320,9 @@ private struct Spotlight: View {
                 Color.clear
                     .frame(width: 0, height: 0)
                     .overlay(alignment: .topTrailing) {
+                        // Figma "Highlight Tag": SF Pro Display Semibold 13 in a 22 pt white capsule.
                         Text(verbatim: tag)
-                            .activityFont(9, .semibold)
+                            .activityFont(13, .semibold)
                             .foregroundStyle(DetailStyle.title)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
@@ -306,14 +330,15 @@ private struct Spotlight: View {
                             .shadow(color: DetailStyle.pageShadow.opacity(0.15), radius: 1.5, y: 1)
                             .fixedSize()
                     }
-                    .offset(x: hole.maxX + 4, y: hole.minY - 8)
+                    // Figma: right edge 7.7 pt past the outline, top 10.9 pt above it.
+                    .offset(x: hole.maxX + 7.7, y: hole.minY - 10.9)
             }
         }
         .allowsHitTesting(false)
     }
 }
 
-/// Figma "Evidence Card" (416:9273): photo, reason, "Sinyal: …", contribution to the scam score.
+/// Figma "Evidence Card" (1252:2114, REVISI PRU): photo, reason, "Sinyal: …" on a pale card.
 struct EvidenceCard: View {
     let reason: Evidence
     let image: UIImage?
@@ -343,41 +368,30 @@ struct EvidenceCard: View {
                 .accessibilityHint(Text("Opens a larger view"))
                 .accessibilityIdentifier("detail.screenshot")
             }
-            VStack(alignment: .leading, spacing: 6) {
+            // Figma "Keterangan": the reason, then "Sinyal: …", 4 pt apart and 4 pt in.
+            VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: reason.text)
-                    .activityFont(17, tracking: -0.17)
+                    .activityFont(17, .semibold)
+                    .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(DetailStyle.title)
                     .fixedSize(horizontal: false, vertical: true)
                 (Text("Signal:").foregroundStyle(DetailStyle.secondary) + Text(verbatim: " ")
                     + Text(verbatim: L10n.string(reason.kind.title, language: language))
-                    .fontWeight(.medium).foregroundStyle(DetailStyle.title))
-                    .activityFont(15, tracking: -0.15)
+                    .foregroundStyle(DetailStyle.title))
+                    .activityFont(17, rounded: true)
+                    .figmaLineHeight(23.8, relativeTo: .body)
             }
             .padding(.horizontal, 4)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: reason.spokenLine(language: language)))
             .accessibilityIdentifier("detail.evidence.\(reason.index)")
-            VStack(spacing: 12) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Scam risk contribution")
-                        .activityFont(13)
-                        .foregroundStyle(DetailStyle.secondary)
-                    Spacer()
-                    Text(verbatim: reason.weightText(language: language))
-                        .activityFont(15, .semibold, tracking: -0.15)
-                        .foregroundStyle(DetailStyle.contribution)
-                        .monospacedDigit()
-                }
-                ContributionBar(weights: reason.runningWeights)
-            }
-            .padding(.top, 10)
-            .accessibilityHidden(true)
         }
         .padding(.horizontal, 12)
         .padding(.top, 12)
         .padding(.bottom, 16)
-        .background(.white, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(.white.opacity(0.9)))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DetailStyle.cardFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(.white.opacity(0.9)))
         .figmaCardShadow()
     }
 }

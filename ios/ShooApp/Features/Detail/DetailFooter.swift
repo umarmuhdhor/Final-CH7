@@ -10,6 +10,8 @@ struct DetailFooter: View {
     let failed: Bool
     /// The person who opened the site, when it isn't the viewer (the note under a safe verdict).
     let ownerName: String?
+    /// Blocked sites ask "Apakah situs ini berbahaya?", warnings "Apakah situs ini benar penipuan?".
+    var isBlocked = false
     let onDecide: (Verdict.Value) -> Void
 
     @Environment(\.locale) private var locale
@@ -24,8 +26,10 @@ struct DetailFooter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if showsButtons {
-                Text("Is this site really a scam?")
-                    .activityFont(15, tracking: -0.15)
+                Text(isBlocked ? "Is this site dangerous?" : "Is this site really a scam?")
+                    // Figma "Pertanyaan": SF Pro Rounded 17, 140 %.
+                    .activityFont(17, rounded: true)
+                    .figmaLineHeight(23.8, relativeTo: .body)
                     .foregroundStyle(DetailStyle.secondary)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)

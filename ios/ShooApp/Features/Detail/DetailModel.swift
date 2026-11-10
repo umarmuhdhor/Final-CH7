@@ -85,6 +85,15 @@ final class DetailModel {
     /// The owner's avatar for the chip, from the family list (best effort).
     private(set) var ownerAvatarId: String?
 
+    /// The guardian's avatar for the hero, on the protected person's own scan once that guardian decided
+    /// (Figma "Guardian Virellia", 1211:19925 / 1252:2473). `nil`: the hero shows the big shield.
+    var deciderAvatarId: String? {
+        guard isOwnScan, let verdict = scan?.verdict, let guardian = viewer?.guardian,
+              verdict.byDeviceId == guardian.deviceId
+        else { return nil }
+        return guardian.avatarId
+    }
+
     /// DT-03: the owner's name is for the guardian's family view, never for Protected.
     func showsOwner(familyModeOn: Bool) -> Bool {
         guard viewer?.mode == .guardian, scan != nil else { return false }
