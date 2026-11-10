@@ -47,6 +47,34 @@ final class DeepLinkUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Activity"].isSelected)
     }
 
+    /// QA 2026-11-10 #1 and #9: a push tap (same `Router.openDetail` as this link) from Home, with motion on,
+    /// froze the app at 100 % CPU (DetailFooter's safe-area state fed the tab bar's hide transition) and left
+    /// the tab bar over Aman / Bahaya. The tab bar must be gone and the buttons hittable, twice in a row.
+    @MainActor
+    func testScanLinkFromHomeWithMotionShowsHittableVerdictButtons() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-UITestMock", "YES", "-UITestReset", "YES",
+            "-settings.onboardingCompleted", "YES", "-settings.onboardingConnectPassed", "YES",
+            "-settings.mode", "guardian", "-settings.language", "en", "-settings.familyModeOn", "YES",
+            "-UITestExtensionActive", "YES", "-UITestNotifications", "granted",
+        ]
+        app.launch()
+        XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        for round in 0..<2 {
+            openLink("shoo://scan/\(Self.blocked)", in: app)
+            XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), "round \(round)\n\(app.debugDescription)")
+            let safe = app.buttons["detail.verdict.safe"]
+            XCTAssertTrue(safe.waitForExistence(timeout: 10), app.debugDescription)
+            XCTAssertTrue(app.tabBars.firstMatch.waitForNonExistence(timeout: 5), "tab bar still shown, round \(round)")
+            XCTAssertTrue(safe.isHittable, "Aman covered, round \(round)")
+            app.buttons["detail.back"].tap()
+            XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 5), app.debugDescription)
+            app.tabBars.buttons["Shield"].tap()
+            XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        }
+    }
+
     @MainActor
     func testScanLinkOpensDetailWithoutVerdictButtonsForProtected() {
         let app = launch(mode: "protected")
