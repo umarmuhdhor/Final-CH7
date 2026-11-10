@@ -1,7 +1,7 @@
 import type { Env } from "../../env";
 import { errorInfo } from "../../http/logError";
 import { apnsJwt, importApnsKey } from "./jwt";
-import type { PushMessage, PushSender, SendResult } from "./sender";
+import type { LiveMessage, LiveSender, PushMessage, PushSender, SendResult } from "./sender";
 
 export interface ApnsConfig {
   /** The .p8 key file (PEM) as one line of base64. */
@@ -61,7 +61,7 @@ function entry(config: ApnsConfig): CacheEntry {
  * token; 400 BadDeviceToken (also a sandbox token sent to production) keeps it. No retries:
  * one push per scan. Logs carry no token, JWT, key or text (SECURITY §3 P6).
  */
-export class ApnsSender implements PushSender {
+export class ApnsSender implements PushSender, LiveSender {
   private readonly fetch: typeof fetch;
   private readonly now: () => number;
 
@@ -89,7 +89,36 @@ export class ApnsSender implements PushSender {
   }
 
   async send(message: PushMessage): Promise<SendResult> {
-    if (!HEX.test(message.apnsToken)) return { result: "failed:400 BadDeviceToken" };
+    return this.post(message.apnsToken, {
+      pushType: "alert",
+      topic: this.config.topic,
+      priority: 10,
+      // A guardian offline for over an hour gets no stale alert; Activity still has the scan.
+      expiresInSeconds: 3600,
+      body: { aps: { alert: { body: message.body }, sound: "default" }, ...(message.scanId ? { scanId: message.scanId } : {}) },
+    });
+  }
+
+  /**
+   * EX-03 (#49): a Live Activity start/update/end. Own topic suffix and push type (Apple, "Starting
+   * and updating Live Activities with ActivityKit push notifications"). The caller picks the expiry:
+   * a live score is useless after a minute, an end must still arrive (services/push/live.ts).
+   */
+  async sendLive(message: LiveMessage): Promise<SendResult> {
+    return this.post(message.token, {
+      pushType: "liveactivity",
+      topic: `${this.config.topic}.push-type.liveactivity`,
+      priority: message.priority,
+      expiresInSeconds: message.expiresInSeconds,
+      body: message.payload,
+    });
+  }
+
+  private async post(
+    token: string,
+    p: { pushType: "alert" | "liveactivity"; topic: string; priority: 5 | 10; expiresInSeconds: number; body: unknown },
+  ): Promise<SendResult> {
+    if (!HEX.test(token)) return { result: "failed:400 BadDeviceToken" };
     const e = entry(this.config);
     const { ref } = await this.tokenRef(e);
     let jwt: string;
@@ -104,18 +133,17 @@ export class ApnsSender implements PushSender {
 
     let res: Response;
     try {
-      res = await this.fetch(`${HOST[this.config.env]}/3/device/${message.apnsToken}`, {
+      res = await this.fetch(`${HOST[this.config.env]}/3/device/${token}`, {
         method: "POST",
         headers: {
           authorization: `bearer ${jwt}`,
-          "apns-push-type": "alert",
-          "apns-topic": this.config.topic,
-          "apns-priority": "10",
-          // A guardian offline for over an hour gets no stale alert; Activity still has the scan.
-          "apns-expiration": String(Math.floor(this.now() / 1000) + 3600),
+          "apns-push-type": p.pushType,
+          "apns-topic": p.topic,
+          "apns-priority": String(p.priority),
+          "apns-expiration": String(Math.floor(this.now() / 1000) + p.expiresInSeconds),
           "content-type": "application/json",
         },
-        body: JSON.stringify({ aps: { alert: { body: message.body }, sound: "default" }, ...(message.scanId ? { scanId: message.scanId } : {}) }),
+        body: JSON.stringify(p.body),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {

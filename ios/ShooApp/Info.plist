@@ -37,6 +37,8 @@
 	<string>Scan your family's QR code to connect.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>ShooAppGroup</key>
 	<string>$(SHOO_APP_GROUP)</string>
 	<key>UIBackgroundModes</key>

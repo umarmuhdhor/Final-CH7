@@ -201,6 +201,36 @@
         }
       }
     },
+    "Family under threat" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga Dalam Ancaman"
+          }
+        }
+      }
+    },
+    "Suspicious site!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Mencurigakan!"
+          }
+        }
+      }
+    },
+    "Dangerous site!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs Berbahaya!"
+          }
+        }
+      }
+    },
     "Family in danger" : {
       "localizations" : {
         "id" : {
@@ -3291,7 +3321,6 @@
       }
     },
     "People you protect" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {

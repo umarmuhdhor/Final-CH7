@@ -14,7 +14,7 @@ struct MainTabView: View {
                     .navigationDestination(for: Route.self, destination: destination)
             }
             // Figma tab bar: "Shield" bolt-shield and "Activity" list circle.
-            .tabItem { Label("Shield", systemImage: "checkmark.shield.fill") }
+            .tabItem { Label("Shield", systemImage: "bolt.shield.fill") }
             .tag(AppTab.shield)
 
             NavigationStack(path: $router.activityPath) {
