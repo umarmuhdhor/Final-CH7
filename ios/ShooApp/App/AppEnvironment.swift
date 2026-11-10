@@ -27,6 +27,8 @@ final class AppEnvironment {
     @ObservationIgnored private var sentDeviceInfo = false
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
+    /// EX-03 (#49): the Dynamic Island's push tokens for the backend. Started at the first activation.
+    @ObservationIgnored private var liveActivityTokens: LiveActivityTokens?
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
     /// so XCUITest finds it idle (fase 23a K2). Not for screenshots or the accessibility audit.
     @ObservationIgnored private(set) var reducesMotionForUITests = false
@@ -202,6 +204,7 @@ final class AppEnvironment {
         // A new device on the server: its first token must be sent even if APNs hands out the same one.
         sentPushToken = nil
         pushTokenEpoch += 1
+        liveActivityTokens?.deviceChanged()
         if mode == .guardian { router.pendingJoinCode = nil }
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
@@ -250,6 +253,25 @@ final class AppEnvironment {
             Log.app.error("Profile refresh failed", error)
         }
         await registerForPushIfAllowed()
+        startLiveActivityTokens()
+        await liveActivityTokens?.sync()
+    }
+
+    /// EX-03 (#49, QA 2026-11-10 #5): without the start token the backend answered `no_start_token` to every
+    /// `POST /live` and the island never started. Both modes: the island shows the viewer's own Safari page.
+    @MainActor
+    private func startLiveActivityTokens() {
+        guard liveActivityTokens == nil else { return }
+        let tokens = LiveActivityTokens(
+            canSend: { [weak self] in
+                // Never from the demo or the UI-test mock: they have no server record to update.
+                guard let self, self.settings.mode != nil, !self.sessionExpired else { return false }
+                return !(self.repository is MockRepository)
+            },
+            send: { [weak self] update in try await self?.repository.updateMe(update) }
+        )
+        liveActivityTokens = tokens
+        tokens.start()
     }
 
     /// A registered device whose token is gone (backup restored onto another iPhone: the Keychain item
@@ -366,6 +388,7 @@ final class AppEnvironment {
         sentPushToken = nil
         sentDeviceInfo = false
         pushTokenEpoch += 1
+        liveActivityTokens?.deviceChanged()
         DeliveredPushes.clear()
         await registerForPushIfAllowed()
         return result.guardian
