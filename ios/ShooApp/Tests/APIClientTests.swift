@@ -28,6 +28,32 @@ struct APIClientTests {
         #expect(Set(body.keys) == ["language"])
     }
 
+    /// EX-03 (QA 2026-11-10 #5): the island's tokens as contracts/api.md asks: hex, `{ activityId, token }`,
+    /// and an explicit `null` to clear (a plain `nil` would leave the key out).
+    @Test func liveActivityTokensAreSetAndClearedExplicitly() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(200, #"{"ok":true}"#) }
+        let client = server.client()
+        let _: OkResponse = try await client.send(.init(
+            method: .patch, path: ["devices", "me"], body: DeviceUpdate(liveActivityStartToken: .set("ab12"))
+        ))
+        #expect(server.requests.last?.json as? [String: String] == ["liveActivityStartToken": "ab12"])
+
+        let _: OkResponse = try await client.send(.init(
+            method: .patch, path: ["devices", "me"],
+            body: DeviceUpdate(liveActivityUpdateToken: .set(LiveActivityUpdateToken(activityId: "A-1", token: "cd34")))
+        ))
+        let update = try #require(server.requests.last?.json?["liveActivityUpdateToken"] as? [String: String])
+        #expect(update == ["activityId": "A-1", "token": "cd34"])
+
+        let _: OkResponse = try await client.send(.init(
+            method: .patch, path: ["devices", "me"], body: DeviceUpdate(liveActivityUpdateToken: .clear)
+        ))
+        let cleared = try #require(server.requests.last?.json)
+        #expect(Set(cleared.keys) == ["liveActivityUpdateToken"])
+        #expect(cleared["liveActivityUpdateToken"] is NSNull)
+    }
+
     @Test func datesGoOutAsISO8601() async throws {
         let server = StubServer()
         server.reply { _ in .json(200, #"{"ok":true}"#) }
