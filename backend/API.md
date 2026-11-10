@@ -305,6 +305,11 @@ everything about it right away.
   files are removed from storage just after the response; if storage cannot be reached, the daily cron
   retries. `POST /devices/me/protected` deletes the old guardian device the same way.
 - The app then clears the Keychain token and the App Group keys and starts onboarding again.
+- **Push to the other side** (QA 2026-11-10 #6), after the delete, to each family contact that has an APNs
+  token, in their language, no `scanId`: a guardian's members get "Adhella stopped protecting you" /
+  "Adhella berhenti melindungimu" (the disconnect text); a member's guardian gets "Maria deleted their Shoo
+  account. You no longer protect them" / "Maria menghapus akun Shoo-nya. Kamu tidak lagi melindunginya". The
+  name is only in the push text; nothing about the deleted device is stored for it.
 
 ## Family
 
