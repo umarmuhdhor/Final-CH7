@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// ON-01: brand splash, then two swipeable slides with Skip and a round Next button (Figma 110:3585, 110:3692, 110:3786).
+/// ON-01: brand splash, then two swipeable slides with Skip and a round Next button (Figma 110:3585, 1352:4375, 1352:4039).
 struct SplashView: View {
     let model: OnboardingModel
     @State private var showsBrand: Bool
@@ -202,11 +202,7 @@ private struct SlidePage: View {
                     .frame(height: headerHeight, alignment: .bottom)
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottom) {
-                        // Figma "Rectangle 953": the picture fades into the white page.
-                        LinearGradient(colors: [OnboardingTheme.card.opacity(0), OnboardingTheme.card], startPoint: .top, endPoint: .bottom)
-                            .frame(height: headerHeight * 153 / 463)
-                    }
+                    // The asset already ends in Figma "Rectangle 953", the fade into the white page.
                     .accessibilityHidden(true)
 
                 VStack(spacing: 8) {
