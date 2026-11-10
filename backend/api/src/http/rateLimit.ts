@@ -10,7 +10,15 @@ export interface Limit {
 }
 
 export const limits = {
-  createDevice: { bucket: "devices_create", max: 10, windowSeconds: 3600 },
+  // POST /devices per client IP. Mobile carriers put many users behind one CGNAT IP, and one person
+  // may register twice (a reinstall), so 10/h locked strangers out of onboarding (edge-case QA
+  // 2026-11-11 #2). 30/h keeps one IP from draining createDeviceAll in under a day (33 h).
+  createDevice: { bucket: "devices_create", max: 30, windowSeconds: 3600 },
+  // POST /devices/me/protected per device, not per IP: it replaces one device with another (the
+  // copy is deleted again on a failed join), so it never adds devices and must not spend the IP
+  // bucket above. 5 failed joins per 10 min stop guessing first (D-alief-B06); this only caps how
+  // often one token makes and deletes copies. Answered as too_many_attempts, like the join limit.
+  becomeProtected: { bucket: "devices_protected", max: 30, windowSeconds: 3600 },
   // All callers together, key "all" (D-alief-B12): rotating IPs cannot fill the free-tier DB.
   // 1000/day is far above a demo's sign-ups; reaching it blocks new devices only, not existing ones.
   createDeviceAll: { bucket: "devices_create_all", max: 1000, windowSeconds: 86400 },

@@ -5084,6 +5084,16 @@
         }
       }
     },
+    "Too many new sign-ups from this network. Wait up to an hour, then try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak pendaftaran baru dari jaringan ini. Tunggu hingga 1 jam, lalu coba lagi."
+          }
+        }
+      }
+    },
     "Too many tries. Wait a few minutes, then try again." : {
       "extractionState" : "stale",
       "localizations" : {
