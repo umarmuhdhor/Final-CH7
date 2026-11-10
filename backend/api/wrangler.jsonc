@@ -69,6 +69,7 @@
     { "name": "VERDICTS_GET_LIMITER", "namespace_id": "2001", "simple": { "limit": 30, "period": 10 } },
     { "name": "SCREENSHOTS_VIEW_LIMITER", "namespace_id": "2002", "simple": { "limit": 120, "period": 60 } },
     { "name": "FAVICONS_VIEW_LIMITER", "namespace_id": "2003", "simple": { "limit": 600, "period": 60 } },
-    { "name": "REPLICAS_VIEW_LIMITER", "namespace_id": "2004", "simple": { "limit": 10, "period": 60 } }
+    { "name": "REPLICAS_VIEW_LIMITER", "namespace_id": "2004", "simple": { "limit": 10, "period": 60 } },
+    { "name": "LIVE_PUSH_LIMITER", "namespace_id": "2005", "simple": { "limit": 10, "period": 10 } }
   ]
 }
