@@ -13,7 +13,7 @@ Single source of truth for data shared between teams. **Owner: lead.** Everyone 
 ## Thresholds (PRD §5)
 | Score | Status | Extension |
 |---|---|---|
-| 0–29 | `normal` | Nothing shown, nothing sent |
+| 0–29 | `normal` | Nothing shown or reported. Only the live score (pill; with the online check on, also `POST /live` for the Dynamic Island, forwarded and never stored) |
 | 30–49 | `warning` | First popup + highlight |
 | 50–79 | `warning` | Second popup + sensitive forms struck through |
 | ≥ 80 | `blocked` | Block screen, no bypass |
