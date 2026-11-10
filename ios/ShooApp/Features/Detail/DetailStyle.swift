@@ -7,6 +7,14 @@ enum DetailStyle {
     static let ink = hex(0x151617)
     static let title = hex(0x191D2F)
     static let link = hex(0x3A3D42)
+    /// "Diakses lewat SMS …", "Penilaian Risiko Shoo", "Status situs" (Figma #564C51, 7.6:1 on white).
+    static let rowSubtitle = hex(0x564C51)
+    /// The line between the score and the status (1252:2036).
+    static let scoreLine = hex(0xE2E8F0)
+    /// Under the score row (1252:3123).
+    static let divider = hex(0xEEF1F5)
+    /// "Evidence Card" fill in the REVISI PRU frames.
+    static let cardFill = hex(0xF6F8FA)
     static let secondary = hex(0x6A717E)
     static let tick = hex(0x3F4D5A)
     static let needle = hex(0x383D43)
