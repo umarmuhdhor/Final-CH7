@@ -26,7 +26,15 @@ final class LiveReinstallUITests: XCTestCase {
             "-UITestExtensionActive", "YES",
         ]
         app.launch()
-        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10), app.debugDescription)
+        // Already set up (a second join after a failed one): straight to Connect.
+        let splash = app.buttons["splash.skip"], home = app.buttons["profileButton"]
+        let end = Date().addingTimeInterval(15)
+        while Date() < end, !splash.exists, !home.exists { Thread.sleep(forTimeInterval: 0.5) }
+        if home.exists {
+            try joinAndCheck(app, code: code)
+            return
+        }
+        XCTAssertTrue(splash.exists, app.debugDescription)
         // `onboardPersonal`, with Shoo brought back to the front once more before Safari Default: after a
         // reinstall Settings can stay in front a moment longer.
         app.onboardName("Bu Sari")
@@ -37,6 +45,11 @@ final class LiveReinstallUITests: XCTestCase {
         app.passSafariDefault()
         app.buttons["extensionOn.continue"].tapWhenHittable()
         XCTAssertTrue(app.buttons["profileButton"].waitForExistence(timeout: 15), app.debugDescription)
+        try joinAndCheck(app, code: code)
+    }
+
+    @MainActor
+    private func joinAndCheck(_ app: XCUIApplication, code: String) throws {
         app.dismissNotificationsReminder()
         app.openSupervisedConnect()
         let field = app.textFields["connect.code"]
