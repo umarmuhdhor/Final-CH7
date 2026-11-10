@@ -43,6 +43,9 @@ export const limits = {
   viewReplica: { bucket: "replicas_view", max: 10, windowSeconds: 60 },
   viewReplicaDay: { bucket: "replicas_view_day", max: 500, windowSeconds: 86400 },
   createVerdict: { bucket: "verdicts_create", max: 60, windowSeconds: 60 },
+  // EX-03 POST /live per device (#49 Q4): ~1 push/s on average, burst-tolerant within 10 s. The
+  // extension coalesces; this only caps a runaway client. Ends (open: false) are never counted.
+  livePush: { bucket: "live_push", max: 10, windowSeconds: 10 },
   // EX-06 polls every 5 s per open block screen (several tabs), plus one lookup per page (SECURITY T10).
   getVerdict: { bucket: "verdicts_get", max: 30, windowSeconds: 10 },
   // Unknown bearer tokens per IP (D-alief-B05): guessing a 256-bit token is hopeless, this caps the DB cost.

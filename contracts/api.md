@@ -21,12 +21,16 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 |---|---|---|---|---|
 | POST | `/devices` | `{ name, mode: "guardian"\|"protected", avatarId?, apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
 | GET | `/devices/me` | — | `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } \| null }` — Protected learns its guardian, or that it was disconnected | PR-04, PF-01, EX-06 |
-| PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` | `{ ok }` | ON-05, PF-01, GD-03 |
+| PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt?, liveActivityStartToken?, liveActivityUpdateToken? }` | `{ ok }` | ON-05, PF-01, GD-03, EX-03 |
 | DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots + page replicas, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
 
 `avatarId` (ON-02, #120): optional, one of `avatar_01`…`avatar_12`. The 4 memoji in the ON-02 picker are `avatar_01`…`avatar_04`; `avatar_05`…`avatar_12` stay for the random pick. Missing or unknown → the server picks at random, as before. The response `avatarId` is the source of truth. Chosen once at registration: `PATCH /devices/me` does not change it (not in the MVP).
 
 `extensionLastSeenAt` (ISO): sent by the **extension** at most once per hour with its heartbeat, and by the app when it comes to the foreground. The backend uses it for `extensionActive` in `GET /family/members` ("Not connected", GD-03). No data yet → `extensionActive: true` (never "Not connected" without evidence).
+
+`liveActivityStartToken` / `liveActivityUpdateToken` (EX-03, #49): the two APNs tokens of the Dynamic Island. Sent by the **app** only. See "Live score (Dynamic Island)" below.
+- `liveActivityStartToken`: hex string from `Activity<ScoreActivityAttributes>.pushToStartTokenUpdates`, or `null` to clear. The app sends it while it is on screen (onboarding and every launch), and again when it changes.
+- `liveActivityUpdateToken`: `{ activityId, token }` from the running activity's `id` and `pushTokenUpdates`, or `null` when that activity ended. `activityId`: letters, digits and `-`, max 64. `token`: hex. The backend keeps only the latest one (a device has at most one island).
 
 ### Family (max 3 protected per guardian)
 | Method | Path | Body | Response | PRD |
@@ -135,6 +139,49 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 - A `since` that is not a valid ISO 8601 timestamp (or is out of range) → HTTP 422 `invalid_body`, the same code as a bad body. The client only ever sends back a `nextSince` it was given, so this only happens on a client bug.
 
 The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
+
+### Live score (Dynamic Island, EX-03, #49)
+| Method | Path | Body | Response | PRD |
+|---|---|---|---|---|
+| POST | `/live` | `{ domain, score, status: "normal"\|"warning"\|"blocked", analyzing: boolean, open: boolean }` | `202 { ok }` | EX-03 |
+
+The running score of the page on screen in Safari, forwarded to this device's Dynamic Island by Live Activity push. It works with Shoo closed, once the app has sent `liveActivityStartToken`.
+
+- **Who sends it:** the **extension** (`background.js`), and only when the online check is on (`getSession` has `aiBaseURL`, same rule as `/analyze`). Online check off → no call, the in-page pill only.
+- **`domain`:** registrable domain only, never a URL. Same rule as `/scans`. `score`: integer 0–100. Extra keys or a bad value → `422 invalid_body`, like every other bad body.
+- **`open: false`:** no page of Safari is on screen any more (tab hidden, Safari left, page closed), so the island ends. The other fields are still sent (last values).
+- **When:**
+  - a page comes on screen;
+  - its `status` or `analyzing` changes → right away;
+  - a score-only change → coalesced, at most 1 call per second;
+  - `open: false` → after 1.5 s without another page coming on screen, so a tab switch doesn't end and restart the island.
+- **Privacy (#49 decision 3): forward, never store.** `domain` and `score` go into the APNs payload only. No table row, no `push_log` row, and log lines carry the event kind and result only.
+- **Rate limit:** 10 calls per 10 s per device → `429 rate_limited`. `open: false` is never limited.
+
+**Backend → APNs.** Header `apns-push-type: liveactivity`, topic `<bundle id>.push-type.liveactivity`.
+| Case | Token | `event` | Priority | `apns-expiration` |
+|---|---|---|---|---|
+| No update token stored | start token | `start` | 10 | +60 s |
+| Update token stored, `open: true` | update token | `update` | 10 if `analyzing` or `status` ≠ `normal`, else 5 | +60 s |
+| Update token stored, `open: false` | update token | `end` | 10 | +1 h |
+
+While a `start` waits for the app's update token, there is no second `start` for 30 s, so islands don't stack. APNs `410` clears the token it was sent to.
+
+```json
+{ "aps": {
+    "timestamp": 1731200000,
+    "event": "start",
+    "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false },
+    "attributes-type": "ScoreActivityAttributes",
+    "attributes": {},
+    "stale-date": 1731200600
+} }
+```
+- `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`.
+- `attributes` (start only) = `ScoreActivityAttributes`: empty. The island follows the page, so the domain lives in `content-state`.
+- `update` has `timestamp`, `event`, `content-state`, `stale-date` (+10 min). `end` has `timestamp`, `event`, `content-state` and `dismissal-date` (= `timestamp`, gone at once).
+
+**App side.** When `Activity<ScoreActivityAttributes>.activityUpdates` delivers a new activity (also in the background after a `start` push), the app ends every other `ScoreActivityAttributes` activity with `.immediate`, then sends the new update token. When an activity ends, it sends `liveActivityUpdateToken: null`.
 
 ### Push payloads (APNs)
 ```json
