@@ -55,9 +55,37 @@ final class DetailUITests: XCTestCase {
         let note = app.descendants(matching: .any)["detail.verdictNote"]
         XCTAssertTrue(note.waitForExistence(timeout: 5))
         XCTAssertTrue((header.value as? String ?? "").contains("Verified scam by you"), header.debugDescription)
-        // The card replaces the buttons; "Change" is only offered on a safe verdict (Figma 480:5768).
+        // The card replaces the buttons, with "Change" to undo it.
         XCTAssertFalse(app.buttons["detail.verdict.notSafe"].exists)
-        XCTAssertFalse(app.buttons["detail.verdictChange"].exists)
+        XCTAssertTrue(app.buttons["detail.verdictChange"].exists)
+    }
+
+    /// QA 2026-11-11 #5: a Danger tapped by mistake can be changed back to Safe (R4: NotSafe → Safe).
+    @MainActor
+    func testDangerCanBeChangedBackToSafe() throws {
+        let app = openDetail(Self.blocked92)
+        app.buttons["detail.verdict.notSafe"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 5), app.debugDescription)
+        try shot(app, "detail-after-danger")
+        let change = app.buttons["detail.verdictChange"]
+        XCTAssertTrue(change.waitForExistence(timeout: 5), app.debugDescription)
+        change.tap()
+        let safe = app.buttons["detail.verdict.safe"]
+        XCTAssertTrue(safe.waitForExistence(timeout: 5), app.debugDescription)
+        try shot(app, "detail-change-open")
+        safe.tap()
+        let header = app.descendants(matching: .any)["detail.header"]
+        let marked = expectation(for: NSPredicate(format: "value CONTAINS 'Marked safe by you'"), evaluatedWith: header)
+        wait(for: [marked], timeout: 5)
+        try shot(app, "detail-back-to-safe")
+    }
+
+    /// `SHOO_SHOT_DIR` keeps the screens for the PR.
+    @MainActor
+    private func shot(_ app: XCUIApplication, _ name: String) throws {
+        guard let directory = ProcessInfo.processInfo.environment["SHOO_SHOT_DIR"] else { return }
+        try XCUIScreen.main.screenshot().pngRepresentation
+            .write(to: URL(fileURLWithPath: directory).appendingPathComponent("\(name).png"))
     }
 
     @MainActor
