@@ -334,8 +334,8 @@ final class ProfileUITests: XCTestCase {
         app.buttons["profile.mode"].tap()
         let join = app.buttons["mode.joinFamily"]
         reveal(join, in: app)
-        join.tap()
-        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5), app.debugDescription)
+        // A tap right after the scroll could be lost (local run, 1 in 4): tapped again until the alert shows.
+        app.tap(join, until: app.alerts.firstMatch)
         XCTAssertFalse(app.textFields["connect.code"].exists)
     }
 }
