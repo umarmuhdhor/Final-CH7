@@ -13,6 +13,7 @@ import { createDeviceData } from "./device-data.js";
 import { createReportLog } from "./report-log.js";
 import { mayReport } from "./share-settings.js";
 import { createThresholds } from "./thresholds.js";
+import { createLive } from "./live.js";
 
 const NATIVE_APP_ID = "com.shoo.app"; // ignored by Safari, required by the API
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
@@ -20,6 +21,7 @@ const SESSION_TTL_MS = 30 * 1000; // onboarding can finish while Safari is open
 const SESSION_WAIT_MS = 1000;
 const ANALYZE_TIMEOUT_MS = 8 * 1000; // contracts/api.md
 const SCAN_TIMEOUT_MS = 15 * 1000; // includes the page replica upload
+const LIVE_TIMEOUT_MS = 5 * 1000; // a late live score is useless (EX-03)
 
 let rules = null;
 function domainFor(hostname) {
@@ -234,6 +236,19 @@ async function startReport(message) {
     return { ok: true };
 }
 
+// EX-03 path C (#49): running score → POST /live → Dynamic Island. Coalescing and the online-check rule
+// live in live.js; the backend forwards domain + score to APNs and stores neither.
+const live = createLive({
+    getSession,
+    post: (session, body) =>
+        fetchJSON(endpoint(session.apiBaseURL, "/live"), {
+            method: "POST",
+            token: session.token,
+            timeoutMs: LIVE_TIMEOUT_MS,
+            body: JSON.stringify(body),
+        }),
+});
+
 // Content scripts run in the page's process: no message ever answers with the token or the base URLs.
 browser.runtime.onMessage.addListener((message) => {
     switch (message?.type) {
@@ -265,6 +280,15 @@ browser.runtime.onMessage.addListener((message) => {
         case "pageChecked":
             // A count for the app, no address (PF-01). Nothing depends on it, so a failure stays here.
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "pageChecked" }).catch(() => ({ ok: false }));
+        case "liveScore":
+            return message.open === false
+                ? live.hide()
+                : live.show({
+                      domain: domainFor(String(message.hostname ?? "")),
+                      score: message.score,
+                      status: message.status,
+                      analyzing: message.analyzing,
+                  });
         case "recallBlock":
             return sessionSettled().then(() => blockMemory.recall(message.url)).then((memory) => ({ ok: true, memory }));
         case "rememberBlock":
