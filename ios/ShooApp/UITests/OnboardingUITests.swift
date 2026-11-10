@@ -11,8 +11,9 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     /// `askConsent`: the mock answers the data question itself; this keeps the consent box unticked like a new install.
     private func launch(extensionActive: Bool = true, extensionStatus: String? = nil, notifications: String = "denied",
-                        askConsent: Bool = false) -> XCUIApplication {
+                        askConsent: Bool = false, scenario: String? = nil) -> XCUIApplication {
         var arguments = ["-settings.language", "en", "-UITestNotifications", notifications]
+        if let scenario { arguments += ["-mock.scenario", scenario] }
         if askConsent { arguments += ["-debug.askDataConsent", "YES"] }
         if extensionActive { arguments += ["-UITestExtensionActive", "YES"] }
         if let extensionStatus { arguments += ["-UITestExtensionStatus", extensionStatus] }
@@ -84,7 +85,8 @@ final class OnboardingUITests: XCTestCase {
 
     @MainActor
     func testPersonalOnboardingEndsOnHomeWithReminderWhenNotificationsDenied() {
-        let app = launch(notifications: "denied")
+        // Nobody to look after yet: Home Pribadi shows the "Mode Terawasi" card only then (#364).
+        let app = launch(notifications: "denied", scenario: "empty")
         app.onboardName("Rina")
         // Figma "Flow": no mode choice and no invite step.
         XCTAssertFalse(app.buttons["mode.continue"].exists)
@@ -181,7 +183,8 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     func testGuardianIntroShowsOnceBeforeFamilyMode() {
         let app = XCUIApplication.mock(["-settings.language", "en", "-settings.mode", "guardian", "-settings.onboardingCompleted", "YES",
-                                        "-settings.familyModeOn", "NO", "-UITestNotifications", "granted"])
+                                        "-settings.familyModeOn", "NO", "-UITestNotifications", "granted",
+                                        "-mock.scenario", "empty"])
         let toggle = app.descendants(matching: .any)["familyModeToggle"].firstMatch
         toggle.tapWhenHittable()
         let start = app.buttons["guardianIntro.start"]
