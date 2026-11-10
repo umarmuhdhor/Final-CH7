@@ -90,7 +90,7 @@ describe("relayLive: start / update / end (#49)", () => {
       payload: { aps: {
         timestamp: T, event: "start",
         "content-state": { domain: "very-private-domain.example", score: 64, isAnalyzing: true, isBlocked: false },
-        "attributes-type": "ScoreActivityAttributes", attributes: { domain: "very-private-domain.example" },
+        "attributes-type": "ScoreActivityAttributes", attributes: {},
         "stale-date": T + LIVE_STALE_SECONDS,
       } },
     }]);

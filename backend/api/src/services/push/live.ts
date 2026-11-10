@@ -41,9 +41,8 @@ interface Tokens {
 }
 
 /**
- * ScoreActivityAttributes.ContentState (ios/ShooShared). The island is reused across pages, so the
- * domain is in the content state too; `attributes.domain` keeps today's ShooShared shape decodable
- * (Codable ignores unknown keys, so both shapes work until #49's contract settles it).
+ * ScoreActivityAttributes.ContentState (ios/ShooShared, contracts/api.md "Live score"). The island
+ * follows the page, so the domain lives in the content state; the attributes are empty.
  */
 function contentState(u: LiveUpdate) {
   return { domain: u.domain, score: u.score, isAnalyzing: u.analyzing, isBlocked: u.status === "blocked" };
@@ -120,7 +119,7 @@ export async function relayLive(
         event: "start",
         "content-state": contentState(u),
         "attributes-type": "ScoreActivityAttributes",
-        attributes: { domain: u.domain },
+        attributes: {},
         "stale-date": timestamp + LIVE_STALE_SECONDS,
       },
     },
