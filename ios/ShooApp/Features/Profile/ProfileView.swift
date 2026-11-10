@@ -369,11 +369,17 @@ struct RemindButton: View {
         Button { Task { await action() } } label: {
             if isWorking {
                 ProgressView().frame(width: 62)
+                    .transition(.opacity)
             } else {
                 Text(sent ? "Sent" : "Remind")
+                    .contentTransition(.opacity)
+                    .transition(.opacity)
             }
         }
         .buttonStyle(ProfilePillButtonStyle(tint: sent ? ProfileStyle.secondary : ProfileStyle.link, large: true))
+        // Remind → (spinner) → Sent: a 0.2 s cross-fade, already gentle enough for Reduce Motion.
+        .animation(.easeInOut(duration: 0.2), value: sent)
+        .sensoryFeedback(.success, trigger: sent) { wasSent, isSent in !wasSent && isSent }
         .disabled(sent || isWorking)
         .accessibilityLabel(sent ? Text("Reminder sent to \(member.name)") : Text("Remind \(member.name)"))
         .accessibilityHint(sent ? Text(verbatim: "") : Text("Sends a notification to turn on Shoo in Safari"))
