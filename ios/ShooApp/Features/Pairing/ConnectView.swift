@@ -89,7 +89,8 @@ struct ConnectView: View {
                             CodeField(code: Binding(get: { model.code }, set: { model.code = $0 }), onFocusChange: { codeFocused = $0 })
                                 .modifier(ShakeOnProblem(trigger: problemsShown, isEnabled: !reduceMotion))
                             problemLabel
-                                .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: model.problem)
+                                // Fades in; editing the code clears it at once (no fade-out to wait for).
+                                .animation(model.problem == nil ? nil : (reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25)), value: model.problem)
                         }
                         .id(Self.codeFieldID)
                     }
