@@ -148,7 +148,7 @@ The extension's `background.js` downloads this list and refreshes it (incrementa
 The running score of the page on screen in Safari, forwarded to this device's Dynamic Island by Live Activity push. It works with Shoo closed, once the app has sent `liveActivityStartToken`.
 
 - **Who sends it:** the **extension** (`background.js`), and only when the online check is on (`getSession` has `aiBaseURL`, same rule as `/analyze`). Online check off → no call, the in-page pill only.
-- **`domain`:** registrable domain only, never a URL. Same rule as `/scans`. `score`: integer 0–100. Extra keys → `400 invalid_body`.
+- **`domain`:** registrable domain only, never a URL. Same rule as `/scans`. `score`: integer 0–100. Extra keys or a bad value → `422 invalid_body`, like every other bad body.
 - **`open: false`:** no page of Safari is on screen any more (tab hidden, Safari left, page closed), so the island ends. The other fields are still sent (last values).
 - **When:**
   - a page comes on screen;
