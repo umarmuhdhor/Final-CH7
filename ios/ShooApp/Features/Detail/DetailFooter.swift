@@ -17,6 +17,7 @@ struct DetailFooter: View {
 
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var isChanging = false
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
@@ -58,6 +59,7 @@ struct DetailFooter: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                         .fixedSize(horizontal: false, vertical: true)
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 4)))
                 }
             }
             if failed {
@@ -87,6 +89,9 @@ struct DetailFooter: View {
         )
         // A saved choice from the server closes "Ubah".
         .onChange(of: verdict) { _, _ in isChanging = false }
+        // Safe / Danger saved: the buttons hand over to the verified card and its note with a short ease. Keyed
+        // on the verdict only, never on this footer's geometry (GD-06).
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: verdict?.value)
     }
 
     /// Side by side; stacked at accessibility sizes so the words never wrap per letter.
