@@ -18,6 +18,26 @@ export async function guardianOf(sql: Sql | TransactionSql, protectedId: string)
   return row ?? null;
 }
 
+/** Someone on the other side of this device's family links, with what a push to them needs. */
+export interface FamilyContact {
+  deviceId: string;
+  apnsToken: string;
+  language: Language;
+}
+
+/**
+ * QA 2026-11-10 #6: who to tell when this device is deleted. A guardian's members, or a member's guardian;
+ * only those with an APNs token. Read before `deleteDevice`, which removes the links.
+ */
+export async function familyContacts(sql: Sql | TransactionSql, deviceId: string): Promise<FamilyContact[]> {
+  return sql<FamilyContact[]>`
+    select d.id as "deviceId", d.apns_token as "apnsToken", d.language
+    from family_links l
+    join devices d on d.id = case when l.guardian_id = ${deviceId} then l.protected_id else l.guardian_id end
+    where (l.guardian_id = ${deviceId} or l.protected_id = ${deviceId}) and d.apns_token is not null
+    order by d.id`;
+}
+
 /** Same advisory lock as the family_links trigger (I3), held until the transaction ends. */
 export async function lockGuardian(tx: TransactionSql, guardianId: string): Promise<void> {
   await tx`select pg_advisory_xact_lock(hashtext(${guardianId}))`;

@@ -3,7 +3,7 @@ import postgres from "postgres";
 import * as z from "zod";
 import type { AppEnv } from "../env";
 import { deleteDevice, findProfile, insertDevice, insertProtectedCopy, updateDevice } from "../db/repo/devices";
-import { guardianOf } from "../db/repo/families";
+import { familyContacts, guardianOf } from "../db/repo/families";
 import { keyHash } from "../http/keyHash";
 import { joinFamily } from "../services/family";
 import { deleteScreenshots } from "../services/screenshots";
@@ -13,6 +13,10 @@ import { errors } from "../http/errors";
 import { clientIp, hit, limits } from "../http/rateLimit";
 import { displayName, isoTime, readJson } from "../http/validate";
 import { fromClock, isTimeZone, toClock } from "../services/push/quiet";
+import { deliverPush } from "../services/push/deliver";
+import { familyPushText } from "../services/push/messages";
+import { pushSender } from "../services/push/sender";
+import { errorInfo } from "../http/logError";
 
 const name = displayName;
 // APNs device tokens are hex; Apple says not to assume a fixed length.
@@ -193,6 +197,10 @@ devices.post("/devices/me/protected", requireDevice, requireMode("guardian"), as
  * Storage objects go after the DB commit; a Storage failure never brings the data back.
  */
 devices.delete("/devices/me", requireDevice, async (c) => {
+  const me = c.get("principal");
+  // QA 2026-11-10 #6: the other side hears about it. Members: "<guardian> stopped protecting you", as on a
+  // disconnect. The guardian: "<member> deleted their Shoo account". Read now, the delete removes the links.
+  const contacts = await familyContacts(c.get("sql"), me.deviceId);
   let paths: string[] | undefined;
   for (let attempt = 1; !paths; attempt++) {
     try {
@@ -209,5 +217,14 @@ devices.delete("/devices/me", requireDevice, async (c) => {
     }
   }
   c.executionCtx.waitUntil(deleteScreenshots(c.get("sql"), c.env, paths));
+  const sender = pushSender(c.env);
+  for (const contact of contacts) {
+    const body = familyPushText(contact.language, me.mode === "guardian" ? "disconnected" : "memberLeft", me.name);
+    c.executionCtx.waitUntil(
+      deliverPush(c.get("sql"), sender, { toDeviceId: contact.deviceId, apnsToken: contact.apnsToken, body }).catch((err) =>
+        console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
+      ),
+    );
+  }
   return c.json({ ok: true });
 });
