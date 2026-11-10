@@ -330,6 +330,19 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["profile.guardian"].label.contains("Budi"), app.debugDescription)
     }
 
+    /// QA 2026-11-10 #4 and #6: a protected person whose guardian disconnected them (or deleted their account)
+    /// reads why on Akun Tertaut and connects again from there.
+    @MainActor
+    func testProtectedWithoutGuardianConnectsAgainFromLinkedAccount() {
+        let app = openProfile(mode: "protected", extra: ["-mock.scenario", "unpaired"])
+        let connection = app.buttons["profile.connection"]
+        reveal(connection, in: app)
+        connection.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["profile.guardian.none"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["profile.guardian.connect"].tap()
+        XCTAssertTrue(app.textFields["connect.code"].waitForExistence(timeout: 5), app.debugDescription)
+    }
+
     @MainActor
     func testGuardianWithMembersIsAskedToDisconnectThemFirst() {
         let app = openProfile(mode: "guardian")

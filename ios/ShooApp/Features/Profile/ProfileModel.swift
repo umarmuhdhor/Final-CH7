@@ -312,8 +312,19 @@ final class ProfileModel {
         }
     }
 
-    /// "Punya kode undangan?": only a guardian who protects nobody can join another family.
-    var canJoinAnotherFamily: Bool { settings.mode == .guardian && members.isEmpty && !membersFailed }
+    /// "Punya kode undangan?": a guardian who protects nobody (the server turns this iPhone into a protected one),
+    /// or a protected person whose guardian is gone (disconnected them or deleted their account), who joins with
+    /// the code as they are (QA 2026-11-10 #4).
+    var canJoinAnotherFamily: Bool {
+        switch settings.mode {
+        case .guardian: members.isEmpty && !membersFailed
+        case .protected: hasNoGuardian
+        case nil: false
+        }
+    }
+
+    /// Protected with nobody looking after them: Profile offers Connect again.
+    var hasNoGuardian: Bool { settings.mode == .protected && state == .loaded && profile?.guardian == nil }
 
     /// SECURITY §3 P3: gone on the server first, then a fresh install here (onboarding from the start).
     func deleteMyData() async -> Bool {
