@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// PR-01: connect to the guardian by Scan QR or Code, then PR-02 "Connected to …" (Figma "Connect with Guardian").
 /// Used in onboarding (with "Not now") and from Shield / an invite link after onboarding.
@@ -78,22 +79,22 @@ struct ConnectView: View {
                     }
                     .padding(.top, 39)
                 }
+
+                // fase 18 K17: said before joining, since copies are only made while connected.
+                // QA 1110 #8, #16: part of the page, not the pinned footer. In the footer a two-line error ran
+                // into it, and with the keyboard up it took the room the headline needs.
+                copyNote
+                    .padding(.top, 24)
+                    // While typing it would only peek out beside the button; it was read before the field.
+                    .opacity(codeFocused ? 0 : 1)
+                    .accessibilityHidden(codeFocused)
             }
         } footer: {
-            // fase 18 K17: said before joining, since copies are only made while connected.
-            Label {
-                Text("Shoo keeps a copy of pages it blocks or warns you about for 14 days, so your Guardian can see the evidence.")
-            } icon: {
-                Image(systemName: "info.circle")
-            }
-            .onboardingFont(13, design: .rounded, relativeTo: .footnote)
-            .foregroundStyle(OnboardingTheme.secondaryInk)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("connect.copyNote")
             if tab == .code {
                 Button {
+                    // QA 1110 #8: the answer shows on the whole page, not squeezed above the keyboard where
+                    // a two-line error ran under the button and the headline was pushed off the top.
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     Task { await model.join() }
                 } label: {
                     ZStack {
@@ -125,6 +126,21 @@ struct ConnectView: View {
             guard let problem else { return }
             AccessibilityNotification.Announcement(L10n.string(problem.message, language: language)).post()
         }
+    }
+
+    private var copyNote: some View {
+        Label {
+            Text("Shoo keeps a copy of pages it blocks or warns you about for 14 days, so your Guardian can see the evidence.")
+        } icon: {
+            Image(systemName: "info.circle")
+        }
+        .onboardingFont(13, design: .rounded, relativeTo: .footnote)
+        .foregroundStyle(OnboardingTheme.secondaryInk)
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("connect.copyNote")
     }
 
     @ViewBuilder

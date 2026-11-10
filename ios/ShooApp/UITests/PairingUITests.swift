@@ -114,6 +114,40 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(error.label.contains("already connected"), error.label)
     }
 
+    /// QA 1110 #8, #16 (Bahasa, the longer copy): with the keyboard up the whole headline still shows. Connect
+    /// puts the keyboard away, so a two-line error sits clear of the button and the 14-day note.
+    @MainActor
+    func testConnectErrorWithKeyboardUpOverlapsNothing() {
+        let app = launch(mode: "protected", language: "id")
+        XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 10), app.debugDescription)
+        openLink("shoo://join?code=777777", in: app)
+        let field = app.textFields["connect.code"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
+        field.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        // Let the scroll to the field finish.
+        sleep(1)
+        let back = app.buttons["onboarding.back"].firstMatch
+        let title = app.staticTexts["Hubungkan Akun"]
+        XCTAssertTrue(back.exists && title.exists, app.debugDescription)
+        XCTAssertGreaterThanOrEqual(title.frame.minY, back.frame.minY, "Headline pushed under the top: \(title.frame) \(back.frame)")
+
+        let join = app.buttons["connect.join"]
+        join.tap()
+        let error = app.staticTexts["connect.error"]
+        XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(error.label.contains("Terlalu banyak percobaan"), error.label)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3), "Connect puts the keyboard away")
+        sleep(1)
+        XCTAssertGreaterThan(error.frame.height, 30, "Two lines in Bahasa: \(error.frame)")
+        XCTAssertLessThanOrEqual(error.frame.maxY, join.frame.minY, "Error under the button: \(error.frame) \(join.frame)")
+        let note = app.descendants(matching: .any)["connect.copyNote"].firstMatch
+        XCTAssertTrue(note.exists, app.debugDescription)
+        XCTAssertFalse(error.frame.intersects(note.frame), "Error on the 14-day note: \(error.frame) \(note.frame)")
+        XCTAssertLessThanOrEqual(note.frame.maxY, join.frame.minY, "Note under the button: \(note.frame) \(join.frame)")
+        XCTAssertGreaterThanOrEqual(title.frame.minY, back.frame.minY, "Headline cut after the error: \(title.frame)")
+    }
+
     @MainActor
     func testScanTabExplainsWhenTheCameraCannotScan() {
         let app = launch(mode: "protected")
