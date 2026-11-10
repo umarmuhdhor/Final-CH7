@@ -44,6 +44,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true    # EX-03
+        NSSupportsLiveActivitiesFrequentUpdates: true   # EX-03 path C: live score pushes (#49)
         CFBundleURLTypes:                 # PR-03 invite link: shoo://join?code=1234
           - CFBundleURLName: com.shoo.app
             CFBundleURLSchemes: [shoo]
