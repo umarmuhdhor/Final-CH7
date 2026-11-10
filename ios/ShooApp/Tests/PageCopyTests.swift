@@ -300,19 +300,19 @@ extension WebKitTests {
         }
 
         /// Test host without a key window: one of our own.
-        /// `ReplicaSnapshot.render` with one more try. On a cold CI runner the first WebKit content process
-        /// can miss `loadTimeout` or `snapshotTimeout` (CI on #285); a second failure names the stage.
+        /// `ReplicaSnapshot.render` with two more tries. On a cold or busy CI runner the WebKit content process
+        /// can miss `loadTimeout` or `snapshotTimeout` (CI on #285, twice in a row on #362); a third failure names the stage.
         private static func render(
             _ locked: String, meta: ReplicaMeta, ruleList: WKContentRuleList, in window: UIWindow
         ) async -> PageCopy? {
             var failure: ReplicaSnapshot.RenderFailure?
-            for _ in 0..<2 {
+            for _ in 0..<3 {
                 switch await ReplicaSnapshot.attempt(locked, meta: meta, ruleList: ruleList, in: window) {
                 case .success(let copy): return copy
                 case .failure(let stage): failure = stage
                 }
             }
-            Issue.record("Replica render failed twice, last stage: \(String(describing: failure))")
+            Issue.record("Replica render failed three times, last stage: \(String(describing: failure))")
             return nil
         }
 
