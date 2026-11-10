@@ -17,16 +17,31 @@ struct ConnectView: View {
     }
 
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var tab: Tab = .code
     @State private var scanRefused = false
     @State private var codeFocused = false
+    /// Bumped each time a problem shows: shakes the code boxes once and taps an error haptic.
+    @State private var problemsShown = 0
 
     var body: some View {
-        if case .joined(let guardian) = model.state {
-            ProtectedByView(guardian: guardian, onContinue: onFinish)
-        } else {
-            form
+        Group {
+            if case .joined(let guardian) = model.state {
+                ProtectedByView(guardian: guardian, onContinue: onFinish)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
+            } else {
+                form
+                    .transition(.opacity)
+            }
         }
+        // PR-02: "Connected to …" settles in instead of replacing the form at once.
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.4), value: isJoined)
+        .sensoryFeedback(.success, trigger: isJoined) { wasJoined, joined in !wasJoined && joined }
+        .sensoryFeedback(.error, trigger: problemsShown)
+    }
+
+    private var isJoined: Bool {
+        if case .joined = model.state { true } else { false }
     }
 
     private static let codeFieldID = "connect.codeField"
@@ -72,7 +87,10 @@ struct ConnectView: View {
                             .onboardingBodyStyle()
                         VStack(spacing: 12) {
                             CodeField(code: Binding(get: { model.code }, set: { model.code = $0 }), onFocusChange: { codeFocused = $0 })
+                                .modifier(ShakeOnProblem(trigger: problemsShown, isEnabled: !reduceMotion))
                             problemLabel
+                                // Fades in; editing the code clears it at once (no fade-out to wait for).
+                                .animation(model.problem == nil ? nil : (reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25)), value: model.problem)
                         }
                         .id(Self.codeFieldID)
                     }
@@ -123,6 +141,7 @@ struct ConnectView: View {
         }
         .onChange(of: model.problem) { _, problem in
             guard let problem else { return }
+            problemsShown += 1
             AccessibilityNotification.Announcement(L10n.string(problem.message, language: language)).post()
         }
     }
@@ -135,6 +154,32 @@ struct ConnectView: View {
                 systemImage: problem == .expired ? "clock.arrow.circlepath" : "exclamationmark.circle"
             )
             .accessibilityIdentifier("connect.error")
+            .transition(.opacity)
+        }
+    }
+}
+
+/// A wrong or expired code: three quick swings (±6 pt, 0.3 s) of the code boxes. Offset only, never layout.
+/// Off with Reduce Motion: the error still fades in and the haptic still taps.
+private struct ShakeOnProblem: ViewModifier {
+    let trigger: Int
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.keyframeAnimator(initialValue: CGFloat.zero, trigger: trigger) { view, x in
+                view.offset(x: x)
+            } keyframes: { _ in
+                KeyframeTrack {
+                    LinearKeyframe(6, duration: 0.05)
+                    LinearKeyframe(-6, duration: 0.1)
+                    LinearKeyframe(6, duration: 0.1)
+                    LinearKeyframe(0, duration: 0.05)
+                }
+            }
+        } else {
+            content
         }
     }
 }
