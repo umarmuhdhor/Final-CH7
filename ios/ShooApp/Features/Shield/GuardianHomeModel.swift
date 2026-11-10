@@ -43,6 +43,8 @@ final class GuardianHomeModel {
     private(set) var scans: [ScanResult] = []
     /// The card under the personal activity; empty hides it.
     private(set) var scamCases: [ScamCase] = []
+    /// Personal: the family list answered (it only decides the "Mode Terawasi" card).
+    private(set) var personalMembersKnown = false
     private(set) var isSubmittingVerdict = false
     private(set) var verdictFailed = false
     /// The server refused this verdict (`verdict_not_allowed`), e.g. a warning site while the contract allows blocked only.
@@ -121,6 +123,12 @@ final class GuardianHomeModel {
     /// Family Home with no one to look after: the invite takes the sheet.
     var hasNoFamily: Bool { scope == .family && state == .loaded && members.isEmpty }
 
+    /// Pribadi with nobody to look after ("Pribadi/Home kalau belum setting guardian or protected" 1382:10567): the
+    /// "Mode Terawasi" card, until it is closed. Unknown members (their call failed) hide it.
+    var showsSupervisedCard: Bool {
+        scope == .personal && state == .loaded && personalMembersKnown && members.isEmpty && !settings.supervisedCardDismissed
+    }
+
     // MARK: Actions
 
     /// On appear, on foreground, on pull to refresh. Overlapping calls: only the newest one is applied,
@@ -137,7 +145,8 @@ final class GuardianHomeModel {
             let (loadedProfile, loadedMembers, loadedScans) = try await (me, family, all)
             guard request == generation else { return }
             profile = loadedProfile
-            members = loadedMembers
+            // Personal reads the family on its own, after the screen (`refreshPersonalMembers`).
+            if scope == .family { members = loadedMembers }
             scans = loadedScans
             state = .loaded
         } catch {
@@ -146,7 +155,22 @@ final class GuardianHomeModel {
             if state != .loaded { state = .failed }
             return
         }
-        if scope == .personal { await refreshScamCases(request: request) }
+        if scope == .personal {
+            await refreshPersonalMembers(request: request)
+            await refreshScamCases(request: request)
+        }
+    }
+
+    /// Personal Home only needs to know whether anyone is looked after; a failure never fails the screen.
+    private func refreshPersonalMembers(request: Int) async {
+        guard let loaded = try? await repository.familyMembers(), request == generation else { return }
+        members = loaded
+        personalMembersKnown = true
+    }
+
+    /// X on the "Mode Terawasi" card: gone for good on this iPhone.
+    func dismissSupervisedCard() {
+        settings.supervisedCardDismissed = true
     }
 
     /// A bonus on Home: loaded after the screen, never fails it, and a failed call keeps the card on screen.
