@@ -73,7 +73,8 @@ struct ProfileView: View {
         ProfileHeaderCard(
             banner: "ProfileBanner",
             avatarShadow: model.variant == .protected ? .glow : .none,
-            badgeBottom: model.variant == .protected ? -26 : 5,
+            // Figma 455:10289: the pill's ring ends 20 pt above the avatar's bottom (its 44 pt tap frame 18.5).
+            badgeBottom: model.variant == .protected ? -18.5 : 5,
             name: model.profile?.name ?? "",
             handle: model.handle(language: language),
             stats: model.stats(language: language)
@@ -90,17 +91,15 @@ struct ProfileView: View {
                 if model.profile?.guardian != nil {
                     Button { env.router.show(.profilePage(.connection)) } label: {
                         HStack(spacing: 5.5) {
-                            Image(systemName: ConnectedPillButtonStyle.symbol)
-                                .font(.system(size: 15))
-                                .accessibilityHidden(true)
+                            ConnectedPillButtonStyle.glyph
                             Text("Connected")
                         }
                     }
                     .buttonStyle(ConnectedPillButtonStyle())
                     .accessibilityHint(Text("Shows your linked account"))
                     .accessibilityIdentifier("profile.connectedPill")
-                    // Figma: 17 pt from the card's inner edge, not 12 like "Bagikan undangan".
-                    .padding(.trailing, 5)
+                    // Figma 455:10289: the pill ends 21.4 pt from the card's edge, 9.4 inside the 12 pt row inset.
+                    .padding(.trailing, -2.4)
                 }
             } else {
                 Button { isInvitePresented = true } label: {
@@ -129,15 +128,15 @@ struct ProfileView: View {
         privacySection
 
         Button { isDeleteConfirming = true } label: {
-            // Figma "Hapus Akun" (title case here, unlike the Kelola profil row).
+            // Figma "Hapus Akun" (title case here, unlike the Kelola profil row): SF Pro Rounded 17.
             Text("Delete Account")
-                .profileFont(17, .medium, tracking: -0.17)
+                .profileBody()
                 .foregroundStyle(ProfileStyle.red)
                 .frame(minWidth: 44, minHeight: 44)
         }
         .disabled(model.isWorking)
-        // Figma: the text starts 28 pt under the last card; the 44 pt tap area adds 12 above it.
-        .padding(.top, 16)
+        // Figma: the text starts 28 pt under the last card; the 44 pt tap area adds 11 above its 22 pt line.
+        .padding(.top, 17)
         .accessibilityIdentifier("profile.delete")
     }
 
@@ -145,6 +144,9 @@ struct ProfileView: View {
 
     /// Protected sections sit 15 pt apart (Figma "Profile/Pribadi" of the protected user), others 28.
     private var sectionTop: CGFloat { model.variant == .protected ? 15 : 28 }
+
+    /// Title to card: 12 on the Protected profile (Figma 455:10275), 10 elsewhere (1115:14392).
+    private var sectionSpacing: CGFloat { model.variant == .protected ? 12 : 10 }
 
     /// Protected: "Terhubung", the guardian who gets the warnings.
     @ViewBuilder private var guardianSection: some View {
@@ -154,7 +156,7 @@ struct ProfileView: View {
                     HStack(spacing: 12) {
                         InitialsAvatar(name: guardian.name, avatarId: guardian.avatarId, size: 33)
                         Text(verbatim: guardian.name)
-                            .profileFont(17, tracking: -0.17)
+                            .profileBody()
                             .foregroundStyle(ProfileStyle.ink)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Image(systemName: "chevron.right")
@@ -176,7 +178,7 @@ struct ProfileView: View {
     /// Pribadi and Protected: "Perlindungan" with the extension status (the switch lives in Safari).
     @ViewBuilder private var protectionSection: some View {
         if model.variant != .guardian {
-            ProfileSection(title: "Protection", top: protectionTop) {
+            ProfileSection(title: "Protection", top: protectionTop, spacing: sectionSpacing) {
                 extensionRow
             }
         }
@@ -187,9 +189,12 @@ struct ProfileView: View {
             ProfileRow(
                 symbol: ProfileStyle.extensionSymbol,
                 title: Text("Safari extension"),
-                // Figma v2 (455:10275): "Aktif" in grey. Its chevron is left out: the row does nothing while on.
+                // Pribadi (1115:14424): a green dot and "Terhubung" in green. Protected (455:10275): "Aktif" in grey.
+                // No chevron either way: the row does nothing while on.
                 accessory: extensionStatus.isActive
-                    ? .value(L10n.string("Active", language: language), chevron: false)
+                    ? (model.variant == .protected
+                        ? .value(L10n.string("Active", language: language), chevron: false)
+                        : .status(L10n.string("Connected", language: language), dot: ProfileStyle.green, color: ProfileStyle.greenText))
                     : .value(L10n.string("Off", language: language), color: ProfileStyle.red)
             )
         }
@@ -236,7 +241,7 @@ struct ProfileView: View {
                         .opacity(member.extensionActive ? 1 : 0.5)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: member.name)
-                            .profileFont(17, .medium, tracking: -0.17)
+                            .profileBody()
                             .foregroundStyle(ProfileStyle.nameInk)
                         HStack(spacing: 6) {
                             Circle()
@@ -244,14 +249,14 @@ struct ProfileView: View {
                                 .frame(width: 7, height: 7)
                                 .accessibilityHidden(true)
                             Text(verbatim: MemberText.status(member, now: Date(), language: language))
-                                .profileFont(13, rounded: true)
+                                .profileCaption()
                                 .foregroundStyle(ProfileStyle.secondary)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     if member.extensionActive, let seen = member.lastSeenAt {
                         Text(verbatim: MemberText.ago(seen, language: language))
-                            .profileFont(13, rounded: true)
+                            .profileCaption()
                             .foregroundStyle(ProfileStyle.secondary)
                     }
                 }
@@ -274,7 +279,7 @@ struct ProfileView: View {
     }
 
     private var accountSection: some View {
-        ProfileSection(title: "Account", top: sectionTop) {
+        ProfileSection(title: "Account", top: sectionTop, spacing: sectionSpacing) {
             if model.variant == .protected {
                 // Figma: Kelola profil first, then Terhubung.
                 navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
@@ -297,7 +302,7 @@ struct ProfileView: View {
     }
 
     private var preferencesSection: some View {
-        ProfileSection(title: "Preferences", top: sectionTop) {
+        ProfileSection(title: "Preferences", top: sectionTop, spacing: sectionSpacing) {
             navRow(
                 symbol: "circle.lefthalf.filled", title: Text("Theme"),
                 value: L10n.string(themeTitle, language: language),
@@ -316,7 +321,7 @@ struct ProfileView: View {
 
     /// Apple 5.1.1: the online check can be taken back at any time.
     private var privacySection: some View {
-        ProfileSection(title: "Privacy", top: sectionTop) {
+        ProfileSection(title: "Privacy", top: sectionTop, spacing: sectionSpacing) {
             ProfileToggleRow(
                 symbol: "checkmark.shield",
                 title: Text("Online check"),
@@ -363,12 +368,12 @@ struct RemindButton: View {
         let sent = MemberText.recentlyReminded(member)
         Button { Task { await action() } } label: {
             if isWorking {
-                ProgressView().frame(width: 52)
+                ProgressView().frame(width: 62)
             } else {
                 Text(sent ? "Sent" : "Remind")
             }
         }
-        .buttonStyle(ProfilePillButtonStyle(tint: sent ? ProfileStyle.secondary : ProfileStyle.link))
+        .buttonStyle(ProfilePillButtonStyle(tint: sent ? ProfileStyle.secondary : ProfileStyle.link, large: true))
         .disabled(sent || isWorking)
         .accessibilityLabel(sent ? Text("Reminder sent to \(member.name)") : Text("Remind \(member.name)"))
         .accessibilityHint(sent ? Text(verbatim: "") : Text("Sends a notification to turn on Shoo in Safari"))

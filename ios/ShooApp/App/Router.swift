@@ -16,10 +16,8 @@ enum Route: Hashable {
 /// Profile's sub-screens (PF-01, Figma "Pengaturan/*").
 enum ProfilePage: Hashable {
     case mode
-    /// "Kelola profil": avatar, name, @handle, Hapus akun.
+    /// "Kelola profil": avatar, name (edited in a sheet), status, Hapus akun.
     case editProfile
-    /// "Nama tampilan" from Kelola profil.
-    case editName
     /// Protected: "Terhubung", the guardian and Disconnect.
     case connection
     case notifications

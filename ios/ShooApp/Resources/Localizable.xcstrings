@@ -1,6 +1,176 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld of %lld characters" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld dari %lld karakter"
+          }
+        }
+      }
+    },
+    "Change avatar" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah avatar"
+          }
+        }
+      }
+    },
+    "Change name" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ubah nama"
+          }
+        }
+      }
+    },
+    "Connected with" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terhubung dengan"
+          }
+        }
+      }
+    },
+    "Days protecting" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hari melindungi"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus"
+          }
+        }
+      }
+    },
+    "Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua data yang ada di aplikasi ini termasuk profil, riwayat, dan koneksi keluarga hilang permanen dan tidak bisa dipulihkan."
+          }
+        }
+      }
+    },
+    "Guardian mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Guardian"
+          }
+        }
+      }
+    },
+    "Guardian user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna pengawas"
+          }
+        }
+      }
+    },
+    "Personal mode" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode Pribadi"
+          }
+        }
+      }
+    },
+    "Personal user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna pribadi"
+          }
+        }
+      }
+    },
+    "Pick a character." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih karakter."
+          }
+        }
+      }
+    },
+    "Protected since %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dilindungi sejak %@"
+          }
+        }
+      }
+    },
+    "Protected user" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengguna dilindungi"
+          }
+        }
+      }
+    },
+    "Status" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status"
+          }
+        }
+      }
+    },
+    "This name shows in %@'s app." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama ini terlihat di app %@."
+          }
+        }
+      }
+    },
+    "Your family sees this name." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama ini terlihat oleh keluarga Anda."
+          }
+        }
+      }
+    },
     "Danger detected!" : {
       "localizations" : {
         "id" : {
