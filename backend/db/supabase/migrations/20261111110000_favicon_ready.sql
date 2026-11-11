@@ -22,4 +22,9 @@ alter table scans
 -- failed and clearFaviconPath nulled the path. A put still in flight during the deploy is the old
 -- race once more, at most for its last milliseconds. scans is small (14-day retention); no trigger
 -- fires on this column (admin triggers are on insert or on other columns).
-update scans set favicon_ready_at = now() where favicon_path is not null;
+-- Deploy gap: backend.yml pushes this before `wrangler deploy`, so favicons the old Worker stores in
+-- between stay without ready (no link, no reuse) until retention. Heal once after the deploy, with
+-- the real deploy time as cutoff (never unbounded: that would mark uploads in flight ready):
+--   update scans set favicon_ready_at = now()
+--   where favicon_path is not null and favicon_ready_at is null and created_at < '<deploy time>';
+update scans set favicon_ready_at = now() where favicon_path is not null and favicon_ready_at is null;
