@@ -3,7 +3,8 @@ name: backend
 
 on:
   pull_request:
-    paths: ["backend/**"]
+    # The iOS files hold the app identity that `backend/ci/app-identity.mjs` compares (#326).
+    paths: ["backend/**", "ios/project.yml", "ios/ShooApp/Shoo.entitlements", "ios/ShooApp/App/AppConfig.swift"]
   push:
     branches: [main]
     paths: ["backend/**"]
@@ -41,6 +42,9 @@ jobs:
       - run: pnpm -C backend/api install --frozen-lockfile
       - run: pnpm -C backend/api typecheck
       - run: pnpm -C backend/api test
+      # #326: bundle ID, team ID and applinks host agree between ios/project.yml and wrangler.jsonc.
+      - name: App identity check
+        run: node backend/ci/app-identity.mjs
       # Scripts in backend/ci (ops-watch, fase 21b): node:test, no dependencies.
       - name: backend/ci tests
         run: node --test 'backend/ci/*.test.mjs'
