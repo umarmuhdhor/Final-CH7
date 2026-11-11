@@ -1,0 +1,5 @@
+# Points backend vitest at the separate shoo_audit DB (never the shared dev DB).
+CFG=backend/api/vitest.config.ts; [ -f vitest.config.ts ] && CFG=vitest.config.ts
+export SHOO_TEST_DB_URL=$(grep -o '"postgres://shoo_api:[^"]*"' $CFG | head -1 | tr -d '"' | sed 's#/postgres$#/shoo_audit#')
+export SHOO_TEST_ADMIN_DB_URL=$(grep -o '"postgres://postgres:[^"]*"' $CFG | head -1 | tr -d '"' | sed 's#/postgres$#/shoo_audit#')
+case "$SHOO_TEST_DB_URL" in *shoo_audit) ;; *) echo "audit-env: DB URL not rewritten, abort"; return 1;; esac
