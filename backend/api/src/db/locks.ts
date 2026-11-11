@@ -4,10 +4,13 @@
  * whenever their keys hash alike, and could close a lock cycle nobody planned (fase 27k F-B12).
  * Always pass a class from here, never a number (test/locks.test.ts checks both).
  *
- * Taken outside the Worker, in the admin SQL functions (migrations): 7 (blocklist decisions, key 1),
- * 8 (API keys), 9 (Worker secrets). The one-argument form pg_advisory_xact_lock(bigint) is a separate
- * key space: the guardian lock (families.ts, trigger family_links_check) and the rate-limit key
- * (http/rateLimit.ts).
+ * Taken outside the Worker, in the admin SQL functions (migrations): 7 (blocklist decisions and
+ * analysis runs), 8 (API keys), 9 (Worker secrets). A new SQL function must not use a class listed
+ * here: test/locks.test.ts compares both sides. The one-argument form pg_advisory_xact_lock(bigint) is
+ * a separate key space, shared by the guardian lock (families.ts, trigger family_links_check, hashtext)
+ * and the rate-limit key (http/rateLimit.ts, hashtextextended). They collide only by chance (~2^-32)
+ * and then only wait, as long as no transaction takes another advisory lock while holding the
+ * rate-limit one.
  *
  * A changed class only serializes against Workers on the same version: during a deploy an old and a
  * new isolate may briefly take different classes for the same purpose.
