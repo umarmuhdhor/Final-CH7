@@ -479,11 +479,19 @@ ever sent. Scans, screenshots, favicons and page replicas are deleted automatica
 **For:** the Safari extension (EX-07) after it blocks a page or finishes all layers on a warning
 page. One page is one scan, one Activity item and (for a Protected device) one push to the Guardian.
 
-**One row per site (PR-05):** when the owner already has a scan of the same `domain`, no new row is
-made. The response is `201 { id, notified: null }` with that row's id; no screenshot, favicon or page replica is
-stored, and no push is sent unless this visit moves the row from `warning` to `blocked`. The row's `detectedAt` moves to the newest visit, and a higher `score` replaces
-its `url`, `pageTitle`, `score`, `status` and `signals`. The lifetime totals (profile stats) still count
-every scan. Once retention deletes the row (14 days after the first visit), the next visit makes a new one.
+**One row per link (#241, was one row per site, PR-05):** a link is origin + path, without query or
+fragment (`verdict_link`, the same rule as verdicts). When the owner already has a scan of the same
+link, no new row is made. The response is `201 { id, notified: null }` with that row's id, and no
+favicon or page replica is stored. The row's `detectedAt` moves to the newest visit, and a higher
+`score` replaces its `url`, `pageTitle`, `score`, `status` and `signals`. Another page of the site gets
+its own row, so the Guardian can decide on `/b` after marking `/a` safe. The lifetime totals (profile
+stats) still count every scan. Once retention deletes the row (14 days after the first visit), the next
+visit makes a new one.
+
+**Push per site:** the Guardian's push and the device's own push go out at most twice per owner +
+`domain`: on the first visit to the site (no other row of that domain), and once more when the site
+first reaches `blocked` (no earlier row of that domain was blocked). A site blocked on its first visit
+pushes once. A scam site with many pages never sends a push per page.
 
 - **Auth:** Bearer, either mode. The owner is always the token's device.
 - **Rate limit:** 120 per hour per device

@@ -188,9 +188,15 @@ describe("POST /scans notified (#377)", () => {
     await postBody(p, extensionBody(blocked92));
     expect((await postBody(p, extensionBody(blocked92))).notified).toBeNull();
   });
+
+  it("null for another page of a site that already pushed (#241)", async () => {
+    const { p } = await withGuardian();
+    await postBody(p, extensionBody(blocked92));
+    expect((await postBody(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site/otp" }))).notified).toBeNull();
+  });
 });
 
-describe("POST /scans: one Activity row per site", () => {
+describe("POST /scans: one Activity row per link (#241)", () => {
   const at = (minutes: number) => new Date(Date.parse("2026-11-03T04:00:00.000Z") + minutes * 60_000).toISOString();
 
   it("a repeat visit keeps the first row and moves its time to the newest visit", async () => {
@@ -205,12 +211,16 @@ describe("POST /scans: one Activity row per site", () => {
     expect((await list(p)).body.items[0]!.detectedAt).toBe(at(3));
   });
 
-  it("another page of the same site, or a subdomain, is the same row; another site gets its own", async () => {
+  it("the same link with another query or fragment is the same row; another page, a subdomain or another site gets its own", async () => {
     const p = await createDevice("Mom");
     const first = await postOk(p, extensionBody(blocked92));
-    expect(await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site/x" }))).toBe(first);
-    expect(await postOk(p, extensionBody(warning63))).not.toBe(first);
-    expect((await list(p)).body.items).toHaveLength(2);
+    expect(await postOk(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site/login?ref=sms#top" }))).toBe(first);
+    expect(await postOk(p, extensionBody(blocked92, { url: "https://BCA-verifikasi.site:443/login" }))).toBe(first);
+    const page = await postOk(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site/otp" }));
+    const sub = await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site/login" }));
+    const other = await postOk(p, extensionBody(warning63));
+    expect(new Set([first, page, sub, other]).size).toBe(4);
+    expect((await list(p)).body.items).toHaveLength(4);
   });
 
   it("each device keeps its own row for a site", async () => {
@@ -222,7 +232,7 @@ describe("POST /scans: one Activity row per site", () => {
   it("a higher score replaces status, score and signals; a lower one leaves them", async () => {
     const p = await createDevice("Mom");
     const id = await postOk(p, extensionBody(warning63));
-    const blocked = { score: 90, status: "blocked", signals: blocked92.signals, url: "https://bansos-kemensos.site/login" };
+    const blocked = { score: 90, status: "blocked", signals: blocked92.signals, url: "https://bansos-kemensos.site/cek?step=2" };
     expect(await postOk(p, extensionBody(warning63, blocked))).toBe(id);
     expect(await postOk(p, extensionBody(warning63, { score: 41 }))).toBe(id);
     const [row] = await sql`select url, score, status, signals from scans where id = ${id}`;
@@ -230,7 +240,7 @@ describe("POST /scans: one Activity row per site", () => {
     expect(row!.signals).toEqual(blocked92.signals);
   });
 
-  it("parallel reports of one site still make one row", async () => {
+  it("parallel reports of one link still make one row", async () => {
     const p = await createDevice("Mom");
     const ids = await Promise.all(Array.from({ length: 5 }, () => postOk(p, extensionBody(blocked92))));
     expect(new Set(ids).size).toBe(1);

@@ -519,8 +519,8 @@ describe("GET /verdicts logs verdict_seen for fresh verdicts (EX-06, fase 25 K7)
 
 describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
   /**
-   * One scan row per page. POST /scans keeps one row per owner + domain (recordScan), so a second
-   * page of a domain is written directly, as the rows a Guardian would decide on.
+   * One scan row per page (POST /scans keeps one row per owner + link, recordScan), written directly
+   * here, as the rows a Guardian would decide on.
    */
   let seq = 0;
   const scanAt = async (d: Created, url: string, domain: string) => {

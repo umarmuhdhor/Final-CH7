@@ -156,7 +156,7 @@ scans.post("/scans", async (c) => {
   if (body.screenshotBase64) console.log(JSON.stringify({ event: "screenshot_ignored" }));
 
   const iconUrl = favicon(body.faviconUrl);
-  const { id, created, escalated } = await recordScan(sql, {
+  const { id, created, push } = await recordScan(sql, {
     ownerId: principal.deviceId,
     url: body.url,
     domain: body.domain,
@@ -169,9 +169,9 @@ scans.post("/scans", async (c) => {
     thresholdsVersion: body.thresholdsVersion ?? null,
     rdapRegisteredAt: rdapDate(body.rdapRegisteredAt),
   });
-  // The site already has its Activity row: no second row, push or evidence for a repeat visit,
-  // except the push when a warned site is now blocked. Its evidence stays the first visit's.
-  if (!created && !escalated) return c.json({ id, notified: null }, 201);
+  // One row per link, one push per site (#241): a repeat visit of a link keeps its row and evidence,
+  // and only the first visit to the site, or its first block, pushes.
+  if (!created && !push) return c.json({ id, notified: null }, 201);
   // PR-05: the Worker downloads the favicon once, after the response (a slow scam host never delays
   // or fails the scan), so the app never contacts the scam host (SECURITY P9).
   if (created && iconUrl) {
@@ -189,24 +189,26 @@ scans.post("/scans", async (c) => {
   // #377: the Guardian whose push this scan queued, or null. The block page says "Link sent to
   // <name>" only from this, so a Guardian who left, turned the push off or is capped is never named.
   let notified: { name: string } | null = null;
-  try {
-    const scan = { id, status: body.status, score: body.score };
-    // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
-    const guardian = await guardianPush(sql, principal, scan);
-    const pushes = [guardian, await ownPush(sql, principal, scan)];
-    const sender = pushSender(c.env);
-    for (const push of pushes) {
-      if (!push) continue;
-      if (push === guardian) notified = { name: guardian.guardianName };
-      const delivery = deliverPush(sql, sender, push).catch((err) =>
-        // Name only: a DB error can quote values (D-alief-40).
-        console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
-      );
-      deliveries.push(delivery);
-      c.executionCtx.waitUntil(delivery);
+  if (push) {
+    try {
+      const scan = { id, status: body.status, score: body.score };
+      // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
+      const guardian = await guardianPush(sql, principal, scan);
+      const messages = [guardian, await ownPush(sql, principal, scan)];
+      const sender = pushSender(c.env);
+      for (const message of messages) {
+        if (!message) continue;
+        if (message === guardian) notified = { name: guardian.guardianName };
+        const delivery = deliverPush(sql, sender, message).catch((err) =>
+          // Name only: a DB error can quote values (D-alief-40).
+          console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
+        );
+        deliveries.push(delivery);
+        c.executionCtx.waitUntil(delivery);
+      }
+    } catch (err) {
+      console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
     }
-  } catch (err) {
-    console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
   }
   if (!created) return c.json({ id, notified }, 201);
   // EX-07 (K2, D-alief-C22 a): the replica only after the pushes went out. Inflating up to 3 MB costs

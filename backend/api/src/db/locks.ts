@@ -30,6 +30,6 @@ export const LOCK = {
   replica: 6,
   /** Favicon reserve per owner (scans.ts reserveFavicon); was 4, shared with verdictDomain. */
   favicon: 10,
-  /** One Activity row per owner + site (scans.ts recordScan); was 7, shared with the admin functions. */
+  /** Activity rows and the per-site push of one owner + site (scans.ts recordScan); was 7, shared with the admin functions. */
   scanSite: 11,
 } as const;

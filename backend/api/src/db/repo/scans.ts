@@ -19,41 +19,48 @@ export interface NewScan {
 }
 
 /**
- * One Activity row per site: when the owner still has a scan of this domain, that row is kept
- * (`created: false`) instead of a new one. Its time moves to the newest visit, and a higher score
- * replaces url, title, score, status and signals; its evidence stays. Locked per owner + domain, so
- * two parallel scans of one site cannot both insert. Every scan still counts in the owner's
- * lifetime totals (profile stats, PF-01). `escalated`: this visit moved the kept row from warning to
- * blocked, which the guardian has to hear about.
+ * One Activity row per link (owner + origin + path, `verdict_link`, #241; was one row per site, #248):
+ * when the owner still has a scan of this link, that row is kept (`created: false`) instead of a new
+ * one. Its time moves to the newest visit, and a higher score replaces url, title, score, status and
+ * signals; its evidence stays. Every scan still counts in the owner's lifetime totals (profile stats,
+ * PF-01).
+ *
+ * `push`: the push stays per site (owner + registrable domain), so a scam site with many pages sends
+ * at most two: on the first visit to the site (no other row of the domain), and once more when the
+ * site first reaches `blocked` (no earlier row of the domain was blocked). Locked per owner + domain,
+ * so two parallel scans of one site cannot both insert a link or both count as the first visit.
  */
-export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; escalated: boolean }> {
+export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; push: boolean }> {
   return sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(${LOCK.scanSite}, hashtext(${`${s.ownerId}|${s.domain}`}))`;
-    const [kept] = await tx<{ id: string; escalated: boolean }[]>`
-      with previous as (
-        select id, status from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
-        order by created_at desc, id desc limit 1
-      ), kept as (
-        update scans set
-          detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
-          rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
-          url = case when ${s.score} > score then ${s.url} else url end,
-          page_title = case when ${s.score} > score then ${s.pageTitle} else page_title end,
-          signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
-          status = case when ${s.score} > score then ${s.status} else status end,
-          score = greatest(score, ${s.score})
-        where id = (select id from previous)
-        returning id, status
-      ), counted as (
+    // The site before this scan: any row of the domain, any blocked one, and this link's row.
+    const [site] = await tx<{ seen: boolean; blocked: boolean; linkId: string | null }[]>`
+      select count(*) > 0 as seen, coalesce(bool_or(status = 'blocked'), false) as blocked,
+             (array_agg(id order by created_at desc, id desc)
+                filter (where public.verdict_link(url) = public.verdict_link(${s.url})))[1] as "linkId"
+      from scans where owner_id = ${s.ownerId} and domain = ${s.domain}`;
+    const push = !site!.seen || (s.status === "blocked" && !site!.blocked);
+    if (site!.linkId) {
+      await tx`
+        with kept as (
+          update scans set
+            detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
+            rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
+            url = case when ${s.score} > score then ${s.url} else url end,
+            page_title = case when ${s.score} > score then ${s.pageTitle} else page_title end,
+            signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
+            status = case when ${s.score} > score then ${s.status} else status end,
+            score = greatest(score, ${s.score})
+          where id = ${site!.linkId}
+          returning id
+        )
         update devices d set
           blocked_total = d.blocked_total + (${s.status} = 'blocked')::int,
           warning_total = d.warning_total + (${s.status} = 'warning')::int
-        where d.id = ${s.ownerId} and exists (select 1 from kept)
-      )
-      select kept.id, previous.status = 'warning' and kept.status = 'blocked' as escalated
-      from kept join previous using (id)`;
-    if (kept) return { id: kept.id, created: false, escalated: kept.escalated };
-    return { id: await insertScan(tx, s), created: true, escalated: false };
+        where d.id = ${s.ownerId} and exists (select 1 from kept)`;
+      return { id: site!.linkId, created: false, push };
+    }
+    return { id: await insertScan(tx, s), created: true, push };
   });
 }
 
