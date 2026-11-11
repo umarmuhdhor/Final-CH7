@@ -99,12 +99,40 @@
                     const result = { ...state, scanId: p.scanId };
                     if (state.done) p.state = result;
                     ShooPipeline.notify(result);
+                    if (result.done && result.status === "warning" && !result.verdict) watchVerdict(p);
                 },
             });
         } finally {
             p.running = false;
         }
         if (p.dirty && p === page) scheduleRecheck();
+    }
+
+    // #370: an open warning (card or sheet) keeps asking for a Guardian's verdict, like the block screen does:
+    // `not_safe` → block screen, `safe` → the warning goes away. Only while the tab is visible, one timer per page.
+    let watching = null;
+    function watchVerdict(p) {
+        if (watching?.p === p) return;
+        if (watching) clearTimeout(watching.timer);
+        const started = Date.now();
+        const w = { p, timer: null };
+        watching = w;
+        const tick = async () => {
+            const live = () => watching === w && p === page && p.state?.status === "warning" && !p.state.verdict;
+            if (!live()) return;
+            if (document.visibilityState === "visible") {
+                const reply = await send({ type: "verdict", domain: p.state.domain, fresh: true }).catch(() => null);
+                if (!live()) return;
+                const next = ShooPipeline.withVerdict(p.state, reply?.verdict ?? null);
+                if (next) {
+                    p.state = next;
+                    ShooPipeline.notify(next);
+                    return;
+                }
+            }
+            w.timer = setTimeout(tick, ShooPipeline.verdictPollMs(Date.now() - started));
+        };
+        w.timer = setTimeout(tick, ShooPipeline.verdictPollMs(0));
     }
 
     // Live score: pages keep changing after load (a login form slides in, a chat widget, lazy text),

@@ -291,3 +291,20 @@ test("#379: onlineChecked says whether /analyze really ran", async () => {
     assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], skipped: "no_ai_url" })).last.onlineChecked, false);
     assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], remote: "throw" })).last.onlineChecked, false);
 });
+
+test("#370: a verdict on an open warning — not_safe blocks, safe clears it, none changes nothing", () => {
+    const warning = { scanId: 4, domain: "x.test", score: 40, status: "warning", signals: [sig("cheap_tld", 2, 40)], done: true, verdict: null };
+    const blocked = P.withVerdict(warning, { value: "not_safe", byName: "Adhella" });
+    assert.equal(blocked.status, "blocked");
+    assert.equal(blocked.score, 100);
+    assert.equal(blocked.scanId, 4);
+    const safe = P.withVerdict(warning, { value: "safe" });
+    assert.equal(safe.status, "normal");
+    assert.equal(safe.score, 0);
+    assert.deepEqual(safe.signals, []);
+    assert.equal(P.withVerdict(warning, null), null);
+});
+
+test("#370: an open warning asks for a verdict every 2 s, then 5 s, then 15 s", () => {
+    assert.deepEqual([0, 119999, 120000, 599999, 600000].map(P.verdictPollMs), [2000, 2000, 5000, 5000, 15000]);
+});
