@@ -331,6 +331,43 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect(await entry("rejected.example")).toBeUndefined();
   });
 
+  // F-B7 (fase 27c, K5): with no support left the row goes (D-alief-40), but the reviewer's
+  // decision stays in admin.review_decisions, so the next queueing comes back already rejected.
+  it("a reviewer's reject survives the row being dropped and queued again; unreject ends it", async () => {
+    const domain = "rejected-shop.example";
+    const actor = "reviewer@test.example";
+    const note = "fase 27c reject test";
+    await admin`delete from admin.review_decisions where domain = ${domain}`;
+    const row = async () =>
+      (await admin<{ families: number; rejected_at: Date | null; rejected_by: string | null }[]>`
+        select families, rejected_at, rejected_by from blocklist_entries where domain = ${domain}`)[0];
+    try {
+      const { g, p } = await family();
+      const id = await scan(p, blocked92 as Fixture, domain);
+      expect((await verdict(g, id, "not_safe")).status).toBe(200);
+      await admin`select admin.vote(${domain}, 'reject', null, ${note}, ${actor})`;
+      expect((await row())?.rejected_by).toBe(actor);
+
+      expect((await verdict(g, id, "safe")).status).toBe(200);
+      expect(await row()).toBeUndefined(); // no support → dropped, rejected or not
+      expect((await verdict(g, id, "not_safe")).status).toBe(200);
+      const again = await row();
+      expect(again?.families).toBe(1);
+      expect(again?.rejected_at, "rejected domain is back in the queue").not.toBeNull();
+      expect(again?.rejected_by).toBe(actor);
+      expect((await blocklist(p)).domains).toEqual([]);
+
+      await admin`select admin.unreject(${domain}, ${note}, ${actor})`;
+      expect((await row())?.rejected_at).toBeNull();
+      expect((await verdict(g, id, "safe")).status).toBe(200);
+      expect(await row()).toBeUndefined();
+      expect((await verdict(g, id, "not_safe")).status).toBe(200);
+      expect(await row()).toEqual({ families: 1, rejected_at: null, rejected_by: null });
+    } finally {
+      await admin`delete from admin.review_decisions where domain = ${domain}`;
+    }
+  });
+
   it("families counts distinct guardians", async () => {
     const a = await family();
     const b = await family();
