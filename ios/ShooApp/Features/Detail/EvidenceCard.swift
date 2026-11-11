@@ -233,10 +233,14 @@ struct EvidencePhoto: View {
             DetailStyle.photoFill
             if let image {
                 page(image)
+                    .transition(.opacity)
             } else if isLoading {
                 PageScanPlaceholder(pageWidth: Self.pageWidth, topInset: Self.pageInset)
+                    .transition(.opacity)
             }
         }
+        // Scan placeholder → the page copy: a 0.2 s cross-fade, gentle enough for Reduce Motion.
+        .animation(.easeOut(duration: 0.2), value: image != nil)
         .frame(height: Self.height)
         .clipShape(panel)
         .overlay(panel.stroke(DetailStyle.photoStroke))
