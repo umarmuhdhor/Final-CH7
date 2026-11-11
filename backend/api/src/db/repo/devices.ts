@@ -135,9 +135,9 @@ export async function findProfile(sql: Sql, id: string): Promise<DeviceProfile |
 /**
  * PF-01 "Punya kode undangan?": a protected copy of a guardian device (mode never changes, I1).
  * Name, avatar, language, push token, settings, counters and start date carry over; the history
- * stays with the old device, which the caller deletes once the new one joined a family.
+ * stays with the old device, which the caller deletes in the same transaction as the join (fase 27a).
  */
-export async function insertProtectedCopy(sql: Sql, fromId: string, tokenHash: Uint8Array): Promise<{ id: string; avatarId: string } | undefined> {
+export async function insertProtectedCopy(sql: Sql | TransactionSql, fromId: string, tokenHash: Uint8Array): Promise<{ id: string; avatarId: string } | undefined> {
   const [row] = await sql<{ id: string; avatarId: string }[]>`
     insert into devices (
       name, mode, avatar_id, language, apns_token, token_hash, created_at,
@@ -241,20 +241,29 @@ export async function deleteDevice(sql: Sql, id: string, opts?: DeleteDeviceOpti
       const still = await inactiveCandidates(tx, opts.onlyIfInactive, id);
       if (still.length === 0) return null;
     }
-    // Links first, then verdicts under their domain locks (lock order of decideVerdict), so the
-    // review queue counts drop with the device (D-alief-B10).
-    await tx`delete from family_links where protected_id = ${id} or guardian_id = ${id}`;
-    await dropVerdicts(tx, { deviceId: id });
-    // Deleting the scans first (with returning) leaves no window for an upload to slip in.
-    // Locked by id first, the order retention uses, so the two cannot deadlock.
-    await tx`select 1 from scans where owner_id = ${id} order by id for update`;
-    const shots = await tx<{ path: string | null; favicon: string | null; replica: string | null }[]>`
-      delete from scans where owner_id = ${id}
-      returning screenshot_path as path, favicon_path as favicon, replica_path as replica`;
-    await tx`delete from devices where id = ${id}`;
-    // Tombstoned with the delete: if removing the objects fails later, the cron retries (D-alief-B12).
-    const paths = [...new Set(shots.flatMap((s) => [s.path, s.favicon, s.replica].filter((p): p is string => p !== null)))];
-    await addTombstones(tx, paths);
-    return paths;
+    return deleteDeviceInTx(tx, id);
   });
+}
+
+/**
+ * The delete itself, inside the caller's transaction (fase 27a: become-protected deletes the old
+ * guardian in the same transaction as the join). Same cascade as `deleteDevice`; returns the
+ * Storage/R2 paths to remove after commit (already tombstoned here).
+ */
+export async function deleteDeviceInTx(tx: TransactionSql, id: string): Promise<string[]> {
+  // Links first, then verdicts under their domain locks (lock order of decideVerdict), so the
+  // review queue counts drop with the device (D-alief-B10).
+  await tx`delete from family_links where protected_id = ${id} or guardian_id = ${id}`;
+  await dropVerdicts(tx, { deviceId: id });
+  // Deleting the scans first (with returning) leaves no window for an upload to slip in.
+  // Locked by id first, the order retention uses, so the two cannot deadlock.
+  await tx`select 1 from scans where owner_id = ${id} order by id for update`;
+  const shots = await tx<{ path: string | null; favicon: string | null; replica: string | null }[]>`
+    delete from scans where owner_id = ${id}
+    returning screenshot_path as path, favicon_path as favicon, replica_path as replica`;
+  await tx`delete from devices where id = ${id}`;
+  // Tombstoned with the delete: if removing the objects fails later, the cron retries (D-alief-B12).
+  const paths = [...new Set(shots.flatMap((s) => [s.path, s.favicon, s.replica].filter((p): p is string => p !== null)))];
+  await addTombstones(tx, paths);
+  return paths;
 }
