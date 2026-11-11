@@ -117,7 +117,7 @@ A scan's `verdict` in Activity follows the same rule. `?domain=` alone answers w
 
 `notes` (optional, at most 280 characters): why the Guardian decided. The app requires it on `not_safe`; the backend accepts a verdict without it, because older builds don't send it. It is never returned in a `Verdict`. It is cleared after 14 days and the decision stays, otherwise the link would be blocked again on day 15.
 
-Extension polls `GET /verdicts?url=&domain=` every 5 s while the block screen is open, for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
+Extension polls `GET /verdicts?url=&domain=` while the block screen is open (#350): every 2 s for the first 2 minutes, every 5 s up to 10 minutes, then every 15 s (a `429` waits out `Retry-After`), for **both modes**: Protected waits for the guardian, Guardian reopens the page after marking it safe for themselves (PRD §5 Validasi). Also polls once when the user comes back from the app. Realtime instead of polling: propose via PR.
 
 The extension only asks for a verdict once a page reaches score 30 — the point where the page would be sent with `POST /scans` anyway. Low-score browsing never reaches the backend.
 

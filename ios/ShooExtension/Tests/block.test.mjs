@@ -67,11 +67,20 @@ test("App not set up → Open Shoo, nothing to poll", () => {
     assert.equal(v.sentTo, null);
 });
 
-test("block screen polls every 5 s, and waits out a 429's Retry-After instead of hammering", () => {
-    assert.equal(nextPollMs({ ok: true, verdict: null }), 5000);
-    assert.equal(nextPollMs(null), 5000); // offline
+test("#350: block screen polls every 2 s for 2 min, 5 s up to 10 min, then 15 s", () => {
+    const min = 60 * 1000;
+    assert.equal(nextPollMs({ ok: true, verdict: null }), 2000);
+    assert.equal(nextPollMs(null, 1 * min), 2000); // offline
+    assert.equal(nextPollMs(null, 2 * min), 5000);
+    assert.equal(nextPollMs(null, 9 * min), 5000);
+    assert.equal(nextPollMs(null, 10 * min), 15000);
+    assert.equal(nextPollMs(null, 60 * min), 15000);
+});
+
+test("block screen waits out a 429's Retry-After instead of hammering", () => {
     assert.equal(nextPollMs({ ok: true, verdict: null, rateLimited: true, retryAfterMs: 12000 }), 12000);
-    assert.equal(nextPollMs({ ok: true, verdict: null, rateLimited: true, retryAfterMs: 1000 }), 5000); // never faster
+    assert.equal(nextPollMs({ ok: true, verdict: null, rateLimited: true, retryAfterMs: 1000 }), 2000); // never faster
+    assert.equal(nextPollMs({ ok: true, verdict: null, rateLimited: true, retryAfterMs: 1000 }, 11 * 60 * 1000), 15000);
 });
 
 test("#382: a block from memory shows no reasons of its own (they may be another page's)", () => {
