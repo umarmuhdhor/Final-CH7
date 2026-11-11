@@ -15,10 +15,12 @@
 -- No admin lock (7, 1) is taken: the lock order admin vs. domain verdict lock stays as it is. A
 -- reviewer acting between this read and commit acts on the row it then sees (first vote wins).
 --
+-- Deploy order: this migration before the Worker that calls it (backend.yml runs `supabase db push`
+-- before `wrangler deploy`); a Worker without the function fails every eligible not_safe (42883).
 -- Rollback: deploy the Worker back to the plain insert first, then drop this function in a later
 -- migration (the insert (domain, families) grant is kept for that).
 
-create function public.queue_blocklist_domain(p_domain text, p_families int) returns void
+create or replace function public.queue_blocklist_domain(p_domain text, p_families int) returns void
 language plpgsql security definer set search_path = pg_catalog, pg_temp as $$
 declare
   v_action text;
