@@ -6,6 +6,7 @@ struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
@@ -223,11 +224,13 @@ struct ProfileView: View {
                 FamilyEmptyCard { isInvitePresented = true }
             } else {
                 ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
-                    if index > 0 { ProfileDivider(leading: 73) }
-                    memberRow(member)
+                    if index > 0 { ProfileDivider(leading: 73).transition(.opacity) }
+                    memberRow(member).transition(.opacity)
                 }
             }
         }
+        // Someone joins or is disconnected: rows fade and the card eases to its new height.
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
     }
 
     private func memberRow(_ member: FamilyMember) -> some View {
