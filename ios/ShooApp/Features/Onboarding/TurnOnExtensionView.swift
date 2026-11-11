@@ -365,8 +365,6 @@ struct OnboardingStepRow: View {
 /// ON-04 passed (Figma "Yeay, kamu berhasil lebih terlindungi!").
 struct ExtensionOnView: View {
     let onContinue: () -> Void
-    /// One success tap as the screen comes in (Connect fires its own on join, a step earlier).
-    @State private var appeared = false
 
     private static let shieldScale: CGFloat = 1.67
 
@@ -377,7 +375,9 @@ struct ExtensionOnView: View {
             idPrefix: "extensionOn",
             onContinue: onContinue,
             largeTitle: false,
-            revealsText: true
+            // "Yeay": the shield pops in with rings and confetti, a heavy tap as it lands and a success tap with
+            // the title (they replace the single success tap this screen had).
+            celebrates: true
         ) {
             // Figma: the teal shield, its outline 177 pt wide around y 268; the headline at y 437.
             HalftoneShield(tint: .teal)
@@ -386,11 +386,10 @@ struct ExtensionOnView: View {
                     width: HalftoneShield.size.width * Self.shieldScale,
                     height: HalftoneShield.size.height * Self.shieldScale
                 )
+                .successCelebrationHero(ringSize: 177)
                 .padding(.top, 59)
                 .padding(.bottom, 21)
         }
-        .sensoryFeedback(.success, trigger: appeared)
-        .onAppear { appeared = true }
     }
 }
 
