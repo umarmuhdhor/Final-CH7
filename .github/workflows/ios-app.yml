@@ -1,4 +1,4 @@
-# iOS app tests on PRs (TODO C2, D-alief-12).
+# iOS app tests on PRs (TODO C2, D-alief-12). Built once, then unit and UI tests run side by side (#348).
 name: iOS app
 
 on:
@@ -17,11 +17,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  build:
     # Only 5 macOS runners: a draft PR does not take one on every push. Mark it ready to run the suite.
     if: github.event.pull_request.draft == false
     runs-on: macos-26 # Xcode 26.x: the app uses iOS 26.2 SDK APIs (SFSafariSettings)
-    timeout-minutes: 45 # the suite takes about 32 minutes on this runner
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -32,40 +32,79 @@ jobs:
         working-directory: ios
         run: xcodegen
 
+      # Ad-hoc signing ("-", no team, no profile): the simulator still gets the entitlements, so the
+      # Keychain tests work. CODE_SIGNING_ALLOWED=NO strips them and Keychain calls fail with -34018.
+      - name: Build for testing
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project ios/Shoo.xcodeproj \
+            -scheme Shoo \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
+            2>&1 | tee build.log | grep -E ": error: |\*\* (BUILD|TEST BUILD) (SUCCEEDED|FAILED)" || { tail -40 build.log; exit 1; }
+
+      # tar keeps the executable bits and symlinks that upload-artifact would drop.
+      - name: Pack the test build
+        run: tar -czf test-build.tgz -C DerivedData Build/Products
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-build
+          path: test-build.tgz
+          retention-days: 1
+
+  test:
+    needs: build
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [unit, ui]
+    # The UI suite takes about 30 minutes on this runner; the unit tests a few.
+    timeout-minutes: ${{ matrix.kind == 'ui' && 45 || 20 }}
+    name: ${{ matrix.kind }}
+    steps:
+      # Unit tests compare Data/Fixtures with contracts/fixtures by source path, so the repo is checked out
+      # at the same path the build job compiled from.
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-test-build
+
+      - name: Unpack the test build
+        id: build
+        run: |
+          mkdir -p DerivedData
+          tar -xzf test-build.tgz -C DerivedData
+          echo "xctestrun=$(find DerivedData/Build/Products -name '*.xctestrun' | head -1)" >> "$GITHUB_OUTPUT"
+
+      # By UDID, not by name: two runtimes can both have an "iPhone 17 Pro". Newest iOS runtime, first iPhone.
       - name: Pick a simulator
         id: sim
         run: |
-          SIM=$(xcrun simctl list devices available | grep -oE 'iPhone [0-9]+(e| Pro Max| Pro| Plus| mini| Air)?' | head -1)
-          echo "name=$SIM" >> "$GITHUB_OUTPUT"
+          UDID=$(xcrun simctl list -j devices available | jq -r '
+            [.devices | to_entries[]
+              | select(.key | test("SimRuntime\\.iOS-"))
+              | (.key | capture("iOS-(?<a>[0-9]+)-(?<b>[0-9]+)") | [(.a | tonumber), (.b | tonumber)]) as $v
+              | .value[] | select(.name | startswith("iPhone")) | {v: $v, udid, name}]
+            | sort_by(.v) | reverse | first | "\(.udid) \(.name)"')
+          echo "Simulator: $UDID"
+          echo "udid=${UDID%% *}" >> "$GITHUB_OUTPUT"
 
-      # Unit tests also compare Data/Fixtures with contracts/fixtures, so the whole repo must be checked out.
-      # Ad-hoc signing ("-", no team, no profile): the simulator still gets the entitlements, so the
-      # Keychain tests work. CODE_SIGNING_ALLOWED=NO strips them and Keychain calls fail with -34018.
-      # The full log is too long to read; keep its tail plus every assertion line, so a failing
-      # test shows why it failed and not only its name. Each finished test is printed as it happens,
-      # so a run that gets cancelled still shows how far it got and what took the time. The greps also match
-      # the "Test case '…' passed on 'Clone 1 of …' (… seconds)" lines xcodebuild prints for parallel workers.
-      # FigmaParityUITests only takes QA screenshots and is not a gate; it took 17 of the 47 test minutes.
-      # A failing test runs once more before it fails the job, so one flaky run does not cost a whole new
-      # 30-minute run; a test that fails twice still fails the job. No parallel workers: two cloned
-      # simulators on this 3-CPU runner ran past the 45-minute limit (PR #401).
-      # The step timeout stops the step before the job timeout does, so a slow run still keeps its log.
+      # The UI step stops before the job timeout, so a slow run still keeps its log and result bundle.
       - name: Test
-        timeout-minutes: 40
-        run: |
-          set +e
-          xcodebuild test \
-            -project ios/Shoo.xcodeproj \
-            -scheme Shoo \
-            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
-            -skip-testing:ShooAppUITests/FigmaParityUITests \
-            -retry-tests-on-failure -test-iterations 2 \
-            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-            2>&1 | tee xcodebuild.log | grep --line-buffered -iE "^Test case .* (passed|failed|skipped) (on|\()"
-          status=${PIPESTATUS[0]}
-          set -e
-          tail -40 xcodebuild.log
-          echo "::group::Assertion failures"
-          grep -E ": error: |\] failed \(|' failed on |recorded an issue|Expectation failed" xcodebuild.log | cut -c1-600 | head -60 || true
-          echo "::endgroup::"
-          exit $status
+        timeout-minutes: ${{ matrix.kind == 'ui' && 40 || 15 }}
+        run: ios/ShooApp/ci/run-tests.sh ${{ matrix.kind }} "${{ steps.build.outputs.xctestrun }}" "${{ steps.sim.outputs.udid }}"
+
+      # Mock data only (-UITestMock), so the result bundle is safe in a public repo.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: xcresult-${{ matrix.kind }}
+          path: |
+            results-${{ matrix.kind }}.xcresult
+            xcodebuild-${{ matrix.kind }}.log
+          retention-days: 7
