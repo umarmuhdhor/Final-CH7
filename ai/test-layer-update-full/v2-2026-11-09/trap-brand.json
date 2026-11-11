@@ -1,0 +1,189 @@
+[
+  {
+    "id": "tb-servis-hp",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "servis"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://servis-iphone-jakarta.com/ganti-lcd",
+      "title": "Servis iPhone Jakarta - Ganti LCD",
+      "lang": "id",
+      "text": "Servis iPhone Jakarta. Ganti LCD, baterai, dan konektor charger. Teknisi berpengalaman, garansi servis 30 hari. Kami bukan service center resmi dan tidak berafiliasi dengan produsen. Buka Senin sampai Sabtu pukul 10.00 sampai 18.00. Hubungi kami lewat WhatsApp untuk estimasi biaya.",
+      "forms": [],
+      "imageAlts": [
+        "Foto teknisi sedang mengganti layar",
+        "Etalase toko servis"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-komunitas",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "komunitas"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://komunitas-icloud-indonesia.com/forum",
+      "title": "Komunitas Pengguna iCloud Indonesia",
+      "lang": "id",
+      "text": "Selamat datang di forum komunitas pengguna iCloud Indonesia. Tanya jawab seputar penyimpanan, cadangan foto, dan berbagi album keluarga. Situs ini dikelola relawan dan bukan layanan resmi. Topik terbaru: cara memperbesar ruang penyimpanan, cadangan lama tidak muncul.",
+      "forms": [],
+      "imageAlts": [
+        "Ilustrasi awan penyimpanan"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-blog-bca",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "blog"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://panduan-bca-mobile.com/pemula",
+      "title": "Panduan Login BCA Mobile untuk Pemula",
+      "lang": "id",
+      "text": "Panduan ini menjelaskan langkah mendaftar dan masuk ke aplikasi mobile banking untuk pemula. Unduh aplikasi hanya dari toko aplikasi resmi. Jangan pernah membagikan PIN atau kode OTP kepada siapa pun, termasuk orang yang mengaku petugas bank. Blog ini bukan situs resmi bank.",
+      "forms": [],
+      "imageAlts": [
+        "Tangkapan layar halaman awal aplikasi"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-aksesoris",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "toko"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://aksesoris-iphone-murah.com/",
+      "title": "Aksesoris iPhone Original Murah",
+      "lang": "id",
+      "text": "Toko aksesori ponsel: casing, kabel, pelindung layar, dan tripod. Pengiriman ke seluruh Indonesia lewat kurir pilihan Anda. Pesanan diproses hari kerja berikutnya. Pembayaran lewat transfer atau bayar di tempat. Tanya stok lewat chat toko.",
+      "forms": [],
+      "imageAlts": [
+        "Casing transparan",
+        "Kabel charger anyaman"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-agen-bri",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "agen"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://agen-bri-link-tembalang.com/",
+      "title": "Agen BRI Link Kecamatan Tembalang",
+      "lang": "id",
+      "text": "Agen perorangan di Kecamatan Tembalang melayani setor tunai, tarik tunai, dan pembayaran tagihan listrik. Jam layanan 08.00 sampai 20.00. Biaya layanan dijelaskan di tempat sebelum transaksi. Alamat dan peta lokasi tersedia di bawah. Situs ini milik agen, bukan situs resmi bank.",
+      "forms": [],
+      "imageAlts": [
+        "Peta lokasi agen",
+        "Foto etalase agen"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-pulsa",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "pulsa"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://isi-saldo-ovo-murah.com/",
+      "title": "Isi Saldo DANA dan OVO",
+      "lang": "id",
+      "text": "Layanan isi saldo dompet digital lewat konter kami. Datang langsung ke toko, sebutkan nomor ponsel yang akan diisi, bayar tunai atau transfer. Saldo masuk dalam beberapa menit. Kami juga menjual pulsa dan paket data. Konter buka setiap hari.",
+      "forms": [],
+      "imageAlts": [
+        "Spanduk konter pulsa"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-forum-review",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "forum"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://review-shopee-paylater.com/",
+      "title": "Review Shopee Paylater dari Pengguna",
+      "lang": "id",
+      "text": "Kumpulan ulasan pengguna tentang pembayaran cicilan di toko online. Ada yang puas dengan limit dan tenor, ada yang mengeluhkan bunga. Baca beberapa ulasan sebelum memutuskan. Ulasan ditulis oleh pembaca, kami tidak menjual atau menawarkan pinjaman.",
+      "forms": [],
+      "imageAlts": [
+        "Grafik perbandingan bunga cicilan"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "tb-berita",
+    "label": "legit",
+    "tags": [
+      "brand-trap",
+      "berita"
+    ],
+    "synthetic": true,
+    "source": "synthetic, hand-written 2026-11-09 for v2 test; fictional site, domain never contacted, RDAP skipped",
+    "collectedAt": "2026-11-09T00:00:00.000Z",
+    "notes": "No form. Domain only fires brand_name (level 1) in L2; must never be flagged by version C impersonation rule.",
+    "snapshot": {
+      "url": "https://berita-tokopedia-fitur.com/",
+      "title": "Tokopedia Luncurkan Fitur Baru",
+      "lang": "id",
+      "text": "JAKARTA - Sebuah platform belanja daring meluncurkan fitur baru untuk memudahkan penjual mengelola stok. Menurut keterangan perusahaan, fitur ini akan tersedia bertahap bulan ini. Pengamat menilai persaingan toko daring makin ketat. Portal berita ini tidak berafiliasi dengan perusahaan yang diberitakan.",
+      "forms": [],
+      "imageAlts": [
+        "Foto konferensi pers peluncuran fitur"
+      ],
+      "capturedAt": "2026-11-09T00:00:00.000Z"
+    }
+  }
+]

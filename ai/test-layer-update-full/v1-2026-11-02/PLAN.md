@@ -1,7 +1,7 @@
 # Plan: bandingkan arsitektur lama dan baru di 75 link asli, sampai Layer 4
 
 Status: **plan**. Belum dijalankan.
-Pemilik: **Imelda** (`ai/`). Semua file baru di `ai/test-layer-update-full/`. `src/` dan `prompts/` tidak diubah.
+Pemilik: **Imelda** (`ai/`). Semua file baru di `ai/test-layer-update-full/v1-2026-11-02/`. `src/` dan `prompts/` tidak diubah.
 Skrip: `run.mjs` (belum ditulis). Hasil: `HASIL.md`. Data mentah: `.hasil/*.json` (di-gitignore).
 Jalankan dari branch `feat/AI-M4-thinking-off-asks-otp-boxes` (PR #232, commit `2c51aee` atau sesudahnya).
 
@@ -59,8 +59,8 @@ Skor L1-L2 dan aturan L3 sama di ketiganya.
 ### Cara memuat kode lama
 
 ```bash
-mkdir -p ai/test-layer-update-full/.hasil/old
-git archive 3459f58 ai/src ai/prompts detector/data | tar -x -C ai/test-layer-update-full/.hasil/old
+mkdir -p ai/test-layer-update-full/v1-2026-11-02/.hasil/old
+git archive 3459f58 ai/src ai/prompts detector/data | tar -x -C ai/test-layer-update-full/v1-2026-11-02/.hasil/old
 ```
 
 Sudah dicoba: `.hasil/old/ai/src/analyze.js` bisa dimuat berdampingan dengan kode baru, dan pada LLM tiruan kedua versi mengirim body yang sama persis. Lihat `.hasil/probe.mjs`.
