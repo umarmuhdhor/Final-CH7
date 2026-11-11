@@ -7,11 +7,16 @@ struct MemberDetailModelTests {
     /// 14 Sep 2026, the mock members' `connectedAt`.
     static let start = Date(timeIntervalSince1970: 1_789_351_800)
 
-    func model(_ deviceId: String = "dev_mom", repository: (any ShooRepository)? = nil) -> MemberDetailModel {
+    func model(
+        _ deviceId: String = "dev_mom",
+        repository: (any ShooRepository)? = nil,
+        onDisconnected: @escaping @MainActor () -> Void = {}
+    ) -> MemberDetailModel {
         MemberDetailModel(
             deviceId: deviceId,
             repository: repository ?? MockRepository(mode: .guardian, latency: .zero),
-            now: { Self.start.addingTimeInterval(2 * 86_400) }
+            now: { Self.start.addingTimeInterval(2 * 86_400) },
+            onDisconnected: onDisconnected
         )
     }
 
@@ -108,8 +113,31 @@ struct MemberDetailModelTests {
     }
 
     @Test func failedDisconnectSaysSo() async {
-        let model = model(repository: FailingRepository())
+        var cleared = 0
+        let model = model(repository: FailingRepository(), onDisconnected: { cleared += 1 })
         #expect(await model.disconnect() == false)
         #expect(model.actionError != nil)
+        #expect(cleared == 0, "the member is still connected: their pushes stay")
+    }
+
+    /// Fase 27g (F-N3, K9, P13): disconnecting from the member page clears the shown pushes, as the
+    /// family list does (`FamilyCodeModel.remove`).
+    @Test func disconnectClearsDeliveredPushes() async {
+        var cleared = 0
+        let model = model(onDisconnected: { cleared += 1 })
+        await model.load()
+        #expect(await model.disconnect())
+        #expect(cleared == 1)
+    }
+
+    /// Already removed (an earlier answer got lost): the pushes go too.
+    @Test func disconnectThatAlreadyHappenedClearsDeliveredPushes() async throws {
+        var cleared = 0
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let model = model(repository: repository, onDisconnected: { cleared += 1 })
+        await model.load()
+        try await repository.removeMember(deviceId: "dev_mom")
+        #expect(await model.disconnect())
+        #expect(cleared == 1)
     }
 }

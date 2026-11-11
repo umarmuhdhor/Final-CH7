@@ -45,11 +45,19 @@ final class MemberDetailModel {
 
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
+    /// After a disconnect: the member's pushes leave the lock screen (P13). Tests count the calls.
+    @ObservationIgnored private let onDisconnected: @MainActor () -> Void
 
-    init(deviceId: String, repository: any ShooRepository, now: @escaping () -> Date = Date.init) {
+    init(
+        deviceId: String,
+        repository: any ShooRepository,
+        now: @escaping () -> Date = Date.init,
+        onDisconnected: @escaping @MainActor () -> Void = { DeliveredPushes.clear() }
+    ) {
         self.deviceId = deviceId
         self.repository = repository
         self.now = now
+        self.onDisconnected = onDisconnected
     }
 
     func load() async {
@@ -122,6 +130,9 @@ final class MemberDetailModel {
             actionError = "Couldn't disconnect. Check your connection and try again."
             return false
         }
+        // Their pushes go too; one call can't pick a person's, so the lock screen is cleared (C18), as
+        // the family list does (`FamilyCodeModel.remove`).
+        onDisconnected()
         return true
     }
 }

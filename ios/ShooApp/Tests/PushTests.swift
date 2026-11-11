@@ -133,12 +133,23 @@ struct PushRoutingTests {
         #expect(env.router.shieldPath.isEmpty)
     }
 
-    /// The Protected device only gets family pushes (PF-01: "Ingatkan", disconnect): a tap opens Shield.
-    @Test func protectedPushTapOpensShield() {
+    /// Fase 27g (F-N2, K9): the backend also pushes the Protected device about its own scans (`ownPush`
+    /// with a `scanId`); `GET /scans/{id}` lets the owner read it, so the tap opens Detail in that mode too.
+    @Test func protectedPushWithScanIdOpensDetail() {
+        let env = environment(mode: .protected)
+        env.router.shieldPath = [.profile]
+        env.openPush(scanId: Self.scanId)
+        #expect(env.router.selectedTab == .activity)
+        #expect(env.router.activityPath == [.detail(scanId: Self.scanId)])
+        #expect(env.router.shieldPath.isEmpty)
+    }
+
+    /// Family pushes ("Ingatkan", disconnect) carry no `scanId`: the Protected device lands on Shield.
+    @Test func protectedPushWithoutScanIdOpensShield() {
         let env = environment(mode: .protected)
         env.router.selectedTab = .activity
         env.router.activityPath = [.profile]
-        env.openPush(scanId: Self.scanId)
+        env.openPush(scanId: nil)
         #expect(env.router.activityPath.isEmpty)
         #expect(env.router.selectedTab == .shield)
     }
