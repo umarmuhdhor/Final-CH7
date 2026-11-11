@@ -438,6 +438,31 @@ struct ProfileModelTests {
         #expect(model.notificationSettings.quietStart == "21:00")
     }
 
+    /// K11: off → on → off saved while the first "off" is still on its way, then that first one fails. The value
+    /// on screen equals what it set, but newer updates own the key: it stays off, as on the server.
+    @Test func failedUpdateKeepsTheKeyWhenANewerUpdateSetTheSameValue() async throws {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let repository = DelayedScansRepository(base: base)
+        let gate = AsyncGate()
+        let held = HeldOnce()
+        repository.beforeUpdate = { update in
+            guard update.notifications?.warning == false, await held.take() else { return }
+            await gate.hold()
+            throw RepositoryError.network
+        }
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), linked: linked())
+        await model.load()
+        defer { gate.open() }
+        let slow = Task { await model.updateNotifications(NotificationSettingsUpdate(warning: false)) }
+        await gate.arrival()
+        await model.updateNotifications(NotificationSettingsUpdate(warning: true))
+        await model.updateNotifications(NotificationSettingsUpdate(warning: false))
+        gate.open()
+        await slow.value
+        #expect(!model.notificationSettings.warning)
+        #expect(try await base.me().notifications?.warning == false)
+    }
+
     /// Fase 27i (F-N6, K11): start = end means "all day" on the server, which the sheet never offers.
     @Test(arguments: [("22:00", "06:00", true), ("00:00", "23:59", true), ("22:00", "22:00", false), ("00:00", "00:00", false)])
     func quietHoursSaveNeedsDifferentStartAndEnd(start: String, end: String, expected: Bool) {

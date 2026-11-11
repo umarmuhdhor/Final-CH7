@@ -143,12 +143,14 @@ final class AsyncGate {
         arrivalWaiter?.resume()
         arrivalWaiter = nil
         guard !opened else { return }
+        precondition(openWaiter == nil, "AsyncGate holds one call")
         await withCheckedContinuation { openWaiter = $0 }
     }
 
     /// In the test: returns once the held call has reached `hold()`.
     func arrival() async {
         guard !arrived else { return }
+        precondition(arrivalWaiter == nil, "AsyncGate has one waiter")
         await withCheckedContinuation { arrivalWaiter = $0 }
     }
 
@@ -157,5 +159,15 @@ final class AsyncGate {
         opened = true
         openWaiter?.resume()
         openWaiter = nil
+    }
+}
+
+/// `true` for the first `take()` only.
+@MainActor
+final class HeldOnce {
+    private var taken = false
+    func take() -> Bool {
+        defer { taken = true }
+        return !taken
     }
 }
