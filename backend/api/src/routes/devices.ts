@@ -2,10 +2,10 @@ import { Hono } from "hono";
 import postgres from "postgres";
 import * as z from "zod";
 import type { AppEnv } from "../env";
-import { deleteDevice, findProfile, insertDevice, insertProtectedCopy, updateDevice } from "../db/repo/devices";
+import { deleteDevice, findProfile, insertDevice, updateDevice } from "../db/repo/devices";
 import { familyContacts, guardianOf } from "../db/repo/families";
 import { keyHash } from "../http/keyHash";
-import { joinFamily } from "../services/family";
+import { becomeProtected } from "../services/becomeProtected";
 import { deleteScreenshots } from "../services/screenshots";
 import { requireDevice, requireMode } from "../http/auth";
 import { base64url, randomBytes, sha256 } from "../http/crypto";
@@ -164,9 +164,10 @@ const becomeProtectedBody = z.object({ code: z.string().regex(/^\d{6}$/, "must b
 
 /**
  * PF-01 "Punya kode undangan?" (proposed): a guardian without members joins a family as protected.
- * Device mode never changes (I1), so a protected copy is made, joined with the code (same checks
- * and attempt limits as POST /family/join), and only then the old device is deleted. A failed join
- * removes the copy and leaves the guardian as it was. The new token exists only in this response.
+ * Device mode never changes (I1), so a protected copy is made. Since fase 27a the copy, the join
+ * and the old device's delete are one transaction (services/becomeProtected.ts): validation and the
+ * attempt limits run first, with the old device's own attempt budget, so a failure makes no copy and
+ * leaves the guardian as it was. The new token exists only in this response.
  */
 devices.post("/devices/me/protected", requireDevice, requireMode("guardian"), async (c) => {
   const sql = c.get("sql");
@@ -180,22 +181,19 @@ devices.post("/devices/me/protected", requireDevice, requireMode("guardian"), as
     throw err;
   }
   const { code } = await readJson(c, becomeProtectedBody);
+  // Cheap early 409 that spends no attempt; the transaction checks again under the lock.
   const [{ n } = { n: 0 }] = await sql<{ n: number }[]>`select count(*)::int as n from family_links where guardian_id = ${oldId}`;
   if (n > 0) throw errors.hasMembers();
 
   const token = `shoo_${base64url(randomBytes(32))}`;
-  const copy = await insertProtectedCopy(sql, oldId, await sha256(token));
-  if (!copy) throw errors.unauthorized();
-  let guardian;
-  try {
-    guardian = await joinFamily(sql, copy.id, await keyHash(`join:${ip}`), code);
-  } catch (err) {
-    await deleteDevice(sql, copy.id);
-    throw err;
-  }
-  const paths = await deleteDevice(sql, oldId);
-  c.executionCtx.waitUntil(deleteScreenshots(sql, c.env, paths));
-  return c.json({ deviceId: copy.id, token, avatarId: copy.avatarId, guardian });
+  const done = await becomeProtected(sql, {
+    oldId,
+    ipHash: await keyHash(`join:${ip}`),
+    code,
+    tokenHash: await sha256(token),
+  });
+  c.executionCtx.waitUntil(deleteScreenshots(sql, c.env, done.paths));
+  return c.json({ deviceId: done.deviceId, token, avatarId: done.avatarId, guardian: done.guardian });
 });
 
 /**

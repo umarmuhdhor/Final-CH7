@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { runNotifications } from "../src/cron/notifications";
 import type { OpsWriter } from "../src/db/repo/ops";
 import { CRONS } from "../src/index";
@@ -7,7 +7,13 @@ import { summaryText } from "../src/services/push/messages";
 import { guardianPush, ownPush } from "../src/services/push/notify";
 import { isQuiet, localTime } from "../src/services/push/quiet";
 import type { PushMessage, PushSender } from "../src/services/push/sender";
-import { resetDb, testSql } from "./helpers/resetDb";
+import postgres from "postgres";
+import { deleteDevice } from "../src/db/repo/devices";
+import { joinFamily } from "../src/services/family";
+import { becomeProtected, type BecomeProtectedHooks } from "../src/services/becomeProtected";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+import { sha256 } from "../src/http/crypto";
+import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
 
 // PF-01 settings pages (Figma "Pengaturan/*"): notification switches, quiet hours, time zone,
@@ -332,5 +338,240 @@ describe("POST /devices/me/protected (Punya kode undangan?)", () => {
   it("protected devices cannot call it", async () => {
     const p = await createDevice("Mom");
     expect((await call("/devices/me/protected", { method: "POST", token: p.token, json: { code: "123456" } })).status).toBe(403);
+  });
+});
+
+// Fase 27a (F-B1, F-B2, F-B3, F-B6, K3): become-protected is one transaction. Races are tested at
+// function level with two plain postgres() connections and injected hooks: a route call through
+// call() while another connection holds a lock hangs in the workerd pool (fase 27 log).
+// 15 s: each test makes several devices and calls; the local stack sometimes needs a few seconds.
+describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 }, () => {
+  useRateKeySecret(env.RATE_KEY_SECRET);
+  const admin = adminSql();
+  // Two extra sessions for the races. lock_timeout 2 s: a deadlock or a missed wake-up fails fast.
+  const raceSql = () => postgres(env.DB.connectionString, { max: 1, fetch_types: false, connection: { lock_timeout: 2000 } });
+  const a = raceSql();
+  const b = raceSql();
+  let racePids: [number, number] = [0, 0];
+  beforeAll(async () => {
+    const pid = async (s: typeof a) => (await s<{ pid: number }[]>`select pg_backend_pid() as pid`)[0]!.pid;
+    racePids = [await pid(a), await pid(b)];
+  });
+  // Gates a failed assertion left closed: open them, so no session stays parked holding locks.
+  const openGates: (() => void)[] = [];
+  afterEach(() => openGates.splice(0).forEach((release) => release()));
+  // Not ended, like testSql(): end() in the workerd pool raises "This socket has been closed".
+
+  const code = async (g: Created) =>
+    ((await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string }).code;
+  const switchTo = (g: Created, c: string, ip?: string) =>
+    call("/devices/me/protected", { method: "POST", token: g.token, json: { code: c }, ip });
+  const errorCode = async (res: Response) => ((await res.json()) as { error: { code: string } }).error.code;
+  const guardianOf = async (id: string) =>
+    (await sql<{ g: string }[]>`select guardian_id as g from family_links where protected_id = ${id}`)[0]?.g ?? null;
+  const members = async (g: Created) =>
+    (await sql<{ n: number }[]>`select count(*)::int as n from family_links where guardian_id = ${g.deviceId}`)[0]!.n;
+  const deviceCount = async () => (await sql<{ n: number }[]>`select count(*)::int as n from devices`)[0]!.n;
+  const input = async (g: Created, c: string, ip = "203.0.113.50") => ({
+    oldId: g.deviceId,
+    ipHash: await keyHash(`join:${ip}`),
+    code: c,
+    tokenHash: await sha256(`shoo_test_${g.deviceId}`),
+  });
+  /** Resolves once session `a` or `b` waits for a lock that another one holds. */
+  const someoneWaits = async () => {
+    for (let i = 0; i < 100; i++) {
+      const [row] = await admin<{ n: number }[]>`
+        select count(*)::int as n from pg_locks where not granted and pid in (${racePids[0]}, ${racePids[1]})`;
+      if (row!.n > 0) return;
+      await new Promise((r) => setTimeout(r, 20));
+    }
+    throw new Error("nobody waited for a lock");
+  };
+  const settle = <T>(p: Promise<T>) =>
+    p.then(
+      (value) => ({ ok: true as const, value }),
+      (error: unknown) => ({ ok: false as const, code: (error as { code?: string }).code ?? String(error) }),
+    );
+  /**
+   * Starts a switch with a hook that parks it until `release()`. Returns once it is parked; throws
+   * at once (instead of waiting for the test timeout) when the switch ends before the hook.
+   */
+  const parked = async <T>(start: (hook: () => Promise<void>) => Promise<T>) => {
+    let release!: () => void;
+    let arrived!: () => void;
+    const open = new Promise<void>((r) => (release = r));
+    const reached = new Promise<"parked">((r) => (arrived = () => r("parked")));
+    openGates.push(release);
+    const done = settle(
+      start(async () => {
+        arrived();
+        await open;
+      }),
+    );
+    const first = await Promise.race([reached, done]);
+    if (first !== "parked") throw new Error(`switch ended before the gate: ${JSON.stringify(first)}`);
+    return { done, release };
+  };
+
+  it("F-B1: your own code is code_invalid; the guardian stays as it was and no copy is made", async () => {
+    const g = await createDevice("Solo", "guardian");
+    const own = await code(g);
+    const before = await deviceCount();
+    const res = await switchTo(g, own);
+    expect(res.status).toBe(404);
+    expect(await errorCode(res)).toBe("code_invalid");
+    expect(await me(g)).toMatchObject({ mode: "guardian" });
+    expect(await deviceCount()).toBe(before);
+    // Counts as a failed attempt, like any wrong code (F-B6).
+    const [row] = await sql<{ n: number }[]>`
+      select count(*)::int as n from join_attempts where device_id = ${g.deviceId} and not success`;
+    expect(row!.n).toBe(1);
+  });
+
+  it("F-B6: the 6th try from one guardian is too_many_attempts, even with a good code", async () => {
+    const g = await createDevice("G", "guardian");
+    const other = await createDevice("Budi", "guardian");
+    for (let i = 1; i <= 5; i++) {
+      expect((await switchTo(g, `00000${i}`)).status).toBe(404);
+    }
+    const sixth = await switchTo(g, await code(other));
+    expect(sixth.status).toBe(429);
+    expect(await errorCode(sixth)).toBe("too_many_attempts");
+    expect(await me(g)).toMatchObject({ mode: "guardian" });
+    expect(await members(other)).toBe(0);
+  });
+
+  it("F-B6: 20 failures from one IP across guardians hit the IP limit; another IP still gets through", async () => {
+    const ip = "203.0.113.77";
+    for (let d = 0; d < 4; d++) {
+      const g = await createDevice(`G${d}`, "guardian");
+      for (let i = 1; i <= 5; i++) expect((await switchTo(g, `10000${i}`, ip)).status).toBe(404);
+    }
+    const next = await createDevice("G4", "guardian");
+    const limited = await switchTo(next, "100009", ip);
+    expect(limited.status).toBe(429);
+    expect(await errorCode(limited)).toBe("too_many_attempts");
+    expect((await switchTo(next, "100009", "203.0.113.78")).status).toBe(404);
+  }, 30_000);
+
+  it("F-B2: a member joining the old guardian mid-switch gets code_invalid, never a silent loss", async () => {
+    const g = await createDevice("G", "guardian");
+    const budi = await createDevice("Budi", "guardian");
+    const mom = await createDevice("Mom");
+    const gCode = await code(g);
+    const switchInput = await input(g, await code(budi));
+    const switch1 = await parked((hook) => becomeProtected(a, switchInput, { afterValidate: hook }));
+    const joining = settle(joinFamily(b, mom.deviceId, await keyHash("join:203.0.113.51"), gCode));
+    await someoneWaits(); // Mom's join waits for the old guardian's lock
+    switch1.release();
+    const [sw, jn] = await Promise.all([switch1.done, joining]);
+    expect(sw.ok).toBe(true);
+    expect(jn).toEqual({ ok: false, code: "code_invalid" });
+    expect(await guardianOf(mom.deviceId)).toBeNull();
+    expect(await members(budi)).toBe(1);
+  });
+
+  it("F-B2: a member who joined first makes the switch has_members inside the transaction", async () => {
+    const g = await createDevice("G", "guardian");
+    const budi = await createDevice("Budi", "guardian");
+    const mom = await createDevice("Mom");
+    const gCode = await code(g);
+    const before = await deviceCount();
+    const hooks: BecomeProtectedHooks = {
+      // After the route's cheap pre-check, before any lock: Mom's join commits on another session.
+      beforeValidate: async () => {
+        await joinFamily(b, mom.deviceId, await keyHash("join:203.0.113.52"), gCode);
+      },
+    };
+    const sw = await settle(becomeProtected(a, await input(g, await code(budi)), hooks));
+    expect(sw).toEqual({ ok: false, code: "has_members" });
+    expect(await guardianOf(mom.deviceId)).toBe(g.deviceId);
+    expect(await members(budi)).toBe(0);
+    expect(await deviceCount()).toBe(before);
+  });
+
+  it("F-B3: a failure after the copy is made rolls everything back; the retry makes exactly one link", async () => {
+    const g = await createDevice("G", "guardian");
+    const budi = await createDevice("Budi", "guardian");
+    const bCode = await code(budi);
+    const before = await deviceCount();
+    const sw = await settle(
+      becomeProtected(a, await input(g, bCode), {
+        beforeLink: async () => {
+          throw Object.assign(new Error("injected"), { code: "XX000" });
+        },
+      }),
+    );
+    expect(sw).toEqual({ ok: false, code: "XX000" });
+    expect(await deviceCount()).toBe(before);
+    expect(await me(g)).toMatchObject({ mode: "guardian" });
+    expect(await members(budi)).toBe(0);
+
+    const retry = await switchTo(g, bCode);
+    expect(retry.status).toBe(200);
+    expect(await members(budi)).toBe(1);
+    expect(await deviceCount()).toBe(before);
+  });
+
+  it("an account deleted mid-switch stays deleted: 401, no copy, no link", async () => {
+    const g = await createDevice("G", "guardian");
+    const budi = await createDevice("Budi", "guardian");
+    const switchInput = await input(g, await code(budi));
+    const sw = await settle(
+      becomeProtected(a, switchInput, {
+        // DELETE /devices/me on another session commits while the switch holds its locks.
+        afterValidate: async () => void (await deleteDevice(b, g.deviceId)),
+      }),
+    );
+    expect(sw).toEqual({ ok: false, code: "unauthorized" });
+    expect(await members(budi)).toBe(0);
+    expect((await sql<{ n: number }[]>`select count(*)::int as n from devices where name = 'G'`)[0]!.n).toBe(0);
+  });
+
+  it("a wrong code from an account deleted mid-switch is 401, not code_invalid", async () => {
+    const g = await createDevice("G", "guardian");
+    const sw = await settle(
+      becomeProtected(a, await input(g, "000009"), {
+        beforeValidate: async () => void (await deleteDevice(b, g.deviceId)),
+      }),
+    );
+    expect(sw).toEqual({ ok: false, code: "unauthorized" });
+  });
+
+  it("K3: two guardians using each other's codes at once finish without a deadlock: one 200, one refused", async () => {
+    const g1 = await createDevice("G1", "guardian");
+    const g2 = await createDevice("G2", "guardian");
+    const [c1, c2] = [await code(g1), await code(g2)];
+    const started = Date.now();
+    const firstInput = await input(g1, c2, "203.0.113.61");
+    const first = await parked((hook) => becomeProtected(a, firstInput, { afterValidate: hook }));
+    const second = settle(becomeProtected(b, await input(g2, c1, "203.0.113.62")));
+    await someoneWaits();
+    first.release();
+    const results = await Promise.all([first.done, second]);
+    expect(Date.now() - started).toBeLessThan(10_000);
+    expect(results[0].ok).toBe(true);
+    expect(results[1].ok).toBe(false);
+    expect(["has_members", "code_invalid"]).toContain(results[1].ok ? "" : results[1].code);
+    expect(await members(g2)).toBe(1);
+    expect((await call("/devices/me", { token: g1.token })).status).toBe(401);
+  });
+
+  it("K3: a member on the same IP as a switching guardian waits, then joins (no 500)", async () => {
+    const g = await createDevice("G", "guardian");
+    const budi = await createDevice("Budi", "guardian");
+    const mom = await createDevice("Mom");
+    const bCode = await code(budi);
+    const ip = "203.0.113.70";
+    const switchInput = await input(g, bCode, ip);
+    const switch1 = await parked((hook) => becomeProtected(a, switchInput, { afterValidate: hook }));
+    const joining = settle(joinFamily(b, mom.deviceId, await keyHash(`join:${ip}`), bCode));
+    await someoneWaits(); // Mom waits for the shared IP's attempt lock
+    switch1.release();
+    const [sw, jn] = await Promise.all([switch1.done, joining]);
+    expect(sw.ok).toBe(true);
+    expect(jn.ok).toBe(true);
+    expect(await members(budi)).toBe(2);
   });
 });
