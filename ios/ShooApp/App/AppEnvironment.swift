@@ -476,12 +476,13 @@ final class AppEnvironment {
         settings.onboardingCompleted && settings.mode != nil && !sessionExpired
     }
 
-    /// GD-06: a tapped push. A push without a usable `scanId` opens Shield. The Protected device only
-    /// gets family pushes (reminder, disconnect, PF-01), which never carry a `scanId`.
+    /// GD-06: a tapped push. One with a usable `scanId` opens Detail in either mode: the Guardian's pushes
+    /// are about a member's scan, the Protected device's about its own (`ownPush`, `GET /scans/{id}` lets
+    /// the owner read it). Family pushes (reminder, disconnect, PF-01) carry none and open Shield.
     @MainActor
     func openPush(scanId: String?) {
         guard isInMainScreen else { return }
-        if let scanId, settings.mode == .guardian {
+        if let scanId {
             router.openDetail(scanId: scanId)
         } else {
             router.reset()
