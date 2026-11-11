@@ -11,6 +11,7 @@ type Scan = { id: string; status: "blocked" | "warning"; score: number };
 
 interface Target {
   id: string;
+  name: string;
   apnsToken: string | null;
   language: Language;
   recent: number;
@@ -21,7 +22,7 @@ interface Target {
 }
 
 const targetColumns = (sql: Sql) => sql`
-  d.id, d.apns_token as "apnsToken", d.language,
+  d.id, d.name, d.apns_token as "apnsToken", d.language,
   (select count(*)::int from push_log p
     where p.to_device_id = d.id and p.created_at > now() - make_interval(mins => ${PUSH_CAP.minutes})) as recent,
   d.quiet_hours as "quietHours", d.quiet_start as "quietStart", d.quiet_end as "quietEnd", d.time_zone as "timeZone"`;
@@ -40,12 +41,15 @@ function allowed(t: Target, scan: Scan, now: Date): boolean {
   return true;
 }
 
+/** The guardian's push plus their name: `POST /scans` answers `notified: { name }` from it (#377). */
+export type GuardianPush = PushMessage & { guardianName: string };
+
 /**
  * R4 §3: the push for a protected device's scan, addressed to its guardian, or undefined
  * (guardian's own scan, no guardian, "Kabari saya" or "Aktivitas orang dilindungi" off,
  * quiet hours for a warning, no APNs token, or PUSH_CAP reached).
  */
-export async function guardianPush(sql: Sql, owner: Principal, scan: Scan, now = new Date()): Promise<PushMessage | undefined> {
+export async function guardianPush(sql: Sql, owner: Principal, scan: Scan, now = new Date()): Promise<GuardianPush | undefined> {
   if (owner.mode !== "protected") return undefined;
   const [g] = await sql<Target[]>`
     select ${targetColumns(sql)}
@@ -57,6 +61,7 @@ export async function guardianPush(sql: Sql, owner: Principal, scan: Scan, now =
     apnsToken: g.apnsToken!,
     body: pushText(g.language, scan.status, owner.name, scan.score),
     scanId: scan.id,
+    guardianName: g.name,
   };
 }
 

@@ -171,7 +171,7 @@ scans.post("/scans", async (c) => {
   });
   // The site already has its Activity row: no second row, push or evidence for a repeat visit,
   // except the push when a warned site is now blocked. Its evidence stays the first visit's.
-  if (!created && !escalated) return c.json({ id }, 201);
+  if (!created && !escalated) return c.json({ id, notified: null }, 201);
   // PR-05: the Worker downloads the favicon once, after the response (a slow scam host never delays
   // or fails the scan), so the app never contacts the scam host (SECURITY P9).
   if (created && iconUrl) {
@@ -186,13 +186,18 @@ scans.post("/scans", async (c) => {
   // locally with wrangler dev; cloud check in fase 11 LANGKAH MANUAL step 6).
   // A push problem never fails a stored scan (a retry would duplicate it).
   const deliveries: Promise<unknown>[] = [];
+  // #377: the Guardian whose push this scan queued, or null. The block page says "Link sent to
+  // <name>" only from this, so a Guardian who left, turned the push off or is capped is never named.
+  let notified: { name: string } | null = null;
   try {
     const scan = { id, status: body.status, score: body.score };
     // PF-01: the guardian's push, then the device's own ("Situs berbahaya" / "Situs diblokir").
-    const pushes = [await guardianPush(sql, principal, scan), await ownPush(sql, principal, scan)];
+    const guardian = await guardianPush(sql, principal, scan);
+    const pushes = [guardian, await ownPush(sql, principal, scan)];
     const sender = pushSender(c.env);
     for (const push of pushes) {
       if (!push) continue;
+      if (push === guardian) notified = { name: guardian.guardianName };
       const delivery = deliverPush(sql, sender, push).catch((err) =>
         // Name only: a DB error can quote values (D-alief-40).
         console.error(JSON.stringify({ event: "push_failed", requestId: c.get("requestId"), error: errorInfo(err) })),
@@ -203,7 +208,7 @@ scans.post("/scans", async (c) => {
   } catch (err) {
     console.error(JSON.stringify({ event: "push_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
   }
-  if (!created) return c.json({ id }, 201);
+  if (!created) return c.json({ id, notified }, 201);
   // EX-07 (K2, D-alief-C22 a): the replica only after the pushes went out. Inflating up to 3 MB costs
   // CPU; if the invocation is killed for it, the scan and the Guardian's push are already done.
   // Outside the try above: a failed push lookup does not drop the replica.
@@ -228,7 +233,7 @@ scans.post("/scans", async (c) => {
         .catch((err) => console.error(JSON.stringify({ event: "fragments_dropped", reason: "error", error: errorInfo(err) }))),
     );
   }
-  return c.json({ id }, 201);
+  return c.json({ id, notified }, 201);
 });
 
 /** PR-05, GD-05. Owners are resolved from family_links at request time (SECURITY T1, T12). */
