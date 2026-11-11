@@ -8,6 +8,7 @@ import { guardianPush, ownPush } from "../src/services/push/notify";
 import { isQuiet, localTime } from "../src/services/push/quiet";
 import type { PushMessage, PushSender } from "../src/services/push/sender";
 import postgres from "postgres";
+import { deleteDevice } from "../src/db/repo/devices";
 import { joinFamily } from "../src/services/family";
 import { becomeProtected, type BecomeProtectedHooks } from "../src/services/becomeProtected";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
@@ -511,6 +512,21 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
     expect(retry.status).toBe(200);
     expect(await members(budi)).toBe(1);
     expect(await deviceCount()).toBe(before);
+  });
+
+  it("an account deleted mid-switch stays deleted: 401, no copy, no link", async () => {
+    const g = await createDevice("G", "guardian");
+    const budi = await createDevice("Budi", "guardian");
+    const switchInput = await input(g, await code(budi));
+    const sw = await settle(
+      becomeProtected(a, switchInput, {
+        // DELETE /devices/me on another session commits while the switch holds its locks.
+        afterValidate: async () => void (await deleteDevice(b, g.deviceId)),
+      }),
+    );
+    expect(sw).toEqual({ ok: false, code: "unauthorized" });
+    expect(await members(budi)).toBe(0);
+    expect((await sql<{ n: number }[]>`select count(*)::int as n from devices where name = 'G'`)[0]!.n).toBe(0);
   });
 
   it("K3: two guardians using each other's codes at once finish without a deadlock: one 200, one refused", async () => {

@@ -66,7 +66,10 @@ export async function becomeProtectedTx(
   const copy = await insertProtectedCopy(tx, oldId, input.tokenHash);
   // Throw, not `fail`: a fail result commits. Nothing is written yet here, but keep one rule.
   if (!copy) throw errors.unauthorized(); // the old device was deleted meanwhile
-  const paths = await deleteDeviceInTx(tx, oldId);
+  const { deleted, paths } = await deleteDeviceInTx(tx, oldId);
+  // The copy was read without a row lock (locking the old row first would cycle with its own
+  // DELETE /devices/me, K3). If that delete committed in between, roll back: no ghost copy.
+  if (!deleted) throw errors.unauthorized();
   await hooks.beforeLink?.();
   // Last: the FK share lock on the target guardian's row comes after the domain locks of the
   // delete, the same order as that guardian's own DELETE /devices/me (K3).

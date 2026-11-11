@@ -241,16 +241,17 @@ export async function deleteDevice(sql: Sql, id: string, opts?: DeleteDeviceOpti
       const still = await inactiveCandidates(tx, opts.onlyIfInactive, id);
       if (still.length === 0) return null;
     }
-    return deleteDeviceInTx(tx, id);
+    return (await deleteDeviceInTx(tx, id)).paths;
   });
 }
 
 /**
  * The delete itself, inside the caller's transaction (fase 27a: become-protected deletes the old
  * guardian in the same transaction as the join). Same cascade as `deleteDevice`; returns the
- * Storage/R2 paths to remove after commit (already tombstoned here).
+ * Storage/R2 paths to remove after commit (already tombstoned here), and whether the device row
+ * was still there to delete (false when a concurrent delete committed first).
  */
-export async function deleteDeviceInTx(tx: TransactionSql, id: string): Promise<string[]> {
+export async function deleteDeviceInTx(tx: TransactionSql, id: string): Promise<{ deleted: boolean; paths: string[] }> {
   // Links first, then verdicts under their domain locks (lock order of decideVerdict), so the
   // review queue counts drop with the device (D-alief-B10).
   await tx`delete from family_links where protected_id = ${id} or guardian_id = ${id}`;
@@ -261,9 +262,9 @@ export async function deleteDeviceInTx(tx: TransactionSql, id: string): Promise<
   const shots = await tx<{ path: string | null; favicon: string | null; replica: string | null }[]>`
     delete from scans where owner_id = ${id}
     returning screenshot_path as path, favicon_path as favicon, replica_path as replica`;
-  await tx`delete from devices where id = ${id}`;
+  const gone = await tx`delete from devices where id = ${id} returning 1`;
   // Tombstoned with the delete: if removing the objects fails later, the cron retries (D-alief-B12).
   const paths = [...new Set(shots.flatMap((s) => [s.path, s.favicon, s.replica].filter((p): p is string => p !== null)))];
   await addTombstones(tx, paths);
-  return paths;
+  return { deleted: gone.length > 0, paths };
 }
