@@ -48,7 +48,7 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 ### Scans (Activity)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` + `rdapRegisteredAt?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id }` — sends push to guardian if owner is protected. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
+| POST | `/scans` | ScanResult without `id`/`verdict`, + `pageReplicaBase64?` + `evidenceFragmentsBase64?` + `thresholdsVersion?` + `rdapRegisteredAt?` (`screenshotBase64?` deprecated). Body ≤ 1 MiB | `{ id, notified? }` — sends push to guardian if owner is protected. `notified` (#377): `{ name }` of the Guardian who got this scan's push, or `null` when nobody did (no Guardian, Guardian gone, push off). The block page shows "Link sent to <name>" only from it; a response without the field (older backend) keeps the session's Guardian name. `ownerDeviceId`/`ownerName` come from the token; body values are ignored | EX-07, GD-06 |
 | GET | `/scans?owner=me\|family\|{deviceId}&status=warning\|blocked&cursor=` | — | `{ items: ScanResult[], nextCursor }` newest first. `owner=family` = the guardian's own scans **plus** their protected members' (as in `fixtures/activity-family.json`). `screenshotUrl` and `pageReplicaUrl` are always `null` in lists | PR-05, GD-05 |
 | GET | `/scans/{id}` | — | ScanResult, `pageReplicaUrl` (and `screenshotUrl` for older scans) = short-lived URL valid 1 h, re-checked on every request (404 once the scan is deleted or the family link is gone). Load it as-is, without `Authorization` | DT-* |
 

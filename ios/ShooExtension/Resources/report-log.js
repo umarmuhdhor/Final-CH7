@@ -48,19 +48,25 @@ export function createReportLog({ storage, now = () => Date.now() }) {
         return queue;
     }
 
-    const saveRecord = (key, id) => update((log) => (log.ids[key] = { id, at: now() }));
+    /** `notified`: who POST /scans says got the push (#377): a name, null = nobody, undefined = backend didn't say. */
+    const saveRecord = (key, id, notified) =>
+        update((log) => (log.ids[key] = { id, at: now(), ...(notified === undefined ? {} : { notified }) }));
     const markSent = (domain) => update((log) => (log.domains[domain] = now()));
 
-    /** @returns {Promise<string|null>} the backend's scan id of this report, once it answered */
-    async function recordId(key) {
+    /** @returns {Promise<{id: string, notified?: string|null}|null>} this report's record, once the backend answered */
+    async function record(key) {
         await queue;
         try {
             const entry = (await read()).ids[key];
-            return entry && now() - entry.at < ID_TTL_MS ? entry.id : null;
+            if (!entry || now() - entry.at >= ID_TTL_MS) return null;
+            return { id: entry.id, ...("notified" in entry ? { notified: entry.notified } : {}) };
         } catch {
             return null;
         }
     }
+
+    /** @returns {Promise<string|null>} the backend's scan id of this report, once it answered */
+    const recordId = async (key) => (await record(key))?.id ?? null;
 
     /** @returns {Promise<boolean>} true when this domain's evidence is already with the backend */
     async function sentRecently(domain) {
@@ -72,5 +78,5 @@ export function createReportLog({ storage, now = () => Date.now() }) {
         }
     }
 
-    return { saveRecord, markSent, recordId, sentRecently };
+    return { saveRecord, markSent, record, recordId, sentRecently };
 }

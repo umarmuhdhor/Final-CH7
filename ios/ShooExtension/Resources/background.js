@@ -193,7 +193,8 @@ if (browser.alarms) {
 const reports = new Map(); // report key → Promise<backend scan id | null>
 const reportLog = createReportLog({ storage: browser.storage.local });
 /** The Map dies with this page; the log answers for a report sent before that. */
-const recordIdFor = (key) => Promise.resolve(reports.has(key) ? reports.get(key) : reportLog.recordId(key));
+const recordFor = (key) => Promise.resolve(reports.has(key) ? reports.get(key) : reportLog.record(key));
+const recordIdFor = (key) => recordFor(key).then((record) => record?.id ?? null);
 
 /**
  * EX-07. Replies at once (block.js navigates as soon as we have the message); the page replica is
@@ -242,9 +243,12 @@ async function startReport(message) {
                 .catch((error) => (replica && error.status === 413 ? send(null, null) : Promise.reject(error))))
         .then(async (reply) => {
             const id = typeof reply?.id === "string" ? reply.id : null;
+            // #377: who the backend pushed. Only trusted when the backend says it (newer backend); an older one
+            // leaves it undefined and the block page falls back to the session's Guardian name.
+            const notified = reply && "notified" in reply ? (typeof reply.notified?.name === "string" ? reply.notified.name : null) : undefined;
             await reportLog.markSent(scan.domain);
-            if (id) await reportLog.saveRecord(message.key, id);
-            return id;
+            if (id) await reportLog.saveRecord(message.key, id, notified);
+            return id ? { id, ...(notified === undefined ? {} : { notified }) } : null;
         })
         .catch((error) => {
             console.warn("[Shoo] POST /scans failed", error);
@@ -293,7 +297,11 @@ browser.runtime.onMessage.addListener((message) => {
         case "report":
             return startReport(message);
         case "recordId":
-            return recordIdFor(message.key).then((recordId) => ({ ok: true, recordId }));
+            return recordFor(message.key).then((record) => ({
+                ok: true,
+                recordId: record?.id ?? null,
+                ...(record && "notified" in record ? { notified: record.notified } : {}),
+            }));
         case "verdict":
             return lookupVerdict(message.domain, Boolean(message.fresh));
         case "pageChecked":
