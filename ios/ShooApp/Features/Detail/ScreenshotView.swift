@@ -145,9 +145,16 @@ struct ZoomedScreenshot: View {
     private static let doubleTapScale: CGFloat = 2.5
     private static let swipeToClose: CGFloat = 100
 
+    /// How far the unzoomed image is pulled toward closing.
+    private var pull: CGFloat { max(swipeOffset.width, swipeOffset.height) }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            Color.black.ignoresSafeArea()
+            // The backdrop thins as the image is pulled away, showing Detail behind (at most half way).
+            // Reduce Motion: it stays solid.
+            Color.black
+                .opacity(reduceMotion ? 1 : 1 - min(pull / 300, 0.5))
+                .ignoresSafeArea()
             GeometryReader { proxy in
                 Image(uiImage: image)
                     .resizable()
@@ -181,6 +188,8 @@ struct ZoomedScreenshot: View {
             .accessibilitySortPriority(1)
             .accessibilityIdentifier("detail.screenshotClose")
         }
+        // Clear cover: the thinning backdrop lets Detail show through while pulling.
+        .presentationBackground(.clear)
         // VoiceOver two-finger scrub closes it like any modal.
         .accessibilityAction(.escape) { dismiss() }
         .privacyCover()
@@ -208,9 +217,11 @@ struct ZoomedScreenshot: View {
                     height: baseOffset.height + value.translation.height
                 ), in: size)
             }
-            .onEnded { _ in
+            .onEnded { value in
                 baseOffset = offset
-                if max(swipeOffset.width, swipeOffset.height) >= Self.swipeToClose {
+                // A short flick closes it too: where the swipe would coast to counts, not only how far it went.
+                let flung = max(value.predictedEndTranslation.width, value.predictedEndTranslation.height)
+                if scale <= 1, pull >= Self.swipeToClose || flung >= Self.swipeToClose {
                     dismiss()
                 } else {
                     withAnimation(reduceMotion ? nil : .spring(duration: 0.3)) { swipeOffset = .zero }

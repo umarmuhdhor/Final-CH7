@@ -33,6 +33,8 @@ struct DetailView: View {
 
     var body: some View {
         content
+            // Loader → Detail (or "gone" / "couldn't load"): a 0.2 s cross-fade, gentle enough for Reduce Motion.
+            .animation(.easeOut(duration: 0.2), value: model.state)
             .background(alignment: .top) {
                 ZStack(alignment: .top) {
                     DetailStyle.background
@@ -78,6 +80,7 @@ struct DetailView: View {
                 topBar(owner: nil)
                 ShieldPulseLoader().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .transition(.opacity)
         case .notFound:
             VStack(spacing: 0) {
                 topBar(owner: nil)
@@ -87,6 +90,7 @@ struct DetailView: View {
                     message: "Items are deleted after 14 days, or when the family is disconnected."
                 )
             }
+            .transition(.opacity)
         case .failed:
             VStack(spacing: 0) {
                 topBar(owner: nil)
@@ -99,9 +103,11 @@ struct DetailView: View {
                 .buttonStyle(.borderedProminent)
                 .padding(.bottom, 32)
             }
+            .transition(.opacity)
         case .loaded:
             if let scan = model.scan {
                 loaded(scan)
+                    .modifier(LoaderReplacementFade())
             }
         }
     }

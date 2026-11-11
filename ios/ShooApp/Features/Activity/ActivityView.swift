@@ -56,6 +56,8 @@ struct ActivityView: View {
                 }
                 .padding(.top, 24)
                 content
+                    // Loader → list (or message): a 0.2 s cross-fade, gentle enough for Reduce Motion.
+                    .animation(.easeOut(duration: 0.2), value: model.state)
                     .padding(.top, 32)
             }
             .padding(.horizontal, ActivityStyle.margin)
@@ -155,6 +157,7 @@ struct ActivityView: View {
         case .loading:
             ShieldPulseLoader()
                 .frame(maxWidth: .infinity, minHeight: 200)
+                .transition(.opacity)
         case .failed:
             ActivityMessage(systemImage: "wifi.exclamationmark", title: "Couldn't load activity", message: "Check your connection and try again.") {
                 Button { Task { await model.retry() } } label: {
@@ -168,11 +171,14 @@ struct ActivityView: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("activity.retry")
             }
+            .transition(.opacity)
         case .loaded where model.items.isEmpty:
             emptyState
                 .accessibilityIdentifier("activity.empty")
+                .transition(.opacity)
         case .loaded:
             rows
+                .modifier(LoaderReplacementFade())
         }
     }
 

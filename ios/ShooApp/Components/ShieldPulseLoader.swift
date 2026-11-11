@@ -53,3 +53,18 @@ struct ShieldPulseLoader: View {
         .padding()
         .background(ActivityStyle.background)
 }
+
+/// What replaces `ShieldPulseLoader` fades in over 0.2 s instead of cutting in, gentle enough for Reduce Motion.
+/// Started on appear, so a heavy first render (Detail, a long Activity list) can't swallow the fade.
+struct LoaderReplacementFade: ViewModifier {
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .onAppear {
+                guard !shown else { return }
+                withAnimation(.easeOut(duration: 0.2)) { shown = true }
+            }
+    }
+}
