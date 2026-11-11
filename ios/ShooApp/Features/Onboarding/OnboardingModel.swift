@@ -253,7 +253,9 @@ final class OnboardingModel {
         do {
             try await ensureRegistered()
         } catch {
-            environment.settings.inviteRegistrationPending = false
+            // Nothing saved here, so nothing to undo. A cancelled request may still have reached the server:
+            // the flag then stays and the next launch drops it (no mode), as for a crash.
+            if mode == nil, !error.isCancellation { environment.settings.inviteRegistrationPending = false }
             throw error
         }
     }
@@ -284,10 +286,10 @@ final class OnboardingModel {
     private func cancelInviteRegistration() async -> Bool {
         let connect = connect()
         isWorking = true
-        connect.isHeld = true
+        connect.hold(true)
         defer {
             isWorking = false
-            connect.isHeld = false
+            connect.hold(false)
         }
         let profile: DeviceProfile
         do {

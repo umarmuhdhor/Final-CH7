@@ -62,7 +62,7 @@ final class ConnectModel {
     private(set) var state: State = .entering
     private(set) var problem: Problem?
     /// Onboarding is undoing a failed invite registration (fase 27d): no join may start meanwhile.
-    var isHeld = false
+    private(set) var isHeld = false
     /// Digits only, at most 6; editing clears the last problem.
     var code = "" {
         didSet {
@@ -104,6 +104,11 @@ final class ConnectModel {
     /// A failure outside `join()` that belongs on this screen (onboarding "Not now").
     func report(_ error: any Error) {
         problem = Problem(error)
+    }
+
+    /// Set by onboarding around its own work on this screen (`isHeld`).
+    func hold(_ held: Bool) {
+        isHeld = held
     }
 
     /// The server says this device has a guardian after all (a join whose answer got lost): PR-02.

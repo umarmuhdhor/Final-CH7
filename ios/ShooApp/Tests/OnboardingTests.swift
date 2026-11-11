@@ -573,8 +573,11 @@ extension OnboardingModelTests {
             #expect(settings.mode == .protected)
             #expect(settings.inviteRegistrationPending)
             #expect(model.canGoBackFromConnect)
+            linked.autoSendLinks = false
             await model.backFromConnect()
             #expect(await repository.deleteCount == 1)
+            // The same local clean-up as "Delete my data" (P13).
+            #expect(linked.autoSendLinks)
             #expect(settings.mode == nil)
             #expect(!settings.inviteRegistrationPending)
             #expect(!settings.onboardingConnectPassed)
@@ -657,7 +660,7 @@ extension OnboardingModelTests {
             #expect(!settings.inviteRegistrationPending)
         }
 
-        @Test func cancelWaitsWhileJoining() async {
+        @Test(.timeLimit(.minutes(1))) func cancelWaitsWhileJoining() async {
             let model = onConnect()
             await repository.holdNextJoin()
             async let join: Void = model.connect().join()
@@ -676,7 +679,7 @@ extension OnboardingModelTests {
             }
         }
 
-        @Test func connectCannotJoinWhileCancelling() async {
+        @Test(.timeLimit(.minutes(1))) func connectCannotJoinWhileCancelling() async {
             let model = onConnect(code: "999999")
             let connect = model.connect()
             await connect.join()
@@ -765,6 +768,7 @@ actor InviteRepository: ShooRepository {
     }
 
     private func hold() async {
+        held = nil
         await withCheckedContinuation { continuation in
             held = continuation
             heldWaiters.forEach { $0.resume() }
