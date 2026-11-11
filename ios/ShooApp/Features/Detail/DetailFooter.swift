@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Figma "Footer" of Detail (416:9255 / 416:9362 / 480:5768): the guardian's question with Aman / Bahaya
-/// (GD-07, warning and blocked alike), or the card saying who verified it. "Ubah" on a safe verdict
+/// (GD-07, warning and blocked alike), or the card saying who verified it. "Ubah" on either verdict
 /// brings the buttons back; a new choice replaces the old one. No confirmation dialog.
 struct DetailFooter: View {
     let verdict: Verdict?
@@ -47,7 +47,9 @@ struct DetailFooter: View {
                 VerifiedCard(
                     verdict: verdict,
                     viewerDeviceId: viewerDeviceId,
-                    canChange: canValidate && verdict.value == .safe,
+                    // Either verdict can be changed (R4: Safe ⇄ NotSafe, an upsert), so a mis-tapped
+                    // Danger can be undone and the buttons' "You can change it later" holds (QA 2026-11-11 #5).
+                    canChange: canValidate,
                     onChange: { isChanging = true }
                 )
                 if verdict.value == .safe, let ownerName {
