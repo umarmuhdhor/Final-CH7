@@ -176,6 +176,12 @@ final class AppEnvironment {
             // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.
             UIView.setAnimationsEnabled(false)
         }
+        // A test that needs the real push and tab bar transitions (QA 2026-11-10 #1, #9) but not the endless
+        // shield loops: with those running XCUITest never finds the app idle, and a slow CI runner hung on it
+        // until the 300 s test limit (#405). UIKit animations stay on.
+        if Self.value(after: "-UITestStillLoops", in: arguments) == "YES" {
+            environment.reducesMotionForUITests = true
+        }
         // Detail (fase 03): `-debug.detail <scanId>` opens it on the selected tab.
         if let scanId = Self.value(after: "-debug.detail", in: arguments) {
             environment.router.showDetail(scanId: scanId)
