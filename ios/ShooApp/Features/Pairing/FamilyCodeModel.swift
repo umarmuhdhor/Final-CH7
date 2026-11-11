@@ -48,6 +48,10 @@ final class FamilyCodeModel {
     /// Bumped by `remove`: a members answer asked for before it is out of date.
     @ObservationIgnored private var membersVersion = 0
     @ObservationIgnored private var isLoadingMembers = false
+    /// Bumped by every code request: only the newest answer may change the screen. The countdown's request
+    /// and "Refresh code" can overlap, and the older answer may hold the code the refresh just killed
+    /// (fase 27k, F-A10).
+    @ObservationIgnored private var codeRequest = 0
 
     init(repository: any ShooRepository, now: @escaping () -> Date = Date.init, throttle: RefreshThrottle? = nil) {
         self.repository = repository
@@ -134,10 +138,12 @@ final class FamilyCodeModel {
             replaceWait = throttle.wait(at: now())
         }
         if code == nil { codeState = .loading }
+        codeRequest += 1
+        let request = codeRequest
         do {
             let fresh = try await repository.createFamilyCode(refresh: replace)
-            // Screen closed meanwhile: the code is never shown.
-            guard !Task.isCancelled else { return }
+            // Screen closed meanwhile: the code is never shown. A newer request asked meanwhile: its answer counts.
+            guard !Task.isCancelled, request == codeRequest else { return }
             let start = now()
             let validFor = fresh.expiresAt.timeIntervalSince(start)
             expiry = start.addingTimeInterval((1...Self.codeLifetime).contains(validFor) ? validFor : Self.codeLifetime)
@@ -150,7 +156,7 @@ final class FamilyCodeModel {
             codeState = .ready(fresh)
             _ = tick()
         } catch {
-            guard !error.isCancellation else { return }
+            guard !error.isCancellation, request == codeRequest else { return }
             Log.ui.error("Family code failed", error)
             // A code with time left stays on screen (rate_limited, no connection): it still works.
             if code != nil, !tick(), secondsLeft > 0 { return }

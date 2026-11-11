@@ -158,6 +158,8 @@ struct FamilyCodeModelTests {
         private(set) var codeCalls = 0
         private(set) var refreshes: [Bool] = []
         var codeFailure: RepositoryError?
+        /// Holds the next `createFamilyCode` answer (its code already numbered) until the gate opens.
+        private var heldNext: CodeGate?
 
         init(members: MockRepository.Scenario = .standard, clock: Clock, validFor: TimeInterval = 30 * 60) {
             base = MockRepository(mode: .guardian, scenario: members, latency: .zero)
@@ -166,12 +168,18 @@ struct FamilyCodeModelTests {
         }
 
         func failCodes(with error: RepositoryError?) { codeFailure = error }
+        func holdNextCode(_ gate: CodeGate) { heldNext = gate }
 
         func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
             codeCalls += 1
             refreshes.append(refresh)
+            let number = codeCalls
+            if let gate = heldNext {
+                heldNext = nil
+                await gate.hold()
+            }
             if let codeFailure { throw codeFailure }
-            let code = String(format: "%06d", 100_000 + codeCalls)
+            let code = String(format: "%06d", 100_000 + number)
             return FamilyCode(
                 code: code, expiresAt: clock.now.addingTimeInterval(validFor),
                 inviteUrl: URL(string: "https://shoo-api.afindo-mi01.workers.dev/j/\(code)")!
@@ -198,6 +206,77 @@ struct FamilyCodeModelTests {
         func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
             try await base.setVerdict(scanId: scanId, value: value)
         }
+    }
+
+    /// Holds one call until the test opens it; the test awaits its arrival (no sleeps).
+    @MainActor
+    final class CodeGate {
+        private var arrived = false
+        private var opened = false
+        private var arrivalWaiter: CheckedContinuation<Void, Never>?
+        private var openWaiter: CheckedContinuation<Void, Never>?
+
+        func hold() async {
+            arrived = true
+            arrivalWaiter?.resume()
+            arrivalWaiter = nil
+            guard !opened else { return }
+            precondition(openWaiter == nil, "CodeGate holds one call")
+            await withCheckedContinuation { openWaiter = $0 }
+        }
+
+        func arrival() async {
+            guard !arrived else { return }
+            precondition(arrivalWaiter == nil, "CodeGate has one waiter")
+            await withCheckedContinuation { arrivalWaiter = $0 }
+        }
+
+        func open() {
+            opened = true
+            openWaiter?.resume()
+            openWaiter = nil
+        }
+    }
+
+    /// Fase 27k (F-A10): two code requests overlap (the countdown's and "Refresh code"). The older one answers
+    /// last with the code that "Refresh code" just killed on the server: the new code stays on screen.
+    @Test func olderCodeAnswerArrivingLastDoesNotReplaceTheNewCode() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        let gate = CodeGate()
+        defer { gate.open() }
+        await repository.holdNextCode(gate)
+        let older = Task { await model.refreshCode() }
+        await gate.arrival()
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100002")
+        gate.open()
+        await older.value
+        #expect(model.code?.code == "100002", "the replaced code came back")
+        #expect(model.secondsLeft == 1800)
+    }
+
+    /// The older request fails last: the new code stays too (no "Try again" over a working code).
+    @Test func olderCodeFailureArrivingLastKeepsTheNewCode() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        await model.refreshCode()
+        clock.now += 1801
+        model.tick()
+        let gate = CodeGate()
+        defer { gate.open() }
+        await repository.holdNextCode(gate)
+        let older = Task { await model.refreshCode() }
+        await gate.arrival()
+        await model.refreshCode(replace: true)
+        #expect(model.code?.code == "100003")
+        await repository.failCodes(with: .network)
+        gate.open()
+        await older.value
+        #expect(model.code?.code == "100003")
+        #expect(model.codeState != .unavailable)
     }
 
     @Test func countdownRunsAndANewCodeComesAtZero() async {
