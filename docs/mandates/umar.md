@@ -40,7 +40,7 @@ Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CL
 S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhone-nya sendiri — lihat `alief.md`.
 - [x] **L0** Override signing per developer: `ios/Config/Shoo.xcconfig` (default) + `Local.xcconfig` (gitignored, dari `.example`) → `DEVELOPMENT_TEAM`, `SHOO_BUNDLE_ID`, `SHOO_APP_GROUP`. `AppGroup.id` dibaca dari Info.plist `ShooAppGroup`.
 - [x] Pastikan akun Apple tiap tim bisa memakai App Groups (akun gratis / Personal Team kemungkinan tidak bisa). Satu tim berbayar (Umar) untuk semua build, lihat #32. Alief perlu diundang ke tim.
-- [ ] Setelah S1 masuk: set `AppGroup.extensionActiveWindow` sesuai usulan Alief.
+- [x] Setelah S1 masuk: set `AppGroup.extensionActiveWindow` sesuai usulan Alief. 24 jam (`ShooShared/AppGroup.swift`), dipakai `ExtensionStatus` (D-alief-23).
 - [x] **S3** Dynamic Island dari extension → isi `docs/spikes/dynamic-island.md`. Coba jalur A → B → C, kalau semua gagal: pill in-page. Kabari Alief kalau jalur push dipilih (butuh endpoint tambahan). Hasil (#41): A dan B gagal, C belum dites → **pill in-page** untuk U6. Jalur push tidak dipilih.
 
 ### Extension · bisa mulai tanpa device (pakai fixtures + mock)
@@ -61,7 +61,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [x] **U4 · EX-06** Layar blokir. Branch: `feat/EX-06-block-screen`
   - Ganti seluruh halaman, tidak bisa di-bypass (tahan back/scroll/inspect di sisi user biasa).
   - "Shoo! This page is blocked" + skor + alasan.
-  - Protected: "Waiting for [guardianName] to check", poll `GET /verdicts?domain=` tiap 5 s → `safe` → buka halaman.
+  - Protected: "Waiting for [guardianName] to check", poll `GET /verdicts?domain=` tiap 5 s → `safe` → buka halaman. (Sejak 11 Nov: poll adaptif 2 s / 5 s / 15 s, #414; per link `?url=&domain=`, #419.)
   - Guardian: tombol "Review in Shoo" → Detail.
   - [x] Memori blokir di HP (#231, 3 Nov 2026): situs yang pernah diblokir langsung tampil layar blokir tanpa `/analyze` (tanpa LLM) dan tanpa `POST /scans` ulang, sampai verdict `safe` atau 14 hari. Branch: `feat/EX-06-block-memory`.
 - [x] **U5 · EX-07** Kirim hasil. Branch: `feat/EX-07-send-scan`
@@ -70,10 +70,10 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - [x] Ganti screenshot dengan replika DOM (29 Okt 2026): screenshot sering tidak sempat diambil sebelum halaman diblokir / situsnya mati. `replica.js` + `replica-build.js` → `pageReplicaBase64`. Backend + Detail app: Alief (#176, live 30–31 Okt).
   - [x] `marks` di meta replika (#176, permintaan Alief untuk spotlight di Detail): posisi tiap sinyal (teks bukti, logo, field `asks_*`) dalam px dokumen. Branch: `feat/EX-07-replica-marks`.
 - [x] **U6 · EX-03** Indikator live sesuai hasil S3. Branch: `feat/EX-03-live-score`. Pill in-page, merged sebagai #43.
-- [ ] **EX-03 · Dynamic Island lewat push (jalur C, #49)**, diputuskan 10 Nov. Bagian Umar selesai: kontrak #357 + #359, extension + island #358. Spike jalur E dicatat di `docs/spikes/dynamic-island.md`. Sisa: PR app Alief (token), lalu tes di iPhone bersama.
+- [ ] **EX-03 · Dynamic Island lewat push (jalur C, #49)**, diputuskan 10 Nov. Bagian Umar selesai: kontrak #357 + #359, extension + island #358, warna island ikut `status` #420 (#383). Spike jalur E dicatat di `docs/spikes/dynamic-island.md`. Token dari app (Alief) sudah merge (#356, #386). Sisa: tes di iPhone bersama Alief (checklist di komentar #49 / `docs/spikes/dynamic-island.md`).
 - [ ] **U7 · EX-01** Verifikasi "Allow on every website" + pencabutan izin → app Off (dari hasil S1). Branch: `feat/EX-01-all-sites-permission`
   - [x] Heartbeat membawa `allSites` (`browser.permissions.contains(<all_urls>)`) → App Group `extension.allSites`. Dikirim juga saat izin berubah dan tiap alarm 1 jam.
-  - [ ] Alief: `ExtensionStatus` baca `extension.allSites == false` → Off.
+  - [x] Alief: `ExtensionStatus` baca `extension.allSites == false` → Off (`ExtensionStatus.swift`, alasan `.someSitesOnly`).
   - [ ] Tes di iPhone (checklist di `docs/spikes/extension-status.md`).
 - [x] **EX-08** (nice to have) Tap bagian yang ditandai → popup alasan singkat. Branch: `feat/EX-08-mark-reason`.
 
@@ -81,8 +81,30 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
 - [ ] Review & merge PR Imelda dan Alief tiap hari. Pastikan tidak ada yang edit folder tim lain.
 - [ ] Ubah kontrak hanya lewat PR `contracts/` sendiri. Perubahan aditif saja kalau bisa.
 - [ ] Setiap Imelda merge `detector/`, jalankan `detector/scripts/sync-to-extension.sh`.
-- [ ] Tanyakan ke PM pertanyaan terbuka di `docs/README.md` (scope MVP vs Fase 2).
+- [ ] Tanyakan ke PM pertanyaan terbuka di `docs/README.md` (scope MVP vs Fase 2). Draf pesan untuk Richard sudah ada (11 Nov); jawabannya ditempel di #321.
 - [ ] Teruskan ke PM: video tutorial ON-04 ≤ 60 detik, ramah orang tua, MP4 H.264, EN + ID (permintaan Alief C15).
+
+### Issue keputusan lead (QA 10–11 Nov) — dijawab 11 Nov
+Semua pertanyaan untuk lead dijawab di issue masing-masing. Yang tanpa sisa kerja ditutup (#326, #348, #371, #372, #380, #397). Bagian extension / detector / kontrak dikerjakan dan di-merge 11 Nov:
+- [x] **#328** komentar `pill.js` pakai nama ambang → #408.
+- [x] **#375** satu situs satu nama: background menghitung domain PSL dari URL sebelum `POST /scans` → #409.
+- [x] **#377** "Link terkirim ke …": sesi dibaca fresh (#410), kontrak `notified` di respons `POST /scans` + halaman blokir hanya percaya itu (#418).
+- [x] **#382** halaman blokir: teks umum dari memori blokir, chip domain dipotong di tengah, punycode + catatan look-alike → #411.
+- [x] **#381** detector: homoglyph 30, brand + TLD murah 30 → #412.
+- [x] **#379** "Cek online tidak tersedia" kalau `/analyze` tidak jalan (#413) + cek form PIN/OTP/KTP/kartu di HP, layer 2C (#416). Eval layer 1–2: scam ≥ 30 dari 1 → 25 / 52, legit tetap 0 / 56.
+- [x] **#350** poll verdict adaptif di layar blokir (2 s → 5 s → 15 s), tanpa WebSocket → #414.
+- [x] **#370** kartu warning ikut mendengar verdict Guardian; blokir karena verdict tidak `POST /scans` ulang → #415.
+- [x] **#241** langkah 2 + **#369**: lookup verdict per link (`?url=&domain=`), `safe` tidak lagi menghapus seluruh domain dari memori blokir, badge "Ditandai aman oleh …", kontrak satu baris scan per link + push per situs → #419.
+- [x] **#383** warna Dynamic Island ikut `status` (`ContentState.status`, aditif) → #420.
+- [ ] **#347** hapus `screenshotBase64` / `screenshotUrl` dari kontrak + `ShooShared` + mandate Alief, setelah fase 20d Alief merge (paling cepat ±23 Nov).
+- [ ] Tunggu Alief (bagian backend/app dari keputusan di atas): `notified` (#377), `recordScan` per link + push per situs (#241), `status` ke `content-state` + warna scan dari `status` (#383), copy `DetailFooter` / `ActivityNote` (#369), cek domain di backend opsional (#375).
+
+### Tugas pribadi lead (butuh akun / orang lain)
+- [ ] **#337** buat environment `ai-calibration` (salin secret Cloudflare, jalankan perintah satu baris di #337). Kalau secret sudah tidak terlihat: minta Alief rotate.
+- [ ] **#298** Q2: Xcode Cloud workflow Default → Archive + post-action TestFlight (Internal), build number > 6. Saat dicek 11 Nov, `main` baru menjalankan "Build - iOS".
+- [ ] **#351** link TestFlight publik (grup tester eksternal + Beta App Review) → Alief isi `APP_STORE_URL`.
+- [ ] **#321** jawaban Richard (Q1 "AI belajar dari keputusan keluarga" MVP / Fase 2, Q2 salinan halaman untuk admin). Cek juga `AI_CALIBRATION_ENABLED=true` di #337 sesuai jawaban Q1.
+- [ ] **#49** tes Dynamic Island di iPhone bersama Alief.
 
 ### Dari review plan Alief (PR #2, 21 Okt) — semua usulan disetujui
 - [x] Review PR #2 (approve) · `plan/<nama>/` masuk tabel kepemilikan `CLAUDE.md`.
