@@ -337,10 +337,18 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     const domain = "rejected-shop.example";
     const actor = "reviewer@test.example";
     const note = "fase 27c reject test";
-    await admin`delete from admin.review_decisions where domain = ${domain}`;
-    const row = async () =>
-      (await admin<{ families: number; rejected_at: Date | null; rejected_by: string | null }[]>`
-        select families, rejected_at, rejected_by from blocklist_entries where domain = ${domain}`)[0];
+    // admin.vote/unreject also write the audit log, a reviewer label and the L5 review row;
+    // resetDb clears none of them, and a test label must not reach the AI dataset.
+    const forget = async () => {
+      await admin`delete from admin.review_decisions where domain = ${domain}`;
+      await admin`delete from admin.domain_labels where domain = ${domain}`;
+      await admin`delete from admin.domain_review where domain = ${domain}`;
+      await admin`delete from admin.admin_audit where target = ${domain}`;
+    };
+    type Row = { families: number; rejected_at: Date | null; rejected_by: string | null };
+    const row = async (): Promise<Row | undefined> =>
+      (await admin<Row[]>`select families, rejected_at, rejected_by from blocklist_entries where domain = ${domain}`)[0];
+    await forget();
     try {
       const { g, p } = await family();
       const id = await scan(p, blocked92 as Fixture, domain);
@@ -364,7 +372,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
       expect((await verdict(g, id, "not_safe")).status).toBe(200);
       expect(await row()).toEqual({ families: 1, rejected_at: null, rejected_by: null });
     } finally {
-      await admin`delete from admin.review_decisions where domain = ${domain}`;
+      await forget();
     }
   });
 

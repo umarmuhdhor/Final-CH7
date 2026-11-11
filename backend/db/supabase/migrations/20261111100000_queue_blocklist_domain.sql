@@ -6,9 +6,12 @@
 -- still in admin.review_decisions, but shoo_api may neither read that table nor write
 -- rejected_at/rejected_by (hardening.sql: insert (domain, families) only). This function reads the
 -- domain's last decision itself and inserts the row already rejected when that decision is
--- `reject` (a later unreject/approve/add/remove cancels it). It never returns the actor.
+-- `reject`. Only a later decision ends it: in practice `add` (or `unreject` once the row is back),
+-- since approve/remove need an existing row. It never returns the actor.
 --
--- Limit: a reject made by hand in the SQL editor, without a review_decisions row, is not known.
+-- Limits: a reject made by hand in the SQL editor, without a review_decisions row, is not known.
+-- While no row exists (no support), admin.unreject has nothing to clear (SA006 not_rejected):
+-- the reject stands until the domain is queued again, then the reviewer can unreject it.
 -- No admin lock (7, 1) is taken: the lock order admin vs. domain verdict lock stays as it is. A
 -- reviewer acting between this read and commit acts on the row it then sees (first vote wins).
 --

@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(19);
+select plan(23);
 
 select ok(
   (select setconfig @> array['statement_timeout=10s'] from pg_db_role_setting where setrole = 'shoo_api'::regrole and setdatabase = 0),
@@ -46,6 +46,24 @@ select throws_ok($$select public.queue_blocklist_domain('fase27c.example', 0)$$,
   'queue_blocklist_domain refuses families < 1');
 select throws_ok($$select public.queue_blocklist_domain('fase27c.example', null)$$, '22023', 'invalid_families',
   'queue_blocklist_domain refuses null families');
+
+-- Behaviour (as the owner, rolled back): the last decision decides how a fresh row comes back.
+insert into admin.review_decisions (domain, action, note, actor)
+  values ('fase27c.example', 'reject', 'pgtap reject case', 'reviewer@test.example');
+select public.queue_blocklist_domain('fase27c.example', 2);
+select is((select rejected_by from public.blocklist_entries where domain = 'fase27c.example'), 'reviewer@test.example',
+  'last decision reject: the row comes back rejected, by that reviewer');
+select is((select families from public.blocklist_entries where domain = 'fase27c.example'), 2,
+  'the families count is kept');
+delete from public.blocklist_entries where domain = 'fase27c.example';
+insert into admin.review_decisions (domain, action, note, actor)
+  values ('fase27c.example', 'unreject', 'pgtap unreject case', 'reviewer@test.example');
+select public.queue_blocklist_domain('fase27c.example', 1);
+select ok((select rejected_at is null and rejected_by is null from public.blocklist_entries where domain = 'fase27c.example'),
+  'a later unreject: the row comes back pending');
+select public.queue_blocklist_domain('fase27c.example', 3);
+select is((select families from public.blocklist_entries where domain = 'fase27c.example'), 3,
+  'an existing row only gets its families recounted');
 
 select * from finish();
 rollback;
