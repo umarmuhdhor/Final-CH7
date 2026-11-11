@@ -139,12 +139,13 @@ final class ActivityModel {
     }
 
     func load() async {
-        // Read at the start: a verdict saved while this load runs may be missing from it.
-        loadedVerdictSaves = verdictSaves()
+        // Read at the start: a verdict saved while this load runs may be missing from it. Counted as seen only
+        // once a list arrived, so a cancelled or failed reload runs again on the next appearance.
+        let saves = verdictSaves()
         await refreshPeople()
         await refreshViewer()
         guard !Task.isCancelled else { return }
-        await loadFirstPage()
+        if await loadFirstPage() { loadedVerdictSaves = saves }
     }
 
     /// Pull to refresh: keeps the current items on screen until the new first page arrives,
@@ -278,11 +279,13 @@ final class ActivityModel {
         }
     }
 
-    private func loadFirstPage() async {
+    /// `true` when this first page is now on screen.
+    @discardableResult
+    private func loadFirstPage() async -> Bool {
         generation += 1
         let request = generation
         do {
-            guard let page = try await visiblePage(after: nil, request: request) else { return }
+            guard let page = try await visiblePage(after: nil, request: request) else { return false }
             generation += 1
             items = page.items
             nextCursor = page.nextCursor
@@ -290,8 +293,9 @@ final class ActivityModel {
             loadMoreFailed = false
             refreshFailed = false
             state = .loaded
+            return true
         } catch {
-            guard request == generation, !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return false }
             Log.ui.error("Activity load failed", error)
             // A next page on its way was for the list before this load: it is dropped (`generation`).
             isLoadingMore = false
@@ -302,6 +306,7 @@ final class ActivityModel {
                 nextCursor = nil
                 state = .failed
             }
+            return false
         }
     }
 }

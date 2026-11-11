@@ -174,6 +174,30 @@ struct ActivityModelTests {
         #expect(await repository.scanCalls == loaded + 1, "already reloaded for that verdict")
     }
 
+    /// A reload for a verdict that was cancelled (the user left the tab) or failed is tried again on the next
+    /// appearance: only a list that arrived counts as seen.
+    @Test(arguments: [URLError(.cancelled) as any Error, RepositoryError.network])
+    func reloadForAVerdictIsRetriedUntilAListArrives(error: any Error) async throws {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let env = AppEnvironment(
+            repository: repository,
+            settings: AppSettings(defaults: try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))),
+            notifications: FakeNotificationPermission()
+        )
+        let model = ActivityModel(repository: repository, owner: .family, verdictSaves: { env.verdictSaves })
+        await model.load()
+        env.verdictSaves += 1
+
+        await repository.setFailure(error)
+        await model.refreshIfVerdictsChanged()
+        let afterMiss = await repository.scanCalls
+        await repository.setFailure(nil)
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == afterMiss + 1, "the missed reload must run again")
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == afterMiss + 1)
+    }
+
     @Test func failedNextPageCanBeRetried() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero, pageSize: 2))
         let model = ActivityModel(repository: repository, owner: .family)
