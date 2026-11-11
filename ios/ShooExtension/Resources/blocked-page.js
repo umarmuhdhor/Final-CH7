@@ -4,7 +4,12 @@
 // a Guardian's page also reopens after marking it safe for themselves (PRD §5 Validasi).
 
 (() => {
-    const POLL_MS = 5000; // contracts/api.md: poll GET /verdicts every 5 s while blocked
+    // #350 (contracts/api.md): fast while a Guardian is most likely deciding, slower once it's been a while.
+    const POLL_STEPS = [
+        { until: 2 * 60 * 1000, every: 2000 },
+        { until: 10 * 60 * 1000, every: 5000 },
+        { until: Infinity, every: 15000 },
+    ];
 
     /**
      * Pure: what the screen shows for this viewer. Kept free of DOM so it can be tested in Node.
@@ -29,8 +34,10 @@
     }
 
     /** 429 → wait at least Retry-After (backend/API.md), never treat it as "no verdict yet". */
-    function nextPollMs(reply) {
-        return reply?.rateLimited ? Math.max(POLL_MS, Number(reply.retryAfterMs) || 0) : POLL_MS;
+    /** @param {number} openForMs  how long this block screen has been open */
+    function nextPollMs(reply, openForMs = 0) {
+        const every = POLL_STEPS.find((step) => openForMs < step.until).every;
+        return reply?.rateLimited ? Math.max(every, Number(reply.retryAfterMs) || 0) : every;
     }
 
     function detailUrl(payload) {
@@ -129,6 +136,7 @@
     }
 
     let timer = null;
+    const openedAt = Date.now();
     async function poll() {
         clearTimeout(timer);
         timer = null;
@@ -150,7 +158,7 @@
             return; // decided — stays blocked for good
         }
         findRecord();
-        timer = setTimeout(poll, nextPollMs(reply));
+        timer = setTimeout(poll, nextPollMs(reply, Date.now() - openedAt));
     }
 
     // Coming back from the Shoo app (Guardian just reviewed it) → check right away.

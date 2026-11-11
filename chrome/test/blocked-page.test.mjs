@@ -45,6 +45,8 @@ test("a tampered fragment decodes to null (stays blocked, reopens nothing)", () 
 });
 
 test("429 waits at least Retry-After", () => {
-    assert.equal(nextPollMs(null), 5000);
+    assert.equal(nextPollMs(null), 2000);
+    assert.equal(nextPollMs(null, 5 * 60 * 1000), 5000);
+    assert.equal(nextPollMs(null, 30 * 60 * 1000), 15000);
     assert.equal(nextPollMs({ rateLimited: true, retryAfterMs: 12000 }), 12000);
 });
