@@ -31,7 +31,10 @@
         if (!memo || memo.scanId !== state.scanId) memo = { scanId: state.scanId, dismissed: false };
         if (memo.dismissed || state.status === "blocked") return { memo, view: { visible: false } };
 
-        return { memo, view: { visible: true, score: state.score, tone: toneFor(state.score), analyzing: !state.done } };
+        const tone = toneFor(state.score);
+        // #379: without layer 3 a low score is "not checked online", never "low risk".
+        const offline = tone === "safe" && state.done && state.onlineChecked === false;
+        return { memo, view: { visible: true, score: state.score, tone, analyzing: !state.done, ...(offline ? { offline: true } : {}) } };
     }
 
     /** The user tapped Hide: the bubble stays hidden until the next page. */
@@ -325,7 +328,7 @@
         const { state, view } = last;
         const { card, chip, big, list, note } = refs;
         card.dataset.tone = view.tone;
-        chip.textContent = t(view.analyzing ? "pill_status_checking" : `pill_status_${view.tone}`);
+        chip.textContent = t(view.analyzing ? "pill_status_checking" : view.offline ? "pill_status_offline" : `pill_status_${view.tone}`);
         big.textContent = `${view.score}%`;
         card.setAttribute("aria-label", `${chip.textContent} ${big.textContent}`);
 

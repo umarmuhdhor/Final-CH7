@@ -34,6 +34,7 @@
     "pill_open": {"message": "Opens details", "description": "EX-03 live score bubble, accessibility hint"},
     "pill_status_checking": {"message": "Checking", "description": "EX-03 live score card status while layers are still running"},
     "pill_status_safe": {"message": "Low risk", "description": "EX-03 live score card status, score under 30%"},
+    "pill_status_offline": {"message": "Online check unavailable", "description": "EX-03 live score card status under 30% when /analyze was skipped or failed (#379): the score comes from the phone only, so it is not called low risk"},
     "pill_status_warning": {"message": "Warning", "description": "EX-03 live score card status, 30–49%"},
     "pill_status_danger": {"message": "Danger", "description": "EX-03 live score card status, 50–79%"},
     "pill_still_checking": {"message": "Shoo is still checking this page.", "description": "EX-03 live score card, no reasons yet while checking"},

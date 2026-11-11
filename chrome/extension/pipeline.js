@@ -89,6 +89,9 @@
             verdict: null,
             done: false,
             rdapRegisteredAt: previous?.rdapRegisteredAt ?? null,
+            // #379: false once /analyze was skipped or failed (offline, no session, server down). A low score
+            // then only means "nothing found on the phone", and the UI must not call it low risk.
+            onlineChecked: previous?.onlineChecked ?? null,
         };
         let verdictChecked = false;
 
@@ -189,8 +192,10 @@
             const reply = await analyzeRemote(snapshot, local);
             remote = validSignals(reply?.signals, [3, 4]);
             state.rdapRegisteredAt = reply?.rdapRegisteredAt ?? state.rdapRegisteredAt;
+            state.onlineChecked = Boolean(reply) && !reply.skipped;
         } catch {
             remote = [];
+            state.onlineChecked = false;
         }
         if (!isCurrent()) return;
         if (!localAdds && !addsToKept(remote, kept)) return; // re-check found nothing new

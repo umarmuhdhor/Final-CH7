@@ -12,7 +12,7 @@ const fixture = (name) =>
 const snapshotFor = (result) => ({ url: result.url, domain: result.domain, title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: "" });
 
 /** Runs a scan with fakes; returns every published state and which deps were called. */
-async function run({ local = [], remote = [], rdap, verdict = null, current = () => true, snapshot, previous, memory } = {}) {
+async function run({ local = [], remote = [], rdap, skipped, verdict = null, current = () => true, snapshot, previous, memory } = {}) {
     const states = [];
     const calls = { remote: 0, verdict: [], local: 0, fresh: [] };
     await P.runScan({
@@ -23,7 +23,8 @@ async function run({ local = [], remote = [], rdap, verdict = null, current = ()
         },
         analyzeRemote: async () => {
             calls.remote++;
-            return { signals: typeof remote === "function" ? remote() : remote, rdapRegisteredAt: rdap };
+            if (remote === "throw") throw new Error("down");
+            return { signals: typeof remote === "function" ? remote() : remote, rdapRegisteredAt: rdap, ...(skipped ? { skipped } : {}) };
         },
         lookupVerdict: async (domain, options) => {
             calls.verdict.push(domain);
@@ -282,4 +283,11 @@ test("urlChurn: a few route changes are normal, a page that keeps changing its a
     assert.equal(churn(4490), true);
     assert.equal(churn(4980), true);
     assert.equal(churn(30_000), false, "quiet again after the window");
+});
+
+test("#379: onlineChecked says whether /analyze really ran", async () => {
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)] })).last.onlineChecked, true);
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], skipped: "error" })).last.onlineChecked, false);
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], skipped: "no_ai_url" })).last.onlineChecked, false);
+    assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], remote: "throw" })).last.onlineChecked, false);
 });
