@@ -158,8 +158,8 @@ struct FamilyCodeModelTests {
         private(set) var codeCalls = 0
         private(set) var refreshes: [Bool] = []
         var codeFailure: RepositoryError?
-        /// Holds the next `createFamilyCode` answer (its code already numbered) until the gate opens.
-        private var heldNext: CodeGate?
+        /// Hold the next `createFamilyCode` answers, in order (each code already numbered), until their gates open.
+        private var heldNext: [CodeGate] = []
 
         init(members: MockRepository.Scenario = .standard, clock: Clock, validFor: TimeInterval = 30 * 60) {
             base = MockRepository(mode: .guardian, scenario: members, latency: .zero)
@@ -168,15 +168,14 @@ struct FamilyCodeModelTests {
         }
 
         func failCodes(with error: RepositoryError?) { codeFailure = error }
-        func holdNextCode(_ gate: CodeGate) { heldNext = gate }
+        func holdNextCode(_ gate: CodeGate) { heldNext.append(gate) }
 
         func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
             codeCalls += 1
             refreshes.append(refresh)
             let number = codeCalls
-            if let gate = heldNext {
-                heldNext = nil
-                await gate.hold()
+            if !heldNext.isEmpty {
+                await heldNext.removeFirst().hold()
             }
             if let codeFailure { throw codeFailure }
             let code = String(format: "%06d", 100_000 + number)
@@ -257,26 +256,71 @@ struct FamilyCodeModelTests {
         #expect(model.secondsLeft == 1800)
     }
 
-    /// The older request fails last: the new code stays too (no "Try again" over a working code).
-    @Test func olderCodeFailureArrivingLastKeepsTheNewCode() async {
+    /// The older request fails while the newer one is still on its way: no "Try again" flashes up, and the
+    /// newer answer decides.
+    @Test func olderFailureWhileANewerRequestRunsWaitsForIt() async {
         let clock = Clock()
         let repository = CodeRepository(clock: clock)
         let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
-        await model.refreshCode()
-        clock.now += 1801
-        model.tick()
+        let olderGate = CodeGate()
+        let newerGate = CodeGate()
+        defer { olderGate.open(); newerGate.open() }
+        await repository.holdNextCode(olderGate)
+        await repository.holdNextCode(newerGate)
+        let older = Task { await model.refreshCode() }
+        await olderGate.arrival()
+        let newer = Task { await model.refreshCode(replace: true) }
+        await newerGate.arrival()
+        await repository.failCodes(with: .network)
+        olderGate.open()
+        await older.value
+        #expect(model.codeState == .loading, "the older failure showed Try again over a request still running")
+        await repository.failCodes(with: nil)
+        newerGate.open()
+        await newer.value
+        #expect(model.code?.code == "100002")
+    }
+
+    /// The newest request is cancelled (screen task ended): an older live answer still fills the screen
+    /// instead of leaving it loading.
+    @Test func cancelledNewerRequestLetsTheOlderAnswerShow() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
+        let olderGate = CodeGate()
+        let newerGate = CodeGate()
+        defer { olderGate.open(); newerGate.open() }
+        await repository.holdNextCode(olderGate)
+        await repository.holdNextCode(newerGate)
+        let older = Task { await model.refreshCode() }
+        await olderGate.arrival()
+        let newer = Task { await model.refreshCode(replace: true) }
+        await newerGate.arrival()
+        newer.cancel()
+        newerGate.open()
+        await newer.value
+        olderGate.open()
+        await older.value
+        #expect(model.code?.code == "100001")
+    }
+
+    /// While "Refresh code" is on its way, an ordinary request (countdown at zero) asks nothing: it could only
+    /// bring back the code the refresh kills.
+    @Test func ordinaryRequestWaitsForARefreshOnItsWay() async {
+        let clock = Clock()
+        let repository = CodeRepository(clock: clock)
+        let model = FamilyCodeModel(repository: repository, now: { clock.now }, throttle: RefreshThrottle())
         let gate = CodeGate()
         defer { gate.open() }
         await repository.holdNextCode(gate)
-        let older = Task { await model.refreshCode() }
+        let refresh = Task { await model.refreshCode(replace: true) }
         await gate.arrival()
-        await model.refreshCode(replace: true)
-        #expect(model.code?.code == "100003")
-        await repository.failCodes(with: .network)
+        await model.refreshCode()
+        #expect(await repository.codeCalls == 1)
         gate.open()
-        await older.value
-        #expect(model.code?.code == "100003")
-        #expect(model.codeState != .unavailable)
+        await refresh.value
+        #expect(model.code?.code == "100001")
+        #expect(await repository.refreshes == [true])
     }
 
     @Test func countdownRunsAndANewCodeComesAtZero() async {
