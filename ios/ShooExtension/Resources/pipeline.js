@@ -204,6 +204,23 @@
         emit({ done: true });
     }
 
+    /**
+     * #370: a Guardian's verdict that arrives while a warning (30–79) is open. `not_safe` → the block screen,
+     * `safe` → the warning goes away (#369). null when there is nothing to change.
+     */
+    function withVerdict(state, verdict) {
+        if (verdict?.value === "not_safe") return { ...state, verdict, score: 100, status: "blocked", done: true };
+        if (verdict?.value === "safe") return { ...state, verdict, signals: [], score: 0, status: "normal", done: true };
+        return null;
+    }
+
+    /** #370: how often an open warning asks for a verdict, the same schedule as the block screen (#350). */
+    function verdictPollMs(openForMs) {
+        if (openForMs < 2 * 60 * 1000) return 2000;
+        if (openForMs < 10 * 60 * 1000) return 5000;
+        return 15000;
+    }
+
     // Tiny pub/sub so UI scripts (EX-03/04/05/06) can listen without knowing about content.js.
     const listeners = new Set();
     function subscribe(listener) {
@@ -241,6 +258,8 @@
         validSignals,
         mergeSignals,
         runScan,
+        withVerdict,
+        verdictPollMs,
         urlChurn,
         subscribe,
         notify,

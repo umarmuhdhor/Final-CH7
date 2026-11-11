@@ -161,3 +161,9 @@ test("#270: scanBody carries the RDAP date only when known", () => {
     assert.equal(scanBody({ ...state, rdapRegisteredAt: "2026-10-30" }, page).rdapRegisteredAt, "2026-10-30");
     for (const v of [undefined, null]) assert.ok(!("rdapRegisteredAt" in scanBody({ ...state, rdapRegisteredAt: v }, page)), String(v));
 });
+
+test("#370: a block that only comes from a Guardian's not_safe sends no new report", () => {
+    const seen = new Map([[1, "warning"]]);
+    assert.equal(shouldReport({ scanId: 1, status: "blocked", done: true, verdict: { value: "not_safe" } }, seen), false);
+    assert.equal(shouldReport({ scanId: 1, status: "blocked", done: true, verdict: null }, seen), true);
+});
