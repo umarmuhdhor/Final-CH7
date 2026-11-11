@@ -16,11 +16,15 @@
     const dom = globalThis.ShooDom; // the page can shadow document properties (dom.js)
 
     async function registrableDomain(hostname) {
-        try {
-            const reply = await send({ type: "domain", hostname });
-            if (reply?.ok && reply.domain) return reply.domain;
-        } catch {
-            // background unavailable → fall through
+        // Two tries: the first message can wake a sleeping background page (#375). The fallback is only
+        // for the page's own use; background.js works the domain out again from the URL before it sends anything.
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                const reply = await send({ type: "domain", hostname });
+                if (reply?.ok && reply.domain) return reply.domain;
+            } catch {
+                // background unavailable → try once more, then fall through
+            }
         }
         return hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
     }
