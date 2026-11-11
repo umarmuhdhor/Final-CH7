@@ -1015,10 +1015,18 @@ private struct QuietHoursSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                DatePicker(selection: $start, displayedComponents: .hourAndMinute) { Text("Starts") }
-                    .accessibilityIdentifier("quiet.start")
-                DatePicker(selection: $end, displayedComponents: .hourAndMinute) { Text("Ends") }
-                    .accessibilityIdentifier("quiet.end")
+                Section {
+                    DatePicker(selection: $start, displayedComponents: .hourAndMinute) { Text("Starts") }
+                        .accessibilityIdentifier("quiet.start")
+                    DatePicker(selection: $end, displayedComponents: .hourAndMinute) { Text("Ends") }
+                        .accessibilityIdentifier("quiet.end")
+                } footer: {
+                    // Start = end would silence warnings all day (fase 27i, F-N6).
+                    if !canSave {
+                        Text("Start and end can't be the same time.")
+                            .accessibilityIdentifier("quiet.sameTime")
+                    }
+                }
             }
             .environment(\.timeZone, TimeZone(identifier: "UTC")!)
             .navigationTitle(Text("Quiet hours"))
@@ -1032,12 +1040,15 @@ private struct QuietHoursSheet: View {
                         onSave(Self.clock(start), Self.clock(end))
                         dismiss()
                     } label: { Text("Save") }
+                    .disabled(!canSave)
                     .accessibilityIdentifier("quiet.save")
                 }
             }
         }
         .presentationDetents([.medium])
     }
+
+    private var canSave: Bool { ProfileModel.canSaveQuietHours(start: Self.clock(start), end: Self.clock(end)) }
 
     /// "22:00" as a time on 1 Jan 1970 UTC, so pickers and formatters never shift it.
     static func date(_ clock: String) -> Date? {

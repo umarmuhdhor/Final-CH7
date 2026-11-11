@@ -4680,6 +4680,16 @@
         }
       }
     },
+    "Start and end can't be the same time." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waktu mulai dan selesai tidak boleh sama."
+          }
+        }
+      }
+    },
     "Starts" : {
       "localizations" : {
         "id" : {

@@ -67,6 +67,10 @@ final class ProfileModel {
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let notifications: (any NotificationPermission)?
     @ObservationIgnored private let now: () -> Date
+    /// The last notification update that changed each key: a failed update puts back only the keys no newer
+    /// update has changed since (fase 27i, K11). Counted, not compared by value: off → on → off is three writers.
+    @ObservationIgnored private var notificationWriters: [NotificationSettingsUpdate.Key: Int] = [:]
+    @ObservationIgnored private var notificationUpdates = 0
 
     init(
         repository: any ShooRepository,
@@ -278,18 +282,35 @@ final class ProfileModel {
     /// What the notification page shows: the server's settings, or its defaults before the first load.
     var notificationSettings: NotificationSettings { profile?.notifications ?? .defaults }
 
+    /// "Jam tenang" Save: a window, not "all day" (the server reads start = end as the whole day).
+    static func canSaveQuietHours(start: String, end: String) -> Bool { start != end }
+
     /// Changes at once; the server decides which pushes go out, so a failed save goes back and says so.
     func updateNotifications(_ update: NotificationSettingsUpdate) async {
         guard profile != nil else { return }
-        let before = profile?.notifications
-        let after = notificationSettings.applying(update)
+        let before = notificationSettings
+        let after = before.applying(update)
+        // Start = end is "all day" on the server, which the sheet never offers (fase 27i, F-N6).
+        if update.quietStart != nil || update.quietEnd != nil,
+           !Self.canSaveQuietHours(start: after.quietStart, end: after.quietEnd) {
+            Log.ui.error("Quiet hours with the same start and end not sent")
+            return
+        }
+        notificationUpdates += 1
+        let token = notificationUpdates
+        for key in update.keys { notificationWriters[key] = token }
         profile?.notifications = after
         do {
             try await repository.updateMe(DeviceUpdate(notifications: update))
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Notification settings save failed", error)
-            profile?.notifications = before
+            // Only this update's keys go back, on top of what is on screen now: a switch that saved
+            // meanwhile stays (fase 27i, F-A11/F-N5).
+            let owned = update.keys.filter { notificationWriters[$0] == token }
+            // Read first: `profile?.notifications = …` holds `profile` for writing while the right side runs.
+            let reverted = notificationSettings.reverting(owned, to: before)
+            profile?.notifications = reverted
             actionError = "Couldn't save. Check your connection and try again."
         }
     }

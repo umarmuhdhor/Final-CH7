@@ -96,6 +96,25 @@ extension NotificationSettings {
         if let v = update.quietEnd { s.quietEnd = v }
         return s
     }
+
+    /// A failed update undone: the `keys` it still owns go back to `before`; every other key keeps what is on
+    /// screen now (fase 27i, K11).
+    func reverting(_ keys: Set<NotificationSettingsUpdate.Key>, to before: NotificationSettings) -> NotificationSettings {
+        var s = self
+        for key in keys {
+            switch key {
+            case .warning: s.warning = before.warning
+            case .blocked: s.blocked = before.blocked
+            case .family: s.family = before.family
+            case .protectionOff: s.protectionOff = before.protectionOff
+            case .weeklySummary: s.weeklySummary = before.weeklySummary
+            case .quietHours: s.quietHours = before.quietHours
+            case .quietStart: s.quietStart = before.quietStart
+            case .quietEnd: s.quietEnd = before.quietEnd
+            }
+        }
+        return s
+    }
 }
 
 /// Only the switches that changed; `nil` keys are left out of `PATCH /devices/me`.
@@ -108,6 +127,18 @@ struct NotificationSettingsUpdate: Codable, Hashable, Sendable {
     var quietHours: Bool?
     var quietStart: String?
     var quietEnd: String?
+
+    enum Key: Hashable, CaseIterable { case warning, blocked, family, protectionOff, weeklySummary, quietHours, quietStart, quietEnd }
+
+    /// The keys this update sets.
+    var keys: Set<Key> {
+        let set: [(Key, Bool)] = [
+            (.warning, warning != nil), (.blocked, blocked != nil), (.family, family != nil),
+            (.protectionOff, protectionOff != nil), (.weeklySummary, weeklySummary != nil),
+            (.quietHours, quietHours != nil), (.quietStart, quietStart != nil), (.quietEnd, quietEnd != nil),
+        ]
+        return Set(set.filter(\.1).map(\.0))
+    }
 }
 
 /// `PATCH /devices/me` body. `nil` fields are left out of the request.
