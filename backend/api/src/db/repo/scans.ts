@@ -244,8 +244,8 @@ export interface ReplicaQuota {
  * family is the device itself (replicaCountsQuery).
  * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
  * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
- * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (LOCK.replica, 0) stays the final
- * word, so a race costs at most one inflate, as before.
+ * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (LOCK.replica, 0)
+ * stays the final word, so a race costs at most one inflate, as before.
  * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
  * the same moment may keep or drop one replica.
  */
@@ -266,12 +266,12 @@ export async function precheckReplica(
 }
 
 /**
- * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
- * class LOCK.replica, db/locks.ts), reuse the owner's replica of this domain from the last 24 h, else reserve
+ * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner
+ * (LOCK.replica, db/locks.ts), reuse the owner's replica of this domain from the last 24 h, else reserve
  * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
  * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
- * key (LOCK.replica, 0). Every new upload takes that key, so uploads by different members of one family cannot
- * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
+ * key (LOCK.replica, 0). Every new upload takes that key, so uploads by different members of one family
+ * cannot overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
  * so the family may still change by one member in between); held for milliseconds, the R2 put runs
  * after commit. Order of the checks (fase 19 K4): owner → family → family_bytes → global →
  * global_bytes → reserve; the first that applies is the reason.
