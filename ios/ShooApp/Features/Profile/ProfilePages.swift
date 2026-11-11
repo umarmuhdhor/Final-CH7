@@ -1356,6 +1356,24 @@ private struct AboutPage: View {
             // Figma: the icon starts 28 pt under the back button; the header leaves 16.
             .padding(.top, 12)
 
+            // Apple 5.1.1(ii), 5.1.2(i): the online check can be taken back at any time. It lives here, not on
+            // Profile, next to the privacy policy that explains it.
+            ProfileCard {
+                ProfileToggleRow(
+                    symbol: nil,
+                    title: Text("Online check"),
+                    subtitle: Text("Sends pages to Shoo's server and suspicious-page summaries to DeepSeek"),
+                    style: .settings,
+                    isOn: Binding(
+                        get: { env.settings.dataConsent == .granted },
+                        set: { env.setDataConsent($0 ? .granted : .declined) }
+                    )
+                )
+                .accessibilityIdentifier("about.onlineCheck")
+            }
+            .padding(.horizontal, ProfileStyle.margin)
+            .padding(.top, 32)
+
             ProfileCard {
                 linkRow(Text("Privacy policy"), id: "about.privacy") { openURL(page("privacy")) }
                 ProfileDivider(leading: 17)
@@ -1364,7 +1382,7 @@ private struct AboutPage: View {
                 linkRow(Text("Third-party licenses"), id: "about.licenses", isLink: false) { env.router.show(.profilePage(.licenses)) }
             }
             .padding(.horizontal, ProfileStyle.margin)
-            .padding(.top, 32)
+            .padding(.top, 20)
 
             ProfileCard {
                 linkRow(Text("Rate on the App Store"), id: "about.rate") { rate() }

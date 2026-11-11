@@ -302,6 +302,21 @@ final class ProfileUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Third-party licenses"].firstMatch.waitForExistence(timeout: 5), app.debugDescription)
     }
 
+    /// Apple 5.1.1(ii): the online check is no longer on Profile, but it can still be turned off in About Shoo.
+    @MainActor
+    func testOnlineCheckCanBeWithdrawnInAbout() {
+        let app = openProfile(mode: "protected")
+        let about = app.buttons["profile.about"]
+        reveal(about, in: app)
+        XCTAssertFalse(app.descendants(matching: .any)["profile.onlineCheck"].exists, app.debugDescription)
+        about.tap()
+        let onlineCheck = app.switches["about.onlineCheck"]
+        XCTAssertTrue(onlineCheck.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertEqual(onlineCheck.value as? String, "1")
+        onlineCheck.switches.firstMatch.tap()
+        XCTAssertEqual(onlineCheck.value as? String, "0")
+    }
+
     /// "Punya kode undangan?": a guardian without members joins another family and is protected from then on.
     @MainActor
     func testGuardianWithoutMembersJoinsAnotherFamily() {
