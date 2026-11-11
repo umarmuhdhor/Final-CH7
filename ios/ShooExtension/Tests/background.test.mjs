@@ -126,3 +126,12 @@ test("#375: POST /scans and block memory use the PSL domain of the URL, not the 
     const { memory } = await send({ type: "recallBlock", url: `https://${host}/pin` });
     assert.equal(memory.domain, "bca-verifikasi.site");
 });
+
+test("#377: the block page's Guardian name is read fresh, not from the 30 s session cache", async () => {
+    const w = world();
+    w.state.session = { ...SESSION, mode: "protected", guardianName: "Adhella" };
+    const send = await w.boot();
+    assert.equal((await send({ type: "profile" })).guardianName, "Adhella");
+    w.state.session = { ...SESSION, mode: "protected", guardianName: null };
+    assert.equal((await send({ type: "profile" })).guardianName, null);
+});

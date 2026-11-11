@@ -63,8 +63,9 @@ const deviceData = createDeviceData({
 
 let sessionCache = { value: null, at: 0 };
 /** @returns {Promise<object|null>} getSession reply, or null if the app isn't onboarded / unreachable */
-async function getSession() {
-    if (Date.now() - sessionCache.at < SESSION_TTL_MS) return sessionCache.value;
+/** `fresh`: skip the 30 s cache, for a line that must not be stale (the block page's "sent to", #377). */
+async function getSession({ fresh = false } = {}) {
+    if (!fresh && Date.now() - sessionCache.at < SESSION_TTL_MS) return sessionCache.value;
     let reply = null;
     try {
         reply = await browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "getSession" });
@@ -273,8 +274,9 @@ browser.runtime.onMessage.addListener((message) => {
             lastSeen.report();
             return heartbeat.beat();
         case "profile":
-            // What blocked.html needs to pick its wording. Never the token.
-            return getSession().then((s) => ({
+            // What blocked.html needs to pick its wording. Never the token. Read fresh: a Guardian who left
+            // within the last 30 s must not show up as "Link sent to …" (#377).
+            return getSession({ fresh: true }).then((s) => ({
                 ok: true,
                 onboarded: Boolean(s),
                 mode: s?.mode ?? null,
