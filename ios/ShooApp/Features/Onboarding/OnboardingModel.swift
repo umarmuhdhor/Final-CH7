@@ -278,6 +278,8 @@ final class OnboardingModel {
     private func markJoined() {
         environment.settings.onboardingConnectPassed = true
         environment.settings.inviteRegistrationPending = false
+        // Used up: nothing keeps an invite code longer than it needs to.
+        inviteCode = nil
     }
 
     /// Undoes a failed invite join's registration (P13: a Protected mode is for good on the server, so the
