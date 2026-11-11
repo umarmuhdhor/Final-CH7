@@ -25,9 +25,13 @@ struct GuardianHomeView: View {
         repository: any ShooRepository,
         settings: AppSettings,
         scope: GuardianHomeModel.Scope,
-        extensionStatus: @escaping () async -> ExtensionStatus
+        extensionStatus: @escaping () async -> ExtensionStatus,
+        onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
-        _model = State(initialValue: GuardianHomeModel(repository: repository, settings: settings, scope: scope, extensionStatus: extensionStatus))
+        _model = State(initialValue: GuardianHomeModel(
+            repository: repository, settings: settings, scope: scope, extensionStatus: extensionStatus,
+            onVerdictSaved: onVerdictSaved
+        ))
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }

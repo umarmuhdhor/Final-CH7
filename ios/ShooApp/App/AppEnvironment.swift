@@ -18,6 +18,9 @@ final class AppEnvironment {
     /// The server no longer knows our token (401), or the Keychain has none (backup restored onto
     /// another iPhone). `RootView` then shows "Session expired" (fase 13 step 4).
     private(set) var sessionExpired = false
+    /// Verdicts the server confirmed in this launch, from Detail and Home (fase 27 K8). Activity reloads
+    /// when it shows again and this changed since its last load: its rows are a separate list.
+    var verdictSaves = 0
     @ObservationIgnored private var isSyncingForeground = false
     /// Asks iOS for the APNs token; the answer comes back through `AppDelegate`.
     @ObservationIgnored private let registerForPush: @MainActor () -> Void

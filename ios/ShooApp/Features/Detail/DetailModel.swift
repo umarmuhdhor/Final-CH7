@@ -40,6 +40,8 @@ final class DetailModel {
     @ObservationIgnored private let repository: any ShooRepository
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
+    /// Told after every verdict the server confirmed (`AppEnvironment.verdictSaves`, K8).
+    @ObservationIgnored private let onVerdictSaved: @MainActor () -> Void
 
     /// fase 18b: a push can open Detail before the Worker stored the page copy (`waitUntil`).
     /// Within this many seconds of the scan, the screen waits for it instead of saying "no copy".
@@ -54,12 +56,14 @@ final class DetailModel {
         scanId: String,
         repository: any ShooRepository,
         now: @escaping () -> Date = Date.init,
-        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+        sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+        onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
         self.scanId = scanId
         self.repository = repository
         self.now = now
         self.sleep = sleep
+        self.onVerdictSaved = onVerdictSaved
     }
 
     // MARK: Derived
@@ -240,6 +244,7 @@ final class DetailModel {
             let verdict = try await repository.setVerdict(scanId: previous.id, value: value)
             scan?.verdict = verdict
             verdictSaves += 1
+            onVerdictSaved()
             return .saved
         } catch RepositoryError.api(.notFound, _) {
             scan = nil

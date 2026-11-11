@@ -85,16 +85,25 @@ final class ActivityModel {
     private(set) var guardianName: String?
 
     @ObservationIgnored private let repository: any ShooRepository
+    /// `AppEnvironment.verdictSaves` (K8), read at every load.
+    @ObservationIgnored private let verdictSaves: @MainActor () -> Int
     /// Bumped when a first-page request starts and again when one is applied, so neither an older
     /// first page nor a next page meant for the previous list can overwrite the newer one.
     @ObservationIgnored private var generation = 0
+    /// Bumped by every `loadMore`: only the newest one clears the spinner, so a next page dropped by a
+    /// refresh never hides the spinner of the next page asked for after it (F-A5, K8).
+    @ObservationIgnored private var loadMoreRequest = 0
+    /// `verdictSaves()` when the last load started.
+    @ObservationIgnored private var loadedVerdictSaves = 0
 
     /// `ownDeviceId` comes from the session; without one (mock, tests) Family Activity asks `me()` once.
     init(
         repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil,
-        filter: ActivityFilter = .all, person: ActivityPerson = .everyone
+        filter: ActivityFilter = .all, person: ActivityPerson = .everyone,
+        verdictSaves: @escaping @MainActor () -> Int = { 0 }
     ) {
         self.repository = repository
+        self.verdictSaves = verdictSaves
         baseOwner = owner
         self.ownDeviceId = ownDeviceId
         self.filter = filter
@@ -130,16 +139,26 @@ final class ActivityModel {
     }
 
     func load() async {
+        // Read at the start: a verdict saved while this load runs may be missing from it. Counted as seen only
+        // once a list arrived, so a cancelled or failed reload runs again on the next appearance.
+        let saves = verdictSaves()
         await refreshPeople()
         await refreshViewer()
         guard !Task.isCancelled else { return }
-        await loadFirstPage()
+        if await loadFirstPage() { loadedVerdictSaves = saves }
     }
 
     /// Pull to refresh: keeps the current items on screen until the new first page arrives,
     /// and keeps them if it fails.
     func refresh() async {
         await load()
+    }
+
+    /// On every appearance after the first load (back from Detail, back to the tab): a verdict saved since
+    /// the last load (Detail, Home) is not in these rows yet, so the list reloads once (F-A15, K8).
+    func refreshIfVerdictsChanged() async {
+        guard state == .loaded, verdictSaves() != loadedVerdictSaves else { return }
+        await refresh()
     }
 
     /// "Try again" on the error screen: shows the spinner while it retries.
@@ -174,19 +193,21 @@ final class ActivityModel {
     func loadMore() async {
         guard let cursor = nextCursor, state == .loaded, !isLoadingMore else { return }
         let request = generation
+        loadMoreRequest += 1
+        let ticket = loadMoreRequest
         isLoadingMore = true
         loadMoreFailed = false
+        // Every way out clears the spinner (F-A5): before, a page dropped by a refresh left it on for good,
+        // and the `!isLoadingMore` guard then blocked every next page.
+        defer { if ticket == loadMoreRequest { isLoadingMore = false } }
         do {
             guard let page = try await visiblePage(after: cursor, request: request, seen: Set(items.map(Self.site)))
             else { return }
             items += page.items
             nextCursor = page.nextCursor
-            isLoadingMore = false
         } catch {
-            // A newer list replaced this one: its own state is already right.
-            guard request == generation else { return }
-            isLoadingMore = false
-            if error.isCancellation { return }
+            // A newer list replaced this one: it is not a "couldn't load more".
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Activity next page failed", error)
             loadMoreFailed = true
         }
@@ -258,11 +279,13 @@ final class ActivityModel {
         }
     }
 
-    private func loadFirstPage() async {
+    /// `true` when this first page is now on screen.
+    @discardableResult
+    private func loadFirstPage() async -> Bool {
         generation += 1
         let request = generation
         do {
-            guard let page = try await visiblePage(after: nil, request: request) else { return }
+            guard let page = try await visiblePage(after: nil, request: request) else { return false }
             generation += 1
             items = page.items
             nextCursor = page.nextCursor
@@ -270,9 +293,12 @@ final class ActivityModel {
             loadMoreFailed = false
             refreshFailed = false
             state = .loaded
+            return true
         } catch {
-            guard request == generation, !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return false }
             Log.ui.error("Activity load failed", error)
+            // A next page on its way was for the list before this load: it is dropped (`generation`).
+            isLoadingMore = false
             if state == .loaded {
                 refreshFailed = true
             } else {
@@ -280,6 +306,7 @@ final class ActivityModel {
                 nextCursor = nil
                 state = .failed
             }
+            return false
         }
     }
 }

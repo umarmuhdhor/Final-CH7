@@ -14,10 +14,13 @@ struct ActivityView: View {
     @State private var checkStats = CheckStats()
     @State private var isTurnOnPresented = false
 
-    init(repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil) {
+    init(
+        repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil,
+        verdictSaves: @escaping @MainActor () -> Int = { 0 }
+    ) {
         _model = State(initialValue: ActivityModel(
             repository: repository, owner: owner, ownDeviceId: ownDeviceId,
-            filter: Self.initialFilter, person: Self.initialPerson
+            filter: Self.initialFilter, person: Self.initialPerson, verdictSaves: verdictSaves
         ))
     }
 
@@ -86,8 +89,15 @@ struct ActivityView: View {
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { await readExtension() } }) {
             TurnOnExtensionSheet()
         }
-        // First appearance, and coming back to the tab after a failed load.
-        .task { if model.state != .loaded { await model.retry() } }
+        // First appearance, and coming back to the tab after a failed load. Back from Detail or from the other
+        // tab: reload once if a verdict was saved meanwhile (K8).
+        .task {
+            if model.state != .loaded {
+                await model.retry()
+            } else {
+                await model.refreshIfVerdictsChanged()
+            }
+        }
         .task { await readExtension() }
     }
 

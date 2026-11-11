@@ -358,6 +358,19 @@ struct DetailModelTests {
         #expect(model.badge == .markedSafe)
     }
 
+    /// K8 (F-A15): a saved verdict tells the app, so Activity reloads when it shows again; a failed one does not.
+    @Test func onlyASavedVerdictTellsTheApp() async {
+        var told = 0
+        let model = DetailModel(
+            scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1), onVerdictSaved: { told += 1 }
+        )
+        await model.load()
+        await model.setVerdict(.notSafe)
+        #expect(told == 0)
+        await model.setVerdict(.notSafe)
+        #expect(told == 1)
+    }
+
     @Test func failedVerdictRollsBackToNoVerdict() async {
         let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1))
         await model.load()
