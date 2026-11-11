@@ -105,6 +105,8 @@ struct GuardianHomeView: View {
         }
         // Same haptic as a verdict saved on Detail (DetailView).
         .sensoryFeedback(.success, trigger: model.verdictSaves)
+        // "Couldn't save" under Aman / Bahaya is felt too, not only read.
+        .sensoryFeedback(.error, trigger: model.verdictFailed) { _, now in now }
         .sensoryFeedback(.success, trigger: joined)
         // A push while Home is open (new scan, verdict, member change): reload, not just the banner.
         .onChange(of: env.pushesWhileOpen) {
@@ -638,8 +640,21 @@ private struct DecisionButton: View {
             // The capsule is 38.9 pt; the touch area still reaches 44.
             .contentShape(Capsule().inset(by: -2.6))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DecisionPressStyle())
         .accessibilityHint(Text("Applies right away. You can change it later."))
+    }
+}
+
+/// Aman / Bahaya give under the finger like the Detail verdict buttons (`VerdictButtonStyle`). Reduce Motion:
+/// they dim instead of shrinking. The look and hit area are the label's own.
+private struct DecisionPressStyle: ButtonStyle {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .opacity(configuration.isPressed && reduceMotion ? 0.8 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -650,6 +665,7 @@ private struct DecisionButton: View {
 private struct InviteCodeCard: View {
     let onJoined: () -> Void
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: FamilyCodeModel
 
     init(repository: any ShooRepository, onJoined: @escaping () -> Void) {
@@ -728,6 +744,8 @@ private struct InviteCodeCard: View {
                 Text(model.copied ? "Copied" : "Copy")
                     .onboardingFont(17, design: .rounded, relativeTo: .body)
                     .figmaLineHeight(23.8, relativeTo: .body)
+                    // Copy → Copied cross-fades while the pill eases to its new width (pattern: InviteSheet).
+                    .contentTransition(.opacity)
                     .foregroundStyle(HomeTheme.bodyInk)
                     .padding(.horizontal, 16.5)
                     .padding(.vertical, 5)
@@ -736,8 +754,11 @@ private struct InviteCodeCard: View {
                     .contentShape(Rectangle().inset(by: -5))
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.success, trigger: model.copied) { _, now in now }
             .accessibilityIdentifier("familyCode.copy")
         }
+        // On the row, so "Share" glides aside as the pill widens instead of jumping.
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.3), value: model.copied)
     }
 
     @ViewBuilder
