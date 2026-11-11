@@ -25,6 +25,7 @@ struct TurnOnExtensionView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var isVideoPresented = false
     @State private var isDataSheetPresented = false
     @State private var status: ExtensionStatus?
@@ -59,6 +60,8 @@ struct TurnOnExtensionView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
                         .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        // Back from Settings: it drops in over the steps; a fade with Reduce Motion.
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
                         .accessibilityIdentifier("extension.offHint")
                 }
                 // Once the switch is known to be on, the setup steps are done; only the callout is left.
@@ -106,12 +109,14 @@ struct TurnOnExtensionView: View {
                     }
                     .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.ink, weight: .semibold))
                     .disabled(!isChecked)
+                    .transition(.opacity)
                     .accessibilityIdentifier(step.opensSafariFirst ? "extension.settings" : "extension.openSafariLink")
                 }
                 if let onSkipCheck, showsStatusNote, status?.isActive == true {
                     Button("Continue without checking", action: onSkipCheck)
                         .buttonStyle(OnboardingLinkButtonStyle(color: OnboardingTheme.secondaryInk, weight: .regular))
                         .disabled(!isChecked)
+                        .transition(.opacity)
                         .accessibilityIdentifier("extension.skipCheck")
                 }
             }
@@ -120,6 +125,8 @@ struct TurnOnExtensionView: View {
         }
         .footerEndsWithLink()
         .largeHeadline()
+        // Back from Settings the note, steps and buttons change together, not in one jump.
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3), value: cameBack)
         // On appear and every time the user is back from Settings or Safari: read now, then a few more
         // times in case the heartbeat from Safari is still on its way (no app restart needed, #135).
         .task(id: scenePhase) {
@@ -174,6 +181,7 @@ private struct ConsentCheckbox: View {
     @Binding var isChecked: Bool
     let onShowData: () -> Void
     @ScaledMetric(relativeTo: .body) private var boxSize: CGFloat = 24
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private static let checkedFill = Color.dynamic(0x1E6FCB, dark: 0x3D8BE0)
     private static let link = Color.dynamic(0x186FB9, dark: 0x5EAAF0)
@@ -193,6 +201,8 @@ private struct ConsentCheckbox: View {
                             Image(systemName: "checkmark")
                                 .font(.system(size: boxSize * 0.55, weight: .bold))
                                 .foregroundStyle(.white)
+                                // Pops in under the toggle's `.snappy`; a plain fade with Reduce Motion.
+                                .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
                         }
                     }
                     .frame(width: boxSize, height: boxSize)
@@ -206,6 +216,7 @@ private struct ConsentCheckbox: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: isChecked)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(isChecked ? [.isButton, .isSelected] : .isButton)
             .accessibilityIdentifier("extension.consent")
@@ -352,6 +363,8 @@ struct OnboardingStepRow: View {
 /// ON-04 passed (Figma "Yeay, kamu berhasil lebih terlindungi!").
 struct ExtensionOnView: View {
     let onContinue: () -> Void
+    /// One success tap as the screen comes in (Connect fires its own on join, a step earlier).
+    @State private var appeared = false
 
     private static let shieldScale: CGFloat = 1.67
 
@@ -361,7 +374,8 @@ struct ExtensionOnView: View {
             message: Text("The extension is on and ready to help spot possible scams on the internet."),
             idPrefix: "extensionOn",
             onContinue: onContinue,
-            largeTitle: false
+            largeTitle: false,
+            revealsText: true
         ) {
             // Figma: the teal shield, its outline 177 pt wide around y 268; the headline at y 437.
             HalftoneShield(tint: .teal)
@@ -373,6 +387,8 @@ struct ExtensionOnView: View {
                 .padding(.top, 59)
                 .padding(.bottom, 21)
         }
+        .sensoryFeedback(.success, trigger: appeared)
+        .onAppear { appeared = true }
     }
 }
 

@@ -442,6 +442,23 @@ struct OnboardingLinkButtonStyle: ButtonStyle {
     }
 }
 
+/// The success text rises 8 pt into place 0.15 s after the step slides in. Reduce Motion: a fade only.
+private struct SuccessTextEntrance: ViewModifier {
+    let isOn: Bool
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isOn && !shown ? 0 : 1)
+            .offset(y: isOn && !shown && !reduceMotion ? 8 : 0)
+            .onAppear {
+                guard isOn, !shown else { return }
+                withAnimation(.smooth(duration: 0.4).delay(0.15)) { shown = true }
+            }
+    }
+}
+
 /// Blue success screen: illustration, white title + message, "Next" at the bottom
 /// (Figma "Berhasil Terhubung", "Yeay, kamu berhasil"). Ids: `<idPrefix>.title`, `<idPrefix>.continue`.
 struct OnboardingSuccessPage<Hero: View>: View {
@@ -453,6 +470,8 @@ struct OnboardingSuccessPage<Hero: View>: View {
     var background = "SuccessBackground"
     /// Figma "Berhasil Terhubung" has a 34 pt headline, "Yeay, kamu berhasil" a 28 pt one.
     var largeTitle = true
+    /// The title and message rise in a moment after the step slides in (ON-04 passed).
+    var revealsText = false
     /// Brings the headline to Figma's y under the hero.
     @ViewBuilder let hero: Hero
 
@@ -472,6 +491,7 @@ struct OnboardingSuccessPage<Hero: View>: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 24)
+                .modifier(SuccessTextEntrance(isOn: revealsText))
             }
             .frame(maxWidth: .infinity)
         }
