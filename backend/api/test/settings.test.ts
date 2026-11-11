@@ -269,6 +269,16 @@ describe("hourly cron: Ringkasan mingguan", () => {
     expect(sender.sent.map((m) => m.body)).toEqual(["Your week: no dangerous sites for you."]);
   });
 
+  // Fase 27j (F-N4): the Protected page has no summary switch. A protected copy made before the
+  // copy started with it off, or a PATCH from another client, must not keep one going.
+  it("never for a protected device, even with the column on", async () => {
+    const p = await createDevice("Mom");
+    await patch(p, { apnsToken: TOKEN, notifications: { weeklySummary: true } });
+    const sender = new Recorder();
+    await runNotifications(sql, env, { sender, now: MONDAY_0810_WIB });
+    expect(sender.sent).toHaveLength(0);
+  });
+
   it("text in Indonesian", () => {
     expect(summaryText("id", { blocked: 3, warnings: 5, family: true })).toBe("Ringkasan minggu ini untuk kamu dan keluargamu: 3 situs diblokir, 5 peringatan.");
   });
@@ -300,9 +310,14 @@ describe("POST /devices/me/protected (Punya kode undangan?)", () => {
   const code = async (g: Created) =>
     ((await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string }).code;
 
+  // Fase 27j (F-N4, K12): the weekly summary is a guardian page; the Protected settings page has no
+  // switch for it, so the copy starts with it off. Quiet hours wait for Q2 and still carry over.
   it("a guardian without members becomes a protected member: new token, same name and settings, old device gone", async () => {
     const me1 = await createDevice("Adhella", "guardian");
-    await patch(me1, { language: "id", avatarId: "avatar_05", timeZone: "Asia/Makassar", notifications: { weeklySummary: true } });
+    await patch(me1, {
+      language: "id", avatarId: "avatar_05", timeZone: "Asia/Makassar",
+      notifications: { weeklySummary: true, warning: false },
+    });
     const other = await createDevice("Budi", "guardian");
     const res = await call("/devices/me/protected", { method: "POST", token: me1.token, json: { code: await code(other) } });
     expect(res.status).toBe(200);
@@ -314,7 +329,7 @@ describe("POST /devices/me/protected (Punya kode undangan?)", () => {
     const now = await (await call("/devices/me", { token: body.token })).json();
     expect(now).toMatchObject({
       name: "Adhella", mode: "protected", language: "id", timeZone: "Asia/Makassar",
-      notifications: { weeklySummary: true }, guardian: { name: "Budi" },
+      notifications: { weeklySummary: false, warning: false }, guardian: { name: "Budi" },
     });
   });
 

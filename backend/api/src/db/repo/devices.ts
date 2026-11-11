@@ -136,6 +136,7 @@ export async function findProfile(sql: Sql, id: string): Promise<DeviceProfile |
  * PF-01 "Punya kode undangan?": a protected copy of a guardian device (mode never changes, I1).
  * Name, avatar, language, push token, settings, counters and start date carry over; the history
  * stays with the old device, which the caller deletes in the same transaction as the join (fase 27a).
+ * The weekly summary starts off: the Protected settings page has no switch for it (fase 27j, F-N4).
  */
 export async function insertProtectedCopy(sql: Sql | TransactionSql, fromId: string, tokenHash: Uint8Array): Promise<{ id: string; avatarId: string } | undefined> {
   const [row] = await sql<{ id: string; avatarId: string }[]>`
@@ -147,7 +148,7 @@ export async function insertProtectedCopy(sql: Sql | TransactionSql, fromId: str
     )
     select name, 'protected', avatar_id, language, apns_token, ${tokenHash}, created_at,
            blocked_total, warning_total, device_model, os_version, time_zone,
-           notify_warning, notify_blocked, notify_family, notify_protection_off, weekly_summary,
+           notify_warning, notify_blocked, notify_family, notify_protection_off, false,
            quiet_hours, quiet_start, quiet_end
     from devices where id = ${fromId} and mode = 'guardian'
     returning id, avatar_id as "avatarId"`;

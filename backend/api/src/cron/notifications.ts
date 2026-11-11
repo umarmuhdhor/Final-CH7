@@ -108,7 +108,8 @@ async function protectionOff(sql: Sql, now: Date, limit: number): Promise<PushMe
 
 /**
  * Monday from 08:00 local (outside quiet hours), once per local Monday: the last 7 days of
- * blocked and warned sites, the guardian's members included. Counts only, no sites.
+ * blocked and warned sites, the guardian's members included. Counts only, no sites. Guardian
+ * devices only: the Protected settings page has no switch for it (fase 27j, F-N4).
  */
 async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<PushMessage[]> {
   if (limit <= 0) return [];
@@ -116,7 +117,7 @@ async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<Push
     select id, quiet_hours as "quietHours", quiet_start as "quietStart", quiet_end as "quietEnd",
            time_zone as "timeZone", to_char(summary_sent_on, 'YYYY-MM-DD') as "sentOn"
     from devices
-    where weekly_summary and apns_token is not null
+    where weekly_summary and mode = 'guardian' and apns_token is not null
       and (summary_sent_on is null or summary_sent_on < (now() at time zone 'UTC')::date - 1)`;
   const due: { id: string; day: string }[] = [];
   for (const r of rows) {
@@ -129,7 +130,7 @@ async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<Push
   const claimed = await sql<{ id: string; apnsToken: string; language: Language; blocked: number; warnings: number; family: boolean }[]>`
     update devices d set summary_sent_on = v.day
     from unnest(string_to_array(${due.map((d) => d.id).join(",")}, ','), string_to_array(${due.map((d) => d.day).join(",")}, ',')::date[]) as v(id, day)
-    where d.id = v.id and d.weekly_summary and d.apns_token is not null
+    where d.id = v.id and d.weekly_summary and d.mode = 'guardian' and d.apns_token is not null
       and d.summary_sent_on is distinct from v.day
     returning d.id, d.apns_token as "apnsToken", d.language,
       (select count(*)::int from scans s
