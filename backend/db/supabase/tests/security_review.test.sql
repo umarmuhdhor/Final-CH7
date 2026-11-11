@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(23);
+select plan(27);
 
 select is(
   (select count(*)::int from information_schema.role_table_grants
@@ -35,6 +35,12 @@ select has_column('public', 'scans', 'replica_ready_at', 'scans.replica_ready_at
 select col_is_null('public', 'scans', 'replica_ready_at', 'replica_ready_at is nullable (null = upload in flight)');
 select lives_ok($$update scans set replica_ready_at = now() where id = 't_rs'$$, 'a row with a path can be marked ready');
 select throws_ok($$update scans set replica_path = null where id = 't_rs'$$, '23514', null, 'clearing the path needs clearing replica_ready_at too');
+
+-- Fase 27k F-B8: favicon_ready_at marks a finished R2 put, like replica_ready_at.
+select col_is_null('public', 'scans', 'favicon_ready_at', 'favicon_ready_at is nullable (null = upload in flight)');
+select throws_ok($$update scans set favicon_ready_at = now() where id = 't_rs'$$, '23514', null, 'no favicon ready without a path');
+select lives_ok($$update scans set favicon_path = 't_rp/t_rs-icon.png', favicon_ready_at = now() where id = 't_rs'$$, 'a row with a path can be marked ready');
+select throws_ok($$update scans set favicon_path = null where id = 't_rs'$$, '23514', null, 'clearing the path needs clearing favicon_ready_at too');
 
 -- The test runner cannot switch to shoo_api, so the policies are checked in the catalog.
 select policies_are('public', 'blocklist_entries',
