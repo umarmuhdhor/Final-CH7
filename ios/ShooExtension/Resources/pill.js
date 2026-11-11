@@ -14,7 +14,7 @@
     const MARGIN = 10; // gap between bubble and screen edge, px
     const DEFAULT_POS = { side: "right", y: 0.38 }; // clear of the EX-04 warning card, even on an iPhone SE
 
-    /** "safe" < 30 · "warning" 30–49 · "danger" 50–79. Blocked never reaches the bubble. */
+    /** "safe" < firstWarning · "warning" < secondWarning · "danger" below the block threshold (built in: 30 / 50 / 80). Blocked never reaches the bubble. */
     function toneFor(score) {
         if (score >= THRESHOLD.secondWarning) return "danger";
         if (score >= THRESHOLD.firstWarning) return "warning";
