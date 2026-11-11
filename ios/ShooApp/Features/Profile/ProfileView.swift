@@ -6,6 +6,7 @@ struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
@@ -34,6 +35,10 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity, minHeight: 300)
             case .loaded:
                 loaded
+                    // Someone joins or is disconnected: rows fade, the card eases to its new
+                    // height and the sections below move with it. Reduce Motion: the list snaps,
+                    // since the sections below can't fade into their new place.
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
             }
         }
         .task {
@@ -222,8 +227,8 @@ struct ProfileView: View {
                 FamilyEmptyCard { isInvitePresented = true }
             } else {
                 ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
-                    if index > 0 { ProfileDivider(leading: 73) }
-                    memberRow(member)
+                    if index > 0 { ProfileDivider(leading: 73).transition(.opacity) }
+                    memberRow(member).transition(.opacity)
                 }
             }
         }

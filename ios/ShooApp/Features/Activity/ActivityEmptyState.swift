@@ -173,6 +173,8 @@ private struct ActivityStatusPill: View {
 
 /// Figma "Button / Blue Button / Primary": blue gradient capsule, 1.5 pt stroke, white icon + label.
 private struct ActivityBlueButtonStyle: ButtonStyle {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .labelStyle(BlueButtonLabelStyle())
@@ -189,6 +191,9 @@ private struct ActivityBlueButtonStyle: ButtonStyle {
             )
             .overlay(Capsule().stroke(ActivityStyle.blueButtonStroke, lineWidth: 1.5))
             .opacity(configuration.isPressed ? 0.8 : 1)
+            // Reduce Motion: the dim alone.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

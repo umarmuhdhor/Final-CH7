@@ -25,6 +25,8 @@ struct ProfilePageView: View {
                 ProfileStyle.background.ignoresSafeArea()
             }
         }
+        // A new name or avatar saved (the Kelola profil sheets close on success).
+        .sensoryFeedback(.success, trigger: model?.profileSaves ?? 0)
         .task {
             if model == nil {
                 let model = ProfileModel(repository: env.repository, settings: env.settings, notifications: env.notifications)
@@ -54,7 +56,26 @@ struct ProfileRadio: View {
             }
         }
         .frame(width: 24, height: 24)
+        // Ring ↔ fill: a 0.2 s cross-fade, gentle enough for Reduce Motion.
+        .animation(.easeInOut(duration: 0.2), value: isOn)
         .accessibilityHidden(true)
+    }
+}
+
+/// A choice in a Profile list eases into its chosen look and taps once (pattern: the onboarding avatars).
+/// Reduce Motion: a 0.2 s ease. `movesLayout`: the choice changes its size, so Reduce Motion snaps it instead.
+private struct ProfileSelectionMotion: ViewModifier {
+    let isSelected: Bool
+    var movesLayout = false
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .animation(
+                reduceMotion ? (movesLayout ? nil : .easeInOut(duration: 0.2)) : .snappy(duration: 0.2),
+                value: isSelected
+            )
+            .sensoryFeedback(.selection, trigger: isSelected) { _, now in now }
     }
 }
 
@@ -83,6 +104,7 @@ private struct RadioRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .modifier(ProfileSelectionMotion(isSelected: isSelected))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -316,6 +338,7 @@ private struct ModeCard<Icon: View>: View {
             .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
+        .modifier(ProfileSelectionMotion(isSelected: isSelected))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
@@ -1165,6 +1188,8 @@ private struct ThemeOption: View {
                         RoundedRectangle(cornerRadius: 21, style: .continuous)
                             .strokeBorder(ProfileStyle.link, lineWidth: 2)
                             .opacity(isSelected ? 1 : 0)
+                            // The ring still fades with Reduce Motion, when the 4 pt move snaps.
+                            .animation(.easeInOut(duration: 0.2), value: isSelected)
                     )
                 title
                     .profileFont(15, isSelected ? .medium : .regular, tracking: -0.15)
@@ -1174,6 +1199,8 @@ private struct ThemeOption: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The 5 ↔ 3 pt inset moves the name and radio 4 pt: eased, or snapped with Reduce Motion.
+        .modifier(ProfileSelectionMotion(isSelected: isSelected, movesLayout: true))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
@@ -1258,6 +1285,7 @@ private struct AccessibilityPage: View {
 private struct TextSizeSlider: View {
     @Binding var level: TextSizeLevel
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private let levels = TextSizeLevel.allCases
 
@@ -1285,6 +1313,8 @@ private struct TextSizeSlider: View {
                         .frame(width: 28, height: 28)
                         .offset(x: x(level.rawValue) - 14)
                 }
+                // The thumb and the blue rail glide to the next stop; Reduce Motion: they jump.
+                .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: level)
                 .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { value in
@@ -1295,6 +1325,7 @@ private struct TextSizeSlider: View {
             .frame(height: 28)
             Text(verbatim: "A").font(FigmaFont.font(size: 22, weight: .medium)).foregroundStyle(ProfileStyle.ink)
         }
+        .sensoryFeedback(.selection, trigger: level)
         .accessibilityElement()
         .accessibilityLabel(Text("Text size"))
         .accessibilityValue(Text(verbatim: L10n.string(level.title, language: AppLanguage(locale: locale))))
