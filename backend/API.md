@@ -1046,7 +1046,9 @@ sending, so two runs never push twice.
   - `id`: `Perlindungan Mom mati: Shoo tidak berjalan di Safari sejak sehari`
 - **Weekly summary** (`notifications.weeklySummary`, off by default): Monday from 08:00 in the
   device's `timeZone`, outside quiet hours, once per local Monday. Counts of `blocked` and `warning`
-  scans in the last 7 days, the Guardian's members included. Counts only, no sites.
+  scans in the last 7 days, the Guardian's members included. Counts only, no sites. Guardian devices
+  only: a protected device never gets it, and its copy from `POST /devices/me/protected` starts with
+  `weeklySummary: false` (the Protected settings page has no switch for it).
   - `en`: `Your week for you and your family: 2 sites blocked, 1 warning.`
   - `id`: `Ringkasan minggu ini untuk kamu dan keluargamu: 2 situs diblokir, 1 peringatan.`
 

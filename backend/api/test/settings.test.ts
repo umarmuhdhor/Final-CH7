@@ -263,6 +263,16 @@ describe("hourly cron: Ringkasan mingguan", () => {
     expect(sender.sent.map((m) => m.body)).toEqual(["Your week: no dangerous sites for you."]);
   });
 
+  // Fase 27j (F-N4): the Protected page has no summary switch. A protected copy made before the
+  // copy started with it off, or a PATCH from another client, must not keep one going.
+  it("never for a protected device, even with the column on", async () => {
+    const p = await createDevice("Mom");
+    await patch(p, { apnsToken: TOKEN, notifications: { weeklySummary: true } });
+    const sender = new Recorder();
+    await runNotifications(sql, env, { sender, now: MONDAY_0810_WIB });
+    expect(sender.sent).toHaveLength(0);
+  });
+
   it("text in Indonesian", () => {
     expect(summaryText("id", { blocked: 3, warnings: 5, family: true })).toBe("Ringkasan minggu ini untuk kamu dan keluargamu: 3 situs diblokir, 5 peringatan.");
   });
