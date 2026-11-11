@@ -108,9 +108,10 @@ async function recountFamilies(tx: TransactionSql, domain: string): Promise<void
     select count(distinct by_device_id)::int as n from verdicts
     where domain = ${domain} and value = 'not_safe' and global_eligible`;
   if (c!.n > 0) {
-    await tx`insert into blocklist_entries (domain, families) values (${domain}, ${c!.n})
-             on conflict (domain) do update set families = excluded.families
-             where blocklist_entries.families is distinct from excluded.families`;
+    // Insert or recount. A new row comes back rejected when the reviewer's last decision on the
+    // domain was a reject (fase 27c, F-B7): the function reads admin.review_decisions, which
+    // shoo_api cannot (migration 20261111100000_queue_blocklist_domain.sql).
+    await tx`select public.queue_blocklist_domain(${domain}, ${c!.n})`;
   } else {
     // A queued domain nobody supports any more is browsing history without a purpose (D-alief-40):
     // drop it, rejected or not. Approved or removed rows are the reviewer's record and stay.
