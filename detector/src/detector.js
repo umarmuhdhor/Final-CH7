@@ -415,7 +415,62 @@
         if (host && isOfficial(host)) return [];
         if (snapshot.domain && isOfficial(String(snapshot.domain).toLowerCase())) return [];
         const link = linkSignal(snapshot);
-        return [...analyzeBrand(snapshot, host), ...(link ? [link] : [])];
+        const found = [...analyzeBrand(snapshot, host), ...(link ? [link] : [])];
+        return [...found, ...analyzeForms(snapshot, found)];
+    }
+
+    // ---------- layer 2C: credential form on a suspicious name (#379) ----------
+    // Offline, with no session or with the server down, layer 3 never runs, and a BCA PIN/OTP/KTP page scored
+    // 14 "low risk". This is a small on-device copy of layer 3's form check: the same ids (asks_*), lower
+    // weights, and only when the address already imitates a brand (lookalike_domain, brand_plus_keyword) or the
+    // whole link looks like a scam link (suspicious_link >= 20). A weak hint alone (cheap TLD 5, a 10-point link)
+    // is not enough: legit KYC and checkout pages on odd names stay silent (eval traps). When /analyze answers, its layer 3 signal of
+    // the same id is heavier and replaces this one (mergeSignals keeps the heaviest per id).
+    const FORM_IGNORED = new Set(["hidden", "submit", "button", "reset", "image", "checkbox", "radio"]);
+    const FORM_RULES = [
+        { id: "asks_ktp", weight: 15, words: ["ktp", "nik", "induk kependudukan", "national id", "id card", "kartu identitas"] },
+        { id: "asks_cvv", weight: 15, words: ["cvv", "cvc", "card verification"] },
+        { id: "asks_card", weight: 15, words: ["nomor kartu", "no kartu", "card number", "cc number", "cardnumber", "ccnumber", "kartu kredit", "kartu debit", "credit card", "debit card"] },
+        { id: "asks_otp", weight: 15, words: ["otp", "kode verifikasi", "verification code", "sms code", "mobile token", "keybca", "key bca"] },
+        { id: "asks_pin", weight: 20, words: ["pin", "mpin", "passcode", "kode sandi", "kode akses"], not: ["postal", "zip", "kodepos", "kode pos", "lokasi", "location", "map"] },
+    ];
+    const FORM_TEXT = {
+        asks_pin: { label: { en: "Form asks for a PIN or passcode", id: "Form meminta PIN atau kode sandi" }, labelSimple: { en: "Asks for your secret PIN", id: "Meminta PIN rahasia kamu" } },
+        asks_otp: { label: { en: "Form asks for a one-time code (OTP)", id: "Form meminta kode sekali pakai (OTP)" }, labelSimple: { en: "Asks for the code sent to your phone", id: "Meminta kode yang dikirim ke HP kamu" } },
+        asks_card: { label: { en: "Form asks for a card number", id: "Form meminta nomor kartu" }, labelSimple: { en: "Asks for your bank card number", id: "Meminta nomor kartu bank kamu" } },
+        asks_cvv: { label: { en: "Form asks for the card security code (CVV)", id: "Form meminta kode keamanan kartu (CVV)" }, labelSimple: { en: "Asks for the 3 digits on the back of your card", id: "Meminta 3 angka di belakang kartu kamu" } },
+        asks_ktp: { label: { en: "Form asks for a KTP number", id: "Form meminta nomor KTP" }, labelSimple: { en: "Asks for your ID card number", id: "Meminta nomor KTP kamu" } },
+    };
+
+    /** Whole words / word pairs of a field's name, id, label, placeholder and autocomplete. */
+    function fieldWords(field) {
+        const text = [field.name, field.id, field.label, field.placeholder, field.autocomplete]
+            .filter((v) => typeof v === "string")
+            .join(" ")
+            .replace(/([a-z])([A-Z])/g, "$1 $2")
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter(Boolean);
+        const words = new Set(text);
+        for (let i = 0; i + 1 < text.length; i++) words.add(`${text[i]} ${text[i + 1]}`);
+        return words;
+    }
+
+    const FORM_GATE = (s) => s.id === "lookalike_domain" || s.id === "brand_plus_keyword" || (s.id === "suspicious_link" && s.weight >= 20);
+
+    function analyzeForms(snapshot, found) {
+        if (!found.some(FORM_GATE) || !Array.isArray(snapshot.forms)) return [];
+        const hits = new Map(); // id -> evidence of the first field
+        for (const form of snapshot.forms) {
+            for (const field of Array.isArray(form?.fields) ? form.fields : []) {
+                if (!field || FORM_IGNORED.has(String(field.type || "").toLowerCase())) continue;
+                const words = fieldWords(field);
+                const rule = FORM_RULES.find((r) => r.words.some((w) => words.has(w)) && !(r.not || []).some((w) => words.has(w)));
+                if (rule && !hits.has(rule.id)) hits.set(rule.id, field.name || field.id || null);
+            }
+        }
+        if (hits.has("asks_card")) hits.delete("asks_cvv"); // the card is the point; CVV next to it adds nothing
+        return FORM_RULES.filter((r) => hits.has(r.id)).map((r) => signal(r.id, r.weight, FORM_TEXT[r.id], hits.get(r.id)));
     }
 
     /** Layer 2A: does the host NAME imitate a brand? Skips raw IP hosts (no name to read). */

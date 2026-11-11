@@ -97,7 +97,7 @@ Optional, but it drives what the extension marks on the page:
 | `cheap_tld` | 2 | .xyz, .site, .click, ... |
 | `suspicious_link` | 2 | Whole URL looks like a scam link (free-hosting subdomain with bait words, redirect param, random file name, ...). Weight 10–100, the dissector's raw score: the link alone can reach the popup or the block (#140, #231) |
 | `new_domain` | 3 | Domain age in days (made by the server via RDAP) |
-| `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 | Form requests sensitive data |
+| `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 (2) | Form requests sensitive data. Layer 3 on the server. Since #379 the detector also emits `asks_pin` / `asks_otp` / `asks_card` / `asks_cvv` / `asks_ktp` as **layer 2**, with lower weights, only when the address already raised a layer 1–2 signal, so a page offline still shows its credential form. Same id on both layers: the extension keeps the heavier one (`mergeSignals`), never both |
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
 | `urgent_language` | 3 | "blocked in 24 hours", etc. |
 | `unreasonable_request` | 4 | LLM: requested data doesn't fit the page type |

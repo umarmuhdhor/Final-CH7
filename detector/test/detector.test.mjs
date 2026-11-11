@@ -528,3 +528,34 @@ test("#381: brand in a subdomain + bait word on a cheap TLD reaches 30 (was 29)"
     assert.ok(ids(s).includes("brand_plus_keyword") && ids(s).includes("cheap_tld"), ids(s).join(","));
     assert.ok(score(s) >= 30, String(score(s)));
 });
+
+// ---------- #379: credential form on a suspicious name (layer 2C) ----------
+const withForm = (url, fields) =>
+    run({ url, domain: new URL(url).hostname.replace(/^www\./, ""), forms: [{ action: null, fields: fields.map((f) => ({ type: "text", name: null, id: null, label: null, placeholder: null, autocomplete: null, ...f })) }] });
+
+test("#379: PIN / OTP / KTP fields on a brand look-alike count on the phone (layer 2)", async () => {
+    const s = await withForm("https://bca-verifikasi.site/login", [{ name: "nik", label: "NIK KTP" }, { name: "pin", type: "password", label: "PIN" }, { name: "otp", label: "Kode OTP" }]);
+    for (const id of ["asks_ktp", "asks_pin", "asks_otp"]) {
+        assert.equal(find(s, id)?.layer, 2, id);
+    }
+    assert.equal(find(s, "asks_pin").evidence, "pin");
+    assert.ok(score(s) >= 50, String(score(s)));
+});
+
+test("#379: the same form on a clean or official name says nothing (layer 3 judges it online)", async () => {
+    const fields = [{ name: "pin", type: "password" }, { name: "otp" }, { name: "cardnumber" }];
+    assert.deepEqual(await withForm("https://toko-maju.co.id/checkout", fields), []);
+    assert.deepEqual(await withForm("https://www.klikbca.com/login", fields), []);
+});
+
+test("#379: postal 'PIN code' and a CVV next to the card number don't add extra signals", async () => {
+    const zip = await withForm("https://bca-verifikasi.site/alamat", [{ name: "pincode", label: "PIN code (postal)" }]);
+    assert.ok(!ids(zip).includes("asks_pin"), ids(zip).join(","));
+    const card = await withForm("https://bca-verifikasi.site/bayar", [{ name: "cardnumber" }, { name: "cvv" }]);
+    assert.ok(ids(card).includes("asks_card") && !ids(card).includes("asks_cvv"), ids(card).join(","));
+});
+
+test("#379: a weak hint alone (cheap TLD, 10-point link) doesn't open the form check", async () => {
+    const fields = [{ name: "nik" }, { name: "otp" }, { name: "cardnumber" }];
+    assert.deepEqual(ids(await withForm("https://random-shop.xyz/checkout", fields)), ["cheap_tld"]);
+});
