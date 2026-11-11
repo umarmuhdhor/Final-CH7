@@ -16,6 +16,7 @@
     "block_review": {"message": "Review in Shoo", "description": "EX-06 Guardian and Protected button → Detail in app"},
     "block_open_app": {"message": "Open Shoo", "description": "EX-06 button when the app isn't set up yet"},
     "block_back": {"message": "Back to a safe page", "description": "EX-06 button: goes back to the page before the blocked one"},
+    "block_remembered": {"message": "Shoo already blocked this site on this phone", "description": "EX-06 block screen line when the page is blocked from block memory (#382): replaces the reasons, which may belong to another page of the same site"},
     "block_verified_scam": {"message": "Verified scam by $NAME$", "description": "EX-06 after a Not safe verdict; guardian's name", "placeholders": {"name": {"content": "$1"}}},
     "mark_dont_pin": {"message": "Shoo: don't enter your PIN here", "description": "EX-05 hint under a struck-through sensitive field"},
     "mark_dont_otp": {"message": "Shoo: don't enter your OTP here", "description": "EX-05 hint under a struck-through sensitive field"},
