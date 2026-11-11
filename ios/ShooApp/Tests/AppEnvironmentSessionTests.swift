@@ -61,6 +61,40 @@ struct AppEnvironmentSessionTests {
         #expect(server.requests.map(\.path) == ["/devices"])
     }
 
+    /// QA 2026-11-11 #6: reinstalled, the Keychain still holds the old token. That device is deleted with its
+    /// own token before the new one registers, so it stops holding a family place.
+    @Test func reinstallDeletesTheEarlierDeviceFirst() async throws {
+        let server = StubServer(token: "shoo_old_install")
+        server.reply { $0.path == "/devices" ? Self.registered : Self.ok }
+        let env = environment(server: server)
+        _ = try await env.register(name: "Rina", mode: .protected)
+        let requests = server.requests
+        #expect(requests.map { "\($0.method) \($0.path)" } == ["DELETE /devices/me", "POST /devices"])
+        #expect(requests.first?.headers["Authorization"] == "Bearer shoo_old_install")
+        #expect(server.session.token == "shoo_fresh_token")
+        #expect(env.settings.mode == .protected)
+        #expect(server.unauthorizedCount == 0)
+    }
+
+    /// The old device is already gone (401 / 404) or the server fails: the new device registers anyway,
+    /// and no "Session expired" shows for the old token.
+    @Test(arguments: [
+        HostStubProtocol.Reply.json(401, #"{"error":{"code":"unauthorized","message":"gone"}}"#),
+        .json(404, #"{"error":{"code":"not_found","message":"gone"}}"#),
+        .json(500, #"{"error":{"code":"internal","message":"boom"}}"#),
+    ])
+    func reinstallStillRegistersWhenTheOldDeviceCantBeDeleted(reply: HostStubProtocol.Reply) async throws {
+        let server = StubServer(token: "shoo_old_install")
+        server.reply { $0.path == "/devices" ? Self.registered : reply }
+        let env = environment(server: server)
+        _ = try await env.register(name: "Rina", mode: .guardian)
+        #expect(server.requests.map(\.path) == ["/devices/me", "/devices"])
+        #expect(server.session.token == "shoo_fresh_token")
+        #expect(env.settings.mode == .guardian)
+        #expect(!env.sessionExpired)
+        #expect(server.unauthorizedCount == 0)
+    }
+
     @Test func indonesianAppTellsTheServerRightAway() async throws {
         let server = StubServer(token: nil)
         server.reply { $0.path == "/devices" ? Self.registered : Self.ok }
