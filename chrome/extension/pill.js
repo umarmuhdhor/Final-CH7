@@ -30,6 +30,10 @@
     function decide(memo, state) {
         if (!memo || memo.scanId !== state.scanId) memo = { scanId: state.scanId, dismissed: false };
         if (memo.dismissed || state.status === "blocked") return { memo, view: { visible: false } };
+        // #369: a Guardian vouched for this link. Say so instead of a 0% "low risk" over a page with danger signs.
+        if (state.verdict?.value === "safe") {
+            return { memo, view: { visible: true, score: 0, tone: "safe", analyzing: false, safeBy: state.verdict.byName || "" } };
+        }
 
         const tone = toneFor(state.score);
         // #379: without layer 3 a low score is "not checked online", never "low risk".
@@ -328,7 +332,9 @@
         const { state, view } = last;
         const { card, chip, big, list, note } = refs;
         card.dataset.tone = view.tone;
-        chip.textContent = t(view.analyzing ? "pill_status_checking" : view.offline ? "pill_status_offline" : `pill_status_${view.tone}`);
+        chip.textContent = view.safeBy !== undefined
+            ? t(view.safeBy ? "pill_status_marked_safe" : "pill_status_marked_safe_anon", [view.safeBy])
+            : t(view.analyzing ? "pill_status_checking" : view.offline ? "pill_status_offline" : `pill_status_${view.tone}`);
         big.textContent = `${view.score}%`;
         card.setAttribute("aria-label", `${chip.textContent} ${big.textContent}`);
 

@@ -188,7 +188,7 @@
         timer = null;
         let reply = null;
         try {
-            reply = await send({ type: "verdict", domain: payload.domain, fresh: true });
+            reply = await send({ type: "verdict", domain: payload.domain, url: payload.url, fresh: true });
         } catch {
             reply = null; // offline → keep waiting
         }

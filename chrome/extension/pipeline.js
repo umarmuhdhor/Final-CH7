@@ -66,7 +66,7 @@
      * @param {(snapshot) => Promise<Signal[]>} deps.analyzeLocal    layer 1–2
      * @param {(snapshot, localSignals) => Promise<{signals: Signal[], rdapRegisteredAt?: string|null}|null>} deps.analyzeRemote
      *   layer 3–4, resolves with no signals on failure. `rdapRegisteredAt` (#270) is kept on the state for report.js
-     * @param {(domain, options?: {fresh: boolean}) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict
+     * @param {(domain, options?: {fresh?: boolean, url?: string}) => Promise<{value: "safe"|"not_safe"}|null>} deps.lookupVerdict  per link when `url` is given (#241)
      * @param {(url) => Promise<{score, signals, recordId}|null>} [deps.recallBlock]  block memory (#231): a site
      *   blocked before is asked for its verdict once and, without a `safe`, blocked again with no layer run
      *   (no /analyze, so no LLM call) and `remembered: true` (report.js sends nothing again)
@@ -111,7 +111,7 @@
             verdictChecked = true;
             let verdict = null;
             try {
-                verdict = await lookupVerdict(state.domain);
+                verdict = await lookupVerdict(state.domain, { url: state.url });
             } catch {
                 verdict = null; // server down → keep detecting (PRD §5)
             }
@@ -142,7 +142,7 @@
                 verdictChecked = true;
                 let verdict = null;
                 try {
-                    verdict = await lookupVerdict(state.domain, { fresh: true });
+                    verdict = await lookupVerdict(state.domain, { fresh: true, url: state.url });
                 } catch {
                     verdict = null;
                 }

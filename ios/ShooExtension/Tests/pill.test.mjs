@@ -123,3 +123,11 @@ test("#379: under 30 with /analyze skipped or failed → 'online check unavailab
     assert.ok(!("offline" in play([{ score: 14, done: false, onlineChecked: false }]).views[0]), "still checking");
     assert.ok(!("offline" in play([{ score: 40, done: true, onlineChecked: false }]).views[0]), "a warning stays a warning");
 });
+
+test("#369: a link marked safe says who vouched for it, not a 0% score", () => {
+    const { views } = play([{ score: 0, status: "normal", done: true, verdict: { value: "safe", byName: "Adhella" } }]);
+    assert.equal(views[0].visible, true);
+    assert.equal(views[0].safeBy, "Adhella");
+    assert.equal(views[0].analyzing, false);
+    assert.ok(!("safeBy" in play([{ score: 0, status: "normal", done: true, verdict: null }]).views[0]));
+});

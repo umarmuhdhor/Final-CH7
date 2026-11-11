@@ -37,6 +37,8 @@
     "pill_status_checking": {"message": "Mengecek", "description": "EX-03 live score card status while layers are still running"},
     "pill_status_safe": {"message": "Risiko rendah", "description": "EX-03 live score card status, score under 30%"},
     "pill_status_offline": {"message": "Cek online tidak tersedia", "description": "EX-03 live score card status under 30% when /analyze was skipped or failed (#379): the score comes from the phone only, so it is not called low risk"},
+    "pill_status_marked_safe": {"message": "Ditandai aman oleh $NAME$", "description": "EX-03 live score card status when a Guardian marked this link safe (#369), shown instead of a score", "placeholders": {"name": {"content": "$1"}}},
+    "pill_status_marked_safe_anon": {"message": "Ditandai aman oleh Guardian", "description": "EX-03 the same, when the verdict carries no name (#369)"},
     "pill_status_warning": {"message": "Waspada", "description": "EX-03 live score card status, 30–49%"},
     "pill_status_danger": {"message": "Bahaya", "description": "EX-03 live score card status, 50–79%"},
     "pill_still_checking": {"message": "Shoo masih mengecek halaman ini.", "description": "EX-03 live score card, no reasons yet while checking"},

@@ -1,6 +1,7 @@
 // Owner: lead. Chrome only. ES module, used by background.js: answers the messages the shared content
 // scripts and blocked.html send (same types as the Safari background.js). Kept free of chrome.* for tests.
 // Content scripts run in the page's process: no reply ever carries the token or the base URLs.
+import { shareableUrl } from "./domain.js";
 
 /**
  * @param {object} deps
@@ -36,7 +37,11 @@ export function createRouter({ getSession, lists, verdicts, domainFor, analyze }
             case "recordId":
                 return { ok: true, recordId: null };
             case "verdict":
-                return verdicts.lookup(message.domain, { fresh: Boolean(message.fresh) });
+                // #241: per link when the page URL comes along (origin + path only, never the full URL).
+                return verdicts.lookup(message.domain, {
+                    fresh: Boolean(message.fresh),
+                    link: typeof message.url === "string" ? shareableUrl(message.url) : null,
+                });
             default:
                 return { ok: false, error: "unknown_type" };
         }
