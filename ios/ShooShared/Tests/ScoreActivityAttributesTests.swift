@@ -29,4 +29,19 @@ struct ScoreActivityAttributesTests {
         #expect(tone(80) == .blocked)
         #expect(tone(10, blocked: true) == .blocked)
     }
+
+    /// #383: the island's colour follows the status the phone sent, not fixed score bands.
+    @Test func toneFollowsTheStatusWhenThePushCarriesIt() throws {
+        func tone(_ score: Int, _ status: String) -> ScoreActivityAttributes.Tone {
+            ScoreActivityAttributes.ContentState(domain: "a.com", score: score, isAnalyzing: false, isBlocked: status == "blocked", status: status).tone
+        }
+        #expect(tone(35, "normal") == .safe) // warnAt moved to 40: a 35 is not a warning
+        #expect(tone(75, "blocked") == .blocked) // blockAt moved to 70: a 75 is blocked
+        #expect(tone(40, "warning") == .warning)
+        #expect(tone(60, "warning") == .danger)
+        let json = #"{"domain":"a.com","score":75,"isAnalyzing":false,"isBlocked":true,"status":"blocked"}"#
+        let state = try JSONDecoder().decode(ScoreActivityAttributes.ContentState.self, from: Data(json.utf8))
+        #expect(state.status == "blocked")
+        #expect(state.tone == .blocked)
+    }
 }

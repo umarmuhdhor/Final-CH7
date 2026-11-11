@@ -171,13 +171,13 @@ While a `start` waits for the app's update token, there is no second `start` for
 { "aps": {
     "timestamp": 1731200000,
     "event": "start",
-    "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false },
+    "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false, "status": "warning" },
     "attributes-type": "ScoreActivityAttributes",
     "attributes": {},
     "stale-date": 1731200600
 } }
 ```
-- `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`.
+- `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`. `status` (#383, additive) = the `status` from `POST /live`, copied as is: the island takes its colour from it, so a threshold moved in `/config/public` can't colour a block as a warning. A push without it still decodes (built-in 30 / 50 / 80 bands).
 - `attributes` (start only) = `ScoreActivityAttributes`: empty. The island follows the page, so the domain lives in `content-state`.
 - `update` has `timestamp`, `event`, `content-state`, `stale-date` (+10 min). `end` has `timestamp`, `event`, `content-state` and `dismissal-date` (= `timestamp`, gone at once).
 
