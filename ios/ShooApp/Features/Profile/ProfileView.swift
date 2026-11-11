@@ -35,6 +35,9 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity, minHeight: 300)
             case .loaded:
                 loaded
+                    // Someone joins or is disconnected: rows fade, the card eases to its new
+                    // height and the sections below move with it.
+                    .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
             }
         }
         .task {
@@ -229,8 +232,6 @@ struct ProfileView: View {
                 }
             }
         }
-        // Someone joins or is disconnected: rows fade and the card eases to its new height.
-        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
     }
 
     private func memberRow(_ member: FamilyMember) -> some View {
