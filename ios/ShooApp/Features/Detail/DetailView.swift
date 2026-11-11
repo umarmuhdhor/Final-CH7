@@ -25,8 +25,8 @@ struct DetailView: View {
     /// The link pill grows with Dynamic Type; the title keeps clear of it.
     @State private var pillHeight: CGFloat = 34
 
-    init(scanId: String, repository: any ShooRepository) {
-        _model = State(initialValue: DetailModel(scanId: scanId, repository: repository))
+    init(scanId: String, repository: any ShooRepository, onVerdictSaved: @escaping @MainActor () -> Void = {}) {
+        _model = State(initialValue: DetailModel(scanId: scanId, repository: repository, onVerdictSaved: onVerdictSaved))
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }

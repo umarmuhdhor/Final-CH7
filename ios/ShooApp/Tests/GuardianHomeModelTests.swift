@@ -130,6 +130,22 @@ struct GuardianHomeModelTests {
         #expect(model.pendingScan?.domain == "promo-undian-shopee.click")
     }
 
+    /// K8 (F-A15): a saved Home verdict tells the app (Activity reloads when it shows again); a failed one does not.
+    @Test func onlyASavedVerdictTellsTheApp() async throws {
+        var told = 0
+        let failing = GuardianHomeModel(
+            repository: StubRepository(verdictFailures: 1), settings: try settings(), scope: .family,
+            extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow }, onVerdictSaved: { told += 1 }
+        )
+        await failing.refresh()
+        await failing.decide(.notSafe)
+        #expect(failing.verdictFailed)
+        #expect(told == 0)
+        await failing.decide(.notSafe)
+        #expect(!failing.verdictFailed)
+        #expect(told == 1)
+    }
+
     /// GD-07 (#190, #191): a warning site takes a verdict too.
     @Test func verdictOnAWarningSiteIsSaved() async throws {
         let model = model(settings: try settings())

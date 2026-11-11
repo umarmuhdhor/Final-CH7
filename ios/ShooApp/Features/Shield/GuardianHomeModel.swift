@@ -57,6 +57,8 @@ final class GuardianHomeModel {
     @ObservationIgnored private let readExtensionStatus: () async -> ExtensionStatus
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let now: () -> Date
+    /// Told after every verdict the server confirmed (`AppEnvironment.verdictSaves`, K8).
+    @ObservationIgnored private let onVerdictSaved: @MainActor () -> Void
     @ObservationIgnored private var generation = 0
 
     init(
@@ -64,13 +66,15 @@ final class GuardianHomeModel {
         settings: AppSettings,
         scope: Scope = .family,
         extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
         self.repository = repository
         self.settings = settings
         self.scope = scope
         readExtensionStatus = extensionStatus
         self.now = now
+        self.onVerdictSaved = onVerdictSaved
     }
 
     // MARK: Derived
@@ -208,6 +212,7 @@ final class GuardianHomeModel {
                 scans[index].verdict = verdict
             }
             verdictSaves += 1
+            onVerdictSaved()
         } catch RepositoryError.api(.verdictNotAllowed, _) {
             verdictNotAllowed = true
         } catch {
