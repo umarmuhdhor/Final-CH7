@@ -115,15 +115,15 @@ final class ProfileModel {
             guard let stats = profile?.stats else { return [] }
             return [
                 ProfileStat(value: number(days(since: stats.since)), label: "Days protected"),
-                ProfileStat(value: number(stats.blocked), label: "Sites blocked"),
-                ProfileStat(value: linked.checkedCount.map(number) ?? "—", label: "Sites checked"),
+                ProfileStat(value: number(stats.blocked), label: "Blocked"),
+                ProfileStat(value: linked.checkedCount.map(number) ?? "—", label: "Checked"),
             ]
         case .guardian:
             guard !membersFailed, !members.isEmpty, members.allSatisfy({ $0.stats != nil }) else { return [] }
             let since = members.compactMap(\.connectedAt).min()
             return [
                 ProfileStat(value: since.map { number(days(since: $0)) } ?? number(0), label: "Days protecting"),
-                ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.blocked ?? 0) }), label: "Sites blocked"),
+                ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.blocked ?? 0) }), label: "Blocked"),
                 ProfileStat(value: number(members.reduce(0) { $0 + ($1.stats?.warnings ?? 0) }), label: "Warnings"),
             ]
         }

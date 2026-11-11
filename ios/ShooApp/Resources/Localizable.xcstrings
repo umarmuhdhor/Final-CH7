@@ -396,12 +396,12 @@
         }
       }
     },
-    "%@ still sees Shoo's warning when opening this site." : {
+    "Shoo no longer blocks or warns %@ on this link." : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ tetap melihat peringatan Shoo saat membuka situs ini."
+            "value" : "Shoo tidak lagi memblokir atau memperingatkan %@ di link ini."
           }
         }
       }
@@ -841,18 +841,18 @@
       }
     },
     "activity.note.safe %@" : {
-      "comment" : "Activity row (Figma 450:8744): the guardian marked this blocked site safe. %@ = guardian's name or 'you'",
+      "comment" : "Activity row (Figma 450:8744): the guardian marked this link safe (#369: no more warnings on it). %@ = guardian's name or 'you'",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "According to %@, this link is safe.\nShoo still doesn't recommend opening it"
+            "value" : "%@ marked this link safe."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menurut %@ link ini aman.\nShoo tetap tak menyarankan untuk membuka link ini"
+            "value" : "%@ menandai link ini aman."
           }
         }
       }
@@ -1264,6 +1264,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ubah foto"
+          }
+        }
+      }
+    },
+    "Checked" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperiksa"
           }
         }
       }
