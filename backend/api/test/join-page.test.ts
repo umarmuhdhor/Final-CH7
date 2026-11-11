@@ -13,7 +13,7 @@ const page = async (path: string, lang?: string) => {
 const nonceOf = (res: Response) => /script-src 'nonce-([A-Za-z0-9_-]+)'/.exec(res.headers.get("content-security-policy") ?? "")?.[1];
 
 describe("GET /j/:code", () => {
-  it("valid code: shoo:// button and the code in large text, strict headers", async () => {
+  it("valid code: shoo:// button and the code in six boxes, strict headers", async () => {
     const { res, html } = await page("/j/482193");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toMatch(/^text\/html; charset=utf-8/i);
@@ -22,13 +22,16 @@ describe("GET /j/:code", () => {
     expect(csp).toContain("style-src 'unsafe-inline'");
     expect(csp).not.toContain("unsafe-eval");
     expect(csp).not.toMatch(/script-src[^;]*unsafe-inline/);
+    expect(csp).toContain("img-src 'self'");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     expect(html).toContain('href="shoo://join?code=482193"');
     expect(html).toContain(">482193<");
+    expect([...html.matchAll(/class="digit">(\d)</g)].map((m) => m[1]).join("")).toBe("482193");
     expect(html).toContain('lang="en"');
-    expect(html).toContain("Open Shoo");
+    expect(html).toContain("Open in the Shoo app");
+    expect(html).toContain('src="/og/join-hero.png"');
   });
 
   it("Install copies the invite link, then goes to the store; the only script carries the header's nonce", async () => {
@@ -40,6 +43,7 @@ describe("GET /j/:code", () => {
     expect(html.match(/<script/g)).toHaveLength(1);
     expect(html).toContain(`<script nonce="${nonce}">`);
     expect(html).toContain("navigator.clipboard.writeText");
+    expect(html).toContain('id="copy" class="copy" type="button" data-code="482193"');
     expect(html).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon|document\.cookie|localStorage/);
   });
 
@@ -75,6 +79,9 @@ describe("GET /j/:code", () => {
     const { html } = await page("/j/482193", "id-ID,id;q=0.9,en;q=0.8");
     expect(html).toContain('lang="id"');
     expect(html).toContain("Belum punya Shoo?");
+    expect(html).toContain("Buka di app Shoo");
+    expect(html).toContain("Salin kode");
+    expect(html).toContain("Berlaku maks. 30 menit");
   });
 
   it.each([
@@ -96,7 +103,7 @@ describe("GET /j/:code", () => {
   });
 
   it("does not reveal whether a code exists (no DB lookup)", async () => {
-    const strip = (html: string) => html.replace(/nonce="[^"]+"/, "");
+    const strip = (html: string) => html.replace(/nonce="[^"]+"/, "").replace(/class="digit">\d</g, 'class="digit"><');
     const a = await page("/j/000000");
     const b = await page("/j/999999");
     expect(strip(a.html).replaceAll("000000", "")).toBe(strip(b.html).replaceAll("999999", ""));
@@ -132,6 +139,18 @@ describe("GET /og/invite.jpg", () => {
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect([...bytes.slice(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
     expect(bytes.length).toBeLessThan(300 * 1024);
+  });
+});
+
+describe("GET /og/join-hero.png", () => {
+  it("serves the page hero as a cacheable PNG (no user data)", async () => {
+    const res = await call("/og/join-hero.png");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(res.headers.get("cache-control")).toBe("public, max-age=86400");
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect([...bytes.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(bytes.length).toBeLessThan(100 * 1024);
   });
 });
 
