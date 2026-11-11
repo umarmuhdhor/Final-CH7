@@ -43,7 +43,8 @@ jobs:
       # Keychain tests work. CODE_SIGNING_ALLOWED=NO strips them and Keychain calls fail with -34018.
       # The full log is too long to read; keep its tail plus every assertion line, so a failing
       # test shows why it failed and not only its name. Each finished test is printed as it happens,
-      # so a run that gets cancelled still shows how far it got and what took the time.
+      # so a run that gets cancelled still shows how far it got and what took the time. The greps also match
+      # the "Test case '…' passed on 'Clone 1 of …' (… seconds)" lines xcodebuild prints for parallel workers.
       # FigmaParityUITests only takes QA screenshots and is not a gate; it took 17 of the 47 test minutes.
       # A failing test runs once more before it fails the job, so one flaky run does not cost a whole new
       # 30-minute run; a test that fails twice still fails the job. No parallel workers: two cloned
@@ -60,11 +61,11 @@ jobs:
             -skip-testing:ShooAppUITests/FigmaParityUITests \
             -retry-tests-on-failure -test-iterations 2 \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-            2>&1 | tee xcodebuild.log | grep --line-buffered -E "^Test Case .* (passed|failed|skipped) \("
+            2>&1 | tee xcodebuild.log | grep --line-buffered -iE "^Test case .* (passed|failed|skipped) (on|\()"
           status=${PIPESTATUS[0]}
           set -e
           tail -40 xcodebuild.log
           echo "::group::Assertion failures"
-          grep -E ": error: |\] failed \(|recorded an issue|Expectation failed" xcodebuild.log | cut -c1-600 | head -60 || true
+          grep -E ": error: |\] failed \(|' failed on |recorded an issue|Expectation failed" xcodebuild.log | cut -c1-600 | head -60 || true
           echo "::endgroup::"
           exit $status
