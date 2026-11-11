@@ -79,6 +79,7 @@ struct SafariDefaultView: View {
             if cameBack {
                 Button("Keep going", action: onContinue)
                     .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .transition(.opacity)
                     .accessibilityIdentifier("safariDefault.continue")
             } else {
                 Button("Make Safari default") {
@@ -86,6 +87,7 @@ struct SafariDefaultView: View {
                     Task { await SafariDefaultSetup.openSettings() }
                 }
                 .buttonStyle(OnboardingCapsuleButtonStyle())
+                .transition(.opacity)
                 .accessibilityIdentifier("safariDefault.open")
             }
             OnboardingTutorialLink { isVideoPresented = true }
@@ -95,6 +97,8 @@ struct SafariDefaultView: View {
         .largeHeadline()
         // Figma "Frame 2": 354 wide, one line.
         .headlineInset(24)
+        // Back from Settings, "Make Safari default" crossfades into "Keep going".
+        .animation(.smooth(duration: 0.3), value: cameBack)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, openedSettings { cameBack = true }
         }
