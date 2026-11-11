@@ -1,4 +1,4 @@
-import type { Sql } from "postgres";
+import type { PendingQuery, Row, Sql } from "postgres";
 import { opsWriter, type OpsWriter } from "../db/repo/ops";
 import type { Env, Language } from "../env";
 import { errorInfo } from "../http/logError";
@@ -70,6 +70,27 @@ async function writeOps(write: () => Promise<void>): Promise<void> {
 }
 
 /**
+ * isQuiet (services/push/quiet.ts) in SQL, for the device columns of alias `g` at the injected `now`:
+ * local minutes in the device's zone, a window that may cross midnight, start = end = all day. An
+ * unknown zone falls back to WIB like localTime does, instead of failing the whole query. The name
+ * matches without case, as Intl accepts it (PATCH /devices/me stores what Intl took). Lets the cron
+ * filter quiet hours before its limit (fase 27k F-N10).
+ * The zone map is an uncorrelated subquery, so Postgres builds it once per query (an InitPlan; the
+ * pg_timezone_names scan takes ~15 ms), and `offset 0` keeps the local time from being inlined into
+ * each comparison. EXPLAIN ANALYZE on 10k rows: one scan, 24 ms in all.
+ */
+export function quietSql(sql: Sql, now: Date): PendingQuery<Row[]> {
+  return sql`(g.quiet_hours and (
+    select g.quiet_start = g.quiet_end
+        or (g.quiet_start < g.quiet_end and x.m >= g.quiet_start and x.m < g.quiet_end)
+        or (g.quiet_start > g.quiet_end and (x.m >= g.quiet_start or x.m < g.quiet_end))
+    from (select (extract(hour from t.local) * 60 + extract(minute from t.local))::int as m
+          from (select ${now.toISOString()}::timestamptz at time zone coalesce(
+                  (select jsonb_object_agg(lower(z.name), z.name) from pg_timezone_names z) ->> lower(g.time_zone),
+                  'Asia/Jakarta') as local offset 0) t) x))`;
+}
+
+/**
  * A member whose extension has not reported for 24 h ("Ekstensi mati", same rule as
  * GET /family/members) is pushed to the guardian once per off period. The mark clears when the
  * member reports again. A member that never reported is not "off" (contract: no evidence).
@@ -81,19 +102,19 @@ async function protectionOff(sql: Sql, now: Date, limit: number): Promise<PushMe
     where m.id = l.protected_id and l.off_notified_at is not null
       and m.ext_last_seen_at > now() - interval '24 hours'`;
   if (limit <= 0) return [];
-  const rows = await sql<(Candidate & { protectedId: string })[]>`
-    select g.id, l.protected_id as "protectedId",
-           g.quiet_hours as "quietHours", g.quiet_start as "quietStart", g.quiet_end as "quietEnd", g.time_zone as "timeZone"
+  // Quiet hours: not claimed, so the next run after the window sends it. Filtered before the limit,
+  // so guardians inside their window cannot fill it and starve one outside (F-N10).
+  const due = await sql<{ protectedId: string }[]>`
+    select l.protected_id as "protectedId"
     from family_links l
     join devices m on m.id = l.protected_id
     join devices g on g.id = l.guardian_id
     where l.off_notified_at is null
       and m.ext_last_seen_at <= now() - interval '24 hours'
       and g.notify_protection_off and g.apns_token is not null
-    order by m.ext_last_seen_at
-    limit 200`;
-  // Quiet hours: not claimed, so the next run after the window sends it.
-  const due = rows.filter((r) => !isQuiet(r, now)).slice(0, limit);
+      and not ${quietSql(sql, now)}
+    order by m.ext_last_seen_at, l.protected_id
+    limit ${limit}`;
   if (due.length === 0) return [];
   const claimed = await sql<{ guardianId: string; apnsToken: string; language: Language; member: string }[]>`
     update family_links l set off_notified_at = now()
