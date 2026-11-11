@@ -2,11 +2,12 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
 import { runRetention } from "../src/cron/retention";
-import { recentFavicon } from "../src/db/repo/scans";
+import { recentFavicon, reserveFavicon } from "../src/db/repo/scans";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
 import { limits } from "../src/http/rateLimit";
 import { downloadFavicon, isPublicIp, MAX_FAVICON_BYTES, sniffFavicon } from "../src/services/faviconFetch";
 import { faviconLink, screenshotLink } from "../src/services/screenshotLinks";
+import { R2ReplicaStore } from "../src/services/replicaStore";
 import { screenshotStore } from "../src/services/screenshots";
 import { jpeg, png } from "./helpers/images";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -339,8 +340,9 @@ async function until(done: () => Promise<boolean> | boolean): Promise<void> {
   }
   throw new Error("timed out waiting for waitUntil work");
 }
+/** The stored path, once its upload finished (favicon_ready_at, fase 27k F-B8). */
 const stored = async (id: string) => {
-  await until(async () => (await faviconPath(id)) !== null);
+  await until(async () => (await sql`select 1 from scans where id = ${id} and favicon_ready_at is not null`).length === 1);
   return (await faviconPath(id))!;
 };
 const droppedFor = (reason: string) => until(() => logs.some((l) => l.includes(`"event":"favicon_dropped"`) && l.includes(`"reason":"${reason}"`)));
@@ -516,6 +518,76 @@ describe("faviconUrl in GET /scans and GET /scans/{id} (PR-05)", () => {
   });
 });
 
+// Fase 27k F-B8: the path is reserved (and tombstoned) before the R2 put, like a replica's. The link
+// and a reuse may only follow a finished put (favicon_ready_at, as replica_ready_at in fase 22).
+describe("favicon link only after the upload (fase 27k F-B8)", () => {
+  /** Holds every R2 put until release(); the reservation commits first, as in production. */
+  let held: (() => void) | undefined;
+  const holdPuts = () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    held = release;
+    const real = R2ReplicaStore.prototype.put;
+    vi.spyOn(R2ReplicaStore.prototype, "put").mockImplementation(async function (this: R2ReplicaStore, ...args) {
+      await gate;
+      return real.apply(this, args);
+    });
+    return release;
+  };
+  // Also after a failed assertion: a held put would keep its waitUntil work hanging into later tests.
+  afterEach(() => {
+    held?.();
+    held = undefined;
+  });
+  const list = async (viewer: Created, q = "") =>
+    ((await (await call(`/scans${q}`, { token: viewer.token })).json()) as { items: { id: string; faviconUrl: string | null }[] }).items;
+
+  it("faviconUrl stays null in list and detail while the put is pending, a link 404s; it works once stored", async () => {
+    mockInternet({ [ICON_URL]: () => image(png(16, 16)) });
+    const release = holdPuts();
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Mom");
+    await connect(g, p);
+    const id = await postScan(p);
+    const path = `${p.deviceId}/${id}-icon.png`;
+    await until(async () => (await faviconPath(id)) === path);
+    for (const viewer of [p, g]) expect((await detail(viewer, id)).faviconUrl).toBeNull();
+    expect((await list(p)).find((i) => i.id === id)?.faviconUrl).toBeNull();
+    expect((await list(g, "?owner=family")).find((i) => i.id === id)?.faviconUrl).toBeNull();
+    // A link signed by hand opens nothing yet.
+    const early = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    expect((await call(`/favicons/${id}${early.search}`)).status).toBe(404);
+
+    release();
+    await until(async () => (await detail(p, id)).faviconUrl !== null);
+    expect(await objectExists(path)).toBe(true);
+    for (const viewer of [p, g]) expect((await call(await linkFor(viewer, id))).status).toBe(200);
+  });
+
+  it("a reuse never picks an upload still in flight; it does once the put finished", async () => {
+    mockInternet({ [ICON_URL]: () => image(png(16, 16)) });
+    const release = holdPuts();
+    const p = await createDevice("Mom");
+    const first = await postScan(p);
+    const path = `${p.deviceId}/${first}-icon.png`;
+    await until(async () => (await faviconPath(first)) === path);
+    // A younger row of the same site (from before one row per site).
+    const younger = async () => (await sql<[{ id: string }]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now()) returning id`)[0].id;
+    const early = await younger();
+    expect(await reserveFavicon(sql, { id: early, ownerId: p.deviceId, domain }, null)).toEqual({ none: true });
+    expect(await faviconPath(early)).toBeNull();
+
+    release();
+    await until(async () => (await detail(p, first)).faviconUrl !== null);
+    const late = await younger();
+    expect(await reserveFavicon(sql, { id: late, ownerId: p.deviceId, domain }, null)).toEqual({ reuse: path });
+    // The reuse row points at a stored object, so its link works at once.
+    expect((await call(await linkFor(p, late))).status).toBe(200);
+  });
+});
+
 describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
   const setup = async () => {
     mockInternet({ [ICON_URL]: () => image(ico(), "image/x-icon") });
@@ -611,8 +683,8 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
     const path = await stored(id);
     // A younger row of the same site from before one row per site (it reused the favicon).
     const [{ id: younger }] = await sql<[{ id: string }]>`
-      insert into scans (owner_id, url, domain, score, status, detected_at, favicon_path)
-      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}) returning id`;
+      insert into scans (owner_id, url, domain, score, status, detected_at, favicon_path, favicon_ready_at)
+      values (${p.deviceId}, ${blocked92.url}, ${domain}, 92, 'blocked', now(), ${path}, now()) returning id`;
     await sql`update scans set created_at = now() - interval '15 days' where id = ${id}`;
     await runRetention(sql, env);
     expect(await objectExists(path)).toBe(true);
@@ -643,7 +715,7 @@ describe("old favicons (`-favicon.`, Supabase) next to new ones (`-icon.`, R2) (
     const id = await postScan(p, { faviconUrl: null });
     const path = `${p.deviceId}/${id}-favicon.png`;
     await store.put(path, png(16, 16), "image/png");
-    await sql`update scans set favicon_path = ${path}, created_at = now() - make_interval(hours => ${ageHours}) where id = ${id}`;
+    await sql`update scans set favicon_path = ${path}, favicon_ready_at = now(), created_at = now() - make_interval(hours => ${ageHours}) where id = ${id}`;
     await sql`insert into storage_tombstones (path) values (${path})`;
     return { id, path };
   };
