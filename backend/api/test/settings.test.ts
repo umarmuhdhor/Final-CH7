@@ -294,9 +294,14 @@ describe("POST /devices/me/protected (Punya kode undangan?)", () => {
   const code = async (g: Created) =>
     ((await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string }).code;
 
+  // Fase 27j (F-N4, K12): the weekly summary is a guardian page; the Protected settings page has no
+  // switch for it, so the copy starts with it off. Quiet hours wait for Q2 and still carry over.
   it("a guardian without members becomes a protected member: new token, same name and settings, old device gone", async () => {
     const me1 = await createDevice("Adhella", "guardian");
-    await patch(me1, { language: "id", avatarId: "avatar_05", timeZone: "Asia/Makassar", notifications: { weeklySummary: true } });
+    await patch(me1, {
+      language: "id", avatarId: "avatar_05", timeZone: "Asia/Makassar",
+      notifications: { weeklySummary: true, warning: false },
+    });
     const other = await createDevice("Budi", "guardian");
     const res = await call("/devices/me/protected", { method: "POST", token: me1.token, json: { code: await code(other) } });
     expect(res.status).toBe(200);
@@ -308,7 +313,7 @@ describe("POST /devices/me/protected (Punya kode undangan?)", () => {
     const now = await (await call("/devices/me", { token: body.token })).json();
     expect(now).toMatchObject({
       name: "Adhella", mode: "protected", language: "id", timeZone: "Asia/Makassar",
-      notifications: { weeklySummary: true }, guardian: { name: "Budi" },
+      notifications: { weeklySummary: false, warning: false }, guardian: { name: "Budi" },
     });
   });
 
