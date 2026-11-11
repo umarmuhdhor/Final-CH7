@@ -36,8 +36,9 @@ struct ProfileView: View {
             case .loaded:
                 loaded
                     // Someone joins or is disconnected: rows fade, the card eases to its new
-                    // height and the sections below move with it.
-                    .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
+                    // height and the sections below move with it. Reduce Motion: the list snaps,
+                    // since the sections below can't fade into their new place.
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
             }
         }
         .task {
