@@ -45,7 +45,8 @@ interface Tokens {
  * follows the page, so the domain lives in the content state; the attributes are empty.
  */
 function contentState(u: LiveUpdate) {
-  return { domain: u.domain, score: u.score, isAnalyzing: u.analyzing, isBlocked: u.status === "blocked" };
+  // status (#383): copied as is, so the island's colour follows what the phone did, not a fixed band.
+  return { domain: u.domain, score: u.score, isAnalyzing: u.analyzing, isBlocked: u.status === "blocked", status: u.status };
 }
 
 const ok = (r: SendResult) => r.result === "sent" || r.result === "logged";

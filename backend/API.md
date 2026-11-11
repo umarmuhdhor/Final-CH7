@@ -990,7 +990,7 @@ for the app's update token). Answered after the push, so one device's calls stay
 | `open: false`, update token known | `end` with `dismissal-date` now | update | 10 |
 | `open: false`, no update token yet | nothing; logged as `kind: "none"`, `reason: "no_update_token"`. The app ends older islands itself when a new one starts | | |
 
-`content-state` is `{ domain, score, isAnalyzing, isBlocked }` (`isBlocked` = `status == "blocked"`).
+`content-state` is `{ domain, score, isAnalyzing, isBlocked, status }` (`isBlocked` = `status == "blocked"`; `status` is the `POST /live` value as is, #383, so the island colours by what the phone did, not by fixed bands).
 `start` also carries `"attributes-type": "ScoreActivityAttributes"` and `attributes: {}` (the domain lives in `content-state`).
 `start` and `update` carry `stale-date` +10 min. APNs `410` clears the token it was sent to; an `end`
 clears the update token whatever the result.
