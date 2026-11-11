@@ -30,10 +30,11 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|connect|connected|turnOnExtension|safariDefault|extensionOn`
+    /// `-debug.onboardingStep name|consent|connect|connected|turnOnExtension|safariDefault|extensionOn`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
+        case "consent": .consent
         case "connect", "connected": .connect
         case "turnOnExtension": .turnOnExtension
         case "safariDefault": .safariDefault
@@ -53,6 +54,7 @@ private struct OnboardingStepView: View {
             switch model.step {
             case .splash: SplashView(model: model)
             case .name: NameView(model: model)
+            case .consent: DataConsentView(onBack: { model.goBack() }, onAnswer: { model.answerConsent($0) })
             case .connect: OnboardingConnectStep(model: model)
             case .turnOnExtension: OnboardingExtensionStep(model: model)
             case .safariDefault: SafariDefaultView(onBack: model.goBack, onContinue: model.continueFromSafariDefault)
@@ -152,7 +154,7 @@ private struct OnboardingConnectStep: View {
     var body: some View {
         ConnectView(
             model: model.connect(),
-            onBack: model.canGoBackToName ? { model.goBack() } as (() -> Void)? : nil,
+            onBack: model.canGoBackFromConnect ? { Task { await model.backFromConnect() } } as (() -> Void)? : nil,
             onSkip: { Task { await model.skipConnect() } },
             onFinish: model.continueFromConnect
         )
@@ -164,7 +166,8 @@ private struct OnboardingConnectStep: View {
     }
 }
 
-/// ON-04 inside onboarding: the consent checkbox gates the button, and the first tap registers the device.
+/// ON-04 inside onboarding: the consent checkbox (only while the question is unanswered) gates the button,
+/// and the first tap registers the device.
 private struct OnboardingExtensionStep: View {
     @Bindable var model: OnboardingModel
 
@@ -175,6 +178,7 @@ private struct OnboardingExtensionStep: View {
             onSkipCheck: { Task { await model.skipExtensionCheck() } },
             consent: OnboardingExtensionConsent(
                 isChecked: $model.consentChecked,
+                showsCheckbox: model.showsConsentCheckbox,
                 isWorking: model.isWorking,
                 failed: model.registrationFailed,
                 prepare: model.activateExtension

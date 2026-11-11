@@ -125,7 +125,8 @@ final class OnboardingUITests: XCTestCase {
     /// up clear of the box. `SHOO_SHOT_DIR` keeps the screen for the PR.
     @MainActor
     func testStepsScrollClearOfTheConsentAfterSettings() throws {
-        let app = launch(extensionActive: false)
+        // The box shows only while the question is unanswered (fase 27d).
+        let app = launch(extensionActive: false, askConsent: true)
         app.onboardName("Rina")
         app.passTurnOnExtension()
         XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
