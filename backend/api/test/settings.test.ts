@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { runNotifications } from "../src/cron/notifications";
 import type { OpsWriter } from "../src/db/repo/ops";
 import { CRONS } from "../src/index";
@@ -351,6 +351,15 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
   const raceSql = () => postgres(env.DB.connectionString, { max: 1, fetch_types: false, connection: { lock_timeout: 2000 } });
   const a = raceSql();
   const b = raceSql();
+  let racePids: [number, number] = [0, 0];
+  beforeAll(async () => {
+    const pid = async (s: typeof a) => (await s<{ pid: number }[]>`select pg_backend_pid() as pid`)[0]!.pid;
+    racePids = [await pid(a), await pid(b)];
+  });
+  // Gates a failed assertion left closed: open them, so no session stays parked holding locks.
+  const openGates: (() => void)[] = [];
+  afterEach(() => openGates.splice(0).forEach((release) => release()));
+  // Not ended, like testSql(): end() in the workerd pool raises "This socket has been closed".
 
   const code = async (g: Created) =>
     ((await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string }).code;
@@ -368,34 +377,41 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
     code: c,
     tokenHash: await sha256(`shoo_test_${g.deviceId}`),
   });
-  /** Resolves once some session waits for a lock that another one holds. */
+  /** Resolves once session `a` or `b` waits for a lock that another one holds. */
   const someoneWaits = async () => {
     for (let i = 0; i < 100; i++) {
       const [row] = await admin<{ n: number }[]>`
-        select count(*)::int as n from pg_locks where not granted
-          and database = (select oid from pg_database where datname = current_database())`;
+        select count(*)::int as n from pg_locks where not granted and pid in (${racePids[0]}, ${racePids[1]})`;
       if (row!.n > 0) return;
       await new Promise((r) => setTimeout(r, 20));
     }
     throw new Error("nobody waited for a lock");
-  };
-  /** A hook that parks the switch until `release()`, and tells when it got there. */
-  const gate = () => {
-    let release!: () => void;
-    let arrived!: () => void;
-    const open = new Promise<void>((r) => (release = r));
-    const reached = new Promise<void>((r) => (arrived = r));
-    const hook = async () => {
-      arrived();
-      await open;
-    };
-    return { hook, reached, release };
   };
   const settle = <T>(p: Promise<T>) =>
     p.then(
       (value) => ({ ok: true as const, value }),
       (error: unknown) => ({ ok: false as const, code: (error as { code?: string }).code ?? String(error) }),
     );
+  /**
+   * Starts a switch with a hook that parks it until `release()`. Returns once it is parked; throws
+   * at once (instead of waiting for the test timeout) when the switch ends before the hook.
+   */
+  const parked = async <T>(start: (hook: () => Promise<void>) => Promise<T>) => {
+    let release!: () => void;
+    let arrived!: () => void;
+    const open = new Promise<void>((r) => (release = r));
+    const reached = new Promise<"parked">((r) => (arrived = () => r("parked")));
+    openGates.push(release);
+    const done = settle(
+      start(async () => {
+        arrived();
+        await open;
+      }),
+    );
+    const first = await Promise.race([reached, done]);
+    if (first !== "parked") throw new Error(`switch ended before the gate: ${JSON.stringify(first)}`);
+    return { done, release };
+  };
 
   it("F-B1: your own code is code_invalid; the guardian stays as it was and no copy is made", async () => {
     const g = await createDevice("Solo", "guardian");
@@ -443,13 +459,12 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
     const budi = await createDevice("Budi", "guardian");
     const mom = await createDevice("Mom");
     const gCode = await code(g);
-    const parked = gate();
-    const switching = settle(becomeProtected(a, await input(g, await code(budi)), { afterValidate: parked.hook }));
-    await parked.reached;
+    const switchInput = await input(g, await code(budi));
+    const switch1 = await parked((hook) => becomeProtected(a, switchInput, { afterValidate: hook }));
     const joining = settle(joinFamily(b, mom.deviceId, await keyHash("join:203.0.113.51"), gCode));
     await someoneWaits(); // Mom's join waits for the old guardian's lock
-    parked.release();
-    const [sw, jn] = await Promise.all([switching, joining]);
+    switch1.release();
+    const [sw, jn] = await Promise.all([switch1.done, joining]);
     expect(sw.ok).toBe(true);
     expect(jn).toEqual({ ok: false, code: "code_invalid" });
     expect(await guardianOf(mom.deviceId)).toBeNull();
@@ -503,13 +518,12 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
     const g2 = await createDevice("G2", "guardian");
     const [c1, c2] = [await code(g1), await code(g2)];
     const started = Date.now();
-    const parked = gate();
-    const first = settle(becomeProtected(a, await input(g1, c2, "203.0.113.61"), { afterValidate: parked.hook }));
-    await parked.reached;
+    const firstInput = await input(g1, c2, "203.0.113.61");
+    const first = await parked((hook) => becomeProtected(a, firstInput, { afterValidate: hook }));
     const second = settle(becomeProtected(b, await input(g2, c1, "203.0.113.62")));
     await someoneWaits();
-    parked.release();
-    const results = await Promise.all([first, second]);
+    first.release();
+    const results = await Promise.all([first.done, second]);
     expect(Date.now() - started).toBeLessThan(10_000);
     expect(results[0].ok).toBe(true);
     expect(results[1].ok).toBe(false);
@@ -524,13 +538,12 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
     const mom = await createDevice("Mom");
     const bCode = await code(budi);
     const ip = "203.0.113.70";
-    const parked = gate();
-    const switching = settle(becomeProtected(a, await input(g, bCode, ip), { afterValidate: parked.hook }));
-    await parked.reached;
+    const switchInput = await input(g, bCode, ip);
+    const switch1 = await parked((hook) => becomeProtected(a, switchInput, { afterValidate: hook }));
     const joining = settle(joinFamily(b, mom.deviceId, await keyHash(`join:${ip}`), bCode));
     await someoneWaits(); // Mom waits for the shared IP's attempt lock
-    parked.release();
-    const [sw, jn] = await Promise.all([switching, joining]);
+    switch1.release();
+    const [sw, jn] = await Promise.all([switch1.done, joining]);
     expect(sw.ok).toBe(true);
     expect(jn.ok).toBe(true);
     expect(await members(budi)).toBe(2);

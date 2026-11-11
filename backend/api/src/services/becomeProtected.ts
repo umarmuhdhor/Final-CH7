@@ -13,7 +13,10 @@ export interface BecomeProtectedInput {
   tokenHash: Uint8Array;
 }
 
-/** Test-only pause and failure points (fase 27a race tests). Never set in the route. */
+/**
+ * Test-only pause and failure points (fase 27a race tests). Never set in the route. A retry
+ * (deadlock or lock timeout) runs the whole transaction again, hooks included.
+ */
 export interface BecomeProtectedHooks {
   /** At the start of the transaction, before any lock. */
   beforeValidate?: () => Promise<void>;
@@ -61,14 +64,15 @@ export async function becomeProtectedTx(
   await hooks.afterValidate?.();
 
   const copy = await insertProtectedCopy(tx, oldId, input.tokenHash);
-  if (!copy) return { fail: errors.unauthorized };
+  // Throw, not `fail`: a fail result commits. Nothing is written yet here, but keep one rule.
+  if (!copy) throw errors.unauthorized(); // the old device was deleted meanwhile
   const paths = await deleteDeviceInTx(tx, oldId);
   await hooks.beforeLink?.();
   // Last: the FK share lock on the target guardian's row comes after the domain locks of the
   // delete, the same order as that guardian's own DELETE /devices/me (K3).
   await insertLink(tx, copy.id, valid.guardianId);
-  const guardian = await guardianSummary(tx, valid.guardianId);
-  if (!guardian) return { fail: errors.codeInvalid };
+  // The link's FK holds a share lock on the guardian's row, so it exists until commit.
+  const guardian = (await guardianSummary(tx, valid.guardianId))!;
   return { ok: { deviceId: copy.id, avatarId: copy.avatarId, guardian, paths } };
 }
 
@@ -102,9 +106,11 @@ export async function becomeProtected(
 
 /** Backstops for races the locks already prevent. Every check_violation from the link is the target's fault. */
 function mapJoinError(err: unknown): unknown {
-  const e = err as { code?: string; message?: string };
-  if (e.code === "23505") return errors.alreadyConnected();
-  if (e.code === "23503") return errors.codeInvalid(); // the target guardian deleted itself meanwhile
-  if (e.code === "23514") return e.message === "family_full" ? errors.familyFull() : errors.codeInvalid();
+  if (!(err instanceof postgres.PostgresError)) return err;
+  if (err.code === "23505") return errors.alreadyConnected();
+  if (err.code === "23503") return errors.codeInvalid(); // the target guardian deleted itself meanwhile
+  // joinFamily rethrows other check violations; here the old device's own checks passed under its
+  // lock, so a check failure on the link means the target is no longer a guardian (init.sql I3).
+  if (err.code === "23514") return err.message === "family_full" ? errors.familyFull() : errors.codeInvalid();
   return err;
 }
