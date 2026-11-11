@@ -143,3 +143,37 @@ final class StubServer: @unchecked Sendable {
 
     private func countUnauthorized() { lock.withLock { _unauthorizedCount += 1 } }
 }
+
+/// Holds one stubbed reply until the test lets it go (fase 27h: no sleeps). The handler calls `hold()` on the
+/// URL loading thread; the test awaits `arrival()`, does what happens "meanwhile", then calls `open()`.
+final class ReplyGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var arrived = false
+    private var waiter: CheckedContinuation<Void, Never>?
+    private let release = DispatchSemaphore(value: 0)
+
+    /// From the stub handler: tells the test the request is in, then blocks until `open()`.
+    func hold() {
+        let waiter = lock.withLock { () -> CheckedContinuation<Void, Never>? in
+            arrived = true
+            defer { self.waiter = nil }
+            return self.waiter
+        }
+        waiter?.resume()
+        release.wait()
+    }
+
+    /// Returns once the held request has reached the stub.
+    func arrival() async {
+        await withCheckedContinuation { continuation in
+            let already = lock.withLock { () -> Bool in
+                if arrived { return true }
+                waiter = continuation
+                return false
+            }
+            if already { continuation.resume() }
+        }
+    }
+
+    func open() { release.signal() }
+}

@@ -21,10 +21,14 @@ final class SessionStore: @unchecked Sendable {
     private let forgetCachedDataHandler: @Sendable () -> Void
 
     /// The keys this app writes. `extension.lastSeenAt` belongs to the extension and is left alone.
+    /// The Protected "Akun Tertaut" switches go too: the extension reads them, so an old account's `false`
+    /// would stop the next account's scans (fase 27h, F-A13).
     static let appKeys = [
         AppGroup.Key.deviceId, AppGroup.Key.deviceToken, AppGroup.Key.deviceMode, AppGroup.Key.deviceName,
         AppGroup.Key.guardianName, AppGroup.Key.apiBaseURL, AppGroup.Key.aiBaseURL,
         AppGroup.Key.statsChecked, AppGroup.Key.statsLastCheckedAt,
+        LinkedAccountSettings.Key.autoSendLinks, LinkedAccountSettings.Key.shareWarnings,
+        LinkedAccountSettings.Key.notifyLinkVerified,
     ]
 
     init(

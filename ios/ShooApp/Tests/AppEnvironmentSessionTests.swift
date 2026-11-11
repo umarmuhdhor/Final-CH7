@@ -315,6 +315,97 @@ struct AppEnvironmentSessionTests {
         #expect(request.method == "POST")
     }
 
+    private nonisolated static let switched = HostStubProtocol.Reply.json(
+        201, #"{"deviceId":"dev_p","token":"shoo_protected_token","avatarId":"avatar_05","guardian":{"deviceId":"dev_g","name":"Budi","avatarId":"avatar_04"}}"#
+    )
+
+    /// Fase 27h (F-A3, K10): while "Punya kode undangan?" is in flight the server has already swapped the device,
+    /// so another request sent with the old token gets 401. That answer belongs to the old session: the new
+    /// one is saved and "Session expired" never shows.
+    @Test func oldTokenUnauthorizedDuringTheSwitchKeepsTheNewSession() async throws {
+        let server = StubServer()
+        let gate = ReplyGate()
+        server.reply { request in
+            guard request.path == "/devices/me/protected" else { return Self.ok }
+            gate.hold()
+            return Self.switched
+        }
+        let env = environment(server: server, mode: .guardian)
+        let switching = Task { try await env.becomeProtected(code: "123456", name: "Rina") }
+        await gate.arrival()
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        gate.open()
+        _ = try await switching.value
+        #expect(!env.sessionExpired)
+        #expect(server.session.token == "shoo_protected_token")
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceId) == "dev_p")
+        #expect(env.settings.mode == .protected)
+    }
+
+    /// K10: the switch flag lives only while the request runs. A failed switch (here a 500) leaves the old
+    /// session, and its next 401 shows "Session expired" as usual.
+    @Test func failedSwitchStillLetsTheNextUnauthorizedExpire() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(500, #"{"error":{"code":"internal","message":"Something went wrong"}}"#) }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        #expect(env.sessionExpired)
+    }
+
+    /// Fase 27h (F-A8, K10): a second registration in the same launch (after "Delete my data") is a new device on
+    /// the server, so its first activation sends the model, iOS version and time zone again.
+    @Test func registeringAgainInTheSameLaunchSendsTheDeviceInfoAgain() async throws {
+        let server = StubServer(token: nil)
+        server.reply { request in
+            switch (request.method, request.path) {
+            case ("POST", "/devices"): Self.registered
+            case ("GET", _): Self.profile
+            default: Self.ok
+            }
+        }
+        let env = environment(server: server)
+        _ = try await env.register(name: "Rina", mode: .guardian)
+        await env.sceneBecameActive()
+        // "Delete my data" (ProfileModel.deleteMyData): gone on the server, then a fresh install here.
+        try await env.repository.deleteMe()
+        env.settings.reset()
+        _ = try await env.register(name: "Rina", mode: .guardian)
+        let afterSecondRegistration = server.requests.count
+        await env.sceneBecameActive()
+        let sent = server.requests.dropFirst(afterSecondRegistration).filter { $0.method == "PATCH" }.compactMap(\.json)
+        #expect(sent.contains { $0["deviceModel"] is String && $0["osVersion"] is String && $0["timeZone"] is String })
+    }
+
+    /// Fase 27h (F-N7, K10): a 401 for another request with the same token can land before `DELETE /devices/me`
+    /// answers. The delete still ends in onboarding, not on "Session expired".
+    @Test func unauthorizedDuringDeleteEndsInOnboarding() async throws {
+        let server = StubServer()
+        let gate = ReplyGate()
+        server.reply { request in
+            guard request.method == "DELETE" else { return Self.ok }
+            gate.hold()
+            return Self.ok
+        }
+        let env = environment(server: server, mode: .protected)
+        env.settings.onboardingCompleted = true
+        let linkedSuite = "test.linked.\(UUID().uuidString)"
+        defer { UserDefaults.standard.removePersistentDomain(forName: linkedSuite) }
+        let profile = ProfileModel(
+            repository: env.repository, settings: env.settings,
+            linked: LinkedAccountSettings(defaults: UserDefaults(suiteName: linkedSuite)!)
+        )
+        profile.onSessionEnd = { env.returnToOnboardingAfterDelete() }
+        let deleting = Task { await profile.deleteMyData() }
+        await gate.arrival()
+        env.handleUnauthorized(usedToken: "shoo_test_token_123")
+        gate.open()
+        #expect(await deleting.value)
+        #expect(!env.sessionExpired)
+        #expect(env.settings.mode == nil)
+        #expect(!env.settings.onboardingCompleted)
+    }
+
     @Test func joiningWhileProtectingSomeoneKeepsTheGuardianSession() async throws {
         let server = StubServer()
         server.reply { _ in .json(409, #"{"error":{"code":"has_members","message":"Disconnect the people you protect first"}}"#) }

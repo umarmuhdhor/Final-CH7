@@ -27,6 +27,9 @@ final class AppEnvironment {
     @ObservationIgnored private var sentDeviceInfo = false
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
+    /// While `becomeProtected` runs, the server may already have swapped the device: a 401 for the old token
+    /// is the old session's, not this one's (fase 27h, F-A3). Reset when the request ends either way.
+    @ObservationIgnored private var isSwitchingSession = false
     /// EX-03 (#49): the Dynamic Island's push tokens for the backend. Started at the first activation.
     @ObservationIgnored private var liveActivityTokens: LiveActivityTokens?
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
@@ -217,8 +220,10 @@ final class AppEnvironment {
             throw RepositoryError.network
         }
         settings.chooseMode(mode)
-        // A new device on the server: its first token must be sent even if APNs hands out the same one.
+        // A new device on the server: its first token must be sent even if APNs hands out the same one, and
+        // its model, iOS version and time zone too (a second registration in one launch, fase 27h F-A8).
         sentPushToken = nil
+        sentDeviceInfo = false
         pushTokenEpoch += 1
         liveActivityTokens?.deviceChanged()
         if mode == .guardian { router.pendingJoinCode = nil }
@@ -331,10 +336,11 @@ final class AppEnvironment {
     }
 
     /// A 401 for `usedToken`. Ignored when the session has moved on since that request left
-    /// (restart, new registration): only the current token can expire.
+    /// (restart, new registration): only the current token can expire. Also ignored while
+    /// `becomeProtected` runs: the old token is about to be replaced (and the server may have dropped it).
     @MainActor
     func handleUnauthorized(usedToken: String) {
-        guard let current = try? session?.readToken(), current == usedToken else { return }
+        guard !isSwitchingSession, let current = try? session?.readToken(), current == usedToken else { return }
         markSessionExpired()
     }
 
@@ -382,6 +388,18 @@ final class AppEnvironment {
         DeliveredPushes.clear()
     }
 
+    /// "Delete my data" is done (the device is gone on the server): back to onboarding. Profile calls it
+    /// right before `settings.reset()`.
+    @MainActor
+    func returnToOnboardingAfterDelete() {
+        leaveDemo()
+        router.reset()
+        // A 401 for another request with the same token can land before the delete answers (fase 27h, F-N7):
+        // the device is gone on purpose, so onboarding shows, not "Session expired".
+        sessionExpired = false
+        DeliveredPushes.clear()
+    }
+
     /// Family mode on (Pribadi → Guardian). The first time, Figma "To be guardian" shows first and its
     /// "Mulai" turns it on (`startGuardian`).
     @MainActor
@@ -408,6 +426,8 @@ final class AppEnvironment {
     /// Throws the join errors (code, full family) and `has_members`.
     @MainActor
     func becomeProtected(code: String, name: String) async throws -> GuardianInfo {
+        isSwitchingSession = true
+        defer { isSwitchingSession = false }
         let result = try await repository.becomeProtected(code: code)
         do {
             try session?.save(result.registration, name: name, mode: .protected)
