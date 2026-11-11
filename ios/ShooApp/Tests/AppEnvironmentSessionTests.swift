@@ -331,6 +331,7 @@ struct AppEnvironmentSessionTests {
             return Self.switched
         }
         let env = environment(server: server, mode: .guardian)
+        defer { gate.open() }
         let switching = Task { try await env.becomeProtected(code: "123456", name: "Rina") }
         await gate.arrival()
         env.handleUnauthorized(usedToken: "shoo_test_token_123")
@@ -351,6 +352,17 @@ struct AppEnvironmentSessionTests {
         await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
         env.handleUnauthorized(usedToken: "shoo_test_token_123")
         #expect(env.sessionExpired)
+    }
+
+    /// The switch's own 401: the token was dead before the switch and nothing replaces it, so the session
+    /// expires at once (the flag only covers other requests' answers).
+    @Test func switchRequestItselfUnauthorizedExpiresTheSession() async throws {
+        let server = StubServer()
+        server.reply { _ in .json(401, #"{"error":{"code":"unauthorized","message":"Unknown token"}}"#) }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { try await env.becomeProtected(code: "123456", name: "Rina") }
+        #expect(env.sessionExpired)
+        #expect(server.session.token == nil)
     }
 
     /// Fase 27h (F-A8, K10): a second registration in the same launch (after "Delete my data") is a new device on
@@ -396,6 +408,7 @@ struct AppEnvironmentSessionTests {
             linked: LinkedAccountSettings(defaults: UserDefaults(suiteName: linkedSuite)!)
         )
         profile.onSessionEnd = { env.returnToOnboardingAfterDelete() }
+        defer { gate.open() }
         let deleting = Task { await profile.deleteMyData() }
         await gate.arrival()
         env.handleUnauthorized(usedToken: "shoo_test_token_123")

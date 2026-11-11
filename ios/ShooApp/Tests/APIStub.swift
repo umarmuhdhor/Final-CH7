@@ -150,6 +150,7 @@ final class ReplyGate: @unchecked Sendable {
     private let lock = NSLock()
     private var arrived = false
     private var waiter: CheckedContinuation<Void, Never>?
+    private var opened = false
     private let release = DispatchSemaphore(value: 0)
 
     /// From the stub handler: tells the test the request is in, then blocks until `open()`.
@@ -175,5 +176,12 @@ final class ReplyGate: @unchecked Sendable {
         }
     }
 
-    func open() { release.signal() }
+    /// Lets the held reply go. Safe to call more than once (a test can `defer` it as a safety net).
+    func open() {
+        let first = lock.withLock { () -> Bool in
+            defer { opened = true }
+            return !opened
+        }
+        if first { release.signal() }
+    }
 }

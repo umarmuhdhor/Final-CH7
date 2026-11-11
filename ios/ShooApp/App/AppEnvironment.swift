@@ -28,8 +28,9 @@ final class AppEnvironment {
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
     /// While `becomeProtected` runs, the server may already have swapped the device: a 401 for the old token
-    /// is the old session's, not this one's (fase 27h, F-A3). Reset when the request ends either way.
-    @ObservationIgnored private var isSwitchingSession = false
+    /// is the old session's, not this one's (fase 27h, F-A3). A count, so overlapping calls each hold it;
+    /// back to 0 when the requests end either way.
+    @ObservationIgnored private var switchingSessions = 0
     /// EX-03 (#49): the Dynamic Island's push tokens for the backend. Started at the first activation.
     @ObservationIgnored private var liveActivityTokens: LiveActivityTokens?
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
@@ -340,7 +341,7 @@ final class AppEnvironment {
     /// `becomeProtected` runs: the old token is about to be replaced (and the server may have dropped it).
     @MainActor
     func handleUnauthorized(usedToken: String) {
-        guard !isSwitchingSession, let current = try? session?.readToken(), current == usedToken else { return }
+        guard switchingSessions == 0, let current = try? session?.readToken(), current == usedToken else { return }
         markSessionExpired()
     }
 
@@ -426,9 +427,16 @@ final class AppEnvironment {
     /// Throws the join errors (code, full family) and `has_members`.
     @MainActor
     func becomeProtected(code: String, name: String) async throws -> GuardianInfo {
-        isSwitchingSession = true
-        defer { isSwitchingSession = false }
-        let result = try await repository.becomeProtected(code: code)
+        switchingSessions += 1
+        defer { switchingSessions -= 1 }
+        let result: ProtectedSwitch
+        do {
+            result = try await repository.becomeProtected(code: code)
+        } catch let error as RepositoryError where error.apiCode == .unauthorized {
+            // This request's own 401: the token was already dead before the switch, and nothing replaces it.
+            markSessionExpired()
+            throw error
+        }
         do {
             try session?.save(result.registration, name: name, mode: .protected)
         } catch {

@@ -38,12 +38,15 @@ final class ApiRepository: ShooRepository {
     func me() async throws -> DeviceProfile {
         let usedToken = session.token
         let profile: DeviceProfile = try await client.send(.init(method: .get, path: ["devices", "me"]))
-        // The session changed meanwhile ("Punya kode undangan?" saved a new device, fase 27h F-A12): this is the
-        // old device's profile and must not overwrite the new name or guardian in the App Group.
-        guard session.token == usedToken else { return profile }
-        session.updateName(profile.name)
+        // Written only while the token is still the one this request used: when "Punya kode undangan?" saved
+        // a new device meanwhile (fase 27h, F-A12), this is the old device's profile and the App Group keeps
+        // the new name and guardian. No token (locked Keychain, cleared) = nothing to write for.
         // `guardian: null` = never joined, left, or removed by the guardian (D-alief-21).
-        session.setGuardian(profile.mode == .protected ? profile.guardian : nil)
+        if let usedToken {
+            session.applyProfile(
+                name: profile.name, guardian: profile.mode == .protected ? profile.guardian : nil, ifToken: usedToken
+            )
+        }
         return profile
     }
 
