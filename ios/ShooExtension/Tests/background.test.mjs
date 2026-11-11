@@ -113,3 +113,16 @@ test("no message ever answers with the token", async () => {
     assert.ok(!("token" in reply));
     assert.equal(reply.onboarded, true);
 });
+
+test("#375: POST /scans and block memory use the PSL domain of the URL, not the full host the page sent", async () => {
+    const w = world();
+    const send = await w.boot();
+    const host = "login.bca-verifikasi.site";
+    const fromPage = { ...report("k1", host), scan: { ...report("k1", host).scan, domain: host } };
+    await send(fromPage);
+    await settled(send, "k1");
+    assert.equal(w.posts[0].domain, "bca-verifikasi.site");
+    await send({ type: "rememberBlock", url: `https://${host}/pin`, domain: host, score: 90, signals: [] });
+    const { memory } = await send({ type: "recallBlock", url: `https://${host}/pin` });
+    assert.equal(memory.domain, "bca-verifikasi.site");
+});

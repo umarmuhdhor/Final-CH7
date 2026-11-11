@@ -34,6 +34,21 @@ function domainFor(hostname) {
     }
 }
 
+/**
+ * #375: the registrable domain of a page URL, worked out here where the PSL rules live. content.js falls back
+ * to the full host when this background page is asleep, and that would file one site under two names
+ * (one scan row, block memory entry and verdict per name). `fallback` only when the URL can't be parsed.
+ */
+function domainOfUrl(url, fallback) {
+    try {
+        const { hostname } = new URL(url);
+        if (hostname) return domainFor(hostname);
+    } catch {
+        // not a URL → keep what the page sent
+    }
+    return fallback;
+}
+
 // A deleted account leaves nothing behind here either: what is stored belongs to the device that stored it.
 const deviceData = createDeviceData({
     storage: browser.storage.local,
@@ -124,7 +139,8 @@ async function lookupVerdict(domain, fresh) {
 
 /** Remembers a blocked page now; the backend's scan id is added once POST /scans answers. */
 function rememberBlock(message) {
-    const saved = blockMemory.remember(message.url, { domain: message.domain, score: message.score, signals: message.signals });
+    const domain = domainOfUrl(message.url, message.domain);
+    const saved = blockMemory.remember(message.url, { domain, score: message.score, signals: message.signals });
     if (message.reportKey) {
         recordIdFor(message.reportKey).then((recordId) => saved.then(() => blockMemory.setRecord(message.url, recordId)));
     }
@@ -190,7 +206,8 @@ async function startReport(message) {
     // X1: a 422 on a scan that carries thresholdsVersion means the status and that version disagree
     // (thresholds changed while the page was being scored). Sent again without it, only the fence
     // applies; the scan matters more than the check.
-    const { thresholdsVersion, ...scan } = message.scan ?? {};
+    const { thresholdsVersion, ...sent } = message.scan ?? {};
+    const scan = { ...sent, domain: domainOfUrl(sent.url, sent.domain) };
     const post1 = (body) =>
         fetchJSON(endpoint(session.apiBaseURL, "/scans"), { method: "POST", token: session.token, timeoutMs: SCAN_TIMEOUT_MS, body });
     const send = (pageReplicaBase64, evidenceFragmentsBase64) => {
