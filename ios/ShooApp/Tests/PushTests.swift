@@ -144,6 +144,14 @@ struct PushRoutingTests {
         #expect(env.router.shieldPath.isEmpty)
     }
 
+    /// Onboarding still on screen: a Protected tap opens nothing yet, as for the Guardian.
+    @Test func protectedPushBeforeOnboardingDoesNothing() {
+        let env = environment(mode: .protected, onboarded: false)
+        env.openPush(scanId: Self.scanId)
+        #expect(env.router.activityPath.isEmpty)
+        #expect(env.router.selectedTab == .shield)
+    }
+
     /// Family pushes ("Ingatkan", disconnect) carry no `scanId`: the Protected device lands on Shield.
     @Test func protectedPushWithoutScanIdOpensShield() {
         let env = environment(mode: .protected)
