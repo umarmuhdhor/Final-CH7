@@ -472,6 +472,180 @@ private struct SuccessTextEntrance: ViewModifier {
     }
 }
 
+/// The celebrated success text (`OnboardingSuccessPage.celebrates`): the title rises 16 pt and grows from 94 %
+/// on a light spring, the message follows without bounce. Reduce Motion: a 0.2 s fade at the same moment.
+private struct CelebrationTextEntrance: ViewModifier {
+    let isOn: Bool
+    let delay: Double
+    let bounces: Bool
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        let waiting = isOn && !shown
+        content
+            .opacity(waiting ? 0 : 1)
+            .offset(y: waiting && !reduceMotion ? 16 : 0)
+            .scaleEffect(waiting && !reduceMotion && bounces ? 0.94 : 1)
+            .onAppear {
+                guard isOn, !shown else { return }
+                let animation: Animation = reduceMotion
+                    ? .easeInOut(duration: 0.2)
+                    : bounces ? .spring(duration: 0.45, bounce: 0.25) : .smooth(duration: 0.45)
+                withAnimation(animation.delay(delay)) { shown = true }
+            }
+    }
+}
+
+private struct SuccessCelebrationKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// Set by `OnboardingSuccessPage(celebrates: true)` for its hero.
+    var successCelebration: Bool {
+        get { self[SuccessCelebrationKey.self] }
+        set { self[SuccessCelebrationKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// The hero's centre piece on a celebrated success page: it pops in, two white rings ripple out behind it
+    /// and one confetti burst leaves its centre. Does nothing on a page that doesn't celebrate.
+    /// `ringSize`: the rings' starting diameter, about the piece's visible width.
+    func successCelebrationHero(ringSize: CGFloat) -> some View {
+        modifier(SuccessCelebrationHero(ringSize: ringSize))
+    }
+}
+
+/// One shot, about 1.2 s: the piece scales 0.6 → 1 on a bouncy spring from 0.1 s; when it lands (0.35 s) two
+/// rings grow 0.8 → 2.2 and fade (0.8 s, the second 0.12 s later) and ~28 confetti bits fall away. Transform and
+/// opacity only, so the layout is the same as without it. Reduce Motion: a 0.2 s fade, no rings or confetti.
+private struct SuccessCelebrationHero: ViewModifier {
+    let ringSize: CGFloat
+    @Environment(\.successCelebration) private var isOn
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var landed = false
+    @State private var ringsArmed = false
+    @State private var firstRingOut = false
+    @State private var secondRingOut = false
+    @State private var confettiStart: Date?
+
+    func body(content: Content) -> some View {
+        let waiting = isOn && !landed
+        content
+            .scaleEffect(waiting && !reduceMotion ? 0.6 : 1)
+            .opacity(waiting ? 0 : 1)
+            // Behind the piece: the bits burst out from under its edges instead of clumping on its face.
+            .background {
+                if isOn, !reduceMotion, ringsArmed {
+                    ZStack {
+                        if let confettiStart { ConfettiBurst(start: confettiStart) }
+                        ring(out: firstRingOut)
+                        ring(out: secondRingOut)
+                    }
+                }
+            }
+            .onAppear(perform: play)
+    }
+
+    private func ring(out: Bool) -> some View {
+        Circle()
+            .strokeBorder(.white, lineWidth: 3)
+            .frame(width: ringSize, height: ringSize)
+            .scaleEffect(out ? 2.2 : 0.8)
+            .opacity(out ? 0 : 0.5)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private func play() {
+        guard isOn, !landed else { return }
+        if reduceMotion {
+            withAnimation(.easeInOut(duration: 0.2)) { landed = true }
+            return
+        }
+        withAnimation(.spring(duration: 0.5, bounce: 0.35).delay(0.1)) { landed = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            ringsArmed = true
+            confettiStart = .now
+            // Let the rings draw once at their start before they grow.
+            try? await Task.sleep(for: .milliseconds(16))
+            withAnimation(.easeOut(duration: 0.8)) { firstRingOut = true }
+            try? await Task.sleep(for: .milliseconds(120))
+            withAnimation(.easeOut(duration: 0.8)) { secondRingOut = true }
+            try? await Task.sleep(for: .milliseconds(Int(ConfettiBurst.life * 1000)))
+            // Burst over: drop the canvas so its timeline stops.
+            confettiStart = nil
+            ringsArmed = false
+        }
+    }
+}
+
+/// ~28 white, teal and yellow bits thrown up from the centre that fall under gravity and fade; gone after `life`.
+/// Drawn in one `Canvas`; the `TimelineView` stops when the view is removed.
+private struct ConfettiBurst: View {
+    let start: Date
+
+    static let life: Double = 0.85
+    private static let gravity: Double = 1400
+
+    private struct Bit {
+        let velocity: CGVector
+        let size: CGSize
+        let spin: Double
+        let color: Color
+    }
+
+    /// The same throw every time (a fixed-seed generator), so the burst looks designed, not noisy.
+    private static let bits: [Bit] = {
+        var seed: UInt64 = 0x5EED_5100
+        func random() -> Double {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Double(seed >> 11) / Double(1 << 53)
+        }
+        let colors = [Color.white, Color(hex: 0x5FE3D6), Color(hex: 0xFFD84A)]
+        return (0..<28).map { index in
+            // Up and out: −165° … −15°, 340–640 pt/s.
+            let angle = (-165 + 150 * random()) * .pi / 180
+            let speed = 340 + 300 * random()
+            return Bit(
+                velocity: CGVector(dx: cos(angle) * speed, dy: sin(angle) * speed),
+                size: CGSize(width: 5 + 3 * random(), height: 7 + 4 * random()),
+                spin: (random() - 0.5) * 16,
+                color: colors[index % colors.count]
+            )
+        }
+    }()
+
+    var body: some View {
+        TimelineView(.animation) { context in
+            Canvas { canvas, size in
+                let t = context.date.timeIntervalSince(start)
+                guard t >= 0, t < Self.life else { return }
+                let centre = CGPoint(x: size.width / 2, y: size.height / 2)
+                let fade = min(1, (Self.life - t) / 0.3)
+                for bit in Self.bits {
+                    var piece = canvas
+                    piece.opacity = fade
+                    piece.translateBy(
+                        x: centre.x + bit.velocity.dx * t,
+                        y: centre.y + bit.velocity.dy * t + 0.5 * Self.gravity * t * t
+                    )
+                    piece.rotate(by: .radians(bit.spin * t))
+                    let rect = CGRect(x: -bit.size.width / 2, y: -bit.size.height / 2, width: bit.size.width, height: bit.size.height)
+                    piece.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(bit.color))
+                }
+            }
+        }
+        // Wider than the hero so the bits can fly out; a background, so the layout doesn't change.
+        .frame(width: 640, height: 720)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 /// Blue success screen: illustration, white title + message, "Next" at the bottom
 /// (Figma "Berhasil Terhubung", "Yeay, kamu berhasil"). Ids: `<idPrefix>.title`, `<idPrefix>.continue`.
 struct OnboardingSuccessPage<Hero: View>: View {
@@ -485,28 +659,48 @@ struct OnboardingSuccessPage<Hero: View>: View {
     var largeTitle = true
     /// The title and message rise in a moment after the step slides in (ON-04 passed).
     var revealsText = false
+    /// A one-shot celebration (~1.2 s): the hero's `successCelebrationHero` piece pops in with rings and confetti,
+    /// the title and message come in one after the other, a heavy tap as the hero lands and a success tap with
+    /// the title. "Next" works from the start. Replaces `revealsText`.
+    var celebrates = false
     /// Brings the headline to Figma's y under the hero.
     @ViewBuilder let hero: Hero
+
+    @State private var heroLanded = 0
+    @State private var titleLanded = 0
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 hero
+                    .environment(\.successCelebration, celebrates)
 
                 // Figma "Frame 2": Large Title, 8, Body; or Title 1, 4, Subhead.
                 VStack(spacing: largeTitle ? 8 : 4) {
                     styledTitle
                         .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("\(idPrefix).title")
+                        .modifier(CelebrationTextEntrance(isOn: celebrates, delay: 0.3, bounces: true))
                     styledMessage
                         .foregroundStyle(Color(hex: 0xFAF9FB))
+                        .modifier(CelebrationTextEntrance(isOn: celebrates, delay: 0.42, bounces: false))
                 }
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 24)
-                .modifier(SuccessTextEntrance(isOn: revealsText))
+                .modifier(SuccessTextEntrance(isOn: revealsText && !celebrates))
             }
             .frame(maxWidth: .infinity)
+        }
+        .sensoryFeedback(.impact(weight: .heavy), trigger: heroLanded)
+        .sensoryFeedback(.success, trigger: titleLanded)
+        .task {
+            // The two taps of the celebration, with Reduce Motion too: the hero lands, then the title.
+            guard celebrates, heroLanded == 0 else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            heroLanded += 1
+            try? await Task.sleep(for: .milliseconds(300))
+            titleLanded += 1
         }
         .scrollBounceBehavior(.basedOnSize)
         .contentMargins(.bottom, 104, for: .scrollContent)
