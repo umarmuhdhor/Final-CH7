@@ -42,5 +42,11 @@ begin
    where b.families is distinct from excluded.families;
 end $$;
 
-revoke all on function public.queue_blocklist_domain(text, int) from public, anon, authenticated;
+revoke all on function public.queue_blocklist_domain(text, int) from public, anon, authenticated, service_role;
 grant execute on function public.queue_blocklist_domain(text, int) to shoo_api;
+
+-- The Worker could now make a reviewer's email reappear in rejected_by for any domain ever rejected
+-- (security review): it reads every column it needs but not the reviewers' names. The Worker never
+-- selects approved_by or rejected_by (backend/api/src).
+revoke select on public.blocklist_entries from shoo_api;
+grant select (domain, families, first_seen_at, approved_at, removed_at, rejected_at) on public.blocklist_entries to shoo_api;

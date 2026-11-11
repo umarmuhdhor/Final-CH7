@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(23);
+select plan(27);
 
 select ok(
   (select setconfig @> array['statement_timeout=10s'] from pg_db_role_setting where setrole = 'shoo_api'::regrole and setdatabase = 0),
@@ -42,6 +42,14 @@ select ok(not has_table_privilege('shoo_api', 'admin.review_decisions', 'SELECT'
   'shoo_api still cannot read admin.review_decisions');
 select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'rejected_at', 'UPDATE'),
   'shoo_api still cannot write rejected_at');
+select ok(not has_function_privilege('service_role', 'public.queue_blocklist_domain(text, integer)', 'EXECUTE'),
+  'service_role may not call queue_blocklist_domain');
+select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'rejected_by', 'SELECT'),
+  'shoo_api cannot read who rejected a domain');
+select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'approved_by', 'SELECT'),
+  'shoo_api cannot read who approved a domain');
+select ok(has_column_privilege('shoo_api', 'blocklist_entries', 'rejected_at', 'SELECT'),
+  'shoo_api still reads the review state');
 select throws_ok($$select public.queue_blocklist_domain('fase27c.example', 0)$$, '22023', 'invalid_families',
   'queue_blocklist_domain refuses families < 1');
 select throws_ok($$select public.queue_blocklist_domain('fase27c.example', null)$$, '22023', 'invalid_families',
