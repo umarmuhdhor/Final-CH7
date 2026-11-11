@@ -14,6 +14,7 @@
             score: state.score,
             recordId: state.recordId ?? null,
             reportKey: state.reportKey ?? null, // EX-07: blocked.html asks background for the record id
+            remembered: Boolean(state.remembered), // #382: from block memory, the reasons may be another page's
             reasons: [...state.signals]
                 .sort((a, b) => b.weight - a.weight)
                 .slice(0, MAX_REASONS)

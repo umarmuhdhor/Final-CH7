@@ -15,10 +15,19 @@
     function viewFor(profile, payload, lang) {
         const mode = profile?.onboarded ? profile.mode : null;
         const simple = mode === "protected"; // parents get the plain wording (DT-04)
+        const lookalike = lookalikeNote(payload, lang);
         return {
-            reasons: payload.reasons
-                .map((r) => (simple ? r.labelSimple : r.label)?.[lang])
-                .filter(Boolean),
+            // #382: a block from memory can be about a sibling page (another subdomain of the same site), so its
+            // reasons may not fit this page. It shows one generic line instead (`remembered` → block_remembered).
+            remembered: Boolean(payload.remembered),
+            reasons: payload.remembered
+                ? []
+                : payload.reasons
+                      .filter((r) => !(lookalike && r.id === "lookalike_domain")) // already said under the chip
+                      .map((r) => (simple ? r.labelSimple : r.label)?.[lang])
+                      .filter(Boolean),
+            chip: middleEllipsis(payload.domain || payload.url),
+            lookalike,
             sentTo: mode === "protected" ? profile.guardianName || null : null,
             button:
                 mode === null
@@ -26,6 +35,30 @@
                     : { textKey: "block_review", href: detailUrl(payload) },
             poll: mode !== null,
         };
+    }
+
+    /**
+     * #382: long names are cut in the middle, so the ending (".xyz", ".co.id") always shows. The chip keeps
+     * a CSS end-ellipsis only as a backstop for very narrow screens.
+     */
+    function middleEllipsis(text, max = 32) {
+        const value = String(text ?? "");
+        if (value.length <= max) return value;
+        const lastDot = value.lastIndexOf(".");
+        const ending = lastDot > 0 ? value.length - lastDot : 0;
+        const tail = Math.min(max - 4, Math.max(Math.floor((max - 1) / 2), ending));
+        return `${value.slice(0, max - 1 - tail)}…${value.slice(-tail)}`;
+    }
+
+    /**
+     * #382: an IDN look-alike stays in punycode on the chip (the decoded letters are what fool the eye), with
+     * the detector's own "spelled like <brand>" line under it.
+     */
+    function lookalikeNote(payload, lang) {
+        const name = String(payload.domain || "");
+        if (!name.split(".").some((label) => label.startsWith("xn--"))) return null;
+        const reason = payload.reasons.find((r) => r.id === "lookalike_domain");
+        return reason?.label?.[lang] || null;
     }
 
     /** 429 → wait at least Retry-After (backend/API.md), never treat it as "no verdict yet". */
@@ -37,7 +70,7 @@
         return payload.recordId ? `shoo://scan/${encodeURIComponent(payload.recordId)}` : "shoo://activity";
     }
 
-    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs };
+    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs, middleEllipsis };
 
     // ---- Page ---------------------------------------------------------------------------
 
@@ -69,7 +102,8 @@
 
     $(".gauge-art").innerHTML = globalThis.ShooGauge.gauge(payload.score, "bahaya"); // our markup from a number
     $(".score-value").textContent = `${payload.score}%`;
-    $(".link").textContent = payload.domain || payload.url;
+    $(".link").textContent = globalThis.ShooBlockedPage.middleEllipsis(payload.domain || payload.url);
+    $(".link").title = payload.domain || payload.url;
 
     let mode = null;
     let view = null;
@@ -84,9 +118,14 @@
         view = viewFor(profile, payload, lang);
         mode = profile?.onboarded ? profile.mode : null;
 
+        const lines = view.remembered ? [t("block_remembered")] : view.reasons;
         const reasons = $(".reasons");
-        reasons.replaceChildren(...view.reasons.map((text) => Object.assign(document.createElement("span"), { textContent: text })));
-        reasons.hidden = view.reasons.length === 0;
+        reasons.replaceChildren(...lines.map((text) => Object.assign(document.createElement("span"), { textContent: text })));
+        reasons.hidden = lines.length === 0;
+        if (view.lookalike) {
+            $(".lookalike").textContent = view.lookalike;
+            $(".lookalike").hidden = false;
+        }
 
         if (view.button) {
             const button = $(".button");
