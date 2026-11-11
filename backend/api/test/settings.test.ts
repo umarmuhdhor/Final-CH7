@@ -1,13 +1,13 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { runNotifications } from "../src/cron/notifications";
+import { quietSql, runNotifications } from "../src/cron/notifications";
 import type { OpsWriter } from "../src/db/repo/ops";
 import { CRONS } from "../src/index";
 import { summaryText } from "../src/services/push/messages";
 import { guardianPush, ownPush } from "../src/services/push/notify";
 import { isQuiet, localTime } from "../src/services/push/quiet";
 import type { PushMessage, PushSender } from "../src/services/push/sender";
-import { resetDb, testSql } from "./helpers/resetDb";
+import { resetDb, testSql, withoutTriggers } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
 
 // PF-01 settings pages (Figma "Pengaturan/*"): notification switches, quiet hours, time zone,
@@ -224,6 +224,67 @@ describe("hourly cron: Perlindungan mati", () => {
     expect(sender.sent).toHaveLength(0);
     await runNotifications(sql, env, { sender, now: DAY_JAKARTA });
     expect(sender.sent).toHaveLength(1);
+  });
+
+  // Fase 27k F-N10: quiet hours are filtered in SQL before the limit. Before, the 200 members off
+  // the longest all belonged to guardians in quiet hours, so a guardian outside them never got a push.
+  it("a guardian outside quiet hours is not starved by 201 guardians inside them", async () => {
+    await withoutTriggers(async (tx) => {
+      await tx`insert into devices (id, name, mode, avatar_id, token_hash, apns_token, notify_protection_off,
+                                    quiet_hours, quiet_start, quiet_end, time_zone)
+        select 'g_quiet_' || i, 'G', 'guardian'::device_mode, 'avatar_01', ('\\x01' || lpad(to_hex(i), 6, '0'))::bytea, ${TOKEN_G},
+               true, true, 1320, 360, 'Asia/Jakarta'
+        from generate_series(1, 201) i
+        union all
+        select 'g_awake', 'Awake', 'guardian', 'avatar_01', '\\x02000000'::bytea, ${TOKEN}, true, false, 1320, 360, 'Asia/Jakarta'`;
+      await tx`insert into devices (id, name, mode, avatar_id, token_hash, ext_last_seen_at)
+        select 'p_quiet_' || i, 'Mom', 'protected'::device_mode, 'avatar_02', ('\\x03' || lpad(to_hex(i), 6, '0'))::bytea,
+               now() - interval '40 hours' - make_interval(mins => i)
+        from generate_series(1, 201) i
+        union all
+        select 'p_awake', 'Renatta', 'protected', 'avatar_02', '\\x04000000'::bytea, now() - interval '25 hours'`;
+      await tx`insert into family_links (protected_id, guardian_id)
+        select 'p_quiet_' || i, 'g_quiet_' || i from generate_series(1, 201) i
+        union all select 'p_awake', 'g_awake'`;
+    });
+    const sender = new Recorder();
+    expect((await runNotifications(sql, env, { sender, now: NIGHT_JAKARTA })).protectionOff).toBe(1);
+    expect(sender.sent.map((m) => m.toDeviceId)).toEqual(["g_awake"]);
+    // The quiet ones were not claimed: they go out on the first run after their window.
+    const [left] = await sql<{ n: number }[]>`select count(*)::int as n from family_links where off_notified_at is null`;
+    expect(left!.n).toBe(201);
+  });
+});
+
+describe("quiet hours in SQL (cron, fase 27k F-N10) = isQuiet", () => {
+  const zones = ["Asia/Jakarta", "Asia/Makassar", "UTC", "Mars/Olympus"]; // the last one is unknown → WIB
+  const windows: [boolean, number, number][] = [
+    [true, 22 * 60, 6 * 60], [true, 9 * 60, 17 * 60], [true, 600, 600], [false, 22 * 60, 6 * 60], [true, 0, 1],
+  ];
+  const instants = [
+    NIGHT_JAKARTA, DAY_JAKARTA,
+    at("2026-10-27T15:00:00Z"), // 22:00 WIB: start counts as quiet
+    at("2026-10-27T22:59:00Z"), // 05:59 WIB
+    at("2026-10-27T23:00:00Z"), // 06:00 WIB: end does not
+    at("2026-10-27T01:00:30Z"), // 09:00:30 WITA
+    at("2026-10-26T16:59:59Z"), // 23:59:59 WIB
+    at("2026-10-26T17:00:00Z"), // 00:00 WIB
+  ];
+  const cases = zones.flatMap((timeZone) =>
+    windows.map(([quietHours, quietStart, quietEnd]) => ({ quietHours, quietStart, quietEnd, timeZone })));
+  const rowsJson = cases.map((c) =>
+    ({ quiet_hours: c.quietHours, quiet_start: c.quietStart, quiet_end: c.quietEnd, time_zone: c.timeZone }));
+
+  it.each(instants.map((now) => [now.toISOString(), now] as const))("at %s", async (_, now) => {
+    const rows = await sql<{ quiet: boolean }[]>`
+      select ${quietSql(sql, now)} as quiet
+      from rows from (jsonb_to_recordset(${JSON.stringify(rowsJson)}::text::jsonb)
+                        as (quiet_hours boolean, quiet_start int, quiet_end int, time_zone text))
+             with ordinality as g(quiet_hours, quiet_start, quiet_end, time_zone, n)
+      order by n`;
+    const got = rows.map((r) => r.quiet);
+    const want = cases.map((c) => isQuiet(c, now));
+    expect(cases.map((c, i) => ({ ...c, quiet: got[i] }))).toEqual(cases.map((c, i) => ({ ...c, quiet: want[i] })));
   });
 });
 
