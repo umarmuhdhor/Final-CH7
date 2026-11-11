@@ -163,7 +163,10 @@ Free project from pausing.
 the app after the user picks a name and a mode.
 
 - **Auth:** none
-- **Rate limit:** 10 per hour per IP (and 1000 per day across all users)
+- **Rate limit:** 30 per hour per IP (and 1000 per day across all users). Not lower: mobile carriers
+  put many users behind one CGNAT IP, and a reinstall registers again (edge-case QA 2026-11-11 #2).
+  Over it: `429 rate_limited` with `Retry-After` (up to an hour). The app says so ("too many new
+  sign-ups from this network"), not the join copy for `too_many_attempts`.
 
 **Request body**
 
@@ -273,7 +276,9 @@ another family and is a Protected device from then on.
   attempt limits as [`POST /family/join`](#post-familyjoin)), and only then deletes the old Guardian
   device and everything about it, as in [`DELETE /devices/me`](#delete-devicesme). A failed join
   deletes the new device again: nothing changes for the Guardian.
-- Rate limit: the `POST /devices` limit per IP, plus the join attempt limits.
+- Rate limit: 30 per hour per device (not per IP: it replaces a device, so it never spends the
+  `POST /devices` IP bucket), plus the join attempt limits. Over it: `429 too_many_attempts` with
+  `Retry-After`, like a join.
 
 **Response 200**
 
@@ -290,7 +295,7 @@ The new token is shown only in this response; the old token returns `401` from n
 saves it in the Keychain and the App Group, then sends its APNs token again.
 
 **Errors:** `409 has_members` (disconnect the members first), and the `POST /family/join` errors
-`code_invalid`, `code_expired`, `family_full`, `rate_limited`.
+`code_invalid`, `code_expired`, `family_full`, `too_many_attempts`.
 
 ### `DELETE /devices/me`
 

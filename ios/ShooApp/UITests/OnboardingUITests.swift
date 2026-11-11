@@ -120,6 +120,59 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(again.tabBars.buttons["Shield"].waitForExistence(timeout: 10), again.debugDescription)
     }
 
+    /// QA 2026-11-11 #7: back from Settings with Shoo still off, the note above the steps pushes step 03 down
+    /// behind the consent box. The footer hides what is under it (no text through text), and the step scrolls
+    /// up clear of the box. `SHOO_SHOT_DIR` keeps the screen for the PR.
+    @MainActor
+    func testStepsScrollClearOfTheConsentAfterSettings() throws {
+        let app = launch(extensionActive: false)
+        app.onboardName("Rina")
+        app.passTurnOnExtension()
+        XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
+        let consent = app.buttons["extension.consent"]
+        let last = app.descendants(matching: .any)["extension.step.3"]
+        XCTAssertTrue(last.waitForExistence(timeout: 5), app.debugDescription)
+        let screenshot = XCUIScreen.main.screenshot()
+        if let directory = ProcessInfo.processInfo.environment["SHOO_SHOT_DIR"] {
+            try screenshot.pngRepresentation
+                .write(to: URL(fileURLWithPath: directory).appendingPathComponent("on04-back-from-settings.png"))
+        }
+        // Right of "See what is sent" the footer draws nothing: step 03's text must not show through there
+        // (main: ~5000 dark pixels here; the fix: a few edge pixels of the link).
+        let link = app.buttons["extension.dataSent"]
+        XCTAssertTrue(link.exists, app.debugDescription)
+        let empty = CGRect(x: link.frame.maxX + 12, y: link.frame.minY + 4,
+                           width: app.frame.width - 24 - (link.frame.maxX + 12), height: link.frame.height - 8)
+        let marks = Self.inkPixels(in: empty, of: screenshot.image)
+        XCTAssertLessThan(marks, 300, "\(marks) dark pixels in \(empty): the steps show through the footer")
+        XCTAssertTrue(consent.isHittable)
+        for _ in 0..<3 where last.frame.maxY > consent.frame.minY { app.swipeUp() }
+        XCTAssertLessThanOrEqual(last.frame.maxY, consent.frame.minY, "step \(last.frame) under consent \(consent.frame)")
+        XCTAssertTrue(consent.isHittable)
+    }
+
+    /// Pixels in `rect` (points) clearly darker than the page background (text, even faded text).
+    private static func inkPixels(in rect: CGRect, of image: UIImage) -> Int {
+        guard let cgImage = image.cgImage, rect.width > 0, rect.height > 0 else { return 0 }
+        let scale = CGFloat(cgImage.width) / image.size.width
+        let pixels = CGRect(x: rect.minX * scale, y: rect.minY * scale, width: rect.width * scale, height: rect.height * scale)
+            .integral.intersection(CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+        guard let crop = cgImage.cropping(to: pixels) else { return 0 }
+        let width = crop.width, height = crop.height
+        var data = [UInt8](repeating: 0, count: width * height * 4)
+        guard let context = CGContext(
+            data: &data, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return 0 }
+        context.draw(crop, in: CGRect(x: 0, y: 0, width: width, height: height))
+        var count = 0
+        for index in stride(from: 0, to: data.count, by: 4) {
+            let luminance = 0.299 * Double(data[index]) + 0.587 * Double(data[index + 1]) + 0.114 * Double(data[index + 2])
+            if luminance < 215 { count += 1 }
+        }
+        return count
+    }
+
     @MainActor
     func testNarrowedAccessOffersSafariAndSettingsOnceBack() {
         let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")

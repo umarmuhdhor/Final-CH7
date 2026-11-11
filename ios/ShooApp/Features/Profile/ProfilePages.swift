@@ -161,7 +161,10 @@ private struct ModePage: View {
     @State private var isJoinPresented = false
     @State private var showsMembersFirst = false
 
-    private var current: ProfileModel.Variant { model.variant }
+    /// A protected iPhone without a guardian works like Pribadi (QA 2026-11-10 #4: no card was marked). It can't
+    /// become a Guardian: the device mode never changes on the server.
+    private var current: ProfileModel.Variant { model.variant == .protected ? .personal : model.variant }
+    private var isProtected: Bool { model.variant == .protected }
     private var choice: ProfileModel.Variant { selected ?? current }
 
     var body: some View {
@@ -194,6 +197,8 @@ private struct ModePage: View {
                 ) {
                     AvatarStack(members: model.members)
                 } action: { selected = .guardian }
+                    .disabled(isProtected)
+                    .opacity(isProtected ? 0.45 : 1)
                     .accessibilityIdentifier("mode.guardian")
             }
             .padding(.horizontal, ProfileStyle.margin)
@@ -201,7 +206,14 @@ private struct ModePage: View {
 
             ProfileCard {
                 Button {
-                    if model.canJoinAnotherFamily { isJoinPresented = true } else { showsMembersFirst = true }
+                    if !model.canJoinAnotherFamily {
+                        showsMembersFirst = true
+                    } else if isProtected {
+                        // Already protected: a plain join with the code (POST /family/join), as on Home.
+                        env.router.showConnect()
+                    } else {
+                        isJoinPresented = true
+                    }
                 } label: {
                     ProfileRow(
                         symbol: ProfileStyle.extensionSymbol, title: Text("Have an invite code?"),
@@ -239,10 +251,14 @@ private struct ModePage: View {
             JoinAnotherFamilySheet(name: model.profile?.name ?? "")
                 .environment(\.locale, locale)
         }
-        .alert(Text("You still protect someone"), isPresented: $showsMembersFirst) {
+        .alert(isProtected ? Text("You're already connected") : Text("You still protect someone"), isPresented: $showsMembersFirst) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Disconnect the people you protect first. Then you can join another family.")
+            if isProtected {
+                Text("Only your guardian can disconnect you. Ask them first, then join another family.")
+            } else {
+                Text("Disconnect the people you protect first. Then you can join another family.")
+            }
         }
     }
 }
@@ -653,6 +669,7 @@ private struct ProtectedManageProfilePage: View {
 /// what the guardian gets, and "Putuskan koneksi" locked — only the guardian can disconnect.
 private struct ConnectionPage: View {
     let model: ProfileModel
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -662,16 +679,42 @@ private struct ConnectionPage: View {
             if let guardian = model.profile?.guardian {
                 linked(guardian)
             } else if model.state == .loaded {
-                Text("Not connected to a guardian yet")
-                    .profileFont(17, .semibold)
-                    .foregroundStyle(ProfileStyle.ink)
-                    .frame(maxWidth: .infinity, minHeight: 200)
-                    .accessibilityIdentifier("profile.guardian.none")
+                notLinked
             } else {
                 ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
         .task { model.linked.refresh() }
+    }
+
+    /// QA 2026-11-10 #6: the guardian disconnected this iPhone or deleted their account. Say what that means and
+    /// offer the way back, the same Connect as on Home.
+    private var notLinked: some View {
+        VStack(spacing: 12) {
+            Text("Not connected to a guardian yet")
+                .profileFont(17, .semibold)
+                .foregroundStyle(ProfileStyle.ink)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("profile.guardian.none")
+            Text("If your guardian disconnected you or deleted their account, ask them for a new invite code. Shoo keeps protecting you in the meantime.")
+                .profileFont(15)
+                .foregroundStyle(ProfileStyle.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+            Button { env.router.showConnect() } label: {
+                Text("Connect")
+                    .profileFont(17, .semibold, tracking: -0.17)
+                    .foregroundStyle(ProfileStyle.primaryText)
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .background(ProfileStyle.primaryFill, in: Capsule())
+            }
+            .padding(.top, 12)
+            .accessibilityIdentifier("profile.guardian.connect")
+        }
+        .padding(.horizontal, ProfileStyle.margin + 16)
+        .padding(.top, 48)
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder private func linked(_ guardian: GuardianInfo) -> some View {

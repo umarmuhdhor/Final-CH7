@@ -124,6 +124,36 @@ struct DeviceUpdate: Codable, Hashable, Sendable {
     /// PF-01 proposed: IANA zone ("Asia/Makassar") for quiet hours and the weekly summary.
     var timeZone: String?
     var notifications: NotificationSettingsUpdate?
+    /// EX-03 (#49): `Activity<ScoreActivityAttributes>.pushToStartTokenUpdates` as hex; `.clear` sends `null`.
+    var liveActivityStartToken: Clearable<String>?
+    /// EX-03 (#49): the running island's `id` and `pushTokenUpdates` token; `.clear` (`null`) once it ended.
+    var liveActivityUpdateToken: Clearable<LiveActivityUpdateToken>?
+}
+
+/// `{ activityId, token }` of `PATCH /devices/me` (contracts/api.md "Live score (Dynamic Island)").
+struct LiveActivityUpdateToken: Codable, Hashable, Sendable {
+    var activityId: String
+    var token: String
+}
+
+/// A `PATCH` field that can be set or cleared: `.set(x)` encodes `x`, `.clear` encodes JSON `null`.
+/// (A plain optional can't say "clear": `nil` leaves the key out.)
+enum Clearable<Value: Codable & Hashable & Sendable>: Codable, Hashable, Sendable {
+    case set(Value)
+    case clear
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        self = container.decodeNil() ? .clear : .set(try container.decode(Value.self))
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .set(let value): try container.encode(value)
+        case .clear: try container.encodeNil()
+        }
+    }
 }
 
 /// `POST /family/code` response. 6 digits, valid 30 min, `inviteUrl` = `https://<api host>/j/<code>`.

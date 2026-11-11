@@ -104,13 +104,22 @@ struct ConnectModelTests {
         #expect(model.problem == nil)
     }
 
+    /// Edge-case QA 2026-11-11 #2: `rate_limited` comes from registering (`POST /devices`, per IP), not from
+    /// join attempts, so it must not say "too many tries ... a few minutes".
+    @Test func rateLimitedIsTheSignUpLimitNotTooManyTries() {
+        #expect(ConnectModel.Problem(RepositoryError.api(.rateLimited, message: "Too many requests")) == .signUpLimit)
+        #expect(ConnectModel.Problem(RepositoryError.api(.tooManyAttempts, message: "Too many join attempts")) == .tooManyAttempts)
+        #expect(L10n.string(ConnectModel.Problem.signUpLimit.message, language: .indonesian)
+            == "Terlalu banyak pendaftaran baru dari jaringan ini. Tunggu hingga 1 jam, lalu coba lagi.")
+    }
+
     @Test func offlineIsItsOwnProblem() async {
         let model = ConnectModel(repository: FailingRepository(), code: "482193")
         await model.join()
         #expect(model.problem == .offline)
     }
 
-    @Test(arguments: [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .alreadyConnected, .offline, .other])
+    @Test(arguments: [ConnectModel.Problem.invalid, .expired, .full, .tooManyAttempts, .signUpLimit, .alreadyConnected, .offline, .other])
     func messagesExistInBothLanguages(problem: ConnectModel.Problem) {
         let english = L10n.string(problem.message, language: .english)
         let indonesian = L10n.string(problem.message, language: .indonesian)

@@ -5084,6 +5084,16 @@
         }
       }
     },
+    "Too many new sign-ups from this network. Wait up to an hour, then try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak pendaftaran baru dari jaringan ini. Tunggu hingga 1 jam, lalu coba lagi."
+          }
+        }
+      }
+    },
     "Too many tries. Wait a few minutes, then try again." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -5629,17 +5639,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu tidak akan tahu saat keluargamu dalam bahaya."
-          }
-        }
-      }
-    },
-    "You're already connected to a guardian. Disconnect in Profile first." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah terhubung ke Guardian. Putuskan dulu di Profil."
           }
         }
       }
@@ -6328,6 +6327,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nama ini terlihat oleh keluarga Anda."
+          }
+        }
+      }
+    },
+    "You're already connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah terhubung"
+          }
+        }
+      }
+    },
+    "Only your guardian can disconnect you. Ask them first, then join another family." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya Guardian-mu yang bisa memutuskan koneksi. Minta dulu, lalu bergabung ke keluarga lain."
+          }
+        }
+      }
+    },
+    "If your guardian disconnected you or deleted their account, ask them for a new invite code. Shoo keeps protecting you in the meantime." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalau Guardian-mu memutuskan koneksi atau menghapus akunnya, minta kode undangan baru. Sementara itu Shoo tetap melindungimu."
+          }
+        }
+      }
+    },
+    "You're already connected to a guardian. Only they can disconnect you: ask them first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah terhubung ke Guardian. Hanya Guardian-mu yang bisa memutuskan koneksi, jadi minta dulu."
           }
         }
       }

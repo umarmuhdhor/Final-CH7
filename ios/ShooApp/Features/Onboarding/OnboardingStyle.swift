@@ -189,6 +189,8 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
     @State private var footerHeight: CGFloat = 92
+    /// The footer's top padding, where the page fades out under it.
+    private static var footerFade: CGFloat { 24 }
     /// Figma "Footer": a lone button ends 68 pt above the screen bottom (34 over the home indicator inset);
     /// a button + text link ends 40 pt above it. See `footerEndsWithLink()`.
     private var footerBottom: CGFloat = 34
@@ -280,18 +282,21 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
             // Figma "Footer": 16 between the button and the text link under it.
             VStack(spacing: 16) { footer }
                 .padding(.horizontal, 24)
-                .padding(.top, 24)
+                .padding(.top, Self.footerFade)
                 .padding(.bottom, footerBottom)
                 .background {
-                    LinearGradient(
-                        stops: [
-                            .init(color: OnboardingTheme.background.opacity(0), location: 0),
-                            .init(color: OnboardingTheme.background.opacity(0.96), location: 0.3),
-                            .init(color: OnboardingTheme.background, location: 1),
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                    // Only the 24 pt above the first row fades; behind the rows it is solid. A fade that
+                    // scaled with the footer let a tall one (ON-04's consent box) show the steps scrolled
+                    // under it through its own text (QA 2026-11-11 #7).
+                    VStack(spacing: 0) {
+                        LinearGradient(
+                            colors: [OnboardingTheme.background.opacity(0), OnboardingTheme.background],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: Self.footerFade)
+                        OnboardingTheme.background
+                    }
                     .ignoresSafeArea(edges: .bottom)
                 }
                 .background {

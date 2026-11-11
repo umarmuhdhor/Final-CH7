@@ -23,6 +23,7 @@ final class PairingGateUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-UITestMock", "YES",
+            "-UITestSkipSplash", "YES",
             "-settings.language", language,
             "-UIPreferredContentSizeCategoryName", size,
             "-UITestNotifications", "denied",

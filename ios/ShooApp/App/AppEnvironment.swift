@@ -27,11 +27,18 @@ final class AppEnvironment {
     @ObservationIgnored private var sentDeviceInfo = false
     /// Bumped by `register`: a token send that started for the old device can't mark the new one as sent.
     @ObservationIgnored private var pushTokenEpoch = 0
+    /// EX-03 (#49): the Dynamic Island's push tokens for the backend. Started at the first activation.
+    @ObservationIgnored private var liveActivityTokens: LiveActivityTokens?
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
     /// so XCUITest finds it idle (fase 23a K2). Not for screenshots or the accessibility audit.
     @ObservationIgnored private(set) var reducesMotionForUITests = false
     /// Builds the real backend when the demo ends. `nil` in previews and tests that don't leave a demo.
     @ObservationIgnored fileprivate var makeLiveBackend: (() -> (repository: any ShooRepository, session: SessionStore))?
+    /// ON-01: the brand splash over the first screen (`LaunchSplash`). It lives as long as the process, so a
+    /// cold launch shows it and a return from the background does not.
+    var launchSplash: LaunchSplashPhase = .showing
+    /// UI tests: how long the splash stays before it fades (`-UITestSplashSeconds`, Debug only).
+    @ObservationIgnored private(set) var launchSplashHold: Double?
 
     init(
         repository: any ShooRepository,
@@ -160,6 +167,10 @@ final class AppEnvironment {
             environment.router.openProfile()
             environment.router.show(.profilePage(page))
         }
+        // ON-01: UI tests that don't test the launch splash start on their screen (`-UITestSkipSplash YES`);
+        // the splash test holds it long enough to see (`-UITestSplashSeconds 5`).
+        if Self.value(after: "-UITestSkipSplash", in: arguments) == "YES" { environment.launchSplash = .done }
+        environment.launchSplashHold = Self.value(after: "-UITestSplashSeconds", in: arguments).flatMap(Double.init)
         if Self.value(after: "-UITestReduceMotion", in: arguments) == "YES" {
             environment.reducesMotionForUITests = true
             // Push and sheet transitions too (UIKit); SwiftUI's own animations read `shooReduceMotion`.
@@ -202,6 +213,7 @@ final class AppEnvironment {
         // A new device on the server: its first token must be sent even if APNs hands out the same one.
         sentPushToken = nil
         pushTokenEpoch += 1
+        liveActivityTokens?.deviceChanged()
         if mode == .guardian { router.pendingJoinCode = nil }
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
@@ -250,6 +262,25 @@ final class AppEnvironment {
             Log.app.error("Profile refresh failed", error)
         }
         await registerForPushIfAllowed()
+        startLiveActivityTokens()
+        await liveActivityTokens?.sync()
+    }
+
+    /// EX-03 (#49, QA 2026-11-10 #5): without the start token the backend answered `no_start_token` to every
+    /// `POST /live` and the island never started. Both modes: the island shows the viewer's own Safari page.
+    @MainActor
+    private func startLiveActivityTokens() {
+        guard liveActivityTokens == nil else { return }
+        let tokens = LiveActivityTokens(
+            canSend: { [weak self] in
+                // Never from the demo or the UI-test mock: they have no server record to update.
+                guard let self, self.settings.mode != nil, !self.sessionExpired else { return false }
+                return !(self.repository is MockRepository)
+            },
+            send: { [weak self] update in try await self?.repository.updateMe(update) }
+        )
+        liveActivityTokens = tokens
+        tokens.start()
     }
 
     /// A registered device whose token is gone (backup restored onto another iPhone: the Keychain item
@@ -366,6 +397,7 @@ final class AppEnvironment {
         sentPushToken = nil
         sentDeviceInfo = false
         pushTokenEpoch += 1
+        liveActivityTokens?.deviceChanged()
         DeliveredPushes.clear()
         await registerForPushIfAllowed()
         return result.guardian
@@ -418,6 +450,17 @@ final class AppEnvironment {
     @MainActor
     var showsPushBanner: Bool { isInMainScreen }
 
+    /// Bumped by every push that arrives while the tabs are showing. Guardian Home reloads on it, so the
+    /// banner and the page under it tell the same story without a pull-to-refresh (QA 2026-11-11 #4).
+    private(set) var pushesWhileOpen = 0
+
+    /// A push arrived while Shoo is open (`willPresent`).
+    @MainActor
+    func pushArrivedWhileOpen() {
+        guard isInMainScreen else { return }
+        pushesWhileOpen += 1
+    }
+
     /// ON-05: both modes send their token. The Guardian gets scan pushes; the Protected device gets
     /// family pushes ("Ingatkan", disconnect, PF-01 proposed in backend/API.md).
     @MainActor
@@ -460,7 +503,9 @@ final class AppEnvironment {
         settings.language = language
         settings.onboardingCompleted = true
         settings.dataConsent = .granted
-        return AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+        let environment = AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+        environment.launchSplash = .done
+        return environment
     }
 
     private static func value(after flag: String, in arguments: [String]) -> String? {

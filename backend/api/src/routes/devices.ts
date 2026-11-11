@@ -9,7 +9,7 @@ import { joinFamily } from "../services/family";
 import { deleteScreenshots } from "../services/screenshots";
 import { requireDevice, requireMode } from "../http/auth";
 import { base64url, randomBytes, sha256 } from "../http/crypto";
-import { errors } from "../http/errors";
+import { ApiError, errors } from "../http/errors";
 import { clientIp, hit, limits } from "../http/rateLimit";
 import { displayName, isoTime, readJson } from "../http/validate";
 import { fromClock, isTimeZone, toClock } from "../services/push/quiet";
@@ -171,9 +171,15 @@ const becomeProtectedBody = z.object({ code: z.string().regex(/^\d{6}$/, "must b
 devices.post("/devices/me/protected", requireDevice, requireMode("guardian"), async (c) => {
   const sql = c.get("sql");
   const ip = clientIp((n) => c.req.header(n));
-  await hit(sql, limits.createDevice, ip);
-  const { code } = await readJson(c, becomeProtectedBody);
   const oldId = c.get("principal").deviceId;
+  try {
+    await hit(sql, limits.becomeProtected, oldId);
+  } catch (err) {
+    // A join route: the app shows "too many tries" for this device, not the per-network sign-up limit.
+    if (err instanceof ApiError && err.code === "rate_limited") throw errors.tooManyAttempts(err.retryAfter ?? 1);
+    throw err;
+  }
+  const { code } = await readJson(c, becomeProtectedBody);
   const [{ n } = { n: 0 }] = await sql<{ n: number }[]>`select count(*)::int as n from family_links where guardian_id = ${oldId}`;
   if (n > 0) throw errors.hasMembers();
 

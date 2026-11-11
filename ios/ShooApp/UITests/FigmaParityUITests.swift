@@ -314,7 +314,9 @@ final class FigmaParityUITests: XCTestCase {
     private func launch(_ arguments: [String], onboarded: Bool = true, extensionActive: Bool = true) -> XCUIApplication {
         let app = XCUIApplication()
         app.terminate()
-        app.launchArguments = ["-UITestMock", "YES", "-settings.language", "id", "-UITestNotifications", "granted"]
+        app.launchArguments = [
+            "-UITestMock", "YES", "-UITestSkipSplash", "YES", "-settings.language", "id", "-UITestNotifications", "granted",
+        ]
             + (onboarded ? ["-settings.onboardingCompleted", "YES"] : [])
             + (extensionActive ? ["-UITestExtensionActive", "YES"] : [])
             + arguments

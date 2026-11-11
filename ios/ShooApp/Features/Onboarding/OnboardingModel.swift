@@ -58,8 +58,6 @@ final class OnboardingModel {
     var consentChecked = false
     /// The last step change was a Back tap, so the screens slide the other way.
     private(set) var movedBack = false
-    /// The brand splash shows once per launch, not again after Back from ON-02.
-    var brandSplashShown = false
     /// The avatar from `POST /devices` (the pick, or random if the server did not keep it). The token is not kept here (fase 13 stores it in the Keychain).
     private(set) var avatarId: String?
     private(set) var isWorking = false

@@ -41,6 +41,24 @@ struct ProfileModelTests {
         #expect(!model.showsFamilyCode)
     }
 
+    /// QA 2026-11-10 #4: Maria, protected, disconnected by her guardian, got "You still protect someone".
+    @Test func protectedWithoutAGuardianCanJoinAgain() async {
+        let repository = MockRepository(mode: .protected, scenario: .unpaired, latency: .zero)
+        let model = ProfileModel(repository: repository, settings: settings(mode: .protected), linked: linked())
+        #expect(!model.canJoinAnotherFamily)  // not loaded yet: no answer before the server's
+        await model.load()
+        #expect(model.profile?.guardian == nil)
+        #expect(model.hasNoGuardian)
+        #expect(model.canJoinAnotherFamily)
+    }
+
+    @Test func protectedWithAGuardianCannotJoinAnotherFamily() async {
+        let (model, _, _) = model(mode: .protected)
+        await model.load()
+        #expect(!model.hasNoGuardian)
+        #expect(!model.canJoinAnotherFamily)
+    }
+
     @Test func savingANameUsesTheOnboardingRule() async throws {
         let (model, repository, _) = model(mode: .guardian)
         await model.load()

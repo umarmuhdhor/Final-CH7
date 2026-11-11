@@ -40,6 +40,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             let shows = environment.showsPushBanner
             // "Getar" (Pengaturan/Aksesibilitas): a warning that arrives while Shoo is open.
             if shows, isScan { WarningFeedback.warn(settings: environment.settings) }
+            // The page under the banner reloads too (QA 2026-11-11 #4).
+            environment.pushArrivedWhileOpen()
             completionHandler(shows ? [.banner, .list, .sound] : [])
         }
     }
