@@ -18,6 +18,8 @@ struct ConnectedPillButtonStyle: ButtonStyle {
         startPoint: .leading, endPoint: UnitPoint(x: 1 / 0.37387, y: 0.5)
     )
 
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
     /// Figma 455:10289, 138.6 × 41: 5 / 15 inside a 3.5 pt white ring that counts in the layout,
     /// "Terhubung" in SF Pro Rounded 17 on a 140 % line.
     func makeBody(configuration: Configuration) -> some View {
@@ -29,6 +31,9 @@ struct ConnectedPillButtonStyle: ButtonStyle {
             .background(Self.gradient, in: Capsule())
             .overlay(Capsule().strokeBorder(ProfileStyle.card, lineWidth: 3.5))
             .opacity(configuration.isPressed ? 0.7 : 1)
+            // Reduce Motion: the dim alone.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
     }

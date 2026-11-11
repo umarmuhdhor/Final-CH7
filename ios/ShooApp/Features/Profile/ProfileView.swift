@@ -6,6 +6,7 @@ struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
@@ -34,6 +35,10 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity, minHeight: 300)
             case .loaded:
                 loaded
+                    // Someone joins or is disconnected: rows fade, the card eases to its new
+                    // height and the sections below move with it. Reduce Motion: the list snaps,
+                    // since the sections below can't fade into their new place.
+                    .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: model.members.map(\.deviceId))
             }
         }
         .task {
@@ -123,7 +128,6 @@ struct ProfileView: View {
         protectionSection
         accountSection
         preferencesSection
-        privacySection
 
         Button { isDeleteConfirming = true } label: {
             // Figma "Hapus Akun" (title case here, unlike the Kelola profil row): SF Pro Rounded 17.
@@ -223,8 +227,8 @@ struct ProfileView: View {
                 FamilyEmptyCard { isInvitePresented = true }
             } else {
                 ForEach(Array(model.members.enumerated()), id: \.element.id) { index, member in
-                    if index > 0 { ProfileDivider(leading: 73) }
-                    memberRow(member)
+                    if index > 0 { ProfileDivider(leading: 73).transition(.opacity) }
+                    memberRow(member).transition(.opacity)
                 }
             }
         }
@@ -314,22 +318,6 @@ struct ProfileView: View {
             )
             ProfileDivider()
             navRow(symbol: "text.magnifyingglass", title: Text("About Shoo"), page: .about, id: "profile.about")
-        }
-    }
-
-    /// Apple 5.1.1: the online check can be taken back at any time.
-    private var privacySection: some View {
-        ProfileSection(title: "Privacy", top: sectionTop, spacing: sectionSpacing) {
-            ProfileToggleRow(
-                symbol: "checkmark.shield",
-                title: Text("Online check"),
-                subtitle: Text("Sends pages to Shoo's server and suspicious-page summaries to DeepSeek"),
-                isOn: Binding(
-                    get: { env.settings.dataConsent == .granted },
-                    set: { env.setDataConsent($0 ? .granted : .declined) }
-                )
-            )
-            .accessibilityIdentifier("profile.onlineCheck")
         }
     }
 

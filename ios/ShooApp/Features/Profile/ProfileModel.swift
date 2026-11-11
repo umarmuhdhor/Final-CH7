@@ -27,6 +27,8 @@ final class ProfileModel {
     /// The family list could not be read; the rest of Profile still works.
     private(set) var membersFailed = false
     private(set) var isWorking = false
+    /// Counts the name and avatar saves the server confirmed, so the view gives a success haptic.
+    private(set) var profileSaves = 0
     /// Why the name was not saved; cleared as soon as the name is edited.
     private(set) var nameError: String.LocalizationValue?
     /// Disconnect / delete / language failures, shown as an alert.
@@ -240,6 +242,7 @@ final class ProfileModel {
             try await repository.updateMe(DeviceUpdate(name: trimmed))
             profile?.name = trimmed
             nameDraft = trimmed
+            profileSaves += 1
             return true
         } catch {
             Log.ui.error("Name save failed", error)
@@ -325,6 +328,7 @@ final class ProfileModel {
         do {
             try await repository.updateMe(DeviceUpdate(avatarId: avatarId))
             profile?.avatarId = avatarId
+            profileSaves += 1
             return true
         } catch {
             Log.ui.error("Avatar save failed", error)

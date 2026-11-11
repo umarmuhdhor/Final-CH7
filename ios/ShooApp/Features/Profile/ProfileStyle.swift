@@ -543,6 +543,8 @@ struct ProfilePillButtonStyle: ButtonStyle {
     /// Figma 1115:14655 "Ingatkan": SF Pro Rounded 17 at 140 % (88 × 38). `false`: the older 14 pt pills.
     var large = false
 
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         label(configuration)
             .foregroundStyle(tint)
@@ -550,6 +552,9 @@ struct ProfilePillButtonStyle: ButtonStyle {
             .background(ProfileStyle.card, in: Capsule())
             .overlay(Capsule().strokeBorder(ProfileStyle.pillStroke))
             .opacity(configuration.isPressed ? 0.6 : 1)
+            // Gives under the finger like the onboarding pill; Reduce Motion: the dim alone.
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
     }
@@ -691,13 +696,17 @@ struct ProfileConfirmSheet<Avatar: View>: View {
                     HStack(spacing: 8) {
                         if isWorking {
                             ProgressView().tint(.white)
+                                .transition(.opacity)
                         } else {
                             Image(systemName: "exclamationmark.circle.fill").font(.system(size: 19, weight: .semibold))
                                 .frame(width: 22, height: 22)
                                 .accessibilityHidden(true)
+                                .transition(.opacity)
                         }
                         Text(verbatim: confirmTitle).profileFont(17, .semibold, tracking: -0.21)
                     }
+                    // Icon ↔ spinner: a 0.2 s cross-fade like "Remind".
+                    .animation(.easeInOut(duration: 0.2), value: isWorking)
                     .foregroundStyle(.white)
                     // Figma: icon and label cast black 20 %, y 4, blur 4.
                     .shadow(color: .black.opacity(0.2), radius: 2, y: 4)

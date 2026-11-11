@@ -569,16 +569,6 @@
         }
       }
     },
-    "Privacy" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Privasi"
-          }
-        }
-      }
-    },
     "Read the privacy policy" : {
       "localizations" : {
         "id" : {

@@ -59,6 +59,7 @@ struct ProfileSheetHeader: View {
 /// Figma "Button" in the Kelola profil sheets: dark blue capsule, a white compass and "Simpan" (54 pt).
 struct ProfileSaveButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 8) {
@@ -82,6 +83,9 @@ struct ProfileSaveButtonStyle: ButtonStyle {
         .background(isEnabled ? AnyShapeStyle(ModeOfferCard.button) : AnyShapeStyle(ProfileStyle.disabledFill), in: Capsule())
         .overlay(Capsule().strokeBorder(isEnabled ? Color(hex: 0x191D2F) : .clear, lineWidth: 1.5))
         .opacity(configuration.isPressed ? 0.85 : 1)
+        // Reduce Motion: the dim alone.
+        .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+        .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
         .contentShape(Capsule())
     }
 }
@@ -140,7 +144,16 @@ struct AvatarPickerSheet: View {
             Button {
                 if selected == current { dismiss() } else { onSave(selected) }
             } label: {
-                if isWorking { ProgressView().tint(.white) } else { Text("Save") }
+                Group {
+                    if isWorking {
+                        ProgressView().tint(.white).transition(.opacity)
+                    } else {
+                        Text("Save").transition(.opacity)
+                    }
+                }
+                // Save ↔ spinner: a 0.2 s cross-fade like "Remind", gentle enough for Reduce Motion. Only the
+                // label: the capsule's gradient ↔ grey swap would fade through white.
+                .animation(.easeInOut(duration: 0.2), value: isWorking)
             }
             .buttonStyle(ProfileSaveButtonStyle())
             .disabled(isWorking)
@@ -199,7 +212,14 @@ struct NameSheet: View {
                 .padding(.trailing, 4)
             }
             Button { Task { await save() } } label: {
-                if model.isWorking { ProgressView().tint(.white) } else { Text("Save") }
+                Group {
+                    if model.isWorking {
+                        ProgressView().tint(.white).transition(.opacity)
+                    } else {
+                        Text("Save").transition(.opacity)
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: model.isWorking)
             }
             .buttonStyle(ProfileSaveButtonStyle())
             .disabled(saveDisabled)
@@ -338,8 +358,13 @@ private struct DeleteAccountAlert: ViewModifier {
                     Task { if await model.deleteMyData() { isPresented = false } }
                 } label: {
                     Group {
-                        if model.isWorking { ProgressView().tint(.white) } else { Text("Delete") }
+                        if model.isWorking {
+                            ProgressView().tint(.white).transition(.opacity)
+                        } else {
+                            Text("Delete").transition(.opacity)
+                        }
                     }
+                    .animation(.easeInOut(duration: 0.2), value: model.isWorking)
                     .alertButton(fill: ProfileStyle.red, ink: .white)
                 }
                 .buttonStyle(.plain)

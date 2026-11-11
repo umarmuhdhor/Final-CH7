@@ -95,6 +95,8 @@ struct DetailFooter: View {
         // Safe / Danger saved: the buttons hand over to the verified card and its note with a short ease. Keyed
         // on the verdict only, never on this footer's geometry (GD-06).
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: verdict?.value)
+        // "Couldn't save" is felt too, not only read. Haptic only: the animation above stays keyed on the verdict.
+        .sensoryFeedback(.error, trigger: failed) { _, now in now }
     }
 
     /// Side by side; stacked at accessibility sizes so the words never wrap per letter.
