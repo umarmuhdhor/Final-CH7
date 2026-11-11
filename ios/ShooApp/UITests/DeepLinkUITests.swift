@@ -50,11 +50,13 @@ final class DeepLinkUITests: XCTestCase {
     /// QA 2026-11-10 #1 and #9: a push tap (same `Router.openDetail` as this link) from Home, with motion on,
     /// froze the app at 100 % CPU (DetailFooter's safe-area state fed the tab bar's hide transition) and left
     /// the tab bar over Aman / Bahaya. The tab bar must be gone and the buttons hittable, twice in a row.
+    /// UIKit transitions stay on; only the endless shield loops stop (`-UITestStillLoops`), or XCUITest waits
+    /// for an idle app that never comes and a slow runner hangs (#405).
     @MainActor
     func testScanLinkFromHomeWithMotionShowsHittableVerdictButtons() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-UITestMock", "YES", "-UITestReset", "YES", "-UITestSkipSplash", "YES",
+            "-UITestMock", "YES", "-UITestReset", "YES", "-UITestSkipSplash", "YES", "-UITestStillLoops", "YES",
             "-settings.onboardingCompleted", "YES", "-settings.onboardingConnectPassed", "YES",
             "-settings.mode", "guardian", "-settings.language", "en", "-settings.familyModeOn", "YES",
             "-UITestExtensionActive", "YES", "-UITestNotifications", "granted",
