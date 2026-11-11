@@ -257,9 +257,12 @@ describe("hourly cron: Perlindungan mati", () => {
 });
 
 describe("quiet hours in SQL (cron, fase 27k F-N10) = isQuiet", () => {
-  const zones = ["Asia/Jakarta", "Asia/Makassar", "UTC", "Mars/Olympus"]; // the last one is unknown → WIB
+  // DST zones, a name in another case (Intl accepts it, so PATCH stores it), and an unknown one → WIB.
+  const zones = ["Asia/Jakarta", "Asia/Makassar", "UTC", "America/New_York", "Europe/Berlin", "Australia/Lord_Howe",
+    "asia/makassar", "Mars/Olympus"];
   const windows: [boolean, number, number][] = [
     [true, 22 * 60, 6 * 60], [true, 9 * 60, 17 * 60], [true, 600, 600], [false, 22 * 60, 6 * 60], [true, 0, 1],
+    [true, 90, 180], // 01:30–03:00, the hour a spring-forward skips
   ];
   const instants = [
     NIGHT_JAKARTA, DAY_JAKARTA,
@@ -269,6 +272,10 @@ describe("quiet hours in SQL (cron, fase 27k F-N10) = isQuiet", () => {
     at("2026-10-27T01:00:30Z"), // 09:00:30 WITA
     at("2026-10-26T16:59:59Z"), // 23:59:59 WIB
     at("2026-10-26T17:00:00Z"), // 00:00 WIB
+    at("2026-03-08T06:59:00Z"), at("2026-03-08T07:00:00Z"), // New York springs forward
+    at("2026-11-01T05:59:00Z"), at("2026-11-01T06:00:00Z"), // New York falls back
+    at("2026-03-29T00:59:00Z"), at("2026-03-29T01:00:00Z"), // Berlin springs forward
+    at("2026-04-04T14:59:00Z"), at("2026-04-04T15:00:00Z"), // Lord Howe: 30 minutes back
   ];
   const cases = zones.flatMap((timeZone) =>
     windows.map(([quietHours, quietStart, quietEnd]) => ({ quietHours, quietStart, quietEnd, timeZone })));
@@ -284,6 +291,7 @@ describe("quiet hours in SQL (cron, fase 27k F-N10) = isQuiet", () => {
       order by n`;
     const got = rows.map((r) => r.quiet);
     const want = cases.map((c) => isQuiet(c, now));
+    expect(new Set(want)).toEqual(new Set([true, false])); // never a comparison of all-false
     expect(cases.map((c, i) => ({ ...c, quiet: got[i] }))).toEqual(cases.map((c, i) => ({ ...c, quiet: want[i] })));
   });
 });

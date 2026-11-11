@@ -72,8 +72,9 @@ async function writeOps(write: () => Promise<void>): Promise<void> {
 /**
  * isQuiet (services/push/quiet.ts) in SQL, for the device columns of alias `g` at the injected `now`:
  * local minutes in the device's zone, a window that may cross midnight, start = end = all day. An
- * unknown zone falls back to WIB like localTime does, instead of failing the whole query. Lets the
- * cron filter quiet hours before its limit (fase 27k F-N10).
+ * unknown zone falls back to WIB like localTime does, instead of failing the whole query. The name
+ * matches without case, as Intl accepts it (PATCH /devices/me stores what Intl took). Lets the cron
+ * filter quiet hours before its limit (fase 27k F-N10).
  */
 export function quietSql(sql: Sql, now: Date): PendingQuery<Row[]> {
   return sql`(g.quiet_hours and (
@@ -82,7 +83,8 @@ export function quietSql(sql: Sql, now: Date): PendingQuery<Row[]> {
         or (g.quiet_start > g.quiet_end and (x.m >= g.quiet_start or x.m < g.quiet_end))
     from (select (extract(hour from t.local) * 60 + extract(minute from t.local))::int as m
           from (select ${now.toISOString()}::timestamptz at time zone coalesce(
-                  (select z.name from pg_timezone_names z where z.name = g.time_zone), 'Asia/Jakarta') as local) t) x))`;
+                  (select z.name from pg_timezone_names z where lower(z.name) = lower(g.time_zone) limit 1),
+                  'Asia/Jakarta') as local) t) x))`;
 }
 
 /**
@@ -108,7 +110,7 @@ async function protectionOff(sql: Sql, now: Date, limit: number): Promise<PushMe
       and m.ext_last_seen_at <= now() - interval '24 hours'
       and g.notify_protection_off and g.apns_token is not null
       and not ${quietSql(sql, now)}
-    order by m.ext_last_seen_at
+    order by m.ext_last_seen_at, l.protected_id
     limit ${limit}`;
   if (due.length === 0) return [];
   const claimed = await sql<{ guardianId: string; apnsToken: string; language: Language; member: string }[]>`
