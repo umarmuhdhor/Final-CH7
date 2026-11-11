@@ -185,7 +185,20 @@ final class AppEnvironment {
     }
 
     /// A device registered before the question existed answers it before anything else (Apple 5.1.2(i)).
-    var needsDataConsent: Bool { settings.mode != nil && settings.dataConsent == nil && !sessionExpired }
+    /// Only once onboarding is done: during onboarding the invite path asks before Connect and ON-04 has its
+    /// checkbox, so this screen must not replace the flow halfway (fase 27d, F-A1).
+    var needsDataConsent: Bool {
+        settings.mode != nil && settings.onboardingCompleted && settings.dataConsent == nil && !sessionExpired
+    }
+
+    /// The local part of "this device is deleted on the server" (P13), shared by "Delete my data" and
+    /// cancelling a failed invite join: the Protected switches and the checked-pages counter. The session is
+    /// already empty (`ApiRepository.deleteMe`); the caller resets the settings its own way.
+    @MainActor
+    static func forgetDeletedDevice(linked: LinkedAccountSettings) {
+        linked.clear()
+        CheckStats.clear()
+    }
 
     /// Onboarding, the same question for an existing device, and the switch in Profile.
     @MainActor

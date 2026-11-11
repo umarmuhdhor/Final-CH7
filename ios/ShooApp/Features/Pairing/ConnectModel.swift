@@ -61,6 +61,8 @@ final class ConnectModel {
 
     private(set) var state: State = .entering
     private(set) var problem: Problem?
+    /// Onboarding is undoing a failed invite registration (fase 27d): no join may start meanwhile.
+    var isHeld = false
     /// Digits only, at most 6; editing clears the last problem.
     var code = "" {
         didSet {
@@ -78,7 +80,10 @@ final class ConnectModel {
         if let code { prefill(code) }
     }
 
-    var canJoin: Bool { state == .entering && DeepLink.isCode(code) }
+    var canJoin: Bool { state == .entering && !isHeld && DeepLink.isCode(code) }
+
+    /// Busy with a join or with something onboarding does on this screen: Back and "Not now" wait.
+    var isBusy: Bool { state == .joining || isHeld }
 
     /// From `shoo://join?code=` or a QR: fills the field, never joins (T11).
     func prefill(_ code: String) {
@@ -99,6 +104,12 @@ final class ConnectModel {
     /// A failure outside `join()` that belongs on this screen (onboarding "Not now").
     func report(_ error: any Error) {
         problem = Problem(error)
+    }
+
+    /// The server says this device has a guardian after all (a join whose answer got lost): PR-02.
+    func showJoined(_ guardian: GuardianInfo) {
+        problem = nil
+        state = .joined(guardian)
     }
 
     #if DEBUG
