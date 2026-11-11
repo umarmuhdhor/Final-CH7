@@ -88,7 +88,7 @@ test("a normal international domain does not crash or trigger", async () => {
 test("fixture domains from contracts/fixtures", async () => {
     const a = await scan("https://bca-verifikasi.site/login?ref=wa");
     assert.deepEqual(ids(a), ["brand_plus_keyword", "cheap_tld"]);
-    assert.equal(score(a), 29);
+    assert.equal(score(a), 30); // #381: brand + bait word on a cheap TLD reaches the first warning
 
     const b = await scan("https://promo-undian-shopee.click/hadiah");
     assert.deepEqual(ids(b), ["brand_plus_keyword", "cheap_tld"]);
@@ -126,9 +126,9 @@ test("brand in a subdomain of an unrelated domain", async () => {
     assert.ok(ids(await scan("https://bca-login.evil-hosting.com/")).includes("brand_plus_keyword"));
 });
 
-test("cheap TLD with a brand scores 15, alone only 5", async () => {
+test("cheap TLD with a brand scores 16, alone only 5", async () => {
     assert.equal(find(await scan("https://random-shop.xyz/"), "cheap_tld").weight, 5);
-    assert.equal(find(await scan("https://bca-verifikasi.xyz/"), "cheap_tld").weight, 15);
+    assert.equal(find(await scan("https://bca-verifikasi.xyz/"), "cheap_tld").weight, 16);
 });
 
 test("two-part suffixes (.co.id) are never treated as a cheap TLD", async () => {
@@ -470,7 +470,7 @@ test("link: legit international domain and plain sites stay silent", async () =>
 test("link: cheap TLD from brands.json is counted once (cheap_tld signal), not again by the dissector", async () => {
     const s = await scan("https://bca-verifikasi.xyz/");
     assert.deepEqual(ids(s), ["brand_plus_keyword", "cheap_tld"]);
-    assert.equal(score(s), 29);
+    assert.equal(score(s), 30);
 });
 
 test("link: official domains still return nothing, whatever the path", async () => {
@@ -511,4 +511,20 @@ test("ag0da.com, dh1.com, dhl-express.xyz -> lookalike_domain", async () => {
 
 test("words that merely contain dhl are not the DHL brand (adhlete.com, studhall.com)", async () => {
     for (const host of ["adhlete.com", "studhall.com"]) assert.deepEqual(await scan(`https://${host}/`), [], host);
+});
+
+// ---------- #381: domain-only look-alikes reach the first warning (30) ----------
+test("#381: a homoglyph look-alike alone reaches 30; leet and typo stay at 25", async () => {
+    const cyr = await scan("https://bcа.co.id/"); // Cyrillic а
+    assert.ok(new URL("https://bcа.co.id/").hostname.startsWith("xn--"));
+    assert.equal(find(cyr, "lookalike_domain").weight, 30);
+    assert.ok(score(cyr) >= 30);
+    assert.equal(find(await scan("https://gооgle.com/"), "lookalike_domain").weight, 30);
+    assert.equal(find(await scan("https://p0stindonesia.com/"), "lookalike_domain").weight, 25);
+});
+
+test("#381: brand in a subdomain + bait word on a cheap TLD reaches 30 (was 29)", async () => {
+    const s = await scan("https://login.klikbca.com.verifikasi-akun.xyz/");
+    assert.ok(ids(s).includes("brand_plus_keyword") && ids(s).includes("cheap_tld"), ids(s).join(","));
+    assert.ok(score(s) >= 30, String(score(s)));
 });
