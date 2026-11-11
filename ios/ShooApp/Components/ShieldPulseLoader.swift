@@ -1,24 +1,26 @@
 import SwiftUI
 
-/// Three soft discs that grow and fade one after the other (4 s for each). Reduce Motion keeps them still.
+/// Three soft discs that grow and fade one after the other (`period` for each, so a new one every third of it).
+/// Reduce Motion keeps them still.
 struct SoftPulse: View {
     var color: Color = .white
     let smallest: CGFloat
     let largest: CGFloat
     let peak: Double
+    /// One disc's life in seconds.
+    var period: Double = 4
 
     @Environment(\.shooReduceMotion) private var reduceMotion
 
-    private static let period = 4.0
     /// A disc fades in over this share of its life, so it never pops up behind the glass.
     private static let fadeIn = 0.12
 
     var body: some View {
         TimelineView(.animation(paused: reduceMotion)) { context in
-            let time = reduceMotion ? Self.period * 0.15 : context.date.timeIntervalSinceReferenceDate
+            let time = reduceMotion ? period * 0.15 : context.date.timeIntervalSinceReferenceDate
             ZStack {
                 ForEach(0..<3, id: \.self) { index in
-                    let phase = (time / Self.period + Double(index) / 3).truncatingRemainder(dividingBy: 1)
+                    let phase = (time / period + Double(index) / 3).truncatingRemainder(dividingBy: 1)
                     Circle()
                         .fill(color.opacity(peak * min(phase / Self.fadeIn, 1) * pow(1 - phase, 1.2)))
                         .frame(width: smallest + phase * (largest - smallest), height: smallest + phase * (largest - smallest))

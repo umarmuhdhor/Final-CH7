@@ -264,7 +264,8 @@ extension HomeHero where Accessory == EmptyView {
 private struct HeroPulse: View {
     var body: some View {
         ZStack {
-            SoftPulse(smallest: 120, largest: 368, peak: 0.2)
+            // 9 s per disc, so a new one every 3 s: at the loader's 4 s the big Home hero felt hurried and overwhelming.
+            SoftPulse(smallest: 120, largest: 368, peak: 0.2, period: 9)
             ring(368, opacity: 0.16, width: 1)
             ring(300, opacity: 0.28, width: 1.2)
             ring(236, opacity: 0.45, width: 1.5)
