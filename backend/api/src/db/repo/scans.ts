@@ -193,9 +193,16 @@ export async function reserveFavicon(
   });
 }
 
-/** Clears the path (and ready) on every scan of the owner that points at it. */
+/**
+ * Clears the path (and ready) on every scan of the owner that points at it. Under the owner's favicon
+ * lock (as clearReplicaPath), so a reserveFavicon that just picked this path as its reuse cannot
+ * commit after it.
+ */
 export async function clearFaviconPath(sql: Sql, ownerId: string, path: string): Promise<void> {
-  await sql`update scans set favicon_path = null, favicon_ready_at = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(4, hashtext(${ownerId}))`;
+    await tx`update scans set favicon_path = null, favicon_ready_at = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+  });
 }
 
 /**

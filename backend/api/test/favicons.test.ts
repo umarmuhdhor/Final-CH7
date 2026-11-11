@@ -521,7 +521,7 @@ describe("faviconUrl in GET /scans and GET /scans/{id} (PR-05)", () => {
 // Fase 27k F-B8: the path is reserved (and tombstoned) before the R2 put, like a replica's. The link
 // and a reuse may only follow a finished put (favicon_ready_at, as replica_ready_at in fase 22).
 describe("favicon link only after the upload (fase 27k F-B8)", () => {
-  /** Holds every R2 put until release(); the reservation commits first, as in production. */
+  /** Holds every favicon put to R2 until release(); the reservation commits first, as in production. */
   let held: (() => void) | undefined;
   const holdPuts = () => {
     let release!: () => void;
@@ -529,11 +529,13 @@ describe("favicon link only after the upload (fase 27k F-B8)", () => {
     held = release;
     const real = R2ReplicaStore.prototype.put;
     vi.spyOn(R2ReplicaStore.prototype, "put").mockImplementation(async function (this: R2ReplicaStore, ...args) {
-      await gate;
+      if (args[0].includes("-icon.")) await gate;
       return real.apply(this, args);
     });
     return release;
   };
+  const ready = async (id: string) =>
+    (await sql<{ r: Date | null }[]>`select favicon_ready_at as r from scans where id = ${id}`)[0]?.r ?? null;
   // Also after a failed assertion: a held put would keep its waitUntil work hanging into later tests.
   afterEach(() => {
     held?.();
@@ -562,6 +564,32 @@ describe("favicon link only after the upload (fase 27k F-B8)", () => {
     await until(async () => (await detail(p, id)).faviconUrl !== null);
     expect(await objectExists(path)).toBe(true);
     for (const viewer of [p, g]) expect((await call(await linkFor(viewer, id))).status).toBe(200);
+  });
+
+  it("a failed put leaves no path, no ready, no link and no object", async () => {
+    mockInternet({ [ICON_URL]: () => image(png(16, 16)) });
+    vi.spyOn(R2ReplicaStore.prototype, "put").mockRejectedValue(new Error("r2 down"));
+    const p = await createDevice("Mom");
+    const id = await postScan(p);
+    await until(async () => (await sql`select 1 from storage_tombstones where path = ${`${p.deviceId}/${id}-icon.png`}`).length === 1
+      && (await faviconPath(id)) === null);
+    expect(await ready(id)).toBeNull();
+    expect((await detail(p, id)).faviconUrl).toBeNull();
+    expect(await objectExists(`${p.deviceId}/${id}-icon.png`)).toBe(false);
+  });
+
+  it("the scan deleted while the put is held → the object is removed, nothing is marked ready", async () => {
+    mockInternet({ [ICON_URL]: () => image(png(16, 16)) });
+    const release = holdPuts();
+    const p = await createDevice("Mom");
+    const id = await postScan(p);
+    const path = `${p.deviceId}/${id}-icon.png`;
+    await until(async () => (await faviconPath(id)) === path);
+    expect((await call("/devices/me", { method: "DELETE", token: p.token })).status).toBe(200);
+    release();
+    // markFaviconReady finds no row, so attachFavicon abandons the object it just put.
+    await until(async () => !(await objectExists(path)));
+    expect((await sql`select 1 from scans where id = ${id}`).length).toBe(0);
   });
 
   it("a reuse never picks an upload still in flight; it does once the put finished", async () => {
