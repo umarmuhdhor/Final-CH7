@@ -53,7 +53,8 @@ struct DetailFooter: View {
                     onChange: { isChanging = true }
                 )
                 if verdict.value == .safe, let ownerName {
-                    Text("\(ownerName) still sees Shoo's warning when opening this site.")
+                    // #369: "Aman" vouches for this link on both phones: no block, card or sheet while it stands.
+                    Text("Shoo no longer blocks or warns \(ownerName) on this link.")
                         .activityFont(13, rounded: true)
                         .foregroundStyle(DetailStyle.secondary)
                         // Figma: centred, 140 % line height.

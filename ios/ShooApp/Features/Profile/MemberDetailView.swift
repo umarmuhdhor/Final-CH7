@@ -234,7 +234,7 @@ struct MemberDetailView: View {
         let number = { (n: Int) in n.formatted(.number.locale(language.locale)) }
         return [
             ProfileStat(value: model.daysProtected.map(number) ?? "–", label: "Days under protection"),
-            ProfileStat(value: number(stats.blocked), label: "Sites blocked"),
+            ProfileStat(value: number(stats.blocked), label: "Blocked"),
             ProfileStat(value: number(stats.warnings), label: "Warnings"),
         ]
     }

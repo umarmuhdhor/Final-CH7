@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// The guardian's word under a row of the own Activity list (PR-05, Figma 450:8734 / 450:8739 /
-/// 450:8744): "Menurut Virellia website ini berbahaya!", "… link ini aman. Shoo tetap tak
-/// menyarankan …" or "Virellia belum melihat website ini".
+/// 450:8744): "Menurut Virellia website ini berbahaya!", "Virellia menandai link ini aman" (#369) or
+/// "Virellia belum melihat website ini".
 enum ActivityNote: Equatable {
     /// `name` nil = the viewer decided themselves ("you").
     case notSafe(name: String?)
@@ -22,11 +22,9 @@ enum ActivityNote: Equatable {
         }
     }
 
-    /// "… link ini aman. Shoo tetap tak menyarankan …" runs on two 15 pt lines in Figma (450:8657).
-    var isTwoLine: Bool {
-        if case .safe = self { return true }
-        return false
-    }
+    /// The old safe note ("… link ini aman. Shoo tetap tak menyarankan …", Figma 450:8657) ran on two lines.
+    /// Since #369 "Aman" stops the warnings, so the note is one line like the others.
+    var isTwoLine: Bool { false }
 
     /// Figma (icon, icon circle, stroke, text).
     fileprivate var colors: (icon: Color, circle: Color, stroke: Color, text: Color) {
@@ -47,7 +45,9 @@ enum ActivityNote: Equatable {
             let who = Text(verbatim: name ?? L10n.string("activity.note.you", language: language)).bold()
             return Text("activity.note.notSafe \(who)")
         case .safe(let name):
-            let who = Text(verbatim: name ?? L10n.string("activity.note.you", language: language)).bold()
+            // The name opens the sentence here ("Kamu menandai link ini aman"), so "you" gets a capital.
+            let you = L10n.string("activity.note.you", language: language)
+            let who = Text(verbatim: name ?? you.prefix(1).uppercased() + you.dropFirst()).bold()
             return Text("activity.note.safe \(who)")
         case .unseen(let guardianName):
             let who = Text(verbatim: guardianName).fontWeight(.semibold)
