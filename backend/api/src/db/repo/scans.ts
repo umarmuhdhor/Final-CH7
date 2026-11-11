@@ -1,4 +1,5 @@
 import type { Sql, TransactionSql } from "postgres";
+import { LOCK } from "../locks";
 import { addTombstones } from "./tombstones";
 
 export interface NewScan {
@@ -27,7 +28,7 @@ export interface NewScan {
  */
 export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; escalated: boolean }> {
   return sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(7, hashtext(${`${s.ownerId}|${s.domain}`}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.scanSite}, hashtext(${`${s.ownerId}|${s.domain}`}))`;
     const [kept] = await tx<{ id: string; escalated: boolean }[]>`
       with previous as (
         select id, status from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
@@ -94,7 +95,7 @@ export async function reserveScreenshot(
   quota: { owner: number; global: number },
 ): Promise<ScreenshotSlot> {
   return sql.begin(async (tx): Promise<ScreenshotSlot> => {
-    await tx`select pg_advisory_xact_lock(3, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.screenshot}, hashtext(${scan.ownerId}))`;
     const reuse = await recentScreenshot(tx, scan.ownerId, scan.domain);
     const chosen = reuse ?? path;
     if (!reuse) {
@@ -177,7 +178,7 @@ export async function reserveFavicon(
   path: string | null,
 ): Promise<FaviconSlot> {
   return sql.begin(async (tx): Promise<FaviconSlot> => {
-    await tx`select pg_advisory_xact_lock(4, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.favicon}, hashtext(${scan.ownerId}))`;
     const reuse = await recentFavicon(tx, scan.ownerId, scan.domain);
     const chosen = reuse ?? path;
     if (!chosen) return { none: true };
@@ -243,7 +244,7 @@ export interface ReplicaQuota {
  * family is the device itself (replicaCountsQuery).
  * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
  * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
- * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (6, 0) stays the final
+ * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (LOCK.replica, 0) stays the final
  * word, so a race costs at most one inflate, as before.
  * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
  * the same moment may keep or drop one replica.
@@ -266,10 +267,10 @@ export async function precheckReplica(
 
 /**
  * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
- * class 6; 3–5 are taken), reuse the owner's replica of this domain from the last 24 h, else reserve
+ * class LOCK.replica, db/locks.ts), reuse the owner's replica of this domain from the last 24 h, else reserve
  * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
  * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
- * key (6, 0). Every new upload takes that key, so uploads by different members of one family cannot
+ * key (LOCK.replica, 0). Every new upload takes that key, so uploads by different members of one family cannot
  * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
  * so the family may still change by one member in between); held for milliseconds, the R2 put runs
  * after commit. Order of the checks (fase 19 K4): owner → family → family_bytes → global →
@@ -290,12 +291,12 @@ export async function reserveReplica(
   quota: ReplicaQuota,
 ): Promise<ReplicaSlot> {
   return sql.begin(async (tx): Promise<ReplicaSlot> => {
-    await tx`select pg_advisory_xact_lock(6, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${scan.ownerId}))`;
     const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan.ownerId, scan.domain)}) as path`;
     const reuse = found?.path ?? undefined;
     if (!reuse && !upload) return { none: true };
     if (!reuse) {
-      await tx`select pg_advisory_xact_lock(6, 0)`;
+      await tx`select pg_advisory_xact_lock(${LOCK.replica}, 0)`;
       const full = quotaFull(await replicaCounts(tx, scan.ownerId), upload!.bytes, quota);
       if (full) return { quota: full };
     }
@@ -425,7 +426,7 @@ function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
  */
 export async function clearReplicaPath(sql: Sql, ownerId: string, path: string): Promise<void> {
   await sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(6, hashtext(${ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${ownerId}))`;
     await tx`update scans set replica_path = null, replica_bytes = null, replica_ready_at = null
              where owner_id = ${ownerId} and replica_path = ${path}`;
   });
