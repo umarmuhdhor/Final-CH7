@@ -146,13 +146,14 @@ struct GuardianHomeModelTests {
     /// K7 (F-N1): a verdict lands on the decided scan only. Bayu's older visit to the same link keeps its
     /// own state until a refresh brings the server's answer.
     @Test func verdictLandsOnTheDecidedScanOnly() async throws {
-        // The figma scenario puts "today" at 10:4x on the given day and keeps its older rows in Oct/Sep 2026.
-        let now = try #require(Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 20)))
-        let repository = MockRepository(mode: .guardian, scenario: .figma, latency: .zero, now: { now })
-        let model = model(repository: repository, settings: try settings(), now: now)
+        // Picked by id, never by order: the figma "today" times are Jakarta times clamped to the clock, so on a
+        // UTC runner the three newest rows can share one timestamp and swap places.
+        let repository = MockRepository(mode: .guardian, scenario: .figma, latency: .zero)
+        let target = try await repository.scan(id: "figma-warning-72")
+        let settings = try settings()
+        let model = model(repository: repository, settings: settings, now: target.detectedAt.addingTimeInterval(60))
         await model.refresh()
-        model.dismissPending() // Syahnaz's blocked site
-        model.dismissPending() // Bayu's Shopee site
+        for scan in model.scans where scan.id != target.id { settings.dismissHomeScan(scan.id) }
         let decided = try #require(model.pendingScan)
         try #require(decided.id == "figma-warning-72")
         let untouched = model.scans.filter { $0.id != decided.id }
