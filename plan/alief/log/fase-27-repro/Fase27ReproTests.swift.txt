@@ -1,0 +1,129 @@
+import Foundation
+import Testing
+@testable import Shoo
+
+/// Fase 27 (state-machine audit) reproductions. Each test asserts the CORRECT behaviour, so on unfixed
+/// code it fails: that failure is the evidence for the finding (plan/alief/fase-27-state-machines.md).
+@MainActor
+struct Fase27ReproTests {
+    let settings: AppSettings
+    let env: AppEnvironment
+
+    init() throws {
+        let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
+        settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        // A real fresh install: no consent answer yet (OnboardingModelTests pre-grants it).
+        settings.dataConsent = nil
+        env = AppEnvironment(
+            repository: MockRepository(mode: .guardian, latency: .zero),
+            settings: settings,
+            notifications: FakeNotificationPermission(),
+            extensionStatus: { .off(lastSeen: nil) }
+        )
+    }
+
+    func inviteModel(code: String) -> OnboardingModel {
+        env.router.pendingJoinCode = code
+        let model = OnboardingModel(environment: env)
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        return model
+    }
+
+    /// F-A1: RootView shows DataConsentView instead of OnboardingFlow when `needsDataConsent` (RootView.swift:18).
+    @Test func inviteJoinDoesNotSwapOnboardingOutForConsent() async {
+        let model = inviteModel(code: "482193")
+        #expect(model.step == .connect)
+        await model.connect().join()
+        #expect(!env.needsDataConsent, "consent screen replaces OnboardingFlow in the middle of the invite flow")
+    }
+
+    /// F-A1: after the consent answer a new OnboardingModel is built; it must not skip ON-04.
+    @Test func protectedAfterInviteStillReachesTurnOnExtension() async {
+        let model = inviteModel(code: "482193")
+        await model.connect().join()
+        env.setDataConsent(.granted)
+        let rebuilt = OnboardingModel(environment: env)
+        #expect(rebuilt.step != .done, "invite join skipped ON-04 + notification ask (step = \(rebuilt.step))")
+    }
+
+    /// F-A2: a failed join must not make the phone Protected for good.
+    @Test(arguments: ["999999", "000000", "888888"])
+    func failedInviteJoinSavesNoMode(code: String) async {
+        settings.dataConsent = .granted // isolate F-A2 from F-A1
+        let model = inviteModel(code: code)
+        await model.connect().join()
+        #expect(settings.mode == nil, "failed join (\(code)) already saved mode \(String(describing: settings.mode))")
+    }
+
+    /// F-A5: loadMore in flight, then a refresh that fails: the spinner row must not stay forever.
+    @Test func loadingMoreSpinnerClearsAfterAFailedRefresh() async {
+        let repository = DelayedScansRepository(
+            base: MockRepository(mode: .guardian, latency: .zero, pageSize: 2),
+            delays: [.zero, .milliseconds(300), .milliseconds(100)]
+        )
+        let model = ActivityModel(repository: repository, owner: .family)
+        await model.load()
+        #expect(model.state == .loaded)
+        repository.failure = RepositoryError.network
+        async let more: Void = model.loadMore()
+        try? await Task.sleep(for: .milliseconds(20))
+        async let refresh: Void = model.refresh()
+        _ = await (more, refresh)
+        #expect(model.refreshFailed)
+        #expect(!model.isLoadingMore, "spinner row stuck; loadMore is blocked by its own guard")
+    }
+
+    /// F-A4: a Home refresh that read the list before the verdict must not bring the decided card back.
+    @Test func homeVerdictIsNotUndoneByAnOlderRefresh() async throws {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let repository = StaleListRepository(base: base)
+        let model = GuardianHomeModel(
+            repository: repository, settings: settings, scope: .family,
+            extensionStatus: { .active(lastSeen: nil) }, now: { GuardianHomeModelTests.fixtureNow }
+        )
+        await model.refresh()
+        let decided = try #require(model.pendingScan)
+        repository.holdNextList = .milliseconds(300) // reads now, answers in 300 ms
+        async let refresh: Void = model.refresh()
+        try? await Task.sleep(for: .milliseconds(50))
+        await model.decide(.notSafe)
+        await refresh
+        #expect(model.scans.first { $0.id == decided.id }?.verdict != nil, "older refresh wiped the verdict just made")
+    }
+}
+
+/// Reads `scans` from the base at call time, then waits before answering (a list that left the
+/// server before a verdict was saved). Everything else goes straight to the base.
+final class StaleListRepository: ShooRepository, @unchecked Sendable {
+    private let base: any ShooRepository
+    var holdNextList: Duration?
+
+    init(base: any ShooRepository) { self.base = base }
+
+    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
+        let page = try await base.scans(owner: owner, status: status, cursor: cursor)
+        if let hold = holdNextList, cursor == nil {
+            holdNextList = nil
+            try await Task.sleep(for: hold)
+        }
+        return page
+    }
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
+    }
+    func me() async throws -> DeviceProfile { try await base.me() }
+    func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
+    func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
+    func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
+    func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
+    func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
+    func deleteMe() async throws { try await base.deleteMe() }
+    func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
+    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
+}
