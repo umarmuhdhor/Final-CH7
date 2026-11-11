@@ -58,6 +58,11 @@ final class GuardianHomeModel {
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var generation = 0
+    /// Bumped by every verdict the server confirmed, like Detail's `verdictEpoch` (fase 27 K7).
+    @ObservationIgnored private var verdictEpoch = 0
+    /// Verdicts confirmed on Home by scan id, with the epoch they were saved in. A refresh that started
+    /// before one of them read an older list; the verdict is put back on it.
+    @ObservationIgnored private var savedVerdicts: [String: (epoch: Int, verdict: Verdict)] = [:]
 
     init(
         repository: any ShooRepository,
@@ -138,6 +143,7 @@ final class GuardianHomeModel {
     func refresh() async {
         generation += 1
         let request = generation
+        let epoch = verdictEpoch
         extensionStatus = await readExtensionStatus()
         guard request == generation else { return }
         do {
@@ -149,7 +155,7 @@ final class GuardianHomeModel {
             profile = loadedProfile
             // Personal reads the family on its own, after the screen (`refreshPersonalMembers`).
             if scope == .family { members = loadedMembers }
-            scans = loadedScans
+            scans = merged(loadedScans, readAt: epoch)
             state = .loaded
         } catch {
             guard request == generation, !error.isCancellation else { return }
@@ -203,8 +209,11 @@ final class GuardianHomeModel {
         defer { isSubmittingVerdict = false }
         do {
             let verdict = try await repository.setVerdict(scanId: scan.id, value: value)
-            // A verdict applies to the domain for that owner (contracts/api.md).
-            for index in scans.indices where scans[index].domain == scan.domain && scans[index].ownerDeviceId == scan.ownerDeviceId {
+            // Only the decided scan (K7): the server applies it per link (contracts/api.md, #241), and other
+            // rows of that link get it from the next refresh. A refresh running now may have replaced `scans`.
+            verdictEpoch += 1
+            savedVerdicts[scan.id] = (verdictEpoch, verdict)
+            if let index = scans.firstIndex(where: { $0.id == scan.id }) {
                 scans[index].verdict = verdict
             }
             verdictSaves += 1
@@ -214,6 +223,19 @@ final class GuardianHomeModel {
             guard !error.isCancellation else { return }
             Log.ui.error("Home verdict failed", error)
             verdictFailed = true
+        }
+    }
+
+    /// A list read when the epoch was `epoch`: verdicts saved after that are newer than the list, so they
+    /// win for their scan. Older ones are in the list already (the server had them) and are forgotten.
+    private func merged(_ loaded: [ScanResult], readAt epoch: Int) -> [ScanResult] {
+        savedVerdicts = savedVerdicts.filter { $0.value.epoch > epoch }
+        guard !savedVerdicts.isEmpty else { return loaded }
+        return loaded.map { scan in
+            guard let saved = savedVerdicts[scan.id] else { return scan }
+            var scan = scan
+            scan.verdict = saved.verdict
+            return scan
         }
     }
 
