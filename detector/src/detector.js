@@ -18,7 +18,9 @@
     const DATA = /*__BRANDS_JSON__*/ null;
     const LINK = /*__LINK_RULES_JSON__*/ null;
 
-    const WEIGHT = { lookalike: 25, nameOnly: 10, brandKeyword: 14, cheapTldWithBrand: 15, cheapTldAlone: 5 };
+    // #381: a homoglyph look-alike (Cyrillic "а" in bcа.co.id, punycode) reaches the first warning on its own;
+    // leet / typo look-alikes stay at 25 (more false positives). Brand + bait word on a cheap TLD = 14 + 16 = 30.
+    const WEIGHT = { lookalike: 25, homoglyph: 30, nameOnly: 10, brandKeyword: 14, cheapTldWithBrand: 16, cheapTldAlone: 5 };
 
     // Link dissector. Weights are starting values, not calibrated on real scams yet (D-imelda-45).
     const LINK_MIN_EMIT = 10; // below this the link says too little to show (a free host alone is 3)
@@ -461,7 +463,8 @@
         const signals = [];
 
         if (look) {
-            signals.push(signal("lookalike_domain", WEIGHT.lookalike, T.lookalike(look.brand.name), `${look.brand.id} · level 3 · ${look.how}`));
+            const weight = look.how === "homoglyph" ? WEIGHT.homoglyph : WEIGHT.lookalike;
+            signals.push(signal("lookalike_domain", weight, T.lookalike(look.brand.name), `${look.brand.id} · level 3 · ${look.how}`));
         }
         const brandHit = look || exact;
         if (brandHit && keyword) {
