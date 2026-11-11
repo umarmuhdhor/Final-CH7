@@ -131,10 +131,15 @@ const verdicts = createVerdicts({ getSession, fetchJSON: (url, init) => fetchJSO
 // #231: sites blocked on this phone stay blocked without /analyze until a `safe` verdict clears them.
 const blockMemory = createBlockMemory({ storage: browser.storage.local, registrableDomain: domainFor });
 
-/** GET /verdicts; a `safe` verdict also clears the block memory of that domain before anyone reopens it. */
-async function lookupVerdict(domain, fresh) {
-    const reply = await verdicts.lookup(domain, { fresh });
-    if (reply?.verdict?.value === "safe") await blockMemory.forgetDomain(domain);
+/**
+ * GET /verdicts. With the page URL the lookup is per link (#241): a `safe` opens that link only and leaves the
+ * rest of the site in block memory (recall asks again for each page). The old per-domain lookup (no URL) still
+ * clears the whole domain, as before.
+ */
+async function lookupVerdict(domain, fresh, url) {
+    const link = url ? shareableUrl(url) : null;
+    const reply = await verdicts.lookup(domain, { fresh, link });
+    if (!link && reply?.verdict?.value === "safe") await blockMemory.forgetDomain(domain);
     return reply;
 }
 
@@ -303,7 +308,7 @@ browser.runtime.onMessage.addListener((message) => {
                 ...(record && "notified" in record ? { notified: record.notified } : {}),
             }));
         case "verdict":
-            return lookupVerdict(message.domain, Boolean(message.fresh));
+            return lookupVerdict(message.domain, Boolean(message.fresh), typeof message.url === "string" ? message.url : null);
         case "pageChecked":
             // A count for the app, no address (PF-01). Nothing depends on it, so a failure stays here.
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "pageChecked" }).catch(() => ({ ok: false }));

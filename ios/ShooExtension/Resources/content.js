@@ -92,7 +92,7 @@
                 previous,
                 analyzeLocal: async (s) => (await globalThis.ShooDetector?.analyzeLocal(s)) ?? [],
                 analyzeRemote: (s, localSignals) => send({ type: "analyze", snapshot: s, localSignals }),
-                lookupVerdict: async (domain, { fresh = false } = {}) => (await send({ type: "verdict", domain, fresh }))?.verdict ?? null,
+                lookupVerdict: async (domain, { fresh = false, url } = {}) => (await send({ type: "verdict", domain, url, fresh }))?.verdict ?? null,
                 recallBlock: async (url) => (await send({ type: "recallBlock", url }))?.memory ?? null,
                 isCurrent,
                 publish: (state) => {
@@ -121,7 +121,7 @@
             const live = () => watching === w && p === page && p.state?.status === "warning" && !p.state.verdict;
             if (!live()) return;
             if (document.visibilityState === "visible") {
-                const reply = await send({ type: "verdict", domain: p.state.domain, fresh: true }).catch(() => null);
+                const reply = await send({ type: "verdict", domain: p.state.domain, url: p.state.url, fresh: true }).catch(() => null);
                 if (!live()) return;
                 const next = ShooPipeline.withVerdict(p.state, reply?.verdict ?? null);
                 if (next) {

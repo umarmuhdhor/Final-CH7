@@ -40,9 +40,14 @@ test("domain, listMatch, analyze and verdict reach their modules", async () => {
     await route({ type: "analyze", snapshot: {} });
     await route({ type: "verdict", domain: "scam.test", fresh: true });
     await route({ type: "verdict", domain: "scam.test" });
+    await route({ type: "verdict", domain: "scam.test", url: "https://scam.test/a?token=x#y" });
     assert.deepEqual(calls.match, ["scam.test"]);
     assert.deepEqual(calls.analyze, [[]]);
-    assert.deepEqual(calls.verdict, [["scam.test", { fresh: true }], ["scam.test", { fresh: false }]]);
+    assert.deepEqual(calls.verdict, [
+        ["scam.test", { fresh: true, link: null }],
+        ["scam.test", { fresh: false, link: null }],
+        ["scam.test", { fresh: false, link: "https://scam.test/a" }], // #241: per link, query and fragment dropped
+    ]);
 });
 
 test("unknown message types are refused", async () => {
