@@ -308,3 +308,24 @@ test("#370: a verdict on an open warning — not_safe blocks, safe clears it, no
 test("#370: an open warning asks for a verdict every 2 s, then 5 s, then 15 s", () => {
     assert.deepEqual([0, 119999, 120000, 599999, 600000].map(P.verdictPollMs), [2000, 2000, 5000, 5000, 15000]);
 });
+
+test("#379: the phone's asks_* signals count in the score but are not sent to /analyze", async () => {
+    let sent = null;
+    const states = [];
+    await P.runScan({
+        snapshot: { url: "https://x.test/", domain: "x.test" },
+        analyzeLocal: async () => [sig("brand_plus_keyword", 2, 14), sig("asks_pin", 2, 20)],
+        analyzeRemote: async (_s, localSignals) => {
+            sent = localSignals;
+            return { signals: [sig("asks_pin", 3, 35)] };
+        },
+        lookupVerdict: async () => null,
+        isCurrent: () => true,
+        publish: (s) => states.push(s),
+    });
+    assert.deepEqual(sent.map((s) => s.id), ["brand_plus_keyword"]);
+    const last = states.at(-1);
+    assert.equal(last.signals.filter((s) => s.id === "asks_pin").length, 1);
+    assert.equal(last.signals.find((s) => s.id === "asks_pin").layer, 3); // the heavier server one wins
+    assert.equal(last.score, 49);
+});

@@ -189,7 +189,9 @@
         // Layer 3–4
         let remote = [];
         try {
-            const reply = await analyzeRemote(snapshot, local);
+            // #379: the phone's own asks_* (layer 2C) stay here. /analyze finds the form itself (layer 3), and
+            // counting both there would push its LLM gate with the same field twice.
+            const reply = await analyzeRemote(snapshot, local.filter((s) => !s.id.startsWith("asks_")));
             remote = validSignals(reply?.signals, [3, 4]);
             state.rdapRegisteredAt = reply?.rdapRegisteredAt ?? state.rdapRegisteredAt;
             state.onlineChecked = Boolean(reply) && !reply.skipped;
