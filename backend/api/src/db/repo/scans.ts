@@ -201,7 +201,7 @@ export async function reserveFavicon(
  */
 export async function clearFaviconPath(sql: Sql, ownerId: string, path: string): Promise<void> {
   await sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(4, hashtext(${ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.favicon}, hashtext(${ownerId}))`;
     await tx`update scans set favicon_path = null, favicon_ready_at = null where owner_id = ${ownerId} and favicon_path = ${path}`;
   });
 }
