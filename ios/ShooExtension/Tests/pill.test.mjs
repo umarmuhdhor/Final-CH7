@@ -114,3 +114,12 @@ test("stored position: bad values fall back to the default", () => {
         assert.equal(validPos(bad).side, "right");
     }
 });
+
+test("#379: under 30 with /analyze skipped or failed → 'online check unavailable', not 'low risk'", () => {
+    const { views } = play([{ score: 14, done: true, onlineChecked: false }]);
+    assert.equal(views[0].tone, "safe");
+    assert.equal(views[0].offline, true);
+    assert.ok(!("offline" in play([{ score: 14, done: true, onlineChecked: true }]).views[0]));
+    assert.ok(!("offline" in play([{ score: 14, done: false, onlineChecked: false }]).views[0]), "still checking");
+    assert.ok(!("offline" in play([{ score: 40, done: true, onlineChecked: false }]).views[0]), "a warning stays a warning");
+});
