@@ -21,6 +21,7 @@ struct NameView: View {
     @Bindable var model: OnboardingModel
     @FocusState private var focused: Bool
     @Environment(\.locale) private var locale
+    @Environment(\.shooReduceMotion) private var reduceMotion
     /// Figma "Atur Nama": no avatar is marked until the user picks one or starts typing.
     @State private var pickedAvatar = false
 
@@ -32,14 +33,20 @@ struct NameView: View {
             scrollTarget: focused ? "name.form" : nil
         ) {
             VStack(spacing: 0) {
-                Image(OnboardingAvatar.imageName(for: model.selectedAvatarId))
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .overlay { Circle().strokeBorder(OnboardingTheme.card, lineWidth: 3) }
-                    .accessibilityHidden(true)
-                    // Figma: message ends at y 182, avatar at 209, picker at 352, field at 464.
-                    .padding(.top, 27)
+                // A new pick crossfades in place with a small settle (the picker's own `.snappy`).
+                ZStack {
+                    Image(OnboardingAvatar.imageName(for: model.selectedAvatarId))
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+                        .overlay { Circle().strokeBorder(OnboardingTheme.card, lineWidth: 3) }
+                        .id(model.selectedAvatarId)
+                        .transition(reduceMotion ? .opacity : .scale(scale: 0.9).combined(with: .opacity))
+                }
+                .frame(width: 100, height: 100)
+                .accessibilityHidden(true)
+                // Figma: message ends at y 182, avatar at 209, picker at 352, field at 464.
+                .padding(.top, 27)
 
                 avatarPicker
                     .padding(.top, 43)
@@ -78,6 +85,7 @@ struct NameView: View {
             }
         }
         .padding(.horizontal, -1)
+        .sensoryFeedback(.selection, trigger: model.selectedAvatarId)
     }
 
     private var nameField: some View {
@@ -181,7 +189,7 @@ private struct AvatarChoice: View {
                 // Figma: #000 3 %, y 12, blur 6.
                 .shadow(color: .black.opacity(isSelected && isMarked ? 0.03 : 0), radius: 3, y: 12)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(OnboardingPressButtonStyle())
         .accessibilityLabel(Text("Avatar \(number)"))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }

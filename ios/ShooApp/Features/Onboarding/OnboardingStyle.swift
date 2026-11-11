@@ -117,6 +117,19 @@ struct OnboardingCapsuleButtonStyle: ButtonStyle {
     }
 }
 
+/// A `.plain` button that gives under the finger like the pill (splash Next, the avatar picker). The look
+/// and hit area are the label's own. Reduce Motion: it dims instead of shrinking.
+struct OnboardingPressButtonStyle: ButtonStyle {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
+            .opacity(configuration.isPressed && reduceMotion ? 0.8 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 /// Round 50 pt back button over the header gradient (Liquid Glass on iOS 26+).
 struct OnboardingBackButton: View {
     var identifier = "onboarding.back"
