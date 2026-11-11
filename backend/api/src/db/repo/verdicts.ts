@@ -1,4 +1,5 @@
 import type { Sql, TransactionSql } from "postgres";
+import { LOCK } from "../locks";
 import { isProtected } from "./domainLists";
 import { ISO_MS } from "./scans";
 
@@ -18,7 +19,7 @@ export type VerdictResult =
   | { error: "not_found" | "not_allowed" };
 
 const lockDomain = async (tx: TransactionSql, domain: string): Promise<void> => {
-  await tx`select pg_advisory_xact_lock(4, hashtext(${domain}))`;
+  await tx`select pg_advisory_xact_lock(${LOCK.verdictDomain}, hashtext(${domain}))`;
 };
 
 /**
@@ -55,7 +56,7 @@ export async function decideVerdict(
     let eligible = value === "not_safe" && scan.ownerMode === "protected" && linked;
     if (eligible && (await isProtected(tx, scan.domain))) eligible = false;
     // Serializes this guardian's queue count, so parallel verdicts cannot pass the daily cap.
-    if (eligible) await tx`select pg_advisory_xact_lock(5, hashtext(${guardian.deviceId}))`;
+    if (eligible) await tx`select pg_advisory_xact_lock(${LOCK.verdictQueue}, hashtext(${guardian.deviceId}))`;
     await lockDomain(tx, scan.domain);
     if (eligible) {
       // A domain this owner already has queued (on any of its links) is not a new one: keep it.
@@ -108,9 +109,10 @@ async function recountFamilies(tx: TransactionSql, domain: string): Promise<void
     select count(distinct by_device_id)::int as n from verdicts
     where domain = ${domain} and value = 'not_safe' and global_eligible`;
   if (c!.n > 0) {
-    await tx`insert into blocklist_entries (domain, families) values (${domain}, ${c!.n})
-             on conflict (domain) do update set families = excluded.families
-             where blocklist_entries.families is distinct from excluded.families`;
+    // Insert or recount. A new row comes back rejected when the reviewer's last decision on the
+    // domain was a reject (fase 27c, F-B7): the function reads admin.review_decisions, which
+    // shoo_api cannot (migration 20261111100000_queue_blocklist_domain.sql).
+    await tx`select public.queue_blocklist_domain(${domain}, ${c!.n})`;
   } else {
     // A queued domain nobody supports any more is browsing history without a purpose (D-alief-40):
     // drop it, rejected or not. Approved or removed rows are the reviewer's record and stay.

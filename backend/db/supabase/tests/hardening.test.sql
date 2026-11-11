@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(9);
+select plan(27);
 
 select ok(
   (select setconfig @> array['statement_timeout=10s'] from pg_db_role_setting where setrole = 'shoo_api'::regrole and setdatabase = 0),
@@ -20,6 +20,58 @@ select ok(has_column_privilege('shoo_api', 'blocklist_entries', 'families', 'UPD
 select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'approved_at', 'UPDATE'), 'cannot approve (approved_at)');
 select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'approved_at', 'INSERT'), 'cannot insert approved rows');
 select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'removed_at', 'UPDATE'), 'cannot remove (removed_at)');
+
+-- Fase 27c (F-B7, K5): the Worker re-queues a domain through public.queue_blocklist_domain, which
+-- reads the reviewer's last decision itself. shoo_api still cannot read that history or write
+-- rejected_at.
+select ok(has_function_privilege('shoo_api', 'public.queue_blocklist_domain(text, integer)', 'EXECUTE'),
+  'shoo_api may call queue_blocklist_domain');
+select ok(not has_function_privilege('anon', 'public.queue_blocklist_domain(text, integer)', 'EXECUTE'),
+  'anon may not call queue_blocklist_domain');
+select ok(not has_function_privilege('authenticated', 'public.queue_blocklist_domain(text, integer)', 'EXECUTE'),
+  'authenticated may not call queue_blocklist_domain');
+select ok(not exists (
+    select 1 from pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+    where p.oid = 'public.queue_blocklist_domain(text, integer)'::regprocedure and a.grantee = 0),
+  'PUBLIC has no EXECUTE on queue_blocklist_domain');
+select ok((select prosecdef from pg_proc where oid = 'public.queue_blocklist_domain(text, integer)'::regprocedure),
+  'queue_blocklist_domain is security definer');
+select is((select proconfig from pg_proc where oid = 'public.queue_blocklist_domain(text, integer)'::regprocedure),
+  array['search_path=pg_catalog, pg_temp'], 'queue_blocklist_domain pins search_path');
+select ok(not has_table_privilege('shoo_api', 'admin.review_decisions', 'SELECT'),
+  'shoo_api still cannot read admin.review_decisions');
+select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'rejected_at', 'UPDATE'),
+  'shoo_api still cannot write rejected_at');
+select ok(not has_function_privilege('service_role', 'public.queue_blocklist_domain(text, integer)', 'EXECUTE'),
+  'service_role may not call queue_blocklist_domain');
+select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'rejected_by', 'SELECT'),
+  'shoo_api cannot read who rejected a domain');
+select ok(not has_column_privilege('shoo_api', 'blocklist_entries', 'approved_by', 'SELECT'),
+  'shoo_api cannot read who approved a domain');
+select ok(has_column_privilege('shoo_api', 'blocklist_entries', 'rejected_at', 'SELECT'),
+  'shoo_api still reads the review state');
+select throws_ok($$select public.queue_blocklist_domain('fase27c.example', 0)$$, '22023', 'invalid_families',
+  'queue_blocklist_domain refuses families < 1');
+select throws_ok($$select public.queue_blocklist_domain('fase27c.example', null)$$, '22023', 'invalid_families',
+  'queue_blocklist_domain refuses null families');
+
+-- Behaviour (as the owner, rolled back): the last decision decides how a fresh row comes back.
+insert into admin.review_decisions (domain, action, note, actor)
+  values ('fase27c.example', 'reject', 'pgtap reject case', 'reviewer@test.example');
+select public.queue_blocklist_domain('fase27c.example', 2);
+select is((select rejected_by from public.blocklist_entries where domain = 'fase27c.example'), 'reviewer@test.example',
+  'last decision reject: the row comes back rejected, by that reviewer');
+select is((select families from public.blocklist_entries where domain = 'fase27c.example'), 2,
+  'the families count is kept');
+delete from public.blocklist_entries where domain = 'fase27c.example';
+insert into admin.review_decisions (domain, action, note, actor)
+  values ('fase27c.example', 'unreject', 'pgtap unreject case', 'reviewer@test.example');
+select public.queue_blocklist_domain('fase27c.example', 1);
+select ok((select rejected_at is null and rejected_by is null from public.blocklist_entries where domain = 'fase27c.example'),
+  'a later unreject: the row comes back pending');
+select public.queue_blocklist_domain('fase27c.example', 3);
+select is((select families from public.blocklist_entries where domain = 'fase27c.example'), 3,
+  'an existing row only gets its families recounted');
 
 select * from finish();
 rollback;
