@@ -96,6 +96,21 @@ extension NotificationSettings {
         if let v = update.quietEnd { s.quietEnd = v }
         return s
     }
+
+    /// A failed `update` undone: its keys go back to `before`, but only where they still hold the value it
+    /// set, so a newer change of the same key stays (fase 27i, K11).
+    func reverting(_ update: NotificationSettingsUpdate, to before: NotificationSettings) -> NotificationSettings {
+        var s = self
+        if let v = update.warning, s.warning == v { s.warning = before.warning }
+        if let v = update.blocked, s.blocked == v { s.blocked = before.blocked }
+        if let v = update.family, s.family == v { s.family = before.family }
+        if let v = update.protectionOff, s.protectionOff == v { s.protectionOff = before.protectionOff }
+        if let v = update.weeklySummary, s.weeklySummary == v { s.weeklySummary = before.weeklySummary }
+        if let v = update.quietHours, s.quietHours == v { s.quietHours = before.quietHours }
+        if let v = update.quietStart, s.quietStart == v { s.quietStart = before.quietStart }
+        if let v = update.quietEnd, s.quietEnd == v { s.quietEnd = before.quietEnd }
+        return s
+    }
 }
 
 /// Only the switches that changed; `nil` keys are left out of `PATCH /devices/me`.

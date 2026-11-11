@@ -395,6 +395,66 @@ struct ProfileModelTests {
         #expect(model.actionError != nil)
     }
 
+    /// Fase 27i (F-A11/F-N5, K11): a slow switch that fails puts back only its own key, on top of what is on screen
+    /// now. Another switch that saved meanwhile stays.
+    @Test func failedSwitchRollsBackOnlyItsOwnKey() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let gate = AsyncGate()
+        repository.beforeUpdate = { update in
+            guard update.notifications?.warning != nil else { return }
+            await gate.hold()
+            throw RepositoryError.network
+        }
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), linked: linked())
+        await model.load()
+        defer { gate.open() }
+        let slow = Task { await model.updateNotifications(NotificationSettingsUpdate(warning: false)) }
+        await gate.arrival()
+        await model.updateNotifications(NotificationSettingsUpdate(blocked: false))
+        gate.open()
+        await slow.value
+        #expect(model.notificationSettings.warning, "the failed switch goes back")
+        #expect(!model.notificationSettings.blocked, "the switch that saved stays")
+        #expect(model.actionError != nil)
+    }
+
+    /// K11: the failed update's key was changed again and saved meanwhile: the newer value stays.
+    @Test func failedUpdateKeepsANewerValueOfTheSameKey() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let gate = AsyncGate()
+        repository.beforeUpdate = { update in
+            guard update.notifications?.quietStart == "23:00" else { return }
+            await gate.hold()
+            throw RepositoryError.network
+        }
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), linked: linked())
+        await model.load()
+        defer { gate.open() }
+        let slow = Task { await model.updateNotifications(NotificationSettingsUpdate(quietStart: "23:00")) }
+        await gate.arrival()
+        await model.updateNotifications(NotificationSettingsUpdate(quietStart: "21:00"))
+        gate.open()
+        await slow.value
+        #expect(model.notificationSettings.quietStart == "21:00")
+    }
+
+    /// Fase 27i (F-N6, K11): start = end means "all day" on the server, which the sheet never offers.
+    @Test(arguments: [("22:00", "06:00", true), ("00:00", "23:59", true), ("22:00", "22:00", false), ("00:00", "00:00", false)])
+    func quietHoursSaveNeedsDifferentStartAndEnd(start: String, end: String, expected: Bool) {
+        #expect(ProfileModel.canSaveQuietHours(start: start, end: end) == expected)
+    }
+
+    /// The model refuses a window with start = end too, whoever asks.
+    @Test func quietHoursWithTheSameStartAndEndAreNotSent() async throws {
+        let (model, repository, _) = model(mode: .guardian)
+        await model.load()
+        await model.updateNotifications(NotificationSettingsUpdate(quietStart: "06:00", quietEnd: "06:00"))
+        #expect(model.notificationSettings.quietStart == "22:00")
+        let saved = try #require(try await repository.me().notifications)
+        #expect(saved.quietStart == "22:00")
+        #expect(saved.quietEnd == "06:00")
+    }
+
     @Test func choosingAnAvatarSavesIt() async throws {
         let (model, repository, _) = model(mode: .guardian)
         await model.load()

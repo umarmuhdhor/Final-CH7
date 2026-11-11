@@ -29,6 +29,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     var failure: (any Error)?
     /// `updateMe` throws this.
     var updateFailure: (any Error)?
+    /// `updateMe` runs this first: a test can hold one update while another finishes (fase 27i).
+    var beforeUpdate: (@Sendable (DeviceUpdate) async throws -> Void)?
     /// `familyMembers` throws this.
     var membersFailure: (any Error)?
     /// `remindMember` throws this.
@@ -59,6 +61,7 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
         return try await base.me()
     }
     func updateMe(_ update: DeviceUpdate) async throws {
+        try await beforeUpdate?(update)
         if let updateFailure { throw updateFailure }
         try await base.updateMe(update)
     }
@@ -124,4 +127,35 @@ final class CountingScansRepository: ShooRepository, @unchecked Sendable {
     func deleteMe() async throws { try await base.deleteMe() }
     func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
+}
+
+/// Holds one async call until the test opens it, and tells the test when the call has arrived (no sleeps).
+@MainActor
+final class AsyncGate {
+    private var arrived = false
+    private var opened = false
+    private var arrivalWaiter: CheckedContinuation<Void, Never>?
+    private var openWaiter: CheckedContinuation<Void, Never>?
+
+    /// In the held call: returns once `open()` is called.
+    func hold() async {
+        arrived = true
+        arrivalWaiter?.resume()
+        arrivalWaiter = nil
+        guard !opened else { return }
+        await withCheckedContinuation { openWaiter = $0 }
+    }
+
+    /// In the test: returns once the held call has reached `hold()`.
+    func arrival() async {
+        guard !arrived else { return }
+        await withCheckedContinuation { arrivalWaiter = $0 }
+    }
+
+    /// Safe to call more than once.
+    func open() {
+        opened = true
+        openWaiter?.resume()
+        openWaiter = nil
+    }
 }
