@@ -529,6 +529,16 @@ describe("POST /devices/me/protected is atomic (fase 27a)", { timeout: 15_000 },
     expect((await sql<{ n: number }[]>`select count(*)::int as n from devices where name = 'G'`)[0]!.n).toBe(0);
   });
 
+  it("a wrong code from an account deleted mid-switch is 401, not code_invalid", async () => {
+    const g = await createDevice("G", "guardian");
+    const sw = await settle(
+      becomeProtected(a, await input(g, "000009"), {
+        beforeValidate: async () => void (await deleteDevice(b, g.deviceId)),
+      }),
+    );
+    expect(sw).toEqual({ ok: false, code: "unauthorized" });
+  });
+
   it("K3: two guardians using each other's codes at once finish without a deadlock: one 200, one refused", async () => {
     const g1 = await createDevice("G1", "guardian");
     const g2 = await createDevice("G2", "guardian");

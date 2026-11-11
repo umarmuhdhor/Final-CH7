@@ -111,6 +111,8 @@ export async function becomeProtected(
 function mapJoinError(err: unknown): unknown {
   if (!(err instanceof postgres.PostgresError)) return err;
   if (err.code === "23505") return errors.alreadyConnected();
+  // A failed attempt for an old device that a concurrent DELETE /devices/me already removed.
+  if (err.code === "23503" && err.table_name === "join_attempts") return errors.unauthorized();
   if (err.code === "23503") return errors.codeInvalid(); // the target guardian deleted itself meanwhile
   // joinFamily rethrows other check violations; here the old device's own checks passed under its
   // lock, so a check failure on the link means the target is no longer a guardian (init.sql I3).
