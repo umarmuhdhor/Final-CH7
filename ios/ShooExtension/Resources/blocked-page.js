@@ -155,11 +155,15 @@
     }
 
     // EX-07: the POST may still be running when this page opens. Asked again on every poll until it exists.
+    let recordAnswered = false; // asked background at least once with an answer (it also carries `notified`, #377)
     async function findRecord() {
-        if (recordId || !payload.reportKey || mode === null) return;
+        if ((recordId && recordAnswered) || !payload.reportKey || mode === null) return;
         const reply = await send({ type: "recordId", key: payload.reportKey }).catch(() => null);
         if (!reply?.recordId) return;
+        recordAnswered = true;
         recordId = reply.recordId;
+        // #377: the backend says who it really pushed (null = nobody). Older backends say nothing: keep the name.
+        if (view && "notified" in reply) view.sentTo = mode === "protected" ? reply.notified || null : null;
         showRecord();
     }
 
@@ -167,7 +171,10 @@
     function showRecord() {
         if (!recordId || !view) return;
         if (view.button && mode !== null) $(".button").href = detailUrl({ recordId });
-        if (!view.sentTo) return;
+        if (!view.sentTo) {
+            $(".sent").hidden = true; // #377: the backend said nobody got it
+            return;
+        }
         $(".avatar").textContent = Array.from(view.sentTo)[0].toUpperCase();
         const [before = "", after = ""] = t("popup_sent_to", ["\u0000"]).split("\u0000");
         $(".sent-text").replaceChildren(before, Object.assign(document.createElement("b"), { textContent: view.sentTo }), after);

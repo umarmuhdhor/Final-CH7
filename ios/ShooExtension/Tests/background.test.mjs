@@ -34,7 +34,8 @@ function world() {
         globalThis.fetch = async (url, init = {}) => {
             if (init.method === "POST" && url.endsWith("/scans")) {
                 posts.push(JSON.parse(init.body));
-                return new Response(JSON.stringify({ id: `scan_${posts.length}` }), { status: 201 });
+                const notified = state.notified === undefined ? {} : { notified: state.notified };
+                return new Response(JSON.stringify({ id: `scan_${posts.length}`, ...notified }), { status: 201 });
             }
             return new Response(JSON.stringify({ domains: [], nextSince: null, verdict: null }), { status: 200 });
         };
@@ -134,4 +135,25 @@ test("#377: the block page's Guardian name is read fresh, not from the 30 s sess
     assert.equal((await send({ type: "profile" })).guardianName, "Adhella");
     w.state.session = { ...SESSION, mode: "protected", guardianName: null };
     assert.equal((await send({ type: "profile" })).guardianName, null);
+});
+
+test("#377: the record carries who the backend pushed — a name, null, or nothing from an older backend", async () => {
+    const w = world();
+    const send = await w.boot();
+    await send(report("old"));
+    await settled(send, "old");
+    assert.ok(!("notified" in (await send({ type: "recordId", key: "old" }))));
+
+    w.state.notified = null;
+    await send(report("none", "other.site"));
+    await settled(send, "none");
+    assert.equal((await send({ type: "recordId", key: "none" })).notified, null);
+
+    w.state.notified = { name: "Adhella" };
+    await send(report("named", "third.site"));
+    await settled(send, "named");
+    assert.equal((await send({ type: "recordId", key: "named" })).notified, "Adhella");
+    const restarted = await w.boot(); // from the stored log, after Safari restarted the background page
+    assert.equal((await restarted({ type: "recordId", key: "named" })).notified, "Adhella");
+    assert.equal((await restarted({ type: "recordId", key: "none" })).notified, null);
 });
