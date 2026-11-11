@@ -341,6 +341,11 @@ actor MockRepository: ShooRepository {
         return ScanPage(items: items, nextCursor: end < matching.count ? String(end) : nil)
     }
 
+    /// Adds a scan as if a device had just sent it (tests: rows the scenarios don't have).
+    func insertScan(_ scan: ScanResult) {
+        allScans.append(scan)
+    }
+
     func scan(id: String) async throws -> ScanResult {
         try await pause()
         guard let scan = allScans.first(where: { $0.id == id }),
@@ -366,13 +371,23 @@ actor MockRepository: ShooRepository {
         }
         // GD-07: warning and blocked alike (Figma 416:9469, backend #191); a new verdict replaces the old.
         let verdict = Verdict(value: value, byDeviceId: profile.deviceId, byName: profile.name, decidedAt: now())
-        // A verdict applies to the scan's domain for that owner (contracts/api.md).
+        // A verdict applies to the scan's link for that owner (contracts/api.md "Verdicts (per link)", #241).
+        let link = Self.link(scan.url)
         for index in allScans.indices
-        where allScans[index].domain == scan.domain
+        where Self.link(allScans[index].url) == link
             && allScans[index].ownerDeviceId == scan.ownerDeviceId {
             allScans[index].verdict = verdict
         }
         return verdict
+    }
+
+    /// The backend's link (`verdict_link`, #241) kept simple: origin + path, without query or fragment.
+    nonisolated static func link(_ url: URL) -> String {
+        let scheme = url.scheme?.lowercased() ?? "https"
+        let host = url.host?.lowercased() ?? ""
+        let port = url.port.map { ":\($0)" } ?? ""
+        let path = url.path.isEmpty ? "/" : url.path
+        return "\(scheme)://\(host)\(port)\(path)"
     }
 
     // MARK: Helpers

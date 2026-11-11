@@ -143,6 +143,59 @@ struct GuardianHomeModelTests {
         #expect(model.scans.first { $0.domain == "promo-undian-shopee.click" }?.verdict?.value == .safe)
     }
 
+    /// K7 (F-N1): a verdict lands on the decided scan only. Bayu's older visit to the same link keeps its
+    /// own state until a refresh brings the server's answer.
+    @Test func verdictLandsOnTheDecidedScanOnly() async throws {
+        // Picked by id, never by order: the figma "today" times are Jakarta times clamped to the clock, so on a
+        // UTC runner the three newest rows can share one timestamp and swap places.
+        let repository = MockRepository(mode: .guardian, scenario: .figma, latency: .zero)
+        let target = try await repository.scan(id: "figma-warning-72")
+        let settings = try settings()
+        let model = model(repository: repository, settings: settings, now: target.detectedAt.addingTimeInterval(60))
+        await model.refresh()
+        for scan in model.scans where scan.id != target.id { settings.dismissHomeScan(scan.id) }
+        let decided = try #require(model.pendingScan)
+        try #require(decided.id == "figma-warning-72")
+        let untouched = model.scans.filter { $0.id != decided.id }
+        try #require(untouched.contains { $0.ownerDeviceId == decided.ownerDeviceId && $0.domain == decided.domain })
+
+        await model.decide(.safe)
+
+        #expect(model.scans.first { $0.id == decided.id }?.verdict?.value == .safe)
+        #expect(model.scans.filter { $0.id != decided.id } == untouched)
+    }
+
+    /// F-A4: a Home refresh that read the list before the verdict must not bring the decided card back.
+    @Test func homeVerdictIsNotUndoneByAnOlderRefresh() async throws {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = model(repository: repository, settings: try settings())
+        await model.refresh()
+        let decided = try #require(model.pendingScan)
+
+        await repository.hold(.first)
+        async let refresh: Void = model.refresh()
+        await repository.waitUntilHeld() // the list is read, the verdict is not saved yet
+        await model.decide(.notSafe)
+        await repository.release()
+        await refresh
+
+        #expect(model.scans.first { $0.id == decided.id }?.verdict?.value == .notSafe, "older refresh wiped the verdict just made")
+        #expect(model.pendingScan?.id != decided.id)
+    }
+
+    /// A refresh that starts after the verdict was saved takes the server's list as it is.
+    @Test func refreshAfterTheVerdictTakesTheServerList() async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let model = model(repository: repository, settings: try settings())
+        await model.refresh()
+        let decided = try #require(model.pendingScan)
+        await model.decide(.notSafe)
+        // Changed on the server since (another Guardian device, or the Detail screen).
+        let replaced = try await repository.setVerdict(scanId: decided.id, value: .safe)
+        await model.refresh()
+        #expect(model.scans.first { $0.id == decided.id }?.verdict == replaced)
+    }
+
     @Test func failureShowsError() async throws {
         let model = model(repository: FailingRepository(), settings: try settings())
         await model.refresh()
