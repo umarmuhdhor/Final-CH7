@@ -1,9 +1,11 @@
 import SwiftUI
 
 /// ON-04 inside onboarding: the online check question as a checkbox (Figma "Persetujuan · Checkbox", 1328:13421).
-/// Turn on stays off until it is ticked; `prepare` saves the answer and registers the device.
+/// Turn on stays off until it is ticked; `prepare` saves the answer and registers the device. Without the
+/// checkbox (answered before, e.g. on the invite path's consent step) the buttons are on (fase 27d K6).
 struct OnboardingExtensionConsent {
     @Binding var isChecked: Bool
+    var showsCheckbox = true
     var isWorking = false
     var failed = false
     /// `true` once Settings may open.
@@ -38,7 +40,7 @@ struct TurnOnExtensionView: View {
     private static let recheck = (times: 10, every: Duration.seconds(2))
     private let steps = ExtensionSetup.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
 
-    private var isChecked: Bool { consent?.isChecked ?? true }
+    private var isChecked: Bool { consent.map { !$0.showsCheckbox || $0.isChecked } ?? true }
     private var isWorking: Bool { consent?.isWorking ?? false }
 
     var body: some View {
@@ -80,7 +82,7 @@ struct TurnOnExtensionView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 40)
         } footer: {
-            if let consent {
+            if let consent, consent.showsCheckbox {
                 // Figma: 24 under the steps' area, 55 above the button.
                 // Figma: the checkbox block ends 55 above the button (footer rows are 12 apart).
                 ConsentCheckbox(isChecked: consent.$isChecked) { isDataSheetPresented = true }

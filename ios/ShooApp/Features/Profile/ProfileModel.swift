@@ -362,10 +362,9 @@ final class ProfileModel {
             return false
         }
         // `ApiRepository.deleteMe` has already cleared the Keychain token and App Group session keys.
-        linked.clear()
+        AppEnvironment.forgetDeletedDevice(linked: linked)
         onSessionEnd()
         settings.reset()
-        CheckStats.clear()
         return true
     }
 }

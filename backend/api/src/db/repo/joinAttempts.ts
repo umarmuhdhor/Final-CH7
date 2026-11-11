@@ -1,4 +1,5 @@
 import type { TransactionSql } from "postgres";
+import { LOCK } from "../locks";
 
 export const JOIN_MAX_FAILURES_DEVICE = 5;
 /** Higher than per device: mobile carriers put many households behind one CGNAT IP (D-alief-B06). */
@@ -11,8 +12,8 @@ export const JOIN_WINDOW_SECONDS = 600;
  * nobody holds an IP lock while waiting for a device lock, so no deadlock.
  */
 export async function lockAttempts(tx: TransactionSql, deviceId: string, ipHash: Uint8Array): Promise<void> {
-  await tx`select pg_advisory_xact_lock(1, hashtext(${deviceId}))`;
-  await tx`select pg_advisory_xact_lock(2, hashtext(encode(${ipHash}::bytea, 'hex')))`;
+  await tx`select pg_advisory_xact_lock(${LOCK.joinDevice}, hashtext(${deviceId}))`;
+  await tx`select pg_advisory_xact_lock(${LOCK.joinIp}, hashtext(encode(${ipHash}::bytea, 'hex')))`;
 }
 
 /** Seconds until the oldest failure leaves the window, or null when under the limit (R3 §5). */

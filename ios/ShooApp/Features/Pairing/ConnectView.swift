@@ -53,7 +53,7 @@ struct ConnectView: View {
         OnboardingFormPage(
             title: "Connect your account",
             message: "Scan the QR or enter the invite code from your Guardian.",
-            onBack: onBack.map { back in { if model.state != .joining { back() } } },
+            onBack: onBack.map { back in { if !model.isBusy { back() } } },
             scrollTarget: codeFocused || model.problem != nil ? Self.codeFieldID : nil
         ) {
             VStack(spacing: 0) {
@@ -129,7 +129,7 @@ struct ConnectView: View {
                 Button("Not now", action: onSkip)
                     .buttonStyle(OnboardingLinkButtonStyle())
                     // A join already sent finishes on the server: wait for its answer (PR-02).
-                    .disabled(model.state == .joining)
+                    .disabled(model.isBusy)
                     .accessibilityIdentifier("connect.skip")
             }
         }

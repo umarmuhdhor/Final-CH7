@@ -40,3 +40,8 @@ declare module "*?raw" {
   const text: string;
   export default text;
 }
+
+// Vite `import.meta.glob` with `query: "?raw"`: the text of every matching file, by path (test/locks.test.ts).
+interface ImportMeta {
+  glob(pattern: string | string[], options: { query: "?raw"; import: "default"; eager: true }): Record<string, string>;
+}

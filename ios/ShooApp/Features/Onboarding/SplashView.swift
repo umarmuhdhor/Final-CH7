@@ -85,7 +85,7 @@ struct SplashView: View {
                     // Figma "Button/Full/Circle": gradient only, no shadow.
                     .background(OnboardingTheme.buttonGradient, in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(OnboardingPressButtonStyle())
             .accessibilityLabel(isLast ? Text("Get started") : Text("Next"))
             .accessibilityIdentifier("splash.next")
         }

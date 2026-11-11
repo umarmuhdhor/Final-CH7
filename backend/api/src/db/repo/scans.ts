@@ -1,4 +1,5 @@
 import type { Sql, TransactionSql } from "postgres";
+import { LOCK } from "../locks";
 import { addTombstones } from "./tombstones";
 
 export interface NewScan {
@@ -27,7 +28,7 @@ export interface NewScan {
  */
 export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; escalated: boolean }> {
   return sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(7, hashtext(${`${s.ownerId}|${s.domain}`}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.scanSite}, hashtext(${`${s.ownerId}|${s.domain}`}))`;
     const [kept] = await tx<{ id: string; escalated: boolean }[]>`
       with previous as (
         select id, status from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
@@ -94,7 +95,7 @@ export async function reserveScreenshot(
   quota: { owner: number; global: number },
 ): Promise<ScreenshotSlot> {
   return sql.begin(async (tx): Promise<ScreenshotSlot> => {
-    await tx`select pg_advisory_xact_lock(3, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.screenshot}, hashtext(${scan.ownerId}))`;
     const reuse = await recentScreenshot(tx, scan.ownerId, scan.domain);
     const chosen = reuse ?? path;
     if (!reuse) {
@@ -177,12 +178,15 @@ export async function reserveFavicon(
   path: string | null,
 ): Promise<FaviconSlot> {
   return sql.begin(async (tx): Promise<FaviconSlot> => {
-    await tx`select pg_advisory_xact_lock(4, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.favicon}, hashtext(${scan.ownerId}))`;
     const reuse = await recentFavicon(tx, scan.ownerId, scan.domain);
     const chosen = reuse ?? path;
     if (!chosen) return { none: true };
-    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded.
-    const updated = await tx`update scans set favicon_path = ${chosen} where id = ${scan.id} returning id`;
+    // Zero rows: the scan was deleted meanwhile (DELETE /devices/me), so nothing is uploaded. A reuse
+    // points at a stored object, so it is ready at once; a new path waits for markFaviconReady.
+    const updated = reuse
+      ? await tx`update scans set favicon_path = ${reuse}, favicon_ready_at = now() where id = ${scan.id} returning id`
+      : await tx`update scans set favicon_path = ${chosen}, favicon_ready_at = null where id = ${scan.id} returning id`;
     if (updated.length === 0) return { gone: true };
     if (reuse) return { reuse };
     await addTombstones(tx, [chosen]);
@@ -190,19 +194,39 @@ export async function reserveFavicon(
   });
 }
 
-/** Clears the path on every scan of the owner that points at it: a reuse may have picked it up meanwhile. */
+/**
+ * Clears the path (and ready) on every scan of the owner that points at it. Under the owner's favicon
+ * lock (as clearReplicaPath), so a reserveFavicon that just picked this path as its reuse cannot
+ * commit after it.
+ */
 export async function clearFaviconPath(sql: Sql, ownerId: string, path: string): Promise<void> {
-  await sql`update scans set favicon_path = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+  await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(${LOCK.favicon}, hashtext(${ownerId}))`;
+    await tx`update scans set favicon_path = null, favicon_ready_at = null where owner_id = ${ownerId} and favicon_path = ${path}`;
+  });
+}
+
+/**
+ * After the R2 put succeeded (fase 27k F-B8, as markReplicaReady): from now on the scan gets a
+ * faviconUrl, GET /favicons/{id} serves it and a later scan may reuse it. Only while the row still
+ * holds this path; false when the scan was deleted meanwhile (DELETE /devices/me) or its path was
+ * cleared, so the caller removes the object no row points at.
+ */
+export async function markFaviconReady(sql: Sql, id: string, path: string): Promise<boolean> {
+  const rows = await sql`update scans set favicon_ready_at = now() where id = ${id} and favicon_path = ${path} returning id`;
+  return rows.length > 0;
 }
 
 /**
  * Reuse: a favicon of the same owner + domain from the last 24 h. Only the scan that uploaded it
- * counts, so an object is gone at most 15 days after upload, as for screenshots.
+ * counts, so an object is gone at most 15 days after upload, as for screenshots. Only a stored one
+ * (favicon_ready_at): an upload still in flight is no source (fase 27k F-B8).
  */
 export async function recentFavicon(sql: Q, ownerId: string, domain: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select favicon_path as path from scans
     where owner_id = ${ownerId} and domain = ${domain} and favicon_path is not null
+      and favicon_ready_at is not null
       and ${sql.unsafe(ORIGINAL_FAVICON)}
       and created_at > now() - interval '24 hours'
     order by created_at desc limit 1`;
@@ -243,8 +267,8 @@ export interface ReplicaQuota {
  * family is the device itself (replicaCountsQuery).
  * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
  * is already full for an upload of `bytes`, `quota` names it, so the caller drops the replica before
- * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (6, 0) stays the final
- * word, so a race costs at most one inflate, as before.
+ * it spends an IP slot or inflate CPU. Not under any lock: reserveReplica under (LOCK.replica, 0)
+ * stays the final word, so a race costs at most one inflate, as before.
  * Not under the owner lock: family_links changes under other locks (families.ts), so a pairing at
  * the same moment may keep or drop one replica.
  */
@@ -265,12 +289,12 @@ export async function precheckReplica(
 }
 
 /**
- * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner (advisory
- * class 6; 3–5 are taken), reuse the owner's replica of this domain from the last 24 h, else reserve
+ * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner
+ * (LOCK.replica, db/locks.ts), reuse the owner's replica of this domain from the last 24 h, else reserve
  * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
  * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
- * key (6, 0). Every new upload takes that key, so uploads by different members of one family cannot
- * overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
+ * key (LOCK.replica, 0). Every new upload takes that key, so uploads by different members of one family
+ * cannot overshoot the family quota either (a pairing or unpairing at the same moment does not take the key,
  * so the family may still change by one member in between); held for milliseconds, the R2 put runs
  * after commit. Order of the checks (fase 19 K4): owner → family → family_bytes → global →
  * global_bytes → reserve; the first that applies is the reason.
@@ -290,12 +314,12 @@ export async function reserveReplica(
   quota: ReplicaQuota,
 ): Promise<ReplicaSlot> {
   return sql.begin(async (tx): Promise<ReplicaSlot> => {
-    await tx`select pg_advisory_xact_lock(6, hashtext(${scan.ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${scan.ownerId}))`;
     const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan.ownerId, scan.domain)}) as path`;
     const reuse = found?.path ?? undefined;
     if (!reuse && !upload) return { none: true };
     if (!reuse) {
-      await tx`select pg_advisory_xact_lock(6, 0)`;
+      await tx`select pg_advisory_xact_lock(${LOCK.replica}, 0)`;
       const full = quotaFull(await replicaCounts(tx, scan.ownerId), upload!.bytes, quota);
       if (full) return { quota: full };
     }
@@ -425,7 +449,7 @@ function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
  */
 export async function clearReplicaPath(sql: Sql, ownerId: string, path: string): Promise<void> {
   await sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(6, hashtext(${ownerId}))`;
+    await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${ownerId}))`;
     await tx`update scans set replica_path = null, replica_bytes = null, replica_ready_at = null
              where owner_id = ${ownerId} and replica_path = ${path}`;
   });
@@ -453,7 +477,7 @@ export interface ScanRow {
   status: "warning" | "blocked";
   signals: unknown[];
   screenshotPath: string | null;
-  /** The stored favicon (PR-05). The scam site's own favicon_url is never read back. */
+  /** The stored favicon (PR-05). Null until its upload finished (favicon_ready_at, F-B8). The scam site's own favicon_url is never read back. */
   faviconPath: string | null;
   /** The stored page replica (EX-07), in R2. Null until its upload finished (replica_ready_at). */
   replicaPath: string | null;
@@ -472,7 +496,7 @@ function selectScans(sql: Sql) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
            s.page_title as "pageTitle", s.score, s.status, s.signals,
-           s.screenshot_path as "screenshotPath", s.favicon_path as "faviconPath",
+           s.screenshot_path as "screenshotPath", case when s.favicon_ready_at is not null then s.favicon_path end as "faviconPath",
            case when s.replica_ready_at is not null then s.replica_path end as "replicaPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
@@ -535,11 +559,14 @@ export async function screenshotPathForViewer(sql: Sql, id: string, viewerId: st
   return row?.path;
 }
 
-/** The favicon path while the viewer owns the scan or is the owner's current guardian (as screenshots). */
+/**
+ * The favicon path while the viewer owns the scan or is the owner's current guardian (as screenshots),
+ * once its upload finished (favicon_ready_at, fase 27k F-B8).
+ */
 export async function faviconPathForViewer(sql: Sql, id: string, viewerId: string): Promise<string | undefined> {
   const [row] = await sql<{ path: string }[]>`
     select s.favicon_path as path from scans s
-    where s.id = ${id} and s.favicon_path is not null
+    where s.id = ${id} and s.favicon_path is not null and s.favicon_ready_at is not null
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
   return row?.path;

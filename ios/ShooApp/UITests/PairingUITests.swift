@@ -112,6 +112,72 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 10), app.debugDescription)
     }
 
+    /// Fase 27d (F-A1): a real new install (the mock answers nothing, `-debug.askDataConsent YES`) opened from
+    /// an invite link answers the online check question before Connect registers the device, then goes on
+    /// past ON-04: no checkbox there any more, and Turn on works.
+    @MainActor
+    func testInviteNewInstallAsksConsentFirstAndPassesTurnOn() {
+        let app = XCUIApplication.mock([
+            "-settings.language", "en", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
+            // Shoo on but no page seen yet: ON-04 waits for a tap instead of moving on by itself.
+            "-UITestExtensionStatus", "unchecked",
+        ])
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: UITestTimeout.screen))
+        openLink("shoo://join?code=482193", in: app)
+        app.onboardName("Mom")
+        let allow = app.buttons["consent.allow"]
+        XCTAssertTrue(allow.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.buttons["connect.join"].exists, "Connect before the answer")
+        allow.tapWhenHittable()
+
+        let field = app.textFields["connect.code"]
+        XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertEqual(field.value as? String, "482193")
+        app.buttons["connect.join"].tapWhenHittable()
+        XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        // Before the fix the consent screen replaced onboarding here.
+        XCTAssertFalse(app.buttons["consent.allow"].exists, app.debugDescription)
+        app.buttons["protectedBy.continue"].tapWhenHittable()
+
+        // ON-04: answered already, so no checkbox and the button is on.
+        let turnOn = app.buttons["extension.turnOn"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.consent"].exists, app.debugDescription)
+        XCTAssertTrue(turnOn.isEnabled)
+        turnOn.tapWhenHittable()
+        app.comeBackFromSettings()
+        app.buttons["extension.skipCheck"].tapWhenHittable()
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+    }
+
+    /// Fase 27d (F-A2): a failed invite join keeps the registration for another try; Back deletes it again
+    /// and reaches the name, and Next then continues as Pribadi.
+    @MainActor
+    func testFailedInviteJoinBackReachesTheName() {
+        let app = XCUIApplication.mock([
+            "-settings.language", "en", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
+            "-UITestExtensionStatus", "unchecked",
+        ])
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: UITestTimeout.screen))
+        openLink("shoo://join?code=999999", in: app)
+        app.onboardName("Mom")
+        app.buttons["consent.decline"].tapWhenHittable()
+        let join = app.buttons["connect.join"]
+        XCTAssertTrue(join.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        tapWhenSettled(join)
+        let error = app.staticTexts["connect.error"]
+        XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(error.label.contains("expired"), error.label)
+
+        app.tap(app.buttons["onboarding.back"].firstMatch, until: app.textFields["name.field"])
+        app.buttons["name.continue"].tapWhenHittable()
+        // The code went with the deleted device; the answer ("no") stays, so no checkbox either.
+        let turnOn = app.buttons["extension.turnOn"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.consent"].exists, app.debugDescription)
+        XCTAssertTrue(turnOn.isEnabled)
+    }
+
     /// T11: an invite link only fills the code; nothing joins until Connect is tapped.
     @MainActor
     func testInviteLinkOpensConnectWithTheCodeFilled() {

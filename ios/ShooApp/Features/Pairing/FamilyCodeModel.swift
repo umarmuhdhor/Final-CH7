@@ -48,6 +48,14 @@ final class FamilyCodeModel {
     /// Bumped by `remove`: a members answer asked for before it is out of date.
     @ObservationIgnored private var membersVersion = 0
     @ObservationIgnored private var isLoadingMembers = false
+    /// Code requests can overlap (the countdown's, the members refresh's, "Refresh code"), and an older answer
+    /// may hold the code a refresh just killed (fase 27k, F-A10). Each request gets a number; an answer changes
+    /// the screen only when no newer one has, and no newer request is still on its way. A cancelled request
+    /// leaves the set without answering, so an older live one still can.
+    @ObservationIgnored private var codeRequests = 0
+    @ObservationIgnored private var codeRequestsInFlight: Set<Int> = []
+    @ObservationIgnored private var appliedCodeRequest = 0
+    @ObservationIgnored private var replacesInFlight = 0
 
     init(repository: any ShooRepository, now: @escaping () -> Date = Date.init, throttle: RefreshThrottle? = nil) {
         self.repository = repository
@@ -133,11 +141,22 @@ final class FamilyCodeModel {
             throttle.record(at: now())
             replaceWait = throttle.wait(at: now())
         }
+        // "Refresh code" on its way brings the new code; an ordinary request now could only bring back the old one.
+        if !replace, replacesInFlight > 0 { return }
         if code == nil { codeState = .loading }
+        codeRequests += 1
+        let request = codeRequests
+        codeRequestsInFlight.insert(request)
+        if replace { replacesInFlight += 1 }
+        defer {
+            codeRequestsInFlight.remove(request)
+            if replace { replacesInFlight -= 1 }
+        }
         do {
             let fresh = try await repository.createFamilyCode(refresh: replace)
-            // Screen closed meanwhile: the code is never shown.
-            guard !Task.isCancelled else { return }
+            // Screen closed meanwhile: the code is never shown. A newer request counts instead of this one.
+            guard !Task.isCancelled, isNewestCodeAnswer(request) else { return }
+            appliedCodeRequest = request
             let start = now()
             let validFor = fresh.expiresAt.timeIntervalSince(start)
             expiry = start.addingTimeInterval((1...Self.codeLifetime).contains(validFor) ? validFor : Self.codeLifetime)
@@ -150,7 +169,8 @@ final class FamilyCodeModel {
             codeState = .ready(fresh)
             _ = tick()
         } catch {
-            guard !error.isCancellation else { return }
+            guard !error.isCancellation, isNewestCodeAnswer(request) else { return }
+            appliedCodeRequest = request
             Log.ui.error("Family code failed", error)
             // A code with time left stays on screen (rate_limited, no connection): it still works.
             if code != nil, !tick(), secondsLeft > 0 { return }
@@ -158,6 +178,10 @@ final class FamilyCodeModel {
             codeState = isFull ? .full : .unavailable
             secondsLeft = 0
         }
+    }
+
+    private func isNewestCodeAnswer(_ request: Int) -> Bool {
+        request > appliedCodeRequest && !codeRequestsInFlight.contains { $0 > request }
     }
 
     /// "29:59": what is left of the code on screen.

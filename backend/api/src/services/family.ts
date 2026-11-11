@@ -50,34 +50,69 @@ export async function issueCode(
 
 type JoinResult = { ok: DeviceSummary } | { fail: () => Error };
 
+/** What a join may do once validated: link to `guardianId`. `fail` is raised after commit. */
+export type JoinValidation = { guardianId: string } | { fail: () => Error };
+
+export interface ValidateJoinInput {
+  /** Whose attempt budget this is (the joining device, or the old guardian for become-protected). */
+  attemptDeviceId: string;
+  ipHash: Uint8Array;
+  code: string;
+  /** A code of this guardian is code_invalid, recorded as a failed attempt (F-B1: your own code). */
+  excludeGuardianId?: string;
+  /** Also lock this guardian, together with the code's guardian in id order (K3). */
+  alsoLockGuardianId?: string;
+  /** POST /family/join: already_connected before the code lookup, not recorded as an attempt. */
+  checkAlreadyConnected?: boolean;
+}
+
 /**
- * R4 §2, in one transaction. Only code_invalid and code_expired count as failed
- * attempts; they are recorded inside the transaction that holds the attempt locks,
- * then the error is raised after commit.
+ * R4 §2 + fase 27 K1 steps 1–6, inside the caller's transaction: attempt locks (device, then IP),
+ * the failure budget, the code, then the guardian locks in id order and the recheck. Only
+ * code_invalid and code_expired from the lookup count as failed attempts; they are recorded here,
+ * so the caller must commit before raising `fail`. On `{ guardianId }` the guardian locks are held
+ * until the transaction ends.
+ */
+export async function validateJoinInTx(tx: TransactionSql, input: ValidateJoinInput): Promise<JoinValidation> {
+  const { attemptDeviceId, ipHash, code } = input;
+  await lockAttempts(tx, attemptDeviceId, ipHash);
+  const retry = await attemptsRetryAfter(tx, attemptDeviceId, ipHash);
+  if (retry !== null) return { fail: () => errors.tooManyAttempts(retry) };
+  if (input.checkAlreadyConnected && (await guardianOf(tx, attemptDeviceId))) return { fail: errors.alreadyConnected };
+
+  const found = await findCode(tx, code);
+  if (!found || found.expired) {
+    await recordAttempt(tx, attemptDeviceId, ipHash, false);
+    return { fail: found ? errors.codeExpired : errors.codeInvalid };
+  }
+  if (found.guardianId === input.excludeGuardianId) {
+    await recordAttempt(tx, attemptDeviceId, ipHash, false);
+    return { fail: errors.codeInvalid };
+  }
+
+  const guardians = [found.guardianId];
+  if (input.alsoLockGuardianId !== undefined) guardians.push(input.alsoLockGuardianId);
+  for (const id of [...new Set(guardians)].sort()) await lockGuardian(tx, id);
+  // The guardian may have rotated the code (or deleted itself) while we waited for its lock.
+  const still = await findCode(tx, code);
+  if (!still || still.guardianId !== found.guardianId) return { fail: errors.codeInvalid };
+  if ((await memberCount(tx, found.guardianId)) >= FAMILY_MAX) return { fail: errors.familyFull };
+  return { guardianId: found.guardianId };
+}
+
+/**
+ * R4 §2, in one transaction: validateJoinInTx, the link, and a success row. Failed attempts are
+ * recorded inside the transaction that holds the attempt locks, then the error is raised after commit.
  */
 export async function joinFamily(sql: Sql, protectedId: string, ipHash: Uint8Array, code: string): Promise<DeviceSummary> {
   let result: JoinResult;
   try {
     result = await sql.begin(async (tx): Promise<JoinResult> => {
-      await lockAttempts(tx, protectedId, ipHash);
-      const retry = await attemptsRetryAfter(tx, protectedId, ipHash);
-      if (retry !== null) return { fail: () => errors.tooManyAttempts(retry) };
-      if (await guardianOf(tx, protectedId)) return { fail: errors.alreadyConnected };
-
-      const found = await findCode(tx, code);
-      if (!found || found.expired) {
-        await recordAttempt(tx, protectedId, ipHash, false);
-        return { fail: found ? errors.codeExpired : errors.codeInvalid };
-      }
-
-      await lockGuardian(tx, found.guardianId);
-      // The guardian may have rotated the code while we waited for its lock.
-      const still = await findCode(tx, code);
-      if (!still || still.guardianId !== found.guardianId) return { fail: errors.codeInvalid };
-      if ((await memberCount(tx, found.guardianId)) >= FAMILY_MAX) return { fail: errors.familyFull };
-      await insertLink(tx, protectedId, found.guardianId);
+      const valid = await validateJoinInTx(tx, { attemptDeviceId: protectedId, ipHash, code, checkAlreadyConnected: true });
+      if ("fail" in valid) return valid;
+      await insertLink(tx, protectedId, valid.guardianId);
       await recordAttempt(tx, protectedId, ipHash, true);
-      return { ok: (await guardianSummary(tx, found.guardianId))! };
+      return { ok: (await guardianSummary(tx, valid.guardianId))! };
     });
   } catch (err) {
     // Backstops for races the locks already prevent: PK (I2), the I3 trigger, guardian FK.
@@ -91,7 +126,7 @@ export async function joinFamily(sql: Sql, protectedId: string, ipHash: Uint8Arr
   return result.ok;
 }
 
-async function guardianSummary(tx: TransactionSql, id: string): Promise<DeviceSummary | undefined> {
+export async function guardianSummary(tx: TransactionSql, id: string): Promise<DeviceSummary | undefined> {
   const [row] = await tx<DeviceSummary[]>`select id as "deviceId", name, avatar_id as "avatarId" from devices where id = ${id}`;
   return row;
 }

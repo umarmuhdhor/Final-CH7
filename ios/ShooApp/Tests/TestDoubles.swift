@@ -171,3 +171,69 @@ final class HeldOnce {
         return !taken
     }
 }
+
+/// Wraps a repository. `hold(_:)` makes the next `scans` call for that page read its answer from the base
+/// at once, then wait until `release()`: a list that left the server before something newer happened.
+/// A gate, not a timer, so the order is the same on every run. `setFailure` makes `scans` throw once
+/// it would answer (after the hold).
+actor GatedScansRepository: ShooRepository {
+    enum Page { case first, next }
+
+    private let base: any ShooRepository
+    private var holding: Page?
+    private var failure: (any Error)?
+    private var held: CheckedContinuation<Void, Never>?
+    private var heldWaiters: [CheckedContinuation<Void, Never>] = []
+    private(set) var scanCalls = 0
+
+    init(base: any ShooRepository) { self.base = base }
+
+    func hold(_ page: Page) { holding = page }
+    func setFailure(_ error: (any Error)?) { failure = error }
+
+    /// Returns once a held `scans` call is waiting.
+    func waitUntilHeld() async {
+        if held != nil { return }
+        await withCheckedContinuation { heldWaiters.append($0) }
+    }
+
+    func release() {
+        held?.resume()
+        held = nil
+    }
+
+    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
+        scanCalls += 1
+        let page: Page = cursor == nil ? .first : .next
+        let holdsThis = holding == page
+        if holdsThis { holding = nil }
+        // Read before waiting: this is the "old" answer.
+        let answer = try await base.scans(owner: owner, status: status, cursor: cursor)
+        if holdsThis {
+            await withCheckedContinuation { continuation in
+                held = continuation
+                heldWaiters.forEach { $0.resume() }
+                heldWaiters = []
+            }
+        }
+        if let failure { throw failure }
+        return answer
+    }
+
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
+        try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
+    }
+    func me() async throws -> DeviceProfile { try await base.me() }
+    func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
+    func joinFamily(code: String) async throws -> GuardianInfo { try await base.joinFamily(code: code) }
+    func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
+    func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
+    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
+    func leaveGuardian() async throws { try await base.leaveGuardian() }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
+    func deleteMe() async throws { try await base.deleteMe() }
+    func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
+    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
+}

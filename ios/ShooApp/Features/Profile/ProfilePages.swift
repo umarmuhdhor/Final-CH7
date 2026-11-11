@@ -28,10 +28,8 @@ struct ProfilePageView: View {
         .task {
             if model == nil {
                 let model = ProfileModel(repository: env.repository, settings: env.settings, notifications: env.notifications)
-                model.onSessionEnd = { [env, router = env.router] in
-                    env.leaveDemo()
-                    router.reset()
-                    DeliveredPushes.clear()
+                model.onSessionEnd = { [env] in
+                    env.returnToOnboardingAfterDelete()
                 }
                 self.model = model
             }

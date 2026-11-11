@@ -240,15 +240,40 @@ struct MockRepositoryTests {
         #expect(try await repo.me().name == "Adhella")
     }
 
-    @Test func verdictCoversSameDomainAndOwnerAndCanBeReplaced() async throws {
+    @Test func verdictCoversTheLinkForThatOwnerAndCanBeReplaced() async throws {
         let repo = guardian()
         let blocked = "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
         _ = try await repo.setVerdict(scanId: blocked, value: .notSafe)
         let replaced = try await repo.setVerdict(scanId: blocked, value: .safe)
         #expect(try await repo.scan(id: blocked).verdict == replaced)
-        // Other scans (other domains) keep their own verdicts.
+        // Other scans (other links) keep their own verdicts.
         let others = try await repo.scans(owner: .family, status: nil, cursor: nil).items.filter { $0.id != blocked }
         #expect(others.allSatisfy { $0.verdict != replaced })
+    }
+
+    /// Per link like the backend (#241, contracts/api.md "Verdicts (per link)"): link = origin + path.
+    /// Another page of the same site waits for its own verdict; the same page again (query aside) shares it.
+    @Test func verdictIsPerLinkNotPerDomain() async throws {
+        let repo = guardian()
+        let decided = try await repo.scan(id: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")
+        func copy(_ id: String, _ url: String) throws -> ScanResult {
+            var scan = decided
+            scan.id = id
+            scan.url = try #require(URL(string: url))
+            scan.verdict = nil
+            return scan
+        }
+        var components = try #require(URLComponents(url: decided.url, resolvingAgainstBaseURL: false))
+        components.query = "ref=wa"
+        let otherPage = try copy("other-page", "https://\(decided.domain)/another-page")
+        let samePage = try copy("same-page", try #require(components.url).absoluteString)
+        await repo.insertScan(otherPage)
+        await repo.insertScan(samePage)
+
+        let verdict = try await repo.setVerdict(scanId: decided.id, value: .notSafe)
+
+        #expect(try await repo.scan(id: samePage.id).verdict == verdict)
+        #expect(try await repo.scan(id: otherPage.id).verdict == nil)
     }
 
     @Test func emptyScenarioHasNothing() async throws {

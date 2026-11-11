@@ -46,6 +46,21 @@ struct SessionStoreTests {
         #expect(defaults.object(forKey: AppGroup.Key.statsLastCheckedAt) == nil)
     }
 
+    /// Fase 27h (F-A13, K10): the Protected "Akun Tertaut" switches live in the App Group and the extension reads
+    /// `link.autoSend` + `history.shareWarnings`. An old account's `false` must not stop the next account's scans.
+    @Test func clearTakesTheLinkedAccountSwitchesWithTheSession() throws {
+        let (store, defaults, suite) = makeStore()
+        defer { store.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        try store.save(registration, name: "Mom", mode: .protected)
+        defaults.set(false, forKey: "link.autoSend")
+        defaults.set(false, forKey: "history.shareWarnings")
+        defaults.set(false, forKey: "notify.linkVerified")
+        store.clear()
+        #expect(defaults.object(forKey: "link.autoSend") == nil)
+        #expect(defaults.object(forKey: "history.shareWarnings") == nil)
+        #expect(defaults.object(forKey: "notify.linkVerified") == nil)
+    }
+
     @Test func consentBeforeRegisteringWritesNoSession() {
         let (store, defaults, suite) = makeStore()
         defer { store.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }

@@ -65,24 +65,38 @@ struct MainTabView: View {
     @ViewBuilder
     private var activityRoot: some View {
         if env.settings.mode == .guardian && env.settings.familyModeOn {
-            ActivityView(repository: env.repository, owner: .family, ownDeviceId: env.session?.deviceId)
+            ActivityView(repository: env.repository, owner: .family, ownDeviceId: env.session?.deviceId, verdictSaves: verdictSaves)
         } else {
-            ActivityView(repository: env.repository, owner: .me)
+            ActivityView(repository: env.repository, owner: .me, verdictSaves: verdictSaves)
         }
     }
 
-    /// A new repository (mode switch, later a new session) or the Family toggle starts fresh screen models.
+    /// A new repository (mode switch), a new device session, or the Family toggle starts fresh screen models.
     /// Protected screens ignore the toggle, so it never resets them.
     private var screenIdentity: String {
-        let familyMode = env.settings.mode == .guardian && env.settings.familyModeOn
-        return "\(ObjectIdentifier(env.repository).hashValue)-\(familyMode)"
+        // `session` is `@ObservationIgnored`: this is read again because `settings.mode` changes in the same switch
+        // (Pribadi → Protected keeps the repository but deletes the old device, F-A6).
+        Self.identity(
+            repository: env.repository,
+            familyMode: env.settings.mode == .guardian && env.settings.familyModeOn,
+            deviceId: env.session?.deviceId
+        )
+    }
+
+    static func identity(repository: any ShooRepository, familyMode: Bool, deviceId: String?) -> String {
+        "\(ObjectIdentifier(repository).hashValue)-\(familyMode)-\(deviceId ?? "-")"
+    }
+
+    /// Activity reads the app-wide verdict counter (K8).
+    private var verdictSaves: @MainActor () -> Int {
+        { [env] in env.verdictSaves }
     }
 
     @ViewBuilder
     private func destination(_ route: Route) -> some View {
         switch route {
         case .detail(let scanId):
-            DetailView(scanId: scanId, repository: env.repository)
+            DetailView(scanId: scanId, repository: env.repository, onVerdictSaved: { [env] in env.verdictSaves += 1 })
                 .id(scanId)
         case .profile:
             ProfileView(repository: env.repository, settings: env.settings, notifications: env.notifications)
@@ -92,7 +106,7 @@ struct MainTabView: View {
             MemberDetailView(deviceId: deviceId, repository: env.repository)
                 .id(deviceId)
         case .memberActivity(let deviceId):
-            ActivityView(repository: env.repository, owner: .device(deviceId))
+            ActivityView(repository: env.repository, owner: .device(deviceId), verdictSaves: verdictSaves)
                 .id(deviceId)
         }
     }

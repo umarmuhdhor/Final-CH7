@@ -103,13 +103,16 @@ extension XCUIApplication {
         buttons["name.continue"].tapWhenHittable(file: file, line: line)
     }
 
-    /// ON-04: ticks the consent box (once) and taps the main button. With Shoo already on that is Next, which
-    /// moves to Safari Default; otherwise Turn on, which opens Settings, so the test comes back to Shoo.
+    /// ON-04: ticks the consent box (once, when it shows) and taps the main button. With Shoo already on that
+    /// is Next, which moves to Safari Default; otherwise Turn on, which opens Settings, so the test comes back
+    /// to Shoo. The box shows only while the question is unanswered (fase 27d K6): the mock answers it unless
+    /// `-debug.askDataConsent YES`.
     @MainActor
     func passTurnOnExtension(file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(descendants(matching: .any)["extension.video"].waitForExistence(timeout: UITestTimeout.screen),
+                      debugDescription, file: file, line: line)
         let consent = buttons["extension.consent"]
-        XCTAssertTrue(consent.waitForExistence(timeout: UITestTimeout.screen), debugDescription, file: file, line: line)
-        if !consent.isSelected { consent.tapWhenHittable(file: file, line: line) }
+        if consent.exists, !consent.isSelected { consent.tapWhenHittable(file: file, line: line) }
         let next = buttons["extension.continue"]
         if next.waitForExistence(timeout: UITestTimeout.optional) {
             next.tapWhenHittable(file: file, line: line)

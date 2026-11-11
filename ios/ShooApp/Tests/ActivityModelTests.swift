@@ -124,6 +124,80 @@ struct ActivityModelTests {
         #expect(!model.isLoadingMore)
     }
 
+    /// F-A5 (repro `loadingMoreSpinnerClearsAfterAFailedRefresh`, timing replaced by a gate): a next page
+    /// still on its way when a refresh lands, failed or not, must not leave the spinner row for good.
+    @Test(arguments: [false, true])
+    func loadingMoreSpinnerClearsAfterARefresh(refreshFails: Bool) async {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero, pageSize: 2))
+        let model = ActivityModel(repository: repository, owner: .family)
+        await model.load()
+        #expect(model.hasMore)
+
+        await repository.hold(.next)
+        async let more: Void = model.loadMore()
+        await repository.waitUntilHeld()
+        #expect(model.isLoadingMore)
+        if refreshFails { await repository.setFailure(RepositoryError.network) }
+        await model.refresh()
+        await repository.release()
+        await more
+
+        #expect(model.refreshFailed == refreshFails)
+        #expect(!model.isLoadingMore, "spinner row stuck; loadMore is blocked by its own guard")
+        // The dropped page was for the list before the refresh: not a "couldn't load more".
+        #expect(!model.loadMoreFailed)
+        await repository.setFailure(nil)
+        await model.loadMore()
+        #expect(model.items.count == 3)
+    }
+
+    /// K8 (F-A15): a verdict saved elsewhere (Detail, Home) reloads the list once when it shows again.
+    @Test func reloadsOnlyAfterAVerdictWasSaved() async throws {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let env = AppEnvironment(
+            repository: repository,
+            settings: AppSettings(defaults: try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))),
+            notifications: FakeNotificationPermission()
+        )
+        let model = ActivityModel(repository: repository, owner: .family, verdictSaves: { env.verdictSaves })
+        await model.load()
+        let loaded = await repository.scanCalls
+
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == loaded, "nothing changed: no request")
+
+        env.verdictSaves += 1
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == loaded + 1)
+
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == loaded + 1, "already reloaded for that verdict")
+    }
+
+    /// A reload for a verdict that was cancelled (the user left the tab) or failed is tried again on the next
+    /// appearance: only a list that arrived counts as seen.
+    @Test(arguments: [URLError(.cancelled) as any Error, RepositoryError.network])
+    func reloadForAVerdictIsRetriedUntilAListArrives(error: any Error) async throws {
+        let repository = GatedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let env = AppEnvironment(
+            repository: repository,
+            settings: AppSettings(defaults: try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))),
+            notifications: FakeNotificationPermission()
+        )
+        let model = ActivityModel(repository: repository, owner: .family, verdictSaves: { env.verdictSaves })
+        await model.load()
+        env.verdictSaves += 1
+
+        await repository.setFailure(error)
+        await model.refreshIfVerdictsChanged()
+        let afterMiss = await repository.scanCalls
+        await repository.setFailure(nil)
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == afterMiss + 1, "the missed reload must run again")
+        await model.refreshIfVerdictsChanged()
+        #expect(await repository.scanCalls == afterMiss + 1)
+    }
+
     @Test func failedNextPageCanBeRetried() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero, pageSize: 2))
         let model = ActivityModel(repository: repository, owner: .family)

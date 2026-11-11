@@ -14,7 +14,8 @@ struct GuardianShieldView: View {
                 repository: env.repository,
                 settings: env.settings,
                 scope: env.settings.familyModeOn ? .family : .personal,
-                extensionStatus: env.extensionStatus
+                extensionStatus: env.extensionStatus,
+                onVerdictSaved: { [env] in env.verdictSaves += 1 }
             )
         }
         .task(id: canRemind) {
