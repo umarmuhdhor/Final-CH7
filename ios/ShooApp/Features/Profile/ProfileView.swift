@@ -38,10 +38,8 @@ struct ProfileView: View {
         }
         .task {
             // Disconnect / delete hand the app back to onboarding: clear navigation first.
-            model.onSessionEnd = { [env, router = env.router] in
-                env.leaveDemo()
-                router.reset()
-                DeliveredPushes.clear()
+            model.onSessionEnd = { [env] in
+                env.returnToOnboardingAfterDelete()
             }
             await model.load()
         }

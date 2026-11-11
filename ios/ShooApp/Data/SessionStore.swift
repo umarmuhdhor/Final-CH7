@@ -21,10 +21,14 @@ final class SessionStore: @unchecked Sendable {
     private let forgetCachedDataHandler: @Sendable () -> Void
 
     /// The keys this app writes. `extension.lastSeenAt` belongs to the extension and is left alone.
+    /// The Protected "Akun Tertaut" switches go too: the extension reads them, so an old account's `false`
+    /// would stop the next account's scans (fase 27h, F-A13).
     static let appKeys = [
         AppGroup.Key.deviceId, AppGroup.Key.deviceToken, AppGroup.Key.deviceMode, AppGroup.Key.deviceName,
         AppGroup.Key.guardianName, AppGroup.Key.apiBaseURL, AppGroup.Key.aiBaseURL,
         AppGroup.Key.statsChecked, AppGroup.Key.statsLastCheckedAt,
+        LinkedAccountSettings.Key.autoSendLinks, LinkedAccountSettings.Key.shareWarnings,
+        LinkedAccountSettings.Key.notifyLinkVerified,
     ]
 
     init(
@@ -90,28 +94,47 @@ final class SessionStore: @unchecked Sendable {
     /// After `PATCH /devices/me { name }` or a `GET /devices/me` with another name.
     /// A no-op once the session is gone: a late answer never brings data back after delete (P13).
     func updateName(_ name: String) {
-        lock.withLock {
-            guard hasSessionLocked else { return }
-            defaults.set(name, forKey: AppGroup.Key.deviceName)
-        }
+        lock.withLock { updateNameLocked(name) }
     }
 
     /// `nil` = no guardian (left, removed by the guardian, or never joined): EX-06 stops naming them.
     func setGuardian(_ guardian: GuardianInfo?) {
-        let lostGuardian = lock.withLock { () -> Bool in
-            guard guardian == nil || hasSessionLocked else { return false }
-            let hadGuardian = _guardian != nil || defaults.string(forKey: AppGroup.Key.guardianName) != nil
-            _guardian = guardian
-            if let guardian {
-                defaults.set(guardian.name, forKey: AppGroup.Key.guardianName)
-            } else {
-                defaults.removeObject(forKey: AppGroup.Key.guardianName)
-            }
-            return hadGuardian && guardian == nil
-        }
+        let lostGuardian = lock.withLock { setGuardianLocked(guardian) }
         // Left the family, or the guardian removed this phone. Not on a guardian's every
         // `GET /devices/me` (never had one).
         if lostGuardian { forgetCachedData() }
+    }
+
+    /// `GET /devices/me`: name and guardian, only while `usedToken` is still the session's token. One lock
+    /// around the check and the writes, so a switch to a new device ("Punya kode undangan?") can't land
+    /// between them and get the old device's profile (fase 27h, F-A12). `false` = not written.
+    @discardableResult
+    func applyProfile(name: String, guardian: GuardianInfo?, ifToken usedToken: String) -> Bool {
+        let result = lock.withLock { () -> (applied: Bool, lostGuardian: Bool) in
+            guard (try? keychain.read()) == usedToken else { return (false, false) }
+            updateNameLocked(name)
+            return (true, setGuardianLocked(guardian))
+        }
+        if result.lostGuardian { forgetCachedData() }
+        return result.applied
+    }
+
+    private func updateNameLocked(_ name: String) {
+        guard hasSessionLocked else { return }
+        defaults.set(name, forKey: AppGroup.Key.deviceName)
+    }
+
+    /// `true` when a guardian this phone had is now gone.
+    private func setGuardianLocked(_ guardian: GuardianInfo?) -> Bool {
+        guard guardian == nil || hasSessionLocked else { return false }
+        let hadGuardian = _guardian != nil || defaults.string(forKey: AppGroup.Key.guardianName) != nil
+        _guardian = guardian
+        if let guardian {
+            defaults.set(guardian.name, forKey: AppGroup.Key.guardianName)
+        } else {
+            defaults.removeObject(forKey: AppGroup.Key.guardianName)
+        }
+        return hadGuardian && guardian == nil
     }
 
     /// Delete my data, session expired: the extension loses its session at once (P3, P13).

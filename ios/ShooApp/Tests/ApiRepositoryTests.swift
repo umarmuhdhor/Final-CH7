@@ -221,6 +221,27 @@ struct ApiRepositoryTests {
         #expect(server.session.defaults.string(forKey: AppGroup.Key.guardianName) == "Adhella")
     }
 
+    /// Fase 27h (F-A12, K10): a `GET /devices/me` sent with the old token answers after "Punya kode undangan?"
+    /// saved the new protected session. That old Guardian profile must not overwrite the new session's
+    /// name or guardian in the App Group (the extension shows them).
+    @Test func profileForAnOlderTokenLeavesTheNewSessionAlone() async throws {
+        let server = StubServer()
+        let session = server.session
+        server.reply { _ in
+            // Meanwhile the switch finished: new token, new name, the new guardian.
+            try! session.save(
+                DeviceRegistration(deviceId: "dev_p", token: "shoo_protected_token", avatarId: "avatar_05"),
+                name: "Rina", mode: .protected
+            )
+            session.setGuardian(GuardianInfo(deviceId: "dev_g", name: "Budi", avatarId: "avatar_04"))
+            return .json(200, #"{"deviceId":"dev_me","name":"Adhella","avatarId":"avatar_01","mode":"guardian","language":"en","guardian":null}"#)
+        }
+        _ = try await server.repository().me()
+        #expect(session.defaults.string(forKey: AppGroup.Key.guardianName) == "Budi")
+        #expect(session.guardian?.deviceId == "dev_g")
+        #expect(session.defaults.string(forKey: AppGroup.Key.deviceName) == "Rina")
+    }
+
     // MARK: Delete my data (SECURITY §3 P3, P13)
 
     @Test func deleteClearsKeychainAndAppGroup() async throws {
