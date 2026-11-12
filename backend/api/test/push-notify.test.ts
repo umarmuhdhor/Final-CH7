@@ -25,6 +25,7 @@ describe("guardianPush (R4 §3)", () => {
 
     expect(await guardianPush(sql, principal(p, "Mom", "protected"), scan)).toEqual({
       toDeviceId: g.deviceId, apnsToken: TOKEN, body: "Mom membuka situs yang diblokir · 92%", scanId: scan.id,
+      guardianName: "G",
     });
   });
 

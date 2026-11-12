@@ -144,6 +144,52 @@ describe("POST /scans", () => {
   });
 });
 
+describe("POST /scans notified (#377)", () => {
+  const TOKEN = "a".repeat(64);
+  const postBody = async (d: Created, json: unknown) => {
+    const res = await post(d, json);
+    expect(res.status, await res.clone().text()).toBe(201);
+    return (await res.json()) as { id: string; notified?: { name: string } | null };
+  };
+  const withGuardian = async () => {
+    const g = await createDevice("Adhella", "guardian");
+    const p = await createDevice("Maria");
+    await connect(g, p);
+    expect((await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } })).status).toBe(200);
+    return { g, p };
+  };
+
+  it("names the Guardian whose push this scan queued", async () => {
+    const { p } = await withGuardian();
+    expect((await postBody(p, extensionBody(blocked92))).notified).toEqual({ name: "Adhella" });
+  });
+
+  it("null without a Guardian, for the Guardian's own scan, and once the Guardian is gone", async () => {
+    const alone = await createDevice("Solo");
+    expect((await postBody(alone, extensionBody(blocked92))).notified).toBeNull();
+    const { g, p } = await withGuardian();
+    expect((await postBody(g, extensionBody(blocked92))).notified).toBeNull();
+    expect((await call("/devices/me", { method: "DELETE", token: g.token })).status).toBe(200);
+    expect((await postBody(p, extensionBody(warning63))).notified).toBeNull();
+  });
+
+  it("null when the Guardian's push is off or the Guardian has no APNs token", async () => {
+    const g = await createDevice("Adhella", "guardian");
+    const p = await createDevice("Maria");
+    await connect(g, p);
+    expect((await postBody(p, extensionBody(blocked92))).notified).toBeNull();
+    await call("/devices/me", { method: "PATCH", token: g.token, json: { apnsToken: TOKEN } });
+    await sql`update devices set notify_family = false where id = ${g.deviceId}`;
+    expect((await postBody(p, extensionBody(warning63))).notified).toBeNull();
+  });
+
+  it("null for a repeat visit that sends no push", async () => {
+    const { p } = await withGuardian();
+    await postBody(p, extensionBody(blocked92));
+    expect((await postBody(p, extensionBody(blocked92))).notified).toBeNull();
+  });
+});
+
 describe("POST /scans: one Activity row per site", () => {
   const at = (minutes: number) => new Date(Date.parse("2026-11-03T04:00:00.000Z") + minutes * 60_000).toISOString();
 

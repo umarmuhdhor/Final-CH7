@@ -480,7 +480,7 @@ ever sent. Scans, screenshots, favicons and page replicas are deleted automatica
 page. One page is one scan, one Activity item and (for a Protected device) one push to the Guardian.
 
 **One row per site (PR-05):** when the owner already has a scan of the same `domain`, no new row is
-made. The response is `201 { id }` with that row's id; no screenshot, favicon or page replica is
+made. The response is `201 { id, notified: null }` with that row's id; no screenshot, favicon or page replica is
 stored, and no push is sent unless this visit moves the row from `warning` to `blocked`. The row's `detectedAt` moves to the newest visit, and a higher `score` replaces
 its `url`, `pageTitle`, `score`, `status` and `signals`. The lifetime totals (profile stats) still count
 every scan. Once retention deletes the row (14 days after the first visit), the next visit makes a new one.
@@ -551,7 +551,12 @@ an extension that sends version 0 is held to the old 30/80 rule.
 }
 ```
 
-**Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03" }`
+**Response 201:** `{ "id": "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03", "notified": { "name": "Adhella" } }`
+
+`notified` (#377): the Guardian whose push this scan queued, as `{ name }`, or `null` when no Guardian
+push was queued (no Guardian, the Guardian's own scan, "Kabari saya" or "Aktivitas orang dilindungi"
+off, quiet hours for a warning, no APNs token, the push cap, a repeat visit, or a failed lookup). The
+block page shows "Link terkirim ke <name>" only from this field.
 
 > **Deprecated (EX-07).** Extension builds from `main` since PR #178 (29 Oct 2026) no longer send a screenshot; they send a page replica instead, which the backend stores from fase 18a. Since fase 20a (7 Nov 2026) `screenshotBase64` is ignored. `GET /screenshots/{scanId}` stays only for scans already stored and is removed in fase 20b (plan/alief, D-alief-C24/C27).
 
