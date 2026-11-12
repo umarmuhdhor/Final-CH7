@@ -371,33 +371,41 @@ private struct AvatarStack: View {
     }
 }
 
-/// "Punya kode undangan?" and Home Pribadi "Mode Terawasi": the Connect screen, joining as protected (a new
-/// device on the server). An empty `name` is read from the server first.
+/// "Punya kode undangan?", Home Pribadi "Mode Terawasi" and an invite link (PR-03): the Connect screen, joining
+/// as protected (a new device on the server). An empty `name` is read from the server first. A link's code is
+/// filled in, so the only step left is the Hubungkan tap (T11); "Nanti saja" then closes it.
 struct JoinAnotherFamilySheet: View {
     let name: String
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var model: ConnectModel?
+    @State private var cameFromLink = false
 
     var body: some View {
         Group {
             if let model {
-                ConnectView(model: model, onBack: { dismiss() }, onFinish: {
+                ConnectView(model: model, onBack: { dismiss() }, onSkip: cameFromLink ? { dismiss() } : nil, onFinish: {
                     dismiss()
                     env.router.reset()
                 })
+            } else {
+                // An empty Group never appears, so `onAppear` below would never run.
+                Color(.systemBackground)
             }
         }
         .onAppear {
             guard model == nil else { return }
-            // An invite link opened this sheet (BH-10): its code is filled in, the join still needs a tap (T11).
-            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode()) { [env, name] code in
+            let code = env.router.takePendingJoinCode()
+            cameFromLink = code != nil
+            model = ConnectModel(repository: env.repository, code: code) { [env, name] code in
                 let name = name.isEmpty ? try await env.repository.me().name : name
                 return try await env.becomeProtected(code: code, name: name)
             }
         }
+        // A second link while this is open: the new code replaces the old one.
         .onChange(of: env.router.pendingJoinCode) { _, code in
             guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
+            cameFromLink = true
             model?.prefill(pending)
         }
         // Once joined the old device is gone: no swipe back to a screen that no longer exists.

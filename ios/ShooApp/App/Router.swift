@@ -29,6 +29,16 @@ enum ProfilePage: Hashable {
     case licenses
 }
 
+/// What the invite banner says (PR-03, Figma "Flow · Protected buka link undangan").
+enum InviteNotice: Equatable {
+    /// Pribadi (or a guardian protecting nobody): "Kamu dapat undangan keluarga" with Lihat / Nanti saja.
+    case invited
+    /// A guardian still protecting someone: the join would be refused (`has_members`).
+    case hasMembers
+    /// Already protected: only that guardian can disconnect this iPhone.
+    case alreadyProtected(guardian: String)
+}
+
 /// Tabs of the main screen.
 enum AppTab: String, Hashable, CaseIterable {
     case shield
@@ -45,8 +55,13 @@ final class Router {
     /// Protected after onboarding: Connect (PR-01) as a sheet, from Shield or an invite link.
     var isConnectPresented = false
     /// From `shoo://join?code=` or `https://<api host>/j/<code>` (PR-03): fills the Connect field, never joins by itself (T11).
-    /// Memory only, dropped when the app goes to the background.
-    var pendingJoinCode: String?
+    /// Memory only. It survives a trip to Settings (ON-04 turns the extension on there) but never outlives a code
+    /// (`FamilyCodeModel.codeLifetime`): `takePendingJoinCode` and `dropExpiredInvite` drop an older one.
+    var pendingJoinCode: String? {
+        didSet { pendingJoinCodeAt = pendingJoinCode == nil ? nil : now() }
+    }
+    /// PR-03 banner on Home for a link opened after onboarding (Figma "Notif undangan").
+    var inviteNotice: InviteNotice?
     /// Shield's "Turn on" sheet (PR-04). Here, not in the view, so a link can close it first.
     var isTurnOnPresented = false
     /// Figma "To be guardian": before Family mode turns on for the first time.
@@ -59,6 +74,12 @@ final class Router {
     private(set) var wantsConnect = false
     /// An invite link asked for "Become supervised" (Pribadi) while another sheet was up: shown once that one is gone.
     private(set) var wantsJoinFamily = false
+    @ObservationIgnored private var pendingJoinCodeAt: Date?
+    @ObservationIgnored private let now: () -> Date
+
+    init(now: @escaping () -> Date = Date.init) {
+        self.now = now
+    }
 
     /// A push tap or `shoo://scan/{id}` (GD-06): Detail on the Activity tab, whatever was open.
     func openDetail(scanId: String) {
@@ -162,10 +183,38 @@ final class Router {
         closeSheets()
     }
 
-    /// Hands the pending invite code to Connect once.
+    /// Hands the pending invite code to Connect once, unless it is older than a code lives.
     func takePendingJoinCode() -> String? {
+        dropExpiredInvite()
         defer { pendingJoinCode = nil }
         return pendingJoinCode
+    }
+
+    /// When the app comes back: a code older than a code lives is gone, and so is its banner.
+    func dropExpiredInvite() {
+        guard let at = pendingJoinCodeAt, now().timeIntervalSince(at) > FamilyCodeModel.codeLifetime else { return }
+        pendingJoinCode = nil
+        if inviteNotice == .invited { inviteNotice = nil }
+    }
+
+    /// "Lihat" on the invite banner: the join sheet, with the code still waiting for it.
+    func acceptInvite() {
+        inviteNotice = nil
+        showJoinFamily()
+    }
+
+    /// "Nanti saja", "Tutup" or "Oke" on the invite banner: the code is not used.
+    func dismissInviteNotice() {
+        inviteNotice = nil
+        pendingJoinCode = nil
+    }
+
+    /// "Buka Profil" on the "still protecting someone" banner: Profile, where members are disconnected.
+    func openProfileFromInviteNotice() {
+        dismissInviteNotice()
+        selectedTab = .shield
+        popToRoot()
+        append(.profile)
     }
 
     private func append(_ route: Route) {
