@@ -217,14 +217,19 @@ final class PairingUITests: XCTestCase {
         let error = app.staticTexts["connect.error"]
         XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(error.label.contains("Terlalu banyak percobaan"), error.label)
+        // The 429 carried `Retry-After`: the button now counts down instead of "Hubungkan".
+        let wait = app.buttons["connect.wait"]
+        XCTAssertTrue(wait.waitForExistence(timeout: 3), app.debugDescription)
+        XCTAssertTrue(wait.label.hasPrefix("Coba lagi dalam 04:"), wait.label)
+        XCTAssertFalse(wait.isEnabled)
         XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 3), "Connect puts the keyboard away")
         sleep(1)
         XCTAssertGreaterThan(error.frame.height, 30, "Two lines in Bahasa: \(error.frame)")
-        XCTAssertLessThanOrEqual(error.frame.maxY, join.frame.minY, "Error under the button: \(error.frame) \(join.frame)")
+        XCTAssertLessThanOrEqual(error.frame.maxY, wait.frame.minY, "Error under the button: \(error.frame) \(wait.frame)")
         let note = app.descendants(matching: .any)["connect.copyNote"].firstMatch
         XCTAssertTrue(note.exists, app.debugDescription)
         XCTAssertFalse(error.frame.intersects(note.frame), "Error on the 14-day note: \(error.frame) \(note.frame)")
-        XCTAssertLessThanOrEqual(note.frame.maxY, join.frame.minY, "Note under the button: \(note.frame) \(join.frame)")
+        XCTAssertLessThanOrEqual(note.frame.maxY, wait.frame.minY, "Note under the button: \(note.frame) \(wait.frame)")
         XCTAssertGreaterThanOrEqual(title.frame.minY, back.frame.minY, "Headline cut after the error: \(title.frame)")
     }
 
