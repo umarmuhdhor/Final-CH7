@@ -242,8 +242,9 @@ final class DetailModel {
     }
 
     /// GD-07: applies at once, no confirmation. Optimistic; rolled back if the server says no.
+    /// `notes`: why the Guardian decided (the "Aman" reason sheet), sent as `POST /verdicts` `notes`.
     @discardableResult
-    func setVerdict(_ value: Verdict.Value) async -> VerdictOutcome {
+    func setVerdict(_ value: Verdict.Value, notes: String? = nil) async -> VerdictOutcome {
         guard canValidate, !isSubmittingVerdict, let viewer, let previous = scan else { return .ignored }
         isSubmittingVerdict = true
         verdictEpoch += 1
@@ -251,7 +252,7 @@ final class DetailModel {
         scan?.verdict = Verdict(value: value, byDeviceId: viewer.deviceId, byName: viewer.name, decidedAt: now())
         defer { isSubmittingVerdict = false }
         do {
-            let verdict = try await repository.setVerdict(scanId: previous.id, value: value)
+            let verdict = try await repository.setVerdict(scanId: previous.id, value: value, notes: notes)
             scan?.verdict = verdict
             verdictSaves += 1
             onVerdictSaved()

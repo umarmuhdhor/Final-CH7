@@ -162,6 +162,15 @@ struct GuardianHomeModelTests {
         #expect(model.scans.first { $0.id == scan.id }?.verdict?.value == .safe)
     }
 
+    /// GD-07: "Aman" from the Home card sends the reasons as `notes`.
+    @Test func safeSendsTheReasons() async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero)
+        let model = model(repository: repository, settings: try settings())
+        await model.refresh()
+        #expect(await model.decide(.safe, notes: "reasons: official_site"))
+        #expect(await repository.lastVerdictNotes == "reasons: official_site")
+    }
+
     /// BH-27: a verdict on a card whose scan was deleted (404) drops that card, as Detail shows "gone",
     /// instead of a connection error on a card that can never be saved.
     @Test func verdictOnADeletedScanDropsTheCard() async throws {

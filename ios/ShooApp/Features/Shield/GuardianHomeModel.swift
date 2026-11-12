@@ -198,11 +198,13 @@ final class GuardianHomeModel {
 
     /// The last Safe / Dangerous tapped on the card: "Try again" under "Couldn't save" sends it again.
     private(set) var lastDecision: Verdict.Value?
+    /// The reasons sent with the last "Safe" (SafeReasonSheet), so "Try again" sends them again.
+    @ObservationIgnored private var lastNotes: String?
 
     /// "Try again" on "Couldn't save" (Figma 1665:3183).
     func retryDecision() async {
         guard let lastDecision else { return }
-        await decide(lastDecision)
+        await decide(lastDecision, notes: lastNotes)
     }
 
     /// X on the card: hidden on this iPhone, the next pending site (if any) takes its place.
@@ -214,15 +216,18 @@ final class GuardianHomeModel {
     }
 
     /// GD-07 from Home: applies at once, no confirmation. On success the card moves on to the next site.
-    func decide(_ value: Verdict.Value) async {
-        guard canDecide, !isSubmittingVerdict, let scan = pendingScan else { return }
+    /// `notes`: why (the "Aman" reason sheet). `true` once the server saved it, or the scan is gone.
+    @discardableResult
+    func decide(_ value: Verdict.Value, notes: String? = nil) async -> Bool {
+        guard canDecide, !isSubmittingVerdict, let scan = pendingScan else { return false }
         isSubmittingVerdict = true
         lastDecision = value
+        lastNotes = notes
         verdictFailed = false
         verdictNotAllowed = false
         defer { isSubmittingVerdict = false }
         do {
-            let verdict = try await repository.setVerdict(scanId: scan.id, value: value)
+            let verdict = try await repository.setVerdict(scanId: scan.id, value: value, notes: notes)
             // Only the decided scan (K7): the server applies it per link (contracts/api.md, #241), and other
             // rows of that link get it from the next refresh. A refresh running now may have replaced `scans`.
             verdictEpoch += 1
@@ -232,16 +237,20 @@ final class GuardianHomeModel {
             }
             verdictSaves += 1
             onVerdictSaved()
+            return true
         } catch RepositoryError.api(.verdictNotAllowed, _) {
             verdictNotAllowed = true
+            return false
         } catch RepositoryError.api(.notFound, _) {
             // BH-27: the scan was deleted (14 days, a disconnect): no verdict can ever be saved on it, so the
             // card moves on to the next site, as Detail shows "This item is gone".
             scans.removeAll { $0.id == scan.id }
+            return true
         } catch {
-            guard !error.isCancellation else { return }
+            guard !error.isCancellation else { return false }
             Log.ui.error("Home verdict failed", error)
             verdictFailed = true
+            return false
         }
     }
 

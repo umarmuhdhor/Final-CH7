@@ -168,12 +168,20 @@ final class ApiRepository: ShooRepository {
     }
 
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
+        try await setVerdict(scanId: scanId, value: value, notes: nil)
+    }
+
+    func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict {
         struct Body: Encodable, Sendable {
             var scanId: String
             var value: Verdict.Value
+            /// Left out when empty, as older builds send it.
+            var notes: String?
         }
+        let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
         let response: VerdictResponse = try await client.send(.init(
-            method: .post, path: ["verdicts"], body: Body(scanId: scanId, value: value)
+            method: .post, path: ["verdicts"],
+            body: Body(scanId: scanId, value: value, notes: trimmed?.isEmpty == false ? trimmed : nil)
         ))
         return response.verdict
     }
