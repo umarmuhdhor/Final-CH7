@@ -20,8 +20,8 @@ struct GuardianHomeView: View {
     @State private var joined = 0
     /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
     @State private var isHeroHidden = false
-    /// "Aman" on the pending card opens SafeReasonSheet.
-    @State private var askingSafeReason = false
+    /// "Aman" on the pending card opens SafeReasonSheet for that site (its id, kept while the sheet is open).
+    @State private var safeReasonScanId: String?
 
     init(
         repository: any ShooRepository,
@@ -271,12 +271,15 @@ struct GuardianHomeView: View {
                     onOpen: { env.router.showDetail(scanId: scan.id) },
                     onDecide: { value in
                         // "Aman" overrides Shoo, so it asks why first; "Bahaya" applies at once.
-                        if value == .safe { askingSafeReason = true } else { Task { await model.decide(value) } }
+                        if value == .safe { safeReasonScanId = scan.id } else { Task { await model.decide(value, scanId: scan.id) } }
                     },
                     onRetry: { await model.retryDecision() }
                 )
-                .sheet(isPresented: $askingSafeReason) {
-                    SafeReasonSheet { notes in await model.decide(.safe, notes: notes) }
+                .sheet(isPresented: Binding(get: { safeReasonScanId != nil }, set: { if !$0 { safeReasonScanId = nil } })) {
+                    SafeReasonSheet { notes in
+                        guard let scanId = safeReasonScanId else { return true }
+                        return await model.decide(.safe, notes: notes, scanId: scanId)
+                    }
                 }
                 .id(scan.id)
                 .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))

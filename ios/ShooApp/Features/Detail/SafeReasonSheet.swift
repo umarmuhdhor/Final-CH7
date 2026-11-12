@@ -117,7 +117,7 @@ struct SafeReasonSheet: View {
                     .activityFont(28, .semibold)
                     .foregroundStyle(DetailStyle.title)
                     .accessibilityAddTraits(.isHeader)
-                Text("Shoo flagged this site. Tell it why it's safe, so it learns and blocks fewer good sites.")
+                Text("Shoo flagged this site. Tell us why it's safe. It helps Shoo block fewer good sites.")
                     .activityFont(16, rounded: true, tracking: -0.31)
                     .foregroundStyle(DetailStyle.secondary)
                     .fixedSize(horizontal: false, vertical: true)

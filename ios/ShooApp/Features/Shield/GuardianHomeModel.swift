@@ -200,11 +200,13 @@ final class GuardianHomeModel {
     private(set) var lastDecision: Verdict.Value?
     /// The reasons sent with the last "Safe" (SafeReasonSheet), so "Try again" sends them again.
     @ObservationIgnored private var lastNotes: String?
+    /// The site the last answer was for, so "Try again" never lands on the next card.
+    @ObservationIgnored private var lastScanId: String?
 
     /// "Try again" on "Couldn't save" (Figma 1665:3183).
     func retryDecision() async {
         guard let lastDecision else { return }
-        await decide(lastDecision, notes: lastNotes)
+        await decide(lastDecision, notes: lastNotes, scanId: lastScanId)
     }
 
     /// X on the card: hidden on this iPhone, the next pending site (if any) takes its place.
@@ -216,13 +218,18 @@ final class GuardianHomeModel {
     }
 
     /// GD-07 from Home: applies at once, no confirmation. On success the card moves on to the next site.
-    /// `notes`: why (the "Aman" reason sheet). `true` once the server saved it, or the scan is gone.
+    /// `notes`: why (the "Aman" reason sheet). `scanId`: the site the answer was given for (the sheet keeps it, so a
+    /// card that moved on while the sheet was open never gets the answer); `nil` is the card shown now.
+    /// `true` when the sheet can close: saved, the scan is gone, or this viewer may not decide (the card says so).
     @discardableResult
-    func decide(_ value: Verdict.Value, notes: String? = nil) async -> Bool {
-        guard canDecide, !isSubmittingVerdict, let scan = pendingScan else { return false }
+    func decide(_ value: Verdict.Value, notes: String? = nil, scanId: String? = nil) async -> Bool {
+        let target = scanId.map { id in scans.first { $0.id == id } } ?? pendingScan
+        guard let scan = target else { return scanId != nil }
+        guard Self.verdictStatuses.contains(scan.status), !isSubmittingVerdict else { return false }
         isSubmittingVerdict = true
         lastDecision = value
         lastNotes = notes
+        lastScanId = scan.id
         verdictFailed = false
         verdictNotAllowed = false
         defer { isSubmittingVerdict = false }
@@ -240,7 +247,7 @@ final class GuardianHomeModel {
             return true
         } catch RepositoryError.api(.verdictNotAllowed, _) {
             verdictNotAllowed = true
-            return false
+            return true
         } catch RepositoryError.api(.notFound, _) {
             // BH-27: the scan was deleted (14 days, a disconnect): no verdict can ever be saved on it, so the
             // card moves on to the next site, as Detail shows "This item is gone".

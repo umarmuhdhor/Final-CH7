@@ -6944,16 +6944,6 @@
         }
       }
     },
-    "Shoo flagged this site. Tell it why it's safe, so it learns and blocks fewer good sites." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shoo menandai situs ini. Beri tahu kenapa aman, supaya Shoo belajar dan tidak salah blokir lagi."
-          }
-        }
-      }
-    },
     "e.g. This is my bank's real site, I checked the address." : {
       "localizations" : {
         "id" : {
@@ -7000,6 +6990,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Bisa diubah lagi setelah Shoo belajar mingguan, %@."
+          }
+        }
+      }
+    },
+    "Shoo flagged this site. Tell us why it's safe. It helps Shoo block fewer good sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo menandai situs ini. Beri tahu kami kenapa aman. Ini membantu Shoo tidak salah blokir situs yang baik."
           }
         }
       }

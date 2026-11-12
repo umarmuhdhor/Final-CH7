@@ -204,7 +204,9 @@ struct DetailView: View {
             SafeReasonSheet { notes in
                 let outcome = await model.setVerdict(.safe, notes: notes)
                 announce(outcome)
-                return outcome == .saved || outcome == .gone
+                // Only a connection problem keeps the sheet ("Coba lagi"); "not allowed" and "too many" close it
+                // and the footer says why.
+                return outcome != .rolledBack || model.verdictError != .connection
             }
         }
     }

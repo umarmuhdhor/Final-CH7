@@ -162,6 +162,30 @@ struct GuardianHomeModelTests {
         #expect(model.scans.first { $0.id == scan.id }?.verdict?.value == .safe)
     }
 
+    /// Review #475 (5): the answer goes to the site the sheet was opened for, even when the card moved on.
+    @Test func reasonSheetAnswersTheSiteItWasOpenedFor() async throws {
+        let model = model(settings: try settings())
+        await model.refresh()
+        let first = try #require(model.pendingScan)
+        model.dismissPending()
+        #expect(model.pendingScan?.id != first.id)
+        #expect(await model.decide(.safe, notes: "reasons: other", scanId: first.id))
+        #expect(model.scans.first { $0.id == first.id }?.verdict?.value == .safe)
+        #expect(model.pendingScan?.verdict == nil)
+    }
+
+    /// Review #475 (4): "not allowed" closes the sheet; the card says why, not "check your connection".
+    @Test func notAllowedClosesTheSheet() async throws {
+        let model = GuardianHomeModel(
+            repository: StubRepository(verdictFailures: 1, verdictError: .api(.verdictNotAllowed, message: "no")),
+            settings: try settings(), scope: .family, extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow }
+        )
+        await model.refresh()
+        #expect(await model.decide(.safe, notes: "reasons: other"))
+        #expect(model.verdictNotAllowed)
+        #expect(!model.verdictFailed)
+    }
+
     /// GD-07: "Aman" from the Home card sends the reasons as `notes`.
     @Test func safeSendsTheReasons() async throws {
         let repository = MockRepository(mode: .guardian, latency: .zero)
