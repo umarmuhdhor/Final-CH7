@@ -269,7 +269,7 @@ export interface ReplicaQuota {
 
 /**
  * EX-07 pre-check before the IP limit and the inflate (cheap first, K5): the owner's replica of this
- * domain from the last 24 h to reuse. A device without a family link keeps its replicas too: Detail
+ * link from the last 24 h to reuse. A device without a family link keeps its replicas too: Detail
  * shows the owner the evidence in Personal mode (5 Nov 2026; was dropped as no_family), and its quota
  * family is the device itself (replicaCountsQuery).
  * Fase 22 K12 (D-alief-B15): in the same statement, the quota counts of reserveReplica; when a quota
@@ -281,12 +281,12 @@ export interface ReplicaQuota {
  */
 export async function precheckReplica(
   sql: Sql,
-  scan: { ownerId: string; domain: string },
+  scan: { id: string; ownerId: string; domain: string },
   bytes: number,
   quota: ReplicaQuota,
 ): Promise<{ reuse: string | undefined; quota: ReplicaQuotaReason | undefined }> {
   const [row] = await sql<({ reuse: string | null } & ReplicaCounts)[]>`
-    select (${recentReplicaQuery(sql, scan.ownerId, scan.domain)}) as reuse, c.*
+    select (${recentReplicaQuery(sql, scan)}) as reuse, c.*
     from (${replicaCountsQuery(sql, scan.ownerId)}) c`;
   // An aggregate without group by: always exactly one row. The counts also run for a reuse, where
   // they are not used: one index-only pass, cheaper than a second trip.
@@ -297,7 +297,7 @@ export async function precheckReplica(
 
 /**
  * Like reserveScreenshot, for replicas (D-alief-C25/C26): in one transaction locked per owner
- * (LOCK.replica, db/locks.ts), reuse the owner's replica of this domain from the last 24 h, else reserve
+ * (LOCK.replica, db/locks.ts), reuse the owner's replica of this link from the last 24 h, else reserve
  * `upload.path` if every quota of the last 24 h has room (original rows only, index scans_original_replica).
  * Fase 19 (D-alief-B14): the counts for owner, family and everyone are one statement under the global
  * key (LOCK.replica, 0). Every new upload takes that key, so uploads by different members of one family
@@ -322,7 +322,7 @@ export async function reserveReplica(
 ): Promise<ReplicaSlot> {
   return sql.begin(async (tx): Promise<ReplicaSlot> => {
     await tx`select pg_advisory_xact_lock(${LOCK.replica}, hashtext(${scan.ownerId}))`;
-    const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan.ownerId, scan.domain)}) as path`;
+    const [found] = await tx<{ path: string }[]>`select (${recentReplicaQuery(tx, scan)}) as path`;
     const reuse = found?.path ?? undefined;
     if (!reuse && !upload) return { none: true };
     if (!reuse) {
@@ -436,18 +436,21 @@ export async function replicaUsage(sql: Sql, q: ReplicaQuota, maxBytes: number):
 }
 
 /**
- * Reuse source: the newest original replica (replica_bytes set) of the owner + domain from the last
- * 24 h. Only originals count, so reuse never chains and an object is gone 15 days after upload.
+ * Reuse source: the newest original replica (replica_bytes set) of the owner + this scan's link
+ * (`verdict_link`: origin + path, #241) from the last 24 h. Per link, not per domain (BH-15): each
+ * page has its own Activity row, so another page of the site must show its own copy, never the first
+ * page's. Only originals count, so reuse never chains and an object is gone 15 days after upload.
  * Only a stored one (replica_ready_at): an upload still in flight is no source (fase 22 fix, 8 Nov
- * 2026); a scan of the same site meanwhile uploads its own copy, counted by the quotas as usual.
+ * 2026); a scan of the same link meanwhile uploads its own copy, counted by the quotas as usual.
  */
-function recentReplicaQuery(sql: Q, ownerId: string, domain: string) {
+function recentReplicaQuery(sql: Q, scan: { id: string; ownerId: string; domain: string }) {
   return sql`
-    select replica_path from scans
-    where owner_id = ${ownerId} and domain = ${domain} and replica_bytes is not null
-      and replica_ready_at is not null
-      and created_at > now() - interval '24 hours'
-    order by created_at desc limit 1`;
+    select r.replica_path from scans r
+    where r.owner_id = ${scan.ownerId} and r.domain = ${scan.domain} and r.replica_bytes is not null
+      and r.replica_ready_at is not null
+      and r.created_at > now() - interval '24 hours'
+      and public.verdict_link(r.url) = (select public.verdict_link(s.url) from scans s where s.id = ${scan.id})
+    order by r.created_at desc limit 1`;
 }
 
 /**

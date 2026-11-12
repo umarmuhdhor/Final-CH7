@@ -579,7 +579,7 @@ already stored 50 in the last 24 h, when its family (the Guardian and up to 3 me
 sending IP already sent 300 in the last 24 h. The last 600 uploads and 100 MB of the global quota are
 kept for families with fewer than 10 uploads in the last 24 h. A full device, family or global quota
 is checked before the replica is decompressed and before it counts against the IP's 300. A second
-scan of the same domain within 24 h reuses the earlier replica. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
+scan of the same link (origin + path) within 24 h reuses the earlier replica; another page of the site gets its own. The gzip bytes are stored as sent, in a private Cloudflare R2 bucket.
 
 **Screenshot rules.** `screenshotBase64` is ignored since fase 20a (7 Nov 2026): any value (string or
 not) is accepted, the scan is stored and the answer is 201, but no screenshot is stored. A non-empty
