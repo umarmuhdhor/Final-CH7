@@ -575,13 +575,37 @@ struct DeepLinkRoutingTests {
         #expect(env.router.pendingJoinCode == nil)
     }
 
+    /// A Guardian with Family mode on: a join link is not for this phone, so Shield.
     @Test func guardianLandsOnShield() {
         let env = environment(mode: .guardian, onboarded: true)
+        env.settings.familyModeOn = true
         env.router.selectedTab = .activity
         env.open(URL(string: "shoo://join?code=482193")!)
         #expect(!env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == nil)
         #expect(env.router.selectedTab == .shield)
+    }
+
+    /// BH-10: Pribadi (a Guardian with Family mode off) can join a family ("Become supervised"), so the
+    /// link opens that sheet with the code filled in instead of dropping it.
+    @Test func pribadiLinkOpensBecomeSupervisedWithTheCode() {
+        let env = environment(mode: .guardian, onboarded: true)
+        env.settings.familyModeOn = false
+        env.router.selectedTab = .activity
+        env.router.activityPath = [.profile]
+        env.open(URL(string: "shoo://join?code=482193")!)
+        #expect(env.router.isJoinFamilyPresented)
+        #expect(!env.router.isConnectPresented)
+        #expect(env.router.pendingJoinCode == "482193")
+        #expect(env.router.selectedTab == .shield)
+        #expect(env.router.activityPath.isEmpty)
+    }
+
+    @Test func pribadiMidOnboardingKeepsNoCode() {
+        let env = environment(mode: .guardian, onboarded: false)
+        env.open(URL(string: "shoo://join?code=482193")!)
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(env.router.pendingJoinCode == nil)
     }
 
     /// Profile is a pushed screen (PF-01): the link pops it and Connect opens at once.

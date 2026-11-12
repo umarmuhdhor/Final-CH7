@@ -474,8 +474,9 @@ final class AppEnvironment {
     }
 
     /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: Connect still asks
-    /// for a tap (T11). `scan` opens Detail, `activity` the Activity tab; a Guardian's join link, or any
-    /// unknown link, lands on Shield.
+    /// for a tap (T11). Pribadi (a Guardian with Family mode off) can join a family too, so its join link
+    /// opens "Become supervised" with the code (BH-10). `scan` opens Detail, `activity` the Activity tab; a
+    /// join link for a Guardian with Family mode on, or any unknown link, lands on Shield.
     @MainActor
     func open(_ url: URL) {
         switch DeepLink(url: url) {
@@ -485,12 +486,16 @@ final class AppEnvironment {
             guard settings.mode == .protected, settings.onboardingCompleted else { return }
             // Already open, `ConnectSheet` picks the new code up.
             router.showConnect()
+        case .join(let code) where isInMainScreen && !settings.familyModeOn:
+            router.pendingJoinCode = code
+            // Already open, `JoinAnotherFamilySheet` picks the new code up.
+            router.showJoinFamily()
         case .scan(let id) where isInMainScreen:
             router.openDetail(scanId: id)
         case .activity where isInMainScreen:
             router.openActivity()
         case .join, .unknown:
-            // A Guardian's join link, or a link we don't know: Shield.
+            // A join link for a Guardian with Family mode on (or mid-onboarding), or a link we don't know: Shield.
             if isInMainScreen { router.reset() }
         case .scan, .activity:
             // Onboarding or "Session expired" is on screen: nothing to open yet.
