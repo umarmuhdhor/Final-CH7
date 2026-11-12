@@ -89,8 +89,24 @@ struct ApiRepositoryTests {
         try await repository.deleteMe()
         let verdictBody = try #require(server.requests.first { $0.path == "/verdicts" }?.json)
         #expect(verdictBody["scanId"] as? String == "scan_1" && verdictBody["value"] as? String == "safe")
+        #expect(verdictBody.keys.contains("notes") == false)
         #expect(server.requests.first { $0.path == "/family/join" }?.json?["code"] as? String == "482193")
         #expect(server.requests.allSatisfy { $0.headers["Authorization"] == "Bearer shoo_test_token_123" })
+    }
+
+    /// GD-07 "Aman" sheet: the reasons travel as `notes`; a blank note is left out, as older builds send it.
+    @Test func verdictSendsNotesOnlyWhenThereAreSome() async throws {
+        let server = StubServer()
+        server.reply { _ in
+            .json(200, #"{"verdict":{"value":"safe","byDeviceId":"dev_me","byName":"Adhella","decidedAt":"2026-10-22T03:00:00Z"}}"#)
+        }
+        let repository = server.repository()
+        _ = try await repository.setVerdict(scanId: "scan_1", value: .safe, notes: "reasons: official_site\nSitus bank saya")
+        _ = try await repository.setVerdict(scanId: "scan_1", value: .safe, notes: "  ")
+        let bodies = server.requests.filter { $0.path == "/verdicts" }.compactMap(\.json)
+        #expect(bodies.count == 2)
+        #expect(bodies[0]["notes"] as? String == "reasons: official_site\nSitus bank saya")
+        #expect(bodies[1].keys.contains("notes") == false)
     }
 
     /// No body asks for the active code; `{"refresh":true}` only from "Refresh code" (contracts/api.md).

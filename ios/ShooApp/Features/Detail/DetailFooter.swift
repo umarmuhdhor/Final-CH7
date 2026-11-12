@@ -31,6 +31,7 @@ struct DetailFooter: View {
     }
 
     private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
+    private var lockedUntil: Date? { verdict.flatMap { VerdictLock.lockedUntil($0, now: Date()) } }
 
     /// The window's home indicator inset (34 on Face ID iPhones, 0 with a Home button). Read from the window,
     /// never from this footer's own geometry: that safe area moves while the tab bar hides, and feeding it
@@ -58,7 +59,8 @@ struct DetailFooter: View {
                     viewerDeviceId: viewerDeviceId,
                     // Either verdict can be changed (R4: Safe ⇄ NotSafe, an upsert), so a mis-tapped
                     // Danger can be undone and the buttons' "You can change it later" holds (QA 2026-11-11 #5).
-                    canChange: canValidate,
+                    // An "Aman" waits for the weekly AI review (VerdictLock); "Bahaya" can always change.
+                    canChange: canValidate && lockedUntil == nil,
                     onChange: { isChanging = true }
                 )
                 if verdict.value == .safe, let ownerName {
@@ -72,6 +74,16 @@ struct DetailFooter: View {
                         .frame(maxWidth: .infinity)
                         .fixedSize(horizontal: false, vertical: true)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 4)))
+                }
+                if canValidate, let lockedUntil {
+                    let day = lockedUntil.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(locale))
+                    Label("You can change this after Shoo's weekly review, \(day).", systemImage: "lock.fill")
+                        .activityFont(13, rounded: true)
+                        .foregroundStyle(DetailStyle.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("detail.verdictLocked")
                 }
             }
             if let failure {

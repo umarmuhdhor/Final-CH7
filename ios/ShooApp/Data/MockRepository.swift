@@ -380,7 +380,17 @@ actor MockRepository: ShooRepository {
         return copy
     }
 
+    func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict {
+        let verdict = try await setVerdict(scanId: scanId, value: value)
+        lastVerdictNotes = notes
+        return verdict
+    }
+
+    /// The `notes` of the last `setVerdict` (tests and the debug flow; the server never returns them).
+    private(set) var lastVerdictNotes: String?
+
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
+        lastVerdictNotes = nil
         try await pause()
         try failIfAsked("setVerdict")
         guard profile.mode == .guardian else {

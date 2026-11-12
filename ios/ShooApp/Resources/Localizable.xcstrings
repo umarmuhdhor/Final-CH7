@@ -6853,6 +6853,156 @@
           }
         }
       }
+    },
+    "Official site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs resmi"
+          }
+        }
+      }
+    },
+    "I know this site" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saya kenal situs ini"
+          }
+        }
+      }
+    },
+    "Used it before, no problems" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pernah dipakai, aman"
+          }
+        }
+      }
+    },
+    "Sent by someone I trust" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dari orang yang saya percaya"
+          }
+        }
+      }
+    },
+    "Other" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lainnya"
+          }
+        }
+      }
+    },
+    "Why is it safe?" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kenapa aman?"
+          }
+        }
+      }
+    },
+    "Note (optional)" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Catatan (opsional)"
+          }
+        }
+      }
+    },
+    "Don't write a PIN, OTP or account number." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jangan tulis PIN, OTP, atau nomor rekening."
+          }
+        }
+      }
+    },
+    "Mark as safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tandai sebagai aman"
+          }
+        }
+      }
+    },
+    "e.g. This is my bank's real site, I checked the address." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contoh: Ini situs resmi bank saya, alamatnya sudah saya cek."
+          }
+        }
+      }
+    },
+    "Check your connection. Your note isn't lost." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa koneksi. Catatanmu tidak hilang."
+          }
+        }
+      }
+    },
+    "Mark Safe" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tandai Aman"
+          }
+        }
+      }
+    },
+    "Pick at least one reason first" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilih minimal satu alasan dulu"
+          }
+        }
+      }
+    },
+    "You can change this after Shoo's weekly review, %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisa diubah lagi setelah Shoo belajar mingguan, %@."
+          }
+        }
+      }
+    },
+    "Shoo flagged this site. Tell us why it's safe. It helps Shoo block fewer good sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo menandai situs ini. Beri tahu kami kenapa aman. Ini membantu Shoo tidak salah blokir situs yang baik."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

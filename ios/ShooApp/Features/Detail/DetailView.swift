@@ -24,6 +24,8 @@ struct DetailView: View {
     @State private var statusBarShade = 0.0
     /// The link pill grows with Dynamic Type; the title keeps clear of it.
     @State private var pillHeight: CGFloat = 34
+    /// "Aman" on a site Shoo flagged asks why first (SafeReasonSheet); "Bahaya" still applies at once.
+    @State private var askingSafeReason = false
 
     init(scanId: String, repository: any ShooRepository, onVerdictSaved: @escaping @MainActor () -> Void = {}) {
         _model = State(initialValue: DetailModel(scanId: scanId, repository: repository, onVerdictSaved: onVerdictSaved))
@@ -185,6 +187,10 @@ struct DetailView: View {
                     ownerName: ownerName(scan),
                     isBlocked: scan.status == .blocked,
                     onDecide: { value in
+                        if value == .safe {
+                            askingSafeReason = true
+                            return
+                        }
                         Task {
                             let outcome = await model.setVerdict(value)
                             announce(outcome)
@@ -194,6 +200,15 @@ struct DetailView: View {
             }
         }
         .sensoryFeedback(.success, trigger: model.verdictSaves)
+        .sheet(isPresented: $askingSafeReason) {
+            SafeReasonSheet { notes in
+                let outcome = await model.setVerdict(.safe, notes: notes)
+                announce(outcome)
+                // Only a connection problem keeps the sheet ("Coba lagi"); "not allowed" and "too many" close it
+                // and the footer says why.
+                return outcome != .rolledBack || model.verdictError != .connection
+            }
+        }
     }
 
     /// Figma "Sheet": white from y 284 with 32 pt corners; the link pill sits on its top edge.
