@@ -4319,7 +4319,6 @@
       }
     },
     "Shows how to switch Shoo off in Safari" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -5032,7 +5031,6 @@
       }
     },
     "This iPhone isn't connected to Shoo anymore. Set it up again to stay protected." : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
@@ -6397,6 +6395,146 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kamu sudah terhubung ke Guardian. Hanya Guardian-mu yang bisa memutuskan koneksi, jadi minta dulu."
+          }
+        }
+      }
+    },
+    "This iPhone isn't protected yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone ini belum terlindungi"
+          }
+        }
+      }
+    },
+    "Set up again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siapkan lagi"
+          }
+        }
+      }
+    },
+    "Checking Shoo…" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mengecek Shoo…"
+          }
+        }
+      }
+    },
+    "Checking the Safari extension" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Memeriksa ekstensi Safari"
+          }
+        }
+      }
+    },
+    "Status not available yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status Belum Tersedia"
+          }
+        }
+      }
+    },
+    "Connection not read yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koneksi belum terbaca"
+          }
+        }
+      }
+    },
+    "Couldn't load" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal memuat"
+          }
+        }
+      }
+    },
+    "Check your connection." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa koneksi Anda."
+          }
+        }
+      }
+    },
+    "Couldn't save" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal menyimpan"
+          }
+        }
+      }
+    },
+    "Can't be marked yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum bisa ditandai"
+          }
+        }
+      }
+    },
+    "Open this site's details first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat detail situs ini dulu."
+          }
+        }
+      }
+    },
+    "Open details" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka detail"
+          }
+        }
+      }
+    },
+    "Switch the Shoo extension off." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matikan ekstensi Shoo."
+          }
+        }
+      }
+    },
+    "Shoo off means protection stops. Your family won't get warnings anymore." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo mati, perlindungan berhenti. Keluarga tak lagi mendapat peringatan."
           }
         }
       }

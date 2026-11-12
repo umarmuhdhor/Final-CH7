@@ -15,6 +15,9 @@ final class ShieldModel {
 
     private(set) var state: State = .loading
     private(set) var extensionStatus: ExtensionStatus = .off(lastSeen: nil)
+    /// `false` until the first read of the extension's status: the hero says "Checking Shoo…" instead of a guess
+    /// (Figma "protected/Home · Mengecek ekstensi" 1681:5275).
+    private(set) var extensionChecked = false
     /// `GET /devices/me` → `guardian`; `nil` when not (or no longer) connected.
     private(set) var guardian: GuardianInfo?
     /// For the profile initial top right.
@@ -73,6 +76,7 @@ final class ShieldModel {
         let request = generation
         // Local (App Group + Safari's switch): never waits for the network.
         extensionStatus = await readExtensionStatus()
+        extensionChecked = true
         guard request == generation else { return }
         do {
             async let profile = repository.me()
@@ -99,9 +103,8 @@ final class ShieldModel {
         scamCases = cases
     }
 
-    /// "Try again" on the error view: shows the spinner while it retries.
+    /// "Try again" on the error card: the card stays (its button spins) until the answer is in.
     func retry() async {
-        state = .loading
         await refresh()
     }
 

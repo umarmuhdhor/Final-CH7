@@ -33,6 +33,26 @@ struct ShieldModelTests {
         #expect(!never.extensionStatus.isActive)
     }
 
+    /// "Mengecek Shoo…" (1681:5275) until Safari has answered once, then the status itself.
+    @Test func checksTheExtensionBeforeSayingAnything() async {
+        let model = model(lastSeen: now.addingTimeInterval(-60))
+        #expect(!model.extensionChecked)
+        await model.refresh()
+        #expect(model.extensionChecked)
+    }
+
+    /// "Coba lagi" on "Gagal memuat" keeps the failed page (the card's button spins) instead of a spinner page.
+    @Test func retryAfterAFailureStaysFailedWhileStillOffline() async {
+        let model = ShieldModel(
+            repository: MockRepository(mode: .protected, latency: .zero, failures: ["me": .network]),
+            extensionStatus: { .active(lastSeen: nil) }
+        )
+        await model.refresh()
+        #expect(model.state == .failed)
+        await model.retry()
+        #expect(model.state == .failed)
+    }
+
     @Test func showsTheGuardian() async {
         let model = model()
         await model.refresh()

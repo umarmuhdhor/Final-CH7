@@ -586,14 +586,79 @@ struct DeepLinkRoutingTests {
         #expect(env.router.selectedTab == .shield)
     }
 
+    /// A protected phone with a guardian: a join link never reaches Connect (`already_connected`); Home stays.
+    @Test func protectedWithAGuardianStaysOnHome() throws {
+        let suite = "test.links.session.\(UUID().uuidString)"
+        let session = SessionStore(
+            defaults: UserDefaults(suiteName: suite)!,
+            keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
+            apiBaseURL: URL(string: "https://api.shoo.test")!, aiBaseURL: nil, forgetCachedData: {}
+        )
+        defer { session.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        try session.save(DeviceRegistration(deviceId: "dev_me", token: "shoo_t", avatarId: "avatar_01"), name: "Rina", mode: .protected)
+        session.setGuardian(GuardianInfo(deviceId: "dev_mom", name: "Mom", avatarId: "avatar_02"))
+        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
+        settings.chooseMode(.protected)
+        settings.onboardingCompleted = true
+        let env = AppEnvironment(repository: MockRepository(mode: .protected, latency: .zero), settings: settings, session: session)
+        env.router.selectedTab = .activity
+        env.router.activityPath = [.profile]
+        env.open(URL(string: "shoo://join?code=482193")!)
+        #expect(!env.router.isConnectPresented)
+        #expect(env.router.pendingJoinCode == nil)
+        #expect(env.router.selectedTab == .shield)
+        #expect(env.router.activityPath.isEmpty)
+    }
+
+    /// The guardian disconnected: the next link opens Connect again.
+    @Test func protectedWhoseGuardianLeftGetsConnectAgain() throws {
+        let suite = "test.links.session.\(UUID().uuidString)"
+        let session = SessionStore(
+            defaults: UserDefaults(suiteName: suite)!,
+            keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
+            apiBaseURL: URL(string: "https://api.shoo.test")!, aiBaseURL: nil, forgetCachedData: {}
+        )
+        defer { session.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
+        try session.save(DeviceRegistration(deviceId: "dev_me", token: "shoo_t", avatarId: "avatar_01"), name: "Rina", mode: .protected)
+        session.setGuardian(GuardianInfo(deviceId: "dev_mom", name: "Mom", avatarId: "avatar_02"))
+        session.setGuardian(nil)
+        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
+        settings.chooseMode(.protected)
+        settings.onboardingCompleted = true
+        let env = AppEnvironment(repository: MockRepository(mode: .protected, latency: .zero), settings: settings, session: session)
+        env.open(URL(string: "shoo://join?code=482193")!)
+        #expect(env.router.isConnectPresented)
+        #expect(env.router.pendingJoinCode == "482193")
+    }
+
+    /// Pribadi who still protects someone: joining would fail with `has_members`, so the link lands on Home.
+    @Test func pribadiWithMembersStaysOnHome() async {
+        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
+        settings.chooseMode(.guardian)
+        settings.onboardingCompleted = true
+        settings.familyModeOn = false
+        let env = AppEnvironment(repository: MockRepository(mode: .guardian, latency: .zero), settings: settings)
+        env.router.selectedTab = .activity
+        env.open(URL(string: "shoo://join?code=482193")!)
+        await env.joinLinkCheck?.value
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(!env.router.isConnectPresented)
+        #expect(env.router.pendingJoinCode == nil)
+        #expect(env.router.selectedTab == .shield)
+    }
+
     /// BH-10: Pribadi (a Guardian with Family mode off) can join a family ("Become supervised"), so the
-    /// link opens that sheet with the code filled in instead of dropping it.
-    @Test func pribadiLinkOpensBecomeSupervisedWithTheCode() {
-        let env = environment(mode: .guardian, onboarded: true)
+    /// link opens that sheet with the code filled in instead of dropping it. Nobody protected yet.
+    @Test func pribadiLinkOpensBecomeSupervisedWithTheCode() async {
+        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
+        settings.chooseMode(.guardian)
+        settings.onboardingCompleted = true
+        let env = AppEnvironment(repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero), settings: settings)
         env.settings.familyModeOn = false
         env.router.selectedTab = .activity
         env.router.activityPath = [.profile]
         env.open(URL(string: "shoo://join?code=482193")!)
+        await env.joinLinkCheck?.value
         #expect(env.router.isJoinFamilyPresented)
         #expect(!env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "482193")

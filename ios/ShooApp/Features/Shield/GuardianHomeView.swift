@@ -170,6 +170,10 @@ struct GuardianHomeView: View {
                     .accessibilityIdentifier("home.turnOn")
                 }
             }
+        } else if model.state == .failed {
+            // Figma "Guardian/Home · Gagal memuat" (1665:3038): nothing loaded, so no "Family protected!".
+            HomeHero(style: .teal, title: "Status not available yet", titleIdentifier: "home.family.unavailable",
+                     shieldTint: .teal, layout: .family)
         } else if model.hasNoFamily {
             // Figma 1382:10466: the teal hero, white headline and line.
             HomeHero(style: .teal, title: "Protect your loved ones", titleIdentifier: "home.family.empty",
@@ -198,19 +202,24 @@ struct GuardianHomeView: View {
     private var sheet: some View {
         switch model.state {
         case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, minHeight: 216)
+            // The rows that are coming, sweeping while they load.
+            SkeletonActivity(rows: 3, animating: true)
+                .padding(isFamily ? 24 : 0)
+                .frame(maxWidth: .infinity, minHeight: 216, alignment: .top)
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Loading"))
         case .failed:
-            VStack(spacing: 12) {
-                Text("Couldn't load your Shield").font(.headline)
-                Text("Check your connection and try again.").foregroundStyle(.primary)
-                Button { Task { await model.retry() } } label: { Text("Try again").frame(minHeight: 44) }
-                    .buttonStyle(.borderedProminent)
+            // Figma "Guardian/Home · Gagal memuat" (1665:3038): the card, "Aktivitas Terakhir", three grey rows.
+            VStack(alignment: .leading, spacing: 22) {
+                StateNoticeCard(title: "Couldn't load", message: "Check your connection.", actionTitle: "Try again") {
+                    await model.retry()
+                }
+                .accessibilityIdentifier("home.loadError")
+                .stateEntrance()
+                SkeletonActivity(rows: 3)
             }
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, minHeight: 216)
-            .padding(16)
+            .padding(.horizontal, isFamily ? 24 : 0)
+            .padding(.vertical, isFamily ? 24 : 0)
         case .loaded:
             if !isFamily {
                 // Figma 435:20058: the list, 35 pt, the scams; 1382:10567 puts the "Mode Terawasi" card first and
@@ -258,7 +267,8 @@ struct GuardianHomeView: View {
                     failed: model.verdictFailed,
                     notAllowed: model.verdictNotAllowed,
                     onOpen: { env.router.showDetail(scanId: scan.id) },
-                    onDecide: { value in Task { await model.decide(value) } }
+                    onDecide: { value in Task { await model.decide(value) } },
+                    onRetry: { await model.retryDecision() }
                 )
                 .id(scan.id)
                 .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.97)))
@@ -424,8 +434,10 @@ private struct PendingSiteCard: View {
     let notAllowed: Bool
     let onOpen: () -> Void
     let onDecide: (Verdict.Value) -> Void
+    var onRetry: () async -> Void = {}
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     private var isBlocked: Bool { scan.status == .blocked }
     private var reason: String? {
@@ -483,30 +495,32 @@ private struct PendingSiteCard: View {
                     DecisionButton(kind: .danger) { onDecide(.notSafe) }
                         .accessibilityIdentifier("home.verdict.notSafe")
                 }
+                // Figma 1665:3387: while the site can't be marked, both buttons go grey and stop taking taps.
+                .disabled(notAllowed)
+                .grayscale(notAllowed ? 1 : 0)
+                .opacity(notAllowed ? 0.5 : 1)
                 .padding(.leading, 28.3)
                 .padding(.trailing, 24.1)
                 .padding(.top, 20)
             }
+            // Figma "Pesan verdict" (1665:3183 / 1665:3387): the card's own foot, full width, 26 under the buttons.
             if failed {
-                Label("Couldn't save. Check your connection and try again.", systemImage: "exclamationmark.triangle.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 21)
-                    .padding(.top, 12)
+                StateNoticeCard(title: "Couldn't save", message: "Check your connection.", actionTitle: "Try again",
+                                cornerRadius: 16, action: onRetry)
+                    .padding(.top, 26)
+                    .transition(StateMotion.transition(reduceMotion: reduceMotion))
                     .accessibilityIdentifier("home.verdictError")
-            }
-            if notAllowed {
-                Label("This site can't be marked yet. Open the details to see more.", systemImage: "info.circle.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 21)
-                    .padding(.top, 12)
+            } else if notAllowed {
+                StateNoticeCard(tone: .info, title: "Can't be marked yet", message: "Open this site's details first.",
+                                actionTitle: "Open details", cornerRadius: 16) { onOpen() }
+                    .padding(.top, 26)
+                    .transition(StateMotion.transition(reduceMotion: reduceMotion))
                     .accessibilityIdentifier("home.verdictNotAllowed")
             }
         }
-        .padding(.bottom, canDecide ? 14.7 : 20)
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: failed)
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: notAllowed)
+        .padding(.bottom, failed || notAllowed ? 0 : (canDecide ? 14.7 : 20))
         .frame(maxWidth: .infinity)
         .background {
             // #EDEDED at 50 % on the white sheet, 20.7 pt corners.

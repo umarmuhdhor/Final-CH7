@@ -15,6 +15,8 @@ struct ProtectedShieldView: View {
     @State private var turnedOn = 0
     /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
     @State private var isHeroHidden = false
+    /// Bumped when a failed page loads after "Try again": one success tap.
+    @State private var recovered = 0
 
     init(repository: any ShooRepository, extensionStatus: @escaping () async -> ExtensionStatus) {
         _model = State(initialValue: ShieldModel(repository: repository, extensionStatus: extensionStatus))
@@ -37,6 +39,9 @@ struct ProtectedShieldView: View {
                         isLoaded ? (reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.35)) : nil,
                         value: model.extensionStatus.isActive
                     )
+                    // "Checking Shoo…" → protected / not protected, and "Status not available yet" ↔ loaded:
+                    // the headline and the pill cross-fade.
+                    .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.35), value: heroPhase)
                     .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
                 // Figma "Status": the page itself rounds up over the hero; one 354 pt column, 24 from the edges.
                 VStack(spacing: 0) {
@@ -100,13 +105,28 @@ struct ProtectedShieldView: View {
         }
         // Only off → on, never the other way round.
         .sensoryFeedback(.success, trigger: turnedOn)
+        .sensoryFeedback(.success, trigger: recovered)
+        // A failed load is felt too, not only read.
+        .sensoryFeedback(.error, trigger: model.state) { _, now in now == .failed }
+        .onChange(of: model.state) { old, now in
+            if old == .failed, now == .loaded { recovered += 1 }
+        }
     }
 
     // MARK: Hero
 
+    /// What the hero says: still reading the extension, the page failed, or the status itself.
+    private enum HeroPhase: Equatable { case checking, failed, status }
+
+    private var heroPhase: HeroPhase {
+        if !model.extensionChecked { return .checking }
+        return model.state == .failed ? .failed : .status
+    }
+
     private var hero: some View {
         let isActive = model.extensionStatus.isActive
-        let showsPill = isLoaded && model.guardian != nil
+        let phase = heroPhase
+        let showsPill = (isLoaded && model.guardian != nil) || phase != .status
         var layout = HomeHeroLayout.personal
         // Figma "box": 349…469 with nothing today, 362…482 over the card; 1382:2393 (no pill) moves the gradient
         // up to y −31 and stretches the fade to 141 pt from 317.
@@ -117,34 +137,62 @@ struct ProtectedShieldView: View {
         }
         // The sheet starts at 403 under the pill (24.4 below it) and at 379 without one.
         let bottom: CGFloat = showsPill ? 24.38 : 379 - layout.titleBottom
+        let showsNextStep = phase == .status && model.extensionStatus.nextStep != nil
+        let title: LocalizedStringKey = switch phase {
+        case .checking: "Checking Shoo…"
+        case .failed: "Status not available yet"
+        case .status: isActive ? "You're protected!" : "You're not protected yet"
+        }
+        let identifier = switch phase {
+        case .checking: "shield.status.checking"
+        case .failed: "shield.status.unavailable"
+        case .status: isActive ? "shield.status.active" : "shield.status.off"
+        }
         return HomeHero(
             style: .blue,
-            title: isActive ? "You're protected!" : "You're not protected yet",
-            titleIdentifier: isActive ? "shield.status.active" : "shield.status.off",
-            shieldOn: isActive,
+            title: title,
+            titleIdentifier: identifier,
+            shieldOn: isActive || phase == .checking,
             layout: layout,
-            bottomPadding: model.extensionStatus.nextStep != nil ? 20 : bottom
+            bottomPadding: showsNextStep ? 20 : bottom
         ) {
             VStack(spacing: 8) {
-                if model.extensionStatus.nextStep != nil {
-                    Button { env.router.isTurnOnPresented = true } label: {
-                        Text(isActive ? "Finish setup" : "Turn on now")
-                            .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
-                            .underline()
-                            .foregroundStyle(.white)
-                            .frame(minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
-                    .accessibilityIdentifier("shield.turnOn")
-                }
-                if showsPill, let guardian = model.guardian {
-                    ConnectedPill(name: guardian.name)
+                switch phase {
+                case .checking:
+                    // Figma 1681:5275: a blue dot that breathes while Safari answers.
+                    HeroStatusPill(text: Text("Checking the Safari extension"), dot: Color(hex: 0x1A73D9), pulses: true)
+                        .accessibilityIdentifier("shield.checking")
+                case .failed:
+                    // Figma 1665:3122: grey dot, nothing to report yet.
+                    HeroStatusPill(text: Text("Connection not read yet"), dot: HomeTheme.offline)
+                        .accessibilityIdentifier("shield.unavailable")
+                case .status:
+                    statusAccessory(showsNextStep: showsNextStep, showsPill: showsPill, isActive: isActive)
                 }
             }
             // Figma: the pill 12 under the headline's text box (13 here: SwiftUI's 28 pt box ends 1 pt higher).
-            .padding(.top, model.extensionStatus.nextStep != nil ? 4 : (showsPill ? 13 : 0))
+            .padding(.top, showsNextStep ? 4 : (showsPill ? 13 : 0))
+        }
+    }
+
+    @ViewBuilder
+    private func statusAccessory(showsNextStep: Bool, showsPill: Bool, isActive: Bool) -> some View {
+        if showsNextStep {
+            Button { env.router.isTurnOnPresented = true } label: {
+                Text(isActive ? "Finish setup" : "Turn on now")
+                    .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
+                    .underline()
+                    .foregroundStyle(.white)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("Shows how to switch Shoo on in Safari"))
+            .accessibilityIdentifier("shield.turnOn")
+        }
+        if showsPill, let guardian = model.guardian {
+            ConnectedPill(name: guardian.name)
+                .transition(.opacity)
         }
     }
 
@@ -154,23 +202,26 @@ struct ProtectedShieldView: View {
     private var content: some View {
         switch model.state {
         case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, minHeight: 120)
-                .padding(.top, 24)
+            // The rows that are coming, sweeping while they load.
+            SkeletonActivity(rows: 4, animating: true)
+                .padding(.top, 32)
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text("Loading"))
         case .failed:
-            VStack(spacing: 12) {
-                Text("Couldn't load your Shield").font(.headline)
-                Text("Check your connection and try again.").foregroundStyle(.primary)
-                Button { Task { await model.retry() } } label: { Text("Try again").frame(minHeight: 44) }
-                    .buttonStyle(.borderedProminent)
+            // Figma "protected/Home · Gagal memuat" (1665:3122): the card 28 under the sheet's top, "Aktivitas
+            // Terakhir" 22 under it, then four grey rows.
+            VStack(alignment: .leading, spacing: 22) {
+                StateNoticeCard(title: "Couldn't load", message: "Check your connection.", actionTitle: "Try again") {
+                    await model.retry()
+                }
+                .accessibilityIdentifier("shield.loadError")
+                .stateEntrance()
+                SkeletonActivity(rows: 4)
             }
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(16)
-            .padding(.top, 24)
+            .padding(.top, 28)
         case .loaded:
             loaded
+                .modifier(LoaderReplacementFade())
         }
     }
 
@@ -218,19 +269,25 @@ struct ProtectedShieldView: View {
 
 // MARK: - Guardian
 
-/// Figma "Card Perlindungan" (1373:13094): a 42.6 pt glass capsule, white 28 % with a 1 pt white 90 % ring;
-/// a green 8.9 pt dot, 4 pt, "Terhubung dengan Virellia" in SF Pro Display 13 (-1 %, #1A1A1A); 17 pt sides.
-private struct ConnectedPill: View {
-    let name: String
+/// The glass capsule under the hero's headline (Figma "Card Perlindungan"): a dot and a line. `pulses`: the dot
+/// breathes while something is being checked (still with Reduce Motion).
+struct HeroStatusPill: View {
+    let text: Text
+    let dot: Color
+    var pulses = false
     @Environment(\.shooReduceGlass) private var reduceGlass
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var breathing = false
 
     var body: some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(HomeTheme.success)
+                .fill(dot)
                 .frame(width: 8.88, height: 8.88)
+                .opacity(pulses && breathing ? 0.35 : 1)
+                .scaleEffect(pulses && breathing && !reduceMotion ? 0.8 : 1)
                 .accessibilityHidden(true)
-            Text("Connected with \(name)")
+            text
                 .onboardingFont(13, tracking: -0.13, relativeTo: .footnote)
                 .foregroundStyle(HomeTheme.glassInk)
                 .lineLimit(2)
@@ -242,7 +299,21 @@ private struct ConnectedPill: View {
         .background(.white.opacity(reduceGlass ? 1 : 0.28), in: Capsule())
         .overlay(Capsule().strokeBorder(.white.opacity(0.9), lineWidth: 1.06))
         .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("shield.guardian")
+        .onAppear {
+            guard pulses, !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { breathing = true }
+        }
+    }
+}
+
+/// Figma "Card Perlindungan" (1373:13094): a 42.6 pt glass capsule, white 28 % with a 1 pt white 90 % ring;
+/// a green 8.9 pt dot, 4 pt, "Terhubung dengan Virellia" in SF Pro Display 13 (-1 %, #1A1A1A); 17 pt sides.
+private struct ConnectedPill: View {
+    let name: String
+
+    var body: some View {
+        HeroStatusPill(text: Text("Connected with \(name)"), dot: HomeTheme.success)
+            .accessibilityIdentifier("shield.guardian")
     }
 }
 

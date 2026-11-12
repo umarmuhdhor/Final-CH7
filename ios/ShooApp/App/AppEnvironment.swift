@@ -106,9 +106,16 @@ final class AppEnvironment {
         if usesMock {
             let scenario = Self.value(after: "-mock.scenario", in: arguments)
                 .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
+            #if DEBUG
+            // Error states in the simulator: `-mock.fail me,setVerdict=verdict_not_allowed`.
+            let failures = MockRepository.failures(from: Self.value(after: "-mock.fail", in: arguments))
+            #else
+            let failures: [String: RepositoryError] = [:]
+            #endif
             repository = MockRepository(
                 mode: settings.mode ?? .guardian, scenario: scenario,
-                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
+                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES",
+                failures: failures
             )
             session = nil
             // Fixtures only, nothing leaves the phone: UI tests don't answer the question unless they test it.
@@ -139,6 +146,14 @@ final class AppEnvironment {
         // Activity "Perlindungan mati" (PR-05): switched off, last heartbeat two days ago.
         case "offTwoDays": extensionStatus = { .off(lastSeen: Date().addingTimeInterval(-2 * 86_400), reason: .switchedOff) }
         default: break
+        }
+        // "Mengecek Shoo…" (1681:5275): Safari takes this many seconds to answer, `-UITestExtensionDelay 3`.
+        if let delay = Self.value(after: "-UITestExtensionDelay", in: arguments).flatMap(Double.init) {
+            let read = extensionStatus
+            extensionStatus = {
+                try? await Task.sleep(for: .seconds(delay))
+                return await read()
+            }
         }
         // Activity empty states (PR-05): the extension's counters as in Figma (#183, not written yet).
         if Self.value(after: "-UITestCheckStats", in: arguments) == "YES" {
@@ -480,9 +495,15 @@ final class AppEnvironment {
     /// for a tap (T11). Pribadi (a Guardian with Family mode off) can join a family too, so its join link
     /// opens "Become supervised" with the code (BH-10). `scan` opens Detail, `activity` the Activity tab; a
     /// join link for a Guardian with Family mode on, or any unknown link, lands on Shield.
+    /// Product rule (states audit 2026-11-12): a protected phone that already has a guardian stays on Home and
+    /// never sees Connect again until the guardian disconnects (the server would answer `already_connected`);
+    /// a Pribadi guardian who still protects someone is not sent to join either (`409 has_members`).
     @MainActor
     func open(_ url: URL) {
         switch DeepLink(url: url) {
+        case .join where settings.mode == .protected && settings.onboardingCompleted && hasGuardian:
+            router.pendingJoinCode = nil
+            if isInMainScreen { router.reset() }
         case .join(let code) where settings.mode != .guardian:
             router.pendingJoinCode = code
             // Not registered yet: onboarding reaches Connect with the code. Mid-onboarding Connect picks it up.
@@ -490,9 +511,25 @@ final class AppEnvironment {
             // Already open, `ConnectSheet` picks the new code up.
             router.showConnect()
         case .join(let code) where isInMainScreen && !settings.familyModeOn:
-            router.pendingJoinCode = code
             // Already open, `JoinAnotherFamilySheet` picks the new code up.
-            router.showJoinFamily()
+            if router.isJoinFamilyPresented {
+                router.pendingJoinCode = code
+                return
+            }
+            joinLinkCheck?.cancel()
+            joinLinkCheck = Task { [weak self] in
+                guard let self else { return }
+                // Unknown (offline): the sheet opens and its own join answers `has_members` if it must.
+                let protectsSomeone = (try? await repository.familyMembers().isEmpty == false) ?? false
+                guard !Task.isCancelled, isInMainScreen, !settings.familyModeOn else { return }
+                if protectsSomeone {
+                    router.pendingJoinCode = nil
+                    router.reset()
+                } else {
+                    router.pendingJoinCode = code
+                    router.showJoinFamily()
+                }
+            }
         case .scan(let id) where isInMainScreen:
             router.openDetail(scanId: id)
         case .activity where isInMainScreen:
@@ -505,6 +542,13 @@ final class AppEnvironment {
             break
         }
     }
+
+    /// Protected: a guardian looks after this phone (the last join or `GET /devices/me`, kept across launches).
+    @MainActor
+    var hasGuardian: Bool { session?.hasGuardian ?? false }
+
+    /// The Pribadi join link's members check (`open(_:)`); tests await it.
+    @ObservationIgnored private(set) var joinLinkCheck: Task<Void, Never>?
 
     /// The tabs are showing (not onboarding, not "Session expired").
     @MainActor

@@ -282,3 +282,19 @@ struct MockRepositoryTests {
         #expect(try await repo.familyMembers().isEmpty)
     }
 }
+
+/// Debug `-mock.fail`: stages the error states in the simulator.
+struct MockFailureArgumentTests {
+    @Test func parsesNamesAndCodes() {
+        let failures = MockRepository.failures(from: "me,setVerdict=verdict_not_allowed,,=x")
+        #expect(failures["me"] == .network)
+        #expect(failures["setVerdict"] == .api("verdict_not_allowed", message: "verdict_not_allowed"))
+        #expect(failures.count == 2)
+        #expect(MockRepository.failures(from: nil).isEmpty)
+    }
+
+    @Test func aListedCallFails() async {
+        let repository = MockRepository(mode: .protected, latency: .zero, failures: ["me": .network])
+        await #expect(throws: RepositoryError.network) { try await repository.me() }
+    }
+}

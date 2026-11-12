@@ -60,6 +60,12 @@ final class SessionStore: @unchecked Sendable {
     /// Protected: the guardian from the last join or `GET /devices/me`.
     var guardian: GuardianInfo? { lock.withLock { _guardian } }
 
+    /// A guardian looks after this phone: in memory, or its name kept from an earlier launch (before
+    /// `GET /devices/me` answers). Cleared by `setGuardian(nil)`, `save` and `clear`.
+    var hasGuardian: Bool {
+        lock.withLock { _guardian != nil || (hasSessionLocked && defaults.string(forKey: AppGroup.Key.guardianName) != nil) }
+    }
+
     /// After `POST /devices`: Keychain first, so a failed write leaves no half session behind.
     /// One lock around every write, so a `clear()` from a 401 can't interleave with it.
     func save(_ registration: DeviceRegistration, name: String, mode: UserMode) throws {
