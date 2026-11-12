@@ -61,7 +61,7 @@ describe("guardianPush cap (security review fase 11 M1)", () => {
 
 describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
   const { id: _id, verdict: _v, screenshotUrl: _s, ownerDeviceId: _o, ownerName: _n, ...scanBody } = blocked92;
-  /** A scan of its own site (one Activity row per site), waiting for its waitUntil work: the push
+  /** A scan of a site's front page (one Activity row per link), waiting for its waitUntil work: the push
    * runs after the response, and a query still open when the file ends fails as "socket closed". */
   const postScan = async (token: string, site: string, fields: Record<string, unknown> = {}) => {
     const ctx = createExecutionContext();
@@ -125,6 +125,31 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
       expect(await postScan(p.token, "a.example")).toBe(id);
       const row = { to_device_id: g.deviceId, scan_id: id, result: "logged" };
       expect(await pushRows()).toEqual([row, row]);
+    });
+
+    it("many pages of one site → at most two pushes: the first visit and its first block (#241)", async () => {
+      const { g, p } = await linked();
+      const page = (path: string, fields: Record<string, unknown> = {}) => postScan(p.token, "a.example", { url: `https://a.example/${path}`, ...fields });
+      const first = await page("a", warning);
+      await page("b", warning);
+      await page("c", warning);
+      const blocked = await page("d");
+      await page("e");
+      await page("a");
+      const ids = new Set((await sql<{ id: string }[]>`select id from scans where owner_id = ${p.deviceId}`).map((r) => r.id));
+      expect(ids.size).toBe(5);
+      expect(await pushRows()).toEqual([
+        { to_device_id: g.deviceId, scan_id: first, result: "logged" },
+        { to_device_id: g.deviceId, scan_id: blocked, result: "logged" },
+      ]);
+    });
+
+    it("a site blocked on its first visit pushes once, for every later page too", async () => {
+      const { p } = await linked();
+      await postScan(p.token, "a.example", { url: "https://a.example/one" });
+      await postScan(p.token, "a.example", { url: "https://a.example/two" });
+      await postScan(p.token, "a.example", { url: "https://a.example/three", ...warning });
+      expect(await pushRows()).toHaveLength(1);
     });
 
     it("no new push: still a warning, blocked again, or a lower score after a block", async () => {
