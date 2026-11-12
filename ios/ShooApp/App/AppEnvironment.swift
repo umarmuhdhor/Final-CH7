@@ -109,11 +109,15 @@ final class AppEnvironment {
             #if DEBUG
             // Error states in the simulator: `-mock.fail me,setVerdict=verdict_not_allowed`.
             let failures = MockRepository.failures(from: Self.value(after: "-mock.fail", in: arguments))
+            // Loading states in the simulator: `-mock.latency 8000` (milliseconds per call).
+            let latency = Self.value(after: "-mock.latency", in: arguments).flatMap(Int.init).map { Duration.milliseconds($0) }
+                ?? .milliseconds(300)
             #else
             let failures: [String: RepositoryError] = [:]
+            let latency = Duration.milliseconds(300)
             #endif
             repository = MockRepository(
-                mode: settings.mode ?? .guardian, scenario: scenario,
+                mode: settings.mode ?? .guardian, scenario: scenario, latency: latency,
                 pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES",
                 failures: failures
             )

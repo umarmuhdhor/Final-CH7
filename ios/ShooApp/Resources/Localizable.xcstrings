@@ -2560,12 +2560,11 @@
       }
     },
     "Invite link copied" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Link undangan disalin"
+            "value" : "Link undangan tersalin"
           }
         }
       }
@@ -6572,6 +6571,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Coba lagi dalam %lld menit"
+          }
+        }
+      }
+    },
+    "Preparing the invite code…" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menyiapkan kode undangan…"
+          }
+        }
+      }
+    },
+    "Code can't be made yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode belum bisa dibuat"
+          }
+        }
+      }
+    },
+    "Check your internet connection, then try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Periksa koneksi internetmu, lalu coba lagi."
+          }
+        }
+      }
+    },
+    "Family is full" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga sudah penuh"
+          }
+        }
+      }
+    },
+    "A family has at most 3 people.\nRemove one to invite again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga maksimal 3 orang.\nHapus satu untuk mengundang lagi."
+          }
+        }
+      }
+    },
+    "Manage family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kelola Keluarga"
           }
         }
       }
