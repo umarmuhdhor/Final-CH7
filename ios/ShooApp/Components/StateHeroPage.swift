@@ -7,21 +7,42 @@ import SwiftUI
 struct StateHeroPage<Shield: View, Content: View, Footer: View>: View {
     enum ChipTone {
         case blue, red
+        /// "Kedaluwarsa" (1665:3006): #4F6074 on itself at 10 %.
+        case slate
+        /// "Gangguan koneksi" (1665:3023): #B85A05 on #EF871C at 14 %.
+        case orange
 
         var ink: Color {
             switch self {
             case .blue: Color(hex: 0x136CB7)
             case .red: Color(hex: 0xBB1616)
+            case .slate: Color(hex: 0x4F6074)
+            case .orange: Color(hex: 0xB85A05)
+            }
+        }
+
+        var fill: Color {
+            switch self {
+            case .orange: Color(hex: 0xEF871C).opacity(0.14)
+            case .blue, .red, .slate: ink.opacity(0.1)
             }
         }
     }
 
+    /// The hero behind the shield: Home's blue, or a Figma export ("HeroGradientSlate", "HeroGradientOrange").
+    enum Background {
+        case blue
+        case image(String)
+    }
+
     var chip: LocalizedStringKey?
     var chipTone: ChipTone = .blue
+    var background: Background = .blue
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     var titleIdentifier: String?
     var onBack: (() -> Void)?
+    var backIdentifier = "onboarding.back"
     @ViewBuilder let shield: Shield
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
@@ -56,14 +77,26 @@ struct StateHeroPage<Shield: View, Content: View, Footer: View>: View {
         .scrollBounceBehavior(.basedOnSize)
         .contentMargins(.bottom, 104, for: .scrollContent)
         .background(alignment: .top) {
-            HeroBackground(style: .blue)
-                .frame(height: 450 + Self.safeTop)
-                .ignoresSafeArea(edges: .top)
+            Group {
+                switch background {
+                case .blue:
+                    HeroBackground(style: .blue)
+                case .image(let name):
+                    // Figma "Gradient-classic-2 lighter" (402 × 449 at y −9) with its grain, then the "box" fade to white.
+                    Image(name).resizable()
+                        .overlay(alignment: .bottom) {
+                            LinearGradient(colors: [.white.opacity(0), .white], startPoint: .top, endPoint: .bottom)
+                                .frame(height: 140)
+                        }
+                }
+            }
+            .frame(height: 450 + Self.safeTop)
+            .ignoresSafeArea(edges: .top)
         }
         .background(Color.white.ignoresSafeArea())
         .overlay(alignment: .topLeading) {
             if let onBack {
-                OnboardingBackButton(action: onBack)
+                OnboardingBackButton(identifier: backIdentifier, action: onBack)
                     .padding(.leading, 24)
             }
         }
@@ -100,7 +133,7 @@ struct StateHeroPage<Shield: View, Content: View, Footer: View>: View {
                     .foregroundStyle(chipTone.ink)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
-                    .background(chipTone.ink.opacity(0.1), in: Capsule())
+                    .background(chipTone.fill, in: Capsule())
                     .stateEntrance(delay: 0.06)
             }
             // Figma "Frame 2": SF Pro Display Medium 28 (120 %, −2 %), 8, SF Pro Rounded 17 (140 %) #6A717E.
@@ -143,6 +176,8 @@ struct StateInfoList: View {
 
     let rows: [Row]
     var tint = Color(hex: 0x136CB7)
+    /// Figma "Info" sits on #F5F8FC; Detail "Sudah tidak ada" lists its rows on the sheet itself.
+    var boxed = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -164,8 +199,8 @@ struct StateInfoList: View {
                 .accessibilityElement(children: .combine)
             }
         }
-        .padding(14)
+        .padding(boxed ? 14 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: 0xF5F8FC), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(boxed ? Color(hex: 0xF5F8FC) : .clear, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
