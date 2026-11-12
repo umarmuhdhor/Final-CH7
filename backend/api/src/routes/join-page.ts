@@ -16,7 +16,9 @@ import heroImage from "../assets/join-hero.png";
 // invalid and nothing more. Such a miss is a failed join attempt of the IP (no device), so page and
 // POST /family/join share one budget of 20 failures per IP per 10 min and the page is no extra oracle.
 // The page skips the lookup and shows the normal invite once that budget is used, past the global cap
-// `limits.joinPageAll`, or when the DB fails (the app still checks the code on join).
+// `limits.joinPageAll`, or when the DB fails (the app still checks the code on join). Only a top-level
+// navigation (Sec-Fetch-Mode navigate, Sec-Fetch-Dest document) is looked up: an <img>, iframe or fetch
+// from another site cannot spend a visitor's join budget, it gets the normal invite.
 // With the app installed the link is a Universal Link (issue #129) and this page never shows.
 // Layout: Figma "Undangan keluarga · Web · Redesign" (1326:12651). The design names the inviter;
 // this page never names anyone (T13), so the heading stays generic.
@@ -233,7 +235,8 @@ async function codeMayBeValid(c: Context<AppEnv>, code: string): Promise<boolean
 joinPage.get("/j/:code", async (c) => {
   const raw = c.req.param("code");
   const wellFormed = /^\d{6}$/.test(raw) ? raw : null;
-  const code = wellFormed && (await codeMayBeValid(c, wellFormed)) ? wellFormed : null;
+  const navigation = c.req.header("sec-fetch-mode") === "navigate" && c.req.header("sec-fetch-dest") === "document";
+  const code = wellFormed && (!navigation || (await codeMayBeValid(c, wellFormed))) ? wellFormed : null;
   const lang = /^id\b/i.test(c.req.header("accept-language") ?? "") ? "id" : "en";
   const t = TEXT[lang];
   const nonce = base64url(randomBytes(16));

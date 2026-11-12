@@ -11,8 +11,11 @@ import { call, createDevice } from "./helpers/seed";
 
 const sql = testSql();
 
+// A browser opening the link: top-level navigation, the only request the page looks a code up for.
+const NAV = { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" };
+
 const page = async (path: string, lang?: string, ip?: string) => {
-  const res = await call(path, { headers: lang ? { "accept-language": lang } : {}, ip });
+  const res = await call(path, { headers: { ...NAV, ...(lang ? { "accept-language": lang } : {}) }, ip });
   return { res, html: await res.text() };
 };
 
@@ -168,6 +171,17 @@ describe("GET /j/:code", () => {
     expect(join.status).toBe(429);
     // Another IP still gets the real answer.
     expect((await page("/j/000000")).html).not.toContain("shoo://");
+  });
+
+  it.each([
+    ["an <img> from another site", { "sec-fetch-mode": "no-cors", "sec-fetch-dest": "image" }],
+    ["an iframe", { "sec-fetch-mode": "navigate", "sec-fetch-dest": "iframe" }],
+    ["a fetch", { "sec-fetch-mode": "cors", "sec-fetch-dest": "empty" }],
+    ["no Sec-Fetch headers", {}],
+  ])("%s: no lookup, nothing recorded, the normal invite", async (_, headers) => {
+    const res = await call("/j/000000", { headers });
+    expect(await res.text()).toContain('href="shoo://join?code=000000"');
+    expect(await sql`select 1 from join_attempts`).toHaveLength(0);
   });
 
   it("over the global cap the page skips the lookup for everyone", async () => {
