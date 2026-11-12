@@ -1,15 +1,22 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { AppEnv } from "../env";
 import { base64url, randomBytes } from "../http/crypto";
-import { CODE_TTL_SECONDS } from "../db/repo/codes";
+import { CODE_TTL_SECONDS, findCode } from "../db/repo/codes";
+import { clientIp, hit, limits } from "../http/rateLimit";
+import { ApiError } from "../http/errors";
+import { errorInfo } from "../http/logError";
 import ogImage from "../assets/og-invite.jpg";
 import heroImage from "../assets/join-hero.png";
 
-// Invite page behind `inviteUrl` (R3 §4, SECURITY T13, PR-03 issue #128). No auth, no DB lookup:
-// it never tells whether a code is active. Only a strict 6-digit code is echoed.
+// Invite page behind `inviteUrl` (R3 §4, SECURITY T13, PR-03 issue #128). No auth. Only a strict 6-digit
+// code is echoed. A 6-digit code is looked up read-only (no join attempt recorded): an unknown or expired
+// code shows the same "invalid" page as a malformed one (Figma 1619:7334), so the page says valid or
+// invalid and nothing more. The lookup spends `limits.joinPage` per IP, the same budget as failed joins,
+// so the page is no cheaper oracle than POST /family/join; over it, or when the DB fails, the page skips
+// the lookup and shows the normal invite (the app still checks the code on join).
 // With the app installed the link is a Universal Link (issue #129) and this page never shows.
 // Layout: Figma "Undangan keluarga · Web · Redesign" (1326:12651). The design names the inviter;
-// this page cannot (no DB lookup, T13), so the heading stays generic.
+// this page never names anyone (T13), so the heading stays generic.
 
 const TTL_MINUTES = CODE_TTL_SECONDS / 60;
 
@@ -22,7 +29,10 @@ const TEXT = {
     validity: `Valid for up to ${TTL_MINUTES} min`,
     copy: "Copy code",
     copied: "Copied",
-    noCode: "This invite link has no valid code. Ask for a new one.",
+    noCode: "This invite link has no valid code.",
+    requestNew: "Ask for a new code",
+    requestMsg: "The Shoo invite code doesn't work anymore. Could you send me a new one?",
+    requested: "Message copied",
     installLead: "Don't have Shoo yet?",
     install: "Install it",
     installHint: "We copy the invite link. After installing, open it again to join.",
@@ -38,7 +48,10 @@ const TEXT = {
     validity: `Berlaku maks. ${TTL_MINUTES} menit`,
     copy: "Salin kode",
     copied: "Tersalin",
-    noCode: "Link undangan ini tidak berisi kode yang valid. Minta kode baru.",
+    noCode: "Link undangan ini tidak berisi kode yang valid.",
+    requestNew: "Minta kode baru",
+    requestMsg: "Kode undangan Shoo-nya sudah tidak berlaku. Bisa kirim kode baru?",
+    requested: "Pesan tersalin",
     installLead: "Belum punya Shoo?",
     install: "Unduh",
     installHint: "Link undangan sudah kami salin. Setelah install, buka lagi link itu untuk bergabung.",
@@ -78,7 +91,15 @@ main{max-width:402px;margin:0 auto;padding:32px 24px 40px;display:flex;flex-dire
 .hero .ring{left:86px;top:18px;width:60px;height:60px;border:2px solid rgba(24,111,185,.4);animation:ring 3s ease-out infinite}
 @keyframes travel{0%{transform:translateX(0);opacity:0}10%,60%{opacity:1}70%,100%{transform:translateX(144px);opacity:0}}
 @keyframes ring{0%,25%{transform:scale(.8);opacity:0}35%{transform:scale(1);opacity:1}55%,100%{transform:scale(1.3);opacity:0}}
-@media (prefers-reduced-motion:reduce){.hero i{animation:none}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.enter>*{animation:rise .3s cubic-bezier(.2,.8,.2,1) both}
+.enter>.actions{animation-delay:.08s}
+.badge{position:relative;display:flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:50%;background:#ef871c;box-shadow:inset 0 0 0 5px rgba(255,255,255,.1),0 10px 27px rgba(127,69,27,.36);color:#fff;font:700 48px/1 ui-rounded,-apple-system,system-ui,sans-serif;animation:pop .45s cubic-bezier(.34,1.56,.64,1) .1s both}
+.badge::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #ef871c;opacity:0;animation:halo 1.6s ease-out .6s 3}
+.badge span{display:block;animation:nudge .6s ease-in-out .6s 3}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes halo{0%{transform:scale(1);opacity:.5}100%{transform:scale(1.5);opacity:0}}
+@keyframes nudge{0%,100%{transform:none}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
 h1{margin:20px 0 0;font-size:28px;line-height:34px;font-weight:600;letter-spacing:.02em}
 .rounded{font-family:ui-rounded,-apple-system,system-ui,sans-serif}
 .label{margin:24px 0 0;color:#6a717e;letter-spacing:-.01em}
@@ -89,13 +110,19 @@ h1{margin:20px 0 0;font-size:28px;line-height:34px;font-weight:600;letter-spacin
 .ttl{display:flex;align-items:center;gap:6px;color:#6a717e;font-size:13px;line-height:18px;letter-spacing:-.08px}
 .copy{display:flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:#186fb9;font:inherit;letter-spacing:-.01em;cursor:pointer}
 .actions{width:100%;margin-top:80px;display:flex;flex-direction:column;gap:10px}
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:16px 20px 16px 16px;border:1.5px solid #191d2f;border-radius:999px;background:linear-gradient(180deg,#446eb4 -4%,#214889 75%);color:#fff;font-weight:600;text-decoration:none;text-shadow:0 4px 4px rgba(0,0,0,.2)}
+.btn{width:100%;font:inherit;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:transform .12s ease,filter .12s ease;display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:16px 20px 16px 16px;border:1.5px solid #191d2f;border-radius:999px;background:linear-gradient(180deg,#446eb4 -4%,#214889 75%);color:#fff;font-weight:600;text-decoration:none;text-shadow:0 4px 4px rgba(0,0,0,.2)}
+.btn:active{transform:scale(.97);filter:brightness(.92)}
+.copy{transition:transform .12s ease}.copy:active{transform:scale(.97)}
 .btn svg{flex:none;filter:drop-shadow(0 4px 2px rgba(0,0,0,.2))}
 .install{display:flex;align-items:center;justify-content:center;min-height:54px;margin:0;letter-spacing:-.01em}
 .install a{margin-left:.25em;color:#186fb9;font-weight:600;text-decoration:none}
 .hint{margin:0;color:#6a717e;font-size:13px;line-height:18px}
-.nocode{margin:24px 0 0;color:#6a717e}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}`;
+.invalid{padding-top:88px}
+.invalid h1{margin-top:20px;letter-spacing:-.02em;font-weight:700}
+.nocode{margin:8px 0 0;color:#6a717e;letter-spacing:-.01em}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Last, so it wins over the motion rules above. */
+@media (prefers-reduced-motion:reduce){.hero i,.enter>*,.badge,.badge::after,.badge span{animation:none}.btn,.copy{transition:none}.btn:active,.copy:active{transform:none}}`;
 
 // Hero motion: a soft glow and a thin beam travel behind the image from the inviter's avatar, past the
 // Shoo shield (a ring pulses as they cross it), to the "you" circle, so the three read as connecting.
@@ -114,6 +141,17 @@ if(!l||!navigator.clipboard)return;e.preventDefault();navigator.clipboard.writeT
 var c=document.getElementById("copy"),t=document.getElementById("copy-label");
 if(!navigator.clipboard)c.hidden=true;else c.addEventListener("click",function(){navigator.clipboard.writeText(c.dataset.code).then(function(){
 t.textContent=c.dataset.done;setTimeout(function(){t.textContent=c.dataset.label},2000)})})`;
+
+// "Minta kode baru" (Figma 1619:7334): the visitor cannot make a code, only the guardian can, so the
+// button hands a short request to the share sheet (pick the chat the invite came from). Without the
+// share sheet it copies the text, else opens Messages with it. Nothing is sent by the page itself.
+const REQUEST_SCRIPT = `var r=document.getElementById("request");r.addEventListener("click",function(){var m=r.dataset.msg;
+if(navigator.share){navigator.share({text:m}).catch(function(){});return}
+if(navigator.clipboard){navigator.clipboard.writeText(m).then(function(){r.textContent=r.dataset.done;setTimeout(function(){r.textContent=r.dataset.label},2000)});return}
+location.href="sms:?&body="+encodeURIComponent(m)})`;
+
+// iOS Safari only shows :active (the button press scale) when a touch listener exists.
+const ACTIVE_SCRIPT = `document.addEventListener("touchstart",function(){},{passive:true});`;
 
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
@@ -164,9 +202,27 @@ joinPage.get(HERO_IMAGE_PATH, (c) => {
   return c.body(heroImage);
 });
 
-joinPage.get("/j/:code", (c) => {
+/**
+ * False only when the code is known to be unknown or expired. Over the IP budget, or when the DB fails,
+ * the answer is true (not checked): the normal invite is harmless, the app validates on join.
+ */
+async function codeMayBeValid(c: Context<AppEnv>, code: string): Promise<boolean> {
+  try {
+    const sql = c.get("sql");
+    await hit(sql, limits.joinPage, clientIp((n) => c.req.header(n)));
+    const found = await findCode(sql, code);
+    return !!found && !found.expired;
+  } catch (err) {
+    // The code is never logged (T13): route and error class only.
+    if (!(err instanceof ApiError)) console.error(JSON.stringify({ event: "join_page_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));
+    return true;
+  }
+}
+
+joinPage.get("/j/:code", async (c) => {
   const raw = c.req.param("code");
-  const code = /^\d{6}$/.test(raw) ? raw : null;
+  const wellFormed = /^\d{6}$/.test(raw) ? raw : null;
+  const code = wellFormed && (await codeMayBeValid(c, wellFormed)) ? wellFormed : null;
   const lang = /^id\b/i.test(c.req.header("accept-language") ?? "") ? "id" : "en";
   const t = TEXT[lang];
   const nonce = base64url(randomBytes(16));
@@ -180,13 +236,14 @@ joinPage.get("/j/:code", (c) => {
 <button id="copy" class="copy" type="button" data-code="${code}" data-label="${escapeHtml(t.copy)}" data-done="${escapeHtml(t.copied)}">${ICON_COPY}<span id="copy-label">${escapeHtml(t.copy)}</span></button></div>
 <div class="actions"><a class="btn" href="shoo://join?code=${code}">${ICON_OPEN}${escapeHtml(t.open)}</a>
 <p class="install">${escapeHtml(t.installLead)}<a id="install" href="${store}" data-invite="${escapeHtml(`${c.env.INVITE_BASE_URL}/j/${code}`)}">${escapeHtml(t.install)}</a></p>
-<p class="hint">${escapeHtml(t.installHint)}</p></div><script nonce="${nonce}">${INSTALL_SCRIPT}</script>`
-    : `<h1>${escapeHtml(t.title)}</h1><p class="nocode">${t.noCode}</p>
-<div class="actions"><p class="install">${escapeHtml(t.installLead)}<a href="${store}">${escapeHtml(t.install)}</a></p></div>`;
+<p class="hint">${escapeHtml(t.installHint)}</p></div><script nonce="${nonce}">${ACTIVE_SCRIPT}${INSTALL_SCRIPT}</script>`
+    : `<div class="badge" aria-hidden="true"><span>!</span></div><h1>${escapeHtml(t.title)}</h1><p class="nocode rounded">${escapeHtml(t.noCode)}</p>
+<div class="actions"><button id="request" class="btn" type="button" data-msg="${escapeHtml(t.requestMsg)}" data-label="${escapeHtml(t.requestNew)}" data-done="${escapeHtml(t.requested)}">${escapeHtml(t.requestNew)}</button>
+<p class="install">${escapeHtml(t.installLead)}<a href="${store}">${escapeHtml(t.install)}</a></p></div><script nonce="${nonce}">${ACTIVE_SCRIPT}${REQUEST_SCRIPT}</script>`;
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(t.title)}</title>
 ${ogTags(c.env.INVITE_BASE_URL.replace(/\/+$/, ""), lang)}
-<style>${STYLE}</style></head><body><main>${hero}${body}</main></body></html>`;
+<style>${STYLE}</style></head><body><main class="enter${code ? "" : " invalid"}">${code ? hero : ""}${body}</main></body></html>`;
 
   c.header("Content-Security-Policy", csp(nonce));
   c.header("X-Content-Type-Options", "nosniff");

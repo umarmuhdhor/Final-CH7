@@ -29,6 +29,10 @@ export const limits = {
   // workflow calls it 4×/h, the rest is for Alief by hand.
   opsStatus: { bucket: "ops_status", max: 30, windowSeconds: 3600 },
   familyCode: { bucket: "family_code", max: 6, windowSeconds: 60 },
+  // GET /j/<code> per client IP (row 7 state audit): the page now looks the code up to show "invalid",
+  // so it must not become a free oracle beside POST /family/join's 20 failures/IP/10 min. Same budget,
+  // counted per lookup. Over it the page skips the lookup and renders the normal invite (fails open).
+  joinPage: { bucket: "join_page", max: 20, windowSeconds: 600 },
   createScan: { bucket: "scans_create", max: 120, windowSeconds: 3600 },
   // All devices together, key "all", checked with hitLight (D-alief-B12): bounds what retention
   // must delete per day (50 000 plain scans/day) far above what a demo produces.
