@@ -103,17 +103,6 @@ struct OnboardingModelTests {
         return model
     }
 
-    /// Protected from an invite link: name, Connect, join.
-    func joinedProtected() async -> OnboardingModel {
-        env.router.pendingJoinCode = "482193"
-        let model = model()
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        await model.connect().join()
-        return model
-    }
-
     @Test func freshInstallStartsAtSplash() {
         #expect(model().step == .splash)
     }
@@ -205,50 +194,6 @@ struct OnboardingModelTests {
         #expect(settings.mode == nil)
     }
 
-    @Test func inviteLinkGoesThroughConnect() {
-        env.router.pendingJoinCode = "482193"
-        let model = model()
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        #expect(model.step == .connect)
-        #expect(model.selectedMode == .protected)
-        // Connect still gets the code: nothing joins until the user taps Connect (T11).
-        #expect(model.connect().code == "482193")
-        #expect(model.connect().state == .entering)
-        #expect(model.canGoBackFromConnect)
-        model.goBack()
-        #expect(model.step == .name)
-    }
-
-    @Test func notNowOnConnectContinuesAsPersonal() async {
-        env.router.pendingJoinCode = "482193"
-        let model = model()
-        model.skipSplash()
-        model.name = "Rina"
-        model.submitName()
-        await model.skipConnect()
-        #expect(model.step == .turnOnExtension)
-        #expect(model.selectedMode == .guardian)
-        #expect(settings.mode == nil)
-    }
-
-    @Test func joiningRegistersFirstAndStaysPassedAfterRelaunch() async {
-        let model = await joinedProtected()
-        let connect = model.connect()
-        #expect(settings.mode == .protected)
-        guard case .joined = connect.state else {
-            Issue.record("expected joined, got \(connect.state)")
-            return
-        }
-        #expect(settings.onboardingConnectPassed)
-        // Back from ON-04 finds the same guardian, not an empty form.
-        model.continueFromConnect()
-        model.goBack()
-        #expect(model.step == .connect)
-        #expect(model.connect() === connect)
-    }
-
     @Test func personalRelaunchGoesHome() async {
         _ = await registeredPersonal()
         #expect(model().step == .done)
@@ -316,7 +261,6 @@ struct OnboardingModelTests {
 
     /// Through ON-04 and Safari Default to the success screen.
     func reachSuccess(_ model: OnboardingModel) async {
-        if model.step == .connect { model.continueFromConnect() }
         model.consentChecked = true
         box.status = .active(lastSeen: Date())
         await model.refreshExtensionStatus()
@@ -332,14 +276,6 @@ struct OnboardingModelTests {
         #expect(model.step == .done)
         #expect(settings.onboardingCompleted)
         #expect(NotificationReminder.isShown(status: .denied, mode: .guardian))
-    }
-
-    @Test func protectedIsAskedForNotificationsToo() async {
-        let model = await joinedProtected()
-        await reachSuccess(model)
-        await model.requestNotifications()
-        #expect(notifications.requestCount == 1)
-        #expect(settings.onboardingCompleted)
     }
 
     @Test func notificationsAreOnlyAskedFromTheSuccessScreen() async {
@@ -418,418 +354,61 @@ struct ExtensionSetupTests {
     }
 }
 
-/// Fase 27d (K6): the invite link path. Consent comes before the device registers, a failed join can be
-/// undone honestly (the device is deleted on the server), and ON-04 never asks or overwrites an answer twice.
+/// PR-03 (Figma "Flow · Protected buka link undangan"): everyone onboards as Pribadi. An invite link only keeps
+/// its code; the join sheet opens with it once onboarding is done.
 extension OnboardingModelTests {
-    @MainActor
-    struct Invite {
-        let settings: AppSettings
-        let repository: InviteRepository
-        let env: AppEnvironment
-        let box = StatusBox()
-        let linked: LinkedAccountSettings
-
-        init() throws {
-            let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-            settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
-            // A real fresh install: the question is not answered yet.
-            settings.dataConsent = nil
-            repository = InviteRepository()
-            let box = box
-            env = AppEnvironment(
-                repository: repository, settings: settings,
-                notifications: FakeNotificationPermission(), extensionStatus: { box.status }
-            )
-            linked = LinkedAccountSettings(defaults: try #require(UserDefaults(suiteName: "linked.\(UUID().uuidString)")))
-        }
-
-        func model() -> OnboardingModel { OnboardingModel(environment: env, linked: linked) }
-
-        /// Opened from an invite link, name typed, Next.
-        func named(code: String = "482193") -> OnboardingModel {
-            env.router.pendingJoinCode = code
-            let model = model()
-            model.skipSplash()
-            model.name = "Rina"
-            model.submitName()
-            return model
-        }
-
-        /// Invite link, consent answered, on Connect with `code` (not joined yet).
-        func onConnect(code: String = "482193", consent: DataConsent = .granted) -> OnboardingModel {
-            let model = named(code: code)
-            model.answerConsent(consent)
-            return model
-        }
-
-        // MARK: Consent before registration (F-A1)
-
-        @Test func consentComesBeforeConnectAndTheCodeSurvivesTheBackground() async {
-            let model = named()
-            #expect(model.step == .consent)
-            #expect(await repository.registerCount == 0)
-            // RootView empties the router's code when the app goes to the background.
-            env.router.pendingJoinCode = nil
-            model.answerConsent(.granted)
-            #expect(settings.dataConsent == .granted)
-            #expect(model.step == .connect)
-            #expect(model.connect().code == "482193")
-            #expect(await repository.registerCount == 0, "nothing registers before the Connect tap")
-        }
-
-        @Test func backFromConsentKeepsTheCode() {
-            let model = named()
-            model.goBack()
-            #expect(model.step == .name)
-            env.router.pendingJoinCode = nil
-            model.submitName()
-            #expect(model.step == .consent)
-            model.answerConsent(.declined)
-            #expect(model.connect().code == "482193")
-        }
-
-        @Test func anAnswerGivenEarlierSkipsTheConsentStep() {
-            settings.dataConsent = .declined
-            let model = named()
-            #expect(model.step == .connect)
-        }
-
-        @Test func joinKeepsOnboardingOnScreen() async {
-            let model = onConnect()
-            await model.connect().join()
-            #expect(settings.mode == .protected)
-            #expect(!env.needsDataConsent, "the consent screen must not replace onboarding mid-flow")
-            #expect(await repository.registerCount == 1)
-            #expect(!settings.inviteRegistrationPending)
-        }
-
-        @Test func aWrongCodeThenTheRightOneRegistersOnce() async {
-            let model = onConnect(code: "000000")
-            let connect = model.connect()
-            await connect.join()
-            #expect(connect.problem == .invalid)
-            connect.code = "482193"
-            await connect.join()
-            guard case .joined = connect.state else {
-                Issue.record("expected joined, got \(connect.state)")
-                return
-            }
-            #expect(await repository.registerCount == 1)
-        }
-
-        @Test func protectedRelaunchContinuesAtTurnOnWithoutBack() async {
-            let model = onConnect()
-            await model.connect().join()
-            model.continueFromConnect()
-            let relaunched = self.model()
-            #expect(relaunched.step == .turnOnExtension, "invite join skipped ON-04 (step = \(relaunched.step))")
-            // A new Connect would only answer `already_connected`.
-            #expect(!relaunched.canGoBackFromExtension)
-        }
-
-        @Test func guardianRelaunchStillGoesHome() async {
-            settings.dataConsent = .granted
-            let model = model()
-            model.skipSplash()
-            model.name = "Rina"
-            model.submitName()
-            _ = await model.activateExtension()
-            #expect(self.model().step == .done)
-        }
-
-        @Test func consentGivenOnTheStepLeavesNoBoxOnTurnOn() async {
-            let model = onConnect(consent: .granted)
-            await model.connect().join()
-            model.continueFromConnect()
-            #expect(model.step == .turnOnExtension)
-            #expect(!model.showsConsentCheckbox)
-            #expect(model.canTurnOn)
-            #expect(await model.activateExtension())
-            box.status = .active(lastSeen: Date())
-            await model.refreshExtensionStatus()
-            #expect(model.step == .safariDefault)
-        }
-
-        @Test func declinedConsentIsNeverOverwritten() async {
-            let model = onConnect(consent: .declined)
-            await model.connect().join()
-            model.continueFromConnect()
-            #expect(!model.showsConsentCheckbox)
-            #expect(model.canTurnOn)
-            await model.skipExtensionCheck()
-            #expect(model.step == .safariDefault)
-            #expect(settings.dataConsent == .declined)
-        }
-
-        @Test func declinedThenFailedJoinThenNotNowTurnsOnAsPersonal() async {
-            let model = onConnect(code: "999999", consent: .declined)
-            await model.connect().join()
-            await model.skipConnect()
-            #expect(model.step == .turnOnExtension)
-            #expect(settings.mode == nil)
-            #expect(await repository.deleteCount == 1)
-            #expect(model.canTurnOn)
-            #expect(await model.activateExtension())
-            #expect(settings.mode == .guardian)
-            #expect(settings.dataConsent == .declined)
-        }
-
-        // MARK: Failed join (F-A2)
-
-        @Test(arguments: ["999999", "000000", "888888"])
-        func failedJoinKeepsTheRegistrationAndBackDeletesIt(code: String) async {
-            let model = onConnect(code: code)
-            await model.connect().join()
-            // Kept, so Connect can be tried again with the same device.
-            #expect(settings.mode == .protected)
-            #expect(settings.inviteRegistrationPending)
-            #expect(model.canGoBackFromConnect)
-            linked.autoSendLinks = false
-            await model.backFromConnect()
-            #expect(await repository.deleteCount == 1)
-            // The same local clean-up as "Delete my data" (P13).
-            #expect(linked.autoSendLinks)
-            #expect(settings.mode == nil)
-            #expect(!settings.inviteRegistrationPending)
-            #expect(!settings.onboardingConnectPassed)
-            #expect(settings.dataConsent == .granted, "the answer stays")
-            #expect(model.step == .name)
-            // The code is forgotten: Next now continues as Pribadi.
-            model.submitName()
-            #expect(model.step == .turnOnExtension)
-        }
-
-        @Test func notNowAfterAFailedJoinContinuesAsPersonal() async {
-            let model = onConnect(code: "999999")
-            await model.connect().join()
-            await model.skipConnect()
-            #expect(await repository.deleteCount == 1)
-            #expect(settings.mode == nil)
-            #expect(model.step == .turnOnExtension)
-            #expect(model.selectedMode == .guardian)
-        }
-
-        @Test func alreadyDeletedOnTheServerCountsAsDeleted() async {
-            let model = onConnect(code: "999999")
-            await model.connect().join()
-            await repository.failDelete(with: RepositoryError.api(.notFound, message: "gone"))
-            await model.backFromConnect()
-            #expect(settings.mode == nil)
-            #expect(model.step == .name)
-        }
-
-        @Test func offlineDeleteStaysOnConnect() async {
-            let model = onConnect(code: "999999")
-            await model.connect().join()
-            await repository.failDelete(with: RepositoryError.network)
-            await model.backFromConnect()
-            #expect(settings.mode == .protected)
-            #expect(settings.inviteRegistrationPending)
-            #expect(model.step == .connect)
-            #expect(model.connect().problem == .offline)
-        }
-
-        @Test func noProfileAnswerDeletesNothing() async {
-            let model = onConnect(code: "999999")
-            await model.connect().join()
-            await repository.failMe(with: RepositoryError.network)
-            await model.backFromConnect()
-            #expect(await repository.deleteCount == 0)
-            #expect(settings.mode == .protected)
-            #expect(model.step == .connect)
-            #expect(model.connect().problem == .offline)
-        }
-
-        @Test func aJoinThatCommittedAfterAllIsKept() async {
-            let model = onConnect()
-            // The server joined, the answer got lost.
-            await repository.loseNextJoinAnswer()
-            await model.connect().join()
-            #expect(model.connect().problem == .offline)
-            await model.backFromConnect()
-            #expect(await repository.deleteCount == 0)
-            guard case .joined(let guardian) = model.connect().state else {
-                Issue.record("expected joined, got \(model.connect().state)")
-                return
-            }
-            #expect(guardian == MockRepository.fixtureGuardian)
-            #expect(settings.onboardingConnectPassed)
-            #expect(!settings.inviteRegistrationPending)
-        }
-
-        @Test func alreadyConnectedAfterALostAnswerMeansJoined() async {
-            let model = onConnect()
-            await repository.loseNextJoinAnswer()
-            let connect = model.connect()
-            await connect.join()
-            await connect.join()
-            guard case .joined = connect.state else {
-                Issue.record("expected joined, got \(connect.state) / \(String(describing: connect.problem))")
-                return
-            }
-            #expect(connect.problem == nil)
-            #expect(!settings.inviteRegistrationPending)
-        }
-
-        @Test(.timeLimit(.minutes(1))) func cancelWaitsWhileJoining() async {
-            let model = onConnect()
-            await repository.holdNextJoin()
-            async let join: Void = model.connect().join()
-            await repository.waitUntilHeld()
-            #expect(model.connect().state == .joining)
-            #expect(model.isConnectBusy)
-            await model.backFromConnect()
-            await model.skipConnect()
-            #expect(model.step == .connect)
-            await repository.release()
-            await join
-            #expect(await repository.deleteCount == 0)
-            guard case .joined = model.connect().state else {
-                Issue.record("expected joined, got \(model.connect().state)")
-                return
-            }
-        }
-
-        @Test(.timeLimit(.minutes(1))) func connectCannotJoinWhileCancelling() async {
-            let model = onConnect(code: "999999")
-            let connect = model.connect()
-            await connect.join()
-            connect.code = "482193"
-            #expect(connect.canJoin)
-            await repository.holdNextMe()
-            async let back: Void = model.backFromConnect()
-            await repository.waitUntilHeld()
-            #expect(model.isConnectBusy)
-            #expect(!connect.canJoin)
-            await connect.join()
-            await repository.release()
-            await back
-            #expect(await repository.joinCount == 1)
-            #expect(model.step == .name)
-        }
-
-        @Test func aRelaunchOnConnectCanStillCancel() async {
-            let first = onConnect(code: "999999")
-            await first.connect().join()
-            let relaunched = model()
-            #expect(relaunched.step == .connect)
-            #expect(relaunched.canGoBackFromConnect)
-            await relaunched.backFromConnect()
-            #expect(settings.mode == nil)
-            #expect(relaunched.step == .name)
-        }
-
-        @Test func aFlagWithoutARegistrationIsDroppedAtLaunch() {
-            // The app died during `POST /devices`.
-            settings.inviteRegistrationPending = true
-            _ = model()
-            #expect(!settings.inviteRegistrationPending)
-        }
-
-        @Test func registrationFailureClearsTheFlag() async throws {
-            let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-            let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
-            settings.dataConsent = .granted
-            let env = AppEnvironment(repository: FailingRepository(), settings: settings, notifications: FakeNotificationPermission())
-            env.router.pendingJoinCode = "482193"
-            let model = OnboardingModel(environment: env, linked: linked)
-            model.skipSplash()
-            model.name = "Rina"
-            model.submitName()
-            await model.connect().join()
-            #expect(settings.mode == nil)
-            #expect(!settings.inviteRegistrationPending)
-        }
-
-        @Test func needsDataConsentOnlyAfterOnboarding() {
-            #expect(settings.chooseMode(.protected))
-            #expect(!env.needsDataConsent)
-            settings.onboardingCompleted = true
-            #expect(env.needsDataConsent)
-        }
-    }
-}
-
-/// `MockRepository` with counters, a lost join answer, injected failures and one call that can be held.
-actor InviteRepository: ShooRepository {
-    private let base = MockRepository(mode: .guardian, latency: .zero)
-    private(set) var registerCount = 0
-    private(set) var joinCount = 0
-    private(set) var deleteCount = 0
-    private var meFailure: (any Error)?
-    private var deleteFailure: (any Error)?
-    private var losesJoinAnswer = false
-    private var holdsJoin = false
-    private var holdsMe = false
-    private var held: CheckedContinuation<Void, Never>?
-    private var heldWaiters: [CheckedContinuation<Void, Never>] = []
-
-    func failMe(with error: any Error) { meFailure = error }
-    func failDelete(with error: any Error) { deleteFailure = error }
-    func loseNextJoinAnswer() { losesJoinAnswer = true }
-    func holdNextJoin() { holdsJoin = true }
-    func holdNextMe() { holdsMe = true }
-    func waitUntilHeld() async {
-        if held != nil { return }
-        await withCheckedContinuation { heldWaiters.append($0) }
-    }
-    func release() {
-        held?.resume()
-        held = nil
+    @Test func inviteLinkStillOnboardsAsPersonal() async {
+        env.router.pendingJoinCode = "482193"
+        let model = model()
+        model.skipSplash()
+        model.name = "Rina"
+        model.submitName()
+        #expect(model.step == .turnOnExtension)
+        model.consentChecked = true
+        #expect(await model.activateExtension())
+        #expect(settings.mode == .guardian)
+        // Registering as Pribadi keeps the code: the join sheet needs it after onboarding.
+        #expect(env.router.pendingJoinCode == "482193")
     }
 
-    private func hold() async {
-        held = nil
-        await withCheckedContinuation { continuation in
-            held = continuation
-            heldWaiters.forEach { $0.resume() }
-            heldWaiters = []
-        }
+    @Test func finishingWithAnInviteOpensTheJoinSheetWithTheCode() async {
+        env.router.pendingJoinCode = "482193"
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        await model.requestNotifications()
+        #expect(settings.onboardingCompleted)
+        // The sheet waits for the tabs: asked for before they show, it would be lost in the cross-fade.
+        #expect(!env.router.isJoinFamilyPresented)
+        env.presentInviteAfterOnboarding()
+        #expect(env.router.isJoinFamilyPresented)
+        #expect(env.router.takePendingJoinCode() == "482193")
+        // Only once: the next time the tabs show (no new link) nothing opens.
+        env.router.isJoinFamilyPresented = false
+        env.presentInviteAfterOnboarding()
+        #expect(!env.router.isJoinFamilyPresented)
     }
 
-    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
-        registerCount += 1
-        return try await base.registerDevice(name: name, mode: mode, avatarId: avatarId, apnsToken: apnsToken)
+    @Test func finishingWithoutAnInviteOpensNothing() async {
+        let model = await registeredPersonal()
+        await reachSuccess(model)
+        await model.requestNotifications()
+        env.presentInviteAfterOnboarding()
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(!env.router.isConnectPresented)
     }
-    func me() async throws -> DeviceProfile {
-        if holdsMe {
-            holdsMe = false
-            await hold()
-        }
-        if let meFailure { throw meFailure }
-        return try await base.me()
+
+    /// An older build registered this device as Protected mid-onboarding: it carries on at ON-04.
+    @Test func olderProtectedRegistrationContinuesAtTurnOn() {
+        #expect(settings.chooseMode(.protected))
+        #expect(model().step == .turnOnExtension)
     }
-    func joinFamily(code: String) async throws -> GuardianInfo {
-        joinCount += 1
-        if holdsJoin {
-            holdsJoin = false
-            await hold()
-        }
-        let guardian = try await base.joinFamily(code: code)
-        if losesJoinAnswer {
-            losesJoinAnswer = false
-            throw RepositoryError.network
-        }
-        return guardian
-    }
-    func deleteMe() async throws {
-        deleteCount += 1
-        if let deleteFailure { throw deleteFailure }
-        try await base.deleteMe()
-    }
-    func updateMe(_ update: DeviceUpdate) async throws { try await base.updateMe(update) }
-    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { try await base.createFamilyCode(refresh: refresh) }
-    func familyMembers() async throws -> [FamilyMember] { try await base.familyMembers() }
-    func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
-    func leaveGuardian() async throws { try await base.leaveGuardian() }
-    func setMemberNotify(deviceId: String, notify: Bool) async throws { try await base.setMemberNotify(deviceId: deviceId, notify: notify) }
-    func remindMember(deviceId: String) async throws { try await base.remindMember(deviceId: deviceId) }
-    func becomeProtected(code: String) async throws -> ProtectedSwitch { try await base.becomeProtected(code: code) }
-    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
-        try await base.scans(owner: owner, status: status, cursor: cursor)
-    }
-    func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
-    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
-        try await base.setVerdict(scanId: scanId, value: value)
+
+    @Test func needsDataConsentOnlyAfterOnboarding() {
+        // A real fresh install: the question is not answered yet.
+        settings.dataConsent = nil
+        #expect(settings.chooseMode(.protected))
+        #expect(!env.needsDataConsent)
+        settings.onboardingCompleted = true
+        #expect(env.needsDataConsent)
     }
 }

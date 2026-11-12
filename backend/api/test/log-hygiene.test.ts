@@ -146,6 +146,7 @@ describe("every rate limit has a test (429, or 401 + Retry-After for auth_fail; 
       replicas_ip: "replicas.test.ts", replicas_view: "replicas.test.ts", replicas_view_day: "replicas.test.ts",
       ops_status: "ops-status.test.ts",
       live_push: "live.test.ts",
+      join_page_all: "join-page.test.ts",
     };
     expect(Object.values(limits).map((l) => l.bucket).sort()).toEqual(Object.keys(tested).sort());
     // Not in `limits`: join attempts (family.test.ts "too_many_attempts") and the push cap (push-notify.test.ts).

@@ -1,14 +1,34 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app";
+import { limits } from "../src/http/rateLimit";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+import { JOIN_MAX_FAILURES_IP } from "../src/db/repo/joinAttempts";
 import { storeUrl } from "../src/routes/join-page";
-import { call } from "./helpers/seed";
+import { resetDb, testSql } from "./helpers/resetDb";
+import { call, createDevice } from "./helpers/seed";
 
-const page = async (path: string, lang?: string) => {
-  const res = await call(path, { headers: lang ? { "accept-language": lang } : {} });
+const sql = testSql();
+
+// A browser opening the link: top-level navigation, the only request the page looks a code up for.
+const NAV = { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" };
+
+const page = async (path: string, lang?: string, ip?: string) => {
+  const res = await call(path, { headers: { ...NAV, ...(lang ? { "accept-language": lang } : {}) }, ip });
   return { res, html: await res.text() };
 };
+
+const addCode = async (code: string, expiresIn: string) => {
+  const g = await createDevice("Mom", "guardian");
+  await sql`insert into family_codes (code, guardian_id, expires_at) values (${code}, ${g.deviceId}, now() + ${expiresIn}::interval)`;
+};
+
+// 482193 is an active code in every test; the page looks codes up (state audit row 7, Figma 1619:7334).
+beforeEach(async () => {
+  await resetDb(sql);
+  await addCode("482193", "30 minutes");
+});
 
 const nonceOf = (res: Response) => /script-src 'nonce-([A-Za-z0-9_-]+)'/.exec(res.headers.get("content-security-policy") ?? "")?.[1];
 
@@ -43,6 +63,7 @@ describe("GET /j/:code", () => {
     expect(html.match(/<script/g)).toHaveLength(1);
     expect(html).toContain(`<script nonce="${nonce}">`);
     expect(html).toContain("navigator.clipboard.writeText");
+    expect(html).toContain('<main class="enter">');
     expect(html).toContain('id="copy" class="copy" type="button" data-code="482193"');
     expect(html).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon|document\.cookie|localStorage/);
   });
@@ -91,22 +112,96 @@ describe("GET /j/:code", () => {
     "/j/1234567",
     "/j/4821",
     "/j/12a456",
-  ])("no code, no button and no script for %s, input never reflected", async (path) => {
+  ])("invalid page for %s: no join link, input never reflected, only the nonce'd script", async (path) => {
     const { res, html } = await page(path);
     expect(res.status).toBe(200);
     expect(html).not.toContain("shoo://");
-    expect(html).not.toContain("<script");
     expect(html).not.toContain("onclick");
     expect(html).not.toContain("12345");
     expect(html).not.toContain("4821");
+    expect(html).not.toContain("<script>");
+    expect(html.match(/<script/g)).toHaveLength(1);
+    expect(html).toContain(`<script nonce="${nonceOf(res)}">`);
     expect(html).toContain("no valid code");
+    expect(html).not.toContain('class="hero"');
   });
 
-  it("does not reveal whether a code exists (no DB lookup)", async () => {
-    const strip = (html: string) => html.replace(/nonce="[^"]+"/, "").replace(/class="digit">\d</g, 'class="digit"><');
-    const a = await page("/j/000000");
-    const b = await page("/j/999999");
-    expect(strip(a.html).replaceAll("000000", "")).toBe(strip(b.html).replaceAll("999999", ""));
+  const strip = (html: string) => html.replace(/nonce="[^"]+"/g, "");
+
+  it.each([
+    ["unknown", "/j/000000"],
+    ["expired", "/j/111111"],
+  ])("%s 6-digit code: the same invalid page as a malformed code, code not echoed", async (_, path) => {
+    await addCode("111111", "-1 minute");
+    const { html } = await page(path);
+    expect(html).not.toContain("shoo://");
+    expect(html).not.toContain(path.slice(3));
+    expect(strip(html)).toBe(strip((await page("/j/12ab")).html));
+  });
+
+  it("Indonesian invalid page matches Figma 1619:7334: badge, copy, a real Minta kode baru button, Unduh", async () => {
+    const { html } = await page("/j/000000", "id-ID,id;q=0.9");
+    expect(html).toContain('<main class="enter invalid">');
+    expect(html).toContain('<div class="badge" aria-hidden="true"><span>!</span></div>');
+    expect(html).toContain("<h1>Bergabung ke keluarga di Shoo</h1>");
+    expect(html).toContain("Link undangan ini tidak berisi kode yang valid.<");
+    expect(html).toMatch(/<button id="request" class="btn" type="button" data-msg="[^"]+" data-label="Minta kode baru" data-done="Pesan tersalin">Minta kode baru<\/button>/);
+    expect(html).toContain('Belum punya Shoo?<a href="https://apps.apple.com/">Unduh</a>');
+    expect(html).toContain("navigator.share");
+    expect(html).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon|document\.cookie|localStorage/);
+  });
+
+  it("a miss is a failed join attempt of the IP (no device); a hit records nothing and never changes the code", async () => {
+    await page("/j/000000", undefined, "203.0.113.7");
+    await page("/j/482193", undefined, "203.0.113.7");
+    const rows = await sql<{ device_id: string | null; success: boolean }[]>`select device_id, success from join_attempts`;
+    expect(rows).toEqual([{ device_id: null, success: false }]);
+    expect(await sql`select code from family_codes where code = '482193'`).toHaveLength(1);
+  });
+
+  it("page and POST /family/join share one per-IP budget: page misses block joins from that IP", async () => {
+    const ip = "203.0.113.9";
+    for (let i = 0; i < JOIN_MAX_FAILURES_IP; i++) expect((await page("/j/000000", undefined, ip)).html).not.toContain("shoo://");
+    // Budget used: the page no longer looks codes up (no oracle), it shows the normal invite.
+    const { res, html } = await page("/j/000000", undefined, ip);
+    expect(res.status).toBe(200);
+    expect(html).toContain('href="shoo://join?code=000000"');
+    const p = await createDevice("Kid", "protected");
+    const join = await call("/family/join", { method: "POST", token: p.token, ip, json: { code: "482193" } });
+    expect(join.status).toBe(429);
+    // Another IP still gets the real answer.
+    expect((await page("/j/000000")).html).not.toContain("shoo://");
+  });
+
+  it.each([
+    ["an <img> from another site", { "sec-fetch-mode": "no-cors", "sec-fetch-dest": "image" }],
+    ["an iframe", { "sec-fetch-mode": "navigate", "sec-fetch-dest": "iframe" }],
+    ["a fetch", { "sec-fetch-mode": "cors", "sec-fetch-dest": "empty" }],
+    ["no Sec-Fetch headers", {}],
+  ])("%s: no lookup, nothing recorded, the normal invite", async (_, headers) => {
+    const res = await call("/j/000000", { headers });
+    expect(await res.text()).toContain('href="shoo://join?code=000000"');
+    expect(await sql`select 1 from join_attempts`).toHaveLength(0);
+  });
+
+  it("over the global cap the page skips the lookup for everyone", async () => {
+    useRateKeySecret(env.RATE_KEY_SECRET);
+    const key = await keyHash(`${limits.joinPageAll.bucket}:all`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select ${limits.joinPageAll.bucket}, ${key} from generate_series(1, ${limits.joinPageAll.max})`;
+    expect((await page("/j/000000")).html).toContain('href="shoo://join?code=000000"');
+    expect(await sql`select 1 from join_attempts`).toHaveLength(0);
+  });
+
+  it("motion: entrance, badge attention and press feedback, all off under prefers-reduced-motion", async () => {
+    const { html } = await page("/j/000000");
+    expect(html).toContain("@keyframes rise{from{opacity:0;transform:translateY(8px)}");
+    expect(html).toContain(".enter>*{animation:rise .3s");
+    expect(html).toContain(".btn:active{transform:scale(.97)");
+    const reduced = /@media \(prefers-reduced-motion:reduce\)\{([^@]*)\}/.exec(html)![1]!;
+    for (const sel of [".enter>*", ".badge", ".badge::after", ".badge span", ".hero i"]) expect(reduced).toContain(sel);
+    expect(reduced).toContain(".btn:active,.copy:active{transform:none}");
+    // Same specificity: the reduced-motion block must come after the press rule to win.
+    expect(html.indexOf("@media (prefers-reduced-motion:reduce)")).toBeGreaterThan(html.indexOf(".btn:active{transform:scale(.97)"));
   });
 
   it("link preview: static Open Graph tags with an absolute image URL, no code in them", async () => {

@@ -3,6 +3,7 @@ import SwiftUI
 /// Shield / Activity tabs with the profile button top right (PRD §7).
 struct MainTabView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var router = env.router
@@ -32,6 +33,17 @@ struct MainTabView: View {
         .overlay(alignment: .top) {
             if env.settings.demoMode, router.shieldPath.isEmpty, router.activityPath.isEmpty { DemoBanner() }
         }
+        // PR-03: an invite link opened after onboarding. Waits for the launch splash, like Connect below.
+        .overlay(alignment: .top) {
+            if let notice = router.inviteNotice, env.launchSplash == .done {
+                InviteNoticeBanner(notice: notice, router: router)
+                    .padding(.top, 8)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth, value: router.inviteNotice)
+        // PR-03: an invite link opened before or during onboarding opens its join sheet now the tabs are here.
+        .onAppear { env.presentInviteAfterOnboarding() }
         // An invite link that started the app (PR-03): Connect comes up once the launch splash (ON-01) is gone.
         .sheet(isPresented: Binding(
             get: { router.isConnectPresented && env.launchSplash == .done },
