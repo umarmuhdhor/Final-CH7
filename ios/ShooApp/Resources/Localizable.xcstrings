@@ -4905,17 +4905,6 @@
         }
       }
     },
-    "That code doesn't match a family. Check the 6 digits and try again." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kode itu tidak cocok dengan keluarga mana pun. Periksa 6 angkanya lalu coba lagi."
-          }
-        }
-      }
-    },
     "That code has expired. Ask your guardian for the new code." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4923,16 +4912,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kode kedaluwarsa, minta kode baru dan coba lagi."
-          }
-        }
-      }
-    },
-    "That QR code isn't a Shoo family code." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kode QR itu bukan kode keluarga Shoo."
           }
         }
       }
@@ -5019,17 +4998,6 @@
         }
       }
     },
-    "This family already has 3 people. Ask your guardian to remove someone first." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keluarga ini sudah berisi 3 orang. Minta Guardian-mu menghapus satu orang dulu."
-          }
-        }
-      }
-    },
     "This iPhone isn't connected to Shoo anymore. Set it up again to stay protected." : {
       "localizations" : {
         "id" : {
@@ -5108,27 +5076,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Hari ini · %@"
-          }
-        }
-      }
-    },
-    "Too many new sign-ups from this network. Wait up to an hour, then try again." : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terlalu banyak pendaftaran baru dari jaringan ini. Tunggu hingga 1 jam, lalu coba lagi."
-          }
-        }
-      }
-    },
-    "Too many tries. Wait a few minutes, then try again." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi."
           }
         }
       }
@@ -6535,6 +6482,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shoo mati, perlindungan berhenti. Keluarga tak lagi mendapat peringatan."
+          }
+        }
+      }
+    },
+    "That code doesn't match. Check it again, or ask your Guardian for a new code." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kode tidak cocok. Periksa lagi, atau minta kode baru ke Guardian-mu."
+          }
+        }
+      }
+    },
+    "This family already has 3 people. Ask your Guardian to remove one person first." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keluarga ini sudah berisi 3 orang. Minta Guardian-mu menghapus satu orang dulu."
+          }
+        }
+      }
+    },
+    "Too many tries. For your safety, wait a moment before trying again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak percobaan. Demi keamananmu, tunggu sebentar sebelum mencoba lagi."
+          }
+        }
+      }
+    },
+    "Too many sign-ups from this network. Try again in 1 hour." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak pendaftaran dari jaringan ini. Coba lagi dalam 1 jam."
+          }
+        }
+      }
+    },
+    "This QR isn't a Shoo invite code. Scan the QR from your Guardian's Shoo app." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR ini bukan kode undangan Shoo. Pindai QR dari aplikasi Shoo milik Guardian-mu."
+          }
+        }
+      }
+    },
+    "Just enter the code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Masukkan kode saja"
+          }
+        }
+      }
+    },
+    "Retype code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketik ulang kode"
+          }
+        }
+      }
+    },
+    "Try again in %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi dalam %@"
+          }
+        }
+      }
+    },
+    "Try again in %lld minutes" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi dalam %lld menit"
           }
         }
       }

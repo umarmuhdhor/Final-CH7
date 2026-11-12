@@ -122,6 +122,7 @@ struct MockRepositoryTests {
         ("999999", .codeExpired),
         ("888888", .familyFull),
         ("777777", .tooManyAttempts),
+        ("555555", .rateLimited),
         ("666666", .alreadyConnected),
         ("12a456", .codeInvalid),
         ("4821", .codeInvalid),
