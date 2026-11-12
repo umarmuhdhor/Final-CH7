@@ -29,12 +29,19 @@ struct ProfileView: View {
                 ShieldPulseLoader()
                     .frame(maxWidth: .infinity, minHeight: 300)
             case .failed:
-                VStack(spacing: 12) {
-                    Text("Couldn't load your profile").profileFont(17, .semibold)
-                    Button { Task { await model.retry() } } label: { Text("Try again") }
-                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
-                }
-                .frame(maxWidth: .infinity, minHeight: 300)
+                // Figma "Profile/Pribadi · Gagal memuat profil" (1681:6986): the card takes the profile card's
+                // place (370 × 344, r 20); the settings below still work.
+                ProfileLoadFailed { await model.load() }
+                    .frame(minHeight: 344)
+                    .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    // Figma: #1A264D at 6 %, y 4, blur 16.
+                    .shadow(color: Color(hex: 0x1A264D, opacity: 0.06), radius: 8, y: 4)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
+                protectionSection
+                accountSection
+                preferencesSection
+                deleteButton
             case .loaded:
                 loaded
                     // Someone joins or is disconnected: rows fade, the card eases to its new
@@ -134,6 +141,10 @@ struct ProfileView: View {
         accountSection
         preferencesSection
 
+        deleteButton
+    }
+
+    private var deleteButton: some View {
         Button { isDeleteConfirming = true } label: {
             // Figma "Hapus Akun" (title case here, unlike the Kelola profil row): SF Pro Rounded 17.
             Text("Delete Account")
@@ -220,14 +231,9 @@ struct ProfileView: View {
         // Figma: 32 pt under the profile card (416:10447, 480:5353).
         ProfileSection(title: "People you protect", top: 32) {
             if model.membersFailed {
-                VStack(spacing: 8) {
-                    Text("Couldn't load your family").profileFont(15).foregroundStyle(ProfileStyle.secondary)
-                    Button { Task { await model.load() } } label: { Text("Try again") }
-                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
-                        .accessibilityIdentifier("profile.members.retry")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                // Figma "Profile/Guardian · Gagal memuat" (1681:7088): the same card inside the section.
+                ProfileLoadFailed(identifier: "profile.members.retry") { await model.load() }
+                    .transition(.opacity)
             } else if model.members.isEmpty {
                 FamilyEmptyCard { isInvitePresented = true }
             } else {

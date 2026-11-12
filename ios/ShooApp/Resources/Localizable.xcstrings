@@ -1666,32 +1666,12 @@
         }
       }
     },
-    "Couldn't load your family" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gagal memuat keluarga"
-          }
-        }
-      }
-    },
     "Couldn't load your family. Try again" : {
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gagal memuat keluarga. Coba lagi"
-          }
-        }
-      }
-    },
-    "Couldn't load your profile" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gagal memuat profil"
           }
         }
       }
@@ -5552,16 +5532,6 @@
         }
       }
     },
-    "You still protect someone" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu masih melindungi seseorang"
-          }
-        }
-      }
-    },
     "You still protect someone. Disconnect them in Profile first." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -6304,16 +6274,6 @@
         }
       }
     },
-    "You're already connected" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kamu sudah terhubung"
-          }
-        }
-      }
-    },
     "Only your guardian can disconnect you. Ask them first, then join another family." : {
       "localizations" : {
         "id" : {
@@ -6870,6 +6830,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ belum terlindungi."
+          }
+        }
+      }
+    },
+    "Try Again" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba Lagi"
+          }
+        }
+      }
+    },
+    "Couldn't load the profile" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profil belum bisa dimuat"
           }
         }
       }
