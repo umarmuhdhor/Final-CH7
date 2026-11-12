@@ -388,10 +388,15 @@ struct JoinAnotherFamilySheet: View {
         }
         .onAppear {
             guard model == nil else { return }
-            model = ConnectModel(repository: env.repository) { [env, name] code in
+            // An invite link opened this sheet (BH-10): its code is filled in, the join still needs a tap (T11).
+            model = ConnectModel(repository: env.repository, code: env.router.takePendingJoinCode()) { [env, name] code in
                 let name = name.isEmpty ? try await env.repository.me().name : name
                 return try await env.becomeProtected(code: code, name: name)
             }
+        }
+        .onChange(of: env.router.pendingJoinCode) { _, code in
+            guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
+            model?.prefill(pending)
         }
         // Once joined the old device is gone: no swipe back to a screen that no longer exists.
         .interactiveDismissDisabled(isJoined)

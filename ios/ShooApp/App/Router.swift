@@ -57,6 +57,8 @@ final class Router {
     var notificationReminderShown = false
     /// An invite link asked for Connect while another sheet was up: shown once that one is gone.
     private(set) var wantsConnect = false
+    /// An invite link asked for "Become supervised" (Pribadi) while another sheet was up: shown once that one is gone.
+    private(set) var wantsJoinFamily = false
 
     /// A push tap or `shoo://scan/{id}` (GD-06): Detail on the Activity tab, whatever was open.
     func openDetail(scanId: String) {
@@ -77,6 +79,21 @@ final class Router {
         isTurnOnPresented = false
         isConnectPresented = false
         wantsConnect = false
+        wantsJoinFamily = false
+    }
+
+    /// Pribadi's invite link (BH-10): "Become supervised" with the code filled in, on Shield. Like
+    /// `showConnect`, after the open "Turn on" sheet is dismissed (SwiftUI shows one sheet at a time).
+    func showJoinFamily() {
+        guard !isJoinFamilyPresented else { return }
+        popToRoot()
+        selectedTab = .shield
+        if isTurnOnPresented {
+            wantsJoinFamily = true
+            isTurnOnPresented = false
+        } else {
+            isJoinFamilyPresented = true
+        }
     }
 
     /// Shows Connect now, or right after the open sheet is dismissed (SwiftUI shows one sheet at a time).
@@ -94,6 +111,10 @@ final class Router {
 
     /// `onDismiss` of every other sheet.
     func sheetDismissed() {
+        if wantsJoinFamily {
+            wantsJoinFamily = false
+            isJoinFamilyPresented = true
+        }
         guard wantsConnect else { return }
         wantsConnect = false
         isConnectPresented = true
