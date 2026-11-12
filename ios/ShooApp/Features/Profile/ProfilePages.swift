@@ -181,13 +181,16 @@ private struct ModePage: View {
     @Environment(\.locale) private var locale
     @State private var selected: ProfileModel.Variant?
     @State private var isJoinPresented = false
-    @State private var showsMembersFirst = false
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     /// A protected iPhone without a guardian works like Pribadi (QA 2026-11-10 #4: no card was marked). It can't
     /// become a Guardian: the device mode never changes on the server.
     private var current: ProfileModel.Variant { model.variant == .protected ? .personal : model.variant }
     private var isProtected: Bool { model.variant == .protected }
     private var choice: ProfileModel.Variant { selected ?? current }
+    /// A guardian who still protects someone, or a protected person with a guardian, can't join another family.
+    /// Only once the profile and family have loaded: no lock without the server's answer (the join answers then).
+    private var isLocked: Bool { model.state == .loaded && !model.membersFailed && !model.canJoinAnotherFamily }
 
     var body: some View {
         ProfileScreen(title: "Account mode") {
@@ -228,9 +231,7 @@ private struct ModePage: View {
 
             ProfileCard {
                 Button {
-                    if !model.canJoinAnotherFamily {
-                        showsMembersFirst = true
-                    } else if isProtected {
+                    if isProtected {
                         // Already protected: a plain join with the code (POST /family/join), as on Home.
                         env.router.showConnect()
                     } else {
@@ -243,10 +244,22 @@ private struct ModePage: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(isLocked)
                 .accessibilityIdentifier("mode.joinFamily")
             }
+            // Figma "Mode akun · Terkunci" (1619:7207): the row fades and says why right under it.
+            .opacity(isLocked ? 0.45 : 1)
             .padding(.horizontal, ProfileStyle.margin)
             .padding(.top, 28)
+            .animation(StateMotion.enter(reduceMotion: reduceMotion), value: isLocked)
+            if isLocked {
+                PageNote(text: isProtected
+                    ? Text("Only your guardian can disconnect you. Ask them first, then join another family.")
+                    : Text("Disconnect the people you protect first. Then you can join another family."))
+                    .padding(.horizontal, -16)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("mode.locked")
+            }
 
             if choice != current {
                 Button {
@@ -266,21 +279,14 @@ private struct ModePage: View {
                 .padding(.top, 28)
                 .accessibilityIdentifier("mode.switch")
             }
-            PageNote(text: Text("Your protection stays on. You can switch back to Personal at any time."), alignment: .center)
-                .padding(.top, choice != current ? 0 : 18)
+            if !isLocked {
+                PageNote(text: Text("Your protection stays on. You can switch back to Personal at any time."), alignment: .center)
+                    .padding(.top, choice != current ? 0 : 18)
+            }
         }
         .sheet(isPresented: $isJoinPresented) {
             JoinAnotherFamilySheet(name: model.profile?.name ?? "")
                 .environment(\.locale, locale)
-        }
-        .alert(isProtected ? Text("You're already connected") : Text("You still protect someone"), isPresented: $showsMembersFirst) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            if isProtected {
-                Text("Only your guardian can disconnect you. Ask them first, then join another family.")
-            } else {
-                Text("Disconnect the people you protect first. Then you can join another family.")
-            }
         }
     }
 }

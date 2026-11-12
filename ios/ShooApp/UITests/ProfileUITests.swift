@@ -365,8 +365,9 @@ final class ProfileUITests: XCTestCase {
         app.buttons["profile.mode"].tap()
         let join = app.buttons["mode.joinFamily"]
         reveal(join, in: app)
-        // A tap right after the scroll could be lost (local run, 1 in 4): tapped again until the alert shows.
-        app.tap(join, until: app.alerts.firstMatch)
+        // Figma "Mode akun · Terkunci" (1619:7207): the row is off and the reason sits under it.
+        XCTAssertTrue(app.descendants(matching: .any)["mode.locked"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(join.isEnabled)
         XCTAssertFalse(app.textFields["connect.code"].exists)
     }
 }
