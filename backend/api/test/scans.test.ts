@@ -96,6 +96,19 @@ describe("POST /scans", () => {
     expect(res.status).toBe(422);
   });
 
+  it("a host with a trailing dot (bca-verifikasi.site.) → 201, as GET /verdicts accepts it (BH-04)", async () => {
+    const p = await createDevice("Mom");
+    await postOk(p, extensionBody(blocked92, { url: "https://bca-verifikasi.site./login" }));
+    await postOk(p, extensionBody(blocked92, { url: "https://login.bca-verifikasi.site./x" }));
+    const res = await post(p, extensionBody(blocked92, { url: "https://evilbca-verifikasi.site./" }));
+    expect(res.status).toBe(422);
+  });
+
+  it("signal layers follow the schema enum [1,2,3,4,6] (BH-18)", async () => {
+    const p = await createDevice("Mom");
+    await postOk(p, extensionBody(blocked92, { signals: [{ ...blocked92.signals[0]!, layer: 6 }] }));
+  });
+
   it.each([
     ["score below 30", { score: 29, status: "warning" }],
     // Dashboard phase 05: without thresholdsVersion only the fence applies (scans-thresholds.test.ts).
@@ -104,7 +117,9 @@ describe("POST /scans", () => {
     ["21 signals", { signals: Array.from({ length: 21 }, () => blocked92.signals[0]) }],
     ["signal without labelSimple", { signals: [{ id: "x", layer: 1, weight: 5, label: { en: "a", id: "b" } }] }],
     ["signal label missing id", { signals: [{ ...blocked92.signals[0]!, label: { en: "a" } }] }],
-    ["layer 6", { signals: [{ ...blocked92.signals[0]!, layer: 6 }] }],
+    // Layer 5 is Guardian feedback and emits no Signal (scan-result.schema.json).
+    ["layer 5", { signals: [{ ...blocked92.signals[0]!, layer: 5 }] }],
+    ["layer 7", { signals: [{ ...blocked92.signals[0]!, layer: 7 }] }],
     ["detectedAt far future", { detectedAt: new Date(Date.now() + 3_600_000).toISOString() }],
     ["detectedAt not ISO", { detectedAt: "yesterday" }],
   ])("422 invalid_body: %s", async (_name, extra) => {

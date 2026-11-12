@@ -38,7 +38,8 @@ const localized = z.strictObject({ en: text(500).pipe(z.string().min(1)), id: te
 // contracts/scan-result.schema.json $defs.Signal. Unknown keys are dropped.
 const signal = z.object({
   id: text(64).pipe(z.string().min(1)),
-  layer: z.number().int().min(1).max(5),
+  // Schema enum [1,2,3,4,6]: layer 5 is Guardian feedback and emits no Signal; 6 is hoax (phase 2).
+  layer: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(6)]),
   weight: z.number().int().min(0).max(100),
   label: localized,
   labelSimple: localized,
@@ -79,7 +80,8 @@ const scanBody = z
   })
   .refine(
     (b) => {
-      const host = httpUrl(b.url)?.hostname;
+      // A trailing dot (`bca-verifikasi.site.`) is the same host in every browser; GET /verdicts drops it too.
+      const host = httpUrl(b.url)?.hostname.replace(/\.$/, "");
       return host === b.domain || (host?.endsWith(`.${b.domain}`) ?? false);
     },
     { message: "url host must be the domain or a subdomain of it", path: ["domain"] },

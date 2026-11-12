@@ -520,7 +520,7 @@ Each signal:
 | Field | Type | Rules |
 |---|---|---|
 | `id` | string | 1–64 characters, e.g. `new_domain` |
-| `layer` | integer | 1–5 |
+| `layer` | integer | 1, 2, 3, 4 or 6 (5 is Guardian feedback, no Signal) |
 | `weight` | integer | 0–100 |
 | `label` | `{ en, id }` | Technical text for the Guardian, 1–500 characters each |
 | `labelSimple` | `{ en, id }` | Plain text for the Protected user, 1–500 characters each |
