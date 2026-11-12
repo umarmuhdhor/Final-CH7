@@ -316,8 +316,11 @@ final class AppEnvironment {
 
     /// EX-03 (#49, QA 2026-11-10 #5): without the start token the backend answered `no_start_token` to every
     /// `POST /live` and the island never started. Both modes: the island shows the viewer's own Safari page.
+    /// Called at launch too (`AppDelegate`): a `start` push wakes Shoo in the background only to hand over the
+    /// new activity's update token, and no scene becomes active then. Without it the backend never got the
+    /// token, so the island kept its first score and could not be ended (device test 2026-11-12).
     @MainActor
-    private func startLiveActivityTokens() {
+    func startLiveActivityTokens() {
         guard liveActivityTokens == nil else { return }
         let tokens = LiveActivityTokens(
             canSend: { [weak self] in

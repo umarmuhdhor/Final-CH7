@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // EX-03: also a background launch by a Live Activity `start` push, which only delivers push tokens.
+        environment.startLiveActivityTokens()
         return true
     }
 
