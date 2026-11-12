@@ -6854,6 +6854,16 @@
           }
         }
       }
+    },
+    "You can change this after Shoo's weekly review, %@." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisa diubah lagi setelah Shoo belajar mingguan, %@."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
