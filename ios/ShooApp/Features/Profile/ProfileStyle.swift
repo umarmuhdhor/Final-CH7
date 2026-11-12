@@ -42,19 +42,6 @@ enum ProfileStyle {
     /// Screen side margin for section titles and cards; the profile card sits closer (16).
     static let margin: CGFloat = 24
 
-    /// Initials avatars on member rows and the member detail (Figma gradients, picked by avatar id).
-    static let initialsGradients: [[Color]] = [
-        [Color(hex: 0x7DE49C), Color(hex: 0x54CAE8)],
-        [Color(hex: 0xFFBE8C), Color(hex: 0xFF7896)],
-        [Color(hex: 0xAFA5FF), Color(hex: 0x6E8CFA)],
-    ]
-
-    static func initialsGradient(avatarId: String) -> LinearGradient {
-        let number = Int(avatarId.filter(\.isNumber)) ?? 0
-        let colors = initialsGradients[(max(number, 1) - 1) % initialsGradients.count]
-        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-    }
-
     /// `arrow.left.arrow.right` stands in for Figma's "icon/switch".
     static let switchSymbol = "arrow.left.arrow.right"
 
@@ -594,26 +581,6 @@ struct QRGlyph: View {
         }
         .frame(width: 16, height: 16)
         .accessibilityHidden(true)
-    }
-}
-
-/// A member's initial on its gradient (Figma "Inisial").
-struct InitialsAvatar: View {
-    let name: String
-    let avatarId: String
-    var size: CGFloat = 44
-
-    /// Figma: SF Pro Rounded Semibold 17 on the 44 pt member rows (1115:14626), 41 % of larger avatars.
-    private var fontSize: CGFloat { size == 44 ? 17 : size * 0.41 }
-
-    var body: some View {
-        Text(verbatim: String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
-            .font(FigmaFont.font(size: fontSize, weight: .semibold, design: .rounded))
-            .tracking(size == 44 ? -0.43 : 0)
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(ProfileStyle.initialsGradient(avatarId: avatarId), in: Circle())
-            .accessibilityHidden(true)
     }
 }
 

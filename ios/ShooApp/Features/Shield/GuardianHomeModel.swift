@@ -131,6 +131,13 @@ final class GuardianHomeModel {
     /// At most 3 people are shown (PRD GD-03).
     var shownMembers: [FamilyMember] { Array(members.prefix(FamilyShieldModel.maxMembers)) }
 
+    /// The avatar of a scan's owner: the guardian's own scans use their own avatar, a member's scans the
+    /// member's. `nil` when the owner is not known (yet): the view draws the neutral person.
+    func avatarId(forOwner deviceId: String) -> String? {
+        if let profile, profile.deviceId == deviceId { return profile.avatarId }
+        return members.first { $0.deviceId == deviceId }?.avatarId
+    }
+
     /// Family Home with no one to look after: the invite takes the sheet.
     var hasNoFamily: Bool { scope == .family && state == .loaded && members.isEmpty }
 

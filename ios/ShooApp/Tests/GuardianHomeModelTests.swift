@@ -291,4 +291,16 @@ struct GuardianHomeModelTests {
         await model(repository: familyRepository, settings: try settings(), now: now, scope: .family).refresh()
         #expect(familyRepository.scanCalls == 6)
     }
+
+    /// PF-01: a scan's owner shows their picked avatar: a member's from the family list, the guardian's own
+    /// from `GET /devices/me`; anyone else (or before the load) gets `nil`, the neutral person.
+    @Test func scanOwnerAvatarComesFromTheFamilyOrTheGuardianThemself() async throws {
+        let model = model(settings: try settings())
+        #expect(model.avatarId(forOwner: "dev_mom") == nil)
+        await model.refresh()
+        #expect(model.avatarId(forOwner: "dev_mom") == "avatar_03")
+        #expect(model.avatarId(forOwner: "dev_dad") == "avatar_07")
+        #expect(model.avatarId(forOwner: MockRepository.guardianProfile.deviceId) == MockRepository.guardianProfile.avatarId)
+        #expect(model.avatarId(forOwner: "dev_gone") == nil)
+    }
 }

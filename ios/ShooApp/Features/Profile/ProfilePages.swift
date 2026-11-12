@@ -352,18 +352,16 @@ private enum ModeCardColor {
     static let selectedDivider = Color.dynamic(0xD6E6F7, dark: 0x27405E)
 }
 
-/// Three overlapping initials ("S B R"): the members, or placeholders without any.
+/// Three overlapping avatars: the members', or three neutral person placeholders without any.
 private struct AvatarStack: View {
     let members: [FamilyMember]
 
     var body: some View {
-        let people: [(String, String)] = members.isEmpty
-            ? [("S", "avatar_01"), ("B", "avatar_02"), ("R", "avatar_03")]
-            : members.prefix(3).map { ($0.name, $0.avatarId) }
+        // "" is no avatar: `AvatarView` draws the neutral person.
+        let ids = members.isEmpty ? ["", "", ""] : members.prefix(3).map(\.avatarId)
         HStack(spacing: -10) {
-            ForEach(Array(people.enumerated()), id: \.offset) { _, person in
-                InitialsAvatar(name: person.0, avatarId: person.1, size: 28)
-                    .overlay(Circle().stroke(ProfileStyle.card, lineWidth: 1.5))
+            ForEach(Array(ids.enumerated()), id: \.offset) { _, id in
+                AvatarView(id: id, size: 28, ring: .init(color: ProfileStyle.card, width: 1.5))
             }
         }
         .frame(width: 64, alignment: .leading)

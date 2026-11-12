@@ -89,7 +89,10 @@ struct GuardianHomeView: View {
         }
         // Switch and profile right under the status bar, where the (hidden) navigation bar would be.
         .overlay(alignment: .top) {
-            HomeTopBar(isFamilyShown: isFamily, name: model.profile?.name, onSwitch: switchSide) { env.router.openProfile() }
+            // The cached avatar until `GET /devices/me` answers, so the circle never waits for the network.
+            HomeTopBar(isFamilyShown: isFamily, avatarId: model.profile?.avatarId ?? env.session?.avatarId, onSwitch: switchSide) {
+                env.router.openProfile()
+            }
         }
         .toolbar(.hidden, for: .navigationBar)
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
@@ -261,7 +264,7 @@ struct GuardianHomeView: View {
             } else if let scan = model.pendingScan {
                 PendingSiteCard(
                     scan: scan,
-                    ownerIndex: model.shownMembers.firstIndex { $0.deviceId == scan.ownerDeviceId } ?? 0,
+                    ownerAvatarId: model.avatarId(forOwner: scan.ownerDeviceId),
                     language: language,
                     canDecide: model.canDecide,
                     failed: model.verdictFailed,
@@ -372,7 +375,7 @@ private struct MembersRow: View {
                     }
                 }
                 Button { onOpen(member) } label: {
-                    MemberCell(member: member, gradient: InitialAvatar.gradient(at: index))
+                    MemberCell(member: member)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("family.member.\(member.deviceId)")
@@ -386,12 +389,11 @@ private struct MembersRow: View {
 
 private struct MemberCell: View {
     let member: FamilyMember
-    let gradient: [Color]
 
     var body: some View {
         VStack(spacing: 8) {
-            // Figma "Avatar": 44 pt, the initial SF Pro Rounded Semibold 17.
-            InitialAvatar(name: member.name, size: 44, gradient: gradient, fontSize: 17, tracking: -0.43)
+            // Figma "Avatar": 44 pt, the member's picked avatar (the name is read out below it).
+            AvatarView(id: member.avatarId, size: 44)
                 .overlay(alignment: .bottomTrailing) {
                     // Figma: 12 pt dot, 1 pt white ring outside, flush with the avatar's bottom right.
                     Circle()
@@ -427,7 +429,8 @@ private struct MemberCell: View {
 /// opened it, the reason, then Aman / Bahaya. Points are from the card's top left.
 private struct PendingSiteCard: View {
     let scan: ScanResult
-    let ownerIndex: Int
+    /// `nil`: the owner is not in the family list (yet); the neutral person is drawn.
+    let ownerAvatarId: String?
     let language: AppLanguage
     let canDecide: Bool
     let failed: Bool
@@ -574,8 +577,7 @@ private struct PendingSiteCard: View {
     /// Figma "Frame 1618872332": the person's avatar (20.5 pt) and name in capitals, SF Pro Rounded Semibold 11.88.
     private var owner: some View {
         HStack(spacing: 8.9) {
-            InitialAvatar(name: scan.ownerName, size: 20.5, gradient: InitialAvatar.gradient(at: ownerIndex), fontSize: 7.94,
-                          tracking: -0.2)
+            AvatarView(id: ownerAvatarId ?? "", size: 20.5)
             Text(verbatim: scan.ownerName.uppercased(with: language.locale))
                 .onboardingFont(11.88, weight: .semibold, design: .rounded, tracking: -0.23, relativeTo: .caption)
                 .figmaLineHeight(15.6, relativeTo: .caption)

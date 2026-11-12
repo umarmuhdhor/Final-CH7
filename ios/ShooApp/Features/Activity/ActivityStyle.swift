@@ -150,42 +150,9 @@ struct ActivityBadge: View {
 
 // MARK: Avatars
 
-/// A member's initial on a gradient with a thin white rim (Figma "Avatar/S", "Avatar/B", "Avatar/R").
-/// The gradient is picked by avatar id, so a member keeps the same colour everywhere.
-struct ActivityAvatar: View {
-    let name: String
-    let avatarId: String
-    let size: CGFloat
-
-    /// Figma's three avatar gradients, top-left → bottom-right.
-    static let gradients: [[Color]] = [
-        [ActivityStyle.hex(0x7DE49C), ActivityStyle.hex(0x54CAE8)],
-        [ActivityStyle.hex(0xFFBE8C), ActivityStyle.hex(0xFF7896)],
-        [ActivityStyle.hex(0xAFA5FF), ActivityStyle.hex(0x6E8CFA)],
-    ]
-
-    static func gradient(avatarId: String) -> [Color] {
-        let number = Int(avatarId.filter(\.isNumber)) ?? 1
-        return gradients[(max(number, 1) - 1) % gradients.count]
-    }
-
-    static func initial(of name: String) -> String {
-        String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
-    }
-
-    var body: some View {
-        Text(verbatim: Self.initial(of: name))
-            // Figma: 9.5 pt on 24, 6.33 pt on 16.
-            .font(FigmaFont.font(size: size * 0.4, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(
-                LinearGradient(colors: Self.gradient(avatarId: avatarId), startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: Circle()
-            )
-            .overlay(Circle().stroke(.white.opacity(0.5)))
-            .accessibilityHidden(true)
-    }
+extension ActivityStyle {
+    /// Figma's thin white rim on the people's avatars (rows, the person picker, Detail's owner chip).
+    static let avatarRing = AvatarView.Ring(color: .white.opacity(0.5))
 }
 
 /// Up to three overlapping avatars, each 12 pt to the right of the previous (Figma "Avatar Stack").
@@ -196,7 +163,7 @@ struct ActivityAvatarStack: View {
     var body: some View {
         HStack(spacing: -size / 2) {
             ForEach(Array(people.prefix(3).enumerated()), id: \.offset) { index, member in
-                ActivityAvatar(name: member.name, avatarId: member.avatarId, size: size)
+                AvatarView(id: member.avatarId, size: size, ring: ActivityStyle.avatarRing)
                     .zIndex(Double(-index))
             }
         }

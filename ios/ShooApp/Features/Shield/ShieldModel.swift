@@ -20,8 +20,8 @@ final class ShieldModel {
     private(set) var extensionChecked = false
     /// `GET /devices/me` → `guardian`; `nil` when not (or no longer) connected.
     private(set) var guardian: GuardianInfo?
-    /// For the profile initial top right.
-    private(set) var profileName: String?
+    /// The picked avatar for the profile circle top right.
+    private(set) var profileAvatarId: String?
     /// This device's scans of the last 24 h, and at least enough older ones to fill the list; newest first.
     private(set) var scans: [ScanResult] = []
     /// The card under the activity; empty hides it.
@@ -84,7 +84,7 @@ final class ShieldModel {
             let (me, loaded) = try await (profile, all)
             guard request == generation else { return }
             guardian = me.guardian
-            profileName = me.name
+            profileAvatarId = me.avatarId
             scans = loaded.sorted { $0.detectedAt > $1.detectedAt }
             state = .loaded
         } catch {
