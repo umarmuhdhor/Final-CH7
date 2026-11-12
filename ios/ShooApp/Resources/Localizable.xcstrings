@@ -6723,6 +6723,76 @@
           }
         }
       }
+    },
+    "Data can't be viewed yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data belum bisa dilihat"
+          }
+        }
+      }
+    },
+    "No longer connected" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah tidak terhubung"
+          }
+        }
+      }
+    },
+    "This person has disconnected. You no longer get warnings from them." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang ini sudah memutus koneksi. Kamu tidak lagi menerima peringatan darinya."
+          }
+        }
+      }
+    },
+    "Reminder sent" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pengingat terkirim"
+          }
+        }
+      }
+    },
+    "Safari extension off" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ekstensi Safari mati"
+          }
+        }
+      }
+    },
+    "%@ will get a notification." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ akan dapat notifikasi."
+          }
+        }
+      }
+    },
+    "%@ isn't protected yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ belum terlindungi."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

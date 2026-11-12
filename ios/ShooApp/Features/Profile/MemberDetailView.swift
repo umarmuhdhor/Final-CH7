@@ -6,6 +6,7 @@ struct MemberDetailView: View {
     @Environment(\.locale) private var locale
     @State private var model: MemberDetailModel
     @State private var isDisconnectConfirming = false
+    @Environment(\.shooReduceMotion) private var reduceMotion
 
     init(deviceId: String, repository: any ShooRepository) {
         _model = State(initialValue: MemberDetailModel(deviceId: deviceId, repository: repository))
@@ -20,19 +21,43 @@ struct MemberDetailView: View {
                 ShieldPulseLoader()
                     .frame(maxWidth: .infinity, minHeight: 300)
             case .failed:
-                VStack(spacing: 12) {
-                    Text("Couldn't load your family").profileFont(17, .semibold)
-                    Button { Task { await model.load() } } label: { Text("Try again") }
-                        .buttonStyle(ProfilePillButtonStyle(tint: ProfileStyle.link))
-                }
-                .frame(maxWidth: .infinity, minHeight: 300)
+                // Figma "Gagal memuat" (1681:6968).
+                StateMessage(
+                    systemImage: "exclamationmark.arrow.circlepath",
+                    tint: Color(hex: 0xE5483B),
+                    tileFill: .white,
+                    title: "Data can't be viewed yet",
+                    message: "Check your internet connection, then try again."
+                )
+                .padding(.horizontal, ProfileStyle.margin)
+                .padding(.top, 90)
+                .accessibilityIdentifier("member.failed")
             case .gone:
-                Text("This person is no longer connected")
-                    .profileFont(17, .semibold)
-                    .frame(maxWidth: .infinity, minHeight: 300)
-                    .accessibilityIdentifier("member.gone")
+                // Figma "Sudah tidak terhubung" (1681:6955).
+                StateMessage(
+                    systemImage: "person.2.fill",
+                    symbolSize: 27,
+                    tint: Color(hex: 0x6A717E),
+                    tileFill: .white,
+                    title: "No longer connected",
+                    message: "This person has disconnected. You no longer get warnings from them."
+                )
+                .padding(.horizontal, ProfileStyle.margin)
+                .padding(.top, 90)
+                .accessibilityIdentifier("member.gone")
             case .loaded:
                 if let member = model.member { loaded(member) }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if model.state == .failed || model.state == .gone {
+                Button("Back") { env.router.pop() }
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    // Figma: 306 wide (48 in from each side), its foot 84 above the frame's.
+                    .padding(.horizontal, 48)
+                    .padding(.bottom, 48)
+                    .transition(.opacity)
+                    .accessibilityIdentifier("member.back")
             }
         }
         .task { await model.load() }
@@ -75,7 +100,8 @@ struct MemberDetailView: View {
             badgeBottom: -1,
             name: member.name,
             handle: handle(member),
-            stats: stats(member)
+            stats: stats(member),
+            attachment: member.extensionActive ? nil : AnyView(offBanner(member))
         ) {
             InitialsAvatar(name: member.name, avatarId: member.avatarId, size: 86)
                 .frame(width: 88, height: 88)
@@ -112,22 +138,6 @@ struct MemberDetailView: View {
                     isOn: Binding(get: { notify }, set: { on in Task { await model.setNotify(on) } })
                 )
                 .accessibilityIdentifier("member.notify")
-            }
-            if !member.extensionActive {
-                ProfileDivider()
-                HStack {
-                    Text("Ask \(member.name) to turn Shoo on")
-                        .profileFont(15)
-                        .foregroundStyle(ProfileStyle.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    RemindButton(member: member, isWorking: model.isReminding) {
-                        if let message = await model.remind() {
-                            AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
-                        }
-                    }
-                }
-                .padding(.horizontal, 17)
-                .frame(minHeight: 58)
             }
         }
 
@@ -178,6 +188,66 @@ struct MemberDetailView: View {
         }
         .padding(.horizontal, ProfileStyle.margin)
         .padding(.top, 28)
+    }
+
+    /// Figma "Pesan ekstensi mati" (1681:6718) and "Pengingat terkirim" (1681:6837): orange with **Ingatkan** while
+    /// the extension is off, green once a reminder went out. The swap cross-fades; the check bounces in.
+    private func offBanner(_ member: FamilyMember) -> some View {
+        let sent = MemberText.recentlyReminded(member)
+        return HStack(spacing: 12) {
+            Image(systemName: sent ? "checkmark" : "exclamationmark.triangle.fill")
+                .font(.system(size: 21.67, weight: sent ? .semibold : .regular))
+                .foregroundStyle(sent ? Color(hex: 0x269E4A) : Color(hex: 0xEF871C))
+                .contentTransition(reduceMotion ? .opacity : .symbolEffect(.replace))
+                .frame(width: 40, height: 40)
+                .background(sent ? Color(hex: 0x34C759).opacity(0.14) : Color(hex: 0xEF871C).opacity(0.12),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(sent ? "Reminder sent" : "Safari extension off")
+                    .profileFont(16, .semibold, tracking: -0.31)
+                    .foregroundStyle(Color(hex: 0x151617))
+                Text(sent ? "\(member.name) will get a notification." : "\(member.name) isn't protected yet.")
+                    .profileFont(13, rounded: true)
+                    .foregroundStyle(Color(hex: 0x6A717E))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            if !sent {
+                Button {
+                    Task {
+                        if let message = await model.remind() {
+                            AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
+                        }
+                    }
+                } label: {
+                    ZStack {
+                        Text("Remind").opacity(model.isReminding ? 0 : 1)
+                        if model.isReminding { ProgressView().controlSize(.small).tint(ProfileStyle.link) }
+                    }
+                    .profileFont(15, .semibold, tracking: -0.23)
+                    .foregroundStyle(Color(hex: 0x136CB7))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressScaleButtonStyle())
+                .disabled(model.isReminding)
+                .accessibilityLabel(Text("Remind \(member.name)"))
+                .accessibilityHint(Text("Sends a notification to turn on Shoo in Safari"))
+                .accessibilityIdentifier("profile.remind.\(member.deviceId)")
+                .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(minHeight: 72)
+        .background(sent ? Color(hex: 0xEBF8ED).opacity(0.9) : Color(hex: 0xF8F2EB).opacity(0.9))
+        .overlay(alignment: .top) {
+            Rectangle().fill(sent ? Color(hex: 0x1CEF1C).opacity(0.35) : Color(hex: 0xEF871C).opacity(0.35)).frame(height: 1)
+        }
+        .animation(.easeInOut(duration: 0.25), value: sent)
+        .sensoryFeedback(.success, trigger: sent) { was, now in !was && now }
+        .accessibilityIdentifier(sent ? "member.reminded" : "member.off")
     }
 
     private func activityRow(_ scan: ScanResult) -> some View {

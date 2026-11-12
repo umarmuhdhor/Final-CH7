@@ -193,6 +193,11 @@ final class AppEnvironment {
             environment.router.openProfile()
             environment.router.show(.profilePage(page))
         }
+        // A family member's detail (PF-01): `-debug.member dev_dad`.
+        if let deviceId = Self.value(after: "-debug.member", in: arguments) {
+            environment.router.openProfile()
+            environment.router.show(.member(deviceId: deviceId))
+        }
         // ON-01: UI tests that don't test the launch splash start on their screen (`-UITestSkipSplash YES`);
         // the splash test holds it long enough to see (`-UITestSplashSeconds 5`).
         if Self.value(after: "-UITestSkipSplash", in: arguments) == "YES" { environment.launchSplash = .done }
