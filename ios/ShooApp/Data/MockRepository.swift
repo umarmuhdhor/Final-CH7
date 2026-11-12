@@ -104,6 +104,8 @@ actor MockRepository: ShooRepository {
     /// `-debug.replicaFixture YES`: Detail of a scan with a screenshot gets a page copy link (`FixtureReplicaLoader`).
     /// The contract fixtures have `pageReplicaUrl: null`, so previews and the UI gate need this to show a copy.
     nonisolated let pageCopies: Bool
+    /// See `failIfAsked`.
+    nonisolated let failures: [String: RepositoryError]
 
     /// Link the Detail screen gets for a fixture page copy; `example.invalid` never resolves.
     static func fixtureReplicaURL(scanId: String) -> URL {
@@ -117,8 +119,10 @@ actor MockRepository: ShooRepository {
         pageSize: Int = MockRepository.pageSize,
         bundle: Bundle = .main,
         pageCopies: Bool = false,
+        failures: [String: RepositoryError] = [:],
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
+        self.failures = failures
         let dataset = MockScenarios.dataset(for: scenario, now: now(), bundle: bundle)
         if let dataset {
             profile = mode == .guardian ? dataset.guardian : dataset.protected
@@ -156,6 +160,7 @@ actor MockRepository: ShooRepository {
 
     func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration {
         try await pause()
+        try failIfAsked("registerDevice")
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (1...20).contains(trimmed.count) else {
             throw RepositoryError.api(.invalidBody, message: "name must be 1–20 characters")
@@ -177,11 +182,13 @@ actor MockRepository: ShooRepository {
 
     func me() async throws -> DeviceProfile {
         try await pause()
+        try failIfAsked("me")
         return profile
     }
 
     func updateMe(_ update: DeviceUpdate) async throws {
         try await pause()
+        try failIfAsked("updateMe")
         // Validate everything first: a rejected update changes nothing.
         let trimmed = update.name?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmed, !(1...20).contains(trimmed.count) {
@@ -204,6 +211,7 @@ actor MockRepository: ShooRepository {
 
     func createFamilyCode(refresh: Bool) async throws -> FamilyCode {
         try await pause()
+        try failIfAsked("createFamilyCode")
         try require(.guardian)
         // Same code while more than 5 min is left, like the server (contracts/api.md).
         if !refresh, let familyCode, familyCode.expiresAt.timeIntervalSince(now()) > ApiRepository.codeReuseSeconds { return familyCode }
@@ -219,6 +227,7 @@ actor MockRepository: ShooRepository {
 
     func joinFamily(code: String) async throws -> GuardianInfo {
         try await pause()
+        try failIfAsked("joinFamily")
         try require(.protected)
         switch code {
         case "000000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
@@ -244,6 +253,7 @@ actor MockRepository: ShooRepository {
 
     func becomeProtected(code: String) async throws -> ProtectedSwitch {
         try await pause()
+        try failIfAsked("becomeProtected")
         try require(.guardian)
         guard members.isEmpty else {
             throw RepositoryError.api(.hasMembers, message: "Disconnect the people you protect first")
@@ -267,12 +277,14 @@ actor MockRepository: ShooRepository {
 
     func familyMembers() async throws -> [FamilyMember] {
         try await pause()
+        try failIfAsked("familyMembers")
         try require(.guardian)
         return members
     }
 
     func removeMember(deviceId: String) async throws {
         try await pause()
+        try failIfAsked("removeMember")
         try require(.guardian)
         guard members.contains(where: { $0.deviceId == deviceId }) else {
             throw RepositoryError.api(.notFound, message: "Not your member")
@@ -282,6 +294,7 @@ actor MockRepository: ShooRepository {
 
     func deleteMe() async throws {
         try await pause()
+        try failIfAsked("deleteMe")
         let me = profile.deviceId
         allScans.removeAll { $0.ownerDeviceId == me }
         members = []
@@ -290,6 +303,7 @@ actor MockRepository: ShooRepository {
 
     func setMemberNotify(deviceId: String, notify: Bool) async throws {
         try await pause()
+        try failIfAsked("setMemberNotify")
         try require(.guardian)
         guard let index = members.firstIndex(where: { $0.deviceId == deviceId }) else {
             throw RepositoryError.api(.notFound, message: "Not your member")
@@ -299,6 +313,7 @@ actor MockRepository: ShooRepository {
 
     func remindMember(deviceId: String) async throws {
         try await pause()
+        try failIfAsked("remindMember")
         try require(.guardian)
         guard let index = members.firstIndex(where: { $0.deviceId == deviceId }) else {
             throw RepositoryError.api(.notFound, message: "Not your member")
@@ -311,6 +326,7 @@ actor MockRepository: ShooRepository {
 
     func leaveGuardian() async throws {
         try await pause()
+        try failIfAsked("leaveGuardian")
         try require(.protected)
         guard profile.guardian != nil else {
             throw RepositoryError.api(.notFound, message: "No guardian")
@@ -322,6 +338,7 @@ actor MockRepository: ShooRepository {
 
     func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage {
         try await pause()
+        try failIfAsked("scans")
         let owners = try visibleOwners(for: owner)
         let matching = allScans
             .filter { owners.contains($0.ownerDeviceId) && (status == nil || $0.status == status) }
@@ -348,6 +365,7 @@ actor MockRepository: ShooRepository {
 
     func scan(id: String) async throws -> ScanResult {
         try await pause()
+        try failIfAsked("scan")
         guard let scan = allScans.first(where: { $0.id == id }),
               try visibleOwners(for: profile.mode == .guardian ? .family : .me).contains(scan.ownerDeviceId)
         else {
@@ -361,6 +379,7 @@ actor MockRepository: ShooRepository {
 
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
         try await pause()
+        try failIfAsked("setVerdict")
         guard profile.mode == .guardian else {
             throw RepositoryError.api(.verdictNotAllowed, message: "Only the guardian decides")
         }
@@ -416,6 +435,25 @@ actor MockRepository: ShooRepository {
         guard profile.mode == mode else {
             throw RepositoryError.api(.forbidden, message: "Wrong mode")
         }
+    }
+
+    /// Debug: `-mock.fail me,scans,setVerdict=verdict_not_allowed` makes those calls fail (no value = no
+    /// connection; `name=code` = that contract error), to stage the error states in the simulator.
+    private func failIfAsked(_ name: String) throws {
+        guard let failure = failures[name] else { return }
+        throw failure
+    }
+
+    /// Parses `-mock.fail`. Every entry is `name` or `name=api_error_code`.
+    static func failures(from argument: String?) -> [String: RepositoryError] {
+        guard let argument else { return [:] }
+        var result: [String: RepositoryError] = [:]
+        for entry in argument.split(separator: ",") {
+            let parts = entry.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+            guard let name = parts.first, !name.isEmpty else { continue }
+            result[name] = parts.count > 1 ? .api(APIErrorCode(rawValue: parts[1]), message: parts[1]) : .network
+        }
+        return result
     }
 
     private func pause() async throws {

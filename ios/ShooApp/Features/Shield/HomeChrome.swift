@@ -261,7 +261,7 @@ extension HomeHero where Accessory == EmptyView {
 
 /// Figma "Latar Shield": three dashed rings (236 / 300 / 368 pt, 2 on 6 off) over soft white discs that grow
 /// out of the shield and fade.
-private struct HeroPulse: View {
+struct HeroPulse: View {
     var body: some View {
         ZStack {
             // 9 s per disc, so a new one every 3 s: at the loader's 4 s the big Home hero felt hurried and overwhelming.
@@ -285,7 +285,7 @@ private struct HeroPulse: View {
 
 /// Figma "Gradient-classic-2 lighter" (y −7…443 of the frame) with its film grain, then the "box" fade
 /// (the last 120 pt) into the page. Above the frame the top colour carries on.
-private struct HeroBackground: View {
+struct HeroBackground: View {
     let style: HomeHeroStyle
 
     var body: some View {

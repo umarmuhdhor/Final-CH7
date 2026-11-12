@@ -191,9 +191,18 @@ final class GuardianHomeModel {
         scamCases = cases
     }
 
+    /// "Try again" on the error card: the card stays (its button spins) until the answer is in.
     func retry() async {
-        state = .loading
         await refresh()
+    }
+
+    /// The last Safe / Dangerous tapped on the card: "Try again" under "Couldn't save" sends it again.
+    private(set) var lastDecision: Verdict.Value?
+
+    /// "Try again" on "Couldn't save" (Figma 1665:3183).
+    func retryDecision() async {
+        guard let lastDecision else { return }
+        await decide(lastDecision)
     }
 
     /// X on the card: hidden on this iPhone, the next pending site (if any) takes its place.
@@ -208,6 +217,7 @@ final class GuardianHomeModel {
     func decide(_ value: Verdict.Value) async {
         guard canDecide, !isSubmittingVerdict, let scan = pendingScan else { return }
         isSubmittingVerdict = true
+        lastDecision = value
         verdictFailed = false
         verdictNotAllowed = false
         defer { isSubmittingVerdict = false }

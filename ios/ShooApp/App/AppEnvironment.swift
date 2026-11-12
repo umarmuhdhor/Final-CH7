@@ -111,9 +111,16 @@ final class AppEnvironment {
         if usesMock {
             let scenario = Self.value(after: "-mock.scenario", in: arguments)
                 .flatMap(MockRepository.Scenario.init(rawValue:)) ?? .standard
+            #if DEBUG
+            // Error states in the simulator: `-mock.fail me,setVerdict=verdict_not_allowed`.
+            let failures = MockRepository.failures(from: Self.value(after: "-mock.fail", in: arguments))
+            #else
+            let failures: [String: RepositoryError] = [:]
+            #endif
             repository = MockRepository(
                 mode: settings.mode ?? .guardian, scenario: scenario,
-                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES"
+                pageCopies: Self.value(after: "-debug.replicaFixture", in: arguments) == "YES",
+                failures: failures
             )
             session = nil
             // Fixtures only, nothing leaves the phone: UI tests don't answer the question unless they test it.
@@ -144,6 +151,14 @@ final class AppEnvironment {
         // Activity "Perlindungan mati" (PR-05): switched off, last heartbeat two days ago.
         case "offTwoDays": extensionStatus = { .off(lastSeen: Date().addingTimeInterval(-2 * 86_400), reason: .switchedOff) }
         default: break
+        }
+        // "Mengecek Shoo…" (1681:5275): Safari takes this many seconds to answer, `-UITestExtensionDelay 3`.
+        if let delay = Self.value(after: "-UITestExtensionDelay", in: arguments).flatMap(Double.init) {
+            let read = extensionStatus
+            extensionStatus = {
+                try? await Task.sleep(for: .seconds(delay))
+                return await read()
+            }
         }
         // Activity empty states (PR-05): the extension's counters as in Figma (#183, not written yet).
         if Self.value(after: "-UITestCheckStats", in: arguments) == "YES" {

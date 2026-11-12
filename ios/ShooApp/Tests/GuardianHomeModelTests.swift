@@ -146,6 +146,22 @@ struct GuardianHomeModelTests {
         #expect(told == 1)
     }
 
+    /// "Gagal menyimpan" → "Coba lagi" (Figma 1665:3183) sends the same answer again.
+    @Test func tryAgainResendsTheLastAnswer() async throws {
+        let model = GuardianHomeModel(
+            repository: StubRepository(verdictFailures: 1), settings: try settings(), scope: .family,
+            extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow }
+        )
+        await model.refresh()
+        let scan = try #require(model.pendingScan)
+        await model.decide(.safe)
+        #expect(model.verdictFailed)
+        #expect(model.lastDecision == .safe)
+        await model.retryDecision()
+        #expect(!model.verdictFailed)
+        #expect(model.scans.first { $0.id == scan.id }?.verdict?.value == .safe)
+    }
+
     /// BH-27: a verdict on a card whose scan was deleted (404) drops that card, as Detail shows "gone",
     /// instead of a connection error on a card that can never be saved.
     @Test func verdictOnADeletedScanDropsTheCard() async throws {

@@ -10,6 +10,8 @@ struct ProfileView: View {
     @State private var model: ProfileModel
     @State private var extensionStatus = ExtensionStatus.off(lastSeen: nil)
     @State private var isTurnOnPresented = false
+    /// Figma "Sheet · Matikan Shoo" (1681:5372): how to switch Shoo off, from the active extension row.
+    @State private var isTurnOffPresented = false
     @State private var isInvitePresented = false
     @State private var isDeleteConfirming = false
     @State private var remindingId: String?
@@ -56,6 +58,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
             TurnOnExtensionSheet()
+        }
+        .sheet(isPresented: $isTurnOffPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
+            TurnOffExtensionSheet()
         }
         .sheet(isPresented: $isInvitePresented, onDismiss: { Task { await model.load() } }) {
             InviteSheet(repository: env.repository) { isInvitePresented = false }
@@ -187,12 +192,12 @@ struct ProfileView: View {
     }
 
     private var extensionRow: some View {
-        Button { if !extensionStatus.isActive { isTurnOnPresented = true } } label: {
+        Button { if extensionStatus.isActive { isTurnOffPresented = true } else { isTurnOnPresented = true } } label: {
             ProfileRow(
                 symbol: ProfileStyle.extensionSymbol,
                 title: Text("Safari extension"),
                 // Pribadi (1115:14424): a green dot and "Terhubung" in green. Protected (455:10275): "Aktif" in grey.
-                // No chevron either way: the row does nothing while on.
+                // No chevron either way; while on, the row opens "Matikan Shoo".
                 accessory: extensionStatus.isActive
                     ? (model.variant == .protected
                         ? .value(L10n.string("Active", language: language), chevron: false)
@@ -201,7 +206,7 @@ struct ProfileView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityHint(extensionStatus.isActive ? Text(verbatim: "") : Text("Shows how to switch Shoo on in Safari"))
+        .accessibilityHint(extensionStatus.isActive ? Text("Shows how to switch Shoo off in Safari") : Text("Shows how to switch Shoo on in Safari"))
         .accessibilityIdentifier(extensionStatus.isActive ? "profile.extension.active" : "profile.extension.off")
     }
 
