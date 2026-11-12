@@ -130,6 +130,11 @@ final class LivePushUITests: XCTestCase {
         XCTAssertTrue(safe.waitForExistence(timeout: 10), app.debugDescription)
         for _ in 0..<4 where !safe.isHittable { app.swipeUp() }
         safe.tap()
+        // GD-07: "Aman" asks why first (SafeReasonSheet).
+        let reason = app.buttons["safeReason.chip.official_site"]
+        XCTAssertTrue(reason.waitForExistence(timeout: 10), app.debugDescription)
+        reason.tap()
+        app.buttons["safeReason.submit"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 10), app.debugDescription)
         try write("safe-\(name)", Self.millis())
         try shot("push-\(name)-3-safe")

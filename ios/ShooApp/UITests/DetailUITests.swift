@@ -82,6 +82,11 @@ final class DetailUITests: XCTestCase {
         XCTAssertTrue(safe.waitForExistence(timeout: 5), app.debugDescription)
         try shot(app, "detail-change-open")
         safe.tap()
+        // GD-07: "Aman" asks why first (SafeReasonSheet).
+        let reason = app.buttons["safeReason.chip.official_site"]
+        XCTAssertTrue(reason.waitForExistence(timeout: 5), app.debugDescription)
+        reason.tap()
+        app.buttons["safeReason.submit"].tap()
         let header = app.descendants(matching: .any)["detail.header"]
         let marked = expectation(for: NSPredicate(format: "value CONTAINS 'Marked safe by you'"), evaluatedWith: header)
         wait(for: [marked], timeout: 5)
