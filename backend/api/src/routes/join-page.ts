@@ -2,18 +2,21 @@ import { Hono, type Context } from "hono";
 import type { AppEnv } from "../env";
 import { base64url, randomBytes } from "../http/crypto";
 import { CODE_TTL_SECONDS, findCode } from "../db/repo/codes";
-import { clientIp, hit, limits } from "../http/rateLimit";
+import { clientIp, hitLight, limits } from "../http/rateLimit";
+import { keyHash } from "../http/keyHash";
+import { ipAttemptsExhausted, lockIpAttempts, recordAttempt } from "../db/repo/joinAttempts";
 import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
 import ogImage from "../assets/og-invite.jpg";
 import heroImage from "../assets/join-hero.png";
 
 // Invite page behind `inviteUrl` (R3 §4, SECURITY T13, PR-03 issue #128). No auth. Only a strict 6-digit
-// code is echoed. A 6-digit code is looked up read-only (no join attempt recorded): an unknown or expired
+// code is echoed. A 6-digit code is looked up read-only (the code is never consumed): an unknown or expired
 // code shows the same "invalid" page as a malformed one (Figma 1619:7334), so the page says valid or
-// invalid and nothing more. The lookup spends `limits.joinPage` per IP, the same budget as failed joins,
-// so the page is no cheaper oracle than POST /family/join; over it, or when the DB fails, the page skips
-// the lookup and shows the normal invite (the app still checks the code on join).
+// invalid and nothing more. Such a miss is a failed join attempt of the IP (no device), so page and
+// POST /family/join share one budget of 20 failures per IP per 10 min and the page is no extra oracle.
+// The page skips the lookup and shows the normal invite once that budget is used, past the global cap
+// `limits.joinPageAll`, or when the DB fails (the app still checks the code on join).
 // With the app installed the link is a Universal Link (issue #129) and this page never shows.
 // Layout: Figma "Undangan keluarga · Web · Redesign" (1326:12651). The design names the inviter;
 // this page never names anyone (T13), so the heading stays generic.
@@ -203,15 +206,23 @@ joinPage.get(HERO_IMAGE_PATH, (c) => {
 });
 
 /**
- * False only when the code is known to be unknown or expired. Over the IP budget, or when the DB fails,
- * the answer is true (not checked): the normal invite is harmless, the app validates on join.
+ * False only when the code is known to be unknown or expired; that miss is recorded as a failed join
+ * attempt of the IP, under the same IP lock as POST /family/join. Over the IP budget, past the global
+ * cap, or when the DB fails, the answer is true (not checked): the normal invite is harmless.
  */
 async function codeMayBeValid(c: Context<AppEnv>, code: string): Promise<boolean> {
   try {
     const sql = c.get("sql");
-    await hit(sql, limits.joinPage, clientIp((n) => c.req.header(n)));
-    const found = await findCode(sql, code);
-    return !!found && !found.expired;
+    await hitLight(sql, limits.joinPageAll, "all");
+    const ipHash = await keyHash(`join:${clientIp((n) => c.req.header(n))}`);
+    return await sql.begin(async (tx) => {
+      await lockIpAttempts(tx, ipHash);
+      if (await ipAttemptsExhausted(tx, ipHash)) return true;
+      const found = await findCode(tx, code);
+      if (found && !found.expired) return true;
+      await recordAttempt(tx, null, ipHash, false);
+      return false;
+    });
   } catch (err) {
     // The code is never logged (T13): route and error class only.
     if (!(err instanceof ApiError)) console.error(JSON.stringify({ event: "join_page_lookup_failed", requestId: c.get("requestId"), error: errorInfo(err) }));

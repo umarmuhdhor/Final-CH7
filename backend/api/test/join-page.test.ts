@@ -3,6 +3,8 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/app";
 import { limits } from "../src/http/rateLimit";
+import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+import { JOIN_MAX_FAILURES_IP } from "../src/db/repo/joinAttempts";
 import { storeUrl } from "../src/routes/join-page";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice } from "./helpers/seed";
@@ -146,23 +148,34 @@ describe("GET /j/:code", () => {
     expect(html).not.toMatch(/fetch\(|XMLHttpRequest|sendBeacon|document\.cookie|localStorage/);
   });
 
-  it("the lookup records no join attempt and never changes the code", async () => {
-    await page("/j/000000");
-    await page("/j/482193");
-    const [a] = await sql<{ n: number }[]>`select count(*)::int as n from join_attempts`;
-    expect(a!.n).toBe(0);
-    const rows = await sql`select code from family_codes where code = '482193'`;
-    expect(rows).toHaveLength(1);
+  it("a miss is a failed join attempt of the IP (no device); a hit records nothing and never changes the code", async () => {
+    await page("/j/000000", undefined, "203.0.113.7");
+    await page("/j/482193", undefined, "203.0.113.7");
+    const rows = await sql<{ device_id: string | null; success: boolean }[]>`select device_id, success from join_attempts`;
+    expect(rows).toEqual([{ device_id: null, success: false }]);
+    expect(await sql`select code from family_codes where code = '482193'`).toHaveLength(1);
   });
 
-  it("over the per-IP lookup budget the page skips the lookup and shows the normal invite (no oracle)", async () => {
+  it("page and POST /family/join share one per-IP budget: page misses block joins from that IP", async () => {
     const ip = "203.0.113.9";
-    for (let i = 0; i < limits.joinPage.max; i++) expect((await page("/j/000000", undefined, ip)).html).not.toContain("shoo://");
+    for (let i = 0; i < JOIN_MAX_FAILURES_IP; i++) expect((await page("/j/000000", undefined, ip)).html).not.toContain("shoo://");
+    // Budget used: the page no longer looks codes up (no oracle), it shows the normal invite.
     const { res, html } = await page("/j/000000", undefined, ip);
     expect(res.status).toBe(200);
     expect(html).toContain('href="shoo://join?code=000000"');
+    const p = await createDevice("Kid", "protected");
+    const join = await call("/family/join", { method: "POST", token: p.token, ip, json: { code: "482193" } });
+    expect(join.status).toBe(429);
     // Another IP still gets the real answer.
     expect((await page("/j/000000")).html).not.toContain("shoo://");
+  });
+
+  it("over the global cap the page skips the lookup for everyone", async () => {
+    useRateKeySecret(env.RATE_KEY_SECRET);
+    const key = await keyHash(`${limits.joinPageAll.bucket}:all`);
+    await sql`insert into rate_limit_hits (bucket, key_hash) select ${limits.joinPageAll.bucket}, ${key} from generate_series(1, ${limits.joinPageAll.max})`;
+    expect((await page("/j/000000")).html).toContain('href="shoo://join?code=000000"');
+    expect(await sql`select 1 from join_attempts`).toHaveLength(0);
   });
 
   it("motion: entrance, badge attention and press feedback, all off under prefers-reduced-motion", async () => {
