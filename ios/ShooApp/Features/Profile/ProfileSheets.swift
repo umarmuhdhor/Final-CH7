@@ -204,9 +204,9 @@ struct NameSheet: View {
                             .accessibilityIdentifier("profile.error")
                     }
                     Spacer(minLength: 0)
-                    Text(verbatim: "\(model.nameDraft.count)/\(NameRule.maxLength)")
+                    Text(verbatim: "\(NameRule.length(model.nameDraft))/\(NameRule.maxLength)")
                         .foregroundStyle(model.nameProblem == .tooLong ? Color.readableRed : ProfileStyle.secondary)
-                        .accessibilityLabel(Text("\(model.nameDraft.count) of \(NameRule.maxLength) characters"))
+                        .accessibilityLabel(Text("\(NameRule.length(model.nameDraft)) of \(NameRule.maxLength) characters"))
                 }
                 .profileCaption()
                 .padding(.trailing, 4)

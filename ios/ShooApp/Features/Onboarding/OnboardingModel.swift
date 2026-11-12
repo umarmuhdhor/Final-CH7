@@ -1,7 +1,9 @@
 import Foundation
 import Observation
 
-/// ON-02: a name is 1–20 characters after trimming spaces. Characters are graphemes, so "👨‍👩‍👧" is one.
+/// ON-02: a name is 1–20 characters after trimming spaces. Characters are counted as the server and the
+/// database count them (code points, `char_length`), so "👨‍👩‍👧" is 5 (BH-26): a name the app accepts must never
+/// come back as a 422 that no retry can fix.
 enum NameRule {
     enum Problem: Error, Equatable {
         case empty
@@ -10,16 +12,30 @@ enum NameRule {
 
     static let maxLength = 20
 
+    /// Characters as the server counts them (backend `codePoints`).
+    static func length(_ name: String) -> Int { name.unicodeScalars.count }
+
     /// The trimmed name, or why it is not allowed.
     static func validate(_ raw: String) -> Result<String, Problem> {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Zero-width and control characters would show as a blank name in "Hi, …" and the family list.
+        // Control and bidi characters: the server refuses them (backend `displayName`), and a bidi override
+        // could disguise a name in push text. Dropped here, so the name is sent without them.
+        let cleaned = String(String.UnicodeScalarView(raw.unicodeScalars.filter { !isUnsafe($0) }))
+        let trimmed = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Zero-width characters would show as a blank name in "Hi, …" and the family list.
         let invisible = trimmed.unicodeScalars.allSatisfy {
             $0.properties.isWhitespace || [.format, .control].contains($0.properties.generalCategory)
         }
         if invisible { return .failure(.empty) }
-        if trimmed.count > maxLength { return .failure(.tooLong) }
+        if length(trimmed) > maxLength { return .failure(.tooLong) }
         return .success(trimmed)
+    }
+
+    /// Backend `UNSAFE_TEXT`: `\p{Cc}`, U+200E, U+200F, U+202A–U+202E, U+2066–U+2069.
+    private static func isUnsafe(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x200E, 0x200F, 0x202A...0x202E, 0x2066...0x2069: true
+        default: scalar.properties.generalCategory == .control
+        }
     }
 }
 

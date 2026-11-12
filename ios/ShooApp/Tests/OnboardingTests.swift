@@ -47,10 +47,21 @@ struct NameRuleTests {
         #expect(NameRule.validate(name) == .failure(.empty))
     }
 
-    @Test func emojiCountsAsOneCharacter() {
+    /// BH-26: the server (and the database, `char_length`) counts code points, so the app does too: a name
+    /// the app accepts must never come back as a 422 that no retry can fix. "👨‍👩‍👧" is 5 code points.
+    @Test func charactersAreCountedAsTheServerCountsThem() {
         let family = "👨‍👩‍👧"
-        #expect(NameRule.validate(String(repeating: family, count: 20)) == .success(String(repeating: family, count: 20)))
-        #expect(NameRule.validate(String(repeating: family, count: 21)) == .failure(.tooLong))
+        #expect(NameRule.validate(String(repeating: family, count: 4)) == .success(String(repeating: family, count: 4)))
+        #expect(NameRule.validate(String(repeating: family, count: 3) + "abcdef") == .failure(.tooLong))
+        #expect(NameRule.length(family) == 5)
+    }
+
+    /// BH-26: control and bidi characters (the server refuses them) are dropped from the name before it is sent.
+    @Test func bidiAndControlCharactersAreDropped() {
+        #expect(NameRule.validate("Ri\u{202E}na") == .success("Rina"))
+        #expect(NameRule.validate("\u{2066}Bu Ani\u{2069}") == .success("Bu Ani"))
+        #expect(NameRule.validate("Rina\u{0007}") == .success("Rina"))
+        #expect(NameRule.validate("\u{200F}") == .failure(.empty))
     }
 }
 
