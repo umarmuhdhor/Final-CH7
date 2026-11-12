@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import type { Language } from "../../env";
 import type { LiveSender, SendResult } from "./sender";
 
 /** POST /live body (EX-03, #49). Registrable domain only, never the full URL. */
@@ -38,7 +39,18 @@ export const LIVE_EXPIRY_SECONDS = 60;
 interface Tokens {
   startToken: string | null;
   updateToken: string | null;
+  language: Language;
 }
+
+/**
+ * iOS drops a push-to-start without `aps.alert` ("Received start without an alert configuration",
+ * liveactivitiesd, device test 2026-11-12): no activity, no update token, every page left "waiting".
+ * No sound, so it only lights up the island. The domain stays out of the text (it is in content-state).
+ */
+export const LIVE_START_ALERT = {
+  en: { title: "Shoo", body: "Checking this page" },
+  id: { title: "Shoo", body: "Memeriksa halaman ini" },
+} as const;
 
 /**
  * ScoreActivityAttributes.ContentState (ios/ShooShared, contracts/api.md "Live score"). The island
@@ -65,7 +77,7 @@ export async function relayLive(
   nowMs = Date.now(),
 ): Promise<{ kind: LiveKind; result?: string; reason?: LiveNoneReason }> {
   const [d] = await sql<Tokens[]>`
-    select live_start_token as "startToken", live_update_token as "updateToken"
+    select live_start_token as "startToken", live_update_token as "updateToken", language
     from devices where id = ${deviceId}`;
   if (!d) return { kind: "none", reason: "no_device" };
   const timestamp = Math.floor(nowMs / 1000);
@@ -118,6 +130,7 @@ export async function relayLive(
       aps: {
         timestamp,
         event: "start",
+        alert: LIVE_START_ALERT[d.language],
         "content-state": contentState(u),
         "attributes-type": "ScoreActivityAttributes",
         attributes: {},
