@@ -446,6 +446,14 @@ struct ActivityRow: View {
         return path.isEmpty || path == "/" ? host : host + path
     }
 
+    /// The row title (BH-25): the registrable domain first, so it is the part that always shows, then the
+    /// path when it is not the root, so two pages of one site read apart. Percent-encoded (BH-36): bidi
+    /// or invisible characters in a path cannot reorder what is shown. No query or fragment (SECURITY §3 P9).
+    static func pageTitle(url: URL, domain: String) -> String {
+        let path = url.path(percentEncoded: true)
+        return path.isEmpty || path == "/" ? domain : domain + path
+    }
+
     var body: some View {
         // Figma 450:8443 / 450:8657: a one-line note sits 8 pt under the row and the card stays 118 high
         // (11 pt below the note); the two-line "safe" note is laid out 16 pt under the row, 17 pt above the edge.
@@ -475,7 +483,7 @@ struct ActivityRow: View {
         // One stop: site, status, (who), when.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            Text(verbatim: scan.domain + ", ") + statusTitle
+            Text(verbatim: Self.pageTitle(url: scan.url, domain: scan.domain) + ", ") + statusTitle
                 + Text(verbatim: ", " + ([owner?.name].compactMap { $0 } + [time]).joined(separator: ", "))
                 + (note.map { Text(verbatim: ". ") + $0.text(language: language) } ?? Text(verbatim: ""))
         )
@@ -504,8 +512,8 @@ struct ActivityRow: View {
     private var time: String { Formatters.time(scan.detectedAt, language: language) }
 
 
-    /// Icon + domain (host only, never the path) + subline. One line as in Figma: a long domain
-    /// ends in "…" to leave room for the badge; Detail shows the whole link. The badge shares its width
+    /// Icon + page title (domain, then path: `pageTitle`) + subline. One line as in Figma: a long title
+    /// ends in "…" at the tail, so the domain stays and the path is what is cut; Detail shows the whole link. The badge shares its width
     /// with the domain line only, so "name | time" runs on under it: next to a wide verdict badge
     /// ("Penipuan terverifikasi") the name was cut to "M …" (QA 2026-11-10 #14).
     private func site(badge: Bool) -> some View {
@@ -514,7 +522,7 @@ struct ActivityRow: View {
             // Figma "stack": 2 pt between domain and the "avatar name | time" line, none above a bare time.
             VStack(alignment: .leading, spacing: owner == nil ? 0 : 2) {
                 HStack(alignment: .top, spacing: 16) {
-                    Text(verbatim: scan.domain)
+                    Text(verbatim: Self.pageTitle(url: scan.url, domain: scan.domain))
                         .activityFont(17, tracking: -0.17)
                         .foregroundStyle(ActivityStyle.ink)
                         .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
