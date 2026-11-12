@@ -58,9 +58,9 @@ struct RootView: View {
         ))
         .onOpenURL { env.open($0) }
         .onChange(of: scenePhase, initial: true) { _, phase in
-            // An invite code waits only while the app is in use.
-            if phase == .background { env.router.pendingJoinCode = nil }
             guard phase == .active else { return }
+            // An invite code survives the trip to Settings (ON-04), but not past the life of a code (PR-03).
+            env.router.dropExpiredInvite()
             Task { await env.sceneBecameActive() }
         }
     }
