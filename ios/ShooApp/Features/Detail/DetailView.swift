@@ -156,7 +156,7 @@ struct DetailView: View {
                     verdict: scan.verdict,
                     viewerDeviceId: model.viewer?.deviceId,
                     canValidate: model.canValidate,
-                    failed: model.verdictFailed,
+                    failure: model.verdictError,
                     ownerName: ownerName(scan),
                     isBlocked: scan.status == .blocked,
                     onDecide: { value in

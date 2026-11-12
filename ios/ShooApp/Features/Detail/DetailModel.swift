@@ -33,7 +33,17 @@ final class DetailModel {
     private(set) var viewer: DeviceProfile?
     private(set) var isSubmittingVerdict = false
     /// The last verdict did not reach the server and was rolled back.
-    private(set) var verdictFailed = false
+    /// Why the last verdict was not saved (BH-27), so the footer says what happened.
+    enum VerdictError: Equatable, Sendable {
+        /// Offline, timeout, a server error: try again.
+        case connection
+        /// `verdict_not_allowed` (403): this viewer is no longer the owner's Guardian.
+        case notAllowed
+        /// `rate_limited` (429): more than 60 verdicts a minute.
+        case tooMany
+    }
+    private(set) var verdictError: VerdictError?
+    var verdictFailed: Bool { verdictError != nil }
     /// Counts verdicts the server confirmed (drives the success haptic).
     private(set) var verdictSaves = 0
 
@@ -237,7 +247,7 @@ final class DetailModel {
         guard canValidate, !isSubmittingVerdict, let viewer, let previous = scan else { return .ignored }
         isSubmittingVerdict = true
         verdictEpoch += 1
-        verdictFailed = false
+        verdictError = nil
         scan?.verdict = Verdict(value: value, byDeviceId: viewer.deviceId, byName: viewer.name, decidedAt: now())
         defer { isSubmittingVerdict = false }
         do {
@@ -253,7 +263,11 @@ final class DetailModel {
         } catch {
             Log.ui.error("Verdict failed", error)
             scan?.verdict = previous.verdict
-            verdictFailed = true
+            verdictError = switch (error as? RepositoryError)?.apiCode {
+            case .verdictNotAllowed?: .notAllowed
+            case .rateLimited?: .tooMany
+            default: .connection
+            }
             return .rolledBack
         }
     }

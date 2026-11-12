@@ -512,7 +512,7 @@ function selectScans(sql: Sql) {
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
            case when v.owner_id is not null then json_build_object(
              'value', v.value, 'byDeviceId', v.by_device_id, 'byName', v.by_name,
-             'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)})
+             'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}), 'url', v.url
            ) end as verdict
     from scans s
     join devices d on d.id = s.owner_id

@@ -664,7 +664,7 @@ GET /scans?owner=family&status=blocked&limit=20
   "ownerDeviceId": "0b6e0c1e-…",
   "ownerName": "Mom",
   "detectedAt": "2026-10-21T04:05:00.000Z",
-  "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" }
+  "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z", "url": "https://bca-verifikasi.site/login" }
 }
 ```
 
@@ -771,7 +771,7 @@ confirmation step.
 **Response 200**
 
 ```json
-{ "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
+{ "verdict": { "value": "not_safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z", "url": "https://bca-verifikasi.site/login" } }
 ```
 
 - The verdict is stored for the scan's link (its `url` as origin + path). A new verdict on that link
@@ -808,7 +808,7 @@ confirmation step.
 **Response 200**
 
 ```json
-{ "verdict": { "value": "safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z" } }
+{ "verdict": { "value": "safe", "byDeviceId": "7d1f…", "byName": "Adhella", "decidedAt": "2026-10-21T04:07:12.000Z", "url": "https://bca-verifikasi.site/login" } }
 ```
 
 Lookup, first match wins:
@@ -818,6 +818,9 @@ Lookup, first match wins:
    `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). A
    tenant domain such as `evil.github.io` is one owner, so its pages share step 2.
 3. Otherwise `null`. A `safe` never reaches past its own link.
+
+Every `Verdict` (here, in `POST /verdicts` and on a scan) carries `url`: the link it was made on. A
+`url` that differs from the asked link means step 2 matched (another page of the site).
 
 When a member disconnects or is removed, the old Guardian's verdicts for that member are deleted.
 

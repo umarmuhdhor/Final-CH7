@@ -224,6 +224,10 @@ final class GuardianHomeModel {
             onVerdictSaved()
         } catch RepositoryError.api(.verdictNotAllowed, _) {
             verdictNotAllowed = true
+        } catch RepositoryError.api(.notFound, _) {
+            // BH-27: the scan was deleted (14 days, a disconnect): no verdict can ever be saved on it, so the
+            // card moves on to the next site, as Detail shows "This item is gone".
+            scans.removeAll { $0.id == scan.id }
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Home verdict failed", error)
