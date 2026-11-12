@@ -286,7 +286,7 @@ struct ProfileView: View {
                 // Figma: Kelola profil first, then Terhubung.
                 navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
                 ProfileDivider()
-                navRow(symbol: ProfileStyle.switchSymbol, title: Text("Connected"), page: .connection, id: "profile.connection")
+                navRow(symbol: ProfileStyle.switchSymbol, title: Text(L10n.string(model.connectionRowTitle, language: language)), page: .connection, id: "profile.connection")
             } else {
                 navRow(
                     symbol: ProfileStyle.switchSymbol, title: Text("Account mode"),

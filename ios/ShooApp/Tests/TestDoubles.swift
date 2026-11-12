@@ -37,6 +37,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     var remindFailure: (any Error)?
     /// `setMemberNotify` throws this.
     var notifyFailure: (any Error)?
+    /// `setMemberNotify` runs this first: a test can hold one change while another is sent (BH-30).
+    var beforeNotify: (@Sendable (Bool) async -> Void)?
     /// Only `scans` for this owner throw `RepositoryError.network`.
     var failingOwner: ScanOwnerFilter?
 
@@ -74,6 +76,7 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     func removeMember(deviceId: String) async throws { try await base.removeMember(deviceId: deviceId) }
     func leaveGuardian() async throws { try await base.leaveGuardian() }
     func setMemberNotify(deviceId: String, notify: Bool) async throws {
+        await beforeNotify?(notify)
         if let notifyFailure { throw notifyFailure }
         try await base.setMemberNotify(deviceId: deviceId, notify: notify)
     }

@@ -340,6 +340,10 @@ final class ProfileModel {
     /// "Punya kode undangan?": a guardian who protects nobody (the server turns this iPhone into a protected one),
     /// or a protected person whose guardian is gone (disconnected them or deleted their account), who joins with
     /// the code as they are (QA 2026-11-10 #4).
+    /// Protected's Account row (BH-29): it opens a page that says "Not connected to a guardian yet" when no
+    /// Guardian is linked, so the row must not read "Connected" then.
+    var connectionRowTitle: String.LocalizationValue { hasNoGuardian ? "Not connected" : "Connected" }
+
     var canJoinAnotherFamily: Bool {
         switch settings.mode {
         case .guardian: members.isEmpty && !membersFailed

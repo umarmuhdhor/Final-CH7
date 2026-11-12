@@ -27,6 +27,8 @@ struct ProfilePageView: View {
         }
         // A new name or avatar saved (the Kelola profil sheets close on success).
         .sensoryFeedback(.success, trigger: model?.profileSaves ?? 0)
+        // Member and Guardian names: covered in the app-switcher snapshot, as on Profile (BH-33, SECURITY §3 P13).
+        .privacyCover()
         .task {
             if model == nil {
                 let model = ProfileModel(repository: env.repository, settings: env.settings, notifications: env.notifications)
