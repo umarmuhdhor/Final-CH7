@@ -8,7 +8,8 @@ struct DetailFooter: View {
     let verdict: Verdict?
     let viewerDeviceId: String?
     let canValidate: Bool
-    let failed: Bool
+    /// Why the last verdict was not saved (BH-27); nil when it was, or none was sent.
+    let failure: DetailModel.VerdictError?
     /// The person who opened the site, when it isn't the viewer (the note under a safe verdict).
     let ownerName: String?
     /// Blocked sites ask "Apakah situs ini berbahaya?", warnings "Apakah situs ini benar penipuan?".
@@ -20,6 +21,14 @@ struct DetailFooter: View {
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var isChanging = false
     private var language: AppLanguage { AppLanguage(locale: locale) }
+
+    static func message(_ failure: DetailModel.VerdictError) -> LocalizedStringKey {
+        switch failure {
+        case .connection: "Couldn't save. Check your connection and try again."
+        case .notAllowed: "You're no longer this person's guardian, so you can't mark this site."
+        case .tooMany: "Too many changes in a minute. Wait a moment, then try again."
+        }
+    }
 
     private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
 
@@ -65,8 +74,8 @@ struct DetailFooter: View {
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 4)))
                 }
             }
-            if failed {
-                Label("Couldn't save. Check your connection and try again.", systemImage: "exclamationmark.triangle.fill")
+            if let failure {
+                Label(Self.message(failure), systemImage: "exclamationmark.triangle.fill")
                     .activityFont(13)
                     .foregroundStyle(DetailStyle.title)
                     .frame(maxWidth: .infinity)
@@ -96,7 +105,7 @@ struct DetailFooter: View {
         // on the verdict only, never on this footer's geometry (GD-06).
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25), value: verdict?.value)
         // "Couldn't save" is felt too, not only read. Haptic only: the animation above stays keyed on the verdict.
-        .sensoryFeedback(.error, trigger: failed) { _, now in now }
+        .sensoryFeedback(.error, trigger: failure != nil) { _, now in now }
     }
 
     /// Side by side; stacked at accessibility sizes so the words never wrap per letter.

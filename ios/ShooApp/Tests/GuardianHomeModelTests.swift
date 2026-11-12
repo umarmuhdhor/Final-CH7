@@ -146,6 +146,21 @@ struct GuardianHomeModelTests {
         #expect(told == 1)
     }
 
+    /// BH-27: a verdict on a card whose scan was deleted (404) drops that card, as Detail shows "gone",
+    /// instead of a connection error on a card that can never be saved.
+    @Test func verdictOnADeletedScanDropsTheCard() async throws {
+        let model = GuardianHomeModel(
+            repository: StubRepository(verdictFailures: 1, verdictError: .api(.notFound, message: "gone")), settings: try settings(),
+            scope: .family, extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow }
+        )
+        await model.refresh()
+        let gone = try #require(model.pendingScan)
+        await model.decide(.notSafe)
+        #expect(!model.verdictFailed)
+        #expect(model.pendingScan?.id != gone.id)
+        #expect(!model.scans.contains { $0.id == gone.id })
+    }
+
     /// GD-07 (#190, #191): a warning site takes a verdict too.
     @Test func verdictOnAWarningSiteIsSaved() async throws {
         let model = model(settings: try settings())

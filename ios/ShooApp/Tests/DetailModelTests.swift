@@ -392,6 +392,20 @@ struct DetailModelTests {
         #expect(model.verdictFailed)
     }
 
+    /// BH-27: each failure says what happened, not always "check your connection".
+    @Test(arguments: [
+        (RepositoryError.api(.verdictNotAllowed, message: "no"), DetailModel.VerdictError.notAllowed),
+        (RepositoryError.api(.rateLimited, message: "slow"), DetailModel.VerdictError.tooMany),
+        (RepositoryError.network, DetailModel.VerdictError.connection),
+    ])
+    func verdictFailureSaysWhy(error: RepositoryError, expected: DetailModel.VerdictError) async {
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1, verdictError: error))
+        await model.load()
+        await model.setVerdict(.notSafe)
+        #expect(model.verdictError == expected)
+        #expect(model.verdictFailed)
+    }
+
     @Test func nextVerdictClearsTheError() async {
         let model = DetailModel(scanId: FixtureScan.blocked92, repository: StubRepository(verdictFailures: 1))
         await model.load()

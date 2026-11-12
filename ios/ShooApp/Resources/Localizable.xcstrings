@@ -21,6 +21,16 @@
         }
       }
     },
+    "Too many changes in a minute. Wait a moment, then try again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Terlalu banyak perubahan dalam semenit. Tunggu sebentar, lalu coba lagi."
+          }
+        }
+      }
+    },
     "What is sent" : {
       "localizations" : {
         "id" : {
@@ -665,6 +675,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tanpa ini, Shoo hanya memeriksa halaman di iPhone-mu dan perlindunganmu berkurang. Halaman berisiko tetap dilaporkan. Kamu bisa mengubahnya di Profil."
+          }
+        }
+      }
+    },
+    "You're no longer this person's guardian, so you can't mark this site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu bukan lagi Guardian orang ini, jadi tidak bisa menandai situs ini."
           }
         }
       }
