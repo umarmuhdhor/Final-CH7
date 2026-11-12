@@ -88,27 +88,52 @@ struct DetailView: View {
             }
             .transition(.opacity)
         case .notFound:
-            VStack(spacing: 0) {
-                topBar(owner: nil)
-                EmptyStateView(
-                    systemImage: "clock.arrow.circlepath",
-                    title: "This item is gone",
-                    message: "Items are deleted after 14 days, or when the family is disconnected."
-                )
+            // Figma "Detail Aktivitas · Sudah tidak ada" (1665:3006): the clock shield on slate, "Kedaluwarsa",
+            // the two reasons an item goes, and the way back.
+            StateHeroPage(
+                chip: "Expired",
+                chipTone: .slate,
+                background: .image("HeroGradientSlate"),
+                title: "This item is gone",
+                message: "An item can disappear for one of these reasons:",
+                titleIdentifier: "detail.notFound",
+                onBack: { env.router.pop() },
+                backIdentifier: "detail.back"
+            ) {
+                Image("StateShieldClock").resizable().frame(width: 215, height: 230)
+            } content: {
+                StateInfoList(rows: [
+                    .init(systemImage: "clock.fill", text: "14 days have passed"),
+                    .init(systemImage: "person.2.fill", text: "The family link was removed"),
+                ], tint: Color(hex: 0x4F6074), boxed: false)
+                .padding(.horizontal, 14)
+            } footer: {
+                Button("Back to Activity") { env.router.pop() }
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .accessibilityIdentifier("detail.backToActivity")
             }
             .transition(.opacity)
         case .failed:
-            VStack(spacing: 0) {
-                topBar(owner: nil)
-                EmptyStateView(
-                    systemImage: "wifi.exclamationmark",
-                    title: "Couldn't load this item",
-                    message: "Check your connection and try again."
-                )
+            // Figma "Detail Aktivitas · Gagal memuat" (1665:3023): the "!" shield on orange, "Gangguan koneksi".
+            StateHeroPage(
+                chip: "Connection problem",
+                chipTone: .orange,
+                background: .image("HeroGradientOrange"),
+                title: "Couldn't load this item",
+                message: "This item can't be shown right now. Check your connection, then try again!",
+                titleIdentifier: "detail.failed",
+                onBack: { env.router.pop() },
+                backIdentifier: "detail.back"
+            ) {
+                Image("StateShieldAlert").resizable().frame(width: 215, height: 230)
+            } content: {
+                EmptyView()
+            } footer: {
                 Button("Try again") { loadAttempt += 1 }
-                .buttonStyle(.borderedProminent)
-                .padding(.bottom, 32)
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .accessibilityIdentifier("detail.retry")
             }
+            .sensoryFeedback(.error, trigger: model.state == .failed)
             .transition(.opacity)
         case .loaded:
             if let scan = model.scan {

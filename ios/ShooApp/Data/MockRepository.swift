@@ -452,10 +452,16 @@ actor MockRepository: ShooRepository {
 
     /// Debug: `-mock.fail me,scans,setVerdict=verdict_not_allowed` makes those calls fail (no value = no
     /// connection; `name=code` = that contract error), to stage the error states in the simulator.
+    /// `name~N` lets the first N calls through (`scans~1`: Activity loads, then its refresh fails).
     private func failIfAsked(_ name: String) throws {
-        guard let failure = failures[name] else { return }
-        throw failure
+        let call = (callCounts[name] ?? 0) + 1
+        callCounts[name] = call
+        if let failure = failures[name] { throw failure }
+        for (key, failure) in failures where key.hasPrefix(name + "~") {
+            if let skip = Int(key.dropFirst(name.count + 1)), call > skip { throw failure }
+        }
     }
+    private var callCounts: [String: Int] = [:]
 
     /// Parses `-mock.fail`. Every entry is `name` or `name=api_error_code`.
     static func failures(from argument: String?) -> [String: RepositoryError] {
