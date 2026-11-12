@@ -73,9 +73,13 @@ final class Router {
         selectedTab = .activity
     }
 
+    /// Every sheet and cover the tabs can show (BH-28: a push used to push Detail underneath the
+    /// "Become supervised" sheet or the Guardian intro cover).
     private func closeSheets() {
         isTurnOnPresented = false
         isConnectPresented = false
+        isJoinFamilyPresented = false
+        isGuardianIntroPresented = false
         wantsConnect = false
     }
 

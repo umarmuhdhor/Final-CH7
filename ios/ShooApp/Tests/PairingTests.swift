@@ -612,6 +612,23 @@ struct DeepLinkRoutingTests {
         #expect(env.router.pendingJoinCode == nil)
     }
 
+    /// BH-28: a scan push or `shoo://scan/{id}` closes the "Become supervised" sheet and the Guardian intro
+    /// cover too, so Detail is not pushed underneath them.
+    @Test func scanLinkClosesEverySheetAndCover() {
+        let env = environment(mode: .guardian, onboarded: true)
+        env.router.isJoinFamilyPresented = true
+        env.router.isGuardianIntroPresented = true
+        env.router.isTurnOnPresented = true
+        env.open(URL(string: "shoo://scan/6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")!)
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(!env.router.isGuardianIntroPresented)
+        #expect(!env.router.isTurnOnPresented)
+        #expect(env.router.activityPath == [.detail(scanId: "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")])
+        env.router.isJoinFamilyPresented = true
+        env.open(URL(string: "shoo://activity")!)
+        #expect(!env.router.isJoinFamilyPresented)
+    }
+
     @Test func brokenLinkLandsOnShield() {
         let env = environment(mode: .protected, onboarded: true)
         env.router.selectedTab = .activity
