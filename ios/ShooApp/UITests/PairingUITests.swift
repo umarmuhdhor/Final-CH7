@@ -273,8 +273,13 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(invite.waitForExistence(timeout: 10), app.debugDescription)
         invite.tap()
         // Family full: the invite sheet hands out no code.
-        let full = app.staticTexts["Your family is full (3 people). Remove someone to invite another person."]
+        let full = app.descendants(matching: .any)["invite.full"].firstMatch
         XCTAssertTrue(full.waitForExistence(timeout: 10), app.debugDescription)
+        // Figma "Keluarga penuh": "Kelola Keluarga" closes the sheet onto Profile's family list.
+        let manage = app.buttons["invite.manageFamily"]
+        XCTAssertTrue(manage.exists, app.debugDescription)
+        manage.tap()
+        XCTAssertTrue(full.waitForNonExistence(timeout: 5), app.debugDescription)
         XCTAssertFalse(app.descendants(matching: .any)["invite.code"].exists)
     }
 
