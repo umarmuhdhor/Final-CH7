@@ -89,7 +89,7 @@ describe("relayLive: start / update / end (#49)", () => {
       token: START, priority: 10, expiresInSeconds: LIVE_EXPIRY_SECONDS,
       payload: { aps: {
         timestamp: T, event: "start",
-        "content-state": { domain: "very-private-domain.example", score: 64, isAnalyzing: true, isBlocked: false },
+        "content-state": { domain: "very-private-domain.example", score: 64, isAnalyzing: true, isBlocked: false, status: "warning" },
         "attributes-type": "ScoreActivityAttributes", attributes: {},
         "stale-date": T + LIVE_STALE_SECONDS,
       } },
@@ -144,9 +144,13 @@ describe("relayLive: start / update / end (#49)", () => {
     ]);
     expect(s.sent[2]!.payload).toEqual({ aps: {
       timestamp: T, event: "update",
-      "content-state": { domain: "very-private-domain.example", score: 95, isAnalyzing: false, isBlocked: true },
+      "content-state": { domain: "very-private-domain.example", score: 95, isAnalyzing: false, isBlocked: true, status: "blocked" },
       "stale-date": T + LIVE_STALE_SECONDS,
     } });
+    // #383: a score above the built-in block band that the phone still warned on keeps status warning.
+    expect((s.sent[1]!.payload as { aps: { "content-state": unknown } }).aps["content-state"]).toEqual({
+      domain: "very-private-domain.example", score: 81, isAnalyzing: false, isBlocked: false, status: "warning",
+    });
   });
 
   it("410 on an update clears the update token, so the next page starts again", async () => {
