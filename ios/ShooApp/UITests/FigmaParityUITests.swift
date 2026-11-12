@@ -25,7 +25,7 @@ final class FigmaParityUITests: XCTestCase {
         settle()
         shot("on-splash-2")
 
-        for step in ["name", "connect", "turnOnExtension", "safariDefault", "extensionOn"] {
+        for step in ["name", "turnOnExtension", "safariDefault", "extensionOn"] {
             // "Aktifkan Ekstensi" only shows while the extension is still off.
             app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step], onboarded: false, extensionActive: step != "turnOnExtension")
             shot("on-\(step)")
@@ -43,47 +43,6 @@ final class FigmaParityUITests: XCTestCase {
                     dismissKeyboard(app)
                     settle()
                     shot("on-name-tooLong")
-                }
-            case "connect":
-                // Figma 141:5887 "Connect with Guardian · Kode" (keyboard down) and 140:5762 "· Pindai QR".
-                let typed = app.textFields["connect.code"]
-                if typed.waitForExistence(timeout: 5) {
-                    typed.tap()
-                    typed.typeText("4821")
-                    dismissKeyboard(app)
-                    settle()
-                    shot("on-connect-typed")
-                    if tapIfExists(app.buttons["connect.tab.scan"]) { shot("on-connect-qr") }
-                }
-                app = launch(["-UITestReset", "YES", "-debug.onboardingStep", step, "-settings.mode", "protected"], onboarded: false)
-                let code = app.textFields["connect.code"]
-                if code.waitForExistence(timeout: 5) {
-                    code.tap()
-                    code.typeText("999999")
-                    if app.buttons["connect.join"].exists { app.buttons["connect.join"].tap() }
-                    _ = app.descendants(matching: .any)["connect.error"].waitForExistence(timeout: 5)
-                    dismissKeyboard(app)
-                    settle()
-                    shot("on-connect-expired")
-                    // Figma 205:1081 "Kode Kadaluarsa · QR": the same error under the scanner.
-                    if tapIfExists(app.buttons["connect.tab.scan"]) {
-                        settle()
-                        shot("on-connect-expired-qr")
-                    }
-                }
-                // Figma 141:5945 "Berhasil Terhubung" (PR-02).
-                // "unpaired": no guardian yet, so the join goes through.
-                app = launch(
-                    ["-UITestReset", "YES", "-debug.onboardingStep", step, "-settings.mode", "protected", "-mock.scenario", "unpaired"],
-                    onboarded: false
-                )
-                let fresh = app.textFields["connect.code"]
-                if fresh.waitForExistence(timeout: 5) {
-                    fresh.tap()
-                    fresh.typeText("123456")
-                    if app.buttons["connect.join"].exists { app.buttons["connect.join"].tap() }
-                    settle()
-                    shot("on-connected")
                 }
             case "turnOnExtension":
                 // Figma 1328:13415 (box ticked) and 1328:13313 "Data yang dikirim".
