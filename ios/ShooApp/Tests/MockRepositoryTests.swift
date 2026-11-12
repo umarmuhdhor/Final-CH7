@@ -294,6 +294,12 @@ struct MockFailureArgumentTests {
         #expect(MockRepository.failures(from: nil).isEmpty)
     }
 
+    @Test func aSkipCountLetsTheFirstCallsThrough() async throws {
+        let repository = MockRepository(mode: .protected, latency: .zero, failures: MockRepository.failures(from: "me~1"))
+        _ = try await repository.me()
+        await #expect(throws: RepositoryError.network) { try await repository.me() }
+    }
+
     @Test func aListedCallFails() async {
         let repository = MockRepository(mode: .protected, latency: .zero, failures: ["me": .network])
         await #expect(throws: RepositoryError.network) { try await repository.me() }

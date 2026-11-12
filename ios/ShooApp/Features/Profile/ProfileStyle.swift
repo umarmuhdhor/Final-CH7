@@ -471,6 +471,8 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
     let name: String
     let handle: String
     let stats: [ProfileStat]
+    /// Figma "Pesan ekstensi mati" (1681:6718): a strip across the card's foot.
+    var attachment: AnyView?
     @ViewBuilder var avatar: Avatar
     @ViewBuilder var badge: Badge
 
@@ -516,11 +518,19 @@ struct ProfileHeaderCard<Avatar: View, Badge: View>: View {
                 ProfileStatsStrip(stats: stats)
                     .padding(.top, handle.isEmpty ? 12 : 10)
             }
+            if let attachment {
+                // Edge to edge at the card's foot, under the stats (Figma: 12 under them).
+                attachment
+                    .padding(.horizontal, -12)
+                    .padding(.top, 12)
+                    .padding(.bottom, -(stats.isEmpty ? 10 : 9))
+            }
         }
         .padding(.horizontal, 12)
         .padding(.top, 12)
         // Figma: 9 under the stats, 10 under the handle when the stats are hidden.
         .padding(.bottom, stats.isEmpty ? 10 : 9)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: 32, style: .continuous)
                 .fill(ProfileStyle.card)

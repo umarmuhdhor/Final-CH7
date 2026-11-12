@@ -162,6 +162,57 @@ struct PressScaleButtonStyle: ButtonStyle {
     }
 }
 
+// MARK: - Centred message
+
+/// A centred state: an 80 pt tile with the symbol, the title (SF Pro Semibold 20) and the line (SF Pro Rounded 17,
+/// #6A717E). Figma "Kirim Undangan · Gagal mengambil kode / Keluarga penuh" (tile = the tint at 12 %) and
+/// "Detail Orang Dilindungi · Sudah tidak terhubung / Gagal memuat" (white tile). Settles in with a spring; the
+/// symbol bounces once.
+struct StateMessage: View {
+    let systemImage: String
+    /// Figma: 34 for the error symbol, 27 for the people.
+    var symbolSize: CGFloat = 34
+    let tint: Color
+    /// nil: the tint at 12 %.
+    var tileFill: Color?
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Image(systemName: systemImage)
+                .font(.system(size: symbolSize, weight: .semibold))
+                .foregroundStyle(tint)
+                .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? false : shown)
+                .frame(width: 80, height: 80)
+                .background(tileFill ?? tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .scaleEffect(shown || reduceMotion ? 1 : 0.85)
+                .accessibilityHidden(true)
+            Text(title)
+                .onboardingFont(20, weight: .semibold, relativeTo: .title3)
+                .foregroundStyle(Color(hex: 0x151617))
+                .padding(.top, 24)
+                .accessibilityAddTraits(.isHeader)
+            Text(message)
+                .onboardingFont(17, design: .rounded, relativeTo: .body)
+                .figmaLineHeight(22, relativeTo: .body)
+                .foregroundStyle(Color(hex: 0x6A717E))
+                .padding(.top, 8)
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 52)
+        .opacity(shown ? 1 : 0)
+        .accessibilityElement(children: .combine)
+        .onAppear {
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35, bounce: 0.3)) { shown = true }
+        }
+    }
+}
+
 // MARK: - Skeleton
 
 /// A soft highlight that sweeps across while something loads; still with Reduce Motion.
