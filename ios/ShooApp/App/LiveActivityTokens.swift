@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import UIKit
 
 /// EX-03 (#49): hands the backend the Dynamic Island's two APNs tokens, so `POST /live` from the extension can
 /// start, update and end the island by push (contracts/api.md "Live score (Dynamic Island)", app side).
@@ -65,6 +66,9 @@ final class LiveActivityTokens {
     private func sendStartTokenIfNeeded() async {
         guard let token = startToken, !startTokenSent, canSend() else { return }
         startTokenSent = true
+        // iOS hands out a new start token after each start push, often while Shoo is in the background.
+        let background = UIApplication.shared.beginBackgroundTask(withName: "LiveActivityStartToken")
+        defer { UIApplication.shared.endBackgroundTask(background) }
         do {
             try await send(DeviceUpdate(liveActivityStartToken: .set(token)))
         } catch {
@@ -75,12 +79,18 @@ final class LiveActivityTokens {
     }
 
     private func adopt(_ activity: Activity<ScoreActivityAttributes>) {
-        guard !watched.contains(activity.id) else { return }
-        watched.insert(activity.id)
-        // One island follows the page: the newest wins, the others go at once.
-        for other in Activity<ScoreActivityAttributes>.activities where other.id != activity.id {
+        // One island follows the page: the newest wins, the others go at once. "Newest" is the latest
+        // stale date (every start/update push sets one), never the arrival order: a background launch by a
+        // start push lists the old island and the new one together, in no fixed order, and ending "every
+        // other one" for each of them ended the new island too (device test 2026-11-12).
+        var all = Activity<ScoreActivityAttributes>.activities
+        if !all.contains(where: { $0.id == activity.id }) { all.append(activity) }
+        guard let newest = all.max(by: { Self.staleDate($0) < Self.staleDate($1) }) else { return }
+        for other in all where other.id != newest.id {
             Task { await other.end(nil, dismissalPolicy: .immediate) }
         }
+        guard activity.id == newest.id, !watched.contains(activity.id) else { return }
+        watched.insert(activity.id)
         let id = activity.id
         tasks.append(Task { [weak self] in
             for await data in activity.pushTokenUpdates {
@@ -95,6 +105,10 @@ final class LiveActivityTokens {
         })
     }
 
+    private static func staleDate(_ activity: Activity<ScoreActivityAttributes>) -> Date {
+        activity.content.staleDate ?? .distantPast
+    }
+
     private func ended(_ id: String) async {
         watched.remove(id)
         // Another island already took over: its token is the one the backend should keep.
@@ -104,6 +118,10 @@ final class LiveActivityTokens {
 
     private func sendUpdate(_ token: Clearable<LiveActivityUpdateToken>) async {
         guard canSend() else { return }
+        // Shoo is often woken in the background only to hand over this token (a start push while Safari is
+        // on screen) and suspended right after: without the extra time the PATCH never left the phone.
+        let background = UIApplication.shared.beginBackgroundTask(withName: "LiveActivityToken")
+        defer { UIApplication.shared.endBackgroundTask(background) }
         do {
             try await send(DeviceUpdate(liveActivityUpdateToken: token))
         } catch {
