@@ -43,6 +43,10 @@ struct DetailView: View {
                 .ignoresSafeArea()
             }
             .toolbar(.hidden, for: .navigationBar)
+            // Detail is drawn on fixed light colours (DetailStyle.background, the hero); in dark mode the
+            // "gone" and "couldn't load" text turned white on that light background (BH-12). Pinned light,
+            // as Home, Invite and Onboarding.
+            .environment(\.colorScheme, .light)
             .toolbar(.hidden, for: .tabBar)
             .background(SwipeBackEnabler())
             .accessibilityAction(.escape) { env.router.pop() }
@@ -211,7 +215,7 @@ struct DetailView: View {
         )
         .overlay(alignment: .top) {
             // Verbatim: never turned into a tappable link (D-alief-A31). Copy from the menu.
-            DetailLinkPill(look: look, text: Self.shownLink(scan.url))
+            DetailLinkPill(look: look, text: Self.shownLink(scan.url, domain: scan.domain))
                 .contextMenu {
                     Button {
                         copyLink(scan.url)
@@ -397,11 +401,13 @@ struct DetailView: View {
         .padding(.top, 4)
     }
 
-    /// Figma shows host and path ("bca-verifikasi.site/login"); the full link is what "Copy link" copies.
-    static func shownLink(_ url: URL) -> String {
-        guard let host = url.host(percentEncoded: false) else { return url.absoluteString }
-        let path = url.path(percentEncoded: false)
-        return host + (path == "/" ? "" : path)
+    /// Figma shows "bca-verifikasi.site/login"; the full link is what "Copy link" copies. The registrable
+    /// domain, then the path (BH-13): a deceiving subdomain (`klikbca.co.id.secure-login.<domain>`) is left
+    /// out and the domain is never the part the pill cuts, as on the block page (#382). The path stays
+    /// percent-encoded (BH-36), as in Activity: bidi or invisible characters cannot reorder it.
+    static func shownLink(_ url: URL, domain: String) -> String {
+        let path = url.path(percentEncoded: true)
+        return path.isEmpty || path == "/" ? domain : domain + path
     }
 
     /// "Diakses hari ini · 10.42 WIB".
