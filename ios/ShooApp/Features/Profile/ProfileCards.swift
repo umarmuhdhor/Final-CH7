@@ -49,14 +49,12 @@ struct ConnectedPillButtonStyle: ButtonStyle {
     }
 }
 
-/// The guardian's initial at the avatar's lower right (Figma "Avatar/S", 42 pt, white ring).
+/// The guardian's avatar at the avatar's lower right (Figma "Avatar/S", 42 pt, white ring).
 struct GuardianBadge: View {
-    let name: String
     let avatarId: String
 
     var body: some View {
-        InitialsAvatar(name: name, avatarId: avatarId, size: 42)
-            .overlay(Circle().stroke(ProfileStyle.card, lineWidth: 2.5))
+        AvatarView(id: avatarId, size: 42, ring: .init(color: ProfileStyle.card, width: 2.5))
     }
 }
 

@@ -34,14 +34,25 @@ enum AvatarCatalog {
 }
 
 /// The picked memoji, or a coloured circle with the avatar's symbol. Decorative unless a name is given.
+/// An unknown or empty id draws `AvatarCatalog.fallback` (a grey person).
 struct AvatarView: View {
+    /// A rim on the avatar's edge (Figma's white rings on Home, in stacks and on badges).
+    struct Ring {
+        var color: Color = .white
+        var width: CGFloat = 1
+    }
+
     let id: String
     var size: CGFloat = 44
     var name: String?
+    var ring: Ring?
 
     var body: some View {
         image
             .frame(width: size, height: size)
+            .overlay {
+                if let ring { Circle().stroke(ring.color, lineWidth: ring.width) }
+            }
             .accessibilityHidden(name == nil)
             .accessibilityLabel(Text(verbatim: name ?? ""))
     }

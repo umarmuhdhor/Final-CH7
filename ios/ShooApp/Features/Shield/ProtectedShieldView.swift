@@ -70,7 +70,7 @@ struct ProtectedShieldView: View {
         }
         // Figma "Top Bar" 1115:17282: the profile circle only, right under the status bar.
         .overlay(alignment: .top) {
-            HomeTopBar(name: model.profileName, onSwitch: nil) { env.router.openProfile() }
+            HomeTopBar(avatarId: model.profileAvatarId ?? env.session?.avatarId, onSwitch: nil) { env.router.openProfile() }
         }
         .toolbar(.hidden, for: .navigationBar)
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
@@ -336,6 +336,12 @@ private struct ProtectedSiteCard: View {
     private var isDanger: Bool { decision == .notSafe || (decision == nil && scan.status == .blocked) }
     /// Who the line under the panel names: who decided, else the guardian who will.
     private var checker: String? { scan.verdict?.byName ?? guardian?.name }
+    /// The checker's avatar: the guardian's, unless someone else decided (then the neutral person).
+    private var checkerAvatarId: String? {
+        guard let guardian else { return nil }
+        if let verdict = scan.verdict, verdict.byDeviceId != guardian.deviceId { return nil }
+        return guardian.avatarId
+    }
 
     var body: some View {
         Button(action: onOpen) {
@@ -404,7 +410,7 @@ private struct ProtectedSiteCard: View {
     /// the line in SF Pro Display 17 (#3A3D42), the name semibold.
     private func footer(_ name: String) -> some View {
         HStack(spacing: 6.26) {
-            avatar(name)
+            avatar
             Group {
                 switch decision {
                 case nil: Text("\(Text(verbatim: name).fontWeight(.semibold)) will check it again")
@@ -424,8 +430,8 @@ private struct ProtectedSiteCard: View {
 
     /// Figma "Avatar/S" with "Group 36523": a red ! (11.6 pt, #E5483B) or a blue ✓ (11 pt, #2E90FA) with a white ring,
     /// 18.3 / 19 from the avatar's corner.
-    private func avatar(_ name: String) -> some View {
-        InitialAvatar(name: name, size: 29.21, fontSize: 11.95)
+    private var avatar: some View {
+        AvatarView(id: checkerAvatarId ?? "", size: 29.21)
             .overlay(alignment: .topLeading) {
                 if let decision {
                     let size: CGFloat = decision == .notSafe ? 11.55 : 11

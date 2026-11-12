@@ -44,7 +44,7 @@ final class ApiRepository: ShooRepository {
         // `guardian: null` = never joined, left, or removed by the guardian (D-alief-21).
         if let usedToken {
             session.applyProfile(
-                name: profile.name, guardian: profile.mode == .protected ? profile.guardian : nil, ifToken: usedToken
+                name: profile.name, avatarId: profile.avatarId, guardian: profile.mode == .protected ? profile.guardian : nil, ifToken: usedToken
             )
         }
         return profile
@@ -53,6 +53,7 @@ final class ApiRepository: ShooRepository {
     func updateMe(_ update: DeviceUpdate) async throws {
         let _: OkResponse = try await client.send(.init(method: .patch, path: ["devices", "me"], body: update))
         if let name = update.name { session.updateName(name) }
+        if let avatarId = update.avatarId { session.updateAvatar(avatarId) }
     }
 
     func becomeProtected(code: String) async throws -> ProtectedSwitch {

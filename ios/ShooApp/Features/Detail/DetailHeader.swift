@@ -206,14 +206,9 @@ struct DetailOwnerChip: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Group {
-                if let avatarId {
-                    AvatarView(id: avatarId, size: 24)
-                } else {
-                    ActivityAvatar(name: name, avatarId: "1", size: 24)
-                }
-            }
-            .overlay(Circle().strokeBorder(.white.opacity(0.5)))
+            // `nil` (family list not loaded or failed): the neutral person.
+            AvatarView(id: avatarId ?? "", size: 24)
+                .overlay(Circle().strokeBorder(.white.opacity(0.5)))
             Text(verbatim: name)
                 .activityFont(16, .semibold, rounded: true, tracking: -0.31)
                 .figmaLineHeight(21, relativeTo: .body)

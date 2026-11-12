@@ -73,7 +73,7 @@ struct MemberDetailView: View {
                     confirmIdentifier: "member.disconnect.confirm",
                     isWorking: model.isWorking
                 ) {
-                    InitialsAvatar(name: member.name, avatarId: member.avatarId, size: 64)
+                    AvatarView(id: member.avatarId, size: 64)
                 } onConfirm: {
                     Task {
                         guard await model.disconnect() else { return }
@@ -103,7 +103,7 @@ struct MemberDetailView: View {
             stats: stats(member),
             attachment: member.extensionActive ? nil : AnyView(offBanner(member))
         ) {
-            InitialsAvatar(name: member.name, avatarId: member.avatarId, size: 86)
+            AvatarView(id: member.avatarId, size: 86)
                 .frame(width: 88, height: 88)
         } badge: {
             statusPill(active: member.extensionActive)

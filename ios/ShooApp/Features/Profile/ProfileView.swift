@@ -97,7 +97,7 @@ struct ProfileView: View {
             AvatarView(id: model.profile?.avatarId ?? "", size: 88)
                 .overlay(alignment: .bottomTrailing) {
                     if model.variant == .protected, let guardian = model.profile?.guardian {
-                        GuardianBadge(name: guardian.name, avatarId: guardian.avatarId)
+                        GuardianBadge(avatarId: guardian.avatarId)
                             .offset(x: 16, y: 4)
                     }
                 }
@@ -172,7 +172,7 @@ struct ProfileView: View {
             ProfileSection(title: "Connected", spacing: 24) {
                 Button { env.router.show(.profilePage(.connection)) } label: {
                     HStack(spacing: 12) {
-                        InitialsAvatar(name: guardian.name, avatarId: guardian.avatarId, size: 33)
+                        AvatarView(id: guardian.avatarId, size: 33)
                         Text(verbatim: guardian.name)
                             .profileBody()
                             .foregroundStyle(ProfileStyle.ink)
@@ -250,7 +250,7 @@ struct ProfileView: View {
             Button { env.router.show(.member(deviceId: member.deviceId)) } label: {
                 HStack(spacing: 12) {
                     // Figma: a member whose extension is off has a half-faded avatar.
-                    InitialsAvatar(name: member.name, avatarId: member.avatarId)
+                    AvatarView(id: member.avatarId)
                         .opacity(member.extensionActive ? 1 : 0.5)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: member.name)

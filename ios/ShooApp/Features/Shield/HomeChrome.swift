@@ -322,7 +322,8 @@ struct HomeTopBar: View {
     /// An inline navigation bar's height: Home has none, so its page keeps this room (`HomeHeroLayout.heroTop`).
     static let barHeight: CGFloat = 54
     var isFamilyShown = false
-    let name: String?
+    /// The user's picked avatar; `nil` (not known yet) draws the neutral person.
+    let avatarId: String?
     /// nil: no ⇆ (protected/Home 1115:17282 has the profile circle only).
     let onSwitch: (() -> Void)?
     let onProfile: () -> Void
@@ -334,7 +335,7 @@ struct HomeTopBar: View {
                 HomeSwitchButton(isFamilyShown: isFamilyShown, action: onSwitch)
             }
             Spacer(minLength: 16)
-            ProfileInitialButton(name: name, action: onProfile)
+            ProfileAvatarButton(avatarId: avatarId, action: onProfile)
         }
         .padding(.horizontal, 24)
         .frame(height: 50, alignment: .top)
@@ -385,62 +386,19 @@ private struct HomeGlassCircle: ViewModifier {
     }
 }
 
-/// Top-right 50 pt circle with the user's initial; opens Profile (PF-01).
-private struct ProfileInitialButton: View {
-    let name: String?
+/// Top-right 50 pt circle with the user's picked avatar and a 2 pt white rim; opens Profile (PF-01).
+private struct ProfileAvatarButton: View {
+    let avatarId: String?
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            // Figma "Profile": SF Pro Display Semibold 20, -0.45.
-            InitialAvatar(name: name, size: 50, gradient: [HomeTheme.heroLight, HomeTheme.heroDark], fontSize: 20,
-                          design: .default, tracking: -0.45)
-                .overlay(Circle().stroke(.white, lineWidth: 2))
+            AvatarView(id: avatarId ?? "", size: 50, ring: .init(width: 2))
                 .shadow(color: HomeTheme.heroDark.opacity(0.18), radius: 6, y: 4)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Profile"))
         .accessibilityIdentifier("profileButton")
-    }
-}
-
-/// Figma avatar: a gradient circle with the first letter of the name. Decorative.
-struct InitialAvatar: View {
-    let name: String?
-    var size: CGFloat = 44
-    var gradient: [Color] = InitialAvatar.gradients[0]
-    var fontSize: CGFloat?
-    /// Members are SF Pro Rounded (Figma "S" / "B"), the profile button SF Pro Display.
-    var design: Font.Design = .rounded
-    var tracking: CGFloat = 0
-
-    /// Syahnaz, Bayu, Renatta in the Figma family row; the first one also for the guardian.
-    static let gradients: [[Color]] = [
-        [Color(red: 0x7D / 255, green: 0xE4 / 255, blue: 0x9C / 255), Color(red: 0x54 / 255, green: 0xCA / 255, blue: 0xE8 / 255)],
-        [Color(red: 0xFF / 255, green: 0xBE / 255, blue: 0x8C / 255), Color(red: 0xFF / 255, green: 0x78 / 255, blue: 0x96 / 255)],
-        [Color(red: 0xAF / 255, green: 0xA5 / 255, blue: 0xFF / 255), Color(red: 0x6E / 255, green: 0x8C / 255, blue: 0xFA / 255)],
-    ]
-
-    static func gradient(at index: Int) -> [Color] { gradients[index % gradients.count] }
-
-    private var initial: String {
-        name?.trimmingCharacters(in: .whitespaces).first.map { String($0).uppercased() } ?? ""
-    }
-
-    var body: some View {
-        ZStack {
-            Circle().fill(LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
-            if initial.isEmpty {
-                Image(systemName: "person.fill").font(.system(size: (fontSize ?? size * 0.4), weight: .semibold))
-            } else {
-                Text(verbatim: initial)
-                    .font(FigmaFont.font(size: fontSize ?? size * 0.41, weight: .semibold, design: design))
-                    .tracking(tracking)
-            }
-        }
-        .foregroundStyle(.white)
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
     }
 }
 
