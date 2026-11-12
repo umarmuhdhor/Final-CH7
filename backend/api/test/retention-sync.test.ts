@@ -23,9 +23,9 @@ describe(`retention: ${N} days everywhere`, () => {
 
   it("app copy says it (English source and Bahasa Indonesia)", () => {
     expect(connectView).toContain(`for ${N} days, so your Guardian can see the evidence`);
-    expect(detailView).toContain(`Items are deleted after ${N} days`);
+    expect(detailView).toContain(`text: "${N} days have passed"`);
     expect(strings).toContain(`selama ${N} hari supaya Guardian bisa melihat buktinya`);
-    expect(strings).toContain(`Item dihapus setelah ${N} hari`);
+    expect(strings).toContain(`"value" : "Sudah lewat ${N} hari"`);
   });
 
   it("the extension's block memory forgets a page when the scan is gone", () => {
