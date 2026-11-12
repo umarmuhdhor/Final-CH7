@@ -163,7 +163,7 @@ struct InviteSheet: View {
             }
         case .unavailable:
             // Figma "Gagal mengambil kode" (1681:5974); "Try again" is the footer button.
-            InviteStateMessage(
+            StateMessage(
                 systemImage: "exclamationmark.arrow.circlepath",
                 tint: Color(hex: 0xE5483B),
                 title: "Code can't be made yet",
@@ -172,7 +172,7 @@ struct InviteSheet: View {
             .accessibilityIdentifier("invite.unavailable")
         case .full:
             // Figma "Keluarga penuh" (1681:6059); "Manage family" is the footer button.
-            InviteStateMessage(
+            StateMessage(
                 systemImage: "person.2.fill",
                 symbolSize: 27,
                 tint: Color(hex: 0x136CB7),
@@ -372,51 +372,6 @@ private struct ShareTile: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(color.gradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-        }
-    }
-}
-
-/// Figma "Gagal mengambil kode" / "Keluarga penuh": an 80 pt tile with the symbol (the tint at 12 %), the title
-/// (SF Pro Semibold 20) and the line (SF Pro Rounded 17, #6A717E). Settles in with a spring; the symbol bounces once.
-private struct InviteStateMessage: View {
-    let systemImage: String
-    /// Figma: 34 for the error symbol, 27 for the people.
-    var symbolSize: CGFloat = 34
-    let tint: Color
-    let title: LocalizedStringKey
-    let message: LocalizedStringKey
-    @Environment(\.shooReduceMotion) private var reduceMotion
-    @State private var shown = false
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Image(systemName: systemImage)
-                .font(.system(size: symbolSize, weight: .semibold))
-                .foregroundStyle(tint)
-                .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? false : shown)
-                .frame(width: 80, height: 80)
-                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .scaleEffect(shown || reduceMotion ? 1 : 0.85)
-                .accessibilityHidden(true)
-            Text(title)
-                .onboardingFont(20, weight: .semibold, relativeTo: .title3)
-                .foregroundStyle(Color(hex: 0x151617))
-                .padding(.top, 24)
-                .accessibilityAddTraits(.isHeader)
-            Text(message)
-                .onboardingFont(17, design: .rounded, relativeTo: .body)
-                .figmaLineHeight(22, relativeTo: .body)
-                .foregroundStyle(Color(hex: 0x6A717E))
-                .padding(.top, 8)
-        }
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity)
-        .padding(.top, 52)
-        .opacity(shown ? 1 : 0)
-        .accessibilityElement(children: .combine)
-        .onAppear {
-            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35, bounce: 0.3)) { shown = true }
         }
     }
 }
