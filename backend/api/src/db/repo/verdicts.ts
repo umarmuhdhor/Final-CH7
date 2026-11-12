@@ -9,6 +9,8 @@ export interface Verdict {
   byDeviceId: string;
   byName: string;
   decidedAt: string;
+  /** The link the verdict was made on (origin + path, #241); tells "this link" from "another page of this site". */
+  url: string;
 }
 
 /** New domains one guardian can put in the review queue per 24 h (SECURITY T5, queue flooding). */
@@ -93,7 +95,7 @@ async function upsert(
           by_device_id = excluded.by_device_id, by_name = excluded.by_name, decided_at = excluded.decided_at,
           global_eligible = excluded.global_eligible
     returning value, by_device_id as "byDeviceId", by_name as "byName",
-              to_char(decided_at at time zone 'UTC', ${tx.unsafe(ISO_MS)}) as "decidedAt"`;
+              to_char(decided_at at time zone 'UTC', ${tx.unsafe(ISO_MS)}) as "decidedAt", url`;
   await recountFamilies(tx, scan.domain);
   return { verdict: row! };
 }
@@ -156,7 +158,7 @@ export async function findVerdict(sql: Sql, ownerId: string, url: string, domain
   const [row] = await sql<Verdict[]>`
     with k as (select public.verdict_link(${url}) as link)
     select v.value, v.by_device_id as "byDeviceId", v.by_name as "byName",
-           to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "decidedAt"
+           to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "decidedAt", v.url
     from verdicts v, k
     where v.owner_id = ${ownerId}
       and (v.url = k.link
@@ -173,7 +175,7 @@ export async function findVerdict(sql: Sql, ownerId: string, url: string, domain
 export async function findDomainVerdict(sql: Sql, ownerId: string, domain: string): Promise<Verdict | null> {
   const [row] = await sql<Verdict[]>`
     select value, by_device_id as "byDeviceId", by_name as "byName",
-           to_char(decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "decidedAt"
+           to_char(decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "decidedAt", url
     from verdicts where owner_id = ${ownerId} and domain = ${domain}
     order by (value = 'not_safe') desc, decided_at desc
     limit 1`;

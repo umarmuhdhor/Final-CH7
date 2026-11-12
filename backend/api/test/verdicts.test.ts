@@ -207,7 +207,7 @@ describe("POST /verdicts", () => {
       await verdict(g, id, f.verdict.value as "safe" | "not_safe");
       const item = (await (await call(`/scans/${id}`, { token: g.token })).json()) as Record<string, unknown>;
       expectScanResult(item);
-      expect(item.verdict).toEqual({ ...f.verdict, byDeviceId: g.deviceId, decidedAt: expect.any(String) });
+      expect(item.verdict).toEqual({ ...f.verdict, byDeviceId: g.deviceId, decidedAt: expect.any(String), url: expect.any(String) });
     }
   });
 
@@ -575,6 +575,23 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect(await lookupLink(p, "https://evil.test/c", "evil.test")).toMatchObject({ value: "not_safe" });
   });
 
+  it("every Verdict names the link it was made on (Verdict.url, BH-19)", async () => {
+    const { g, p } = await family();
+    const a = await scanAt(p, "https://cover.test/a?ref=wa", "cover.test");
+    const b = await scanAt(p, "https://cover.test/b", "cover.test");
+    const res = await decide(g, a, "not_safe");
+    expect(((await res.json()) as VerdictBody).verdict).toMatchObject({ url: "https://cover.test/a" });
+    // A domain-wide not_safe tells the client which page it was decided on.
+    expect(await lookupLink(p, "https://cover.test/b", "cover.test")).toMatchObject({ value: "not_safe", url: "https://cover.test/a" });
+    expect(await lookup(p, "cover.test")).toMatchObject({ url: "https://cover.test/a" });
+    const body = (await (await call(`/scans?owner=${p.deviceId}`, { token: g.token })).json()) as {
+      items: { id: string; verdict: { url?: string } | null }[];
+    };
+    expect(body.items.find((i) => i.id === b)?.verdict).toMatchObject({ url: "https://cover.test/a" });
+    const item = (await (await call(`/scans/${b}`, { token: g.token })).json()) as { verdict: { url?: string } };
+    expect(item.verdict).toMatchObject({ url: "https://cover.test/a" });
+  });
+
   it("on a shared host one page says nothing about the others (admin.domain_lists hosting)", async () => {
     const { g, p } = await family();
     // host_path: anyone publishes under a path of sites.google.com (registrable domain google.com).
@@ -635,7 +652,7 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
       const res = await decide(g, a, "not_safe", "  Minta kode OTP\nlewat WA ‮ ");
       expect(res.status).toBe(200);
       const body = (await res.json()) as { verdict: Record<string, unknown> };
-      expect(Object.keys(body.verdict).sort()).toEqual(["byDeviceId", "byName", "decidedAt", "value"]);
+      expect(Object.keys(body.verdict).sort()).toEqual(["byDeviceId", "byName", "decidedAt", "url", "value"]);
       expect((await row(p.deviceId))[0]!.notes).toBe("Minta kode OTP lewat WA");
       expect(await lookupLink(p, "https://note.test/a", "note.test")).not.toHaveProperty("notes");
       expect((await decide(g, a, "safe")).status).toBe(200); // older builds send none

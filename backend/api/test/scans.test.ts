@@ -580,7 +580,11 @@ describe("GET /scans", () => {
     const { body } = await list(g, `?owner=${mom.deviceId}`);
     const blocked = body.items.find((i) => i.status === "blocked")!;
     const warning = body.items.find((i) => i.status === "warning")!;
-    expect(blocked.verdict).toEqual({ value: "not_safe", byDeviceId: g.deviceId, byName: "Adhella", decidedAt: "2026-10-21T04:06:00.000Z" });
+    // A verdict inserted without url gets the backfill's link (verdicts_default_url).
+    expect(blocked.verdict).toEqual({
+      value: "not_safe", byDeviceId: g.deviceId, byName: "Adhella", decidedAt: "2026-10-21T04:06:00.000Z",
+      url: "https://bca-verifikasi.site/",
+    });
     expect(warning.verdict).toEqual(blocked.verdict);
     expectScanResult(blocked);
     expectScanResult(warning);
@@ -614,8 +618,15 @@ describe("GET /scans", () => {
 
     // Times are compared as instants; lists never carry a screenshot URL (D-alief-04). EX-07: every
     // item has pageReplicaUrl null (contracts/api.md); the fixture predates the key, so it is checked
-    // here and left out of the comparison.
+    // here and left out of the comparison. Verdict.url (optional in the schema, BH-19) is checked the same way.
     for (const item of body.items) expect(Object.hasOwn(item, "pageReplicaUrl") && item.pageReplicaUrl === null).toBe(true);
+    for (const item of body.items) {
+      const v = item.verdict as { url?: unknown } | null;
+      if (v) {
+        expect(typeof v.url).toBe("string");
+        delete v.url;
+      }
+    }
     const normal = (x: unknown) =>
       JSON.parse(JSON.stringify(x), (k, v) =>
         k === "pageReplicaUrl" ? undefined
