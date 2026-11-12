@@ -335,7 +335,7 @@ struct ActivityPersonButton: View {
             HStack(spacing: 8) {
                 if let selected {
                     HStack(spacing: 4) {
-                        ActivityAvatar(name: selected.name, avatarId: selected.avatarId, size: 24)
+                        AvatarView(id: selected.avatarId, size: 24, ring: ActivityStyle.avatarRing)
                         Text(verbatim: selected.name)
                             .activityFont(15, tracking: -0.15)
                             .foregroundStyle(ActivityStyle.ink)
@@ -379,7 +379,7 @@ struct ActivityPersonMenu: View {
             }
             ForEach(people) { member in
                 item(.device(member.deviceId), title: Text(verbatim: member.name), identifier: "person.\(member.deviceId)") {
-                    ActivityAvatar(name: member.name, avatarId: member.avatarId, size: 24)
+                    AvatarView(id: member.avatarId, size: 24, ring: ActivityStyle.avatarRing)
                 }
             }
         }
@@ -544,7 +544,7 @@ struct ActivityRow: View {
             // "Name | time" on one line as in Figma; the name is cut first, the time only when even
             // that is not enough (a long verdict badge), so the row never runs past the card.
             HStack(spacing: 4) {
-                ActivityAvatar(name: owner.name, avatarId: owner.avatarId ?? "", size: 16)
+                AvatarView(id: owner.avatarId ?? "", size: 16, ring: ActivityStyle.avatarRing)
                 Text(verbatim: owner.name)
                     .activityFont(13, .medium, rounded: true)
                     .lineLimit(1)

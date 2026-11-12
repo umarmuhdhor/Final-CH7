@@ -5,7 +5,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(110);
+select plan(112);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -28,7 +28,7 @@ select table_privs_are('admin', t, r, array[]::text[], r || ' has no privileges 
 from unnest(array['secrets', 'admin_config', 'admin_audit', 'categories', 'review_decisions',
                   'domain_intel', 'domain_intel_label', 'domain_labels', 'label_forget', 'domain_dirty',
                   'stats_daily', 'analysis_runs', 'intel_state', 'case_library', 'ai_lessons', 'api_keys',
-                  'domain_lists', 'domain_lists_meta', 'worker_secrets']) as t
+                  'domain_lists', 'domain_lists_meta', 'worker_secrets', 'guardian_decisions']) as t
 cross join unnest(array['shoo_admin', 'shoo_api']) as r;
 
 -- Views: SELECT for shoo_admin only.

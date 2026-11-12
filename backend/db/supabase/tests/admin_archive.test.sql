@@ -4,7 +4,11 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(60);
+select plan(61);
+
+-- QA-D-H02: the dashboard scans.jsonl export pages on (created_at, scan_id) up to an hour cutoff.
+select has_index('admin', 'scan_archive', 'scan_archive_created', array['created_at', 'scan_id'],
+  'index for the scans.jsonl keyset (created_at, scan_id)');
 
 create function pg_temp.as_role(r text, q text) returns text language plpgsql as $$
 declare

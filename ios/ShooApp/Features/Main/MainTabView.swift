@@ -9,7 +9,7 @@ struct MainTabView: View {
         @Bindable var router = env.router
         TabView(selection: $router.selectedTab) {
             NavigationStack(path: $router.shieldPath) {
-                // Every Home draws its own top bar over the hero (Figma HOME: ⇆ and the profile initial).
+                // Every Home draws its own top bar over the hero (Figma HOME: ⇆ and the profile avatar).
                 shieldRoot
                     .id(screenIdentity)
                     .navigationDestination(for: Route.self, destination: destination)

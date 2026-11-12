@@ -173,6 +173,45 @@ struct SessionStoreTests {
         #endif
     }
 
+    /// PF-01: Home's profile circle shows the picked avatar at launch, before `GET /devices/me` answers. The id
+    /// stays out of the App Group (contract keys only) and goes with the session.
+    @Test func ownAvatarIsCachedOutsideTheAppGroupAndGoesWithTheSession() throws {
+        let suite = "test.session.\(UUID().uuidString)"
+        let localSuite = "test.local.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let local = try #require(UserDefaults(suiteName: localSuite))
+        let store = SessionStore(
+            defaults: defaults, localDefaults: local,
+            keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
+            apiBaseURL: URL(string: "https://api.shoo.test")!, aiBaseURL: nil
+        )
+        defer {
+            store.clear()
+            UserDefaults.standard.removePersistentDomain(forName: suite)
+            UserDefaults.standard.removePersistentDomain(forName: localSuite)
+        }
+        #expect(store.avatarId == nil)
+        try store.save(registration, name: "Mom", mode: .protected)
+        #expect(store.avatarId == "avatar_03")
+        #expect(defaults.dictionaryRepresentation().values.contains { $0 as? String == "avatar_03" } == false)
+
+        // `GET /devices/me` with another avatar (changed on this phone or elsewhere), then a PATCH.
+        #expect(store.applyProfile(name: "Mom", avatarId: "avatar_07", guardian: nil, ifToken: "shoo_abc"))
+        #expect(store.avatarId == "avatar_07")
+        // An old token's late answer writes nothing.
+        #expect(!store.applyProfile(name: "Mom", avatarId: "avatar_09", guardian: nil, ifToken: "shoo_old"))
+        #expect(store.avatarId == "avatar_07")
+        store.updateAvatar("avatar_02")
+        #expect(store.avatarId == "avatar_02")
+
+        store.clear()
+        #expect(store.avatarId == nil)
+        #expect(local.string(forKey: SessionStore.avatarIdKey) == nil)
+        // After delete, a late answer never brings it back (P13).
+        store.updateAvatar("avatar_04")
+        #expect(local.string(forKey: SessionStore.avatarIdKey) == nil)
+    }
+
     /// A restored backup brings the App Group copy but not the Keychain item: the app does not use it.
     @Test func appGroupCopyAloneIsNotASession() {
         let (store, defaults, suite) = makeStore()

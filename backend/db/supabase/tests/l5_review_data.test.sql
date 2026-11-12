@@ -79,6 +79,7 @@ select is((select host from admin.scan_archive where scan_id = 'l5_s1'), 'login.
 insert into verdicts (owner_id, domain, value, by_device_id, by_name, scan_id, global_eligible, decided_at)
 values ('l5_p1', 'penipu-l5.test', 'not_safe', 'l5_g1', 'Guardian L5', 'l5_s1', true, '2026-11-01 12:00+00');
 update admin.domain_labels set note = 'Telepon saya 081234567890' where domain = 'penipu-l5.test';
+update admin.guardian_decisions set note = 'Telepon saya 081234567890' where domain = 'penipu-l5.test';
 -- A verdict without scan_id gets the owner's latest archived scan of that domain.
 insert into verdicts (owner_id, domain, value, by_device_id, by_name, global_eligible, decided_at)
 values ('l5_p2', 'penipu-l5.test', 'not_safe', 'l5_g2', 'Guardian L5b', true, '2026-11-01 12:30+00');

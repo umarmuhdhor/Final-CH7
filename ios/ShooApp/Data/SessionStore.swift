@@ -7,8 +7,16 @@ import Foundation
 /// - The extension can't read our Keychain, so the contract keys (contracts/app-group-keys.md) are
 ///   copied into the App Group, always through `AppGroup.Key`. Nothing else goes there.
 /// - The guardian's avatar is kept in memory only; `GET /devices/me` brings it back (D-alief-C02).
+/// - This device's own avatar id (`avatar_01…12`, a catalog id, not personal data) is kept in the app's own
+///   `UserDefaults`, not the App Group, so Home's profile circle shows it at launch before `GET /devices/me`
+///   answers (PF-01). Cleared with the session.
 final class SessionStore: @unchecked Sendable {
+    /// App-only key (never in the App Group: the extension has no use for it).
+    static let avatarIdKey = "session.avatarId"
+
     let defaults: UserDefaults
+    /// The app's own defaults (standard), for what the extension never reads.
+    let localDefaults: UserDefaults
     let keychain: KeychainItem
     let apiBaseURL: URL
     let aiBaseURL: URL?
@@ -33,6 +41,7 @@ final class SessionStore: @unchecked Sendable {
 
     init(
         defaults: UserDefaults = AppGroup.defaults,
+        localDefaults: UserDefaults = .standard,
         keychain: KeychainItem = .deviceSession,
         apiBaseURL: URL = AppConfig.apiBaseURL,
         aiBaseURL: URL? = AppConfig.aiBaseURL,
@@ -42,6 +51,7 @@ final class SessionStore: @unchecked Sendable {
         _onlineCheckAllowed = onlineCheckAllowed
         forgetCachedDataHandler = forgetCachedData
         self.defaults = defaults
+        self.localDefaults = localDefaults
         self.keychain = keychain
         self.apiBaseURL = apiBaseURL
         self.aiBaseURL = aiBaseURL
@@ -56,6 +66,11 @@ final class SessionStore: @unchecked Sendable {
     var token: String? { try? readToken() }
 
     var deviceId: String? { defaults.string(forKey: AppGroup.Key.deviceId) }
+
+    /// This device's avatar from the last registration, `GET /devices/me` or avatar change. `nil` without a session.
+    var avatarId: String? {
+        lock.withLock { hasSessionLocked ? localDefaults.string(forKey: Self.avatarIdKey) : nil }
+    }
 
     /// Protected: the guardian from the last join or `GET /devices/me`.
     var guardian: GuardianInfo? { lock.withLock { _guardian } }
@@ -76,6 +91,7 @@ final class SessionStore: @unchecked Sendable {
             defaults.set(mode.rawValue, forKey: AppGroup.Key.deviceMode)
             defaults.set(name, forKey: AppGroup.Key.deviceName)
             defaults.removeObject(forKey: AppGroup.Key.guardianName)
+            localDefaults.set(registration.avatarId, forKey: Self.avatarIdKey)
             _guardian = nil
             writeBaseURLsLocked()
         }
@@ -103,6 +119,11 @@ final class SessionStore: @unchecked Sendable {
         lock.withLock { updateNameLocked(name) }
     }
 
+    /// After `PATCH /devices/me { avatarId }`. A no-op once the session is gone (P13).
+    func updateAvatar(_ avatarId: String) {
+        lock.withLock { updateAvatarLocked(avatarId) }
+    }
+
     /// `nil` = no guardian (left, removed by the guardian, or never joined): EX-06 stops naming them.
     func setGuardian(_ guardian: GuardianInfo?) {
         let lostGuardian = lock.withLock { setGuardianLocked(guardian) }
@@ -111,14 +132,15 @@ final class SessionStore: @unchecked Sendable {
         if lostGuardian { forgetCachedData() }
     }
 
-    /// `GET /devices/me`: name and guardian, only while `usedToken` is still the session's token. One lock
+    /// `GET /devices/me`: name, avatar and guardian, only while `usedToken` is still the session's token. One lock
     /// around the check and the writes, so a switch to a new device ("Punya kode undangan?") can't land
     /// between them and get the old device's profile (fase 27h, F-A12). `false` = not written.
     @discardableResult
-    func applyProfile(name: String, guardian: GuardianInfo?, ifToken usedToken: String) -> Bool {
+    func applyProfile(name: String, avatarId: String? = nil, guardian: GuardianInfo?, ifToken usedToken: String) -> Bool {
         let result = lock.withLock { () -> (applied: Bool, lostGuardian: Bool) in
             guard (try? keychain.read()) == usedToken else { return (false, false) }
             updateNameLocked(name)
+            if let avatarId { updateAvatarLocked(avatarId) }
             return (true, setGuardianLocked(guardian))
         }
         if result.lostGuardian { forgetCachedData() }
@@ -128,6 +150,11 @@ final class SessionStore: @unchecked Sendable {
     private func updateNameLocked(_ name: String) {
         guard hasSessionLocked else { return }
         defaults.set(name, forKey: AppGroup.Key.deviceName)
+    }
+
+    private func updateAvatarLocked(_ avatarId: String) {
+        guard hasSessionLocked else { return }
+        localDefaults.set(avatarId, forKey: Self.avatarIdKey)
     }
 
     /// `true` when a guardian this phone had is now gone.
@@ -148,6 +175,7 @@ final class SessionStore: @unchecked Sendable {
         lock.withLock {
             keychain.delete()
             for key in Self.appKeys { defaults.removeObject(forKey: key) }
+            localDefaults.removeObject(forKey: Self.avatarIdKey)
             _guardian = nil
         }
         forgetCachedData()
