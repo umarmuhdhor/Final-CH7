@@ -40,18 +40,13 @@ enum NameRule {
 }
 
 /// Onboarding screens in order (Figma "Flow" 1205:4696). Everyone starts as Pribadi (a Guardian with Family
-/// mode off); connecting to a guardian or protecting others happens later from Home and Profile. Only an
-/// invite link goes through Connect (PR-01) before ON-04.
+/// mode off), also from an invite link (PR-03): the link's code waits in the router, and the join sheet opens
+/// with it once onboarding is done (`AppEnvironment.finishOnboarding`).
 enum OnboardingStep: Equatable {
     /// ON-01
     case splash
     /// ON-02
     case name
-    /// Invite link only, while the online check question is unanswered: `DataConsentView` before Connect.
-    /// A join registers the device and gives the extension its token, so the answer comes first (fase 27d, F-A1).
-    case consent
-    /// Invite link only: PR-01.
-    case connect
     /// ON-04, with the online check question (`DataConsent`) as a checkbox (Figma 1328:13421).
     case turnOnExtension
     /// ON-04 passed (Figma "Jadikan Safari Default"): Shoo only runs in Safari.
@@ -61,10 +56,8 @@ enum OnboardingStep: Equatable {
     case done
 }
 
-/// State of the whole onboarding flow (ON-01 … ON-05). The device registers on the first tap on ON-04
-/// (or a join on Connect), so until then Back reaches the name. After that there is no way back to it,
-/// also not after a relaunch, except from Connect after an invite join that failed: Back or "Not now" there
-/// deletes the device again (`AppSettings.inviteRegistrationPending`, fase 27d K6).
+/// State of the whole onboarding flow (ON-01 … ON-05). The device registers on the first tap on ON-04, so
+/// until then Back reaches the name. After that there is no way back to it, also not after a relaunch.
 @MainActor
 @Observable
 final class OnboardingModel {
@@ -72,8 +65,6 @@ final class OnboardingModel {
     var name = ""
     /// ON-02 avatar picker. Sent as `avatarId` in `POST /devices` (#120); the response is the source of truth.
     var selectedAvatarId = OnboardingAvatar.ids[0]
-    /// Pribadi unless an invite link was opened (then Protected joins on Connect).
-    private(set) var selectedMode: UserMode = .guardian
     /// ON-04 "Saya setuju halaman dicek secara online." Its Turn on stays off until it is ticked (Figma).
     var consentChecked = false
     /// The ON-04 checkbox answered the question on this screen: it stays visible after the answer is saved.
@@ -86,26 +77,17 @@ final class OnboardingModel {
     private(set) var registrationFailed = false
 
     @ObservationIgnored private let environment: AppEnvironment
-    /// Kept across steps: Back from ON-04 finds the joined guardian.
-    @ObservationIgnored private var connectModel: ConnectModel?
-    /// The invite link's code, taken at the name's Next: `RootView` empties the router's copy when the app
-    /// goes to the background (the consent screen's privacy policy, a look at WhatsApp).
-    @ObservationIgnored private var inviteCode: String?
-    /// Protected switches cleared when a failed invite registration is deleted. `nil`: the App Group's.
-    @ObservationIgnored private let linked: LinkedAccountSettings?
 
-    init(environment: AppEnvironment, linked: LinkedAccountSettings? = nil) {
+    init(environment: AppEnvironment) {
         self.environment = environment
-        self.linked = linked
         let settings = environment.settings
-        // The app died during `POST /devices` for an invite join: nothing was saved, so nothing to undo.
-        if settings.mode == nil, settings.inviteRegistrationPending { settings.inviteRegistrationPending = false }
+        // Left by an older build that registered invite joins during onboarding: nothing uses it any more.
+        if settings.inviteRegistrationPending { settings.inviteRegistrationPending = false }
         // Registered earlier but onboarding not finished (app closed in between): Home shows what is still off
-        // (Figma note 141:6085). Protected from an invite link continues at Connect until it was passed once,
-        // then at ON-04: Protected has no Home reminder, so skipping it would leave Shoo off (fase 27d, F-A14).
+        // (Figma note 141:6085). An older build's Protected registration carries on at ON-04: Protected has no
+        // Home reminder, so skipping it would leave Shoo off (fase 27d, F-A14).
         switch settings.mode {
         case nil: step = .splash
-        case .protected where !settings.onboardingConnectPassed: step = .connect
         case .protected where !settings.onboardingCompleted: step = .turnOnExtension
         default: step = .done
         }
@@ -127,47 +109,20 @@ final class OnboardingModel {
         step = .name
     }
 
-    /// Opened from an invite link (PR-03, WhatsApp/QR): only a Protected joins with a code, so Connect opens
-    /// with the code filled in.
-    var opensWithInvite: Bool { inviteCode != nil || environment.router.pendingJoinCode != nil }
-
-    /// ON-02 Next: ON-04, or for an invite link the consent question (when unanswered) and Connect.
+    /// ON-02 Next: ON-04. An invite link's code stays in the router for after onboarding (PR-03).
     func submitName() {
         guard step == .name, canSubmitName, !isWorking else { return }
         movedBack = false
         registrationFailed = false
-        if let pending = environment.router.takePendingJoinCode() {
-            inviteCode = pending
-            connectModel?.prefill(pending)
-        }
-        if inviteCode != nil {
-            selectedMode = .protected
-            step = environment.settings.dataConsent == nil ? .consent : .connect
-        } else {
-            selectedMode = .guardian
-            step = .turnOnExtension
-        }
+        step = .turnOnExtension
     }
 
-    /// The invite path's consent step: saved at once (it decides what the extension may send), then Connect.
-    func answerConsent(_ consent: DataConsent) {
-        guard step == .consent else { return }
-        environment.setDataConsent(consent)
-        movedBack = false
-        step = .connect
-    }
-
-    /// Back follows Figma: every step has one, except where it would undo a saved registration. Connect with
-    /// a registration to undo goes through `backFromConnect`.
+    /// Back follows Figma: every step has one, except where it would undo a saved registration.
     func goBack() {
         guard !isWorking else { return }
         switch (step, mode) {
         case (.name, nil): step = .splash
-        // The invite code stays: Next comes back here.
-        case (.consent, nil): step = .name
-        case (.connect, nil), (.turnOnExtension, nil): step = .name
-        // Only with this launch's Connect: after a relaunch a new one would just answer `already_connected`.
-        case (.turnOnExtension, .protected) where connectModel != nil: step = .connect
+        case (.turnOnExtension, nil): step = .name
         case (.safariDefault, _): step = .turnOnExtension
         default: return
         }
@@ -175,43 +130,21 @@ final class OnboardingModel {
         registrationFailed = false
     }
 
-    /// ON-04 shows Back until a Pribadi device is registered (its name can no longer change here), and for a
-    /// Protected back to this launch's Connect.
-    var canGoBackFromExtension: Bool { mode == nil || (mode == .protected && connectModel != nil) }
+    /// ON-04 shows Back until the device is registered (its name can no longer change here).
+    var canGoBackFromExtension: Bool { mode == nil }
 
-    /// The device registered for an invite join that has not gone through: Back or "Not now" deletes it.
-    private var undoesInviteRegistration: Bool {
-        mode == .protected && environment.settings.inviteRegistrationPending && !environment.settings.onboardingConnectPassed
-    }
-
-    /// Whether Connect shows Back to the name: nothing registered yet, or a registration that can be undone.
-    var canGoBackFromConnect: Bool { mode == nil || undoesInviteRegistration }
-
-    /// A join is on its way, or a registration is being undone: Connect, Back and "Not now" wait.
-    var isConnectBusy: Bool { isWorking || connectModel?.isBusy == true }
-
-    /// Back on Connect: to the name. A failed invite join's registration is deleted first; if that fails the
-    /// screen says why and stays.
-    func backFromConnect() async {
-        guard step == .connect, !isConnectBusy else { return }
-        guard mode != nil else { return goBack() }
-        guard undoesInviteRegistration, await cancelInviteRegistration() else { return }
-        movedBack = true
-        step = .name
-    }
-
-    /// Saves the device (`POST /devices`), once.
+    /// Saves the device (`POST /devices`) as Pribadi, once.
     func ensureRegistered() async throws {
         guard mode == nil else { return }
         guard case .success(let trimmed) = NameRule.validate(name) else {
             throw RepositoryError.network
         }
-        avatarId = try await environment.register(name: trimmed, mode: selectedMode, avatarId: selectedAvatarId).avatarId
-        if selectedMode == .guardian { environment.settings.familyModeOn = false }
+        avatarId = try await environment.register(name: trimmed, mode: .guardian, avatarId: selectedAvatarId).avatarId
+        environment.settings.familyModeOn = false
     }
 
-    /// ON-04 asks the question only when nothing answered it before (the invite path's consent step, an
-    /// earlier install's answer). Once ticked here it stays on screen.
+    /// ON-04 asks the question only when nothing answered it before (an earlier install's answer). Once ticked
+    /// here it stays on screen.
     var showsConsentCheckbox: Bool { environment.settings.dataConsent == nil || keepsConsentCheckbox }
 
     /// ON-04's buttons: on once the question is answered, here or before.
@@ -238,134 +171,6 @@ final class OnboardingModel {
             registrationFailed = true
             return false
         }
-    }
-
-    /// PR-01 inside onboarding: a join registers the device first.
-    func connect() -> ConnectModel {
-        if let connectModel { return connectModel }
-        let code = inviteCode ?? environment.router.takePendingJoinCode()
-        let connect = ConnectModel(repository: environment.repository, code: code) { [weak self] code in
-            guard let self else { throw CancellationError() }
-            try await self.registerForInvite()
-            let guardian: GuardianInfo
-            do {
-                guardian = try await self.environment.repository.joinFamily(code: code)
-            } catch let error as RepositoryError
-                where error.apiCode == .alreadyConnected && self.environment.settings.inviteRegistrationPending {
-                guardian = try await self.guardianOfLostJoin(else: error)
-            }
-            self.markJoined()
-            return guardian
-        }
-        connectModel = connect
-        return connect
-    }
-
-    /// Registers for an invite join. The flag goes on first, so a crash after `POST /devices` still finds a
-    /// registration to undo; it goes off again when the registration fails (nothing to undo then).
-    private func registerForInvite() async throws {
-        guard mode == nil else { return }
-        environment.settings.inviteRegistrationPending = true
-        do {
-            try await ensureRegistered()
-        } catch {
-            // Nothing saved here, so nothing to undo. A cancelled request may still have reached the server:
-            // the flag then stays and the next launch drops it (no mode), as for a crash.
-            if mode == nil, !error.isCancellation { environment.settings.inviteRegistrationPending = false }
-            throw error
-        }
-    }
-
-    /// `already_connected` for our own fresh registration: an earlier join went through on the server, but its
-    /// answer got lost (backend `family.ts`). `GET /devices/me` names the guardian. Without an answer, the
-    /// offline message (the flag stays, so the next try asks again).
-    private func guardianOfLostJoin(else error: RepositoryError) async throws -> GuardianInfo {
-        let profile: DeviceProfile
-        do {
-            profile = try await environment.repository.me()
-        } catch let meError {
-            if meError.isCancellation { throw meError }
-            throw RepositoryError.network
-        }
-        guard let guardian = profile.guardian else { throw error }
-        return guardian
-    }
-
-    private func markJoined() {
-        environment.settings.onboardingConnectPassed = true
-        environment.settings.inviteRegistrationPending = false
-        // Used up: nothing keeps an invite code longer than it needs to.
-        inviteCode = nil
-    }
-
-    /// Undoes a failed invite join's registration (P13: a Protected mode is for good on the server, so the
-    /// honest way back is deleting the device). `true` once it is gone here and there. Asks the server first:
-    /// a guardian there means a join did go through after all, which then shows as joined (never deleted).
-    private func cancelInviteRegistration() async -> Bool {
-        let connect = connect()
-        isWorking = true
-        connect.hold(true)
-        defer {
-            isWorking = false
-            connect.hold(false)
-        }
-        let profile: DeviceProfile
-        do {
-            profile = try await environment.repository.me()
-        } catch {
-            guard !error.isCancellation else { return false }
-            Log.app.error("Profile check before undoing the registration failed", error)
-            connect.report(error)
-            return false
-        }
-        if let guardian = profile.guardian {
-            markJoined()
-            connect.showJoined(guardian)
-            return false
-        }
-        do {
-            try await environment.repository.deleteMe()
-        } catch RepositoryError.api(.notFound, _), RepositoryError.api(.unauthorized, _) {
-            // Already gone (an earlier answer got lost, or the unused device expired): same end state.
-        } catch {
-            guard !error.isCancellation else { return false }
-            Log.app.error("Undoing the registration failed", error)
-            connect.report(error)
-            return false
-        }
-        // `ApiRepository.deleteMe` has already cleared the Keychain token and App Group session keys.
-        AppEnvironment.forgetDeletedDevice(linked: linked ?? LinkedAccountSettings())
-        environment.settings.forgetInviteRegistration()
-        connectModel = nil
-        selectedMode = .guardian
-        avatarId = nil
-        // Forgotten with the device: the name's Next now continues as Pribadi.
-        inviteCode = nil
-        return true
-    }
-
-    /// "Not now" on Connect: ON-04 as Pribadi instead. Nothing is saved yet, or a failed invite join's
-    /// registration is deleted first (on failure the screen says why and stays).
-    func skipConnect() async {
-        guard step == .connect, !isConnectBusy else { return }
-        if undoesInviteRegistration {
-            guard await cancelInviteRegistration() else { return }
-        }
-        if mode == nil {
-            selectedMode = .guardian
-            inviteCode = nil
-            movedBack = false
-            step = .turnOnExtension
-        } else {
-            continueFromConnect()
-        }
-    }
-
-    func continueFromConnect() {
-        guard step == .connect else { return }
-        environment.settings.onboardingConnectPassed = true
-        movedBack = false
-        step = .turnOnExtension
     }
 
     /// Called on appear and every time the app comes back to the foreground (ON-04). Moves on only once
@@ -415,7 +220,6 @@ final class OnboardingModel {
     func showForScreenshot(_ step: OnboardingStep) {
         // The name step starts empty, as in Figma "Atur Nama · kosong".
         name = step == .name ? "" : "Rina"
-        selectedMode = [.consent, .connect].contains(step) ? .protected : .guardian
         // Figma's ON-04 has the checkbox; the mock has answered the question already.
         keepsConsentCheckbox = step == .turnOnExtension
         avatarId = "avatar_05"

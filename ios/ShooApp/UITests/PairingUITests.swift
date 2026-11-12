@@ -59,147 +59,146 @@ final class PairingUITests: XCTestCase {
         if open.waitForExistence(timeout: 3) { open.tap() }
     }
 
-    /// Connect inside onboarding only comes from an invite link (Figma "Flow" has no mode choice).
+    /// PR-03: a new install opened from an invite link onboards as Pribadi like everyone else (no Connect step,
+    /// no consent screen first). Once onboarding is done the join sheet has the code; nothing joins until the tap.
+    /// `empty`: the new Pribadi protects nobody, so the mock lets the join through.
     @MainActor
-    func testOnboardingConnectShowsErrorsThenWhoProtectsMe() {
-        let app = launch(mode: "protected", onboarded: false)
-        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
+    func testInviteLinkOnNewInstallFillsTheJoinSheetAfterOnboarding() {
+        let app = launch(mode: "guardian", onboarded: false, extra: ["-mock.scenario", "empty"])
+        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: UITestTimeout.screen))
         openLink("shoo://join?code=482193", in: app)
         app.onboardName("Mom")
+        XCTAssertFalse(app.textFields["connect.code"].exists, "Connect inside onboarding")
+        XCTAssertFalse(app.buttons["consent.allow"].exists, "Consent screen before ON-04")
+        app.passTurnOnExtension()
+        let skip = app.buttons["extension.skipCheck"]
+        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable() }
+        app.passSafariDefault()
+        app.buttons["extensionOn.continue"].tapWhenHittable()
 
-        let join = app.buttons["connect.join"]
-        XCTAssertTrue(join.waitForExistence(timeout: 10), app.debugDescription)
+        let field = app.textFields["connect.code"]
+        XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertEqual(field.value as? String, "482193")
+        XCTAssertTrue(app.buttons["connect.skip"].exists, "Came from a link: Not now")
+        XCTAssertFalse(app.staticTexts["protectedBy.title"].exists)
         // K17: told about the page copy before joining.
         let copyNote = app.descendants(matching: .any)["connect.copyNote"].firstMatch
         XCTAssertTrue(copyNote.exists, app.debugDescription)
         XCTAssertTrue(copyNote.label.contains("14 days"), copyNote.label)
+
+        let join = app.buttons["connect.join"]
         enter("000000", in: app)
         tapWhenSettled(join)
         let error = app.staticTexts["connect.error"]
-        XCTAssertTrue(error.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertTrue(error.label.contains("doesn't match"), error.label)
 
         enter("999999", in: app)
         XCTAssertFalse(error.exists, "Editing the code clears the error")
         tapWhenSettled(join)
-        XCTAssertTrue(error.waitForExistence(timeout: 10))
+        XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen))
         XCTAssertTrue(error.label.contains("expired"), error.label)
 
         enter("482193", in: app)
         tapWhenSettled(join)
         let title = app.staticTexts["protectedBy.title"]
-        XCTAssertTrue(title.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(title.label.contains("Adhella"), title.label)
-        app.buttons["protectedBy.continue"].tap()
-        // Registered by the join, consent already given (mock) and Shoo on: Aktifkan Ekstensi passes by itself.
-        app.passSafariDefault()
-        XCTAssertTrue(app.buttons["extensionOn.continue"].waitForExistence(timeout: 10), app.debugDescription)
-        app.buttons["extensionOn.continue"].tap()
+        XCTAssertTrue(title.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(title.label.contains("Budi"), title.label)
     }
 
-    /// A new install opened from an invite link (WhatsApp): no mode choice, Connect has the code, one tap joins.
+    /// PR-03: a real new install (`-debug.askDataConsent YES`) answers the online check question on ON-04, not on
+    /// a screen before it, and still gets the join sheet with the code at the end.
     @MainActor
-    func testInviteLinkOnNewInstallSkipsModeChoice() {
-        let app = launch(mode: "protected", onboarded: false)
-        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10))
-        openLink("shoo://join?code=482193", in: app)
-        app.onboardName("Mom")
-        let field = app.textFields["connect.code"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertFalse(app.buttons["mode.protected"].exists)
-        XCTAssertEqual(field.value as? String, "482193")
-        app.buttons["connect.join"].tap()
-        XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: 10), app.debugDescription)
-    }
-
-    /// Fase 27d (F-A1): a real new install (the mock answers nothing, `-debug.askDataConsent YES`) opened from
-    /// an invite link answers the online check question before Connect registers the device, then goes on
-    /// past ON-04: no checkbox there any more, and Turn on works.
-    @MainActor
-    func testInviteNewInstallAsksConsentFirstAndPassesTurnOn() {
+    func testInviteNewInstallAsksConsentOnTurnOn() {
         let app = XCUIApplication.mock([
             "-settings.language", "en", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
-            // Shoo on but no page seen yet: ON-04 waits for a tap instead of moving on by itself.
-            "-UITestExtensionStatus", "unchecked",
+            "-UITestExtensionActive", "YES", "-mock.scenario", "empty",
         ])
         XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: UITestTimeout.screen))
         openLink("shoo://join?code=482193", in: app)
         app.onboardName("Mom")
-        let allow = app.buttons["consent.allow"]
-        XCTAssertTrue(allow.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        XCTAssertFalse(app.buttons["connect.join"].exists, "Connect before the answer")
-        allow.tapWhenHittable()
+        XCTAssertTrue(app.buttons["extension.consent"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.buttons["consent.allow"].exists, app.debugDescription)
+        app.passTurnOnExtension()
+        let skip = app.buttons["extension.skipCheck"]
+        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable() }
+        app.passSafariDefault()
+        app.buttons["extensionOn.continue"].tapWhenHittable()
 
         let field = app.textFields["connect.code"]
         XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertEqual(field.value as? String, "482193")
-        app.buttons["connect.join"].tapWhenHittable()
-        XCTAssertTrue(app.staticTexts["protectedBy.title"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        // Before the fix the consent screen replaced onboarding here.
-        XCTAssertFalse(app.buttons["consent.allow"].exists, app.debugDescription)
-        app.buttons["protectedBy.continue"].tapWhenHittable()
-
-        // ON-04: answered already, so no checkbox and the button is on.
-        let turnOn = app.buttons["extension.turnOn"]
-        XCTAssertTrue(turnOn.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        XCTAssertFalse(app.buttons["extension.consent"].exists, app.debugDescription)
-        XCTAssertTrue(turnOn.isEnabled)
-        turnOn.tapWhenHittable()
-        app.comeBackFromSettings()
-        app.buttons["extension.skipCheck"].tapWhenHittable()
-        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
     }
 
-    /// Fase 27d (F-A2): a failed invite join keeps the registration for another try; Back deletes it again
-    /// and reaches the name, and Next then continues as Pribadi.
+    /// PR-03: an onboarded Pribadi gets a card on Home. Not now drops the invite; View opens the filled sheet.
     @MainActor
-    func testFailedInviteJoinBackReachesTheName() {
-        let app = XCUIApplication.mock([
-            "-settings.language", "en", "-UITestNotifications", "denied", "-debug.askDataConsent", "YES",
-            "-UITestExtensionStatus", "unchecked",
-        ])
-        XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: UITestTimeout.screen))
-        openLink("shoo://join?code=999999", in: app)
-        app.onboardName("Mom")
-        app.buttons["consent.decline"].tapWhenHittable()
-        let join = app.buttons["connect.join"]
-        XCTAssertTrue(join.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        tapWhenSettled(join)
-        let error = app.staticTexts["connect.error"]
-        XCTAssertTrue(error.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        XCTAssertTrue(error.label.contains("expired"), error.label)
+    func testInviteLinkOnPribadiShowsTheHomeNotice() {
+        let app = launch(mode: "guardian", extra: ["-settings.familyModeOn", "NO", "-mock.scenario", "empty"])
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.dismissNotificationsReminder()
 
-        app.tap(app.buttons["onboarding.back"].firstMatch, until: app.textFields["name.field"])
-        app.buttons["name.continue"].tapWhenHittable()
-        // The code went with the deleted device; the answer ("no") stays, so no checkbox either.
-        let turnOn = app.buttons["extension.turnOn"]
-        XCTAssertTrue(turnOn.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
-        XCTAssertFalse(app.buttons["extension.consent"].exists, app.debugDescription)
-        XCTAssertTrue(turnOn.isEnabled)
-    }
-
-    /// T11: an invite link only fills the code; nothing joins until Connect is tapped.
-    @MainActor
-    func testInviteLinkOpensConnectWithTheCodeFilled() {
-        let app = launch(mode: "protected")
-        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10), app.debugDescription)
         openLink("shoo://join?code=482193", in: app)
+        let notice = app.descendants(matching: .any)["invite.notice"].firstMatch
+        XCTAssertTrue(notice.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.textFields["connect.code"].exists, "Nothing opens before View")
+        app.buttons["invite.notice.later"].tapWhenHittable()
+        XCTAssertTrue(notice.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+
+        openLink("shoo://join?code=482193", in: app)
+        XCTAssertTrue(notice.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.buttons["invite.notice.view"].tapWhenHittable()
         let field = app.textFields["connect.code"]
-        XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertEqual(field.value as? String, "482193")
         XCTAssertFalse(app.staticTexts["protectedBy.title"].exists)
-        // The mock Protected already has a guardian: the server answers already_connected.
-        app.buttons["connect.join"].tap()
-        let error = app.staticTexts["connect.error"]
-        XCTAssertTrue(error.waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(error.label.contains("already connected"), error.label)
+    }
+
+    /// PR-03: a guardian who still protects someone can't join; the card says so and points to Profile.
+    @MainActor
+    func testInviteLinkOnGuardianWithMembersPointsToProfile() {
+        let app = launch(mode: "guardian")
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        app.dismissNotificationsReminder()
+        openLink("shoo://join?code=482193", in: app)
+        let profile = app.buttons["invite.notice.profile"]
+        XCTAssertTrue(profile.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.textFields["connect.code"].exists)
+        profile.tapWhenHittable()
+        XCTAssertFalse(app.descendants(matching: .any)["invite.notice"].firstMatch.exists)
+    }
+
+    /// PR-03 (T11): a Protected that already has a guardian is told so; the invite is not used.
+    @MainActor
+    func testInviteLinkOnProtectedWithGuardianShowsTheNotice() {
+        let app = launch(mode: "protected")
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        openLink("shoo://join?code=482193", in: app)
+        let ok = app.buttons["invite.notice.ok"]
+        XCTAssertTrue(ok.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertFalse(app.textFields["connect.code"].exists)
+        XCTAssertTrue(app.staticTexts["You're already protected by Adhella"].exists, app.debugDescription)
+        ok.tapWhenHittable()
+        XCTAssertTrue(ok.waitForNonExistence(timeout: UITestTimeout.screen), app.debugDescription)
+    }
+
+    /// PR-03: a Protected without a guardian yet gets Connect with the code straight away.
+    @MainActor
+    func testInviteLinkOnUnpairedProtectedOpensConnect() {
+        let app = launch(mode: "protected", extra: ["-mock.scenario", "unpaired"])
+        XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        openLink("shoo://join?code=482193", in: app)
+        let field = app.textFields["connect.code"]
+        XCTAssertTrue(field.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertEqual(field.value as? String, "482193")
+        XCTAssertFalse(app.staticTexts["protectedBy.title"].exists)
     }
 
     /// QA 1110 #8, #16 (Bahasa, the longer copy): with the keyboard up the whole headline still shows. Connect
     /// puts the keyboard away, so a two-line error sits clear of the button and the 14-day note.
     @MainActor
     func testConnectErrorWithKeyboardUpOverlapsNothing() {
-        let app = launch(mode: "protected", language: "id")
+        // `unpaired`: a Protected with a guardian gets the Home card instead of Connect (PR-03).
+        let app = launch(mode: "protected", language: "id", extra: ["-mock.scenario", "unpaired"])
         XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 10), app.debugDescription)
         openLink("shoo://join?code=777777", in: app)
         let field = app.textFields["connect.code"]
@@ -236,7 +235,7 @@ final class PairingUITests: XCTestCase {
 
     @MainActor
     func testScanTabExplainsWhenTheCameraCannotScan() {
-        let app = launch(mode: "protected")
+        let app = launch(mode: "protected", extra: ["-mock.scenario", "unpaired"])
         XCTAssertTrue(app.tabBars.buttons["Shield"].waitForExistence(timeout: 10))
         openLink("shoo://join?code=482193", in: app)
         XCTAssertTrue(app.textFields["connect.code"].waitForExistence(timeout: 10), app.debugDescription)

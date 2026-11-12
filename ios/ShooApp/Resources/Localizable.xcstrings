@@ -6304,6 +6304,86 @@
         }
       }
     },
+    "You've got a family invite" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu dapat undangan keluarga"
+          }
+        }
+      }
+    },
+    "You can't join another family yet" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Belum bisa gabung keluarga lain"
+          }
+        }
+      }
+    },
+    "You're already protected by %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu sudah dilindungi %@"
+          }
+        }
+      }
+    },
+    "Join as Protected so your guardian can help check suspicious sites." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gabung sebagai Protected supaya Guardian-mu bisa bantu cek situs mencurigakan."
+          }
+        }
+      }
+    },
+    "You still protect someone. Disconnect them in Profile first, then open the link again." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu masih melindungi orang lain. Putuskan dulu di Profil, lalu buka link ini lagi."
+          }
+        }
+      }
+    },
+    "Only %@ can disconnect you. This invite won't be used." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hanya %@ yang bisa memutus hubunganmu. Undangan ini tidak dipakai."
+          }
+        }
+      }
+    },
+    "View" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lihat"
+          }
+        }
+      }
+    },
+    "Open Profile" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buka Profil"
+          }
+        }
+      }
+    },
     "This iPhone isn't protected yet" : {
       "localizations" : {
         "id" : {
