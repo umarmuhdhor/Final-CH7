@@ -1657,12 +1657,11 @@
       }
     },
     "Couldn't load this item" : {
-      "extractionState" : "stale",
       "localizations" : {
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Item ini gagal dimuat"
+            "value" : "Gagal memuat item ini"
           }
         }
       }
@@ -6631,6 +6630,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Kelola Keluarga"
+          }
+        }
+      }
+    },
+    "Expired" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kedaluwarsa"
+          }
+        }
+      }
+    },
+    "An item can disappear for one of these reasons:" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item bisa hilang karena salah satu hal ini:"
+          }
+        }
+      }
+    },
+    "14 days have passed" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sudah lewat 14 hari"
+          }
+        }
+      }
+    },
+    "The family link was removed" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungan keluarga diputus"
+          }
+        }
+      }
+    },
+    "Back to Activity" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kembali ke Aktivitas"
+          }
+        }
+      }
+    },
+    "Connection problem" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gangguan koneksi"
+          }
+        }
+      }
+    },
+    "This item can't be shown right now. Check your connection, then try again!" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Item ini belum bisa ditampilkan sekarang. Periksa koneksi, lalu coba lagi!"
+          }
+        }
+      }
+    },
+    "Couldn't refresh" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gagal memperbarui"
+          }
+        }
+      }
+    },
+    "Showing the last data. " : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menampilkan data terakhir. "
           }
         }
       }

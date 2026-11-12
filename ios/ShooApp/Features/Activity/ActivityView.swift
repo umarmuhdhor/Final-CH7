@@ -185,9 +185,8 @@ struct ActivityView: View {
     private var rows: some View {
         LazyVStack(alignment: .leading, spacing: 12) {
             if model.refreshFailed {
-                Label { Text("Couldn't refresh. Pull down to try again.") } icon: { Image(systemName: "exclamationmark.circle") }
-                    .activityFont(15)
-                    .foregroundStyle(ActivityStyle.secondary)
+                ActivityRefreshFailed { await model.refresh() }
+                    .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
                     .accessibilityIdentifier("activity.refreshFailed")
             }
             let days = model.days
@@ -220,6 +219,7 @@ struct ActivityView: View {
                 .accessibilityIdentifier("activity.loadMoreRetry")
             }
         }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: model.refreshFailed)
     }
 
     private func row(_ scan: ScanResult) -> some View {
@@ -612,5 +612,71 @@ struct ActivityMessage<Action: View>: View {
 extension ActivityMessage where Action == EmptyView {
     init(systemImage: String, title: LocalizedStringKey, message: LocalizedStringKey) {
         self.init(systemImage: systemImage, title: title, message: message) { EmptyView() }
+    }
+}
+
+/// Figma "Aktivitas · Gagal memperbarui" (1681:6347): over the rows the list still shows, an 80 pt grey tile with
+/// the circular "!", "Gagal memperbarui" and "Menampilkan data terakhir. **Coba Lagi**". The tile's symbol nudges
+/// when it arrives and spins in place of itself while the retry runs.
+private struct ActivityRefreshFailed: View {
+    let retry: () async -> Void
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var isRunning = false
+    @State private var nudge = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                if isRunning {
+                    ProgressView().controlSize(.large).tint(Color(hex: 0x6A717E))
+                } else {
+                    icon
+                }
+            }
+            .frame(width: 80, height: 80)
+            .background(Color(hex: 0xF3F6F8), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityHidden(true)
+            Text("Couldn't refresh")
+                .activityFont(17, .semibold, tracking: -0.43)
+                .foregroundStyle(Color(hex: 0x151617))
+                .padding(.top, 14)
+            Button {
+                guard !isRunning else { return }
+                Task {
+                    isRunning = true
+                    await retry()
+                    isRunning = false
+                    nudge += 1
+                }
+            } label: {
+                (Text("Showing the last data. ") + Text("Try again").foregroundColor(Color(hex: 0x136CB7)).fontWeight(.semibold))
+                    .activityFont(13, tracking: -0.08)
+                    .foregroundStyle(Color(hex: 0x6A717E))
+                    .frame(minHeight: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressScaleButtonStyle())
+            .disabled(isRunning)
+            .accessibilityIdentifier("activity.refreshRetry")
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 8)
+        .onAppear { nudge += 1 }
+        .sensoryFeedback(.error, trigger: nudge) { old, _ in old == 0 }
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        let image = Image(systemName: "exclamationmark.arrow.circlepath")
+            .font(.system(size: 43, weight: .regular))
+            .foregroundStyle(Color(hex: 0x6A717E))
+        if reduceMotion {
+            image
+        } else if #available(iOS 18, *) {
+            image.symbolEffect(.wiggle.byLayer, options: .nonRepeating, value: nudge)
+        } else {
+            image.symbolEffect(.bounce, options: .nonRepeating, value: nudge)
+        }
     }
 }
