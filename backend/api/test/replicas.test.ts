@@ -410,6 +410,18 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     expect((await sql`select 1 from rate_limit_hits where bucket = ${limits.replicaIp.bucket}`).length).toBe(1);
   });
 
+  it("another link of the same site gets its own replica, never the first link's (BH-15, #241)", async () => {
+    const { p } = await family();
+    const first = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    const { path: firstPath } = await stored(first);
+    const login = new URL("/other-page", blocked92.url).href;
+    const second = await postScan(p, { url: login, pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
+    expect(second).not.toBe(first);
+    const { path, bytes } = await stored(second);
+    expect(path).not.toBe(firstPath);
+    expect(bytes).not.toBeNull();
+  });
+
   it("per-device quota: 50 uploads in 24 h, reuses not counted", async () => {
     const { p } = await family();
     await fakeUploads(p.deviceId, REPLICA_QUOTA.owner);
