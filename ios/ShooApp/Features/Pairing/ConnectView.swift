@@ -24,6 +24,8 @@ struct ConnectView: View {
     @State private var codeFocused = false
     /// Bumped each time a problem shows: shakes the code boxes once and taps an error haptic.
     @State private var problemsShown = 0
+    /// Bumped by "Ketik ulang kode": the code field takes focus again.
+    @State private var focusRequests = 0
 
     var body: some View {
         Group {
@@ -75,7 +77,18 @@ struct ConnectView: View {
                             }
                         }
                         if scanRefused {
-                            OnboardingErrorLabel(text: Text("That QR code isn't a Shoo family code."))
+                            // Figma "QR bukan kode Shoo" (1681:4972): the line, then a way to type the code instead.
+                            VStack(alignment: .leading, spacing: 12) {
+                                ConnectProblemLabel(text: Text("This QR isn't a Shoo invite code. Scan the QR from your Guardian's Shoo app."))
+                                    .accessibilityIdentifier("connect.scanRefused")
+                                Button("Just enter the code") {
+                                    withAnimation(.snappy(duration: 0.3)) { tab = .code }
+                                    focusRequests += 1
+                                }
+                                .buttonStyle(ConnectInlineLinkStyle())
+                                .accessibilityIdentifier("connect.enterCodeInstead")
+                            }
+                            .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
                         } else {
                             problemLabel
                         }
@@ -86,13 +99,29 @@ struct ConnectView: View {
                     VStack(spacing: 32) {
                         Text("Enter the invite code")
                             .onboardingBodyStyle()
-                        VStack(spacing: 12) {
-                            CodeField(code: Binding(get: { model.code }, set: { model.code = $0 }), onFocusChange: { codeFocused = $0 })
-                                .modifier(ShakeOnProblem(trigger: problemsShown, isEnabled: !reduceMotion))
+                        VStack(alignment: .leading, spacing: 12) {
+                            CodeField(
+                                code: Binding(get: { model.code }, set: { model.code = $0 }),
+                                isWrong: model.problem == .invalid,
+                                focusRequests: focusRequests,
+                                onFocusChange: { codeFocused = $0 }
+                            )
+                            .modifier(ShakeOnProblem(trigger: problemsShown, isEnabled: !reduceMotion))
                             problemLabel
-                                // Fades in; editing the code clears it at once (no fade-out to wait for).
-                                .animation(model.problem == nil ? nil : (reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25)), value: model.problem)
+                            // Figma "Kode salah" (1681:4712): "Ketik ulang kode" under the line empties the boxes.
+                            if model.problem == .invalid {
+                                Button("Retype code") {
+                                    model.retype()
+                                    focusRequests += 1
+                                }
+                                .buttonStyle(ConnectInlineLinkStyle())
+                                .padding(.top, 12)
+                                .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
+                                .accessibilityIdentifier("connect.retype")
+                            }
                         }
+                        // Fades in; editing the code clears it at once (no fade-out to wait for).
+                        .animation(model.problem == nil ? nil : StateMotion.enter(reduceMotion: reduceMotion), value: model.problem)
                         .id(Self.codeFieldID)
                     }
                     .padding(.top, 39)
@@ -108,7 +137,16 @@ struct ConnectView: View {
                     .accessibilityHidden(codeFocused)
             }
         } footer: {
-            if tab == .code {
+            if tab == .code, model.problem == .full, let onBack {
+                // Figma "Keluarga penuh" (1681:4750): nothing to retry here until the guardian makes room.
+                Button("Back") { if !model.isBusy { onBack() } }
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .transition(.opacity)
+                    .accessibilityIdentifier("connect.back")
+            } else if tab == .code, model.retryAt != nil {
+                WaitButton(model: model)
+                    .transition(.opacity)
+            } else if tab == .code {
                 Button {
                     // QA 1110 #8: the answer shows on the whole page, not squeezed above the keyboard where
                     // a two-line error ran under the button and the headline was pushed off the top.
@@ -135,10 +173,12 @@ struct ConnectView: View {
         }
         .footerEndsWithLink(onSkip != nil)
         .headlineInset(24)
+        .animation(.easeInOut(duration: 0.2), value: footerKind)
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: scanRefused)
         .onChange(of: tab) { scanRefused = false }
         .onChange(of: scanRefused) { _, refused in
             guard refused else { return }
-            AccessibilityNotification.Announcement(L10n.string("That QR code isn't a Shoo family code.", language: language)).post()
+            AccessibilityNotification.Announcement(L10n.string("This QR isn't a Shoo invite code. Scan the QR from your Guardian's Shoo app.", language: language)).post()
         }
         .onChange(of: model.problem) { _, problem in
             guard let problem else { return }
@@ -162,16 +202,106 @@ struct ConnectView: View {
         .accessibilityIdentifier("connect.copyNote")
     }
 
+    /// Which footer shows; its swaps cross-fade.
+    private var footerKind: Int {
+        if model.problem == .full, onBack != nil { 1 } else if model.retryAt != nil { 2 } else { 0 }
+    }
+
     @ViewBuilder
     private var problemLabel: some View {
         if let problem = model.problem {
-            OnboardingErrorLabel(
+            ConnectProblemLabel(
                 text: Text(verbatim: L10n.string(problem.message, language: language)),
-                systemImage: problem == .expired ? "clock.arrow.circlepath" : "exclamationmark.circle"
+                systemImage: problem.isWait ? "clock" : (problem == .expired ? "clock.arrow.circlepath" : "exclamationmark.triangle.fill"),
+                tint: problem.isWait ? ConnectProblemLabel.waitInk : ConnectProblemLabel.errorInk
             )
             .accessibilityIdentifier("connect.error")
             .transition(.opacity)
         }
+    }
+}
+
+/// Figma "Pesan verdict" under the code (1681:4816): the symbol and SF Pro Rounded 13 / 18, 6 apart, left-aligned;
+/// red #C81414 for a refusal, orange #C2610C for a wait.
+private struct ConnectProblemLabel: View {
+    static let errorInk = Color(hex: 0xC81414)
+    static let waitInk = Color(hex: 0xC2610C)
+
+    let text: Text
+    var systemImage = "exclamationmark.triangle.fill"
+    var tint = errorInk
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 16)
+                .accessibilityHidden(true)
+            text
+                .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                .figmaLineHeight(18, relativeTo: .footnote)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(tint)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// "Ketik ulang kode", "Masukkan kode saja": Figma #136CB7, SF Pro Semibold 17, left-aligned, 44 pt to tap.
+private struct ConnectInlineLinkStyle: ButtonStyle {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onboardingFont(17, weight: .semibold, relativeTo: .body)
+            .foregroundStyle(Color(hex: 0x136CB7))
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1, anchor: .leading)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .padding(.vertical, -10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Figma "Terlalu banyak percobaan / pendaftaran" (1681:4787, 4824): the grey button counts down
+/// ("Coba lagi dalam 04:59", or minutes when it's long) and turns back into Connect when the wait ends.
+private struct WaitButton: View {
+    let model: ConnectModel
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    /// Waits of 10 minutes or more count in minutes ("59 menit"); shorter ones as mm:ss.
+    static func label(seconds: Int) -> Text {
+        if seconds >= 600 {
+            let minutes = Int((Double(seconds) / 60).rounded(.up))
+            return Text("Try again in \(minutes) minutes")
+        }
+        return Text("Try again in \(String(format: "%02d:%02d", seconds / 60, seconds % 60))")
+    }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let seconds = model.secondsToWait(now: context.date) ?? 0
+            Button {} label: {
+                Self.label(seconds: seconds)
+                    .monospacedDigit()
+                    .contentTransition(reduceMotion ? .opacity : .numericText(countsDown: true))
+                    .animation(.snappy(duration: 0.3), value: seconds)
+            }
+            .buttonStyle(OnboardingCapsuleButtonStyle())
+            .disabled(true)
+            .accessibilityIdentifier("connect.wait")
+        }
+        .task(id: model.retryAt) {
+            guard let retryAt = model.retryAt else { return }
+            try? await Task.sleep(for: .seconds(max(0, retryAt.timeIntervalSinceNow)))
+            guard !Task.isCancelled else { return }
+            model.waitEnded()
+        }
+        // A light tap when Connect comes back.
+        .sensoryFeedback(.impact(weight: .light), trigger: model.retryAt) { old, new in old != nil && new == nil }
     }
 }
 
@@ -285,6 +415,10 @@ private struct CornerMarks: Shape {
 /// Six digit boxes over one number-pad field: one VoiceOver element, paste and autofill still work.
 private struct CodeField: View {
     @Binding var code: String
+    /// Figma "Kode salah": every box gets the red ring.
+    var isWrong = false
+    /// Bumped from outside ("Ketik ulang kode", "Masukkan kode saja") to focus the field.
+    var focusRequests = 0
     let onFocusChange: (Bool) -> Void
     @FocusState private var focused: Bool
     @Environment(\.shooReduceMotion) private var reduceMotion
@@ -322,8 +456,9 @@ private struct CodeField: View {
                     .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(OnboardingTheme.ink.opacity(isActive ? 1 : 0.1), lineWidth: 1)
+                            .strokeBorder(isWrong ? ConnectProblemLabel.errorInk : OnboardingTheme.ink.opacity(isActive ? 1 : 0.1), lineWidth: 1)
                     }
+                    .animation(.easeOut(duration: 0.2), value: isWrong)
                 }
             }
             .padding(.horizontal, 6)
@@ -333,6 +468,7 @@ private struct CodeField: View {
         .contentShape(Rectangle())
         .onTapGesture { focused = true }
         .onChange(of: focused) { _, isFocused in onFocusChange(isFocused) }
+        .onChange(of: focusRequests) { focused = true }
         // After the sheet / page has settled: focus set mid-animation is often ignored.
         .task {
             try? await Task.sleep(for: .milliseconds(350))

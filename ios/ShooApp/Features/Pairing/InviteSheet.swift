@@ -13,6 +13,9 @@ struct InviteSheet: View {
     @State private var model: FamilyCodeModel
     /// Text for the system share sheet ("More", or WhatsApp / Messages when they can't open).
     @State private var shareText: ShareText?
+    /// Bumped by each copy: "Link undangan tersalin" shows for a moment in place of "Refresh code".
+    @State private var copies = 0
+    @State private var showsCopiedNote = false
 
     init(repository: any ShooRepository, onDone: @escaping () -> Void) {
         _model = State(initialValue: FamilyCodeModel(repository: repository))
@@ -46,11 +49,13 @@ struct InviteSheet: View {
             .scrollBounceBehavior(.basedOnSize)
             .safeAreaInset(edge: .bottom) {
                 // Figma "App Icon Row": 18 above the icons; the names end 80 pt above the screen bottom.
-                shareRow
+                footer
                     .padding(.horizontal, 24)
                     .padding(.top, 18)
                     .padding(.bottom, 46)
+                    .frame(maxWidth: .infinity)
                     .background(OnboardingTheme.background)
+                    .animation(.easeInOut(duration: 0.25), value: stateKind)
             }
             .background(OnboardingTheme.background.ignoresSafeArea())
             .navigationTitle(localized: "Send invite")
@@ -70,6 +75,14 @@ struct InviteSheet: View {
                 }
             }
             .task { await model.run() }
+            .task(id: copies) {
+                guard copies > 0 else { return }
+                withAnimation(StateMotion.enter(reduceMotion: reduceMotion)) { showsCopiedNote = true }
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.25)) { showsCopiedNote = false }
+            }
+            .sensoryFeedback(.success, trigger: copies) { _, new in new > 0 }
             .sheet(item: $shareText) { item in
                 InviteActivityView(text: item.text)
                     .presentationDetents([.medium, .large])
@@ -85,9 +98,22 @@ struct InviteSheet: View {
     private var codeContent: some View {
         switch model.codeState {
         case .loading:
-            card {
-                ProgressView().accessibilityLabel(Text("Getting a code"))
+            // Figma "Kirim Undangan · Mengambil kode" (1681:5872): the QR and code as grey blocks that shimmer.
+            VStack(spacing: 15) {
+                card { InviteQRSkeleton() }
+                Capsule()
+                    .fill(Color(hex: 0xE2E7EE))
+                    .frame(width: 112, height: 14)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
+            .shimmering()
+            .accessibilityHidden(true)
+            Text("Preparing the invite code…")
+                .onboardingFont(17, design: .rounded, relativeTo: .body)
+                .foregroundStyle(Color(hex: 0x6A717E))
+                .padding(.top, 2)
+                .accessibilityIdentifier("invite.loading")
         case .ready(let code):
             card {
                 if let url = model.inviteURL, let qr = QRCode.image(for: url.absoluteString) {
@@ -115,6 +141,51 @@ struct InviteSheet: View {
                 .background(OnboardingTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .accessibilityLabel(Text("Code \(code.code.map(String.init).joined(separator: " "))"))
                 .accessibilityIdentifier("invite.code")
+            ZStack {
+                if showsCopiedNote {
+                    // Figma "Link tersalin" (1681:6222): a check and the line where "Refresh code" was.
+                    Label {
+                        Text("Invite link copied")
+                    } icon: {
+                        Image(systemName: "checkmark")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color(hex: 0x34C759))
+                    }
+                    .onboardingFont(15, weight: .medium, family: .display, relativeTo: .subheadline)
+                    .foregroundStyle(Color(hex: 0x191D2F))
+                    .frame(minHeight: 44)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.92)))
+                    .accessibilityIdentifier("invite.copiedNote")
+                } else {
+                    refreshAndCountdown
+                        .transition(.opacity)
+                }
+            }
+        case .unavailable:
+            // Figma "Gagal mengambil kode" (1681:5974); "Try again" is the footer button.
+            InviteStateMessage(
+                systemImage: "exclamationmark.arrow.circlepath",
+                tint: Color(hex: 0xE5483B),
+                title: "Code can't be made yet",
+                message: "Check your internet connection, then try again."
+            )
+            .accessibilityIdentifier("invite.unavailable")
+        case .full:
+            // Figma "Keluarga penuh" (1681:6059); "Manage family" is the footer button.
+            InviteStateMessage(
+                systemImage: "person.2.fill",
+                symbolSize: 27,
+                tint: Color(hex: 0x136CB7),
+                title: "Family is full",
+                message: "A family has at most 3 people.\nRemove one to invite again."
+            )
+            .accessibilityIdentifier("invite.full")
+        }
+    }
+
+    @ViewBuilder
+    private var refreshAndCountdown: some View {
+        if case .ready = model.codeState {
             VStack(spacing: 2) {
                 Button {
                     // A new code: the old one stops working, also in links already sent.
@@ -138,22 +209,38 @@ struct InviteSheet: View {
                     .foregroundStyle(OnboardingTheme.secondaryInk)
                     .accessibilityIdentifier("invite.countdown")
             }
+        }
+    }
+
+    /// Which footer and body show; their swaps cross-fade.
+    private var stateKind: Int {
+        switch model.codeState {
+        case .loading: 0
+        case .ready: 1
+        case .unavailable: 2
+        case .full: 3
+        }
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        switch model.codeState {
+        case .loading:
+            InviteShareRowSkeleton()
+        case .ready:
+            shareRow
         case .unavailable:
-            card {
-                VStack(spacing: 12) {
-                    Text("Couldn't get a code").onboardingFont(17, weight: .semibold, relativeTo: .headline)
-                    Button("Try again") { Task { await model.refreshCode() } }
-                        .buttonStyle(OnboardingLinkButtonStyle())
-                        .accessibilityIdentifier("invite.retry")
-                }
-                .padding(24)
-            }
+            Button("Try again") { Task { await model.refreshCode() } }
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                // Figma: the button ends 115 pt above the screen bottom, higher than the icon row.
+                .padding(.bottom, 34)
+                .accessibilityIdentifier("invite.retry")
         case .full:
-            card {
-                Text("Your family is full (3 people). Remove someone to invite another person.")
-                    .onboardingBodyStyle()
-                    .padding(24)
-            }
+            // Profile is right under this sheet: closing it shows the family to remove someone from.
+            Button("Manage family") { dismiss() }
+                .buttonStyle(OnboardingCapsuleButtonStyle())
+                .padding(.bottom, 34)
+                .accessibilityIdentifier("invite.manageFamily")
         }
     }
 
@@ -174,8 +261,9 @@ struct InviteSheet: View {
     private var shareRow: some View {
         let text = model.code.map { FamilyCodeModel.inviteText(for: $0, language: language) }
         return HStack(alignment: .top, spacing: 0) {
-            ShareTile(title: "Copy", systemImage: model.copied ? "checkmark" : "doc.on.doc", style: .plain) {
+            ShareTile(title: model.copied ? "Copied" : "Copy", systemImage: model.copied ? "checkmark" : "doc.on.doc", style: .plain) {
                 if model.copyInvite(language: language) {
+                    copies += 1
                     AccessibilityNotification.Announcement(L10n.string("Invite link copied", language: language)).post()
                 }
             }
@@ -285,6 +373,96 @@ private struct ShareTile: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(color.gradient, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         }
+    }
+}
+
+/// Figma "Gagal mengambil kode" / "Keluarga penuh": an 80 pt tile with the symbol (the tint at 12 %), the title
+/// (SF Pro Semibold 20) and the line (SF Pro Rounded 17, #6A717E). Settles in with a spring; the symbol bounces once.
+private struct InviteStateMessage: View {
+    let systemImage: String
+    /// Figma: 34 for the error symbol, 27 for the people.
+    var symbolSize: CGFloat = 34
+    let tint: Color
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Image(systemName: systemImage)
+                .font(.system(size: symbolSize, weight: .semibold))
+                .foregroundStyle(tint)
+                .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? false : shown)
+                .frame(width: 80, height: 80)
+                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .scaleEffect(shown || reduceMotion ? 1 : 0.85)
+                .accessibilityHidden(true)
+            Text(title)
+                .onboardingFont(20, weight: .semibold, relativeTo: .title3)
+                .foregroundStyle(Color(hex: 0x151617))
+                .padding(.top, 24)
+                .accessibilityAddTraits(.isHeader)
+            Text(message)
+                .onboardingFont(17, design: .rounded, relativeTo: .body)
+                .figmaLineHeight(22, relativeTo: .body)
+                .foregroundStyle(Color(hex: 0x6A717E))
+                .padding(.top, 8)
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 52)
+        .opacity(shown ? 1 : 0)
+        .accessibilityElement(children: .combine)
+        .onAppear {
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35, bounce: 0.3)) { shown = true }
+        }
+    }
+}
+
+/// Figma "Mengambil kode": the three finder squares and a centre block on #F5F8FC, all #E2E7EE / #EAEEF3.
+private struct InviteQRSkeleton: View {
+    var body: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height) * 0.84
+            let block = side * 0.24
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: 0xF5F8FC))
+                VStack {
+                    HStack { finder(block, 0xE2E7EE); Spacer(); finder(block, 0xE2E7EE) }
+                    Spacer()
+                    HStack { finder(block, 0xE2E7EE); Spacer(); finder(block, 0xEAEEF3) }
+                }
+                .padding(side * 0.07)
+                RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color(hex: 0xEAEEF3))
+                    .frame(width: block * 0.74, height: block * 0.74)
+            }
+            .frame(width: side, height: side)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    private func finder(_ size: CGFloat, _ hex: UInt32) -> some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: hex)).frame(width: size, height: size)
+    }
+}
+
+/// Figma "Skeleton bagikan": four grey tiles with a short bar under each, shimmering.
+private struct InviteShareRowSkeleton: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(0..<4, id: \.self) { index in
+                if index > 0 { Spacer(minLength: 4) }
+                VStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous).fill(Color(hex: 0xE2E7EE)).frame(width: 66, height: 66)
+                    Capsule().fill(Color(hex: 0xEAEEF3)).frame(width: 44, height: 8)
+                }
+                .frame(width: 78, height: 90, alignment: .top)
+            }
+        }
+        .shimmering()
+        .accessibilityHidden(true)
     }
 }
 

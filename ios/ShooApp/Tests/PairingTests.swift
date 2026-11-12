@@ -91,7 +91,6 @@ struct ConnectModelTests {
         ("000000", ConnectModel.Problem.invalid),
         ("999999", .expired),
         ("888888", .full),
-        ("777777", .tooManyAttempts),
         ("666666", .alreadyConnected),
     ])
     func everyJoinErrorHasItsMessage(code: String, problem: ConnectModel.Problem) async {
@@ -104,13 +103,59 @@ struct ConnectModelTests {
         #expect(model.problem == nil)
     }
 
+    /// Figma "Terlalu banyak percobaan" (1681:4787): the server's `Retry-After` holds Connect, editing the code
+    /// keeps the line, and the end of the wait brings Connect back.
+    @Test func aWaitHoldsConnectUntilRetryAfterEnds() async {
+        let start = Date()
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "482193") { _ in
+            throw RepositoryError.throttled(.tooManyAttempts, message: "Too many join attempts", retryAfter: 299)
+        }
+        await model.join()
+        #expect(model.problem == .tooManyAttempts)
+        #expect(!model.canJoin)
+        #expect((298...300).contains(model.secondsToWait(now: start) ?? 0))
+        model.code = "48219"
+        model.code = "482190"
+        #expect(model.problem == .tooManyAttempts, "the server still refuses: the line stays")
+        #expect(!model.canJoin)
+        model.retype()
+        #expect(model.code == "482190", "no retyping during a wait")
+        model.waitEnded(now: start.addingTimeInterval(100))
+        #expect(model.retryAt != nil, "too early")
+        model.waitEnded(now: start.addingTimeInterval(301))
+        #expect(model.retryAt == nil)
+        #expect(model.problem == nil)
+        #expect(model.canJoin)
+    }
+
+    /// A 429 without `Retry-After` (a proxy) shows the line but never locks the button.
+    @Test func aWaitWithoutRetryAfterDoesNotLock() async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "482193") { _ in
+            throw RepositoryError.api(.rateLimited, message: "HTTP 429")
+        }
+        await model.join()
+        #expect(model.problem == .signUpLimit)
+        #expect(model.retryAt == nil)
+        #expect(model.canJoin)
+    }
+
+    /// Figma "Kode salah" (1681:4712): "Ketik ulang kode" empties the boxes and the line.
+    @Test func retypeClearsAWrongCode() async {
+        let model = ConnectModel(repository: MockRepository(mode: .protected, latency: .zero), code: "000000")
+        await model.join()
+        #expect(model.problem == .invalid)
+        model.retype()
+        #expect(model.code.isEmpty)
+        #expect(model.problem == nil)
+    }
+
     /// Edge-case QA 2026-11-11 #2: `rate_limited` comes from registering (`POST /devices`, per IP), not from
     /// join attempts, so it must not say "too many tries ... a few minutes".
     @Test func rateLimitedIsTheSignUpLimitNotTooManyTries() {
         #expect(ConnectModel.Problem(RepositoryError.api(.rateLimited, message: "Too many requests")) == .signUpLimit)
         #expect(ConnectModel.Problem(RepositoryError.api(.tooManyAttempts, message: "Too many join attempts")) == .tooManyAttempts)
         #expect(L10n.string(ConnectModel.Problem.signUpLimit.message, language: .indonesian)
-            == "Terlalu banyak pendaftaran baru dari jaringan ini. Tunggu hingga 1 jam, lalu coba lagi.")
+            == "Terlalu banyak pendaftaran dari jaringan ini. Coba lagi dalam 1 jam.")
     }
 
     @Test func offlineIsItsOwnProblem() async {

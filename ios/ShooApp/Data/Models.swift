@@ -321,9 +321,19 @@ enum RepositoryError: Error, Hashable, Sendable {
     case network
     /// The response did not match the contract.
     case decoding
+    /// A 429 (`rate_limited`, `too_many_attempts`) that said how long to wait (`Retry-After`, contracts/api.md).
+    case throttled(APIErrorCode, message: String, retryAfter: TimeInterval)
 
     var apiCode: APIErrorCode? {
-        if case .api(let code, _) = self { return code }
+        switch self {
+        case .api(let code, _), .throttled(let code, _, _): code
+        case .network, .decoding: nil
+        }
+    }
+
+    /// Seconds the server asked to wait before the next try, when it said.
+    var retryAfter: TimeInterval? {
+        if case .throttled(_, _, let seconds) = self { return seconds }
         return nil
     }
 }

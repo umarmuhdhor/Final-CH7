@@ -233,7 +233,10 @@ actor MockRepository: ShooRepository {
         case "000000": throw RepositoryError.api(.codeInvalid, message: "No family uses this code")
         case "999999": throw RepositoryError.api(.codeExpired, message: "Code expired")
         case "888888": throw RepositoryError.api(.familyFull, message: "Guardian already has 3 members")
-        case "777777": throw RepositoryError.api(.tooManyAttempts, message: "Too many attempts")
+        // The backend sends `Retry-After` with both 429s (contracts/api.md): the Connect countdown.
+        case "777777": throw RepositoryError.throttled(.tooManyAttempts, message: "Too many attempts", retryAfter: 299)
+        // Really from `POST /devices` in onboarding; here so "Coba lagi dalam 59 menit" can be staged.
+        case "555555": throw RepositoryError.throttled(.rateLimited, message: "Too many requests", retryAfter: 3599)
         case "666666": throw RepositoryError.api(.alreadyConnected, message: "Already connected")
         default: break
         }

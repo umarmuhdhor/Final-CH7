@@ -8,8 +8,11 @@ final class HostStubProtocol: URLProtocol {
         var status: Int
         var body: Data
         var failure: URLError?
+        var headers: [String: String]?
 
-        static func json(_ status: Int, _ text: String) -> Reply { Reply(status: status, body: Data(text.utf8)) }
+        static func json(_ status: Int, _ text: String, headers: [String: String]? = nil) -> Reply {
+            Reply(status: status, body: Data(text.utf8), headers: headers)
+        }
         static func offline() -> Reply { Reply(status: 0, body: Data(), failure: URLError(.notConnectedToInternet)) }
     }
 
@@ -67,7 +70,7 @@ final class HostStubProtocol: URLProtocol {
             client?.urlProtocol(self, didFailWithError: failure)
             return
         }
-        let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: nil, headerFields: nil)!
+        let response = HTTPURLResponse(url: url, statusCode: reply.status, httpVersion: nil, headerFields: reply.headers)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: reply.body)
         client?.urlProtocolDidFinishLoading(self)
