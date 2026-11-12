@@ -197,8 +197,8 @@ create or replace trigger admin_verdict_label after insert or update of value, b
 
 -- ---------------------------------------------------------------- forget (K11, K12, I11)
 
--- Device delete (by_ref null in label_forget terms) or family unlink. A held row queues the forget
--- entry; ai_dataset hides queued rows at once and on_forget_drain deletes them.
+-- Device delete (by_ref null in label_forget terms) or family unlink. A held row or any other failed
+-- delete queues the forget entry; ai_dataset hides queued rows at once and on_forget_drain deletes them.
 create function admin.on_decision_forget() returns trigger
 language plpgsql security definer set search_path = admin, pg_temp set lock_timeout = '200ms' as $$
 declare
@@ -216,7 +216,10 @@ begin
       delete from admin.guardian_decisions g
        where (v_by is null and (g.owner_ref = v_owner or g.by_ref = v_owner))
           or (g.owner_ref = v_owner and g.by_ref = v_by);
-    exception when lock_not_available then
+    exception when others then
+      -- Held row (lock_not_available) or any other failure: queue the forget entry, which hides the
+      -- rows in ai_dataset at once and lets on_forget_drain retry (fail closed, not open).
+      raise warning 'admin_trigger_queued on_decision_forget % %', sqlstate, sqlerrm;
       insert into admin.label_forget (owner_ref, by_ref) values (v_owner, v_by);
     end;
   exception when others then
