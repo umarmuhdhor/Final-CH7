@@ -300,3 +300,81 @@ private struct SlotPerson: Shape {
         return path
     }
 }
+
+// MARK: Couldn't load
+
+/// Figma "Card · Gagal memuat" (Profile/Pribadi 1681:6986, the Guardian family list 1681:7088): the red
+/// circular arrow (SF Pro Rounded Bold 34, #E5483B), "Profil belum bisa dimuat" (SF Pro Display Semibold 20 / 26),
+/// the line (SF Pro Rounded 17 / 22, #6A717E), then a 56 pt outlined "Coba Lagi" 40 below.
+/// The rest of Profile stays usable. The symbol bounces once on arrival and again after a failed try;
+/// the button shows a spinner while it retries.
+struct ProfileLoadFailed: View {
+    var identifier = "profile.retry"
+    let retry: () async -> Void
+
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var isRetrying = false
+    @State private var nudge = 0
+
+    private static let red = Color(hex: 0xE5483B)
+    /// Figma "Gradient/Primary Button" stroke: #136CB7 to #68CDFA.
+    private static let stroke = LinearGradient(colors: [Color(hex: 0x136CB7), Color(hex: 0x68CDFA)], startPoint: .leading, endPoint: .trailing)
+
+    var body: some View {
+        VStack(spacing: 40) {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.arrow.circlepath")
+                    .font(.system(size: 34.3, weight: .bold, design: .rounded))
+                    .foregroundStyle(Self.red)
+                    .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? 0 : nudge)
+                    .frame(width: 50, height: 50)
+                    .accessibilityHidden(true)
+                VStack(spacing: 4) {
+                    Text("Couldn't load the profile")
+                        .profileFont(20, .semibold)
+                        .figmaLineHeight(26, relativeTo: .title3)
+                        .foregroundStyle(Color(hex: 0x151617))
+                        .accessibilityAddTraits(.isHeader)
+                    Text("Check your internet connection, then try again.")
+                        .onboardingFont(17, design: .rounded, relativeTo: .body)
+                        .figmaLineHeight(22, relativeTo: .body)
+                        .foregroundStyle(ProfileStyle.secondary)
+                }
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+            Button {
+                guard !isRetrying else { return }
+                Task {
+                    isRetrying = true
+                    await retry()
+                    isRetrying = false
+                    nudge += 1
+                }
+            } label: {
+                ZStack {
+                    Text("Try Again")
+                        .profileFont(17, .semibold)
+                        .opacity(isRetrying ? 0 : 1)
+                    if isRetrying { ProgressView().controlSize(.small).tint(ProfileStyle.link) }
+                }
+                .foregroundStyle(ProfileStyle.link)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(ProfileStyle.card, in: Capsule())
+                .overlay(Capsule().strokeBorder(Self.stroke, lineWidth: 1))
+                .contentShape(Capsule())
+                .animation(.easeOut(duration: 0.15), value: isRetrying)
+            }
+            .buttonStyle(PressScaleButtonStyle())
+            .disabled(isRetrying)
+            .accessibilityIdentifier(identifier)
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity)
+        .stateEntrance()
+        .onAppear { nudge += 1 }
+        .sensoryFeedback(.error, trigger: nudge) { _, now in now == 1 }
+    }
+}
