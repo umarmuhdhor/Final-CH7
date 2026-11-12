@@ -219,10 +219,14 @@ final class ActivityModel {
         return scan.ownerDeviceId != ownDeviceId
     }
 
-    /// One row per site (PR-05): an owner's domain shows once, as its newest scan. The backend keeps
-    /// one row per site; older duplicate rows from before that stay hidden until retention drops them.
+    /// One row per link (PR-05, #241): an owner's page (origin + path, as `verdict_link` on the backend)
+    /// shows once, as its newest scan. The backend keeps one row per owner + link, so two pages of one site
+    /// are two rows (BH-25); older duplicate rows of one link stay hidden until retention drops them.
     private static func site(_ scan: ScanResult) -> String {
-        "\(scan.ownerDeviceId)|\(scan.domain)"
+        let url = scan.url
+        let origin = "\(url.scheme?.lowercased() ?? "")://\(url.host()?.lowercased() ?? "")" + (url.port.map { ":\($0)" } ?? "")
+        let path = url.path(percentEncoded: true)
+        return "\(scan.ownerDeviceId)|\(origin)\(path.isEmpty ? "/" : path)"
     }
 
     /// One page with its hidden rows and sites already in `seen` removed. A page left empty by that is

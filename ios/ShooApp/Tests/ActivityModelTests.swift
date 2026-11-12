@@ -293,31 +293,66 @@ struct ActivityModelTests {
         #expect(model.hasMore)
     }
 
-    @Test func aSiteShowsOnceAsItsNewestScanAcrossPages() async throws {
+    @Test func aLinkShowsOnceAsItsNewestScanAcrossPages() async throws {
         let base = MockRepository(mode: .protected, latency: .zero)
         let newest = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
-        func scan(_ id: String, _ domain: String, owner: String = newest.ownerDeviceId) -> ScanResult {
+        func scan(_ id: String, _ link: String, owner: String = newest.ownerDeviceId) throws -> ScanResult {
             var scan = newest
             scan.id = id
-            scan.domain = domain
+            scan.url = try #require(URL(string: link))
+            scan.domain = try #require(scan.url.host())
             scan.ownerDeviceId = owner
             return scan
         }
-        // Rows from before the backend kept one row per site: a.example three times for one owner.
+        // Duplicate rows of one link (older rows from before one row per link): a.example/x three times.
         let repository = CountingScansRepository(base: base)
         repository.pages = [
-            "": ScanPage(items: [scan("1", "a.example"), scan("2", "a.example"), scan("3", "b.example")], nextCursor: "p2"),
-            "p2": ScanPage(items: [scan("4", "a.example")], nextCursor: "p3"),
-            "p3": ScanPage(items: [scan("5", "a.example", owner: "dev_dad")], nextCursor: nil),
+            "": ScanPage(items: [try scan("1", "https://a.example/x"), try scan("2", "https://a.example/x?ref=wa"),
+                                try scan("3", "https://b.example/")], nextCursor: "p2"),
+            "p2": ScanPage(items: [try scan("4", "https://a.example/x")], nextCursor: "p3"),
+            "p3": ScanPage(items: [try scan("5", "https://a.example/x", owner: "dev_dad")], nextCursor: nil),
         ]
         let model = ActivityModel(repository: repository, owner: .me)
         await model.load()
         #expect(model.items.map(\.id) == ["1", "3"])
         await model.loadMore()
-        // The page with only a.example again is skipped; another owner's visit of it still shows.
+        // The page with only a.example/x again is skipped; another owner's visit of it still shows.
         #expect(model.items.map(\.id) == ["1", "3", "5"])
         #expect(repository.scanCalls == 3)
         #expect(!model.hasMore)
+    }
+
+    /// BH-25 (#241): the backend keeps one row per owner + link, so two pages of one site are two rows.
+    @Test func twoPagesOfOneSiteAreTwoRows() async throws {
+        let base = MockRepository(mode: .protected, latency: .zero)
+        let newest = try #require(try await base.scans(owner: .me, status: nil, cursor: nil).items.first)
+        func scan(_ id: String, _ link: String) throws -> ScanResult {
+            var scan = newest
+            scan.id = id
+            scan.url = try #require(URL(string: link))
+            scan.domain = "bca-verifikasi.site"
+            return scan
+        }
+        let repository = CountingScansRepository(base: base)
+        repository.pages = [
+            "": ScanPage(items: [try scan("a", "https://bca-verifikasi.site/a"), try scan("b", "https://bca-verifikasi.site/b"),
+                                try scan("login", "https://login.bca-verifikasi.site/a")], nextCursor: nil),
+        ]
+        let model = ActivityModel(repository: repository, owner: .me)
+        await model.load()
+        #expect(model.items.map(\.id) == ["a", "b", "login"])
+    }
+
+    /// BH-25: each row tells which page it is: the registrable domain first (always readable), then the
+    /// path, percent-encoded so bidi or invisible characters cannot reorder it (as `displayLink`).
+    @Test func rowTitleIsTheDomainThenThePath() throws {
+        func title(_ link: String, _ domain: String) throws -> String {
+            ActivityRow.pageTitle(url: try #require(URL(string: link)), domain: domain)
+        }
+        #expect(try title("https://bca-verifikasi.site/", "bca-verifikasi.site") == "bca-verifikasi.site")
+        #expect(try title("https://bca-verifikasi.site/login?otp=1#x", "bca-verifikasi.site") == "bca-verifikasi.site/login")
+        #expect(try title("https://login.bca-verifikasi.site/b", "bca-verifikasi.site") == "bca-verifikasi.site/b")
+        #expect(try title("https://x.site/%E2%80%AEdi.oc", "x.site") == "x.site/%E2%80%AEdi.oc")
     }
 
     @Test func ownListKeepsTheGuardiansRows() async {
