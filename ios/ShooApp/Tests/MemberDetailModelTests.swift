@@ -68,6 +68,27 @@ struct MemberDetailModelTests {
         #expect(try await repository.familyMembers().first { $0.deviceId == "dev_mom" }?.notify == false)
     }
 
+    /// BH-30: a second tap while the first change is still on its way is ignored, so two failures arriving
+    /// in any order cannot leave the switch on a value the server never had.
+    @Test func secondNotifyTapWhileOneIsInFlightIsIgnored() async throws {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        repository.notifyFailure = RepositoryError.network
+        let first = NotifyGate(), second = NotifyGate()
+        repository.beforeNotify = { on in on ? await second.wait() : await first.wait() }
+        let model = model(repository: repository)
+        await model.load()
+        #expect(model.member?.notify == true)
+        let t1 = Task { await model.setNotify(false) }
+        try await Task.sleep(for: .milliseconds(50))
+        let t2 = Task { await model.setNotify(true) }
+        try await Task.sleep(for: .milliseconds(50))
+        first.release()
+        await t1.value
+        second.release()
+        await t2.value
+        #expect(model.member?.notify == true)
+    }
+
     @Test func failedNotifyGoesBackAndSaysSo() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
         repository.notifyFailure = RepositoryError.network
@@ -139,5 +160,30 @@ struct MemberDetailModelTests {
         try await repository.removeMember(deviceId: "dev_mom")
         #expect(await model.disconnect())
         #expect(cleared == 1)
+    }
+}
+
+/// Holds a call until `release` (BH-30).
+final class NotifyGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isOpen = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if isOpen { lock.unlock(); continuation.resume(); return }
+            waiter = continuation
+            lock.unlock()
+        }
+    }
+
+    func release() {
+        lock.lock()
+        isOpen = true
+        let waiter = waiter
+        self.waiter = nil
+        lock.unlock()
+        waiter?.resume()
     }
 }

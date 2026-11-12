@@ -94,8 +94,12 @@ final class MemberDetailModel {
     }
 
     /// "Kabari saya": optimistic, back to the old value when the server says no.
+    /// BH-30: one change at a time. A tap while one is on its way is ignored (the switch snaps back), so
+    /// two answers arriving in any order cannot leave the switch on a value the server never had.
     func setNotify(_ on: Bool) async {
-        guard let old = member?.notify, old != on else { return }
+        guard !isSavingNotify, let old = member?.notify, old != on else { return }
+        isSavingNotify = true
+        defer { isSavingNotify = false }
         member?.notify = on
         do {
             try await repository.setMemberNotify(deviceId: deviceId, notify: on)
@@ -105,6 +109,8 @@ final class MemberDetailModel {
             actionError = "Couldn't save. Check your connection and try again."
         }
     }
+
+    @ObservationIgnored private var isSavingNotify = false
 
     /// The message to announce after "Ingatkan".
     func remind() async -> String.LocalizationValue? {

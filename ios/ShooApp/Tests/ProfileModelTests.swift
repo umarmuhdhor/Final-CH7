@@ -41,6 +41,17 @@ struct ProfileModelTests {
         #expect(!model.showsFamilyCode)
     }
 
+    /// BH-29: the Account row says "Not connected" when no Guardian protects this phone, as the page it opens.
+    @Test func connectionRowSaysWhetherAGuardianIsLinked() async {
+        let (paired, _, _) = model(mode: .protected)
+        await paired.load()
+        #expect(L10n.string(paired.connectionRowTitle, language: .english) == "Connected")
+        let repository = MockRepository(mode: .protected, scenario: .unpaired, latency: .zero)
+        let alone = ProfileModel(repository: repository, settings: settings(mode: .protected), linked: linked())
+        await alone.load()
+        #expect(L10n.string(alone.connectionRowTitle, language: .english) == "Not connected")
+    }
+
     /// QA 2026-11-10 #4: Maria, protected, disconnected by her guardian, got "You still protect someone".
     @Test func protectedWithoutAGuardianCanJoinAgain() async {
         let repository = MockRepository(mode: .protected, scenario: .unpaired, latency: .zero)
