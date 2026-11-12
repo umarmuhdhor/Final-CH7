@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LIVE_END_EXPIRY_SECONDS, LIVE_EXPIRY_SECONDS, LIVE_STALE_SECONDS, relayLive, type LiveUpdate } from "../src/services/push/live";
+import { LIVE_END_EXPIRY_SECONDS, LIVE_EXPIRY_SECONDS, LIVE_START_ALERT, LIVE_STALE_SECONDS, relayLive, type LiveUpdate } from "../src/services/push/live";
 import type { LiveMessage, LiveSender, SendResult } from "../src/services/push/sender";
 import { atWindowStart } from "./helpers/rateWindow";
 import { resetDb, testSql } from "./helpers/resetDb";
@@ -89,12 +89,21 @@ describe("relayLive: start / update / end (#49)", () => {
       token: START, priority: 10, expiresInSeconds: LIVE_EXPIRY_SECONDS,
       payload: { aps: {
         timestamp: T, event: "start",
+        alert: LIVE_START_ALERT.en,
         "content-state": { domain: "very-private-domain.example", score: 64, isAnalyzing: true, isBlocked: false, status: "warning" },
         "attributes-type": "ScoreActivityAttributes", attributes: {},
         "stale-date": T + LIVE_STALE_SECONDS,
       } },
     }]);
     expect((await tokens(d)).startedAt).not.toBeNull();
+  });
+
+  it("start carries an alert in the device's language: iOS drops a push-to-start without one", async () => {
+    const d = await createDevice();
+    await patch(d, { liveActivityStartToken: START, language: "id" });
+    const s = new Recorder();
+    await relayLive(sql, s, d.deviceId, page(), NOW);
+    expect((s.sent[0]?.payload as { aps: { alert: unknown } }).aps.alert).toEqual(LIVE_START_ALERT.id);
   });
 
   it("no second start while the app has not sent the update token yet (no stacked islands)", async () => {

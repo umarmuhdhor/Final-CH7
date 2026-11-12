@@ -171,6 +171,7 @@ While a `start` waits for the app's update token, there is no second `start` for
 { "aps": {
     "timestamp": 1731200000,
     "event": "start",
+    "alert": { "title": "Shoo", "body": "Checking this page" },
     "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false, "status": "warning" },
     "attributes-type": "ScoreActivityAttributes",
     "attributes": {},
@@ -178,6 +179,7 @@ While a `start` waits for the app's update token, there is no second `start` for
 } }
 ```
 - `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`. `status` (#383, additive) = the `status` from `POST /live`, copied as is: the island takes its colour from it, so a threshold moved in `/config/public` can't colour a block as a warning. A push without it still decodes (built-in 30 / 50 / 80 bands).
+- `alert` (start only, required): iOS drops a push-to-start without it ("Received start without an alert configuration"). Text in the device's `language` (`id`: "Memeriksa halaman ini"), no `sound`, no domain.
 - `attributes` (start only) = `ScoreActivityAttributes`: empty. The island follows the page, so the domain lives in `content-state`.
 - `update` has `timestamp`, `event`, `content-state`, `stale-date` (+10 min). `end` has `timestamp`, `event`, `content-state` and `dismissal-date` (= `timestamp`, gone at once).
 
