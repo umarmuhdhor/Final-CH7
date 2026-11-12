@@ -22,6 +22,11 @@ final class AppEnvironment {
     /// when it shows again and this changed since its last load: its rows are a separate list.
     var verdictSaves = 0
     @ObservationIgnored private var isSyncingForeground = false
+    /// PR-03: the server check behind the latest invite link (`routeInvite`). A newer link cancels it.
+    @ObservationIgnored private(set) var inviteTask: Task<Void, Never>?
+    /// PR-03: onboarding ended with an invite code waiting. The tabs open its sheet once they are on screen
+    /// (`presentInviteAfterOnboarding`): a sheet asked for before then is lost in the cross-fade.
+    @ObservationIgnored private(set) var opensInviteAfterOnboarding = false
     /// Asks iOS for the APNs token; the answer comes back through `AppDelegate`.
     @ObservationIgnored private let registerForPush: @MainActor () -> Void
     /// The token the server has (or is getting) from this launch: the same one is not sent twice.
@@ -243,7 +248,6 @@ final class AppEnvironment {
         sentDeviceInfo = false
         pushTokenEpoch += 1
         liveActivityTokens?.deviceChanged()
-        if mode == .guardian { router.pendingJoinCode = nil }
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
             do {
@@ -476,34 +480,74 @@ final class AppEnvironment {
         return result.guardian
     }
 
-    /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: Connect still asks
-    /// for a tap (T11). Pribadi (a Guardian with Family mode off) can join a family too, so its join link
-    /// opens "Become supervised" with the code (BH-10). `scan` opens Detail, `activity` the Activity tab; a
-    /// join link for a Guardian with Family mode on, or any unknown link, lands on Shield.
+    /// Deep links (contracts/app-group-keys.md). A join link only fills in the code: joining still asks
+    /// for a tap (T11). Every mode gets its invite (PR-03, BH-10): `routeInvite` decides between the join sheet,
+    /// Connect and a Home card. `scan` opens Detail, `activity` the Activity tab; an unknown link lands on Shield.
     @MainActor
     func open(_ url: URL) {
         switch DeepLink(url: url) {
-        case .join(let code) where settings.mode != .guardian:
+        case .join(let code):
             router.pendingJoinCode = code
-            // Not registered yet: onboarding reaches Connect with the code. Mid-onboarding Connect picks it up.
-            guard settings.mode == .protected, settings.onboardingCompleted else { return }
-            // Already open, `ConnectSheet` picks the new code up.
-            router.showConnect()
-        case .join(let code) where isInMainScreen && !settings.familyModeOn:
-            router.pendingJoinCode = code
-            // Already open, `JoinAnotherFamilySheet` picks the new code up.
-            router.showJoinFamily()
+            // Not registered or still onboarding (everyone onboards as Pribadi): the join sheet opens with the
+            // code once onboarding is done (`finishOnboarding`). "Session expired": the code just waits.
+            guard isInMainScreen else { return }
+            inviteTask?.cancel()
+            inviteTask = Task { await routeInvite() }
         case .scan(let id) where isInMainScreen:
             router.openDetail(scanId: id)
         case .activity where isInMainScreen:
             router.openActivity()
-        case .join, .unknown:
-            // A join link for a Guardian with Family mode on (or mid-onboarding), or a link we don't know: Shield.
+        case .unknown:
+            // A link we don't know: Shield.
             if isInMainScreen { router.reset() }
         case .scan, .activity:
             // Onboarding or "Session expired" is on screen: nothing to open yet.
             break
         }
+    }
+
+    /// PR-03, an invite link while the tabs show (Figma "Flow · Protected buka link undangan"). An open join
+    /// sheet just gets the new code. Otherwise the server decides what Home says: a guardian still protecting
+    /// someone can't join (`has_members`), a protected iPhone with a guardian can't either, and anyone else gets
+    /// the invite banner (Pribadi) or Connect (Protected without a guardian). Offline: the banner or Connect, and
+    /// the join itself says why it can't.
+    @MainActor
+    func routeInvite() async {
+        if router.isConnectPresented || router.isJoinFamilyPresented { return }
+        router.inviteNotice = nil
+        switch settings.mode {
+        case .guardian:
+            let members = try? await repository.familyMembers()
+            guard !Task.isCancelled, router.pendingJoinCode != nil else { return }
+            showHomeForInvite()
+            if let members, !members.isEmpty {
+                router.dismissInviteNotice()
+                router.inviteNotice = .hasMembers
+            } else {
+                router.inviteNotice = .invited
+            }
+        case .protected:
+            let guardian = try? await repository.me().guardian
+            guard !Task.isCancelled, router.pendingJoinCode != nil else { return }
+            if let guardian {
+                showHomeForInvite()
+                router.dismissInviteNotice()
+                router.inviteNotice = .alreadyProtected(guardian: guardian.name)
+            } else {
+                // Already open, `ConnectSheet` picks the new code up.
+                router.showConnect()
+            }
+        case nil:
+            break
+        }
+    }
+
+    /// The banner shows over Home: no pushed screen, no Turn on sheet.
+    @MainActor
+    private func showHomeForInvite() {
+        router.isTurnOnPresented = false
+        router.popToRoot()
+        router.selectedTab = .shield
     }
 
     /// The tabs are showing (not onboarding, not "Session expired").
@@ -572,6 +616,25 @@ final class AppEnvironment {
     @MainActor
     func finishOnboarding() {
         settings.onboardingCompleted = true
+        // PR-03: an invite link opened before or during onboarding. The tabs open the join sheet with its code
+        // (`presentInviteAfterOnboarding`), so the only step left is the Hubungkan tap (T11).
+        router.dropExpiredInvite()
+        opensInviteAfterOnboarding = router.pendingJoinCode != nil
+    }
+
+    /// The tabs are on screen after onboarding: the join sheet for a waiting invite code. An older build's
+    /// Protected registration gets Connect.
+    @MainActor
+    func presentInviteAfterOnboarding() {
+        guard opensInviteAfterOnboarding else { return }
+        opensInviteAfterOnboarding = false
+        router.dropExpiredInvite()
+        guard router.pendingJoinCode != nil else { return }
+        switch settings.mode {
+        case .guardian: router.showJoinFamily()
+        case .protected: router.showConnect()
+        case nil: break
+        }
     }
 
     /// For SwiftUI previews: fixtures, no latency, onboarding done.

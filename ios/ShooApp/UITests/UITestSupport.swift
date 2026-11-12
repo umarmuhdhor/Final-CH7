@@ -92,7 +92,7 @@ extension XCUIElement {
 /// Figma "Flow" (1205:4696): Splash → name → ON-04 (consent box, first tap registers) → Safari Default → success.
 /// Shared by every UI test that onboards, mock or live.
 extension XCUIApplication {
-    /// Splash Skip, then the name. Ends on ON-04, or on Connect when an invite link was opened first.
+    /// Splash Skip, then the name. Ends on ON-04 (an invite link waits until onboarding is done, PR-03).
     @MainActor
     func onboardName(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
         buttons["splash.skip"].tapWhenHittable(file: file, line: line)

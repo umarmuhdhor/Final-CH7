@@ -49,18 +49,22 @@ final class PairingGateUITests: XCTestCase {
         for language in ["en", "id"] {
             for (size, suffix) in sizes {
                 let tag = "\(language)-\(appearance)\(suffix)"
-                var app = launch(["-UITestReset", "YES"], language: language, size: size)
-                // Connect inside onboarding only comes from an invite link (Figma 1205:4696 has no mode choice).
-                XCTAssertTrue(app.buttons["splash.skip"].waitForExistence(timeout: 10), app.debugDescription)
+                // PR-03: an invite link on an onboarded Pribadi shows the Home card; View opens Connect with the code.
+                var app = launch(
+                    ["-UITestReset", "YES", "-settings.onboardingCompleted", "YES", "-settings.mode", "guardian",
+                     "-settings.familyModeOn", "NO", "-mock.scenario", "empty"],
+                    language: language, size: size
+                )
+                XCTAssertTrue(app.tabBars.buttons.firstMatch.waitForExistence(timeout: 10), app.debugDescription)
+                let notNow = app.alerts.buttons.firstMatch
+                if notNow.waitForExistence(timeout: 2) { notNow.tap() }
                 app.open(URL(string: "shoo://join?code=000000")!)
                 let openPrompt = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Open"]
                 if openPrompt.waitForExistence(timeout: 3) { openPrompt.tap() }
-                tap(app.buttons["splash.skip"], in: app)
-                let name = app.textFields["name.field"]
-                XCTAssertTrue(name.waitForExistence(timeout: 5))
-                name.tap()
-                name.typeText("Mom")
-                tap(app.buttons["name.continue"], in: app)
+                let view = app.buttons["invite.notice.view"]
+                XCTAssertTrue(view.waitForExistence(timeout: 10), app.debugDescription)
+                shot(app, "invite-notice-\(tag)")
+                tap(view, in: app)
                 let field = app.textFields["connect.code"]
                 XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
                 shot(app, "connect-\(tag)")
