@@ -40,8 +40,11 @@ struct GuardianShieldView: View {
     }
 
     /// In use, and the launch splash (ON-01) is gone: the popup never covers the brand.
+    /// PR-03: not over the join sheet an invite link opens after onboarding. SwiftUI shows one presentation at a
+    /// time, so an alert at the same moment drops the sheet; the reminder comes once the sheet is closed.
     private var canRemind: Bool {
         scenePhase == .active && env.launchSplash == .done
+            && !env.router.isJoinFamilyPresented && !env.router.isConnectPresented
     }
 
     /// Never asked yet: the system prompt. Denied: only Settings can change it.

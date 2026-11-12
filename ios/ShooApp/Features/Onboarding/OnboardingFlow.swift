@@ -18,7 +18,6 @@ struct OnboardingFlow: View {
             let model = OnboardingModel(environment: env)
             #if DEBUG
             if let step = Self.screenshotStep { model.showForScreenshot(step) }
-            if UserDefaults.standard.string(forKey: "debug.onboardingStep") == "connected" { model.connect().showJoinedForScreenshot() }
             // The splash has no demo link in Figma: the sample family opens from a launch argument.
             if UserDefaults.standard.bool(forKey: "debug.demo") { model.startDemo() }
             #endif
@@ -30,12 +29,10 @@ struct OnboardingFlow: View {
 
 #if DEBUG
 extension OnboardingFlow {
-    /// `-debug.onboardingStep name|consent|connect|connected|turnOnExtension|safariDefault|extensionOn`
+    /// `-debug.onboardingStep name|turnOnExtension|safariDefault|extensionOn`
     static var screenshotStep: OnboardingStep? {
         switch UserDefaults.standard.string(forKey: "debug.onboardingStep") {
         case "name": .name
-        case "consent": .consent
-        case "connect", "connected": .connect
         case "turnOnExtension": .turnOnExtension
         case "safariDefault": .safariDefault
         case "extensionOn": .extensionOn
@@ -54,8 +51,6 @@ private struct OnboardingStepView: View {
             switch model.step {
             case .splash: SplashView(model: model)
             case .name: NameView(model: model)
-            case .consent: DataConsentView(onBack: { model.goBack() }, onAnswer: { model.answerConsent($0) })
-            case .connect: OnboardingConnectStep(model: model)
             case .turnOnExtension: OnboardingExtensionStep(model: model)
             case .safariDefault: SafariDefaultView(onBack: model.goBack, onContinue: model.continueFromSafariDefault)
             case .extensionOn: ExtensionOnView { Task { await model.requestNotifications() } }
@@ -144,26 +139,6 @@ struct OnboardingPage<Content: View, Footer: View>: View {
     let env = AppEnvironment.preview()
     env.settings.reset()
     return OnboardingFlow().environment(env)
-}
-
-/// PR-01 inside onboarding (Protected): join now, or "Not now" and connect later from Shield.
-private struct OnboardingConnectStep: View {
-    let model: OnboardingModel
-    @Environment(AppEnvironment.self) private var env
-
-    var body: some View {
-        ConnectView(
-            model: model.connect(),
-            onBack: model.canGoBackFromConnect ? { Task { await model.backFromConnect() } } as (() -> Void)? : nil,
-            onSkip: { Task { await model.skipConnect() } },
-            onFinish: model.continueFromConnect
-        )
-        // An invite link opened while this screen is showing.
-        .onChange(of: env.router.pendingJoinCode) { _, code in
-            guard code != nil, let pending = env.router.takePendingJoinCode() else { return }
-            model.connect().prefill(pending)
-        }
-    }
 }
 
 /// ON-04 inside onboarding: the consent checkbox (only while the question is unanswered) gates the button,
