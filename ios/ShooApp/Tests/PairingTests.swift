@@ -596,154 +596,122 @@ struct FamilyCodeModelTests {
 
 @MainActor
 struct DeepLinkRoutingTests {
-    private func environment(mode: UserMode?, onboarded: Bool) -> AppEnvironment {
+    private func environment(
+        mode: UserMode?, onboarded: Bool, scenario: MockRepository.Scenario = .standard
+    ) -> AppEnvironment {
         let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
         if let mode { settings.chooseMode(mode) }
         settings.onboardingCompleted = onboarded
-        return AppEnvironment(repository: MockRepository(mode: mode ?? .protected, latency: .zero), settings: settings)
+        let repository = MockRepository(mode: mode ?? .protected, scenario: scenario, latency: .zero)
+        return AppEnvironment(repository: repository, settings: settings)
     }
 
-    @Test func protectedAfterOnboardingOpensConnectWithTheCode() {
-        let env = environment(mode: .protected, onboarded: true)
+    /// `open` hands the invite to a task (it asks the server first); the tests wait for it.
+    private func open(_ link: String, in env: AppEnvironment) async {
+        env.open(URL(string: link)!)
+        await env.inviteTask?.value
+    }
+
+    @Test func protectedWithoutAGuardianOpensConnectWithTheCode() async {
+        let env = environment(mode: .protected, onboarded: true, scenario: .unpaired)
         env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=482193")!)
+        await open("shoo://join?code=482193", in: env)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "482193")
         #expect(env.router.selectedTab == .shield)
+        #expect(env.router.inviteNotice == nil)
     }
 
-    @Test func beforeRegistrationTheCodeWaitsForConnect() {
-        let env = environment(mode: nil, onboarded: false)
-        env.open(URL(string: "shoo://join?code=482193")!)
+    @Test func protectedWithAGuardianIsToldAndTheCodeIsDropped() async {
+        let env = environment(mode: .protected, onboarded: true)
+        await open("shoo://join?code=482193", in: env)
         #expect(!env.router.isConnectPresented)
+        #expect(env.router.pendingJoinCode == nil)
+        #expect(env.router.inviteNotice == .alreadyProtected(guardian: MockRepository.protectedProfile.guardian?.name ?? ""))
+    }
+
+    @Test func beforeRegistrationTheCodeWaitsForOnboarding() async {
+        let env = environment(mode: nil, onboarded: false)
+        await open("shoo://join?code=482193", in: env)
+        #expect(!env.router.isConnectPresented)
+        #expect(!env.router.isJoinFamilyPresented)
+        #expect(env.router.inviteNotice == nil)
         #expect(env.router.takePendingJoinCode() == "482193")
         #expect(env.router.pendingJoinCode == nil)
     }
 
-    /// A Guardian with Family mode on: a join link is not for this phone, so Shield.
-    @Test func guardianLandsOnShield() {
+    @Test func personalWithoutMembersGetsTheInviteNotice() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        env.router.selectedTab = .activity
+        env.router.activityPath = [.profile]
+        await open("shoo://join?code=482193", in: env)
+        #expect(env.router.inviteNotice == .invited)
+        #expect(env.router.pendingJoinCode == "482193")
+        #expect(!env.router.isJoinFamilyPresented, "a link never joins or opens the sheet by itself (T11)")
+        #expect(env.router.selectedTab == .shield)
+        #expect(env.router.activityPath.isEmpty)
+    }
+
+    @Test func guardianWithMembersIsToldAndTheCodeIsDropped() async {
         let env = environment(mode: .guardian, onboarded: true)
-        env.settings.familyModeOn = true
-        env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=482193")!)
-        #expect(!env.router.isConnectPresented)
+        await open("shoo://join?code=482193", in: env)
+        #expect(env.router.inviteNotice == .hasMembers)
         #expect(env.router.pendingJoinCode == nil)
-        #expect(env.router.selectedTab == .shield)
     }
 
-    /// A protected phone with a guardian: a join link never reaches Connect (`already_connected`); Home stays.
-    @Test func protectedWithAGuardianStaysOnHome() throws {
-        let suite = "test.links.session.\(UUID().uuidString)"
-        let session = SessionStore(
-            defaults: UserDefaults(suiteName: suite)!,
-            keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
-            apiBaseURL: URL(string: "https://api.shoo.test")!, aiBaseURL: nil, forgetCachedData: {}
-        )
-        defer { session.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
-        try session.save(DeviceRegistration(deviceId: "dev_me", token: "shoo_t", avatarId: "avatar_01"), name: "Rina", mode: .protected)
-        session.setGuardian(GuardianInfo(deviceId: "dev_mom", name: "Mom", avatarId: "avatar_02"))
-        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
-        settings.chooseMode(.protected)
-        settings.onboardingCompleted = true
-        let env = AppEnvironment(repository: MockRepository(mode: .protected, latency: .zero), settings: settings, session: session)
-        env.router.selectedTab = .activity
-        env.router.activityPath = [.profile]
-        env.open(URL(string: "shoo://join?code=482193")!)
-        #expect(!env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == nil)
-        #expect(env.router.selectedTab == .shield)
-        #expect(env.router.activityPath.isEmpty)
-    }
-
-    /// The guardian disconnected: the next link opens Connect again.
-    @Test func protectedWhoseGuardianLeftGetsConnectAgain() throws {
-        let suite = "test.links.session.\(UUID().uuidString)"
-        let session = SessionStore(
-            defaults: UserDefaults(suiteName: suite)!,
-            keychain: KeychainItem(service: "test.\(UUID().uuidString)", account: "device-session"),
-            apiBaseURL: URL(string: "https://api.shoo.test")!, aiBaseURL: nil, forgetCachedData: {}
-        )
-        defer { session.clear(); UserDefaults.standard.removePersistentDomain(forName: suite) }
-        try session.save(DeviceRegistration(deviceId: "dev_me", token: "shoo_t", avatarId: "avatar_01"), name: "Rina", mode: .protected)
-        session.setGuardian(GuardianInfo(deviceId: "dev_mom", name: "Mom", avatarId: "avatar_02"))
-        session.setGuardian(nil)
-        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
-        settings.chooseMode(.protected)
-        settings.onboardingCompleted = true
-        let env = AppEnvironment(repository: MockRepository(mode: .protected, latency: .zero), settings: settings, session: session)
-        env.open(URL(string: "shoo://join?code=482193")!)
-        #expect(env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == "482193")
-    }
-
-    /// Pribadi who still protects someone: joining would fail with `has_members`, so the link lands on Home.
-    @Test func pribadiWithMembersStaysOnHome() async {
-        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
-        settings.chooseMode(.guardian)
-        settings.onboardingCompleted = true
-        settings.familyModeOn = false
-        let env = AppEnvironment(repository: MockRepository(mode: .guardian, latency: .zero), settings: settings)
-        env.router.selectedTab = .activity
-        env.open(URL(string: "shoo://join?code=482193")!)
-        await env.joinLinkCheck?.value
-        #expect(!env.router.isJoinFamilyPresented)
-        #expect(!env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == nil)
-        #expect(env.router.selectedTab == .shield)
-    }
-
-    /// BH-10: Pribadi (a Guardian with Family mode off) can join a family ("Become supervised"), so the
-    /// link opens that sheet with the code filled in instead of dropping it. Nobody protected yet.
-    @Test func pribadiLinkOpensBecomeSupervisedWithTheCode() async {
-        let settings = AppSettings(defaults: UserDefaults(suiteName: "test.links.\(UUID().uuidString)")!)
-        settings.chooseMode(.guardian)
-        settings.onboardingCompleted = true
-        let env = AppEnvironment(repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero), settings: settings)
-        env.settings.familyModeOn = false
-        env.router.selectedTab = .activity
-        env.router.activityPath = [.profile]
-        env.open(URL(string: "shoo://join?code=482193")!)
-        await env.joinLinkCheck?.value
+    @Test func viewingTheInviteOpensTheJoinSheetWithTheCode() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        await open("shoo://join?code=482193", in: env)
+        env.router.acceptInvite()
+        #expect(env.router.inviteNotice == nil)
         #expect(env.router.isJoinFamilyPresented)
-        #expect(!env.router.isConnectPresented)
-        #expect(env.router.pendingJoinCode == "482193")
-        #expect(env.router.selectedTab == .shield)
-        #expect(env.router.activityPath.isEmpty)
+        #expect(env.router.takePendingJoinCode() == "482193")
     }
 
-    @Test func pribadiMidOnboardingKeepsNoCode() {
-        let env = environment(mode: .guardian, onboarded: false)
-        env.open(URL(string: "shoo://join?code=482193")!)
-        #expect(!env.router.isJoinFamilyPresented)
+    @Test func notNowDropsTheCode() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        await open("shoo://join?code=482193", in: env)
+        env.router.dismissInviteNotice()
+        #expect(env.router.inviteNotice == nil)
         #expect(env.router.pendingJoinCode == nil)
+        #expect(!env.router.isJoinFamilyPresented)
     }
 
     /// Profile is a pushed screen (PF-01): the link pops it and Connect opens at once.
-    @Test func linkWhileProfileIsOpenClosesItAndShowsConnect() {
-        let env = environment(mode: .protected, onboarded: true)
+    @Test func linkWhileProfileIsOpenClosesItAndShowsConnect() async {
+        let env = environment(mode: .protected, onboarded: true, scenario: .unpaired)
         env.router.selectedTab = .activity
         env.router.activityPath = [.profile, .profilePage(.connection)]
-        env.open(URL(string: "shoo://join?code=482193")!)
+        await open("shoo://join?code=482193", in: env)
         #expect(env.router.activityPath.isEmpty)
         #expect(env.router.selectedTab == .shield)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "482193")
     }
 
-    @Test func secondLinkWhileConnectIsOpenOnlyRefillsTheCode() {
-        let env = environment(mode: .protected, onboarded: true)
-        env.open(URL(string: "shoo://join?code=482193")!)
+    @Test func secondLinkWhileConnectIsOpenOnlyRefillsTheCode() async {
+        let env = environment(mode: .protected, onboarded: true, scenario: .unpaired)
+        await open("shoo://join?code=482193", in: env)
         _ = env.router.takePendingJoinCode()
-        env.open(URL(string: "shoo://join?code=123456")!)
+        await open("shoo://join?code=123456", in: env)
         #expect(env.router.isConnectPresented)
         #expect(env.router.pendingJoinCode == "123456")
     }
 
-    @Test func guardianRegistrationDropsAWaitingCode() async throws {
+    @Test func secondLinkWhileTheJoinSheetIsOpenOnlyRefillsTheCode() async {
+        let env = environment(mode: .guardian, onboarded: true, scenario: .empty)
+        env.router.isJoinFamilyPresented = true
+        await open("shoo://join?code=123456", in: env)
+        #expect(env.router.inviteNotice == nil)
+        #expect(env.router.pendingJoinCode == "123456")
+    }
+
+    /// Everyone registers as Pribadi now (PR-03): the code must survive it for the join sheet.
+    @Test func personalRegistrationKeepsAWaitingCode() async throws {
         let env = environment(mode: nil, onboarded: false)
-        env.open(URL(string: "shoo://join?code=482193")!)
+        await open("shoo://join?code=482193", in: env)
         _ = try await env.register(name: "Rina", mode: .guardian)
-        #expect(env.router.pendingJoinCode == nil)
+        #expect(env.router.pendingJoinCode == "482193")
     }
 
     /// BH-28: a scan push or `shoo://scan/{id}` closes the "Become supervised" sheet and the Guardian intro
@@ -866,5 +834,57 @@ struct InviteShareTests {
         let text = "code=1234&x"
         let url = try #require(InviteShare.messagesURL(body: text))
         #expect(url.absoluteString == "sms:&body=code%3D1234%26x")
+    }
+}
+
+/// The invite code waits in memory across the trip to Settings (ON-04), never longer than a code lives.
+@MainActor
+struct PendingInviteTests {
+    final class Clock: @unchecked Sendable { var now = Date(timeIntervalSince1970: 1_000_000) }
+
+    @Test func theCodeSurvivesUntilItWouldHaveExpired() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        clock.now += FamilyCodeModel.codeLifetime - 1
+        router.dropExpiredInvite()
+        #expect(router.takePendingJoinCode() == "482193")
+    }
+
+    @Test func anExpiredCodeIsGone() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        router.inviteNotice = .invited
+        clock.now += FamilyCodeModel.codeLifetime + 1
+        router.dropExpiredInvite()
+        #expect(router.pendingJoinCode == nil)
+        #expect(router.inviteNotice == nil)
+    }
+
+    @Test func takingAnExpiredCodeGivesNothing() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        clock.now += FamilyCodeModel.codeLifetime + 1
+        #expect(router.takePendingJoinCode() == nil)
+    }
+
+    @Test func aNewCodeRestartsTheClock() {
+        let clock = Clock()
+        let router = Router(now: { clock.now })
+        router.pendingJoinCode = "482193"
+        clock.now += FamilyCodeModel.codeLifetime - 10
+        router.pendingJoinCode = "123456"
+        clock.now += 20
+        #expect(router.takePendingJoinCode() == "123456")
+    }
+
+    @Test func openProfileFromTheMembersNotice() {
+        let router = Router()
+        router.inviteNotice = .hasMembers
+        router.openProfileFromInviteNotice()
+        #expect(router.inviteNotice == nil)
+        #expect(router.shieldPath == [.profile])
     }
 }
