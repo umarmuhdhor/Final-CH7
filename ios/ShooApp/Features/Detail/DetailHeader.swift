@@ -114,6 +114,9 @@ struct DetailHero: View {
 struct DetailLinkPill: View {
     let look: DetailLook
     let text: String
+    /// Tail, not middle (BH-13): the text starts with the registrable domain (`DetailView.shownLink`),
+    /// so a long path is what gets cut, never the domain.
+    static let truncation: Text.TruncationMode = .tail
 
     var body: some View {
         Text(verbatim: text)
@@ -121,7 +124,7 @@ struct DetailLinkPill: View {
             .figmaLineHeight(22, relativeTo: .body)
             .foregroundStyle(look.pillText)
             .lineLimit(1)
-            .truncationMode(.middle)
+            .truncationMode(Self.truncation)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .frame(minHeight: 34)
