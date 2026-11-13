@@ -255,6 +255,11 @@ final class GuardianHomeModel {
         } catch RepositoryError.api(.verdictNotAllowed, _) {
             verdictNotAllowed = true
             return true
+        } catch RepositoryError.api(.verdictLocked, _) {
+            // #476: the link already has a safe verdict (another device, or Detail) that stays until the weekly
+            // review. The card is stale: reload, so the site shows as decided and the next one takes its place.
+            await refresh()
+            return true
         } catch RepositoryError.api(.notFound, _) {
             // BH-27: the scan was deleted (14 days, a disconnect): no verdict can ever be saved on it, so the
             // card moves on to the next site, as Detail shows "This item is gone".

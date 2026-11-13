@@ -7003,6 +7003,16 @@
           }
         }
       }
+    },
+    "This site stays safe until Shoo's weekly review. You can change it after that." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situs ini tetap aman sampai Shoo belajar mingguan. Setelah itu kamu bisa mengubahnya."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

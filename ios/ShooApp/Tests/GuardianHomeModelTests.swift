@@ -186,6 +186,18 @@ struct GuardianHomeModelTests {
         #expect(!model.verdictFailed)
     }
 
+    /// #476: `verdict_locked` means the link is already marked safe elsewhere: the sheet closes, no "Couldn't save".
+    @Test func lockedClosesTheSheet() async throws {
+        let model = GuardianHomeModel(
+            repository: StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked")),
+            settings: try settings(), scope: .family, extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow }
+        )
+        await model.refresh()
+        #expect(await model.decide(.safe, notes: "reasons: other"))
+        #expect(!model.verdictFailed)
+        #expect(!model.verdictNotAllowed)
+    }
+
     /// GD-07: "Aman" from the Home card sends the reasons as `notes`.
     @Test func safeSendsTheReasons() async throws {
         let repository = MockRepository(mode: .guardian, latency: .zero)

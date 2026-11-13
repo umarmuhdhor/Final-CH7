@@ -90,6 +90,7 @@ verdicts.post("/verdicts", requireMode("guardian"), async (c) => {
   }
   if ("verdict" in result) return c.json({ verdict: result.verdict });
   if (result.error === "not_found") throw errors.notFound();
+  if (result.error === "locked") throw errors.verdictLocked(result.lockedUntil);
   throw errors.verdictNotAllowed(403, "Not the owner's guardian");
 });
 

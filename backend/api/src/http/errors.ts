@@ -7,6 +7,8 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly retryAfter?: number,
+    /** Extra fields inside `error`, next to code and message (e.g. `lockedUntil` on verdict_locked). */
+    readonly details?: Record<string, string>,
   ) {
     super(message);
   }
@@ -33,9 +35,12 @@ export const errors = {
   hasMembers: () => new ApiError(409, "has_members", "Disconnect the people you protect first"),
   // Verdicts (contracts/api.md, R3 §1): 403 not the owner's guardian. Warning scans are allowed (GD-07).
   verdictNotAllowed: (status: 403, message: string) => new ApiError(status, "verdict_not_allowed", message),
+  // #476: a safe verdict cannot change until the weekly AI review has read it (Sunday 18:00 UTC).
+  verdictLocked: (lockedUntil: string) =>
+    new ApiError(409, "verdict_locked", "Safe verdict is locked until the weekly review", undefined, { lockedUntil }),
 };
 
 export function errorResponse(c: Context, err: ApiError): Response {
   if (err.retryAfter !== undefined) c.header("Retry-After", String(err.retryAfter));
-  return c.json({ error: { code: err.code, message: err.message } }, err.status);
+  return c.json({ error: { ...err.details, code: err.code, message: err.message } }, err.status);
 }

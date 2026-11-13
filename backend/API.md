@@ -782,6 +782,11 @@ confirmation step.
 - A Guardian can decide on its own scans and on its members' scans, warning or blocked (Figma "Detail
   Aktivitas Waspada"; before GD-07 warning scans answered `409`).
 - Every scan of that owner then carries it by the lookup rule below, warning or blocked.
+- **Safe lock (#476):** a `safe` verdict cannot change until Shoo's weekly AI review has read it: the
+  first Sunday 18:00 UTC after `decidedAt` (the shoo-admin review cron acts on Mondays in WITA). Until
+  then any new verdict on that link, `safe` or `not_safe`, answers `409 verdict_locked`. A `not_safe`
+  is never locked: blocking more is the safe side. The lock is per link; other pages of the site are free.
+  While locked, the `Verdict` carries `lockedUntil` (ISO), here, in `GET /verdicts` and on a scan.
 - A `not_safe` on a connected member's scan also queues the domain for **manual** review before it can
   enter the global blocklist (at most 10 new domains per Guardian per 24 h). Government, education and bank domains, and
   shared roots such as `co.id` or `vercel.app`, are never queued.
@@ -790,6 +795,7 @@ confirmation step.
 |---|---|
 | `404 not_found` | Unknown scan id |
 | `403 verdict_not_allowed` | Not your scan and not one of your members' scans |
+| `409 verdict_locked` | The link has a `safe` verdict that is still locked. The error carries `lockedUntil`: `{ "error": { "code": "verdict_locked", "message": "…", "lockedUntil": "2026-11-15T18:00:00.000Z" } }` |
 
 ### `GET /verdicts?url=&domain=`
 
@@ -821,6 +827,9 @@ Lookup, first match wins:
 
 Every `Verdict` (here, in `POST /verdicts` and on a scan) carries `url`: the link it was made on. A
 `url` that differs from the asked link means step 2 matched (another page of the site).
+
+A `safe` verdict that is still locked (#476) also carries `lockedUntil`, the ISO time it can change
+again. The field is absent on `not_safe` and once the weekly review has passed.
 
 When a member disconnects or is removed, the old Guardian's verdicts for that member are deleted.
 
