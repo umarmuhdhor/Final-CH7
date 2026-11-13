@@ -1,0 +1,43 @@
+import { beforeAll, describe, expect, it } from "vitest";
+import { resetDb, testSql } from "./helpers/resetDb";
+import { call, createDevice } from "./helpers/seed";
+
+// Fase 28 hunt (hunter 4): renders every web page the Worker serves and prints the HTML between markers,
+// so a script can save and open it at 320 px and 430 px. Not a gate. Calls resetDb (beforeAll).
+// Run: copy to backend/api/test/h4-pages.test.ts, then
+//   cd backend/api && db_guard && npx vitest run test/h4-pages.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+const sql = testSql();
+const NAV = { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" };
+const b64 = (buf: ArrayBuffer) => { let s = ""; for (const b of new Uint8Array(buf)) s += String.fromCharCode(b); return btoa(s); };
+const emit = async (name: string, path: string, lang?: string, ip?: string) => {
+  const res = await call(path, { headers: { ...NAV, ...(lang ? { "accept-language": lang } : {}) }, ip });
+  const html = await res.text();
+  await sql`insert into h4_pages (name, status, body) values (${name}, ${res.status}, ${html}) on conflict (name) do update set status = excluded.status, body = excluded.body`;
+  return { res, html };
+};
+
+describe("h4 pages", () => {
+  beforeAll(async () => {
+    await resetDb(sql);
+    const g = await createDevice("Mom", "guardian");
+    await sql`insert into family_codes (code, guardian_id, expires_at) values ('482193', ${g.deviceId}, now() + interval '30 minutes')`;
+    await sql`insert into family_codes (code, guardian_id, expires_at) values ('111111', ${g.deviceId}, now() - interval '1 minute')`;
+  });
+  it("renders", async () => {
+    for (const lang of ["en", "id"]) {
+      await emit(`join-valid-${lang}`, "/j/482193", lang, "10.0.0.1");
+      await emit(`join-expired-${lang}`, "/j/111111", lang, "10.0.0.2");
+      await emit(`join-unknown-${lang}`, "/j/222222", lang, "10.0.0.3");
+      await emit(`join-malformed-${lang}`, "/j/12ab", lang, "10.0.0.4");
+      await emit(`join-long-${lang}`, "/j/" + "9".repeat(60), lang, "10.0.0.5");
+      await emit(`privacy-${lang}`, `/privacy?lang=${lang}`);
+      await emit(`terms-${lang}`, `/terms?lang=${lang}`);
+      await emit(`support-${lang}`, `/support?lang=${lang}`);
+    }
+    const hero = await call("/og/join-hero.png");
+    await sql`insert into h4_pages (name, status, body) values ('hero', ${hero.status}, ${b64(await hero.arrayBuffer())}) on conflict (name) do update set body = excluded.body`;
+    const nf = await emit("notfound", "/nope");
+    expect(nf.res.status).toBeGreaterThan(0);
+  });
+});

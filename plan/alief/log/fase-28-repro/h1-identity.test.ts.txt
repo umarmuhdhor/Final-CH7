@@ -1,0 +1,169 @@
+// Fase 28 hunt, hunter 1 (backend). Repro + truth tests. NOT part of the suite.
+// Run: copy to backend/api/test/h1-<name>.test.ts, then
+//   cd backend/api && db_guard && npx vitest run test/h1-<name>.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+// Tests named "BUG B-xx" assert the CORRECT behaviour and FAIL on main 9e5403ba.
+import { env } from "cloudflare:workers";
+import { beforeEach, describe, expect, it } from "vitest";
+import { runRetention } from "../src/cron/retention";
+import { runNotifications } from "../src/cron/notifications";
+import { adminSql, resetDb, testSql, withoutTriggers } from "./helpers/resetDb";
+import { call, callWithEnv, createDevice, type Created } from "./helpers/seed";
+
+const sql = testSql();
+const admin = adminSql();
+beforeEach(() => resetDb(sql));
+
+const APNS = "a".repeat(64);
+const now = () => new Date().toISOString();
+const scanBody = (url: string, domain: string, score: number, status: "warning" | "blocked", extra: Record<string, unknown> = {}) => ({
+  url, domain, score, status, signals: [], detectedAt: now(), ...extra,
+});
+/** POST /scans and wait for the waitUntil work (push_log rows). */
+const post = (d: Created, json: unknown) =>
+  callWithEnv({}, "/scans", { method: "POST", token: d.token, headers: { "content-type": "application/json" }, body: JSON.stringify(json) });
+const postId = async (d: Created, json: unknown) => {
+  const res = await post(d, json);
+  expect(res.status, await res.clone().text()).toBe(201);
+  return (await res.json()) as { id: string; notified: { name: string } | null };
+};
+const patch = (d: Created, json: unknown) => call("/devices/me", { method: "PATCH", token: d.token, json });
+async function pair(g: Created, p: Created) {
+  const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+  const res = await call("/family/join", { method: "POST", token: p.token, json: { code } });
+  expect(res.status).toBe(200);
+  return code;
+}
+const pushes = async (to: Created) =>
+  (await sql<{ n: number }[]>`select count(*)::int as n from push_log where to_device_id = ${to.deviceId}`)[0]!.n;
+const verdict = (g: Created, scanId: string, value: string, notes?: string) =>
+  call("/verdicts", { method: "POST", token: g.token, json: { scanId, value, ...(notes ? { notes } : {}) } });
+const getVerdict = async (d: Created, url: string, domain: string) => {
+  const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+  return { status: res.status, body: (await res.json()) as { verdict: { value: string; url: string; lockedUntil?: string } | null } };
+};
+type Item = { id: string; url: string; score: number; status: string; ownerDeviceId: string; ownerName: string; detectedAt: string; verdict: { value: string } | null };
+const list = async (d: Created, q = "") => {
+  const res = await call(`/scans${q}`, { token: d.token });
+  return (await res.json()) as { items: Item[]; nextCursor: string | null };
+};
+
+describe("3. identity: one Activity row per link", () => {
+  const base = "https://toko.example/a";
+  it.each([
+    ["query", "https://toko.example/a?x=1", "toko.example", "same"],
+    ["fragment", "https://toko.example/a#f", "toko.example", "same"],
+    ["default port", "https://toko.example:443/a", "toko.example", "same"],
+    ["upper-case host", "https://TOKO.example/a", "toko.example", "same"],
+    ["userinfo", "https://u:p@toko.example/a", "toko.example", "same"],
+    ["other port", "https://toko.example:8443/a", "toko.example", "other"],
+    ["http", "http://toko.example/a", "toko.example", "other"],
+    ["trailing slash", "https://toko.example/a/", "toko.example", "other"],
+    ["path case", "https://toko.example/A", "toko.example", "other"],
+    ["www", "https://www.toko.example/a", "toko.example", "other"],
+    ["subdomain", "https://m.toko.example/a", "toko.example", "other"],
+    ["trailing dot host", "https://toko.example./a", "toko.example", "other"],
+    ["dot segment (crafted)", "https://toko.example/x/../a", "toko.example", "same"],
+    ["empty port (crafted)", "https://toko.example:/a", "toko.example", "same"],
+  ])("%s: %s", async (name, url, domain, expected) => {
+    const p = await createDevice("Ibu");
+    const first = await postId(p, scanBody(base, "toko.example", 60, "warning"));
+    const res = await post(p, scanBody(url, domain, 60, "warning"));
+    const second = res.status === 201 ? ((await res.json()) as { id: string }).id : `HTTP ${res.status}`;
+    const actual = second === first.id ? "same" : second.startsWith("HTTP") ? second : "other";
+    console.log(`H1 identity-scan | ${name} | ${url} | expected ${expected} | actual ${actual}`);
+    expect(actual).toBe(expected);
+  });
+
+  it.each([
+    ["exact", "https://toko.example/a", "toko.example", "safe"],
+    ["query + fragment", "https://toko.example/a?utm=1#x", "toko.example", "safe"],
+    ["default port", "https://toko.example:443/a", "toko.example", "safe"],
+    ["host case + domain case", "https://TOKO.EXAMPLE/a", "TOKO.example", "safe"],
+    ["domain with www.", "https://toko.example/a", "www.toko.example", "safe"],
+    ["domain with a trailing dot", "https://toko.example/a", "toko.example.", "safe"],
+    ["userinfo", "https://u:p@toko.example/a", "toko.example", "safe"],
+    ["other path", "https://toko.example/b", "toko.example", null],
+    ["trailing slash", "https://toko.example/a/", "toko.example", null],
+    ["http", "http://toko.example/a", "toko.example", null],
+    ["www host", "https://www.toko.example/a", "toko.example", null],
+    ["other port", "https://toko.example:8443/a", "toko.example", null],
+    ["trailing dot host", "https://toko.example./a", "toko.example", null],
+    ["dot segment", "https://toko.example/x/../a", "toko.example", "safe"],
+  ])("GET /verdicts after safe on /a: %s", async (name, url, domain, expected) => {
+    const g = await createDevice("Gita", "guardian");
+    const { id } = await postId(g, scanBody(base, "toko.example", 60, "warning"));
+    expect((await verdict(g, id, "safe")).status).toBe(200);
+    const r = await getVerdict(g, url, domain);
+    console.log(`H1 identity-verdict | ${name} | ${url} ${domain} | expected ${expected} | actual ${r.status} ${r.body.verdict?.value ?? null}`);
+    expect(r.status).toBe(200);
+    expect(r.body.verdict?.value ?? null).toBe(expected);
+  });
+
+  it.each([
+    ["IDN host as unicode", "https://bcа-login.example/masuk", "xn--bc-login-3mg.example"],
+    ["unicode path", "https://toko.example/päth", "toko.example"],
+    ["dot segment", "https://toko.example/x/../a", "toko.example"],
+    ["upper-case percent escape kept", "https://toko.example/%E2%82%AC", "toko.example"],
+    ["trailing dot host", "https://toko.example./a", "toko.example"],
+    ["IPv4 host", "http://203.0.113.9/login", "203.0.113.9"],
+    ["non-default port", "https://toko.example:8443/a", "toko.example"],
+  ])("B-04 a scan stored with %s: the Guardian's safe verdict is found again by the same URL", async (name, url, domain) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    const res = await post(p, scanBody(url, domain, 90, "blocked"));
+    if (res.status !== 201) {
+      console.log(`H1 B-04 | ${name} | POST ${res.status} ${await res.text()}`);
+      expect(res.status).toBe(422);
+      return;
+    }
+    const { id } = (await res.json()) as { id: string };
+    expect((await verdict(g, id, "safe")).status).toBe(200);
+    const stored = (await sql`select url from verdicts`)[0]!.url as string;
+    const r = await getVerdict(p, url, domain);
+    console.log(`H1 B-04 | ${name} | stored verdict url ${stored} | GET ${r.status} ${r.body.verdict?.value ?? null}`);
+    expect(r.body.verdict?.value ?? null).toBe("safe");
+  });
+});
+
+describe("3b. not_safe covers the domain except shared hosts (admin.domain_lists)", () => {
+  it("own domain: /b and a subdomain are covered, a safe on /c wins on /c; shared host: nothing else is covered", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    const a = await postId(p, scanBody("https://toko.example/a", "toko.example", 90, "blocked"));
+    const c = await postId(p, scanBody("https://toko.example/c", "toko.example", 90, "blocked"));
+    expect((await verdict(g, a.id, "not_safe")).status).toBe(200);
+    expect((await verdict(g, c.id, "safe")).status).toBe(200);
+    expect((await getVerdict(p, "https://toko.example/b", "toko.example")).body.verdict?.value).toBe("not_safe");
+    expect((await getVerdict(p, "https://m.toko.example/zz", "toko.example")).body.verdict?.value).toBe("not_safe");
+    expect((await getVerdict(p, "https://toko.example/c", "toko.example")).body.verdict?.value).toBe("safe");
+    // The Guardian does not get P's verdicts for its own browsing (per owner).
+    expect((await getVerdict(g, "https://toko.example/a", "toko.example")).body.verdict).toBeNull();
+    // Activity follows the same rule.
+    const rows = (await list(g, "?owner=family")).items;
+    expect(Object.fromEntries(rows.map((r) => [r.url, r.verdict?.value ?? null]))).toEqual({ "https://toko.example/a": "not_safe", "https://toko.example/c": "safe" });
+
+    const hostPath = (await admin<{ domain: string }[]>`select domain from admin.domain_lists where hosting = 'host_path' order by domain limit 1`)[0]!.domain;
+    const sub = (await admin<{ domain: string }[]>`select domain from admin.domain_lists where hosting = 'subdomains' and protect = 'apex' order by domain limit 1`)[0]!.domain;
+    const hp = await postId(p, scanBody(`https://${hostPath}/evil`, hostPath, 90, "blocked"));
+    expect((await verdict(g, hp.id, "not_safe")).status).toBe(200);
+    expect((await getVerdict(p, `https://${hostPath}/evil`, hostPath)).body.verdict?.value).toBe("not_safe");
+    expect((await getVerdict(p, `https://${hostPath}/other`, hostPath)).body.verdict).toBeNull();
+    // Platform not split into tenants (domain = the platform itself): one tenant says nothing about another.
+    const t = await postId(p, scanBody(`https://evil.${sub}/`, sub, 90, "blocked"));
+    expect((await verdict(g, t.id, "not_safe")).status).toBe(200);
+    expect((await getVerdict(p, `https://good.${sub}/`, sub)).body.verdict).toBeNull();
+    // Tenant split off (domain = evil.<platform>): its other pages are covered.
+    const t2 = await postId(p, scanBody(`https://evil2.${sub}/x`, `evil2.${sub}`, 90, "blocked"));
+    expect((await verdict(g, t2.id, "not_safe")).status).toBe(200);
+    expect((await getVerdict(p, `https://evil2.${sub}/y`, `evil2.${sub}`)).body.verdict?.value).toBe("not_safe");
+    // Protected domains never reach the global queue; the unprotected ones do (connected Protected owner).
+    const queue = (await admin<{ domain: string }[]>`select domain from blocklist_entries order by domain`).map((r) => r.domain);
+    console.log("H1 queue", JSON.stringify(queue), "hostPath", hostPath, "sub", sub);
+    expect(queue).toContain("toko.example");
+    expect(queue).not.toContain(sub);
+  });
+});
+

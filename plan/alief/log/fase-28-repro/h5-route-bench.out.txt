@@ -1,0 +1,25 @@
+H5 ROUTES
+route | n | status | statements/req | SQL ms/req | WAL bytes/req | wall p50 ms | wall max ms | response bytes
+GET /devices/me (guardian) | 15 | 200 | 2 | 0.06 | 0 | 5 | 9 | 404
+GET /devices/me (protected) | 15 | 200 | 3 | 0.11 | 0 | 7 | 20 | 497
+PATCH /devices/me heartbeat | 15 | 200 | 2 | 0.34 | 302 | 9 | 11 | 11
+GET /family/members | 15 | 200 | 2 | 0.15 | 0 | 8 | 10 | 877
+GET /scans owner=me, median-ish (avg guardian own) | 15 | 200 | 3 | 1.42 | 0 | 8 | 11 | 27820
+GET /scans owner=me, heaviest owner | 10 | 200 | 3 | 43.44 | 0 | 52 | 68 | 28334
+GET /scans owner=me limit=50, heaviest owner | 6 | 200 | 3 | 109.48 | 0 | 117 | 141 | 70392
+GET /scans owner=family, median family | 10 | 200 | 4 | 9.77 | 0 | 19 | 23 | 27722
+GET /scans owner=family, heaviest family, page 1 | 5 | 200 | 4 | 1396.38 | 0 | 1393 | 1479 | 28752
+GET /scans owner=family, heaviest family, page 2 | 5 | 200 | 4 | 1357.75 | 0 | 1364 | 1392 | 27964
+GET /scans owner=<member>, heaviest family | 5 | 200 | 4 | 34.05 | 0 | 44 | 44 | 28727
+GET /scans/:id (guardian views member scan) | 15 | 200 | 2 | 1.84 | 0 | 7 | 27 | 1363
+GET /verdicts?url=&domain= (poll) | 15 | 200 | 2 | 0.04 | 0 | 6 | 9 | 16
+GET /config/public | 10 | 200 | 2 | 0.04 | 0 | 5 | 6 | 80
+GET /blocklist (full, 1440 domains) | 5 | 200 | 3 | 0.55 | 0 | 8 | 10 | 70535
+GET /blocklist?since=now-1h (delta) | 10 | 200 | 2 | 0.05 | 0 | 6 | 9 | 408
+POST /scans new link, protected member (no replica) | 15 | 201 | 13 | 2.41 | 26293 | 13 | 20 | 61
+POST /scans repeat visit of a known link | 15 | 201 | 13 | 1.41 | 5398 | 16 | 26 | 61
+POST /scans new link + page replica + evidence fragments | 10 | 201 | 29 | 3.61 | 35045 | 24 | 26 | 61
+POST /verdicts not_safe on a member scan | 10 | 200 | 18.1 | 5.18 | 68557 | 28 | 32 | 178
+POST /family/code | 4 | 200 | 9 | 0.12 | 373 | 10 | 12 | 101
+
+ ✓ test/zz-h5-perf.test.ts > h5 route bench on shoo_f28_perf 21382ms

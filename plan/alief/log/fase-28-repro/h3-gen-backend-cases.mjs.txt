@@ -1,0 +1,24 @@
+// Fase 28 hunt, hunter 3: builds the table h3-chain.test.ts posts to the backend, from the REAL extension / detector / ai modules.
+// Run: node h3-gen-backend-cases.mjs <worktree> > cases.json   (the JSON is pasted into h3-chain.test.ts as CASES)
+const W = process.argv[2];
+const R = `${W}/ios/ShooExtension/Resources`;
+const { PSL_RULES } = await import(`${R}/psl.js`);
+const { parseRules, registrableDomain, shareableUrl } = await import(`${R}/domain.js`);
+await import(`${R}/pipeline.js`); await import(`${R}/detector.js`);
+const { analyzeWithDomain } = await import(`${W}/ai/src/analyze.js`);
+const P = globalThis.ShooPipeline;
+const rules = parseRules(PSL_RULES);
+const reg = (h) => registrableDomain(h, rules);
+const URLS = ["https://toko.example/a", "https://toko.example./a", "https://toko.example:8443/a", "https://xn--bcher-kva.example/a", "https://alice.github.io/a", "https://sites.google.com/view/x",
+    "http://203.0.113.9/login", "http://[2001:db8::1]/login", "http://router/login", "https://a_b.example.com/a", "https://shop_x.web.app/a", "https://www.co.id/x", "https://www.com/x",
+    "https://toko.example/" + "p".repeat(2100), "https://toko.example/" + "p".repeat(2020)];
+const urls = URLS.map((u) => ({ page: u.length > 90 ? `${u.slice(0, 30)}…(${u.length} chars)` : u, url: shareableUrl(u), domain: reg(new URL(u).hostname) }));
+// detector + ai on one scam page, merged and sorted the way pipeline.js + report.js scanBody do
+globalThis.ShooLists = { match: async () => null };
+const fields = ["pin", "otp", "password", "nomor kartu", "cvv", "nik ktp", "foto selfie ktp"].map((n, i) => ({ type: i === 2 ? "password" : i === 6 ? "file" : "text", name: n.replace(/ /g, "_"), id: null, label: n, placeholder: null, autocomplete: null, accept: i === 6 ? "image/*" : null, capture: i === 6 ? "user" : null }));
+const snapshot = { url: "https://bca-verifikasi-akun.xyz/login/klikbca.php", domain: "bca-verifikasi-akun.xyz", title: "KlikBCA - Verifikasi akun Anda", lang: "id",
+    text: "Akun Anda akan diblokir dalam 24 jam. Segera verifikasi data Anda. Masukkan PIN dan kode OTP. BCA", forms: [{ action: null, fields }], imageAlts: ["Logo BCA"], capturedAt: new Date().toISOString() };
+const local = P.validSignals(await globalThis.ShooDetector.analyzeLocal(snapshot), [1, 2]);
+const remote = P.validSignals((await analyzeWithDomain({ ...snapshot, url: shareableUrl(snapshot.url) }, { localSignals: local.filter((s) => !s.id.startsWith("asks_")) })).signals, [3, 4]);
+const signals = P.mergeSignals(local, remote);
+console.log(JSON.stringify({ urls, scam: { url: shareableUrl(snapshot.url), domain: snapshot.domain, score: P.scoreFrom(signals), signals } }));

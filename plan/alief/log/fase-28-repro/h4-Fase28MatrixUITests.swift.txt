@@ -1,0 +1,1207 @@
+import XCTest
+import UIKit
+
+/// Fase 28 hunt (hunter 4): UI edge-case matrix. Not a gate: it never fails a cell, it writes a screenshot
+/// (JPEG) and the accessibility tree (JSON) per cell to `TEST_RUNNER_F28_DIR/<TEST_RUNNER_F28_TAG>/`.
+/// Config from the environment: `F28_LANG` (id|en), `F28_SIZE` (UICTContentSizeCategory…), `F28_THEME`
+/// (light|dark), `F28_EXTRA` (comma list: bold, contrast). Checks run afterwards in `h4-check.py`.
+final class Fase28MatrixUITests: XCTestCase {
+    private var env: [String: String] { ProcessInfo.processInfo.environment }
+    private var lang: String { env["F28_LANG"] ?? "id" }
+    private var dir: URL {
+        let url = URL(fileURLWithPath: env["F28_DIR"] ?? NSTemporaryDirectory()).appendingPathComponent(env["F28_TAG"] ?? "default")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+    private var app = XCUIApplication()
+    private var notes: [String] = []
+
+    override func setUp() {
+        continueAfterFailure = true
+    }
+
+    // MARK: Launch + dump
+
+    private func guardian(_ scenario: String = "figma", family: Bool = true) -> [String] {
+        ["-settings.mode", "guardian", "-settings.familyModeOn", family ? "YES" : "NO", "-mock.scenario", scenario]
+    }
+
+    private func protected(_ scenario: String = "figma") -> [String] {
+        ["-settings.mode", "protected", "-mock.scenario", scenario]
+    }
+
+    @MainActor
+    @discardableResult
+    private func launch(_ arguments: [String], onboarded: Bool = true, extensionActive: Bool = true, notifications: String = "granted",
+                        settle: TimeInterval = 1.8) -> XCUIApplication {
+        app = XCUIApplication()
+        app.terminate()
+        notes = []
+        var args = [
+            "-UITestMock", "YES", "-UITestSkipSplash", "YES", "-UITestReset", "YES", "-UITestStillLoops", "YES",
+            "-settings.language", lang, "-AppleLanguages", "(\(lang))", "-AppleLocale", lang == "id" ? "id_ID" : "en_US",
+            "-settings.theme", env["F28_THEME"] ?? "light",
+            "-UITestNotifications", notifications,
+        ]
+        if let size = env["F28_SIZE"], !size.isEmpty { args += ["-UIPreferredContentSizeCategoryName", size] }
+        let extra = (env["F28_EXTRA"] ?? "").split(separator: ",").map(String.init)
+        if extra.contains("bold") { args += ["-settings.boldText", "YES"] }
+        if extra.contains("contrast") { args += ["-settings.highContrast", "YES"] }
+        if onboarded { args += ["-settings.onboardingCompleted", "YES", "-settings.onboardingConnectPassed", "YES"] }
+        if extensionActive { args += ["-UITestExtensionActive", "YES"] }
+        app.launchArguments = args + arguments
+        app.launchEnvironment["TZ"] = "Asia/Jakarta"
+        app.launch()
+        Thread.sleep(forTimeInterval: settle)
+        // GD-01 "Notifikasi mati" popup covers Home once per launch (it shows with `granted` too when the
+        // launch arguments are read after the first check); close it unless the cell is about it.
+        if notifications != "denied", app.alerts.firstMatch.exists {
+            let button = app.alerts.buttons.firstMatch
+            notes.append("closed alert: \(app.alerts.firstMatch.label)")
+            if button.exists { button.tap() }
+            Thread.sleep(forTimeInterval: 0.8)
+        }
+        return app
+    }
+
+    @MainActor
+    private func dump(_ name: String) {
+        let screenshot = XCUIScreen.main.screenshot()
+        if let jpeg = screenshot.image.jpegData(compressionQuality: 0.55) {
+            try? jpeg.write(to: dir.appendingPathComponent("\(name).jpg"))
+        }
+        var nodes: [[String: Any]] = []
+        func walk(_ snapshot: XCUIElementSnapshot, depth: Int) {
+            let frame = snapshot.frame
+            var node: [String: Any] = [
+                "t": snapshot.elementType.rawValue, "d": depth,
+                "x": Double(frame.minX), "y": Double(frame.minY), "w": Double(frame.width), "h": Double(frame.height),
+                "en": snapshot.isEnabled, "sel": snapshot.isSelected,
+            ]
+            if !snapshot.identifier.isEmpty { node["id"] = snapshot.identifier }
+            if !snapshot.label.isEmpty { node["l"] = snapshot.label }
+            if let value = snapshot.value { node["v"] = "\(value)" }
+            nodes.append(node)
+            for child in snapshot.children { walk(child, depth: depth + 1) }
+        }
+        if let snapshot = try? app.snapshot() { walk(snapshot, depth: 0) } else { notes.append("snapshot failed") }
+        let payload: [String: Any] = ["name": name, "notes": notes, "nodes": nodes]
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            try? data.write(to: dir.appendingPathComponent("\(name).json"))
+        }
+    }
+
+    @MainActor
+    private func element(_ id: String) -> XCUIElement { app.descendants(matching: .any)[id].firstMatch }
+
+    /// Taps the element when it is there (scrolling up to `scrolls` times to reach it). A miss is a note in the dump.
+    @MainActor
+    @discardableResult
+    private func tap(_ id: String, scrolls: Int = 0, wait: TimeInterval = 3) -> Bool {
+        let target = element(id)
+        _ = target.waitForExistence(timeout: wait)
+        var left = scrolls
+        while left > 0, !(target.exists && target.isHittable) {
+            app.swipeUp(velocity: .slow)
+            left -= 1
+        }
+        guard target.exists else {
+            notes.append("missing: \(id)")
+            return false
+        }
+        if target.isHittable { target.tap() } else {
+            notes.append("not hittable, tapped frame: \(id)")
+            target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        Thread.sleep(forTimeInterval: 1.0)
+        return true
+    }
+
+    @MainActor
+    private func scrollEnd(_ times: Int = 3) {
+        for _ in 0..<times { app.swipeUp(velocity: .fast) }
+        Thread.sleep(forTimeInterval: 0.8)
+    }
+
+    @MainActor
+    private func scrollPage() {
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.30))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        Thread.sleep(forTimeInterval: 0.6)
+    }
+
+    @MainActor
+    private func openLink(_ link: String) {
+        app.open(URL(string: link)!)
+        let board = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for title in ["Open", "Buka"] where board.buttons[title].waitForExistence(timeout: 1.5) {
+            board.buttons[title].tap()
+            break
+        }
+        Thread.sleep(forTimeInterval: 1.5)
+    }
+
+    // MARK: Helpers
+
+    @MainActor
+    private func detail(_ name: String, _ scanId: String, _ arguments: [String], pages: Int = 2) {
+        launch(arguments + ["-debug.detail", scanId, "-debug.replicaFixture", "YES"], settle: 2.5)
+        dump(name)
+        if pages >= 1 {
+            scrollPage()
+            dump("\(name)-mid")
+        }
+        if pages >= 2 {
+            scrollEnd()
+            dump("\(name)-end")
+        }
+    }
+
+    @MainActor
+    private func connect(code: String) -> Bool {
+        launch(protected("unpaired") + ["-debug.tab", "shield"])
+        openLink("shoo://join?code=\(code)")
+        return app.textFields["connect.code"].waitForExistence(timeout: 6)
+    }
+
+    // MARK: Cells (one launch per test: a launch costs 12-20 s on a busy Mac and a test may take 120 s)
+
+    @MainActor
+    func test000_on_splash() {
+        launch([], onboarded: false)
+        dump("on-splash-1")
+        if tap("splash.next") { dump("on-splash-2") }
+        if tap("splash.next", wait: 1) { dump("on-splash-3") }
+    }
+
+    @MainActor
+    func test001_on_name() {
+        launch(["-debug.onboardingStep", "name"], onboarded: false)
+        dump("on-name")
+        let field = app.textFields["name.field"]
+        if field.waitForExistence(timeout: 5) {
+            field.tap()
+            field.typeText("Nisrina")
+            Thread.sleep(forTimeInterval: 0.8)
+            dump("on-name-typed-kb")
+            field.typeText(" Thifal Khairunnisa")
+            Thread.sleep(forTimeInterval: 0.8)
+            dump("on-name-toolong-kb")
+        }
+    }
+
+    @MainActor
+    func test002_on_name_rtl() {
+        launch(["-debug.onboardingStep", "name"], onboarded: false)
+        let again = app.textFields["name.field"]
+        if again.waitForExistence(timeout: 5) {
+            again.tap()
+            again.typeText("محمد 👵🏻 e\u{301}\u{302}\u{303}Wwwww")
+            Thread.sleep(forTimeInterval: 0.8)
+            dump("on-name-rtl-emoji-kb")
+        }
+    }
+
+    @MainActor
+    func test003_on_ext() {
+        launch(["-debug.onboardingStep", "turnOnExtension"], onboarded: false, extensionActive: false)
+        dump("on-ext")
+        if tap("extension.consent") { dump("on-ext-agreed") }
+        if tap("extension.dataSent") { dump("on-datasent-sheet") }
+    }
+
+    @MainActor
+    func test004_on_ext_consent() {
+        launch(["-debug.onboardingStep", "turnOnExtension", "-debug.askDataConsent", "YES"], onboarded: false, extensionActive: false)
+        dump("on-ext-consent-unanswered")
+        scrollEnd(2)
+        dump("on-ext-consent-unanswered-end")
+    }
+
+    @MainActor
+    func test005_on_ext_switchedOff() {
+        launch(["-debug.onboardingStep", "turnOnExtension", "-UITestExtensionStatus", "switchedOff"], onboarded: false, extensionActive: false)
+        dump("on-ext-switchedOff")
+        scrollEnd(2)
+        dump("on-ext-switchedOff-end")
+    }
+
+    @MainActor
+    func test006_on_ext_someSitesOnly() {
+        launch(["-debug.onboardingStep", "turnOnExtension", "-UITestExtensionStatus", "someSitesOnly"], onboarded: false, extensionActive: false)
+        dump("on-ext-someSitesOnly")
+    }
+
+    @MainActor
+    func test007_on_ext_notSeen() {
+        launch(["-debug.onboardingStep", "turnOnExtension", "-UITestExtensionStatus", "notSeen"], onboarded: false, extensionActive: false)
+        dump("on-ext-notSeen")
+    }
+
+    @MainActor
+    func test008_on_safariDefault() {
+        launch(["-debug.onboardingStep", "safariDefault"], onboarded: false)
+        dump("on-safariDefault")
+    }
+
+    @MainActor
+    func test009_on_extensionOn() {
+        launch(["-debug.onboardingStep", "extensionOn"], onboarded: false)
+        dump("on-extensionOn")
+    }
+
+    @MainActor
+    func test010_on_connected() {
+        launch(["-debug.onboardingStep", "connected"], onboarded: false)
+        dump("on-connected")
+    }
+
+    @MainActor
+    func test011_consent_question() {
+        launch(guardian("figma", family: false) + ["-debug.askDataConsent", "YES"])
+        dump("consent-question")
+    }
+
+    @MainActor
+    func test012_session_expired() {
+        launch(guardian("figma") + ["-debug.sessionExpired", "YES"])
+        dump("session-expired")
+    }
+
+    @MainActor
+    func test013_home_g_figma() {
+        launch(guardian("figma") + ["-debug.tab", "shield"])
+        dump("home-g-figma")
+        scrollPage()
+        dump("home-g-figma-mid")
+        scrollEnd(3)
+        dump("home-g-figma-end")
+    }
+
+    @MainActor
+    func test014_home_g_empty() {
+        launch(guardian("empty") + ["-debug.tab", "shield"])
+        dump("home-g-empty")
+        scrollEnd(3)
+        dump("home-g-empty-end")
+    }
+
+    @MainActor
+    func test015_home_g_allSafe() {
+        launch(guardian("allSafe") + ["-debug.tab", "shield"])
+        dump("home-g-allSafe")
+    }
+
+    @MainActor
+    func test016_home_g_edge() {
+        launch(guardian("edge") + ["-debug.tab", "shield"])
+        dump("home-g-edge")
+        scrollPage()
+        dump("home-g-edge-mid")
+        scrollEnd(3)
+        dump("home-g-edge-end")
+    }
+
+    @MainActor
+    func test017_home_g_heavy() {
+        launch(guardian("heavy") + ["-debug.tab", "shield"])
+        dump("home-g-heavy")
+    }
+
+    @MainActor
+    func test018_home_g_mixed() {
+        launch(guardian("mixedVerdicts") + ["-debug.tab", "shield"])
+        dump("home-g-mixed")
+    }
+
+    @MainActor
+    func test019_home_g_three() {
+        launch(guardian("threeMembers") + ["-debug.tab", "shield"])
+        dump("home-g-three")
+        scrollEnd(3)
+        dump("home-g-three-end")
+    }
+
+    @MainActor
+    func test020_home_g_one() {
+        launch(guardian("oneMember") + ["-debug.tab", "shield"])
+        dump("home-g-one")
+    }
+
+    @MainActor
+    func test021_home_g_fail() {
+        launch(guardian("figma") + ["-debug.tab", "shield", "-mock.fail", "scans,familyMembers,me"])
+        dump("home-g-fail")
+    }
+
+    @MainActor
+    func test022_home_g_loading() {
+        launch(guardian("figma") + ["-debug.tab", "shield", "-mock.latency", "9000"], settle: 1.5)
+        dump("home-g-loading")
+    }
+
+    @MainActor
+    func test023_home_g_extoff() {
+        launch(guardian("figma") + ["-debug.tab", "shield", "-UITestExtensionStatus", "switchedOff"], extensionActive: false)
+        dump("home-g-extoff")
+        if tap("home.turnOn") { dump("sheet-turnOn") }
+    }
+
+    @MainActor
+    func test024_home_g_notif_denied_alert() {
+        launch(guardian("figma") + ["-debug.tab", "shield"], notifications: "denied")
+        dump("home-g-notif-denied-alert")
+    }
+
+    @MainActor
+    func test025_home_g_verdict_failed() {
+        launch(guardian("figma") + ["-debug.tab", "shield", "-mock.fail", "setVerdict"])
+        if tap("home.verdict.notSafe", scrolls: 2) {
+            Thread.sleep(forTimeInterval: 1)
+            dump("home-g-verdict-failed")
+        } else { dump("home-g-verdict-failed-MISSING") }
+    }
+
+    @MainActor
+    func test026_home_g_verdict_not_allowed() {
+        launch(guardian("figma") + ["-debug.tab", "shield", "-mock.fail", "setVerdict=verdict_not_allowed"])
+        if tap("home.verdict.safe", scrolls: 2) {
+            Thread.sleep(forTimeInterval: 1)
+            dump("home-g-verdict-safe-tapped")
+        }
+    }
+
+    @MainActor
+    func test027_guardian_intro() {
+        launch(guardian("figma", family: false) + ["-debug.tab", "shield", "-settings.guardianIntroSeen", "NO"])
+        if tap("familyModeToggle") { dump("guardian-intro") }
+    }
+
+    @MainActor
+    func test028_home_pb() {
+        launch(guardian("homePribadi", family: false) + ["-debug.tab", "shield"])
+        dump("home-pb")
+        scrollEnd(3)
+        dump("home-pb-end")
+    }
+
+    @MainActor
+    func test029_home_pb_alone() {
+        launch(guardian("homePribadiAlone", family: false) + ["-debug.tab", "shield"])
+        dump("home-pb-alone")
+        scrollEnd(3)
+        dump("home-pb-alone-end")
+    }
+
+    @MainActor
+    func test030_home_pb_extoff() {
+        launch(guardian("homePribadi", family: false) + ["-debug.tab", "shield", "-UITestExtensionStatus", "switchedOff"], extensionActive: false)
+        dump("home-pb-extoff")
+    }
+
+    @MainActor
+    func test031_home_pb_checking() {
+        launch(guardian("homePribadi", family: false) + ["-debug.tab", "shield", "-UITestExtensionDelay", "30"], extensionActive: false)
+        dump("home-pb-checking")
+    }
+
+    @MainActor
+    func test032_home_p_protectedQuiet() {
+        launch(protected("protectedQuiet") + ["-debug.tab", "shield"])
+        dump("home-p-protectedQuiet")
+    }
+
+    @MainActor
+    func test033_home_p_protectedBlocked() {
+        launch(protected("protectedBlocked") + ["-debug.tab", "shield"])
+        dump("home-p-protectedBlocked")
+    }
+
+    @MainActor
+    func test034_home_p_protectedBlockedScam() {
+        launch(protected("protectedBlockedScam") + ["-debug.tab", "shield"])
+        dump("home-p-protectedBlockedScam")
+    }
+
+    @MainActor
+    func test035_home_p_protectedBlockedSafe() {
+        launch(protected("protectedBlockedSafe") + ["-debug.tab", "shield"])
+        dump("home-p-protectedBlockedSafe")
+        scrollEnd(3)
+        dump("home-p-protectedBlockedSafe-end")
+    }
+
+    @MainActor
+    func test036_home_p_protectedWarning() {
+        launch(protected("protectedWarning") + ["-debug.tab", "shield"])
+        dump("home-p-protectedWarning")
+        scrollEnd(3)
+        dump("home-p-protectedWarning-end")
+    }
+
+    @MainActor
+    func test037_home_p_protectedWarningScam() {
+        launch(protected("protectedWarningScam") + ["-debug.tab", "shield"])
+        dump("home-p-protectedWarningScam")
+    }
+
+    @MainActor
+    func test038_home_p_protectedWarningSafe() {
+        launch(protected("protectedWarningSafe") + ["-debug.tab", "shield"])
+        dump("home-p-protectedWarningSafe")
+    }
+
+    @MainActor
+    func test039_home_p_protectedAlone() {
+        launch(protected("protectedAlone") + ["-debug.tab", "shield"])
+        dump("home-p-protectedAlone")
+        scrollEnd(3)
+        dump("home-p-protectedAlone-end")
+    }
+
+    @MainActor
+    func test040_home_p_edge() {
+        launch(protected("edge") + ["-debug.tab", "shield"])
+        dump("home-p-edge")
+        scrollEnd(3)
+        dump("home-p-edge-end")
+    }
+
+    @MainActor
+    func test041_home_p_fail() {
+        launch(protected("figma") + ["-debug.tab", "shield", "-mock.fail", "me,scans"])
+        dump("home-p-fail")
+    }
+
+    @MainActor
+    func test042_home_p_extoff() {
+        launch(protected("figma") + ["-debug.tab", "shield", "-UITestExtensionStatus", "switchedOff"], extensionActive: false)
+        dump("home-p-extoff")
+        if tap("shield.turnOn") { dump("sheet-turnOn-protected") }
+    }
+
+    @MainActor
+    func test043_home_p_checking() {
+        launch(protected("figma") + ["-debug.tab", "shield", "-UITestExtensionDelay", "30"], extensionActive: false)
+        dump("home-p-checking")
+    }
+
+    @MainActor
+    func test044_home_p_loading() {
+        launch(protected("figma") + ["-debug.tab", "shield", "-mock.latency", "9000"], settle: 1.5)
+        dump("home-p-loading")
+    }
+
+    @MainActor
+    func test045_act_g_figma() {
+        launch(guardian("figma") + ["-debug.tab", "activity"])
+        dump("act-g-figma")
+        scrollEnd(3)
+        dump("act-g-figma-end")
+    }
+
+    @MainActor
+    func test046_act_g_edge() {
+        launch(guardian("edge") + ["-debug.tab", "activity"])
+        dump("act-g-edge")
+    }
+
+    @MainActor
+    func test047_act_g_heavy() {
+        launch(guardian("heavy") + ["-debug.tab", "activity"])
+        dump("act-g-heavy")
+        scrollEnd(4)
+        dump("act-g-heavy-end")
+    }
+
+    @MainActor
+    func test048_act_g_picker() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-debug.activityPicker", "YES"])
+        dump("act-g-picker")
+    }
+
+    @MainActor
+    func test049_act_g_edge_picker() {
+        launch(guardian("edge") + ["-debug.tab", "activity", "-debug.activityPicker", "YES"])
+        dump("act-g-edge-picker")
+    }
+
+    @MainActor
+    func test050_act_g_one_person() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-debug.activityPerson", "dev_syahnaz"])
+        dump("act-g-one-person")
+    }
+
+    @MainActor
+    func test051_act_g_warning() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-debug.activityFilter", "warning"])
+        dump("act-g-warning")
+    }
+
+    @MainActor
+    func test052_act_g_allSafe_blocked() {
+        launch(guardian("allSafe") + ["-debug.tab", "activity", "-debug.activityFilter", "blocked"])
+        dump("act-g-allSafe-blocked")
+    }
+
+    @MainActor
+    func test053_act_pb_figma() {
+        launch(guardian("figma", family: false) + ["-debug.tab", "activity"])
+        dump("act-pb-figma")
+    }
+
+    @MainActor
+    func test054_act_empty() {
+        launch(guardian("empty", family: false) + ["-debug.tab", "activity", "-UITestCheckStats", "YES"])
+        dump("act-empty")
+        if tap("filter.warning") { dump("act-empty-warning") }
+    }
+
+    @MainActor
+    func test055_act_off() {
+        launch(guardian("empty", family: false) + ["-debug.tab", "activity", "-UITestCheckStats", "YES", "-UITestExtensionStatus", "offTwoDays"], extensionActive: false)
+        dump("act-off")
+    }
+
+    @MainActor
+    func test056_act_fail() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-mock.fail", "scans"])
+        dump("act-fail")
+    }
+
+    @MainActor
+    func test057_act_loading() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-mock.latency", "9000"], settle: 1.5)
+        dump("act-loading")
+    }
+
+    @MainActor
+    func test058_act_g_empty_family() {
+        launch(guardian("empty") + ["-debug.tab", "activity"])
+        dump("act-g-empty-family")
+    }
+
+    @MainActor
+    func test059_act_refresh_failed() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-mock.fail", "scans~1"])
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
+        Thread.sleep(forTimeInterval: 2)
+        dump("act-refresh-failed")
+    }
+
+    @MainActor
+    func test060_act_loadmore_failed() {
+        launch(guardian("heavy") + ["-debug.tab", "activity", "-mock.fail", "scans~1"])
+        scrollEnd(5)
+        Thread.sleep(forTimeInterval: 1.5)
+        dump("act-loadmore-failed")
+    }
+
+    @MainActor
+    func test061_act_p_figma() {
+        launch(protected("figma") + ["-debug.tab", "activity"])
+        dump("act-p-figma")
+        scrollEnd(3)
+        dump("act-p-figma-end")
+    }
+
+    @MainActor
+    func test062_act_p_edge() {
+        launch(protected("edge") + ["-debug.tab", "activity"])
+        dump("act-p-edge")
+    }
+
+    @MainActor
+    func test063_act_p_blocked() {
+        launch(protected("figma") + ["-debug.tab", "activity", "-debug.activityFilter", "blocked"])
+        dump("act-p-blocked")
+    }
+
+    @MainActor
+    func test064_act_p_empty() {
+        launch(protected("empty") + ["-debug.tab", "activity"])
+        dump("act-p-empty")
+    }
+
+    @MainActor
+    func test065_act_p_fail() {
+        launch(protected("figma") + ["-debug.tab", "activity", "-mock.fail", "scans"])
+        dump("act-p-fail")
+    }
+
+    @MainActor
+    func test066_dt_g_blocked() {
+        detail("dt-g-blocked", "figma-blocked-92", guardian("figma"), pages: 2)
+    }
+
+    @MainActor
+    func test067_dt_g_warning() {
+        detail("dt-g-warning", "figma-warning-72", guardian("figma"), pages: 2)
+    }
+
+    @MainActor
+    func test068_dt_g_edge_long() {
+        detail("dt-g-edge-long", "edge-long", guardian("edge"), pages: 2)
+    }
+
+    @MainActor
+    func test069_dt_g_edge_one() {
+        detail("dt-g-edge-one", "edge-one-signal", guardian("edge"), pages: 2)
+    }
+
+    @MainActor
+    func test070_dt_g_notsafe() {
+        detail("dt-g-notsafe", "mixed-blocked-notsafe", guardian("mixedVerdicts"), pages: 2)
+    }
+
+    @MainActor
+    func test071_dt_g_safe() {
+        detail("dt-g-safe", "mixed-warning-safe", guardian("mixedVerdicts"), pages: 2)
+    }
+
+    @MainActor
+    func test072_dt_g_none() {
+        detail("dt-g-none", "mixed-blocked-none", guardian("mixedVerdicts"), pages: 0)
+    }
+
+    @MainActor
+    func test073_dt_pb_own() {
+        detail("dt-pb-own", "figma-me-1", guardian("figma", family: false), pages: 1)
+    }
+
+    @MainActor
+    func test074_dt_p_blocked() {
+        detail("dt-p-blocked", "maria-1", protected("figma"), pages: 2)
+    }
+
+    @MainActor
+    func test075_dt_p_warning() {
+        detail("dt-p-warning", "maria-2", protected("figma"), pages: 1)
+    }
+
+    @MainActor
+    func test076_dt_p_verdict() {
+        detail("dt-p-verdict", "maria-3", protected("figma"), pages: 1)
+    }
+
+    @MainActor
+    func test077_dt_p_safe() {
+        detail("dt-p-safe", "maria-5", protected("figma"), pages: 1)
+    }
+
+    @MainActor
+    func test078_dt_gone() {
+        launch(guardian("figma") + ["-debug.detail", "no-such-scan"], settle: 2.5)
+        dump("dt-gone")
+    }
+
+    @MainActor
+    func test079_dt_fail() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-mock.fail", "scan"], settle: 2.5)
+        dump("dt-fail")
+    }
+
+    @MainActor
+    func test080_dt_loading() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-mock.latency", "9000"], settle: 1.5)
+        dump("dt-loading")
+    }
+
+    @MainActor
+    func test081_dt_verdict_failed() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-mock.fail", "setVerdict", "-debug.replicaFixture", "YES"], settle: 2.5)
+        if tap("detail.verdict.notSafe", scrolls: 4) {
+            Thread.sleep(forTimeInterval: 1.2)
+            dump("dt-verdict-failed")
+        } else { dump("dt-verdict-failed-MISSING") }
+    }
+
+    @MainActor
+    func test082_dt_safe_reason() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-debug.replicaFixture", "YES"], settle: 2.5)
+        if tap("detail.verdict.safe", scrolls: 4) {
+            dump("sheet-safeReason")
+            if tap("safeReason.note", wait: 2) {
+                app.typeText("Ini toko langganan keluarga kami sejak lama, sudah dicek berkali-kali dan aman.")
+                Thread.sleep(forTimeInterval: 0.8)
+                dump("sheet-safeReason-kb")
+            }
+        } else { dump("sheet-safeReason-MISSING") }
+    }
+
+    @MainActor
+    func test083_dt_after_notsafe() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-debug.replicaFixture", "YES"], settle: 2.5)
+        if tap("detail.verdict.notSafe", scrolls: 4) {
+            Thread.sleep(forTimeInterval: 1)
+            dump("dt-after-notsafe")
+        }
+    }
+
+    @MainActor
+    func test084_dt_screenshot_zoom() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-debug.replicaFixture", "YES"], settle: 2.5)
+        if tap("detail.screenshot", scrolls: 3) { dump("dt-screenshot-zoom") }
+    }
+
+    @MainActor
+    func test085_pf_g_figma() {
+        launch(guardian("figma") + ["-debug.profile", "YES"])
+        dump("pf-g-figma")
+        scrollEnd(3)
+        dump("pf-g-figma-end")
+    }
+
+    @MainActor
+    func test086_pf_g_empty() {
+        launch(guardian("empty") + ["-debug.profile", "YES"])
+        dump("pf-g-empty")
+    }
+
+    @MainActor
+    func test087_pf_g_edge() {
+        launch(guardian("edge") + ["-debug.profile", "YES"])
+        dump("pf-g-edge")
+        scrollPage()
+        dump("pf-g-edge-mid")
+    }
+
+    @MainActor
+    func test088_pf_g_heavy() {
+        launch(guardian("heavy") + ["-debug.profile", "YES"])
+        dump("pf-g-heavy")
+    }
+
+    @MainActor
+    func test089_pf_g_three() {
+        launch(guardian("threeMembers") + ["-debug.profile", "YES"])
+        dump("pf-g-three")
+    }
+
+    @MainActor
+    func test090_pf_pb() {
+        launch(guardian("figma", family: false) + ["-debug.profile", "YES", "-UITestCheckStats", "YES"])
+        dump("pf-pb")
+        scrollEnd(3)
+        dump("pf-pb-end")
+    }
+
+    @MainActor
+    func test091_pf_p() {
+        launch(protected("figma") + ["-debug.profile", "YES"])
+        dump("pf-p")
+        scrollEnd(3)
+        dump("pf-p-end")
+    }
+
+    @MainActor
+    func test092_pf_p_edge() {
+        launch(protected("edge") + ["-debug.profile", "YES"])
+        dump("pf-p-edge")
+    }
+
+    @MainActor
+    func test093_pf_p_alone() {
+        launch(protected("protectedAlone") + ["-debug.profile", "YES"])
+        dump("pf-p-alone")
+    }
+
+    @MainActor
+    func test094_pf_fail_me() {
+        launch(guardian("figma") + ["-debug.profile", "YES", "-mock.fail", "me"])
+        dump("pf-fail-me")
+    }
+
+    @MainActor
+    func test095_pf_fail_family() {
+        launch(guardian("figma") + ["-debug.profile", "YES", "-mock.fail", "familyMembers"])
+        dump("pf-fail-family")
+    }
+
+    @MainActor
+    func test096_pf_loading() {
+        launch(guardian("figma") + ["-debug.profile", "YES", "-mock.latency", "9000"], settle: 1.5)
+        dump("pf-loading")
+    }
+
+    @MainActor
+    func test097_pf_g_extoff() {
+        launch(guardian("figma") + ["-debug.profile", "YES", "-UITestExtensionStatus", "switchedOff"], extensionActive: false)
+        dump("pf-g-extoff")
+    }
+
+    @MainActor
+    func test098_pf_page_mode() {
+        launch(guardian("figma") + ["-debug.profilePage", "mode"])
+        dump("pf-page-mode")
+    }
+
+    @MainActor
+    func test099_pf_page_editProfile() {
+        launch(guardian("figma") + ["-debug.profilePage", "editProfile"])
+        dump("pf-page-editProfile")
+    }
+
+    @MainActor
+    func test100_pf_page_connection() {
+        launch(guardian("figma") + ["-debug.profilePage", "connection"])
+        dump("pf-page-connection")
+    }
+
+    @MainActor
+    func test101_pf_page_notifications() {
+        launch(guardian("figma") + ["-debug.profilePage", "notifications"])
+        dump("pf-page-notifications")
+        scrollEnd(2)
+        dump("pf-page-notifications-end")
+    }
+
+    @MainActor
+    func test102_pf_page_language() {
+        launch(guardian("figma") + ["-debug.profilePage", "language"])
+        dump("pf-page-language")
+    }
+
+    @MainActor
+    func test103_pf_page_theme() {
+        launch(guardian("figma") + ["-debug.profilePage", "theme"])
+        dump("pf-page-theme")
+    }
+
+    @MainActor
+    func test104_pf_page_accessibility() {
+        launch(guardian("figma") + ["-debug.profilePage", "accessibility"])
+        dump("pf-page-accessibility")
+        scrollEnd(2)
+        dump("pf-page-accessibility-end")
+    }
+
+    @MainActor
+    func test105_pf_page_about() {
+        launch(guardian("figma") + ["-debug.profilePage", "about"])
+        dump("pf-page-about")
+        scrollEnd(2)
+        dump("pf-page-about-end")
+    }
+
+    @MainActor
+    func test106_pf_p_page_mode() {
+        launch(protected("figma") + ["-debug.profilePage", "mode"])
+        dump("pf-p-page-mode")
+    }
+
+    @MainActor
+    func test107_pf_p_page_connection() {
+        launch(protected("figma") + ["-debug.profilePage", "connection"])
+        dump("pf-p-page-connection")
+    }
+
+    @MainActor
+    func test108_pf_p_page_notifications() {
+        launch(protected("figma") + ["-debug.profilePage", "notifications"])
+        dump("pf-p-page-notifications")
+    }
+
+    @MainActor
+    func test109_pf_p_page_editProfile() {
+        launch(protected("figma") + ["-debug.profilePage", "editProfile"])
+        dump("pf-p-page-editProfile")
+    }
+
+    @MainActor
+    func test110_pf_p_alone_page_connection() {
+        launch(protected("protectedAlone") + ["-debug.profilePage", "connection"])
+        dump("pf-p-alone-page-connection")
+    }
+
+    @MainActor
+    func test111_pf_p_edge_page_connection() {
+        launch(protected("edge") + ["-debug.profilePage", "connection"])
+        dump("pf-p-edge-page-connection")
+    }
+
+    @MainActor
+    func test112_member_figma() {
+        launch(guardian("figma") + ["-debug.member", "dev_syahnaz"])
+        dump("member-figma")
+        scrollEnd(3)
+        dump("member-figma-end")
+    }
+
+    @MainActor
+    func test113_member_edge_bayu() {
+        launch(guardian("edge") + ["-debug.member", "dev_bayu"])
+        dump("member-edge-bayu")
+    }
+
+    @MainActor
+    func test114_member_edge_long() {
+        launch(guardian("edge") + ["-debug.member", "dev_syahnaz"])
+        dump("member-edge-long")
+        scrollEnd(3)
+        dump("member-edge-long-end")
+    }
+
+    @MainActor
+    func test115_member_heavy() {
+        launch(guardian("heavy") + ["-debug.member", "dev_syahnaz"])
+        dump("member-heavy")
+    }
+
+    @MainActor
+    func test116_member_gone() {
+        launch(guardian("figma") + ["-debug.member", "dev_nobody"])
+        dump("member-gone")
+    }
+
+    @MainActor
+    func test117_member_fail() {
+        launch(guardian("figma") + ["-debug.member", "dev_syahnaz", "-mock.fail", "familyMembers"])
+        dump("member-fail")
+    }
+
+    @MainActor
+    func test118_member_disconnect() {
+        launch(guardian("figma") + ["-debug.member", "dev_syahnaz"])
+        if tap("member.disconnect", scrolls: 4) { dump("member-disconnect-confirm") } else { dump("member-disconnect-MISSING") }
+    }
+
+    @MainActor
+    func test119_member_notify_failed() {
+        launch(guardian("figma") + ["-debug.member", "dev_syahnaz", "-mock.fail", "remindMember,setMemberNotify"])
+        if tap("member.notify", scrolls: 3) {
+            Thread.sleep(forTimeInterval: 1)
+            dump("member-notify-failed")
+        }
+    }
+
+    @MainActor
+    func test120_sheet_delete_guardian() {
+        launch(guardian("figma") + ["-debug.profile", "YES"])
+        if tap("profile.delete", scrolls: 6) { dump("sheet-delete-guardian") } else { dump("sheet-delete-MISSING") }
+    }
+
+    @MainActor
+    func test121_sheet_delete_protected() {
+        launch(protected("figma") + ["-debug.profile", "YES"])
+        if tap("profile.delete", scrolls: 6) { dump("sheet-delete-protected") }
+    }
+
+    @MainActor
+    func test122_sheet_name_edit() {
+        launch(guardian("figma") + ["-debug.profilePage", "editProfile"])
+        if tap("profile.displayName") {
+            dump("sheet-name-edit")
+            app.typeText("WwwwwMmmmm")
+            Thread.sleep(forTimeInterval: 0.6)
+            dump("sheet-name-edit-typed-kb")
+        }
+    }
+
+    @MainActor
+    func test123_sheet_avatar() {
+        launch(guardian("figma") + ["-debug.profilePage", "editProfile"])
+        if tap("profile.changePhoto") { dump("sheet-avatar") }
+    }
+
+    @MainActor
+    func test124_sheet_quiet() {
+        launch(guardian("figma") + ["-debug.profilePage", "notifications"])
+        if tap("notifications.quietTime", scrolls: 3) { dump("sheet-quiet-hours") } else { dump("sheet-quiet-MISSING") }
+    }
+
+    @MainActor
+    func test125_sheet_turnoff() {
+        launch(guardian("figma", family: false) + ["-debug.profile", "YES"])
+        if tap("profile.extension.active", scrolls: 3) { dump("sheet-turnOff") } else { dump("sheet-turnOff-MISSING") }
+    }
+
+    @MainActor
+    func test126_pf_mode_locked() {
+        launch(guardian("threeMembers") + ["-debug.profilePage", "mode"])
+        if tap("mode.personal") {
+            _ = tap("mode.switch", wait: 1)
+            dump("pf-mode-locked")
+        }
+    }
+
+    @MainActor
+    func test127_connect_prefilled() {
+        if connect(code: "482193") {
+            dump("connect-prefilled")
+            app.textFields["connect.code"].tap()
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-kb")
+        } else { dump("connect-MISSING") }
+    }
+
+    @MainActor
+    func test128_connect_scan() {
+        if connect(code: "482193"), tap("connect.tab.scan") { dump("connect-scan-tab") }
+    }
+
+    @MainActor
+    func test129_connect_err_invalid() {
+        if connect(code: "000000"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-err-invalid")
+        } else { dump("connect-err-invalid-MISSING") }
+    }
+
+    @MainActor
+    func test130_connect_err_expired() {
+        if connect(code: "999999"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-err-expired")
+        } else { dump("connect-err-expired-MISSING") }
+    }
+
+    @MainActor
+    func test131_connect_err_full() {
+        if connect(code: "888888"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-err-full")
+        } else { dump("connect-err-full-MISSING") }
+    }
+
+    @MainActor
+    func test132_connect_err_attempts() {
+        if connect(code: "777777"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-err-attempts")
+        } else { dump("connect-err-attempts-MISSING") }
+    }
+
+    @MainActor
+    func test133_connect_err_ratelimit() {
+        if connect(code: "555555"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-err-ratelimit")
+        } else { dump("connect-err-ratelimit-MISSING") }
+    }
+
+    @MainActor
+    func test134_connect_err_already() {
+        if connect(code: "666666"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("connect-err-already")
+        } else { dump("connect-err-already-MISSING") }
+    }
+
+    @MainActor
+    func test135_connect_success() {
+        if connect(code: "482193"), tap("connect.join") {
+            Thread.sleep(forTimeInterval: 1.5)
+            dump("connect-success")
+        }
+    }
+
+    @MainActor
+    func test136_invite_notice_pribadi() {
+        launch(guardian("homePribadiAlone", family: false) + ["-debug.tab", "shield"])
+        openLink("shoo://join?code=482193")
+        dump("invite-notice-pribadi")
+    }
+
+    @MainActor
+    func test137_invite_notice_protected() {
+        launch(protected("figma") + ["-debug.tab", "shield"])
+        openLink("shoo://join?code=482193")
+        dump("invite-notice-protected-paired")
+    }
+
+    @MainActor
+    func test138_sheet_invite() {
+        launch(guardian("figma") + ["-debug.profile", "YES"])
+        if tap("profile.invite") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("sheet-invite")
+            if tap("invite.copy", wait: 1) { dump("sheet-invite-copied") }
+        } else { dump("sheet-invite-MISSING") }
+    }
+
+    @MainActor
+    func test139_sheet_invite_full() {
+        launch(guardian("threeMembers") + ["-debug.profile", "YES"])
+        if tap("profile.invite") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("sheet-invite-full")
+        }
+    }
+
+    @MainActor
+    func test140_sheet_invite_fail() {
+        launch(guardian("figma") + ["-debug.profile", "YES", "-mock.fail", "createFamilyCode"])
+        if tap("profile.invite") {
+            Thread.sleep(forTimeInterval: 1)
+            dump("sheet-invite-fail")
+        }
+    }
+
+    @MainActor
+    func test141_sheet_invite_loading() {
+        launch(guardian("figma") + ["-debug.profile", "YES", "-mock.latency", "5000"], settle: 6)
+        if tap("profile.invite") { dump("sheet-invite-loading") }
+    }
+
+    @MainActor
+    func test142_supervised_connect() {
+        launch(guardian("homePribadiAlone", family: false) + ["-debug.tab", "shield"])
+        if tap("home.supervised.connect", scrolls: 3) { dump("pf-mode-from-supervised") }
+    }
+
+    @MainActor
+    func test143_ix_verdict_doubletap() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-debug.replicaFixture", "YES", "-mock.latency", "1500"], settle: 4)
+        let button = element("detail.verdict.notSafe")
+        for _ in 0..<4 where !(button.exists && button.isHittable) { app.swipeUp(velocity: .slow) }
+        if button.exists {
+            button.doubleTap()
+            Thread.sleep(forTimeInterval: 0.4)
+            dump("ix-verdict-doubletap-inflight")
+            Thread.sleep(forTimeInterval: 3)
+            dump("ix-verdict-doubletap-done")
+        }
+    }
+
+    @MainActor
+    func test144_ix_mode_toggle_rapid() {
+        launch(guardian("figma", family: false) + ["-debug.tab", "shield"])
+        let toggle = element("familyModeToggle")
+        if toggle.waitForExistence(timeout: 3) {
+            for _ in 0..<6 { toggle.tap() }
+            Thread.sleep(forTimeInterval: 1.5)
+            dump("ix-mode-toggle-rapid")
+        }
+    }
+
+    @MainActor
+    func test145_ix_activity_pull_during_load() {
+        launch(guardian("figma") + ["-debug.tab", "activity", "-mock.latency", "4000"], settle: 1)
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)),
+                    withVelocity: .slow, thenHoldForDuration: 0.2)
+        dump("ix-activity-pull-during-load")
+        Thread.sleep(forTimeInterval: 5)
+        dump("ix-activity-pull-after-load")
+    }
+
+    @MainActor
+    func test146_ix_sheet_dismiss_mid_submit() {
+        launch(guardian("figma") + ["-debug.detail", "figma-blocked-92", "-debug.replicaFixture", "YES", "-mock.latency", "2500"], settle: 5)
+        if tap("detail.verdict.safe", scrolls: 4), tap("safeReason.chip.knownSite", wait: 2) || true {
+            let chip = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'safeReason.chip.'")).firstMatch
+            if chip.exists { chip.tap() }
+            if tap("safeReason.submit", wait: 2) {
+                app.swipeDown(velocity: .fast)
+                Thread.sleep(forTimeInterval: 0.5)
+                dump("ix-safeReason-dismiss-inflight")
+                Thread.sleep(forTimeInterval: 4)
+                dump("ix-safeReason-dismiss-done")
+            }
+        }
+    }
+}

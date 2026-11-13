@@ -1,0 +1,152 @@
+// Fase 28 hunt, hunter 3: cross-component scenarios, each through the REAL modules (no network).
+// Run: node h3-chain.mjs <worktree>     Lines starting with "BUG" show the wrong result on main 9e5403ba.
+const W = process.argv[2];
+const R = `${W}/ios/ShooExtension/Resources`;
+await import(`${R}/pipeline.js`);
+const P = globalThis.ShooPipeline;
+await import(`${R}/pill.js`).catch(() => {});
+const pill = globalThis.ShooPill;
+const { PSL_RULES } = await import(`${R}/psl.js`);
+const { parseRules, registrableDomain } = await import(`${R}/domain.js`);
+const { createBlockMemory } = await import(`${R}/block-memory.js`);
+const { createLive } = await import(`${R}/live.js`);
+const { createHeartbeat } = await import(`${R}/heartbeat.js`);
+const { createLastSeen } = await import(`${R}/last-seen.js`);
+const { toThresholds } = await import(`${R}/thresholds.js`);
+const { analyzeWithDomain } = await import(`${W}/ai/src/analyze.js`);
+const { createRealityCheck } = await import(`${W}/ai/src/layer4/reality.js`);
+const rules = parseRules(PSL_RULES);
+const reg = (h) => registrableDomain(h, rules);
+const quiet = console.warn; console.warn = () => {};
+const store = () => { const s = {}; return { s, get: async (k) => Object.fromEntries([k].flat().filter((x) => x in s).map((x) => [x, s[x]])), set: async (i) => void Object.assign(s, structuredClone(i)) }; };
+
+// ---------- X-01: Safari access narrowed to some sites ----------
+console.log("\n== X-01 extension narrowed to some sites: what each side is told");
+{
+    const native = [], patches = [];
+    let allSites = true, now = Date.parse("2026-11-13T02:00:00Z");
+    const heartbeat = createHeartbeat({ permissions: { contains: async () => allSites }, sendNative: async (m) => (native.push(m), { ok: true }), intervalMs: 60_000, now: () => now });
+    const lastSeen = createLastSeen({ storage: store(), getSession: async () => ({ token: "t", apiBaseURL: "https://api.test" }), fetchJSON: async (url, init) => (patches.push({ at: new Date(now).toISOString(), body: JSON.parse(init.body) }), { ok: true }), now: () => now });
+    // background.js `case "heartbeat"` and the hourly alarm both run: lastSeen.report(); heartbeat.beat()
+    const tick = async () => { await lastSeen.report(); await heartbeat.beat(); };
+    await tick();
+    allSites = false; // the member switches Safari from "All websites" to a few sites (or to Ask/Deny)
+    for (let hour = 1; hour <= 30; hour++) { now += 3600_000 + 1000; await tick(); }
+    const told = native.filter((m) => m.allSites === false).length;
+    console.log(`app (App Group) told allSites:false ${told} times -> member's own app: ExtensionStatus.evaluate(...) = .off(.someSitesOnly) ("not protected")`);
+    console.log(`backend told extensionLastSeenAt ${patches.length} times, the last at +${Math.round((Date.parse(patches.at(-1).body.extensionLastSeenAt) - Date.parse("2026-11-13T02:00:00Z")) / 3600e3)} h, keys sent: ${JSON.stringify(Object.keys(patches.at(-1).body))}`);
+    const stale = patches.filter((p) => Date.parse(p.at) > Date.parse("2026-11-13T02:00:00Z")).length;
+    console.log(`BUG X-01 | 30 h after access was narrowed | backend rule: ext_last_seen_at > now() - 24 h -> extensionActive TRUE (Guardian sees the member as connected) | PATCHes sent while allSites was false: ${stale} | expected: 0, or a field that says the access is narrowed`);
+}
+
+// ---------- X-02: layer 4 flag "always blocks" vs /config/public thresholds ----------
+console.log("\n== X-02 a layer 4 flag under admin thresholds (GET /config/public)");
+{
+    const flag = JSON.stringify({ choices: [{ message: { content: JSON.stringify({ page_type: "prize", asks: ["otp"], reasonable: false, confidence: 0.95, evidence: null }) } }] });
+    const snapshot = { url: "https://cek-hadiah.example/klaim", title: "Cek hadiah undian", text: "Masukkan kode OTP untuk klaim hadiah", lang: "id", imageAlts: [],
+        forms: [{ action: null, fields: [{ type: "text", name: "otp", id: "otp", label: "Kode OTP", placeholder: null, autocomplete: null }] }] };
+    const SIG2 = (id, layer, weight) => ({ id, layer, weight, label: { en: id, id }, labelSimple: { en: id, id } });
+    let cells = 0, bad = 0;
+    for (const localWeight of [10, 20, 35]) {
+        const local = [SIG2("suspicious_link", 2, localWeight)]; // the phone's own layer 2, sent as localSignals and summed by the extension
+        for (const [warnAt, blockAt] of [[30, 80], [30, 81], [30, 85], [30, 90], [45, 95], [30, 60]]) {
+            const llm = createRealityCheck({ config: { apiKey: "k", model: "m", baseUrl: "https://llm.test", timeoutMs: 6000, dailyCap: 100 }, fetch: async () => new Response(flag, { status: 200 }), clientCallsPerHour: Infinity });
+            const { signals } = await analyzeWithDomain(snapshot, { llm, localSignals: local });
+            const t = toThresholds({ warnAt, blockAt, version: 3 });
+            Object.assign(P.THRESHOLD, { firstWarning: t.firstWarning, secondWarning: t.secondWarning, blocked: t.blocked });
+            const remote = P.validSignals(signals, [3, 4]);
+            const all = P.mergeSignals(local, remote);
+            const score = P.scoreFrom(all), status = P.statusFor(score);
+            const l4 = remote.find((s) => s.layer === 4);
+            const wrong = Boolean(l4) && status !== "blocked";
+            cells++; if (wrong) bad++;
+            console.log(`${wrong ? "BUG X-02" : "ok      "} | warnAt ${warnAt} blockAt ${blockAt} | layers 1-3 = ${P.scoreFrom(all.filter((s) => s.layer !== 4))} | layer 4 flag weight ${l4?.weight ?? "none"} | total ${score} -> ${status}`);
+        }
+    }
+    console.log(`cells ${cells}, a flagged page that is not blocked: ${bad}   (ai/CLAUDE.md: "A flag weighs max(30, 80 - total), so it always blocks"; reality.js:113 "A flag always ends at the block line or above")`);
+    Object.assign(P.THRESHOLD, { firstWarning: 30, secondWarning: 50, blocked: 80 });
+}
+
+// ---------- X-03: shared-host lists differ: one block on a shared platform blocks the platform ----------
+console.log("\n== X-03 block memory on hosts the backend treats as shared (public.verdict_shared) but block-memory.js does not");
+{
+    const SIG = (id, layer, weight) => ({ id, layer, weight, label: { en: id, id }, labelSimple: { en: id, id } });
+    const cases = [
+        ["https://sway.cloud.microsoft/AbCdEf123", "https://outlook.cloud.microsoft/mail/", "backend: cloud.microsoft host_path"],
+        ["https://s.id/hadiah-bansos", "https://s.id/undangan-nikah-rina", "backend: s.id subdomains"],
+        ["https://1drv.ms/f/s!scam", "https://1drv.ms/w/s!family-photos", "backend: 1drv.ms host_path"],
+        ["https://klaim.page.link/x", "https://tokoresmi.page.link/promo", "backend: page.link subdomains"],
+        ["https://sites.google.com/view/scam", "https://sites.google.com/view/sekolah", "control: both lists"],
+    ];
+    for (const [scam, other, note] of cases) {
+        const memory = createBlockMemory({ storage: store(), registrableDomain: reg });
+        await memory.remember(scam, { domain: reg(new URL(scam).hostname), score: 92, signals: [SIG("asks_otp", 3, 60)] });
+        let last = null, analyzed = false, verdictAsked = null;
+        await P.runScan({
+            snapshot: { url: other, domain: reg(new URL(other).hostname), title: "", text: "", forms: [], imageAlts: [] },
+            analyzeLocal: async () => [], analyzeRemote: async () => ((analyzed = true), { signals: [] }),
+            lookupVerdict: async (d, o) => ((verdictAsked = o.url), null), // backend: no verdict on this link; a not_safe on the scam link would not reach it either (verdict_shared = true)
+            recallBlock: (u) => memory.recall(u), isCurrent: () => true, publish: (s) => (last = s),
+        });
+        const wrong = last.status === "blocked" && !note.startsWith("control");
+        console.log(`${wrong ? "BUG X-03" : "ok      "} | blocked first: ${scam} | then opens ${other} | ${last.status} ${last.score}${last.remembered ? " (from memory, never scanned: /analyze called " + analyzed + ")" : ""} | ${note}`);
+    }
+}
+
+// ---------- X-04: #379 "never low risk without the online check" on the Dynamic Island ----------
+console.log("\n== X-04 /analyze failed: in-page pill vs what goes to the Dynamic Island");
+{
+    const SIG = (id, layer, weight) => ({ id, layer, weight, label: { en: id, id }, labelSimple: { en: id, id } });
+    for (const [name, remote, verdict] of [["/analyze failed", async () => ({ ok: true, signals: [], skipped: "error" }), null], ["/analyze ok", async () => ({ ok: true, signals: [] }), null],
+        ["Guardian marked a 60% link safe (#369)", async () => ({ ok: true, signals: [SIG("asks_pin", 3, 60)] }), { value: "safe", byName: "Gita" }]]) {
+        let last = null;
+        await P.runScan({ snapshot: { url: "https://bca-promo.example/login", domain: "bca-promo.example" }, analyzeLocal: async () => (verdict ? [] : [SIG("lookalike_domain", 2, 25)]), analyzeRemote: remote,
+            lookupVerdict: async () => verdict, isCurrent: () => true, publish: (s) => (last = s) });
+        const v = pill.decide(null, { ...last, scanId: 1 }).view;
+        const pillSays = v.safeBy !== undefined ? `Ditandai aman oleh ${v.safeBy}` : v.offline ? "Cek online tidak tersedia" : v.tone === "safe" ? "Risiko rendah" : v.tone;
+        // live-island.js show(): { open, hostname, score: state.score ?? 0, status: state.status, analyzing: !state.done } -> live.js -> POST /live
+        let body = null;
+        const live = createLive({ getSession: async () => ({ aiBaseURL: "https://ai.test", apiBaseURL: "https://api.test", token: "t" }), post: async (_s, b) => (body = b) });
+        await live.show({ domain: "bca-promo.example", score: last.score ?? 0, status: last.status, analyzing: !last.done });
+        // backend live.ts contentState(): { domain, score, isAnalyzing, isBlocked, status }; ScoreLiveActivity.swift statusText: tone .safe -> "Aman"
+        const island = body.analyzing ? "Menganalisis…" : body.status === "blocked" ? "Diblokir" : body.status === "warning" ? (body.score >= 50 ? "Risiko tinggi" : "Hati-hati") : "Aman";
+        const wrong = pillSays !== "Risiko rendah" && island === "Aman";
+        console.log(`${wrong ? "BUG X-04" : "ok      "} | ${name} | state score ${last.score} onlineChecked ${last.onlineChecked} | pill: "${pillSays}" | POST /live body ${JSON.stringify(body)} | island text (ScoreLiveActivity.swift:116-125): "${island}" ${body.score}%`);
+    }
+}
+// ---------- X-08: which site does the block screen / the Guardian's card name for a scam on a shared platform? ----------
+console.log("\n== X-08 scam page on a shared platform: the name shown where the member is blocked and where the Guardian decides");
+{
+    await import(`${R}/block.js`); await import(`${R}/blocked-page.js`); await import(`${R}/report.js`); await import(`${R}/detector.js`);
+    globalThis.ShooLists = { match: async () => null };
+    const fields = [["text", "user_id", "User ID KlikBCA"], ["password", "pin", "PIN KlikBCA"], ["text", "otp", "Kode OTP"], ["text", "nomor_kartu", "Nomor kartu ATM"], ["text", "nik", "NIK KTP"]].map(([type, name, label]) => ({ type, name, id: null, label, placeholder: null, autocomplete: null }));
+    let cells = 0, bad = 0;
+    for (const url of ["https://sites.google.com/view/klikbca-verifikasi/home", "https://docs.google.com/forms/d/e/1FAIpQLSc/viewform", "https://forms.office.com/r/AbCd123", "https://sway.cloud.microsoft/AbCdEf123", "https://storage.googleapis.com/bca-app/login.html", "https://bca-verifikasi.vercel.app/login", "https://bca-verifikasi-akun.xyz/login"]) {
+        const domain = reg(new URL(url).hostname);
+        const snapshot = { url, domain, title: "KlikBCA - Verifikasi akun Anda", lang: "id", text: "Akun Anda akan diblokir dalam 24 jam. Segera verifikasi. Masukkan PIN dan kode OTP KlikBCA", forms: [{ action: null, fields }], imageAlts: ["Logo BCA"], capturedAt: "" };
+        let last = null;
+        await P.runScan({ snapshot, analyzeLocal: async (s) => (await globalThis.ShooDetector.analyzeLocal(s)) ?? [],
+            analyzeRemote: async (s, l) => ({ ok: true, ...(await analyzeWithDomain({ ...s, url: new URL(s.url).origin + new URL(s.url).pathname }, { localSignals: l })) }),
+            lookupVerdict: async () => null, isCurrent: () => true, publish: (s) => (last = s) });
+        const body = globalThis.ShooReport.scanBody(last, { title: snapshot.title, faviconUrl: null, now: new Date().toISOString() });
+        const chip = last.status === "blocked" ? globalThis.ShooBlockedPage.viewFor({ onboarded: true, mode: "protected", guardianName: "Gita" }, globalThis.ShooBlock.payloadFor(last), "id").chip : "(no block screen)";
+        const host = new URL(url).hostname;
+        const wrong = last.status !== "normal" && body.domain !== host && !host.endsWith(".vercel.app") && /google|office|microsoft/.test(body.domain);
+        cells++; if (wrong) bad++;
+        console.log(`${wrong ? "BUG X-08" : "ok      "} | ${url} | score ${last.score} ${last.status} | block screen chip: "${chip}" | POST /scans domain (Home cards print scan.domain): "${body.domain}" | page really on: ${host}`);
+    }
+    console.log(`cells ${cells}, named after the platform owner instead of the page: ${bad}`);
+}
+// ---------- X-05: second warning tier: extension vs island ----------
+console.log("\n== X-05 tier 2 of a warning: extension (thresholds.js secondWarning) vs Dynamic Island (score >= 50, ScoreActivityAttributes.swift:26)");
+{
+    let cells = 0, bad = 0;
+    for (const [warnAt, blockAt] of [[30, 80], [50, 80], [55, 85], [60, 95], [45, 60]]) {
+        const t = toThresholds({ warnAt, blockAt, version: 3 });
+        const diff = [];
+        for (let score = warnAt; score < blockAt; score++) { cells++; const ext = score >= t.secondWarning ? "danger" : "warning"; const island = score >= 50 ? "danger" : "warning"; if (ext !== island) { bad++; diff.push(score); } }
+        console.log(`${diff.length ? "BUG X-05" : "ok      "} | warnAt ${warnAt} blockAt ${blockAt} secondWarning ${t.secondWarning} | scores where pill/popup and island disagree: ${diff.length ? diff[0] + "–" + diff.at(-1) : "none"}`);
+    }
+    console.log(`cells ${cells}, disagreeing ${bad}`);
+}
+console.warn = quiet;
