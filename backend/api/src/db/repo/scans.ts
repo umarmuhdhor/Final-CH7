@@ -1,6 +1,7 @@
 import type { Sql, TransactionSql } from "postgres";
 import { LOCK } from "../locks";
 import { addTombstones } from "./tombstones";
+import { lockedUntilSql } from "./verdictLock";
 
 export interface NewScan {
   ownerId: string;
@@ -494,7 +495,7 @@ export interface ScanRow {
   detectedAt: string;
   /** detected_at with microseconds, for the cursor. */
   cursorAt: string;
-  verdict: { value: "safe" | "not_safe"; byDeviceId: string; byName: string; decidedAt: string } | null;
+  verdict: { value: "safe" | "not_safe"; byDeviceId: string; byName: string; decidedAt: string; lockedUntil?: string } | null;
 }
 
 export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
@@ -510,10 +511,12 @@ function selectScans(sql: Sql) {
            case when s.replica_ready_at is not null then s.replica_path end as "replicaPath",
            to_char(s.detected_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "detectedAt",
            to_char(s.detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cursorAt",
-           case when v.owner_id is not null then json_build_object(
+           case when v.owner_id is not null then jsonb_build_object(
              'value', v.value, 'byDeviceId', v.by_device_id, 'byName', v.by_name,
              'decidedAt', to_char(v.decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}), 'url', v.url
-           ) end as verdict
+           ) || jsonb_strip_nulls(jsonb_build_object(
+             'lockedUntil', ${lockedUntilSql(sql, "v.value", "v.decided_at")}
+           )) end as verdict
     from scans s
     join devices d on d.id = s.owner_id
     left join lateral (

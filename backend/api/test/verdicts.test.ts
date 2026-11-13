@@ -9,6 +9,7 @@ import { expectScanResult } from "./helpers/schema";
 import { atWindowStart } from "./helpers/rateWindow";
 import { call, createDevice, type Created } from "./helpers/seed";
 import { keyHash, useRateKeySecret } from "../src/http/keyHash";
+import { lockedUntilSql } from "../src/db/repo/verdictLock";
 useRateKeySecret(env.RATE_KEY_SECRET);
 
 const sql = testSql();
@@ -56,6 +57,8 @@ const blocklist = async (d: Created, q = "") =>
     removed?: { domain: string; removedAt: string }[];
     nextSince: string | null;
   };
+/** #476: a safe verdict is locked until the weekly review. Moves every verdict 8 days back, past it. */
+const pastWeeklyReview = () => admin`update verdicts set decided_at = decided_at - interval '8 days'`;
 const approve = (domain: string) =>
   admin`update blocklist_entries set approved_at = now(), approved_by = 'test' where domain = ${domain}`;
 
@@ -158,6 +161,7 @@ describe("POST /verdicts", () => {
     const a = await scan(p);
     const b = await scan(p);
     await verdict(g, a, "safe");
+    await pastWeeklyReview();
     await verdict(g, b, "not_safe");
     expect((await lookup(p, blocked92.domain))?.value).toBe("not_safe");
     for (const id of [a, b]) {
@@ -188,10 +192,11 @@ describe("POST /verdicts", () => {
     expect(w.verdict?.value).toBe("not_safe");
   });
 
-  it("a new verdict replaces the old one (Ubah)", async () => {
+  it("a new verdict replaces the old one (Ubah) once the safe one is past the weekly review", async () => {
     const { g, p } = await family();
     const id = await scan(p, warning41 as Fixture);
     await verdict(g, id, "safe");
+    await pastWeeklyReview();
     const res = await verdict(g, id, "not_safe");
     expect(res.status).toBe(200);
     expect((await lookup(p, warning41.domain))?.value).toBe("not_safe");
@@ -207,7 +212,11 @@ describe("POST /verdicts", () => {
       await verdict(g, id, f.verdict.value as "safe" | "not_safe");
       const item = (await (await call(`/scans/${id}`, { token: g.token })).json()) as Record<string, unknown>;
       expectScanResult(item);
-      expect(item.verdict).toEqual({ ...f.verdict, byDeviceId: g.deviceId, decidedAt: expect.any(String), url: expect.any(String) });
+      expect(item.verdict).toEqual({
+        ...f.verdict, byDeviceId: g.deviceId, decidedAt: expect.any(String), url: expect.any(String),
+        // #476: a fresh safe verdict is locked until the weekly review.
+        ...(f.verdict.value === "safe" ? { lockedUntil: expect.any(String) } : {}),
+      });
     }
   });
 
@@ -308,6 +317,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     const id = await scan(p, blocked92 as Fixture, "flip.example");
     await verdict(g, id, "safe");
     expect(await entry("flip.example")).toBeUndefined();
+    await pastWeeklyReview();
     await verdict(g, id, "not_safe");
     expect((await entry("flip.example"))?.families).toBe(1);
     await verdict(g, id, "safe");
@@ -358,6 +368,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
 
       expect((await verdict(g, id, "safe")).status).toBe(200);
       expect(await row()).toBeUndefined(); // no support → dropped, rejected or not
+      await pastWeeklyReview();
       expect((await verdict(g, id, "not_safe")).status).toBe(200);
       const again = await row();
       expect(again?.families).toBe(1);
@@ -369,6 +380,7 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
       expect((await row())?.rejected_at).toBeNull();
       expect((await verdict(g, id, "safe")).status).toBe(200);
       expect(await row()).toBeUndefined();
+      await pastWeeklyReview();
       expect((await verdict(g, id, "not_safe")).status).toBe(200);
       expect(await row()).toEqual({ families: 1, rejected_at: null, rejected_by: null });
     } finally {
@@ -624,6 +636,7 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect((await decide(g, a, "safe")).status).toBe(200);
     expect(await lookup(p, "old.test")).toMatchObject({ value: "safe" });
     expect((await decide(g, b, "not_safe")).status).toBe(200);
+    await pastWeeklyReview();
     expect((await decide(g, a, "safe")).status).toBe(200); // newer, but a not_safe wins
     expect(await lookup(p, "old.test")).toMatchObject({ value: "not_safe" });
   });
@@ -657,6 +670,7 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
       expect(await lookupLink(p, "https://note.test/a", "note.test")).not.toHaveProperty("notes");
       expect((await decide(g, a, "safe")).status).toBe(200); // older builds send none
       expect((await row(p.deviceId))[0]!.notes).toBeNull();
+      await pastWeeklyReview();
       expect((await decide(g, a, "safe", "   ")).status).toBe(200);
       expect((await row(p.deviceId))[0]!.notes).toBeNull();
     });
@@ -680,5 +694,77 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
       const [archived] = await admin<{ note: string | null }[]>`select note from admin.scan_archive where scan_id = ${a}`;
       expect(archived?.note).toBe("Telepon [nomor] atau [email]");
     });
+  });
+});
+
+describe("safe verdict lock until the weekly review (#476)", () => {
+  type LockedError = { error: { code: string; message: string; lockedUntil?: string } };
+  const detail = async (g: Created, id: string) =>
+    ((await (await call(`/scans/${id}`, { token: g.token })).json()) as { verdict: Record<string, unknown> | null }).verdict;
+
+  it("a fresh safe verdict carries lockedUntil; changing it → 409 verdict_locked, verdict unchanged", async () => {
+    const { g, p } = await family();
+    const id = await scan(p);
+    const res = await verdict(g, id, "safe");
+    expect(res.status).toBe(200);
+    const { verdict: saved } = (await res.json()) as { verdict: { lockedUntil?: string; decidedAt: string } };
+    expect(saved.lockedUntil).toMatch(/^\d{4}-\d{2}-\d{2}T18:00:00\.000Z$/);
+    expect(new Date(saved.lockedUntil!).getUTCDay()).toBe(0); // Sunday
+    expect(Date.parse(saved.lockedUntil!)).toBeGreaterThan(Date.parse(saved.decidedAt));
+    expect(Date.parse(saved.lockedUntil!) - Date.parse(saved.decidedAt)).toBeLessThanOrEqual(7 * 86_400_000);
+
+    for (const value of ["not_safe", "safe"] as const) {
+      const locked = await verdict(g, id, value);
+      expect(locked.status).toBe(409);
+      const body = (await locked.json()) as LockedError;
+      expect(body.error.code).toBe("verdict_locked");
+      expect(body.error.lockedUntil).toBe(saved.lockedUntil);
+    }
+    expect(await lookup(p, blocked92.domain)).toMatchObject({ value: "safe", lockedUntil: saved.lockedUntil });
+    expect(await detail(g, id)).toMatchObject({ value: "safe", lockedUntil: saved.lockedUntil });
+  });
+
+  it("not_safe is never locked: Bahaya → Aman goes through at once", async () => {
+    const { g, p } = await family();
+    const id = await scan(p);
+    const res = await verdict(g, id, "not_safe");
+    expect(((await res.json()) as { verdict: object }).verdict).not.toHaveProperty("lockedUntil");
+    expect(await detail(g, id)).not.toHaveProperty("lockedUntil");
+    expect((await verdict(g, id, "safe")).status).toBe(200);
+  });
+
+  it("past the weekly review the safe verdict unlocks and can change", async () => {
+    const { g, p } = await family();
+    const id = await scan(p);
+    await verdict(g, id, "safe");
+    await pastWeeklyReview();
+    expect(await lookup(p, blocked92.domain)).not.toHaveProperty("lockedUntil");
+    expect(await detail(g, id)).not.toHaveProperty("lockedUntil");
+    expect((await verdict(g, id, "not_safe")).status).toBe(200);
+  });
+
+  it("the lock is per link: a safe on one page does not lock another page of the site", async () => {
+    const { g, p } = await family();
+    // POST /scans keeps one row per link (#248), so the second page is inserted directly.
+    const a = await scan(p, blocked92 as Fixture, "perlink.example");
+    const [other] = await admin<{ id: string }[]>`
+      insert into scans (owner_id, url, domain, score, status, detected_at)
+      values (${p.deviceId}, 'https://perlink.example/other', 'perlink.example', 92, 'blocked', now())
+      returning id`;
+    expect((await verdict(g, a, "safe")).status).toBe(200);
+    expect((await verdict(g, other!.id, "not_safe")).status).toBe(200);
+  });
+
+  it.each([
+    ["Wednesday", "2099-01-07T10:00:00Z", "2099-01-11T18:00:00.000Z"],
+    ["Sunday before 18:00", "2099-01-04T17:59:59Z", "2099-01-04T18:00:00.000Z"],
+    ["Sunday at 18:00", "2099-01-04T18:00:00Z", "2099-01-11T18:00:00.000Z"],
+    ["Sunday after 18:00", "2099-01-04T23:00:00Z", "2099-01-11T18:00:00.000Z"],
+    ["Monday 00:00", "2099-01-05T00:00:00Z", "2099-01-11T18:00:00.000Z"],
+  ])("decided %s → unlocks at the next Sunday 18:00 UTC", async (_, decidedAt, unlocks) => {
+    const [row] = await sql<{ safe: string | null; notSafe: string | null }[]>`
+      select ${lockedUntilSql(sql, "'safe'", "d")} as safe, ${lockedUntilSql(sql, "'not_safe'", "d")} as "notSafe"
+      from (select ${decidedAt}::timestamptz as d) t`;
+    expect(row).toEqual({ safe: unlocks, notSafe: null });
   });
 });

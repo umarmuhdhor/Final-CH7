@@ -27,6 +27,7 @@ struct DetailFooter: View {
         case .connection: "Couldn't save. Check your connection and try again."
         case .notAllowed: "You're no longer this person's guardian, so you can't mark this site."
         case .tooMany: "Too many changes in a minute. Wait a moment, then try again."
+        case .locked: "This site stays safe until Shoo's weekly review. You can change it after that."
         }
     }
 

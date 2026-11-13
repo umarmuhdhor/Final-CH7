@@ -41,6 +41,8 @@ final class DetailModel {
         case notAllowed
         /// `rate_limited` (429): more than 60 verdicts a minute.
         case tooMany
+        /// `verdict_locked` (409, #476): the link is marked safe until Shoo's weekly review.
+        case locked
     }
     private(set) var verdictError: VerdictError?
     var verdictFailed: Bool { verdictError != nil }
@@ -267,6 +269,7 @@ final class DetailModel {
             verdictError = switch (error as? RepositoryError)?.apiCode {
             case .verdictNotAllowed?: .notAllowed
             case .rateLimited?: .tooMany
+            case .verdictLocked?: .locked
             default: .connection
             }
             return .rolledBack

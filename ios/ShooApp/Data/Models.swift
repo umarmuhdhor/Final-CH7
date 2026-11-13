@@ -296,6 +296,8 @@ struct APIErrorCode: RawRepresentable, Hashable, Sendable, ExpressibleByStringLi
     static let alreadyConnected: APIErrorCode = "already_connected"
     // Verdicts (GD-07)
     static let verdictNotAllowed: APIErrorCode = "verdict_not_allowed"
+    /// 409: the link has a `safe` verdict that stays until the weekly AI review (#476).
+    static let verdictLocked: APIErrorCode = "verdict_locked"
     // Member reminder (PF-01 proposed)
     static let pushUnavailable: APIErrorCode = "push_unavailable"
     static let remindTooSoon: APIErrorCode = "remind_too_soon"

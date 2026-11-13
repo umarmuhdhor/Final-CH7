@@ -396,6 +396,7 @@ struct DetailModelTests {
     @Test(arguments: [
         (RepositoryError.api(.verdictNotAllowed, message: "no"), DetailModel.VerdictError.notAllowed),
         (RepositoryError.api(.rateLimited, message: "slow"), DetailModel.VerdictError.tooMany),
+        (RepositoryError.api(.verdictLocked, message: "locked"), DetailModel.VerdictError.locked),
         (RepositoryError.network, DetailModel.VerdictError.connection),
     ])
     func verdictFailureSaysWhy(error: RepositoryError, expected: DetailModel.VerdictError) async {
