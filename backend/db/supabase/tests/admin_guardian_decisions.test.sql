@@ -1,4 +1,4 @@
--- QA-D-H01: one dataset row per Guardian decision (migration 20261113010000_admin_guardian_decisions.sql).
+-- QA-D-H01: one dataset row per Guardian decision (migration 20261113030000_admin_guardian_decisions.sql).
 create extension if not exists pgtap with schema extensions;
 
 begin;
