@@ -1,0 +1,31 @@
+// Fase 28 hunt, hunter 2 (app). Backend half of A-03: which URLs does POST /scans store as sent and GET /scans return?
+// Run: copy to backend/api/test/h2-poison.test.ts, cd backend/api && db_guard && npx vitest run test/h2-poison.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+import { beforeEach, describe, expect, it } from "vitest";
+import { resetDb, testSql } from "./helpers/resetDb";
+import { call, createDevice } from "./helpers/seed";
+
+const sql = testSql();
+beforeEach(() => resetDb(sql));
+
+describe("H2 A-03 backend half", () => {
+  it.each([
+    ["leading and trailing space", " https://toko.example/a "],
+    ["backslash for slash", "https://toko.example\\path"],
+    ["tab inside", "https://toko.example/a\tb"],
+    ["newline at the end", "https://toko.example/a\n"],
+  ])("%s", async (_name, url) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Mom", "protected");
+    const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+    await call("/family/join", { method: "POST", token: p.token, json: { code } });
+    const res = await call("/scans", {
+      method: "POST", token: p.token,
+      json: { url, domain: "toko.example", score: 92, status: "blocked", signals: [], detectedAt: new Date().toISOString() },
+    });
+    const list = (await (await call("/scans?owner=family", { token: g.token })).json()) as { items: { url: string }[] };
+    const members = (await (await call("/family/members", { token: g.token })).json()) as { members: { lastScan: { url: string } | null }[] };
+    console.log(`H2 A-03 backend | ${JSON.stringify(url)} | POST ${res.status} | GET /scans url ${JSON.stringify(list.items[0]?.url)} | members.lastScan.url ${JSON.stringify(members.members[0]?.lastScan?.url)}`);
+    expect(res.status).toBe(201);
+  });
+});

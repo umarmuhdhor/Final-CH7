@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Figma copy vs app labels: for each mapped frame, Figma text nodes that appear in no label of the app cell (config A, ID)."""
+import json, sys, os, re
+H = os.path.dirname(os.path.abspath(__file__))
+MAP = {
+ "Sesi berakhir": ["session-expired"], "Guardian/Home · Gagal memuat": ["home-g-fail"], "protected/Home · Gagal memuat": ["home-p-fail"],
+ "protected/Home · Mengecek ekstensi · V2": ["home-p-checking"], "Sheet · Matikan Shoo (dari Guardian/Home) · V2": ["sheet-turnOff"],
+ "Guardian/Home/warning · Gagal menyimpan": ["home-g-verdict-failed"],
+ "Connect with Guardian · Kode salah · V2": ["connect-err-invalid"], "Connect with Guardian · Keluarga penuh · V2": ["connect-err-full"],
+ "Connect with Guardian · Terlalu banyak percobaan · V2": ["connect-err-attempts"], "Connect with Guardian · Terlalu banyak pendaftaran · V2": ["connect-err-ratelimit"],
+ "Kirim Undangan · Mengambil kode · V2": ["sheet-invite-loading"], "Kirim Undangan · Gagal mengambil kode · V2": ["sheet-invite-fail"],
+ "Kirim Undangan · Keluarga penuh · V2": ["sheet-invite-full"], "Kirim Undangan · Link tersalin · V2": ["sheet-invite-copied"],
+ "Detail Aktivitas · Sudah tidak ada": ["dt-gone"], "Detail Aktivitas · Gagal memuat": ["dt-fail"], "Aktivitas · Gagal memperbarui · V2": ["act-refresh-failed"],
+ "Guardian/Detail Orang Dilindungi · Sudah tidak terhubung · V2": ["member-gone"], "Guardian/Detail Orang Dilindungi · Gagal memuat · V2": ["member-fail"],
+ "Profile/Pribadi · Gagal memuat profil · V2": ["pf-fail-me"], "Profile/Guardian · Gagal memuat keluarga · V2": ["pf-fail-family"],
+ "Pengaturan/Mode akun · Terkunci (masih melindungi)": ["pf-mode-locked"],
+ "Detail Aktivitas · Memuat": ["dt-loading"], "Guardian/Detail Aktivitas · Gagal menyimpan": ["dt-verdict-failed"],
+ "Pengaturan/Kelola profil · Sheet ubah nama · Terlalu panjang": ["sheet-name-edit-typed-kb"],
+ "Pengaturan/Notifikasi · Jam tenang": ["pf-page-notifications", "pf-page-notifications-end"], "Pengaturan/Notifikasi · Sheet atur jam tenang": ["sheet-quiet-hours"],
+ "Pengaturan/Mode akun · Pilih mode": ["pf-page-mode"], "protected/Home · Perlindungan mati · V2": ["home-p-extoff"], "Pribadi/Home · Perlindungan mati · V2": ["home-pb-extoff"],
+ "Sheet · Nyalakan Shoo (dari Home) · V2": ["sheet-turnOn"], "Aktivitas · Semua · Memuat · V2": ["act-loading"], "Aktivitas · Gagal memuat lagi · V2": ["act-loadmore-failed"],
+ "Connect with Guardian · Pemindaian tidak tersedia · V2": ["connect-scan-tab"],
+}
+frames = {}
+for f in ("fig-1685.txt", "fig-1619.txt"):
+    cur = None
+    for line in open(os.path.join(H, f)):
+        if line.startswith("## "): cur = line[3:].strip(); frames.setdefault(cur, [])
+        elif cur and line.strip(): frames[cur].append(line.strip())
+norm = lambda s: re.sub(r"\s+", " ", s.replace(" / ", " ").replace(" ", " ")).strip().lower()
+tag = sys.argv[1] if len(sys.argv) > 1 else "A"
+for frame, cells in MAP.items():
+    texts = frames.get(frame)
+    if texts is None: print("NO FIGMA FRAME", frame); continue
+    labels = []
+    missing_cells = []
+    for c in cells:
+        p = os.path.join(H, "shots", tag, c + ".json")
+        if not os.path.exists(p): missing_cells.append(c); continue
+        labels += [norm(n.get("l", "")) for n in json.load(open(p))["nodes"] if n.get("l")]
+    if missing_cells and not labels: print(f"-- {frame}: cell not run {missing_cells}"); continue
+    blob = " | ".join(labels)
+    miss = []
+    for t in texts:
+        n = norm(t)
+        if len(n) < 4 or re.fullmatch(r"[\d:. /%wib-]+", n) or any(ord(ch) > 0xF0000 for ch in t): continue
+        if n not in blob and n not in miss: miss.append(n)
+    print(f"== {frame} -> {cells}: {len(miss)} Figma texts not in app")
+    for m in miss[:14]: print("     ", m[:150])

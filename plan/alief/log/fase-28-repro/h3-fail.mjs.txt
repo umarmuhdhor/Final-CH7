@@ -1,0 +1,182 @@
+// Fase 28 hunt, hunter 3: every network call of the REAL background.js × failure mode, and what the page is told.
+// Run: node h3-fail.mjs <worktree>
+// background.js runs as in ios/ShooExtension/Tests/background.test.mjs: the module, a fake `browser`, a fake server.
+// "timeout" = the fetch rejects with AbortError (what the AbortController does), so the run does not wait 3–20 s.
+const W = process.argv[2];
+const R = `${W}/ios/ShooExtension/Resources`;
+await import(`${R}/pipeline.js`);
+const P = globalThis.ShooPipeline;
+globalThis.ShooPipeline = P;
+await import(`${R}/pill.js`).catch(() => {}); // needs DOM for the page part; decide() is exported before that
+const pill = globalThis.ShooPill;
+
+const SESSION = { ok: true, deviceId: "dev_1", token: "t", mode: "protected", name: "Ibu", guardianName: "Gita", apiBaseURL: "https://api.test", aiBaseURL: "https://ai.test" };
+let generation = 0;
+const MODES = {
+    ok: null,
+    network: () => { throw new TypeError("Load failed"); },
+    timeout: () => { throw Object.assign(new Error("aborted"), { name: "AbortError" }); },
+    401: () => new Response(JSON.stringify({ error: { code: "unauthorized" } }), { status: 401 }),
+    500: () => new Response(JSON.stringify({ error: { code: "internal" } }), { status: 500 }),
+    429: () => new Response(JSON.stringify({ error: { code: "rate_limited" } }), { status: 429, headers: { "Retry-After": "7" } }),
+    "200 html": () => new Response("<html>captive portal</html>", { status: 200 }),
+    "200 {}": () => new Response("{}", { status: 200 }),
+};
+function world(session = SESSION) {
+    const store = {};
+    const calls = [];
+    const state = { session, mode: {}, body: {} };
+    const local = {
+        get: async (keys) => { const names = keys == null ? Object.keys(store) : [keys].flat(); return structuredClone(Object.fromEntries(names.filter((k) => k in store).map((k) => [k, store[k]]))); },
+        set: async (items) => void Object.assign(store, structuredClone(items)),
+        remove: async (keys) => { for (const key of [keys].flat()) delete store[key]; },
+        clear: async () => { for (const key of Object.keys(store)) delete store[key]; },
+    };
+    const okBody = (path) => state.body[path] ?? ({
+        "/analyze": { signals: [], rdapRegisteredAt: null }, "/verdicts": { verdict: null }, "/config/public": { warnAt: 30, blockAt: 80, version: 0 },
+        "/blocklist": { domains: [], nextSince: null }, "/public-blocklist": { domains: [], nextSince: null }, "/scans": { id: "scan_1", notified: { name: "Gita" } }, "/devices/me": { ok: true }, "/live": { ok: true },
+    })[path];
+    async function boot() {
+        let listener;
+        const native = [];
+        globalThis.browser = {
+            storage: { local },
+            runtime: {
+                sendNativeMessage: async (_app, message) => { native.push(message); if (message.type === "getSession") { if (state.session === "throw") throw new Error("native down"); return state.session; } return { ok: true }; },
+                onMessage: { addListener: (fn) => (listener = fn) },
+                getURL: (path) => `safari-web-extension://x/${path}`,
+            },
+            permissions: { contains: async () => state.allSites ?? true },
+        };
+        globalThis.fetch = async (url, init = {}) => {
+            const path = new URL(url).pathname;
+            calls.push(`${init.method ?? "GET"} ${path}`);
+            const fail = MODES[state.mode[path] ?? "ok"];
+            if (fail) return fail();
+            return new Response(JSON.stringify(okBody(path)), { status: 200 });
+        };
+        await import(`${R}/background.js?boot=${++generation}`);
+        await new Promise((r) => setTimeout(r, 20));
+        return Object.assign((message) => listener(message), { native });
+    }
+    return { store, calls, state, boot };
+}
+const quiet = console.warn; console.warn = () => {};
+const SIG = (id, layer, weight) => ({ id, layer, weight, label: { en: id, id }, labelSimple: { en: id, id } });
+const SNAP = { url: "https://hadiah-gratis.example/klaim", domain: "hadiah-gratis.example", title: "", lang: null, text: "", forms: [], imageAlts: [], capturedAt: "" };
+async function scanWith(send, local = []) {
+    let last = null;
+    await P.runScan({
+        snapshot: SNAP, analyzeLocal: async () => local,
+        analyzeRemote: (s, l) => send({ type: "analyze", snapshot: s, localSignals: l }),
+        lookupVerdict: async (domain, { fresh = false, url } = {}) => (await send({ type: "verdict", domain, url, fresh }))?.verdict ?? null,
+        recallBlock: async (url) => (await send({ type: "recallBlock", url }))?.memory ?? null,
+        isCurrent: () => true, publish: (s) => (last = s),
+    });
+    return last;
+}
+const pillText = (s) => { const v = pill.decide(null, { ...s, scanId: 1 }).view; return !v.visible ? "(hidden: block screen)" : v.safeBy !== undefined ? `Marked safe by ${v.safeBy}` : v.offline ? "Online check unavailable" : v.tone === "safe" ? "Low risk" : v.tone; };
+const rows = [];
+const row = (call, mode, told, verdict) => { rows.push([call, mode, told, verdict]); console.log(`${call} | ${mode} | ${told} | ${verdict}`); };
+console.log("call | failure mode | what the page / user gets | fail-wrong?");
+
+// 1. POST /analyze, clean page (no local signal) and a page layer 2 scored 14
+for (const mode of Object.keys(MODES)) {
+    const w = world(); const send = await w.boot(); w.state.mode["/analyze"] = mode;
+    const s = await scanWith(send, [SIG("cheap_tld", 2, 14)]);
+    row("POST /analyze (layer 2 = 14)", mode, `score ${s.score} ${s.status}, onlineChecked ${s.onlineChecked}, pill "${pillText(s)}"`, mode !== "ok" && pillText(s) === "Low risk" ? "FAIL-WRONG" : "ok");
+}
+for (const [name, body] of [["signals not an array", { signals: "none" }], ["signals of the wrong shape", { signals: [{ id: "asks_pin", weight: 60 }] }], ["weight as string", { signals: [{ ...SIG("asks_pin", 3, 60), weight: "60" }] }], ["layer 2 from server", { signals: [SIG("asks_pin", 2, 60)] }], ["null body", null], ["error object with 200", { error: { code: "internal" } }]]) {
+    const w = world(); const send = await w.boot(); w.state.body["/analyze"] = body;
+    const s = await scanWith(send, [SIG("cheap_tld", 2, 14)]);
+    row("POST /analyze 200", name, `score ${s.score} ${s.status}, onlineChecked ${s.onlineChecked}, pill "${pillText(s)}"`, pillText(s) === "Low risk" ? "FAIL-WRONG (no layer 3 result was used, pill says Low risk)" : "ok");
+}
+// 2. no session / no ai URL
+for (const [name, session] of [["not onboarded", { ok: false, error: "not_onboarded" }], ["native unreachable", "throw"], ["no aiBaseURL", { ...SESSION, aiBaseURL: null }]]) {
+    const w = world(session); const send = await w.boot();
+    const s = await scanWith(send, [SIG("cheap_tld", 2, 14)]);
+    row("getSession", name, `score ${s.score} ${s.status}, onlineChecked ${s.onlineChecked}, pill "${pillText(s)}", calls ${JSON.stringify(w.calls.filter((c) => !/blocklist|config/.test(c)))}`, pillText(s) === "Low risk" ? "FAIL-WRONG" : "ok");
+}
+// 3. GET /verdicts on a page layer 3 scored 60 (warning), and on a remembered block
+for (const mode of Object.keys(MODES)) {
+    const w = world(); const send = await w.boot(); w.state.body["/analyze"] = { signals: [SIG("asks_pin", 3, 60)] }; w.state.mode["/verdicts"] = mode;
+    const s = await scanWith(send);
+    row("GET /verdicts (warning page)", mode, `score ${s.score} ${s.status}, verdict ${JSON.stringify(s.verdict)}`, s.status === "normal" ? "FAIL-WRONG" : "ok");
+}
+for (const mode of Object.keys(MODES)) {
+    const w = world(); const send = await w.boot();
+    await send({ type: "rememberBlock", url: SNAP.url, domain: SNAP.domain, score: 92, signals: [SIG("asks_pin", 3, 60)] });
+    w.state.mode["/verdicts"] = mode;
+    const s = await scanWith(send);
+    row("GET /verdicts (blocked before, #231)", mode, `score ${s.score} ${s.status}, remembered ${s.remembered}`, s.status !== "blocked" ? "FAIL-WRONG" : "ok");
+}
+for (const [name, verdict] of [["value unsure (unknown enum)", { value: "unsure" }], ["value SAFE (case)", { value: "SAFE" }], ["verdict as string", "safe"], ["safe without byName", { value: "safe" }], ["not_safe", { value: "not_safe", byName: "Gita" }], ["safe", { value: "safe", byName: "Gita" }]]) {
+    const w = world(); const send = await w.boot(); w.state.body["/analyze"] = { signals: [SIG("asks_pin", 3, 60)] }; w.state.body["/verdicts"] = { verdict };
+    const s = await scanWith(send);
+    row("GET /verdicts 200", name, `score ${s.score} ${s.status}, pill "${pillText(s)}"`, (name.startsWith("value") || name.includes("string")) && s.status !== "warning" ? "FAIL-WRONG" : "ok");
+}
+// 4. verdict cache: safe, then the Guardian changes it / the server goes away
+{
+    const w = world(); const send = await w.boot(); w.state.body["/analyze"] = { signals: [SIG("asks_pin", 3, 60)] }; w.state.body["/verdicts"] = { verdict: { value: "safe", byName: "Gita" } };
+    await scanWith(send);
+    for (const mode of ["500", "network", "401"]) { w.state.mode["/verdicts"] = mode; const s = await scanWith(send); row("GET /verdicts after a cached safe (<60 s, not fresh)", mode, `score ${s.score} ${s.status}, pill "${pillText(s)}"`, "known BH-41 (60 s cache)"); }
+    w.state.mode["/verdicts"] = "ok"; w.state.body["/verdicts"] = { verdict: null }; // Guardian removed / disconnected: backend drops the verdict
+    const s = await scanWith(send); row("GET /verdicts after a cached safe (<60 s)", "verdict now null on the server (Guardian disconnected)", `score ${s.score} ${s.status}, pill "${pillText(s)}"`, "known BH-41 (60 s cache)");
+}
+// 5. GET /config/public
+for (const mode of Object.keys(MODES)) {
+    const w = world(); w.state.mode["/config/public"] = mode; const send = await w.boot();
+    const t = (await send({ type: "thresholds" })).thresholds;
+    row("GET /config/public (nothing stored)", mode, JSON.stringify(t), t.firstWarning === 30 && t.blocked === 80 ? "ok (built-in 30/80)" : "FAIL-WRONG");
+}
+for (const [name, body] of [["warnAt as string", { warnAt: "45", blockAt: 80, version: 3 }], ["blockAt 96 (outside the fence)", { warnAt: 30, blockAt: 96, version: 3 }], ["gap 10", { warnAt: 45, blockAt: 55, version: 3 }], ["version missing", { warnAt: 45, blockAt: 90 }], ["valid 45/90 v3", { warnAt: 45, blockAt: 90, version: 3 }]]) {
+    const w = world(); w.state.body["/config/public"] = body; const send = await w.boot();
+    const t = (await send({ type: "thresholds" })).thresholds; const t2 = (await send({ type: "thresholds" })).thresholds;
+    row("GET /config/public 200", name, JSON.stringify(t2), name.startsWith("valid") ? (t2.blocked === 90 ? "ok" : "FAIL") : t2.firstWarning === 30 && t2.blocked === 80 ? "ok (built-in 30/80)" : "FAIL-WRONG");
+}
+// 6. GET /blocklist: a listed domain, then the refresh fails
+for (const mode of Object.keys(MODES)) {
+    const w = world(); w.state.body["/blocklist"] = { domains: [{ domain: "scam-listed.example", addedAt: "2026-11-01T00:00:00.000Z" }], nextSince: "2026-11-01T00:00:00.000Z" };
+    let send = await w.boot(); await send({ type: "listMatch", hostname: "scam-listed.example" }); await new Promise((r) => setTimeout(r, 30));
+    const before = (await send({ type: "listMatch", hostname: "login.scam-listed.example" })).match;
+    for (const k of Object.keys(w.store)) if (k.endsWith(".meta")) { w.store[k].fetchedAt -= 2 * 3600e3; w.store[k].fullAt -= 2 * 3600e3; }
+    w.state.mode["/blocklist"] = mode; w.state.mode["/public-blocklist"] = mode;
+    send = await w.boot(); await send({ type: "listMatch", hostname: "x.example" }); await new Promise((r) => setTimeout(r, 30));
+    const after = (await send({ type: "listMatch", hostname: "login.scam-listed.example" })).match;
+    row("GET /blocklist refresh after a good copy", mode, `listed before: ${Boolean(before)}, listed after the failed refresh: ${Boolean(after)}`, before && after ? "ok (last good copy kept)" : mode === "200 {}" ? "see note" : "FAIL-WRONG");
+}
+// 6b. the DAILY full refresh answered 200 with a body that is not a list
+for (const [name, body] of [["{}", {}], ["error object", { error: { code: "internal" } }], ["domains: null", { domains: null, nextSince: null }], ["proper empty list", { domains: [], nextSince: null }]]) {
+    const w = world(); w.state.body["/blocklist"] = { domains: [{ domain: "scam-listed.example", addedAt: "2026-11-01T00:00:00.000Z" }], nextSince: "2026-11-01T00:00:00.000Z" };
+    let send = await w.boot(); await send({ type: "listMatch", hostname: "scam-listed.example" }); await new Promise((r) => setTimeout(r, 30));
+    const before = (await send({ type: "listMatch", hostname: "scam-listed.example" })).match;
+    for (const k of Object.keys(w.store)) if (k.endsWith(".meta")) { w.store[k].fetchedAt -= 25 * 3600e3; w.store[k].fullAt -= 25 * 3600e3; }
+    w.state.body["/blocklist"] = body; w.state.body["/public-blocklist"] = body;
+    send = await w.boot(); await send({ type: "listMatch", hostname: "x.example" }); await new Promise((r) => setTimeout(r, 30));
+    const after = (await send({ type: "listMatch", hostname: "scam-listed.example" })).match;
+    row("GET /blocklist full refresh (daily) 200", name, `listed before: ${Boolean(before)}, after: ${Boolean(after)}`, name.startsWith("proper") ? "ok (the server really has no entries)" : after ? "ok" : "FAIL-WRONG (a body that is no list empties layer 1 and counts as fresh for 24 h)");
+}
+// 7. POST /scans
+for (const mode of Object.keys(MODES)) {
+    const w = world(); const send = await w.boot(); w.state.mode["/scans"] = mode;
+    const ack = await send({ type: "report", key: "k1", scan: { url: SNAP.url, domain: SNAP.domain, score: 92, status: "blocked", signals: [], detectedAt: new Date().toISOString() }, replica: null, fragments: null });
+    await new Promise((r) => setTimeout(r, 30));
+    const rec = await send({ type: "recordId", key: "k1" });
+    const sent = rec.recordId && (("notified" in rec) ? rec.notified : "Gita");
+    row("POST /scans (blocked)", mode, `content script told ${JSON.stringify(ack)}; block page record ${rec.recordId}, "Link sent to" line: ${sent ? sent : "hidden"}`, mode !== "ok" && sent ? "FAIL-WRONG" : mode !== "ok" ? "ok for the line; scan lost (known BH-06)" : "ok");
+}
+for (const [name, body] of [["id as number", { id: 123 }], ["no id", { notified: { name: "Gita" } }], ["notified as string", { id: "scan_1", notified: "Gita" }], ["notified {}", { id: "scan_1", notified: {} }], ["notified absent (older backend)", { id: "scan_1" }]]) {
+    const w = world(); const send = await w.boot(); w.state.body["/scans"] = body;
+    await send({ type: "report", key: "k1", scan: { url: SNAP.url, domain: SNAP.domain, score: 92, status: "blocked", signals: [], detectedAt: new Date().toISOString() }, replica: null, fragments: null });
+    await new Promise((r) => setTimeout(r, 30));
+    const rec = await send({ type: "recordId", key: "k1" });
+    row("POST /scans 201", name, JSON.stringify(rec), "ok");
+}
+// 8. profile (block page wording)
+for (const [name, session] of [["not onboarded", { ok: false, error: "not_onboarded" }], ["native unreachable", "throw"], ["protected, guardianName null", { ...SESSION, guardianName: null }]]) {
+    const w = world(session); const send = await w.boot();
+    row("profile (getSession fresh)", name, JSON.stringify(await send({ type: "profile" })), "ok");
+}
+console.warn = quiet;
+console.log(`\ncells run: ${rows.length}; FAIL-WRONG: ${rows.filter((r) => String(r[3]).startsWith("FAIL")).length}`);
+process.exit(0);
