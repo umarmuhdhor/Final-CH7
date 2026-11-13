@@ -39,8 +39,6 @@ final class LiveReinstallUITests: XCTestCase {
         // reinstall Settings can stay in front a moment longer.
         app.onboardName("Bu Sari")
         app.passTurnOnExtension()
-        let skip = app.buttons["extension.skipCheck"]
-        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable() }
         if !app.buttons["safariDefault.open"].waitForExistence(timeout: 10) { app.activate() }
         app.passSafariDefault()
         app.buttons["extensionOn.continue"].tapWhenHittable()
