@@ -212,12 +212,21 @@ enum MockScenarios {
         data.members[2].osVersion = nil
         data.members[2].lastSeenAt = nil
         let long = "verifikasi-akun-nasabah-prioritas-bca-mobile-banking-indonesia-resmi.secure-login.site"
+        let longRegistrable = "verifikasi-akun-nasabah-prioritas-bca-mobile-banking-resmi.site"
         var scans = [
             ScanResult(
                 id: "edge-long", url: URL(string: "https://\(long)/login/verifikasi/pin/ulang?ref=wa&campaign=promo-akhir-tahun")!,
                 domain: long, pageTitle: nil, faviconUrl: nil, score: 100, status: .blocked,
                 signals: Site.bcaBlocked.signals + Site.bansos.signals, screenshotUrl: nil, pageReplicaUrl: nil,
                 ownerDeviceId: "dev_syahnaz", ownerName: data.members[0].name, detectedAt: now.addingTimeInterval(-60), verdict: nil
+            ),
+            // U-05: the backend stores only the registrable domain, so a long one is what a real row shows.
+            ScanResult(
+                id: "edge-long-registrable",
+                url: URL(string: "https://login.\(longRegistrable)/login/verifikasi/pin?ref=wa")!,
+                domain: longRegistrable, pageTitle: nil, faviconUrl: nil, score: 92, status: .blocked,
+                signals: Site.bcaBlocked.signals, screenshotUrl: nil, pageReplicaUrl: nil,
+                ownerDeviceId: "dev_syahnaz", ownerName: data.members[0].name, detectedAt: now.addingTimeInterval(-90), verdict: nil
             ),
             ScanResult(
                 id: "edge-one-signal", url: URL(string: "https://xn--bc-xja.site/")!, domain: "xn--bc-xja.site",

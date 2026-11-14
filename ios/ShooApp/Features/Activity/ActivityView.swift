@@ -454,6 +454,11 @@ struct ActivityRow: View {
         return path.isEmpty || path == "/" ? domain : domain + path
     }
 
+    /// The row title split in two (U-05): the registrable domain and the path after it.
+    static func titleParts(url: URL, domain: String) -> (domain: String, path: String) {
+        ("", pageTitle(url: url, domain: domain))
+    }
+
     var body: some View {
         // Figma 450:8443 / 450:8657: a one-line note sits 8 pt under the row and the card stays 118 high
         // (11 pt below the note); the two-line "safe" note is laid out 16 pt under the row, 17 pt above the edge.

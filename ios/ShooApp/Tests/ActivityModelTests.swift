@@ -345,6 +345,21 @@ struct ActivityModelTests {
         #expect(try title("https://x.site/%E2%80%AEdi.oc", "x.site") == "x.site/%E2%80%AEdi.oc")
     }
 
+    /// U-05: the row keeps the whole registrable domain apart from the path, so a long domain is never cut at
+    /// its tail (the end is the part a scammer cannot choose); only the path runs out.
+    @Test func rowTitleKeepsTheWholeDomainApartFromThePath() throws {
+        let domain = "verifikasi-akun-nasabah-prioritas-bca-mobile-banking-resmi.site"
+        #expect(domain.count == 63)
+        let url = try #require(URL(string: "https://login.\(domain)/login/verifikasi/pin?ref=wa#x"))
+        let parts = ActivityRow.titleParts(url: url, domain: domain)
+        #expect(parts.domain == domain)
+        #expect(parts.path == "/login/verifikasi/pin")
+        #expect(parts.domain + parts.path == ActivityRow.pageTitle(url: url, domain: domain))
+        let root = ActivityRow.titleParts(url: try #require(URL(string: "https://\(domain)/")), domain: domain)
+        #expect(root.domain == domain)
+        #expect(root.path.isEmpty)
+    }
+
     @Test func ownListKeepsTheGuardiansRows() async {
         let model = model(mode: .guardian, owner: .me)
         await model.load()
