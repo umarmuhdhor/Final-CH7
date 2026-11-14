@@ -802,7 +802,7 @@ Angka yang belum disepakati dua laporan: key katalog yang tidak dipakai dan tida
 
 ## Indeks file repro (`fase-28-repro/`)
 
-49 file: 25 skrip / test / keluaran dan 24 pohon aksesibilitas `h4-tree-*.json.txt`. Semua `.txt` karena folder `plan/` hanya dokumen; jangan commit salinannya ke `backend/api/test/` atau `ios/ShooApp/Tests/` di branch docs. Kolom terakhir mengikuti plan → "Test repro → test permanen".
+49 file: 25 skrip / test / keluaran dan 24 pohon aksesibilitas `h4-tree-*.json.txt`. 28n menambah 52 pohon `28n-tree-*.json.txt` (AX3 dan penjaga ukuran default; isi di §Hasil 28n). Semua `.txt` karena folder `plan/` hanya dokumen; jangan commit salinannya ke `backend/api/test/` atau `ios/ShooApp/Tests/` di branch docs. Kolom terakhir mengikuti plan → "Test repro → test permanen".
 
 | File | Membuktikan | Menjadi test permanen di (sub-fase) |
 |---|---|---|
@@ -839,7 +839,58 @@ Laporan mentah hunter dan reviewer tidak disimpan di repo (sembilan laporan, inv
 
 ## Hasil 28n: ukur ulang di AX3
 
-Belum dijalankan. Diisi oleh sub-fase 28n lewat branch `docs/alief-fase-28n-ax3` dan PR kecil (bukan push langsung ke `main`): sel U-03, U-04, U-07, U-12, dan bagian AX5 dari U-06 / U-08, dijalankan ulang dengan `UICTContentSizeCategoryAccessibilityXL`; per temuan: rusak di AX3 (→ P2, dapat branch) atau hanya di AX5 (→ menunggu Q18). Untuk U-06 / U-08 juga: label tombol consent dan fokus kolom nama ON-02 di AX3 (dua cek yang dipindah dari 28h). Kolom nama ON-02 yang rusak di AX3 diperbaiki di 28p (`fix/ON-02-name-field-at-ax`), bukan di 28h. Per temuan per perangkat (SE, iPhone 17), ID: satu screenshot `qa/img/fase-28/28n_<ID>_<se|17>-ax3-id.jpg`, rusak atau utuh. Matriks tidak punya sel AX3, jadi screenshot ini satu-satunya bukti merah untuk test AX3 di branch 28n, 28h (label consent), dan 28p; tabel hasil di sini menulis perangkat tempat tiap test harus merah.
+Dijalankan 15 Nov 2026 lewat branch `docs/alief-fase-28n-ax3` (PR bertumpuk di atas #485, bukan push langsung ke `main`).
+
+**Yang diukur.** App dari `origin/main` **`9e5403bac388ebb35aac1d0fcec35838aae2512b`** (`9e5403ba`, sama dengan commit dasar hunt), dibangun di worktree terpisah yang dihapus sesudahnya. PR #484 (ON-04) **masih terbuka** saat pengukuran: U-06, U-08, dan ON-02 diukur di `main` apa adanya dan **diukur ulang di 28h langkah 1** setelah #484 merge.
+
+**Cara.** Kelas `Fase28MatrixUITests` dari [`h4-Fase28MatrixUITests.swift.txt`](fase-28-repro/h4-Fase28MatrixUITests.swift.txt) ditempel sementara di akhir `UITests/QALayoutUITests.swift` (tanpa file baru), ditambah 4 method sementara yang menggulung halaman gagal / hilang sebelum merekam (`dt-fail-end`, `dt-gone-end`, `member-gone-end`, `member-fail-end`). File dikembalikan dengan `git checkout` sebelum worktree dihapus; tidak ada perubahan kode di branch ini. Konfigurasi lewat `TEST_RUNNER_F28_*`: bahasa `id`, tema terang, `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityXL` (AX3). Perintah: `xcodebuild test-without-building … -test-timeouts-enabled YES -maximum-test-execution-time-allowance 120 -parallel-testing-enabled NO -only-testing:ShooAppUITests/Fase28MatrixUITests/<method>`, satu simulator sekali jalan.
+
+| Run | Simulator | Bahasa · ukuran | Method | Hasil |
+|---|---|---|---|---|
+| SE AX3 | "Shoo F28 SE" (375 × 667) | ID · AX3 | 62 method yang punya sel gagal U-03, U-04, U-06, U-07, U-08, U-12 di F, + 4 method gulung | 66 lulus (perekaman, tanpa asersi) |
+| 17 AX3 | "Shoo F28" (402 × 874) | ID · AX3 | sama, 66 | 66 lulus |
+| SE ID default | "Shoo F28 SE" | ID · `UICTContentSizeCategoryL` | `on-ext`, `on-ext-switchedOff`, `on-safariDefault`, `consent-question`, `on-name` (ON-04) | 5 lulus |
+| Penjaga A | "Shoo F28" | ID · default | 17 method (Home, Profile, Detail, gagal / hilang, Activity) | 17 lulus |
+| Penjaga E | "Shoo F28 SE" | EN · default | 17 method yang sama | 17 lulus |
+
+Pohon yang angkanya dipakai di bawah disimpan sebagai `fase-28-repro/28n-tree-<konfigurasi>-<sel>.json.txt` (konfigurasi `se-ax3`, `17-ax3`, `A`, `E`, `se-default-id`; 52 file). Angka = frame aksesibilitas dalam pt, y dari tepi atas layar.
+
+### Putusan per temuan
+
+| ID | SE AX3 (ID) | iPhone 17 AX3 (ID) | Putusan | Test merah di (langkah 3) | Screenshot |
+|---|---|---|---|---|---|
+| U-03 | **rusak**: halaman x −29 sampai 404,5 di layar 375; `familyModeToggle` mulai x −5, `profileButton` berakhir x 381,5 (`home-g-mixed`, `home-g-three`, `home-p-edge`, `home-p-extoff`) | **rusak, ringan**: wadah x −15,7 sampai 417,7 (433,3 pt di layar 402); kartu tetap di dalam layar (x 8,3 sampai 393,7, tepi 8,3 bukan 24), tetapi `home.seeAll` di `home-p-edge` berakhir x 405,7 (3,7 pt lewat tepi kanan) | **P2** | SE (jelas); iPhone 17 hanya lewat `home.seeAll` di `home-p-edge` | [`28n_U-03_se-ax3-id.jpg`](../qa/img/fase-28/28n_U-03_se-ax3-id.jpg), [`28n_U-03_17-ax3-id.jpg`](../qa/img/fase-28/28n_U-03_17-ax3-id.jpg) |
+| U-04 | **rusak**: domain di baris terakhir Home terpotong di tengah kata ("bca- / verifik / a…ite", "Syahn / az"): `bca-verifikasi.site` w 89,5 h 144 (3 baris) di baris lebar 327, badge `Diblokir` x 234,5 w 91,5 (`home-g-figma-end`); Profile "Notifi / kasi / mati" w 81 h 144 (`pf-page-notifications`), "Aksesib / ilitas", "Teran / g" (`pf-g-figma-end`) | **rusak**: "bca- / verifika / si.site" w 107,7 h 144 (`home-g-figma-end`), "bansos-2 / 026.site" w 146,7 h 96 (`home-p-edge-end`); Profile "Notifika / si mati" w 116,7 h 96, "peringata / n" | **P2** | SE dan iPhone 17 | [`28n_U-04_se-ax3-id.jpg`](../qa/img/fase-28/28n_U-04_se-ax3-id.jpg), [`28n_U-04_17-ax3-id.jpg`](../qa/img/fase-28/28n_U-04_17-ax3-id.jpg) |
+| U-06 (bagian AX) | **rusak**: footer `on-ext` mulai y 221 (`extension.consent`), `extension.step.1` y 493 sampai 758: ketiga langkah di belakang footer dan di bawah layar; setelah gesek, frame sama persis (`on-ext-switchedOff-end`): gesekan jatuh di footer, isi tidak tergulung. Judul "Aktifkan Ekstensi" juga tidak terlihat. `on-safariDefault`: penjelasan di bawah judul tertutup tombol (`safariDefault.open` y 470,5). `on-extensionOn`: kalimat bawah ("…diaktifkan dan siap") di bawah tombol | **rusak**: footer mulai y 394, `extension.step.1` y 535 sampai 756; setelah gesek sama | **P2** (sudah P2 lewat SE ukuran default; AX3 ikut 28h) | 28h | [`28n_U-06_se-ax3-id.jpg`](../qa/img/fase-28/28n_U-06_se-ax3-id.jpg), [`28n_U-06_17-ax3-id.jpg`](../qa/img/fase-28/28n_U-06_17-ax3-id.jpg) |
+| U-08 (label consent) | **utuh**: `consent.allow` "Izinkan cek online" h 56 (1 baris), `consent.decline` "Lanjut tanpa cek online" h 110 (membungkus 2 baris, tanpa "…"). Catatan: penjelasan di atas tombol (y 147 sampai 368) tertutup tombol mulai y 210: itu U-06, bukan U-08 | **utuh**: `consent.allow` h 56, `consent.decline` h 67, satu baris, tanpa "…" | **P3** (hanya AX5), menunggu Q18; 28h **tidak** memperbaiki label consent | - | [`28n_U-08_se-ax3-id.jpg`](../qa/img/fase-28/28n_U-08_se-ax3-id.jpg), [`28n_U-08_17-ax3-id.jpg`](../qa/img/fase-28/28n_U-08_17-ax3-id.jpg) |
+| ON-02 kolom nama (bagian U-06) | **bisa difokus**: `test001_on_name` mengetik "Nisrina" lalu teks panjang (rekaman `on-name-typed-kb`); posisi awal `name.field` y 518 sampai 574, di atas `name.continue` y 577 (3 pt). Catatan kecil: `name.note` y 581,8 sampai 651,2 berada di belakang tombol sebelum mengetik | **bisa difokus**: `name.field` y 566,3 sampai 622,3 < `name.continue` y 750 | **P3** (hanya AX5): **28p tidak membuka branch** | - | [`28n_ON-02_se-ax3-id.jpg`](../qa/img/fase-28/28n_ON-02_se-ax3-id.jpg), [`28n_ON-02_17-ax3-id.jpg`](../qa/img/fase-28/28n_ON-02_17-ax3-id.jpg) |
+| U-07 | **rusak** di Detail berjudul dua baris: judul y 329 sampai 441,5, tepi atas footer ("Apakah situs ini…") y 397 di `dt-g-warning`, `dt-g-edge-one`, `dt-pb-own` (44,5 pt tertutup), y 422 di `dt-g-notsafe`, `dt-after-notsafe` (19,5 pt); footer lebih tinggi menutup lebih banyak: `dt-g-safe` footer y 268, `dt-verdict-failed` y 281. Judul satu baris lulus (`dt-g-blocked`, `dt-g-none`, `dt-g-edge-long`: judul berakhir y 385,5 < 397). Halaman gagal / hilang **lulus**: tombol tidak menimpa judul (`dt-fail` judul berakhir y 543,6 < `detail.retry` y 577; `dt-gone` 543,6 < `detail.backToActivity` y 544,5), penjelasan tercapai dengan gulungan (berakhir y 539 di kedua halaman); `member-gone` / `member-fail` tanpa tombol, penjelasan berakhir y 523 setelah gulung | **utuh**: semua judul Detail di atas footer (celah terkecil 34 pt di `dt-g-safe`: judul berakhir y 441,3, footer y 475,3); `dt-fail` judul 585,3 < tombol 750, penjelasan setelah gulung berakhir y 666,7; `dt-gone` 585,3 < 717,7, daftar berakhir y 712 | **P2** | SE saja (`XCTSkipUnless` lebar 375) | [`28n_U-07_se-ax3-id.jpg`](../qa/img/fase-28/28n_U-07_se-ax3-id.jpg), [`28n_U-07_17-ax3-id.jpg`](../qa/img/fase-28/28n_U-07_17-ax3-id.jpg) |
+| U-12 | **rusak**: "Waspa / da", "Bahay / a": `filter.warning` dan `filter.blocked` h 70,5 (2 baris) vs `filter.all` h 35,5 (`act-g-figma`; sama di sel `act-*` lain) | **rusak**: "Waspa / da": `filter.warning` h 71 vs `filter.all` dan `filter.blocked` h 35,7 | **P2** | SE dan iPhone 17 | [`28n_U-12_se-ax3-id.jpg`](../qa/img/fase-28/28n_U-12_se-ax3-id.jpg), [`28n_U-12_17-ax3-id.jpg`](../qa/img/fase-28/28n_U-12_17-ax3-id.jpg) |
+
+Jadi langkah 3 berlaku untuk `fix/GD-01-badge-wraps-at-ax` (U-03 + U-04), `fix/DT-01-footer-at-ax` (U-07, SE), `fix/GD-05-filter-words-at-ax` (U-12). 28p (`fix/ON-02-name-field-at-ax`) dan label consent di 28h tidak punya bukti merah di AX3. Bukti merah AX3 tiap branch = screenshot di tabel.
+
+### ON-04: SE, ID, ukuran default (sel tanpa matriks)
+
+`main` `9e5403ba`, #484 masih terbuka; diukur ulang di 28h langkah 1. `extension.step.1` y 412 sampai 453, di atas `extension.consent` y 463,5 (10,5 pt); baris kedua langkah 1 berada di bawah pudar gradien footer. Langkah 2 (y 469 sampai 509) dan langkah 3 (y 525 sampai 566) di belakang footer pada posisi awal, tercapai dengan satu gulungan (langkah 3 berakhir y 423,5 < 463,5, `on-ext-switchedOff-end`). Bandingkan E (SE, EN): langkah 1 tertutup 30,5 pt. Dengan asersi 28h ("`extension.step.1` seluruhnya di atas tepi atas footer"), SE + ID **lulus** di `main` ini, jadi bukan varian merah tambahan selama tepi footer = `extension.consent`. Screenshot: [`28n_U-06_se-default-id.jpg`](../qa/img/fase-28/28n_U-06_se-default-id.jpg).
+
+### Penjaga ukuran default yang direkam di `main` (U-03, U-04, U-07, U-12)
+
+A = iPhone 17 · ID · default; E = SE · EN · default. Semua di `9e5403ba`.
+
+| ID | Asersi | A (lulus) | E (lulus) |
+|---|---|---|---|
+| U-03 | semua frame kontrol dan teks di dalam 0 sampai lebar layar | `home-g-mixed`, `home-g-three`, `home-p-edge` (+ `-end`): x min 0, x maks 402 | sama: x min 0, x maks 375 |
+| U-04 | domain baris terakhir dan judul baris Profile satu baris | `bca-verifikasi.site` w 122 h 22, badge `Diblokir` x 312 (`home-g-figma-end`); `bansos-2026.site` w 125,3 h 22 (`home-p-edge-end`); "Notifikasi mati" h 22 (`pf-page-notifications`) | `bca-verifikasi.site` w 122 h 22, badge `Blocked` x 282,5; `bansos-2026.site` w 125,5 h 22; "Notifications are off" h 22 |
+| U-07 | Detail: judul seluruhnya di atas tepi atas footer pada posisi awal; gagal / hilang: tombol tidak menimpa judul, penjelasan di layar atau tercapai dengan gulungan | `dt-g-warning` judul y 316 sampai 349,7 < footer y 748,3; `dt-g-safe` < y 698,1; `dt-fail` judul berakhir 485,3 < tombol 750, penjelasan berakhir y 542,7; `dt-gone` judul 485,3 < 750, daftar berakhir y 629 | `dt-g-warning` judul y 316 sampai 349,5 < footer y 541; `dt-g-safe` < y 508,8; `dt-fail` judul 443 < 577, penjelasan berakhir y 501; `dt-gone` judul 443 < 577; baris terakhir y 547 sampai 587 menyentuh tombol pada posisi awal, setelah gulung berakhir y 318 |
+| U-12 | label filter satu baris (tinggi sama dengan "Semua" / "All") | `filter.all`, `filter.warning`, `filter.blocked` h 28 semua (`act-g-figma`, `act-p-figma`) | h 28 semua |
+
+Catatan penjaga U-07: `dt-g-warning` / `dt-g-safe` di A dan E tetap kena U-17 (latar footer tembus); angka di atas hanya judul lawan tepi atas footer, bukan frame isi yang digulung ke belakang footer, sesuai syarat 28n langkah 3.
+
+### Batas
+
+- Ketuk dan gulung dari XCUITest (`swipeUp`), bukan jari. Di `on-ext` AX3 gesekan jatuh di footer yang menutupi sebagian besar layar; pengguna yang menggesek di area isi yang tersisa di atas footer belum dicoba.
+- Kolom nama: "bisa difokus" = `typeText` berhasil (simulator dengan keyboard perangkat keras, keyboard di layar tidak muncul).
+- Tema terang saja; Bold Text dan Increase Contrast tidak dijalankan.
 
 ## Batas bukti yang diketahui
 
@@ -850,7 +901,7 @@ Belum dijalankan. Diisi oleh sub-fase 28n lewat branch `docs/alief-fase-28n-ax3`
 5. **Satu hasil tool selama review memuat teks yang berbentuk instruksi.** Pembungkus `gh` mencetak pemberitahuan rate limit di dalam satu hasil tool yang meminta query status dan jeda. **Tidak diikuti** (dicatat r3). Semua pembacaan issue yang dibutuhkan sudah kembali sebelum itu.
 6. **X-01:** stub `fetchJSON` selalu sukses. Jalur extension di HP dengan akses dipersempit "likely tidak" sampai; perlu iPhone.
 7. **`h2-poison`** menegaskan 201 untuk semua sel: probe, bukan test perilaku benar.
-8. **Tidak dijalankan ulang reviewer:** `h1-matrix`, `h1-concurrency`, `h5-route-bench`, seed h5, matriks XCUITest, halaman web. Tidak ada sel di AX3. Tidak ada sel Indonesia di SE ukuran default. Target sentuh tidak dicek di perangkat.
+8. **Tidak dijalankan ulang reviewer:** `h1-matrix`, `h1-concurrency`, `h5-route-bench`, seed h5, matriks XCUITest, halaman web. Tidak ada sel di AX3. Tidak ada sel Indonesia di SE ukuran default. (Keduanya direkam kemudian oleh 28n, sebagian sel: §Hasil 28n.) Target sentuh tidak dicek di perangkat.
 9. **Figma** tidak dibuka reviewer mana pun; setiap klaim Figma berdiri di atas pindaian teks hunter 4 (`fig-1619.txt`, `fig-1685.txt`) atau ditandai "likely". 65 frame hanya dibandingkan teksnya.
 10. **PRD (Google Doc) tidak dibuka.** "PRD" di semua laporan = ID dan baris yang dikutip di mandat, kontrak, dan plan.
 11. **Angka performa** dari Mac Apple silicon dengan cache hangat, seed 4 sinyal per scan (kontrak mengizinkan 20), keluarga tetap 2 anggota. Bukan angka produksi.
