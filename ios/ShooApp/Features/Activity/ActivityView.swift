@@ -185,7 +185,7 @@ struct ActivityView: View {
     private var rows: some View {
         LazyVStack(alignment: .leading, spacing: 12) {
             if model.refreshFailed {
-                ActivityRefreshFailed { await model.refresh() }
+                RefreshFailedNotice { await model.refresh() }
                     .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
                     .accessibilityIdentifier("activity.refreshFailed")
             }
@@ -617,8 +617,10 @@ extension ActivityMessage where Action == EmptyView {
 
 /// Figma "Aktivitas · Gagal memperbarui" (1681:6347): over the rows the list still shows, an 80 pt grey tile with
 /// the circular "!", "Gagal memperbarui" and "Menampilkan data terakhir. **Coba Lagi**". The tile's symbol nudges
-/// when it arrives and spins in place of itself while the retry runs.
-private struct ActivityRefreshFailed: View {
+/// when it arrives and spins in place of itself while the retry runs. Guardian Home shows the same notice over what it
+/// last loaded (D-alief-A12, fase 28a K1).
+struct RefreshFailedNotice: View {
+    var retryIdentifier = "activity.refreshRetry"
     let retry: () async -> Void
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var isRunning = false
@@ -657,7 +659,7 @@ private struct ActivityRefreshFailed: View {
             }
             .buttonStyle(PressScaleButtonStyle())
             .disabled(isRunning)
-            .accessibilityIdentifier("activity.refreshRetry")
+            .accessibilityIdentifier(retryIdentifier)
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
