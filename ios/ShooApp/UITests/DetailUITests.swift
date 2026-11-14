@@ -12,14 +12,15 @@ final class DetailUITests: XCTestCase {
 
     @MainActor
     private func openDetail(
-        _ scanId: String, mode: String = "guardian", language: String = "en", pageCopy: Bool = false
+        _ scanId: String, mode: String = "guardian", language: String = "en", pageCopy: Bool = false,
+        extra: [String] = []
     ) -> XCUIApplication {
         let app = XCUIApplication.mock((pageCopy ? ["-debug.replicaFixture", "YES"] : []) + [
             "-settings.onboardingCompleted", "YES",
             "-settings.mode", mode,
             "-settings.language", language,
             "-debug.detail", scanId,
-        ])
+        ] + extra)
         XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 10), app.debugDescription)
         return app
     }
@@ -93,6 +94,43 @@ final class DetailUITests: XCTestCase {
         try shot(app, "detail-back-to-safe")
         // GD-07: a fresh "Aman" is locked until the weekly AI review.
         XCTAssertFalse(app.buttons["detail.verdictChange"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["detail.verdictLocked"].exists, app.debugDescription)
+    }
+
+    /// A-02 (fase 28c, K5): "Aman" was saved but its answer was lost; the retry gets `409 verdict_locked`.
+    /// Detail reloads and shows the server's safe verdict, so the badge, buttons and footer agree.
+    @MainActor
+    func testLockedVerdictShowsTheServersSafeVerdict() throws {
+        try lockedVerdictShowsTheServersSafeVerdict(language: "en")
+    }
+
+    @MainActor
+    func testLockedVerdictShowsTheServersSafeVerdictInIndonesian() throws {
+        try lockedVerdictShowsTheServersSafeVerdict(language: "id")
+    }
+
+    @MainActor
+    private func lockedVerdictShowsTheServersSafeVerdict(language: String) throws {
+        let app = openDetail(
+            Self.blocked92, language: language,
+            extra: ["-mock.fail", "setVerdict.lost,setVerdict~1=verdict_locked"]
+        )
+        app.buttons["detail.verdict.safe"].tap()
+        let reason = app.buttons["safeReason.chip.official_site"]
+        XCTAssertTrue(reason.waitForExistence(timeout: 5), app.debugDescription)
+        reason.tap()
+        app.buttons["safeReason.submit"].tap()
+        // The answer was lost: the sheet stays with "Try again".
+        XCTAssertTrue(app.descendants(matching: .any)["safeReason.error"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["safeReason.submit"].tap()
+        // The 409 closes the sheet once Detail reloaded; the footer says the site stays safe until the review.
+        XCTAssertTrue(app.descendants(matching: .any)["safeReason.sheet"].waitForNonExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["detail.verdictError"].waitForExistence(timeout: 5), app.debugDescription)
+        let decided = app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 5)
+        try shot(app, "detail-locked-\(language)")
+        XCTAssertTrue(decided, "\(language): no verdict after verdict_locked\n\(app.debugDescription)")
+        XCTAssertTrue(app.buttons["detail.verdict.safe"].waitForNonExistence(timeout: 5), language)
+        XCTAssertTrue(app.buttons["detail.verdict.notSafe"].waitForNonExistence(timeout: 5), language)
         XCTAssertTrue(app.descendants(matching: .any)["detail.verdictLocked"].exists, app.debugDescription)
     }
 

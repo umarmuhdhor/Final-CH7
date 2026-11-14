@@ -300,6 +300,19 @@ struct MockFailureArgumentTests {
         await #expect(throws: RepositoryError.network) { try await repository.me() }
     }
 
+    /// A-02: `setVerdict.lost` saves the verdict, then fails as if the answer was lost; the next call can be a 409.
+    @Test func aLostVerdictIsSavedThenTheNextCallIsLocked() async throws {
+        let repository = MockRepository(
+            latency: .zero, failures: MockRepository.failures(from: "setVerdict.lost,setVerdict~1=verdict_locked")
+        )
+        let id = "6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03"
+        await #expect(throws: RepositoryError.network) { try await repository.setVerdict(scanId: id, value: .safe) }
+        #expect(try await repository.scan(id: id).verdict?.value == .safe)
+        await #expect(throws: RepositoryError.api(.verdictLocked, message: "verdict_locked")) {
+            try await repository.setVerdict(scanId: id, value: .safe)
+        }
+    }
+
     @Test func aListedCallFails() async {
         let repository = MockRepository(mode: .protected, latency: .zero, failures: ["me": .network])
         await #expect(throws: RepositoryError.network) { try await repository.me() }

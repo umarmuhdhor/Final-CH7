@@ -471,6 +471,9 @@ struct DetailView: View {
     private func announce(_ outcome: DetailModel.VerdictOutcome) {
         let text: String? = switch outcome {
         case .saved: model.verdictNote(language: language)
+        // A-02: after `verdict_locked` the screen shows the server's safe verdict; say why, not "connection".
+        case .rolledBack where model.verdictError == .locked:
+            L10n.string("This site stays safe until Shoo's weekly review. You can change it after that.", language: language)
         case .rolledBack: L10n.string("Couldn't save. Check your connection and try again.", language: language)
         case .gone: L10n.string("This item is gone", language: language)
         case .ignored: nil

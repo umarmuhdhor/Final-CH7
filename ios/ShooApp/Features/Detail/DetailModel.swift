@@ -263,13 +263,33 @@ final class DetailModel {
             scan = nil
             state = .notFound
             return .gone
+        } catch RepositoryError.api(.verdictLocked, _) {
+            // #476 (A-02, K5): the server already holds a safe verdict on this link that stays until the weekly
+            // review (an "Aman" whose answer was lost, or another device). Show the server's verdict, not the
+            // rollback, so the badge, buttons and footer agree. Not `load()`: `isSubmittingVerdict` is still
+            // true here, so `load()` would keep the rolled-back verdict. Never guess `safe` from the 409 alone.
+            // The message is set once the reload is done, so it never sits over the rolled-back buttons.
+            scan?.verdict = previous.verdict
+            do {
+                let fresh = try await repository.scan(id: previous.id)
+                guard scan != nil else { return .gone }
+                if scan?.id == fresh.id { scan?.verdict = fresh.verdict }
+            } catch RepositoryError.api(.notFound, _) {
+                scan = nil
+                state = .notFound
+                return .gone
+            } catch {
+                // Offline or cancelled: the rollback and the locked message stay; reopening Detail reloads.
+                if !error.isCancellation { Log.ui.error("Detail reload after a locked verdict failed", error) }
+            }
+            verdictError = .locked
+            return .rolledBack
         } catch {
             Log.ui.error("Verdict failed", error)
             scan?.verdict = previous.verdict
             verdictError = switch (error as? RepositoryError)?.apiCode {
             case .verdictNotAllowed?: .notAllowed
             case .rateLimited?: .tooMany
-            case .verdictLocked?: .locked
             default: .connection
             }
             return .rolledBack

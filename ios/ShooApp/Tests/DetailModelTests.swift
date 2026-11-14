@@ -417,6 +417,69 @@ struct DetailModelTests {
         #expect(model.badge == .verifiedScam)
     }
 
+    /// A-02 (fase 28c, K5): `409 verdict_locked` means the server already holds a safe verdict on this link
+    /// (an "Aman" whose answer was lost, or another device). Detail reloads the scan and shows that verdict,
+    /// whichever button was tapped, instead of rolling back to "Blocked" with the buttons still there.
+    @Test(arguments: [Verdict.Value.safe, .notSafe])
+    func BUG_A02_detailShowsTheServersLockedSafeVerdictAfterVerdictLocked(tapped: Verdict.Value) async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        // Call 1 is the first load (no verdict yet); from call 2 on the server has the locked "Aman".
+        await stub.setEditScan { scan, call in
+            guard call >= 2 else { return }
+            scan.verdict = Verdict(
+                value: .safe, byDeviceId: "dev_me", byName: "Adhella", decidedAt: Date(timeIntervalSince1970: 1_792_584_000)
+            )
+        }
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        #expect(model.scan?.verdict == nil)
+        let outcome = await model.setVerdict(tapped)
+        #expect(outcome == .rolledBack)
+        #expect(model.verdictError == .locked)
+        #expect(model.scan?.verdict?.value == .safe)
+        #expect(model.badge == .markedSafe)
+        #expect(!model.isSubmittingVerdict)
+    }
+
+    /// K5: when the reload after `verdict_locked` fails too, the rollback and the locked message stay.
+    @Test func lockedVerdictKeepsTheRollbackWhenTheReloadFails() async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        await stub.failNextLoads(1)
+        await model.setVerdict(.safe)
+        #expect(model.scan?.verdict == nil)
+        #expect(model.badge == .blocked)
+        #expect(model.verdictError == .locked)
+        #expect(model.state == .loaded)
+    }
+
+    /// K5: the locked message waits for the reload, so it never shows over the rolled-back buttons.
+    @Test func lockedMessageWaitsForTheReload() async {
+        let ref = ModelRef()
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        ref.model = model
+        await model.load()
+        await stub.setOnScan {
+            await MainActor.run { #expect(ref.model?.verdictError == nil) }
+        }
+        await model.setVerdict(.safe)
+        #expect(model.verdictError == .locked)
+    }
+
+    /// K5: a scan deleted meanwhile answers the reload with 404, so Detail says it is gone.
+    @Test func lockedVerdictOnAGoneScanShowsNotFound() async {
+        let stub = StubRepository(verdictFailures: 1, verdictError: .api(.verdictLocked, message: "locked"))
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        await stub.setGone(fromCall: 2)
+        let outcome = await model.setVerdict(.safe)
+        #expect(outcome == .gone)
+        #expect(model.state == .notFound)
+        #expect(model.scan == nil)
+    }
+
     @Test func reloadDuringVerdictKeepsTheNewVerdict() async {
         let ref = ModelRef()
         let stub = StubRepository()
