@@ -109,7 +109,9 @@ final class QALayoutUITests: XCTestCase {
         XCTAssertTrue(tabBar.exists, app.debugDescription)
         // The page may still be scrolling to the notice: give it a moment before measuring.
         let above = NSPredicate { _, _ in notice.frame.maxY <= tabBar.frame.minY + 1 }
-        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: above, object: nil)], timeout: UITestTimeout.optional)
+        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: above, object: nil)], timeout: UITestTimeout.screen)
         XCTAssertLessThanOrEqual(notice.frame.maxY, tabBar.frame.minY + 1, "notice \(notice.frame) tab bar \(tabBar.frame)")
+        // Not scrolled past either: still on screen.
+        XCTAssertGreaterThanOrEqual(notice.frame.minY, 0, "notice \(notice.frame)")
     }
 }
