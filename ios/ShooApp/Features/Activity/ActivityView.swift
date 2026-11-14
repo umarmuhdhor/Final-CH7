@@ -545,8 +545,9 @@ struct ActivityRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// U-05 (K8): the end of the domain (its registrable suffix) is the part a scammer cannot choose, so the
-    /// domain is never cut at its tail: whole, or cut in the middle as on the Home card. The path only gets the
+    /// U-05 (K8): the start of the domain is free text the scammer picks ("bca-verifikasi-…"); its end holds the
+    /// public suffix (".site"), which no fake can make read as the bank's own. So the domain is never cut at its
+    /// tail: whole, or cut in the middle as on the Home card. The path only gets the
     /// room the whole domain leaves (at least `pathRoom`), cut at its tail; with less, the row shows the domain
     /// alone rather than a "…" right after it that reads as more domain.
     @ViewBuilder
@@ -556,9 +557,9 @@ struct ActivityRow: View {
         if parts.path.isEmpty {
             domain.lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
         } else if dynamicTypeSize.isAccessibilitySize {
-            // Large text wraps: the domain on up to two lines, the path on its own line under it.
+            // Large text wraps: the domain on up to three lines (as without a path), the path on its own line under it.
             VStack(alignment: .leading, spacing: 0) {
-                domain.lineLimit(2)
+                domain.lineLimit(3)
                 Text(verbatim: parts.path).lineLimit(1).truncationMode(.tail)
             }
         } else {

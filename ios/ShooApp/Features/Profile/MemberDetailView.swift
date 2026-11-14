@@ -254,7 +254,8 @@ struct MemberDetailView: View {
         HStack(spacing: 12) {
             ProfileIcon(symbol: "globe")
             VStack(alignment: .leading, spacing: 1) {
-                // U-05 (K8): cut in the middle, so the end of the domain (the part a scammer cannot choose) shows.
+                // U-05 (K8): cut in the middle, so the end of the domain (its public suffix, which a scammer cannot
+                // make read as the bank's) always shows, not only the start they picked.
                 Text(verbatim: scan.domain)
                     .profileFont(17, tracking: -0.17)
                     .foregroundStyle(ProfileStyle.ink)

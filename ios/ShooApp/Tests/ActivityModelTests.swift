@@ -358,6 +358,13 @@ struct ActivityModelTests {
         let root = ActivityRow.titleParts(url: try #require(URL(string: "https://\(domain)/")), domain: domain)
         #expect(root.domain == domain)
         #expect(root.path.isEmpty)
+        let bare = ActivityRow.titleParts(url: try #require(URL(string: "https://\(domain)")), domain: domain)
+        #expect(bare.domain == domain)
+        #expect(bare.path.isEmpty)
+        // The path stays percent-encoded (BH-36), apart from the domain.
+        let encoded = ActivityRow.titleParts(url: try #require(URL(string: "https://x.site/%E2%80%AEdi.oc")), domain: "x.site")
+        #expect(encoded.domain == "x.site")
+        #expect(encoded.path == "/%E2%80%AEdi.oc")
     }
 
     @Test func ownListKeepsTheGuardiansRows() async {
