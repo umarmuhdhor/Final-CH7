@@ -320,6 +320,8 @@ browser.runtime.onMessage.addListener((message) => {
                       score: message.score,
                       status: message.status,
                       analyzing: message.analyzing,
+                      label: message.label,
+                      secondWarning: message.secondWarning,
                   });
         case "recallBlock":
             return sessionSettled().then(() => blockMemory.recall(message.url)).then((memory) => ({ ok: true, memory }));

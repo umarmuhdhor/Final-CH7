@@ -143,12 +143,15 @@ The extension's `background.js` downloads this list and refreshes it (incrementa
 ### Live score (Dynamic Island, EX-03, #49)
 | Method | Path | Body | Response | PRD |
 |---|---|---|---|---|
-| POST | `/live` | `{ domain, score, status: "normal"\|"warning"\|"blocked", analyzing: boolean, open: boolean }` | `202 { ok }` | EX-03 |
+| POST | `/live` | `{ domain, score, status: "normal"\|"warning"\|"blocked", analyzing: boolean, open: boolean, label?: "offline_check"\|"marked_safe", secondWarning?: integer }` | `202 { ok }` | EX-03 |
 
 The running score of the page on screen in Safari, forwarded to this device's Dynamic Island by Live Activity push. It works with Shoo closed, once the app has sent `liveActivityStartToken`.
 
 - **Who sends it:** the **extension** (`background.js`), and only when the online check is on (`getSession` has `aiBaseURL`, same rule as `/analyze`). Online check off → no call, the in-page pill only.
 - **`domain`:** registrable domain only, never a URL. Same rule as `/scans`. `score`: integer 0–100. Extra keys or a bad value → `422 invalid_body`, like every other bad body.
+- **`label` (optional, #486):** why a low score must not read "Aman" on the island, so it says what the in-page pill says. `"offline_check"`: score under the first warning and the online check was skipped or failed (pill "Cek online tidak tersedia", #379). `"marked_safe"`: a Guardian marked this link safe (pill "Ditandai aman oleh …", #369). Left off otherwise.
+- **`secondWarning` (optional, #486):** integer 1–100, the extension's second warning (50, or the middle of the warning band when `warnAt` ≥ 50). The island's darker "danger" tone starts there, like the pill's.
+- **Older backend:** a backend that answers `422` to `label` / `secondWarning` gets the same call again without them, and only today's fields after that (until the background restarts). The island keeps working, without the pill's words.
 - **`open: false`:** no page of Safari is on screen any more (tab hidden, Safari left, page closed), so the island ends. The other fields are still sent (last values).
 - **When:**
   - a page comes on screen;
@@ -172,13 +175,13 @@ While a `start` waits for the app's update token, there is no second `start` for
     "timestamp": 1731200000,
     "event": "start",
     "alert": { "title": "Shoo", "body": "Checking this page" },
-    "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false, "status": "warning" },
+    "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false, "status": "warning", "secondWarning": 50 },
     "attributes-type": "ScoreActivityAttributes",
     "attributes": {},
     "stale-date": 1731200600
 } }
 ```
-- `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`. `status` (#383, additive) = the `status` from `POST /live`, copied as is: the island takes its colour from it, so a threshold moved in `/config/public` can't colour a block as a warning. A push without it still decodes (built-in 30 / 50 / 80 bands).
+- `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`. `status` (#383, additive) = the `status` from `POST /live`, copied as is: the island takes its colour from it, so a threshold moved in `/config/public` can't colour a block as a warning. A push without it still decodes (built-in 30 / 50 / 80 bands). `label` and `secondWarning` (#486, additive): copied as is from `POST /live` when the body has them, left out otherwise. The island shows "Cek online tidak tersedia" / "Ditandai aman oleh Guardian" instead of "Aman" for a label, and splits warning from danger at `secondWarning` (50 without it). A push without them still decodes.
 - `alert` (start only, required): iOS drops a push-to-start without it ("Received start without an alert configuration"). Text in the device's `language` (`id`: "Memeriksa halaman ini"), no `sound`, no domain.
 - `attributes` (start only) = `ScoreActivityAttributes`: empty. The island follows the page, so the domain lives in `content-state`.
 - `update` has `timestamp`, `event`, `content-state`, `stale-date` (+10 min). `end` has `timestamp`, `event`, `content-state` and `dismissal-date` (= `timestamp`, gone at once).

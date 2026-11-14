@@ -141,3 +141,57 @@ test("score is clamped to 0–100 and a failed call never throws", async () => {
     const failing = world({ fail: true });
     assert.deepEqual(await failing.live.show(page()), { ok: false });
 });
+
+// #486: the island carries the pill's label and second warning; an older backend still gets today's body.
+
+test("label and secondWarning go out when valid; unknown values are left off", async () => {
+    const { live, sent } = world();
+    await live.show(page({ analyzing: false, score: 25, label: "offline_check", secondWarning: 65 }));
+    assert.deepEqual(sent[0], { domain: "hadiah-gratis.xyz", score: 25, status: "normal", analyzing: false, open: true, label: "offline_check", secondWarning: 65 });
+    const other = world();
+    await other.live.show(page({ label: "trust_me", secondWarning: 500 }));
+    assert.equal("label" in other.sent[0], false);
+    assert.equal("secondWarning" in other.sent[0], false);
+});
+
+test("a label change goes out at once, like a status change", async () => {
+    const { live, sent, tick } = world();
+    await live.show(page({ analyzing: false, score: 25 }));
+    await tick(10);
+    await live.show(page({ analyzing: false, score: 25, label: "offline_check" }));
+    assert.deepEqual(sent.map((b) => b.label), [undefined, "offline_check"]);
+});
+
+test("422 from an older backend → sent again without the #486 fields, and without them from then on", async () => {
+    let clock = 0;
+    const bodies = [];
+    const live = createLive({
+        getSession: async () => ONLINE,
+        post: async (_s, body) => {
+            bodies.push(body);
+            if ("label" in body || "secondWarning" in body) throw Object.assign(new Error("HTTP 422"), { status: 422 });
+            return { ok: true };
+        },
+        now: () => clock,
+        setTimer: () => 0,
+        clearTimer: () => {},
+    });
+    assert.deepEqual(await live.show(page({ secondWarning: 50 })), { ok: true });
+    assert.deepEqual(bodies.map((b) => "secondWarning" in b), [true, false]);
+    clock += 5000;
+    await live.show(page({ domain: "lain.xyz", secondWarning: 50, label: "marked_safe" }));
+    assert.equal(bodies.length, 3, "no second try: the backend already said no");
+    assert.equal("label" in bodies[2], false);
+});
+
+test("a 422 on today's body is a plain failure (no retry loop)", async () => {
+    let calls = 0;
+    const live = createLive({
+        getSession: async () => ONLINE,
+        post: async () => { calls++; throw Object.assign(new Error("HTTP 422"), { status: 422 }); },
+        setTimer: () => 0,
+        clearTimer: () => {},
+    });
+    assert.deepEqual(await live.show(page()), { ok: false });
+    assert.equal(calls, 1);
+});

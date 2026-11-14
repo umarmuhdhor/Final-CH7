@@ -13,6 +13,19 @@
         browser.runtime.sendMessage({ type: "liveScore", ...message }).catch(() => {});
     }
 
+    const { THRESHOLD } = globalThis.ShooPipeline;
+
+    /**
+     * #486: the island never says more than the pill (pill.js `decide`). A link a Guardian marked safe (#369) and a
+     * low score without layer 3 (#379) carry a label, so the island shows the pill's words instead of "Aman".
+     */
+    function labelFor(state) {
+        if (state.status === "blocked") return null;
+        if (state.verdict?.value === "safe") return "marked_safe";
+        const low = (state.score ?? 0) < THRESHOLD.firstWarning;
+        return low && state.done && state.onlineChecked === false ? "offline_check" : null;
+    }
+
     function show(state) {
         if (!state || !isVisible()) return;
         post({
@@ -21,6 +34,8 @@
             score: state.score ?? 0,
             status: state.status,
             analyzing: !state.done,
+            label: labelFor(state),
+            secondWarning: THRESHOLD.secondWarning, // the pill's danger split (#486 B)
         });
     }
 
