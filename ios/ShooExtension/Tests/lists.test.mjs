@@ -1,7 +1,7 @@
 // node --test ios/ShooExtension/Tests/*.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLists, candidates, due, applyPage, shardOf, SOURCES, FULL_EVERY, MAX_AGE, MAX_ENTRIES, RETRY_AFTER_FAILURE, SHARDS } from "../Resources/lists.js";
+import { createLists, candidates, due, applyPage, shardOf, validPage, suspiciousDrop, SOURCES, FULL_EVERY, MAX_AGE, MAX_ENTRIES, RETRY_AFTER_FAILURE, SHARDS, DROP_GUARD_MIN } from "../Resources/lists.js";
 import { PSL_RULES } from "../Resources/psl.js";
 import { parseRules, registrableDomain } from "../Resources/domain.js";
 
@@ -298,4 +298,87 @@ test("paging stops when caught up (empty page or same cursor)", async () => {
     assert.equal(n, 3); // full → s1 → s2 → empty
     assert.ok(await w.lists.match("d1.site"));
     assert.ok(await w.lists.match("d2.site"));
+});
+
+// #488: a malformed 200 or a list that collapses never replaces the stored copy.
+
+test("validPage: only an object with a domains array", () => {
+    assert.ok(validPage({ domains: [], nextSince: null }));
+    assert.ok(validPage({ domains: [], removed: [], nextSince: "s" }));
+    for (const bad of [null, undefined, "x", [], {}, { error: "oops" }, { domains: null }, { domains: {} }, { domains: [], removed: "x" }]) {
+        assert.equal(validPage(bad), false, JSON.stringify(bad));
+    }
+});
+
+test("suspiciousDrop: a big list losing more than half; small lists may empty", () => {
+    assert.equal(suspiciousDrop(200_000, 0), true);
+    assert.equal(suspiciousDrop(200_000, 99_999), true);
+    assert.equal(suspiciousDrop(200_000, 100_000), false);
+    assert.equal(suspiciousDrop(DROP_GUARD_MIN - 1, 0), false, "family list: 3 → 0 is real");
+    assert.equal(suspiciousDrop(undefined, 0), false, "no count stored yet");
+});
+
+for (const [label, bad] of [["{}", {}], ['{"error":…}', { error: "build missing" }], ['{"domains":null}', { domains: null, nextSince: null }]]) {
+    test(`full refresh answering ${label} keeps the listed domain matched and fetchedAt unchanged`, async () => {
+        let broken = false;
+        const w = world({ server: SERVERS(() => (broken ? bad : page(["scam.site"], "s1"))) });
+        await w.lists.refresh();
+        assert.ok(await w.lists.match("scam.site"));
+        const before = w.store["lists.v2.shoo.meta"];
+
+        broken = true;
+        w.tick(FULL_EVERY);
+        await w.lists.refresh();
+        const after = w.store["lists.v2.shoo.meta"];
+        assert.equal(after.fetchedAt, before.fetchedAt, "not stamped fresh");
+        assert.equal(after.fullAt, before.fullAt);
+        assert.equal(after.failedAt, w.now(), "counts as a failure: retried after RETRY_AFTER_FAILURE");
+        assert.ok(await w.lists.match("scam.site"), "still matched");
+    });
+}
+
+test("incremental refresh answering a malformed body is a failure too, nothing changes", async () => {
+    let broken = false;
+    const w = world({ server: SERVERS(() => (broken ? { error: "x" } : page(["scam.site"], "s1"))) });
+    await w.lists.refresh();
+    const before = w.store["lists.v2.shoo.meta"];
+    broken = true;
+    w.tick(HOUR);
+    await w.lists.refresh();
+    assert.equal(w.store["lists.v2.shoo.meta"].fetchedAt, before.fetchedAt);
+    assert.equal(w.store["lists.v2.shoo.meta"].nextSince, "s1");
+    assert.ok(await w.lists.match("scam.site"));
+});
+
+test("a valid full list that shrinks past MAX_DROP keeps the old copy; a small drop is applied", async () => {
+    const big = Array.from({ length: 2000 }, (_, i) => `d${i}.site`);
+    let answer = big;
+    const w = world({ server: SERVERS(() => page([], "s1"), () => page(answer, "p1")) });
+    await w.lists.refresh();
+    assert.equal(w.store["lists.v2.public.meta"].count, 2000);
+
+    answer = big.slice(0, 900); // 2000 → 900: more than half gone
+    w.tick(FULL_EVERY);
+    await w.lists.refresh();
+    assert.ok(await w.lists.match("d1999.site"), "old copy kept");
+    assert.equal(w.store["lists.v2.public.meta"].count, 2000);
+    assert.equal(w.store["lists.v2.public.meta"].failedAt, w.now());
+
+    answer = big.slice(0, 1500); // 2000 → 1500: fine
+    w.tick(FULL_EVERY);
+    await w.lists.refresh();
+    assert.equal(await w.lists.match("d1999.site"), null, "dropped server-side, dropped here");
+    assert.ok(await w.lists.match("d0.site"));
+    assert.equal(w.store["lists.v2.public.meta"].count, 1500);
+});
+
+test("the small family list may really go empty", async () => {
+    let answer = ["a.site", "b.site"];
+    const w = world({ server: SERVERS(() => page(answer, answer.length ? "s1" : null)) });
+    await w.lists.refresh();
+    answer = [];
+    w.tick(FULL_EVERY);
+    await w.lists.refresh();
+    assert.equal(await w.lists.match("a.site"), null);
+    assert.equal(w.store["lists.v2.shoo.meta"].count, 0);
 });

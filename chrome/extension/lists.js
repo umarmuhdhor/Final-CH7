@@ -14,6 +14,11 @@ export const FULL_EVERY = 24 * HOUR; // full download also drops domains removed
 export const MAX_AGE = 7 * 24 * HOUR; // older copies are ignored, not trusted
 export const MAX_ENTRIES = 200_000; // per source, kept at each full download; ≈ 15 MB in storage
 export const RETRY_AFTER_FAILURE = 10 * 60 * 1000; // a server that is down is not asked on every page load
+// A full download that shrinks the stored list by more than this is a server fault, not news (#488).
+// Same ratio as the builder's MAX_DROP (ai/src/blocklist/prebuilt.js). Only for lists of DROP_GUARD_MIN+
+// entries: the family list (/blocklist) is small and may really go from 3 domains to 0.
+export const MAX_DROP = 0.5;
+export const DROP_GUARD_MIN = 1000;
 export const SHARDS = 256;
 const WRITE_BATCH = 16; // shards per storage.set
 const MAX_PAGES = 10;
@@ -47,6 +52,17 @@ export function candidates(hostname, registrable) {
     const out = [];
     for (let i = 0; labels.length - i >= stop; i++) out.push(labels.slice(i).join("."));
     return out;
+}
+
+/** contracts/api.md: every page is an object with a `domains` array (removed[] optional). Anything else is a fault. */
+export function validPage(page) {
+    return page != null && typeof page === "object" && !Array.isArray(page) && Array.isArray(page.domains)
+        && (page.removed === undefined || page.removed === null || Array.isArray(page.removed));
+}
+
+/** A full download of `size` entries replacing a stored one of `count`: too big a drop to trust? */
+export function suspiciousDrop(count, size) {
+    return Number.isFinite(count) && count >= DROP_GUARD_MIN && size < count * (1 - MAX_DROP);
 }
 
 /** "full" | "incremental" | null — what this source needs now. */
@@ -125,7 +141,7 @@ function evictOldest(map, count) {
  * @param {() => number} [deps.now]
  */
 export function createLists({ storage, getSession, fetchJSON, registrableDomain, now = () => Date.now() }) {
-    const state = new Map(); // source id → { meta: { fetchedAt, fullAt, nextSince, failedAt } }
+    const state = new Map(); // source id → { meta: { fetchedAt, fullAt, nextSince, failedAt, count } }
     let loaded = null;
     let generation = 0; // reset() moves it on: work started before that writes nothing
     const inFlight = new Map(); // source id → Promise
@@ -216,6 +232,9 @@ export function createLists({ storage, getSession, fetchJSON, registrableDomain,
                 token: session.token,
                 timeoutMs: TIMEOUT_MS,
             });
+            // A 200 that is not a list ({}, {"error":…}, {"domains":null}) is a failed refresh: keep the stored copy,
+            // don't stamp it fresh, try again after RETRY_AFTER_FAILURE (#488).
+            if (!validPage(body)) throw new Error(`malformed ${source.path} page`);
             if (full) applyPage(map, body);
             else collectChanges(changes, body);
             const next = body?.nextSince ?? null;
@@ -225,10 +244,15 @@ export function createLists({ storage, getSession, fetchJSON, registrableDomain,
             if (caughtUp) break; // otherwise ask again from the new cursor (server may page)
         }
         if (run !== generation) return;
+        if (full && suspiciousDrop(meta.count, map.size)) {
+            throw new Error(`${source.path} shrank from ${meta.count} to ${map.size}, kept the stored copy`);
+        }
         if (full) await writeShards(source, toShards(map), run);
         else if (changes.size) await writeChanges(source, changes, run);
         const at = now();
-        await saveMeta(source, { fetchedAt: at, fullAt: full ? at : meta.fullAt, nextSince: since }, run);
+        // count = entries at the last full download (incremental changes are small next to the guard's ratio).
+        const count = full ? map.size : meta.count;
+        await saveMeta(source, { fetchedAt: at, fullAt: full ? at : meta.fullAt, nextSince: since, ...(count != null ? { count } : {}) }, run);
     }
 
     /** Remembered in storage too: Safari can stop this page at any time. */
