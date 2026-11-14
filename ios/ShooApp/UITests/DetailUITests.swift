@@ -118,6 +118,25 @@ final class DetailUITests: XCTestCase {
         wait(for: [expectation], timeout: 5)
     }
 
+    /// DT-04: an address reason shows the domain instead of the page, and the full screen view keeps the
+    /// card's marks.
+    @MainActor
+    func testAddressReasonShowsTheDomainAndZoomKeepsTheMarks() {
+        let app = openDetail(Self.blocked92, pageCopy: true)
+        // new_domain is the heaviest reason: its card is the address, not a photo.
+        let address = app.descendants(matching: .any)["detail.address.0"]
+        XCTAssertTrue(address.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(address.label.contains("bca-verifikasi.site"), address.label)
+        app.swipeUp()
+        let photo = app.buttons["detail.screenshot"].firstMatch
+        XCTAssertTrue(photo.waitForExistence(timeout: 15), app.debugDescription)
+        photo.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
+        // The asks_pin card's single mark carries its tag into the full screen view.
+        XCTAssertTrue(app.staticTexts["Sensitive form"].waitForExistence(timeout: 5), app.debugDescription)
+        app.buttons["detail.screenshotClose"].tap()
+    }
+
     @MainActor
     func testScreenshotZoomHasNoShareOrSave() {
         let app = openDetail(Self.blocked92)

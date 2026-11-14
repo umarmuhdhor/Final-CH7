@@ -214,6 +214,76 @@ extension WebKitTests {
             #expect(shifted[1].rect.minY == -10)
         }
 
+        /// DT-04: a crop is the same window rule, shorter, with less page above the mark.
+        @Test func cropWindowUsesItsOwnHeightAndLeadIn() {
+            let kept = ReplicaSnapshot.window(
+                focusY: 4000, zoom: 1, contentHeight: 20_000,
+                height: ReplicaSnapshot.cropHeight, leadIn: ReplicaSnapshot.cropLeadIn
+            )
+            #expect(kept == (top: 4000 - ReplicaSnapshot.cropLeadIn, height: ReplicaSnapshot.cropHeight))
+        }
+
+        /// DT-04: only cards that point at the page, have marks, and have none on the main picture get a crop,
+        /// in card order, once each, at most `maxCrops`.
+        @Test func cropsOnlyForCardsWhoseMarksMissTheMainPicture() {
+            func mark(_ id: String) -> ReplicaMark { ReplicaMark(signalId: id, rect: CGRect(x: 0, y: 0, width: 1, height: 1)) }
+            let marks = ["asks_pin", "urgent_language", "hoax_claim", "brand_logo_offsite", "unreasonable_request"].map(mark)
+            let kept = [mark("asks_pin")]
+            #expect(ReplicaSnapshot.cropSignals(
+                wanted: ["asks_pin", "urgent_language", "asks_otp", "urgent_language"], marks: marks, kept: kept
+            ) == ["urgent_language"])
+            #expect(ReplicaSnapshot.cropSignals(
+                wanted: ["urgent_language", "hoax_claim", "brand_logo_offsite", "unreasonable_request"],
+                marks: marks, kept: kept
+            ).count == ReplicaSnapshot.maxCrops)
+            #expect(ReplicaSnapshot.cropSignals(wanted: [], marks: marks, kept: kept).isEmpty)
+        }
+
+        /// A card with its own crop draws that; every other card draws the main picture.
+        @Test func pictureForACardPrefersItsCrop() {
+            let main = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1)).image { _ in }
+            let crop = UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { _ in }
+            let rect = CGRect(x: 4, y: 220, width: 300, height: 40)
+            let copy = PageCopy(
+                image: main, meta: nil, cssWidth: 390, marks: [],
+                crops: ["urgent_language": PagePicture(
+                    image: crop, cssWidth: 390, marks: [ReplicaMark(signalId: "urgent_language", rect: rect)]
+                )]
+            )
+            #expect(copy.picture(for: "urgent_language").image === crop)
+            #expect(copy.picture(for: "urgent_language").highlights(for: "urgent_language") == [rect])
+            #expect(copy.picture(for: "asks_pin").image === main)
+        }
+
+        /// DT-04: a reason 3000 pt below the focus is outside the main picture, so it gets its own picture
+        /// with its mark `cropLeadIn` from the top.
+        @Test func farReasonGetsItsOwnCrop() async throws {
+            let html = """
+                <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>\
+                <body style="margin:0"><div style="height:3000px;background:#ffffff"></div>\
+                <div style="height:100px;background:#ff0000"></div><div style="height:1000px"></div></body></html>
+                """
+            let locked = try #require(ReplicaHTML.locked(html))
+            let ruleList = try #require(await ReplicaRules.compiled())
+            let window = ReplicaSnapshot.keyWindow ?? Self.hostWindow()
+            let meta = ReplicaMeta(
+                url: nil, capturedAt: Date(), focusY: 0, truncated: false,
+                marks: [ReplicaMark(signalId: "urgent_language", rect: CGRect(x: 0, y: 3000, width: 390, height: 100))]
+            )
+            let copy = try #require(await Self.render(
+                locked, meta: meta, wanted: ["asks_pin", "urgent_language"], ruleList: ruleList, in: window
+            ))
+            #expect(copy.marks.isEmpty)
+            let crop = try #require(copy.crops["urgent_language"])
+            #expect(abs(crop.image.size.height - ReplicaSnapshot.cropHeight) < 2)
+            #expect(crop.highlights(for: "urgent_language").first?.minY == ReplicaSnapshot.cropLeadIn)
+            let mark = try #require(Self.color(
+                crop.image, atFraction: CGPoint(x: 0.5, y: (ReplicaSnapshot.cropLeadIn + 50) / ReplicaSnapshot.cropHeight)
+            ))
+            #expect(mark.red > 0.9 && mark.green < 0.1)
+            #expect(window.subviews.allSatisfy { !($0 is LockedWebView) })
+        }
+
         /// Draws a real locked replica: white page with a red block at the bottom.
         @Test func rendersTheLockedPage() async throws {
             let html = """
@@ -303,11 +373,14 @@ extension WebKitTests {
         /// `ReplicaSnapshot.render` with two more tries. On a cold or busy CI runner the WebKit content process
         /// can miss `loadTimeout` or `snapshotTimeout` (CI on #285, twice in a row on #362); a third failure names the stage.
         private static func render(
-            _ locked: String, meta: ReplicaMeta, ruleList: WKContentRuleList, in window: UIWindow
+            _ locked: String, meta: ReplicaMeta, wanted: [String] = [], ruleList: WKContentRuleList,
+            in window: UIWindow
         ) async -> PageCopy? {
             var failure: ReplicaSnapshot.RenderFailure?
             for _ in 0..<3 {
-                switch await ReplicaSnapshot.attempt(locked, meta: meta, ruleList: ruleList, in: window) {
+                switch await ReplicaSnapshot.attempt(
+                    locked, meta: meta, wanted: wanted, ruleList: ruleList, in: window
+                ) {
                 case .success(let copy): return copy
                 case .failure(let stage): failure = stage
                 }
