@@ -128,9 +128,16 @@ extension EnvironmentValues {
     @Entry var screenshotLoader: any ScreenshotLoading = URLSessionScreenshotLoader.shared
 }
 
-/// Full-screen screenshot: pinch or double-tap to zoom, drag when zoomed.
+/// Full-screen screenshot: pinch or double-tap to zoom, drag when zoomed. With marks (DT-04) it shows the
+/// card's spotlight on the page and opens zoomed in on the first one, so the reader lands on the proof.
 struct ZoomedScreenshot: View {
     let image: UIImage
+    /// Areas to light up, in page CSS px from the top of `image`; empty = plain picture.
+    var highlights: [CGRect] = []
+    /// Width of the page in CSS px, when it differs from the image's own width.
+    var pageCSSWidth: CGFloat?
+    /// The white tag on a single area (the signal's name).
+    var tag: String?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.shooReduceMotion) private var reduceMotion
@@ -147,6 +154,8 @@ struct ZoomedScreenshot: View {
 
     /// How far the unzoomed image is pulled toward closing.
     private var pull: CGFloat { max(swipeOffset.width, swipeOffset.height) }
+    /// The first layout zooms in on the marks once; pinches and double taps after that are the reader's.
+    @State private var placedOnMarks = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -169,6 +178,17 @@ struct ZoomedScreenshot: View {
                     .accessibilityAddTraits(.isImage)
                     .accessibilityAction(named: scale > 1 ? Text("Zoom out") : Text("Zoom in")) { toggleZoom() }
                     .accessibilityIdentifier("detail.screenshotZoomed")
+                    .overlay {
+                        // Drawn on top in screen space, not scaled with the image: outlines and the tag stay
+                        // sharp and the same size at any zoom.
+                        let holes = holes(in: proxy.size)
+                        if !holes.isEmpty {
+                            Spotlight(holes: holes, size: proxy.size, tag: holes.count == 1 ? tag : nil)
+                                .opacity(1 - min(pull / 150, 1))
+                                .accessibilityIdentifier("detail.screenshotZoomed.marks")
+                        }
+                    }
+                    .onAppear { zoomOnMarks(in: proxy.size) }
             }
             // Solid, not see-through: a page's own colours sit right behind it and must not hide the way out.
             Button {
@@ -227,6 +247,54 @@ struct ZoomedScreenshot: View {
                     withAnimation(reduceMotion ? nil : .spring(duration: 0.3)) { swipeOffset = .zero }
                 }
             }
+    }
+
+    /// The image's frame on screen at scale 1 (`scaledToFit`, centred).
+    private func fittedRect(in size: CGSize) -> CGRect {
+        let fit = min(size.width / max(image.size.width, 1), size.height / max(image.size.height, 1))
+        let fitted = CGSize(width: image.size.width * fit, height: image.size.height * fit)
+        return CGRect(
+            origin: CGPoint(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2), size: fitted
+        )
+    }
+
+    /// The marks in screen points at scale 1: page CSS px → image points → fitted frame.
+    private func unscaledHoles(in size: CGSize) -> [CGRect] {
+        let fitted = fittedRect(in: size)
+        let perCSS = fitted.width / max(pageCSSWidth ?? image.size.width, 1)
+        return highlights.map { rect in
+            CGRect(
+                x: fitted.minX + rect.minX * perCSS, y: fitted.minY + rect.minY * perCSS,
+                width: rect.width * perCSS, height: rect.height * perCSS
+            )
+        }
+    }
+
+    /// The marks where they are on screen now: `scaleEffect` scales around the centre, then both offsets.
+    private func holes(in size: CGSize) -> [CGRect] {
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let shift = CGSize(width: offset.width + swipeOffset.width, height: offset.height + swipeOffset.height)
+        return unscaledHoles(in: size).map { rect in
+            CGRect(
+                x: center.x + (rect.minX - center.x) * scale + shift.width,
+                y: center.y + (rect.minY - center.y) * scale + shift.height,
+                width: rect.width * scale, height: rect.height * scale
+            ).insetBy(dx: -4, dy: -4)
+        }
+    }
+
+    /// Opens on the proof: wide enough to fill the screen, with the first mark in the middle.
+    private func zoomOnMarks(in size: CGSize) {
+        guard !placedOnMarks, let first = unscaledHoles(in: size).first, size.width > 0 else { return }
+        placedOnMarks = true
+        let fitted = fittedRect(in: size)
+        scale = min(max(size.width / max(fitted.width, 1), 1), Self.maxScale)
+        baseScale = scale
+        offset = clamped(CGSize(
+            width: -(first.midX - size.width / 2) * scale,
+            height: -(first.midY - size.height / 2) * scale
+        ), in: size)
+        baseOffset = offset
     }
 
     /// Keeps the zoomed image covering the screen: it can't be dragged off.

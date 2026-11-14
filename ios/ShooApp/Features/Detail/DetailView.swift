@@ -18,7 +18,8 @@ struct DetailView: View {
     @State private var copyState: PageCopyState = .none
     /// "Try again" bumps it, so the whole first load (read-aloud, waiting for the copy) runs again.
     @State private var loadAttempt = 0
-    @State private var isZoomed = false
+    /// The card picture open full screen, with that card's marks (DT-04).
+    @State private var zoomed: ZoomedPage?
     @State private var copied = false
     /// The material under the status bar shows once the hero has scrolled away.
     @State private var statusBarShade = 0.0
@@ -72,8 +73,10 @@ struct DetailView: View {
                 guard model.scan?.pageReplicaUrl == nil || copyState == .unavailable else { return }
                 await loadScreenshot()
             }
-            .fullScreenCover(isPresented: $isZoomed) {
-                if let pageImage { ZoomedScreenshot(image: pageImage) }
+            .fullScreenCover(item: $zoomed) { page in
+                ZoomedScreenshot(
+                    image: page.image, highlights: page.highlights, pageCSSWidth: page.cssWidth, tag: page.tag
+                )
             }
             .privacyCover()
     }
@@ -234,12 +237,24 @@ struct DetailView: View {
                     hasScreenshot: screenshot != nil || screenshotLoading
                 )
                 ForEach(reasons) { reason in
+                    let picture = cardPicture(for: reason)
                     EvidenceCard(
                         reason: reason,
-                        image: pageImage,
+                        image: picture.image,
+                        highlights: picture.highlights,
                         isLoadingImage: screenshotLoading || copyState == .loading || model.isSavingCopy,
-                        pageCSSWidth: model.pageCSSWidth,
-                        onOpenImage: { isZoomed = true }
+                        pageCSSWidth: picture.cssWidth,
+                        domain: scan.domain,
+                        onOpenImage: {
+                            guard let image = picture.image else { return }
+                            zoomed = ZoomedPage(
+                                id: reason.id,
+                                image: image,
+                                cssWidth: picture.cssWidth,
+                                highlights: picture.highlights,
+                                tag: L10n.string(reason.kind.title, language: language)
+                            )
+                        }
                     )
                 }
             }
@@ -506,6 +521,21 @@ struct DetailView: View {
 
     private var pageImage: UIImage? { pageCopy?.image ?? screenshot }
 
+    /// What one reason card draws: its own crop when its marks are off the main picture (DT-04), else the
+    /// main picture with the marks that land on it. Address reasons point at nothing on the page.
+    private func cardPicture(for reason: Evidence) -> (image: UIImage?, cssWidth: CGFloat?, highlights: [CGRect]) {
+        guard reason.kind.isOnPage else { return (pageImage, model.pageCSSWidth, []) }
+        if let crop = pageCopy?.crops[reason.signalId] {
+            return (crop.image, crop.cssWidth, crop.highlights(for: reason.signalId))
+        }
+        return (pageImage, model.pageCSSWidth, reason.highlights)
+    }
+
+    /// Signal ids of the reason cards that point at the page: each may get its own crop (DT-04).
+    private var wantedCrops: [String] {
+        model.evidence(language: language).filter(\.kind.isOnPage).map(\.signalId)
+    }
+
     /// fase 18b: fetch, lock, draw once, keep the picture. A failed link may only have expired: the model
     /// asks for a fresh one once. 429 says "Try again later" without a new link. A copy that can't be
     /// shown falls back to the screenshot of an old build, then to the placeholder.
@@ -525,7 +555,9 @@ struct DetailView: View {
             guard let locked,
                   let ruleList = await ReplicaRules.compiled(),
                   let window = ReplicaSnapshot.keyWindow,
-                  let copy = await ReplicaSnapshot.render(locked, meta: meta, ruleList: ruleList, in: window)
+                  let copy = await ReplicaSnapshot.render(
+                      locked, meta: meta, wanted: wantedCrops, ruleList: ruleList, in: window
+                  )
             else {
                 guard !Task.isCancelled else { return }
                 copyState = .unavailable
@@ -594,6 +626,15 @@ private extension ScanBadge {
         case .markedSafe: "Marked safe"
         }
     }
+}
+
+/// One card's picture, open full screen (DT-04): the same part of the page and the same marks as the card.
+struct ZoomedPage: Identifiable {
+    let id: String
+    let image: UIImage
+    let cssWidth: CGFloat?
+    let highlights: [CGRect]
+    let tag: String?
 }
 
 #if DEBUG
