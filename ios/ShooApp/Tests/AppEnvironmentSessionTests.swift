@@ -161,6 +161,30 @@ struct AppEnvironmentSessionTests {
         #expect(server.requests.map(\.method) == ["PATCH", "GET", "GET"])
     }
 
+    /// X-01 (fase 28d): Safari access narrowed to some sites, or Safari's switch for Shoo turned off. The
+    /// member's own app says Off, so the Guardian must not be told "connected": no `extensionLastSeenAt`,
+    /// even with a fresh heartbeat in the App Group. The model and time zone still go on the first activation.
+    @Test(arguments: [ExtensionStatus.OffReason.someSitesOnly, .switchedOff])
+    func narrowedSafariAccessSendsNoHeartbeat(reason: ExtensionStatus.OffReason) async throws {
+        let server = StubServer()
+        server.reply { $0.method == "PATCH" ? Self.ok : Self.profile }
+        let now = Date()
+        let env = environment(
+            server: server, mode: .guardian,
+            extensionStatus: { .off(lastSeen: now.addingTimeInterval(-60), reason: reason) }
+        )
+        await env.sceneBecameActive(now: now)
+        let body = try #require(server.requests.first { $0.method == "PATCH" }?.json)
+        #expect(body["deviceModel"] is String)
+        #expect(body["timeZone"] is String)
+        #expect(body["extensionLastSeenAt"] == nil)
+        // A later activation (device info already sent) still reports no heartbeat. Checked per body, not by
+        // counting PATCHes: the Live Activity token sync may PATCH `/devices/me` on its own timing.
+        await env.sceneBecameActive(now: now)
+        #expect(server.requests.allSatisfy { $0.json?["extensionLastSeenAt"] == nil })
+        #expect(server.requests.filter { $0.json?["deviceModel"] != nil }.count == 1)
+    }
+
     @Test func foregroundBeforeRegistrationCallsNothing() async {
         let server = StubServer(token: nil)
         let env = environment(server: server)
