@@ -835,8 +835,11 @@ private struct RecentRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var badge: ScanBadge { ScanBadge(scan: scan) }
-    /// Beside the site name these would squeeze it to a few letters ("Penipuan terverifikasi").
-    private var badgeGoesBelow: Bool { badge == .verifiedScam || badge == .markedSafe }
+    /// Beside the site name these would squeeze it to a few letters ("Penipuan terverifikasi"). At accessibility
+    /// sizes every chip would: "bca-verifik / a…ite" next to "Waspada" at AX3 (U-04), so there it always goes under.
+    private var badgeGoesBelow: Bool {
+        dynamicTypeSize.isAccessibilitySize || badge == .verifiedScam || badge == .markedSafe
+    }
 
     private var subtitle: String {
         // Figma: "Hari ini · 10.42 WIB" on your own Home, "Syahnaz · Hari ini, 10.42" on the family's.
@@ -887,6 +890,7 @@ private struct RecentRow: View {
 struct HomeStatusChip: View {
     let badge: ScanBadge
     var large = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var colors: (text: Color, fill: Color, stroke: Color) {
         switch badge {
@@ -913,13 +917,15 @@ struct HomeStatusChip: View {
                 .onboardingFont(large ? 14 : 13, weight: large ? .semibold : .regular, design: large ? .default : .rounded,
                                 tracking: -0.04, relativeTo: .footnote)
                 .figmaLineHeight(large ? 18.2 : 15.6, relativeTo: .footnote)
-                .lineLimit(1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
         }
         .foregroundStyle(colors.text)
         .padding(.horizontal, large ? 13.3 : 8)
         .padding(.vertical, large ? 10 : 6)
         .background(colors.fill, in: Capsule())
         .overlay(Capsule().strokeBorder(colors.stroke, lineWidth: large ? 1.24 : 0.75))
-        .fixedSize()
+        // Its own width at the usual sizes. At accessibility sizes "Penipuan terverifikasi" is wider than the row,
+        // and a chip that cannot shrink pushed the whole Home past the screen (U-03): there it wraps instead.
+        .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
     }
 }
