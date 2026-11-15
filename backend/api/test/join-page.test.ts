@@ -97,10 +97,11 @@ describe("GET /j/:code", () => {
 
   // U-13: vitest has no layout engine, so the code row width comes from the page CSS. At a 320 px
   // viewport (SE with Display Zoom) the row (6 digits + dash + 6 gaps) must fit inside main's padding.
-  it("the code row fits a 320 px viewport inside main's side padding (U-13)", async () => {
+  // 320 = the U-13 viewport; 359 / 360 = both sides of the narrow-screen breakpoint.
+  it.each([320, 359, 360])("the code row fits a %i px viewport inside main's side padding (U-13)", async (viewport) => {
     const { html } = await page("/j/482193");
-    const css = /<style>([\s\S]*?)<\/style>/.exec(html)![1]!;
-    const viewport = 320;
+    const css = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1];
+    if (!css) throw new Error("no <style> in the page");
     // Base rules plus every max-width media block that applies at this viewport (later rules win).
     const blocks = [...css.matchAll(/@media \(max-width:(\d+)px\)\{((?:[^{}]*\{[^}]*\})*)\}/g)];
     const base = blocks.reduce((acc, m) => acc.replace(m[0], ""), css);
@@ -108,7 +109,7 @@ describe("GET /j/:code", () => {
     const prop = (selector: string, name: string) => {
       const esc = selector.replace(/\./g, "\\.");
       let value: string | undefined;
-      for (const m of applied.matchAll(new RegExp(`(?:^|[}\\s])${esc}\\{([^}]*)\\}`, "g"))) {
+      for (const m of applied.matchAll(new RegExp(`(?:^|[}\\n])${esc}\\{([^}]*)\\}`, "g"))) {
         const v = new RegExp(`(?:^|;)${name}:([^;]+)`).exec(m[1]!)?.[1];
         if (v !== undefined) value = v;
       }
