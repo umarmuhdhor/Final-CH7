@@ -629,6 +629,16 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect(await status(`url=${encodeURIComponent("https://a.test/x")}&domain=A.test`)).toBe(200);
   });
 
+  it("?url= longer than 2048 characters → 422 invalid_body, exactly 2048 → 200 (B-06)", async () => {
+    const { p } = await family();
+    const at = (n: number) => "https://a.test/" + "x".repeat(n - "https://a.test/".length);
+    const get = (u: string) => call(`/verdicts?url=${encodeURIComponent(u)}&domain=a.test`, { token: p.token });
+    const over = await get(at(2049));
+    expect(over.status).toBe(422);
+    expect(((await over.json()) as { error: { code: string } }).error.code).toBe("invalid_body");
+    expect((await get(at(2048))).status).toBe(200);
+  });
+
   it("deprecated ?domain= alone: any not_safe on the domain, else the newest safe", async () => {
     const { g, p } = await family();
     const a = await scanAt(p, "https://old.test/a", "old.test");

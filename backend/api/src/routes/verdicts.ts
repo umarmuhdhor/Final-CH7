@@ -31,9 +31,11 @@ const domainParam = z
   .transform((s) => s.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, ""))
   .pipe(z.string().max(253).regex(DOMAIN, "must be a registrable domain"));
 // The link (origin + path) as the extension's shareableUrl gives it; a query or fragment is dropped.
+// B-06: the length check aborts, so a too-long url never reaches the transform or the object refine
+// below (which reads url.hostname and threw a TypeError → 500 instead of 422).
 const linkParam = z
   .string()
-  .max(2048)
+  .max(2048, { abort: true })
   .transform((s, ctx) => {
     let u: URL | undefined;
     try {
