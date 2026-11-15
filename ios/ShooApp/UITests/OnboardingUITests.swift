@@ -105,12 +105,15 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testExtensionOffShowsTheNoteAfterSettingsAndRelaunchGoesHome() {
+    func testExtensionOffKeepsTheFigmaScreenAfterSettingsAndRelaunchGoesHome() {
         let app = launch(extensionActive: false)
         app.onboardName("Rina")
         app.passTurnOnExtension()
+        // Back from Settings, still off: the same Figma frame (steps + one button), no status note.
         XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)["extension.step.3"].exists, app.debugDescription)
+        XCTAssertFalse(app.descendants(matching: .any)["extension.offHint"].exists)
+        XCTAssertFalse(app.buttons["extension.skipCheck"].exists)
         // Registered on the first tap: no way back to the name.
         XCTAssertFalse(app.buttons["onboarding.back"].exists)
 
@@ -129,7 +132,7 @@ final class OnboardingUITests: XCTestCase {
         let app = launch(extensionActive: false, askConsent: true)
         app.onboardName("Rina")
         app.passTurnOnExtension()
-        XCTAssertTrue(app.descendants(matching: .any)["extension.offHint"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
         let consent = app.buttons["extension.consent"]
         let last = app.descendants(matching: .any)["extension.step.3"]
         XCTAssertTrue(last.waitForExistence(timeout: 5), app.debugDescription)
@@ -175,25 +178,23 @@ final class OnboardingUITests: XCTestCase {
     }
 
     @MainActor
-    func testNarrowedAccessOffersSafariAndSettingsOnceBack() {
+    func testNarrowedAccessKeepsOneTurnOnButtonOnceBack() {
         let app = launch(extensionActive: false, extensionStatus: "someSitesOnly")
         app.onboardName("Rina")
         app.passTurnOnExtension()
-        XCTAssertTrue(app.buttons["extension.openSafari"].waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.buttons["extension.settings"].exists)
+        XCTAssertTrue(app.buttons["extension.turnOn"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.openSafari"].exists)
+        XCTAssertFalse(app.buttons["extension.settings"].exists)
         XCTAssertFalse(app.buttons["extension.skipCheck"].exists)
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "can't check every website")).firstMatch.exists)
     }
 
     @MainActor
-    func testSwitchOnWithoutAPageCanContinueWithoutChecking() {
+    func testSwitchOnWithoutAPageMovesOnToSafariDefault() {
         let app = launch(extensionActive: false, extensionStatus: "unchecked")
         app.onboardName("Rina")
         app.passTurnOnExtension()
-        XCTAssertTrue(app.buttons["extension.skipCheck"].waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(app.buttons["extension.openSafari"].exists)
-        app.buttons["extension.skipCheck"].tap()
-        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(app.buttons["extension.skipCheck"].exists)
     }
 
     @MainActor

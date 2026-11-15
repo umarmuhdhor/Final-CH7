@@ -144,10 +144,8 @@ extension XCUIApplication {
     @MainActor
     func onboardPersonal(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
         onboardName(name, file: file, line: line)
+        // Back from Settings with Shoo on, ON-04 moves on to Safari Default by itself.
         passTurnOnExtension(file: file, line: line)
-        // Back from Settings with Shoo on but no page seen yet: "Continue without checking".
-        let skip = buttons["extension.skipCheck"]
-        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable(file: file, line: line) }
         passSafariDefault(file: file, line: line)
         buttons["extensionOn.continue"].tapWhenHittable(file: file, line: line)
     }

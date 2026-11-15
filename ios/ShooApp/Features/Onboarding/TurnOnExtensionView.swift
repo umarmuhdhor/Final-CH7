@@ -88,8 +88,9 @@ struct TurnOnExtensionView: View {
                 ConsentCheckbox(isChecked: consent.$isChecked) { isDataSheetPresented = true }
                     .padding(.bottom, 43)
             }
-            if let onSkipCheck, status != nil, nextStep == nil {
+            if let onSkipCheck, status != nil, nextStep == nil || (consent != nil && status?.isActive == true) {
                 // Shoo is already on (Back from Safari Default, or switched on before): nothing left to do here.
+                // In onboarding the switch is enough; Safari Default then sends the user to Safari.
                 Button(action: onSkipCheck) { workingLabel("Next") }
                     .buttonStyle(OnboardingCapsuleButtonStyle())
                     .disabled(!isChecked)
@@ -140,6 +141,12 @@ struct TurnOnExtensionView: View {
                 }
                 status = await refreshStatus()
                 if status != nil, nextStep == nil { return }
+                // Onboarding keeps the Figma screen (steps, consent, one button): back from Settings with the
+                // switch on, it moves on by itself instead of asking for a page to check in first.
+                if let onSkipCheck, consent != nil, cameBack, status?.isActive == true {
+                    onSkipCheck()
+                    return
+                }
             }
         }
         .onChange(of: consent?.failed ?? false) { _, failed in
@@ -159,8 +166,9 @@ struct TurnOnExtensionView: View {
     /// nil until the first read, and once Shoo is on and has checked in.
     private var nextStep: ExtensionStatus.NextStep? { status?.nextStep }
 
-    /// Outside onboarding (Home "Turn on") the reason shows right away; in onboarding once the user is back.
-    private var showsStatusNote: Bool { consent == nil || cameBack }
+    /// Only outside onboarding (Home "Turn on"). Onboarding always shows the Figma "Aktifkan Ekstensi" frame:
+    /// the steps, the consent box, Turn on and the tutorial link, also after Settings.
+    private var showsStatusNote: Bool { consent == nil }
 
     private func open(safariFirst: Bool) async {
         if let consent {

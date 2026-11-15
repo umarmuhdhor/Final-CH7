@@ -71,8 +71,6 @@ final class PairingUITests: XCTestCase {
         XCTAssertFalse(app.textFields["connect.code"].exists, "Connect inside onboarding")
         XCTAssertFalse(app.buttons["consent.allow"].exists, "Consent screen before ON-04")
         app.passTurnOnExtension()
-        let skip = app.buttons["extension.skipCheck"]
-        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable() }
         app.passSafariDefault()
         app.buttons["extensionOn.continue"].tapWhenHittable()
 
@@ -120,8 +118,6 @@ final class PairingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["extension.consent"].waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
         XCTAssertFalse(app.buttons["consent.allow"].exists, app.debugDescription)
         app.passTurnOnExtension()
-        let skip = app.buttons["extension.skipCheck"]
-        if skip.waitForExistence(timeout: UITestTimeout.optional) { skip.tapWhenHittable() }
         app.passSafariDefault()
         app.buttons["extensionOn.continue"].tapWhenHittable()
 
