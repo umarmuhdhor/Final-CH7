@@ -304,7 +304,8 @@ final class AppEnvironment {
     }
 
     /// Every time the app comes to the foreground (contracts/api.md `extensionLastSeenAt`): tells the
-    /// server the extension's last heartbeat (GD-03 "Not connected"), then refreshes name + guardian
+    /// server the extension's last heartbeat (GD-03 "Not connected"; none while this app shows Off because
+    /// Safari access is narrowed or Safari's switch is off), then refreshes name + guardian
     /// in the App Group from `GET /devices/me`.
     @MainActor
     func sceneBecameActive(now: Date = Date()) async {
@@ -312,7 +313,15 @@ final class AppEnvironment {
         guard settings.mode != nil, !sessionExpired, !isSyncingForeground else { return }
         isSyncingForeground = true
         defer { isSyncingForeground = false }
-        let lastSeen = await extensionStatus().lastSeen
+        let status = await extensionStatus()
+        // X-01: Safari lets Shoo read only some sites, or Safari's switch for Shoo is off, so this app shows
+        // Off. The Guardian must not see better than that: the heartbeat in the App Group stays on the phone,
+        // or the server would call the member "connected". Once the server's 24 h window passes, the Guardian
+        // sees "Not connected", the same lag accepted in #380.
+        let lastSeen: Date? = switch status {
+        case .off(_, .someSitesOnly), .off(_, .switchedOff): nil
+        case .active, .off(_, .notSeen): status.lastSeen
+        }
         // PF-01: the guardian's member detail shows the model and iOS version; sent once per launch.
         // The time zone goes with it: quiet hours and the weekly summary use the phone's local time.
         let device = sentDeviceInfo ? nil : (model: DeviceInfo.modelName, os: DeviceInfo.osMajorVersion, zone: DeviceInfo.timeZone)
