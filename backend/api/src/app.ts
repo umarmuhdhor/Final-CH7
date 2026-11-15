@@ -19,6 +19,7 @@ import { support } from "./routes/support";
 import { replicas } from "./routes/replicas";
 import { scans } from "./routes/scans";
 import { screenshots } from "./routes/screenshots";
+import { siteIcons } from "./routes/site-icons";
 import { terms } from "./routes/terms";
 import { verdicts } from "./routes/verdicts";
 import { errorInfo } from "./http/logError";
@@ -81,6 +82,7 @@ app.route("/", support);
 app.route("/", replicas);
 app.route("/", scans);
 app.route("/", screenshots);
+app.route("/", siteIcons);
 app.route("/", terms);
 app.route("/", verdicts);
 
