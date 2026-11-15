@@ -255,6 +255,64 @@ describe("POST /scans: one Activity row per link (#241)", () => {
     expect(row!.signals).toEqual(blocked92.signals);
   });
 
+  // B-02 (fase 28, K14). The admins lower blockAt (GET /config/public) while a warning row is open:
+  // the same link at 75 was a warning, at 72 it is blocked now.
+  const warning75 = { url: "https://hadiah.example/a", domain: "hadiah.example", score: 75, status: "warning" };
+  const blocked72 = { ...warning75, score: 72, status: "blocked", signals: blocked92.signals };
+
+  it("BUG B-02a: a block on a row without a verdict replaces its warning, even at a lower score", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const id = await postOk(p, extensionBody(warning63, warning75));
+    expect(await postOk(p, extensionBody(warning63, { ...blocked72, url: "https://hadiah.example/a?step=2" }))).toBe(id);
+    const row = (await list(g, "?owner=family")).body.items[0]!;
+    expect([row.status, row.score]).toEqual(["blocked", 72]);
+    expect(row).toMatchObject({ url: "https://hadiah.example/a?step=2", signals: blocked92.signals });
+    // A later warning never undoes the block, at a lower or a higher score (old thresholds).
+    for (const score of [70, 80]) expect(await postOk(p, extensionBody(warning63, { ...warning75, score }))).toBe(id);
+    const [after] = await sql`select status, score from scans where id = ${id}`;
+    expect(after).toEqual({ status: "blocked", score: 72 });
+  });
+
+  it("BUG B-02a: a not_safe on another page of a shared host is no verdict for this row", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const shared = { domain: "google.com", score: 75, status: "warning" };
+    const other = await postOk(p, extensionBody(warning63, { ...shared, url: "https://sites.google.com/view/sekolah" }));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: other, value: "not_safe" } })).status).toBe(200);
+    const id = await postOk(p, extensionBody(warning63, { ...shared, url: "https://sites.google.com/view/hadiah" }));
+    await postOk(p, extensionBody(warning63, { ...shared, url: "https://sites.google.com/view/hadiah", score: 72, status: "blocked" }));
+    const [row] = await sql`select status, score from scans where id = ${id}`;
+    expect(row).toEqual({ status: "blocked", score: 72 });
+  });
+
+  // Guard until Q4 of fase 27 (27b) is answered: a row with a verdict keeps main's behaviour.
+  it("a block at a lower score leaves a warning row that has a verdict as it was (until fase 27 Q4)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const id = await postOk(p, extensionBody(warning63, warning75));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: id, value: "safe" } })).status).toBe(200);
+    expect(await postOk(p, extensionBody(warning63, blocked72))).toBe(id);
+    const row = (await list(g, "?owner=family")).body.items[0]!;
+    expect([row.status, row.score]).toEqual(["warning", 75]);
+    expect(row.verdict).toMatchObject({ value: "safe" });
+  });
+
+  it("a not_safe on another link of the domain is a verdict for this row too: it stays as it was (until fase 27 Q4)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const other = await postOk(p, extensionBody(warning63, { ...warning75, url: "https://hadiah.example/b" }));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: other, value: "not_safe" } })).status).toBe(200);
+    const id = await postOk(p, extensionBody(warning63, warning75));
+    expect(await postOk(p, extensionBody(warning63, blocked72))).toBe(id);
+    const [row] = await sql`select status, score from scans where id = ${id}`;
+    expect(row).toEqual({ status: "warning", score: 75 });
+  });
+
   it("parallel reports of one link still make one row", async () => {
     const p = await createDevice("Mom");
     const ids = await Promise.all(Array.from({ length: 5 }, () => postOk(p, extensionBody(blocked92))));
