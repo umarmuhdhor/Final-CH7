@@ -27,7 +27,9 @@ struct MemberDetailView: View {
                     tint: Color(hex: 0xE5483B),
                     tileFill: .white,
                     title: "Data can't be viewed yet",
-                    message: "Check your internet connection, then try again."
+                    message: Text(verbatim: L10n.string(
+                        model.loadFailure.message(connection: "Check your internet connection, then try again."), language: language
+                    ))
                 )
                 .padding(.horizontal, ProfileStyle.margin)
                 .padding(.top, 90)
@@ -40,7 +42,7 @@ struct MemberDetailView: View {
                     tint: Color(hex: 0x6A717E),
                     tileFill: .white,
                     title: "No longer connected",
-                    message: "This person has disconnected. You no longer get warnings from them."
+                    message: Text("This person has disconnected. You no longer get warnings from them.")
                 )
                 .padding(.horizontal, ProfileStyle.margin)
                 .padding(.top, 90)

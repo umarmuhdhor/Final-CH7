@@ -339,3 +339,28 @@ enum RepositoryError: Error, Hashable, Sendable {
         return nil
     }
 }
+
+/// Why a screen could not load, for the sentence under "Couldn't load" (A-03, fase 28m). Only a request that
+/// never reached the server asks the person to check their connection: a server error (5xx) or an answer the
+/// app can't read is not theirs to fix.
+enum LoadFailure: Equatable, Sendable {
+    /// No connection, timeout, TLS failure; also every error this type does not name.
+    case connection
+    /// A 5xx (`internal`, or a status without a contract body) or a response that broke the contract.
+    case server
+
+    init(_ error: any Error) {
+        switch error as? RepositoryError {
+        case .decoding?, .api(.internal, _)?: self = .server
+        default: self = .connection
+        }
+    }
+
+    /// The screen's own "check your connection" sentence, or the general one.
+    func message(connection: String.LocalizationValue) -> String.LocalizationValue {
+        switch self {
+        case .connection: connection
+        case .server: "Something went wrong. Try again."
+        }
+    }
+}

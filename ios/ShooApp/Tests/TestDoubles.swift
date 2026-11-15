@@ -3,21 +3,25 @@ import Foundation
 
 /// Every call fails like an offline device.
 final class FailingRepository: ShooRepository {
-    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration { throw RepositoryError.network }
-    func me() async throws -> DeviceProfile { throw RepositoryError.network }
-    func updateMe(_ update: DeviceUpdate) async throws { throw RepositoryError.network }
-    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { throw RepositoryError.network }
-    func joinFamily(code: String) async throws -> GuardianInfo { throw RepositoryError.network }
-    func familyMembers() async throws -> [FamilyMember] { throw RepositoryError.network }
-    func removeMember(deviceId: String) async throws { throw RepositoryError.network }
-    func leaveGuardian() async throws { throw RepositoryError.network }
-    func setMemberNotify(deviceId: String, notify: Bool) async throws { throw RepositoryError.network }
-    func remindMember(deviceId: String) async throws { throw RepositoryError.network }
-    func becomeProtected(code: String) async throws -> ProtectedSwitch { throw RepositoryError.network }
-    func deleteMe() async throws { throw RepositoryError.network }
-    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage { throw RepositoryError.network }
-    func scan(id: String) async throws -> ScanResult { throw RepositoryError.network }
-    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { throw RepositoryError.network }
+    /// What every call throws: `.network` (no connection) unless a test picks another failure.
+    let error: RepositoryError
+    init(error: RepositoryError = .network) { self.error = error }
+
+    func registerDevice(name: String, mode: UserMode, avatarId: String?, apnsToken: String?) async throws -> DeviceRegistration { throw error }
+    func me() async throws -> DeviceProfile { throw error }
+    func updateMe(_ update: DeviceUpdate) async throws { throw error }
+    func createFamilyCode(refresh: Bool) async throws -> FamilyCode { throw error }
+    func joinFamily(code: String) async throws -> GuardianInfo { throw error }
+    func familyMembers() async throws -> [FamilyMember] { throw error }
+    func removeMember(deviceId: String) async throws { throw error }
+    func leaveGuardian() async throws { throw error }
+    func setMemberNotify(deviceId: String, notify: Bool) async throws { throw error }
+    func remindMember(deviceId: String) async throws { throw error }
+    func becomeProtected(code: String) async throws -> ProtectedSwitch { throw error }
+    func deleteMe() async throws { throw error }
+    func scans(owner: ScanOwnerFilter, status: ScanStatus?, cursor: String?) async throws -> ScanPage { throw error }
+    func scan(id: String) async throws -> ScanResult { throw error }
+    func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { throw error }
 }
 
 /// Wraps a repository; each `scans` call waits for the next delay in the list first.

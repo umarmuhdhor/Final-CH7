@@ -48,6 +48,17 @@ struct MemberDetailModelTests {
         #expect(model.state == .failed)
     }
 
+    /// A-03 (fase 28m): a member list the app can't read says "Something went wrong", not "Check your internet
+    /// connection".
+    @Test(arguments: [RepositoryError.decoding, .api(.internal, message: "HTTP 500")])
+    func aServerFailureShowsTheGeneralSentence(_ error: RepositoryError) async {
+        let model = model(repository: FailingRepository(error: error))
+        await model.load()
+        #expect(model.state == .failed)
+        #expect(text(model.loadFailure.message(connection: "Check your internet connection, then try again."))
+            == "Something went wrong. Try again.")
+    }
+
     /// The member still shows when only the activity could not be read.
     @Test func failingActivityKeepsTheMember() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))

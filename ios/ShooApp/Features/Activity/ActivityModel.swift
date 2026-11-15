@@ -70,6 +70,8 @@ final class ActivityModel {
     /// Family members for the picker; empty outside Family Activity.
     private(set) var people: [FamilyMember] = []
     private(set) var state: State = .loading
+    /// Why the first load failed (`state == .failed`): picks the sentence under "Couldn't load activity" (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     private(set) var filter: ActivityFilter = .all
     private(set) var items: [ScanResult] = []
     private(set) var isLoadingMore = false
@@ -308,6 +310,7 @@ final class ActivityModel {
             } else {
                 items = []
                 nextCursor = nil
+                loadFailure = LoadFailure(error)
                 state = .failed
             }
             return false

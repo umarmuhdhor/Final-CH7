@@ -35,6 +35,8 @@ final class MemberDetailModel {
     let deviceId: String
     private(set) var state: State = .loading
     private(set) var member: FamilyMember?
+    /// Why the member could not be read (`state == .failed`): picks the sentence under the title (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     /// Newest first, at most 3 ("Aktivitas terbaru").
     private(set) var recent: [ScanResult] = []
     private(set) var recentFailed = false
@@ -72,7 +74,10 @@ final class MemberDetailModel {
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Member load failed", error)
-            if state != .loaded { state = .failed }
+            if state != .loaded {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         do {

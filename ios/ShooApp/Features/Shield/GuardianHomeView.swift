@@ -236,7 +236,11 @@ struct GuardianHomeView: View {
         case .failed:
             // Figma "Guardian/Home · Gagal memuat" (1665:3038): the card, "Aktivitas Terakhir", three grey rows.
             VStack(alignment: .leading, spacing: 22) {
-                StateNoticeCard(title: "Couldn't load", message: "Check your connection.", actionTitle: "Try again") {
+                StateNoticeCard(
+                    title: "Couldn't load",
+                    message: Text(verbatim: L10n.string(model.loadFailure.message(connection: "Check your connection."), language: language)),
+                    actionTitle: "Try again"
+                ) {
                     await model.retry()
                 }
                 .accessibilityIdentifier("home.loadError")
@@ -576,14 +580,14 @@ private struct PendingSiteCard: View {
             }
             // Figma "Pesan verdict" (1665:3183 / 1665:3387): the card's own foot, full width, 26 under the buttons.
             if failed {
-                StateNoticeCard(title: "Couldn't save", message: "Check your connection.", actionTitle: "Try again",
+                StateNoticeCard(title: "Couldn't save", message: Text("Check your connection."), actionTitle: "Try again",
                                 cornerRadius: 16, action: onRetry)
                     .padding(.top, 26)
                     .transition(StateMotion.transition(reduceMotion: reduceMotion))
                     .accessibilityIdentifier("home.verdictError")
                     .id(Self.verdictErrorAnchor)
             } else if notAllowed {
-                StateNoticeCard(tone: .info, title: "Can't be marked yet", message: "Open this site's details first.",
+                StateNoticeCard(tone: .info, title: "Can't be marked yet", message: Text("Open this site's details first."),
                                 actionTitle: "Open details", cornerRadius: 16) { onOpen() }
                     .padding(.top, 26)
                     .transition(StateMotion.transition(reduceMotion: reduceMotion))

@@ -21,6 +21,8 @@ final class ShieldModel {
     /// A refresh after a successful load failed: the screen keeps what it shows and says it may be old
     /// (D-alief-A12, A-01, fase 28b K4). The next successful load clears it.
     private(set) var refreshFailed = false
+    /// Why the first load failed (`state == .failed`): picks the sentence under "Couldn't load" (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     /// `GET /devices/me` → `guardian`; `nil` when not (or no longer) connected.
     private(set) var guardian: GuardianInfo?
     /// The picked avatar for the profile circle top right.
@@ -95,7 +97,12 @@ final class ShieldModel {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Shield load failed", error)
             // A failed foreground refresh keeps what is on screen, with the "Couldn't refresh" notice (D-alief-A12).
-            if state == .loaded { refreshFailed = true } else { state = .failed }
+            if state == .loaded {
+                refreshFailed = true
+            } else {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         await refreshScamCases(request: request)

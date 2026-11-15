@@ -308,7 +308,11 @@ private struct SlotPerson: Shape {
 /// the button shows a spinner while it retries.
 struct ProfileLoadFailed: View {
     var identifier = "profile.retry"
+    /// Only a failure to reach the server asks to check the connection (A-03).
+    var failure: LoadFailure = .connection
     let retry: () async -> Void
+
+    @Environment(\.locale) private var locale
 
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var isRetrying = false
@@ -333,7 +337,9 @@ struct ProfileLoadFailed: View {
                         .figmaLineHeight(26, relativeTo: .title3)
                         .foregroundStyle(Color(hex: 0x151617))
                         .accessibilityAddTraits(.isHeader)
-                    Text("Check your internet connection, then try again.")
+                    Text(verbatim: L10n.string(
+                        failure.message(connection: "Check your internet connection, then try again."), language: AppLanguage(locale: locale)
+                    ))
                         .onboardingFont(17, design: .rounded, relativeTo: .body)
                         .figmaLineHeight(22, relativeTo: .body)
                         .foregroundStyle(ProfileStyle.secondary)

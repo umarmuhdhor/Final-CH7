@@ -44,6 +44,8 @@ final class GuardianHomeModel {
     /// A refresh after a successful load failed: the screen keeps what it shows and says it may be old
     /// (D-alief-A12, A-01, fase 28a K1). The next successful load clears it.
     private(set) var refreshFailed = false
+    /// Why the first load failed (`state == .failed`): picks the sentence under "Couldn't load" (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
     private(set) var profile: DeviceProfile?
     private(set) var members: [FamilyMember] = []
     private(set) var scans: [ScanResult] = []
@@ -187,7 +189,12 @@ final class GuardianHomeModel {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Guardian Home load failed", error)
             // A failed refresh keeps what is on screen, with the "Couldn't refresh" notice (D-alief-A12).
-            if state == .loaded { refreshFailed = true } else { state = .failed }
+            if state == .loaded {
+                refreshFailed = true
+            } else {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         if scope == .personal {

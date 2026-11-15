@@ -167,7 +167,7 @@ struct InviteSheet: View {
                 systemImage: "exclamationmark.arrow.circlepath",
                 tint: Color(hex: 0xE5483B),
                 title: "Code can't be made yet",
-                message: "Check your internet connection, then try again."
+                message: Text("Check your internet connection, then try again.")
             )
             .accessibilityIdentifier("invite.unavailable")
         case .full:
@@ -177,7 +177,7 @@ struct InviteSheet: View {
                 symbolSize: 27,
                 tint: Color(hex: 0x136CB7),
                 title: "Family is full",
-                message: "A family has at most 3 people.\nRemove one to invite again."
+                message: Text("A family has at most 3 people.\nRemove one to invite again.")
             )
             .accessibilityIdentifier("invite.full")
         }

@@ -79,6 +79,17 @@ struct ActivityModelTests {
         #expect(!model.isEmpty)
     }
 
+    /// A-03 (fase 28m): one row the app can't read fails the page; the screen says "Something went wrong", not
+    /// "Check your connection". (Keeping the readable rows waits for Q11.)
+    @Test(arguments: [RepositoryError.decoding, .api(.internal, message: "HTTP 500")])
+    func aServerFailureShowsTheGeneralSentence(_ error: RepositoryError) async {
+        let model = ActivityModel(repository: FailingRepository(error: error), owner: .family)
+        await model.load()
+        #expect(model.state == .failed)
+        #expect(L10n.string(model.loadFailure.message(connection: "Check your connection and try again."), language: .english)
+            == "Something went wrong. Try again.")
+    }
+
     @Test func staleResponseFromThePreviousFilterIsIgnored() async {
         // The "All" request answers after the "Blocked" one.
         let repository = DelayedScansRepository(

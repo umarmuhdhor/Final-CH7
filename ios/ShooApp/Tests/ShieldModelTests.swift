@@ -135,6 +135,16 @@ struct ShieldModelTests {
         #expect(model.extensionStatus.isActive)
     }
 
+    /// A-03 (fase 28m): a 5xx or an unreadable answer says "Something went wrong", not "Check your connection".
+    @Test(arguments: [RepositoryError.decoding, .api(.internal, message: "HTTP 500")])
+    func aServerFailureShowsTheGeneralSentence(_ error: RepositoryError) async {
+        let model = ShieldModel(repository: FailingRepository(error: error), extensionStatus: { .active(lastSeen: Date()) })
+        await model.refresh()
+        #expect(model.state == .failed)
+        #expect(L10n.string(model.loadFailure.message(connection: "Check your connection."), language: .english)
+            == "Something went wrong. Try again.")
+    }
+
     @Test func failedForegroundRefreshKeepsWhatIsShown() async throws {
         let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
         let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) })
