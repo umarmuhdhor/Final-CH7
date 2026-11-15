@@ -15,6 +15,8 @@ struct GuardianShieldView: View {
                 settings: env.settings,
                 scope: env.settings.familyModeOn ? .family : .personal,
                 extensionStatus: env.extensionStatus,
+                // One `GET /devices/me` per foreground, shared with `sceneBecameActive` (OPT-06).
+                profile: { [env] in try await env.foregroundProfile() },
                 onVerdictSaved: { [env] in env.verdictSaves += 1 }
             )
         }
