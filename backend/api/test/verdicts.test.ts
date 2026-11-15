@@ -658,6 +658,30 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect(await items()).toEqual({ [a]: "safe", [b]: "not_safe", [c]: "not_safe" });
   });
 
+  // B-04 (fase 28 K12): POST /scans stores new URL(url).href, so a crafted, not normal URL still finds the
+  // Guardian's verdict when the block screen asks GET /verdicts with the same URL.
+  it.each([
+    ["dot segment", "https://toko.example/x/../a", "https://toko.example/a"],
+    ["empty port", "https://toko.example:/a", "https://toko.example/a"],
+    ["unicode path", "https://toko.example/päth", "https://toko.example/p%C3%A4th"],
+    ["backslash for slash", "https://toko.example\\path", "https://toko.example/path"],
+    ["leading and trailing space", " https://toko.example/a ", "https://toko.example/a"],
+    // Raw, verdict_link()'s userinfo group crossed the backslash and read the host as evil.example.
+    ["backslash before @", "https://toko.example\\@evil.example/", "https://toko.example/@evil.example/"],
+  ])("a scan posted with %s: the Guardian's safe is found by the same URL", async (_name, url, link) => {
+    const { g, p } = await family();
+    const res = await call("/scans", {
+      method: "POST", token: p.token,
+      json: { url, domain: "toko.example", score: 92, status: "blocked", signals: [], detectedAt: new Date().toISOString() },
+    });
+    expect(res.status, await res.clone().text()).toBe(201);
+    const { id } = (await res.json()) as { id: string };
+    const decided = await decide(g, id, "safe");
+    expect(decided.status).toBe(200);
+    expect(((await decided.json()) as VerdictBody).verdict).toMatchObject({ url: link });
+    expect(await lookupLink(p, url, "toko.example")).toMatchObject({ value: "safe", url: link });
+  });
+
   describe("notes", () => {
     it("are stored, never returned, and replaced by the next decision", async () => {
       const { g, p } = await family();
