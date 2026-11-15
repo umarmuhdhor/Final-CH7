@@ -2,100 +2,124 @@
 
 Folder lain di repo milik Umar/Imelda dan tidak diubah. Folder baru di `ios/ShooApp/` butuh `cd ios && xcodegen` ulang (target Shoo memakai `sources: path: ShooApp`, jadi semua subfolder ikut otomatis).
 
+> Diperbarui 15 Nov 2026 terhadap `main` `c14abbcf`. Daftar endpoint lengkap: `backend/README.md` + `backend/API.md`.
+
 ## 1. `backend/`
 
 ```text
 backend/
 ├── CLAUDE.md                     (sudah ada, jangan dihapus)
-├── README.md                     setup lokal, deploy manual, daftar env (fase 07, diperbarui tiap fase be)
+├── README.md                     setup lokal, deploy, daftar env dan endpoint (diperbarui tiap fase be)
+├── API.md                        referensi semua endpoint (bentuk JSON, error, batas)
 ├── .gitignore                    .dev.vars, .env, node_modules, .wrangler, supabase/.temp, *.p8
 ├── .env.example                  nama variabel tanpa nilai
 ├── api/                          Cloudflare Worker (TypeScript)
-│   ├── package.json              hono, zod, postgres@^3.4.5; dev: wrangler, vitest@^4.1.0, @cloudflare/vitest-plugin, typescript, ajv; scripts: dev, test, typecheck, deploy
-│   ├── wrangler.jsonc            name shoo-api, hyperdrive binding DB, triggers.crons, vars (non-secret)
+│   ├── package.json              hono, zod, postgres; dev: wrangler, vitest, @cloudflare/vitest-plugin, @cloudflare/workers-types, typescript, ajv; scripts: dev, test, typecheck, deploy
+│   ├── wrangler.jsonc            name shoo-api, hyperdrive DB, R2 REPLICAS (`shoo-replicas`) + REPLICA_ARCHIVE (`shoo-replica-archive`), ratelimits (5 binding hitEdge), triggers.crons `0 19 * * *` + `5 * * * *`, vars (non-secret)
 │   ├── .dev.vars.example
 │   ├── tsconfig.json
 │   ├── vitest.config.ts
 │   ├── src/
-│   │   ├── index.ts              export default { fetch: app.fetch, scheduled }
-│   │   ├── app.ts                Hono app: middleware (requestId, error, auth), mount routes
+│   │   ├── index.ts              export default { fetch: app.fetch, scheduled }; CRONS = retention `0 19 * * *`, notifications `5 * * * *`
+│   │   ├── app.ts                Hono app: requestId, batas body awal (413), Cache-Control no-store, header keamanan, mount routes
 │   │   ├── env.ts                tipe Env (bindings + vars + secrets)
+│   │   ├── policy.ts             RETENTION_DAYS = 14 (satu sumber angka retensi)
+│   │   ├── assets/               og-invite.jpg, join-hero.png (halaman undangan)
+│   │   ├── cron/
+│   │   │   ├── retention.ts      harian (R4 §5)
+│   │   │   └── notifications.ts  per jam: "Perlindungan mati" + ringkasan mingguan (PF-01)
 │   │   ├── db/
 │   │   │   ├── client.ts         postgres(env.DB.connectionString, { max: 5, fetch_types: false }) — prepare default (JANGAN prepare:false, docs Hyperdrive)
-│   │   │   └── repo/             satu file per tabel: devices.ts, families.ts, codes.ts, joinAttempts.ts, scans.ts, verdicts.ts
+│   │   │   ├── locks.ts          kelas advisory lock, satu kelas per tujuan (fase 27k F-B12)
+│   │   │   └── repo/             blocklist, codes, config, devices, domainLists, families, fragments, joinAttempts, ops, push, scans, tombstones, verdictLock, verdicts
 │   │   ├── http/
-│   │   │   ├── auth.ts           Bearer → sha256 → device (principal)
+│   │   │   ├── auth.ts           Bearer → sha256 → device (principal), requireMode
 │   │   │   ├── errors.ts         ApiError(code, status) → { error: { code, message } }
-│   │   │   ├── rateLimit.ts      batas per device/IP berbasis tabel (R3 §5)
+│   │   │   ├── rateLimit.ts      `limits`; hit (Postgres), hitLight, hitEdge (binding Rate Limiting, cadangan Postgres) (R3 §5)
+│   │   │   ├── bodyLimit.ts, crypto.ts, keyHash.ts (HMAC RATE_KEY_SECRET), logError.ts
 │   │   │   └── validate.ts       helper zod
-│   │   ├── routes/               devices.ts, family.ts, scans.ts, verdicts.ts, blocklist.ts, join-page.ts, health.ts (+ debug-apns.ts sementara, fase 07, dihapus di fase 11)
-│   │   ├── services/
-│   │   │   ├── family.ts         kode, join, batas 3
-│   │   │   ├── scans.ts          simpan, kuota screenshot, cursor, mapping ke ScanResult
-│   │   │   ├── verdicts.ts
-│   │   │   ├── screenshots.ts    interface ScreenshotStore + SupabaseStorageStore (+ R2Store nanti)
-│   │   │   └── push/
-│   │   │       ├── sender.ts     interface PushSender, LogSender, pemilihan pushSender(env)
-│   │   │       ├── apns.ts       ApnsSender langsung dari Worker (JALUR UTAMA, D-alief-B01; cache JWT per isolate)
-│   │   │       ├── jwt.ts        JWT ES256 APNs (test di vitest)
-│   │   │       ├── deliver.ts    send → kosongkan token (410) → push_log, di waitUntil
-│   │   │       ├── notify.ts     cari Guardian + batas push (fase 09/11)
-│   │   │       └── messages.ts   teks push EN/ID
-│   │   │   (RelaySender + Edge Function push hanya dibuat kalau D7 gagal di jalur langsung, D-alief-B11)
-│   │   ├── data/allowlist.ts     domain resmi/populer yang tidak pernah masuk blocklist global (R2 §5): awal = domain brand di contracts/fixtures + daftar manual bank/e-wallet/pemerintah/marketplace utama Indonesia; diperbarui lewat PR (sumber dicatat di komentar file)
-│   │   └── cron/retention.ts
-│   └── test/                     *.test.ts (vitest-plugin), helpers/{resetDb,seed,schema}.ts (schema = validasi respons dengan contracts/scan-result.schema.json via ajv)
+│   │   ├── routes/               app-site-association, blocklist, config, devices, family, favicons, health, join-page, live, ops, privacy, replicas, scans, screenshots, support, terms, verdicts
+│   │   │                         (debug-apns.ts sementara fase 07 sudah dihapus)
+│   │   └── services/
+│   │       ├── family.ts         kode 6 digit, validateJoinInTx, joinFamily, batas 3
+│   │       ├── becomeProtected.ts  POST /devices/me/protected dalam satu transaksi (fase 27a)
+│   │       ├── scans.ts          mapping ke ScanResult, link screenshot (scan lama)
+│   │       ├── replicas.ts, replicaStore.ts   salinan halaman di R2 (EX-07)
+│   │       ├── favicons.ts, faviconFetch.ts   favicon diunduh Worker, disimpan di R2 (PR-05)
+│   │       ├── fragments.ts      fragmen bukti + favicon per domain ke arsip R2 (ADM-07)
+│   │       ├── screenshots.ts    ScreenshotStore (Supabase Storage, scan lama) + R2, tombstone
+│   │       ├── screenshotLinks.ts  link HMAC screenshot/favicon/replica (3600 s)
+│   │       ├── images.ts, opsStatus.ts
+│   │       └── push/
+│   │           ├── sender.ts     PushSender + LiveSender, LogSender, pemilihan pushSender(env)
+│   │           ├── apns.ts       ApnsSender langsung dari Worker (JALUR UTAMA, D-alief-B01; cache JWT per isolate)
+│   │           ├── jwt.ts        JWT ES256 APNs (test di vitest)
+│   │           ├── deliver.ts    send → kosongkan token (410) → push_log, di waitUntil
+│   │           ├── notify.ts     guardianPush + ownPush, quiet hours, batas 10 / 10 menit
+│   │           ├── live.ts       relay Live Activity (EX-03, #49)
+│   │           ├── quiet.ts      jam tenang per zona waktu
+│   │           └── messages.ts   teks push EN/ID
+│   │       (RelaySender + Edge Function push tidak pernah dibuat: jalur langsung lulus D7, D-alief-B11)
+│   └── test/                     *.test.ts (vitest-plugin), helpers/{resetDb,seed,schema}.ts. resetDb MENGOSONGKAN DB di SHOO_TEST_DB_URL
 ├── db/
+│   ├── scripts/                  daftar domain admin (seed, diff, golden), estimasi kuota, uji konkurensi admin
 │   └── supabase/
 │       ├── config.toml           supabase init
 │       ├── migrations/           YYYYMMDDHHMMSS_<slug>.sql
 │       ├── tests/                *.test.sql (pgTAP, dijalankan `supabase test db`)
-│       ├── seed.sql              data lokal (Guardian + 2 Protected + scan dari fixtures)
-│       └── functions/push/       Edge Function relay APNs (Deno), jalur utama push (D-alief-16)
+│       └── seed.sql              data lokal (Guardian + 2 Protected + scan dari fixtures)
+│       (tidak ada `functions/`: Edge Function relay APNs D-alief-16 dibatalkan oleh D-alief-B01/B11; sekarang, 15 Nov 2026: push hanya dari Worker)
 └── ci/
-    ├── README.md                 langkah pasang untuk Umar (C2)
-    └── backend.yml               draf workflow (inert di sini)
+    ├── README.md                 cara kerja Action backend
+    └── app-identity.mjs, bundle-size.mjs, ops-watch.mjs (+ *.test.mjs)
+    (workflow aktif ada di `.github/workflows/backend.yml` dan `ops-watch.yml`; draf `backend/ci/backend.yml` sudah dipindah)
 ```
+
+Allowlist statis `src/data/allowlist.ts` (rencana awal) tidak ada lagi. Sekarang (15 Nov 2026): `db/repo/domainLists.ts:11` `isProtected` membaca `admin.v_domain_lists_public` (daftar yang diedit dashboard, ADM-09).
 
 ## 2. `ios/ShooApp/`
 
 ```text
 ios/ShooApp/
 ├── CLAUDE.md                     (sudah ada)
-├── ShooApp.swift                 @main, inject AppEnvironment, onOpenURL, AppDelegate adaptor (push)
-├── Info.plist, Shoo.entitlements DI-GENERATE XcodeGen dari ios/project.yml: JANGAN diedit (perubahan hilang); key baru = permintaan ke Umar (TODO C3)
-├── ContentView.swift             diganti RootView (fase 01); contoh extensionLastSeenAt dipindah ke ExtensionStatus
+├── ShooApp.swift                 @main, RootView + AppDelegate adaptor (push, environment)
+├── Info.plist, Shoo.entitlements DI-GENERATE XcodeGen dari ios/project.yml: JANGAN diedit (perubahan hilang); key baru = permintaan ke Umar (TODO C3). Entitlement `applinks:shoo-api.afindo-mi01.workers.dev` (Universal Link #129)
+├── PrivacyInfo.xcprivacy
 ├── App/
-│   ├── AppEnvironment.swift      repository + settings + router (DI)
-│   ├── RootView.swift            onboarding vs TabView
-│   ├── Router.swift              navigasi ke Detail(scanId), Profile, Family code; deep link kontrak: shoo://join (fase 14), shoo://scan/<id> + shoo://activity (fase 15), lainnya → Shield
-│   ├── AppSettings.swift         bahasa, Family mode terakhir (GD-02), onboarding selesai
-│   └── AppConfig.swift           base URL API `#if DEBUG` localhost / Release cloud, flag `cameraEnabled` (R5 §6)
+│   ├── AppDelegate.swift         token APNs, tap push → AppEnvironment.openPush
+│   ├── AppEnvironment.swift      repository + settings + router + siklus sesi (DI)
+│   ├── AppSettings.swift         bahasa, mode, Family mode, onboarding selesai, consent
+│   ├── AppConfig.swift           base URL API (`#if DEBUG` localhost / Release cloud), publicBaseURL, shareURL `/get`, flag `cameraEnabled`
+│   ├── DeepLink.swift            shoo://join?code=, https://<api host>/j/<code> (Universal Link), shoo://scan/<id>, shoo://activity, lainnya → Shield
+│   ├── Router.swift              navigasi + kode undangan tertunda (`pendingJoinCode`, hilang setelah 30 menit)
+│   ├── RootView.swift            sessionExpired → dataConsent → main → onboarding, di bawah LaunchSplash
+│   └── LiveActivityTokens.swift  token push-to-start + update Live Activity → PATCH /devices/me (EX-03, #49)
 ├── Data/
 │   ├── ShooRepository.swift      protocol (semua operasi contracts/api.md yang dipakai app)
-│   ├── MockRepository.swift      membaca Fixtures/*.json
-│   ├── ApiRepository.swift       fase 13
-│   ├── APIClient.swift           URLSession, Bearer, decode error kontrak (fase 13)
-│   ├── SessionStore.swift        Keychain + tulis/hapus key App Group (fase 13): device.*, guardian.name (+ avatar guardian lokal)
+│   ├── ApiRepository.swift, APIClient.swift   URLSession, Bearer, decode error kontrak
+│   ├── MockRepository.swift, MockScenarios.swift   mode demo + test, membaca Fixtures/*.json
+│   ├── SessionStore.swift        Keychain + key App Group (device.*, guardian.name, base URL)
+│   ├── Keychain.swift, LinkedAccountSettings.swift, CheckStats.swift, Models.swift
 │   ├── ExtensionStatus.swift     baca AppGroup.Key.extensionLastSeenAt
 │   └── Fixtures/                 salinan contracts/fixtures/*.json (sumber kebenaran tetap contracts/)
 ├── Features/
-│   ├── Onboarding/               ON-01..05 (TurnOnExtensionView ON-04, TutorialVideoPlayer PiP)
-│   ├── Shield/                   PR-04, GD-01, GD-03
+│   ├── Onboarding/               ON-01..05 (Splash, Name, TurnOnExtension + checkbox consent, SafariDefault, DataConsentView untuk device lama)
+│   ├── Main/                     MainTabView, SessionExpiredView
+│   ├── Shield/                   PR-04, GD-01, GD-03 (GuardianHomeModel, ProtectedShieldView)
 │   ├── Activity/                 PR-05, GD-05
-│   ├── Detail/                   DT-01..06, GD-07
-│   ├── Profile/                  PF-01
-│   └── Pairing/                  GD-04, PR-01, 02, 03 (fase 14)
-├── Debug/                        ExtensionSpikeView (fase 01S, seluruhnya #if DEBUG, launch arg -ShooSpike)
-├── Components/                   ScoreRing, StatusChip, AvatarView, SiteIcon, EmptyStateView, PrimaryButton
-├── Support/                      Formatters (waktu relatif, persen), Localization helper, NotificationRouter (payload push → scanId, fase 15)
+│   ├── Detail/                   DT-01..06, GD-07 (replica, VerdictLock, SafeReasonSheet)
+│   ├── Profile/                  PF-01 (MemberDetail, pengaturan, "Punya kode undangan?")
+│   └── Pairing/                  GD-04, PR-01..03 (FamilyCodeModel, ConnectModel, InviteSheet, QR)
+├── Components/                   ScoreRing, StatusChip, AvatarView, SiteIcon, EmptyStateView, StateViews, HalftoneShield, …
+├── Support/                      Formatters, L10n, AppLanguage, DeviceInfo, NotificationPermission, NotificationRouter (payload push → scanId), Log
+├── Debug/                        ComponentGalleryView (#if DEBUG). ExtensionSpikeView fase 01S sudah dihapus
 ├── Resources/
 │   ├── Localizable.xcstrings     EN (development language) + ID
-│   └── Assets.xcassets           avatar_01..12, ilustrasi placeholder
+│   └── Assets.xcassets
 ├── Tests/                        ShooAppTests (Swift Testing)
 ├── UITests/                      ShooAppUITests (XCUITest)
 └── ci/
-    └── ios-app.yml               draf workflow (inert, di-exclude dari target lewat project.yml)
+    └── run-tests.sh              dipakai workflow `.github/workflows/ios-app.yml`
 ```
 
-`Tests/`, `UITests/`, dan `ci/` di-exclude dari target Shoo dan dimasukkan ke target test lewat PR `chore/APP-test-targets` (D-alief-02).
+`Tests/`, `UITests/`, dan `ci/` di-exclude dari target Shoo dan dimasukkan ke target test lewat PR `chore/APP-test-targets` (D-alief-02). `ContentView.swift` sudah diganti `RootView` (fase 01).
