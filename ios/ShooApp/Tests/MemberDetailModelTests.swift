@@ -161,6 +161,57 @@ struct MemberDetailModelTests {
         #expect(await model.disconnect())
         #expect(cleared == 1)
     }
+
+    /// A-12: a push while a member's page is open reloads it once (their newest scans, notify, reminder).
+    /// The same counter value again (a view redrawn) does not reload a second time.
+    @Test func pushWhileOpenReloadsOnce() async {
+        let env = tabsEnvironment(mode: .guardian)
+        let repository = CountingScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = model(repository: repository)
+        await model.load()
+        #expect(repository.scanCalls == 1)
+        env.pushArrivedWhileOpen()
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2)
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2)
+    }
+
+    /// A-12 review: a push reload and the first load can overlap. The older one answering last must not put
+    /// its list back over the newer one.
+    @Test func anOlderLoadAnsweringLastKeepsTheNewerList() async throws {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let scan = try #require(try await base.scans(owner: .device("dev_mom"), status: nil, cursor: nil).items.first)
+        let repository = GatedScansRepository(base: base)
+        let model = model(repository: repository)
+        await repository.hold(.first)
+        let older = Task { await model.load() }
+        await repository.waitUntilHeld()
+        let decided: Verdict.Value = scan.verdict?.value == .safe ? .notSafe : .safe
+        _ = try await base.setVerdict(scanId: scan.id, value: decided)
+        await model.load()
+        #expect(model.recent.first { $0.id == scan.id }?.verdict?.value == decided)
+        await repository.release()
+        await older.value
+        #expect(model.recent.first { $0.id == scan.id }?.verdict?.value == decided)
+    }
+
+    /// A-12 review: a push reload while "Kabari saya" is on its way keeps the switch where the guardian put it.
+    @Test func reloadWhileANotifyChangeIsOnItsWayKeepsTheSwitch() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let gate = AsyncGate()
+        repository.beforeNotify = { _ in await gate.hold() }
+        let model = model(repository: repository)
+        await model.load()
+        #expect(model.member?.notify == true)
+        let change = Task { await model.setNotify(false) }
+        await gate.arrival()
+        await model.load()
+        #expect(model.member?.notify == false)
+        gate.open()
+        await change.value
+        #expect(model.member?.notify == false)
+    }
 }
 
 /// Holds a call until `release` (BH-30).

@@ -60,30 +60,52 @@ final class MemberDetailModel {
         self.onDisconnected = onDisconnected
     }
 
+    /// Overlapping calls (the first load and a push reload, A-12): only the newest one is applied.
     func load() async {
+        generation += 1
+        let request = generation
         do {
             let members = try await repository.familyMembers()
-            guard let found = members.first(where: { $0.deviceId == deviceId }) else {
+            guard request == generation else { return }
+            guard var found = members.first(where: { $0.deviceId == deviceId }) else {
                 state = .gone
                 return
             }
+            // "Kabari saya" on its way: the switch stays where the guardian put it, not the server's old value.
+            if isSavingNotify, let notify = member?.notify { found.notify = notify }
             member = found
             state = .loaded
         } catch {
-            guard !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Member load failed", error)
             if state != .loaded { state = .failed }
             return
         }
         do {
-            recent = Array(try await repository.scans(owner: .device(deviceId), status: nil, cursor: nil).items.prefix(3))
+            let page = try await repository.scans(owner: .device(deviceId), status: nil, cursor: nil)
+            guard request == generation else { return }
+            recent = Array(page.items.prefix(3))
             recentFailed = false
         } catch {
-            guard !error.isCancellation else { return }
+            guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Member activity failed", error)
             recentFailed = true
         }
     }
+
+    @ObservationIgnored private var generation = 0
+
+    /// A push arrived while this screen is open: `AppEnvironment.pushesWhileOpen` went up to `count` (A-12).
+    /// Reload once, so the page under the banner tells the same story as Guardian Home does. The same count
+    /// again (the view redrawn) does nothing.
+    func pushesWhileOpenChanged(to count: Int) async {
+        guard count != handledPushes else { return }
+        handledPushes = count
+        await load()
+    }
+
+    /// The `pushesWhileOpen` value this screen last reloaded for.
+    @ObservationIgnored private var handledPushes = 0
 
     /// Calendar days since the link was made, counting today.
     var daysProtected: Int? {

@@ -90,6 +90,10 @@ struct ProtectedShieldView: View {
                 L10n.string(isActive ? "You're protected!" : "You're not protected yet", language: language)
             ).post()
         }
+        // A push while this screen is open (new scan, verdict, member change): reload, as Guardian Home does (A-12).
+        .onChange(of: env.pushesWhileOpen) { _, count in
+            Task { await model.pushesWhileOpenChanged(to: count) }
+        }
         // Back from Connect (PR-01): show the new guardian.
         .onChange(of: env.router.isConnectPresented) { _, isPresented in
             guard !isPresented else { return }

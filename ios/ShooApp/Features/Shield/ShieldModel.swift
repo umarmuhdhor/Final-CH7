@@ -107,6 +107,18 @@ final class ShieldModel {
         scamCases = cases
     }
 
+    /// A push arrived while this screen is open: `AppEnvironment.pushesWhileOpen` went up to `count` (A-12).
+    /// Reload once, so the page under the banner tells the same story as Guardian Home does. The same count
+    /// again (the view redrawn) does nothing.
+    func pushesWhileOpenChanged(to count: Int) async {
+        guard count != handledPushes else { return }
+        handledPushes = count
+        await refresh()
+    }
+
+    /// The `pushesWhileOpen` value this screen last reloaded for.
+    @ObservationIgnored private var handledPushes = 0
+
     /// "Try again" on the error card: the card stays (its button spins) until the answer is in.
     func retry() async {
         await refresh()

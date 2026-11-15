@@ -260,4 +260,19 @@ struct ShieldModelTests {
         #expect(repository.scanCalls == 3)
         #expect(model.scans.count == 30)
     }
+
+    /// A-12: a push while Protected Home is open reloads it once, so the page matches the banner.
+    /// The same counter value again (a view redrawn) does not reload a second time.
+    @Test func pushWhileOpenReloadsOnce() async {
+        let env = tabsEnvironment(mode: .protected)
+        let repository = CountingScansRepository(base: MockRepository(mode: .protected, latency: .zero))
+        let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: nil) })
+        await model.refresh()
+        let oneLoad = repository.scanCalls
+        env.pushArrivedWhileOpen()
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2 * oneLoad)
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2 * oneLoad)
+    }
 }
