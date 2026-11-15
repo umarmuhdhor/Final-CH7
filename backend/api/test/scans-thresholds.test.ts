@@ -72,6 +72,14 @@ describe("POST /scans thresholdsVersion (K1)", () => {
     expect(rows.map((r) => r.v)).toEqual([0, null]);
   });
 
+  it("BUG B-02a: the admins lower blockAt; the block that takes over the warning row brings its version", async () => {
+    expect((await post(75, "warning", 0)).status).toBe(201);
+    await setThresholds({ live: true, warnAt: 35, blockAt: 70, version: 7 });
+    expect((await post(72, "blocked", 7)).status).toBe(201);
+    const rows = await sql`select status, score, thresholds_version as v from scans`;
+    expect(rows).toEqual([{ status: "blocked", score: 72, v: 7 }]);
+  });
+
   it("a failed thresholds lookup stores the scan under the fence instead of failing it", async () => {
     const admin = adminSql();
     await admin`revoke select on admin.public_config from shoo_api`;

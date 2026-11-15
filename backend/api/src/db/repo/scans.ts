@@ -23,8 +23,9 @@ export interface NewScan {
  * One Activity row per link (owner + origin + path, `verdict_link`, #241; was one row per site, #248):
  * when the owner still has a scan of this link, that row is kept (`created: false`) instead of a new
  * one. Its time moves to the newest visit, and a higher score replaces url, title, score, status and
- * signals; its evidence stays. Every scan still counts in the owner's lifetime totals (profile stats,
- * PF-01).
+ * signals. On a row without a verdict a block replaces a warning at any score, and a warning never
+ * replaces a block (B-02). Its evidence stays. Every scan
+ * still counts in the owner's lifetime totals (profile stats, PF-01).
  *
  * `push`: the push stays per site (owner + registrable domain), so a scam site with many pages sends
  * at most two: on the first visit to the site (no other row of the domain), and once more when the
@@ -42,18 +43,43 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
       from scans where owner_id = ${s.ownerId} and domain = ${s.domain}`;
     const push = !site!.seen || (s.status === "blocked" && !site!.blocked);
     if (site!.linkId) {
+      // `takes_over`: this visit takes over url, title, signals, score and status.
+      // - A row with a verdict: only a higher score, as before. Fase 27 Q4 (27b) decides this case.
+      // - A row without a verdict (B-02, K14 of fase 28; the admins may lower blockAt): a block takes
+      //   over a warning at any score, and a warning never takes over a block. So the row says what
+      //   the member last saw, and the site pushes its block once (the push rule reads row status).
+      // "Has a verdict" is the selectScans rule below: a verdict on this link, or a not_safe on the
+      // domain unless the link is on a shared host.
       await tx`
-        with kept as (
+        with cur as (
+          select r.id,
+                 case when r.decided then ${s.score} > r.score
+                      when ${s.status} = 'blocked' then r.status = 'warning' or ${s.score} > r.score
+                      else r.status = 'warning' and ${s.score} > r.score
+                 end as takes_over
+          from (
+            select s.id, s.score, s.status, exists (
+                     select 1 from verdicts v, (select public.verdict_link(s.url) as link) k
+                     where v.owner_id = s.owner_id
+                       and (v.url = k.link
+                            or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
+                   ) as decided
+            from scans s where s.id = ${site!.linkId}
+          ) r
+        ), kept as (
           update scans set
             detected_at = greatest(detected_at, ${s.detectedAt}::text::timestamptz),
             rdap_registered_at = coalesce(rdap_registered_at, ${s.rdapRegisteredAt}::date),
-            url = case when ${s.score} > score then ${s.url} else url end,
-            page_title = case when ${s.score} > score then ${s.pageTitle} else page_title end,
-            signals = case when ${s.score} > score then ${tx.json(s.signals as never)} else signals end,
-            status = case when ${s.score} > score then ${s.status} else status end,
-            score = greatest(score, ${s.score})
-          where id = ${site!.linkId}
-          returning id
+            url = case when cur.takes_over then ${s.url} else url end,
+            page_title = case when cur.takes_over then ${s.pageTitle} else page_title end,
+            signals = case when cur.takes_over then ${tx.json(s.signals as never)} else signals end,
+            status = case when cur.takes_over then ${s.status} else status end,
+            score = case when cur.takes_over then ${s.score} else score end,
+            -- The version the status was judged with (as reported), so it follows the status.
+            thresholds_version = case when cur.takes_over then ${s.thresholdsVersion} else thresholds_version end
+          from cur
+          where scans.id = cur.id
+          returning scans.id
         )
         update devices d set
           blocked_total = d.blocked_total + (${s.status} = 'blocked')::int,
@@ -502,7 +528,8 @@ export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
 // Columns shared by list and detail. ownerName is the owner's current name; the verdict is joined
 // for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
-// else a not_safe on the domain unless the link is on a shared host.
+// else a not_safe on the domain unless the link is on a shared host. recordScan repeats this rule
+// ("has a verdict", B-02): change both together.
 function selectScans(sql: Sql) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,

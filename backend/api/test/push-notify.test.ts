@@ -127,6 +127,15 @@ describe("POST /scans → push_log (LogSender without APNs secrets)", () => {
       expect(await pushRows()).toEqual([row, row]);
     });
 
+    it("BUG B-02b: a block at a lower score after a warning pushes once, not on every later visit", async () => {
+      const { g, p } = await linked();
+      // The admins lowered blockAt (B-02, fase 28): 75 was a warning, the same link at 72 is blocked now.
+      const id = await postScan(p.token, "a.example", { score: 75, status: "warning" });
+      for (let i = 0; i < 4; i++) expect(await postScan(p.token, "a.example", { score: 72 })).toBe(id);
+      const row = { to_device_id: g.deviceId, scan_id: id, result: "logged" };
+      expect(await pushRows()).toEqual([row, row]);
+    });
+
     it("many pages of one site → at most two pushes: the first visit and its first block (#241)", async () => {
       const { g, p } = await linked();
       const page = (path: string, fields: Record<string, unknown> = {}) => postScan(p.token, "a.example", { url: `https://a.example/${path}`, ...fields });
