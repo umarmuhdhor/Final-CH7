@@ -7,7 +7,7 @@ import { ApiError, errors } from "../http/errors";
 import { errorInfo } from "../http/logError";
 import { keyHash } from "../http/keyHash";
 import { clientIp, hit, limits } from "../http/rateLimit";
-import { readJson, readOptionalJson } from "../http/validate";
+import { readJson, readOptionalJson, UUID } from "../http/validate";
 import { issueCode, joinFamily } from "../services/family";
 import { deliverPush } from "../services/push/deliver";
 import { familyPushText } from "../services/push/messages";
@@ -56,12 +56,22 @@ function sendLater(c: Context<AppEnv>, message: PushMessage): void {
 }
 
 /**
+ * B-07: a member id that is not a UUID cannot name a device, so 404 before any SQL. A NUL in it
+ * would otherwise reach Postgres (22021) and answer 500.
+ */
+function memberParam(c: Context<AppEnv>): string {
+  const id = c.req.param("deviceId") ?? "";
+  if (!UUID.test(id)) throw errors.notFound();
+  return id;
+}
+
+/**
  * GD-04: 404 when the device is not one of my members (anti-enumeration, R3 §1).
  * PF-01: the member is told ("Adhella stopped protecting you") when it has an APNs token.
  */
 family.delete("/family/members/:deviceId", requireMode("guardian"), async (c) => {
   const guardian = c.get("principal");
-  const memberId = c.req.param("deviceId");
+  const memberId = memberParam(c);
   const removed = await deleteMember(c.get("sql"), guardian.deviceId, memberId);
   if (!removed) throw errors.notFound();
   if (removed.apnsToken) {
@@ -77,7 +87,7 @@ family.delete("/family/members/:deviceId", requireMode("guardian"), async (c) =>
 /** PF-01 "Kabari saya" (proposed): `{ notify }` turns the scan push for this member on or off. */
 family.patch("/family/members/:deviceId", requireMode("guardian"), async (c) => {
   const { notify } = await readJson(c, memberBody);
-  if (!(await setMemberNotify(c.get("sql"), c.get("principal").deviceId, c.req.param("deviceId"), notify))) {
+  if (!(await setMemberNotify(c.get("sql"), c.get("principal").deviceId, memberParam(c), notify))) {
     throw errors.notFound();
   }
   return c.json({ ok: true });
@@ -89,7 +99,7 @@ family.patch("/family/members/:deviceId", requireMode("guardian"), async (c) => 
  */
 family.post("/family/members/:deviceId/remind", requireMode("guardian"), async (c) => {
   const guardian = c.get("principal");
-  const target = await claimReminder(c.get("sql"), guardian.deviceId, c.req.param("deviceId"));
+  const target = await claimReminder(c.get("sql"), guardian.deviceId, memberParam(c));
   switch (target.kind) {
     case "notMember":
       throw errors.notFound();
