@@ -461,6 +461,12 @@ describe("Tentang Shoo pages", () => {
     expect(await (await call("/terms?lang=id")).text()).toContain("Syarat &amp; ketentuan Shoo".replace("&amp;", "&"));
   });
 
+  it.each(["en", "id"])("GET /terms?lang=%s links the privacy policy, not a bare (/privacy) (U-14)", async (lang) => {
+    const html = await (await call(`/terms?lang=${lang}`)).text();
+    expect(html).toContain(`<a href="/privacy?lang=${lang}">`);
+    expect(html).not.toContain("(/privacy)");
+  });
+
   it("GET /get redirects to the store page", async () => {
     const res = await call("/get", { redirect: "manual" });
     expect(res.status).toBe(302);
