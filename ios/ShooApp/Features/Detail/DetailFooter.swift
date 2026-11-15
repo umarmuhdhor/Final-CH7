@@ -31,6 +31,12 @@ struct DetailFooter: View {
         }
     }
 
+    /// Space above the question (or the verified card). Figma: 28 pt.
+    static let topPadding: CGFloat = 28
+    /// Height of the transparent-to-solid fade at the footer's top edge. Shorter than `topPadding`, so the fade
+    /// ends 4 pt above the content (U-17).
+    static let fadeHeight: CGFloat = 24
+
     private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
     private var lockedUntil: Date? { verdict.flatMap { VerdictLock.lockedUntil($0, now: Date()) } }
 
@@ -97,21 +103,24 @@ struct DetailFooter: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 28)
+        .padding(.top, Self.topPadding)
         // Figma: 34 pt from the screen's bottom edge, i.e. right on the home indicator area.
         .padding(.bottom, max(0, 34 - Self.homeIndicatorInset))
         .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                stops: [
-                    .init(color: DetailStyle.footer.opacity(0), location: 0),
-                    .init(color: DetailStyle.footer.opacity(0.96), location: 0.3),
-                    .init(color: DetailStyle.footer, location: 1),
-                ],
-                startPoint: .top, endPoint: .bottom
-            )
+        .background {
+            // U-17: the fade lives only in the empty space above the question (`fadeHeight` < `topPadding`),
+            // so the question and buttons always sit on a solid band. A fade as a share of the footer's height
+            // reached the question at ~0.75 alpha and let the content behind print through.
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [DetailStyle.footer.opacity(0), DetailStyle.footer],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: Self.fadeHeight)
+                DetailStyle.footer
+            }
             .ignoresSafeArea(edges: .bottom)
-        )
+        }
         // A saved choice from the server closes "Ubah".
         .onChange(of: verdict) { _, _ in isChanging = false }
         // Safe / Danger saved: the buttons hand over to the verified card and its note with a short ease. Keyed
