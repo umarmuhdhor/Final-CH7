@@ -351,6 +351,103 @@ describe("hourly cron: Ringkasan mingguan", () => {
   it("text in Indonesian", () => {
     expect(summaryText("id", { blocked: 3, warnings: 5, family: true })).toBe("Ringkasan minggu ini untuk kamu dan keluargamu: 3 situs diblokir, 5 peringatan.");
   });
+
+  // Fase 28k (H5-02, OPT-03): the claim counts per owner list now (index scans_owner_time). Guard:
+  // the counts equal the query before 28k (`owner_id = d.id or owner_id in (…)`) on this fixture.
+  it("counts equal the pre-28k query: own and members' scans, 7 days, other families left out", async () => {
+    const g1 = await createDevice("G1", "guardian");
+    const g2 = await createDevice("G2", "guardian");
+    const g3 = await createDevice("G3", "guardian");
+    const p1 = await createDevice("Mom");
+    const p2 = await createDevice("Renatta");
+    const p3 = await createDevice("Budi");
+    const loner = await createDevice("Loner");
+    await link(g1, p1);
+    await link(g1, p2);
+    await link(g2, p3);
+    await patch(g1, { apnsToken: TOKEN_G, notifications: { weeklySummary: true, quietHours: false } });
+    await patch(g2, { apnsToken: TOKEN, notifications: { weeklySummary: true, quietHours: false } });
+    await patch(g3, { apnsToken: "c".repeat(64), notifications: { weeklySummary: true, quietHours: false } });
+    await sql`update devices set language = 'id' where id = ${g2.deviceId}`;
+    const rows: [string, "blocked" | "warning", number][] = [
+      [g1.deviceId, "blocked", 1], [g1.deviceId, "blocked", 2], [g1.deviceId, "warning", 8],
+      [p1.deviceId, "warning", 2], [p1.deviceId, "blocked", 3], [p1.deviceId, "blocked", 6],
+      [p2.deviceId, "warning", 1], [p2.deviceId, "warning", 4], [p2.deviceId, "blocked", 10],
+      [p3.deviceId, "blocked", 1], [p3.deviceId, "warning", 5], [p3.deviceId, "warning", 6],
+      [g3.deviceId, "warning", 6],
+      [loner.deviceId, "blocked", 1], [loner.deviceId, "warning", 1],
+    ];
+    for (const [i, [owner, status, days]] of rows.entries()) {
+      await sql`insert into scans (owner_id, url, domain, score, status, detected_at)
+        values (${owner}, ${`https://s${i}.example/`}, ${`s${i}.example`}, ${status === "blocked" ? 92 : 54}, ${status},
+                now() - make_interval(days => ${days}))`;
+    }
+    const ids = [g1.deviceId, g2.deviceId, g3.deviceId];
+    // The claim's RETURNING before 28k, as a read-only select.
+    const before = await sql<{ id: string; apnsToken: string; language: "en" | "id"; blocked: number; warnings: number; family: boolean }[]>`
+      select d.id, d.apns_token as "apnsToken", d.language,
+        (select count(*)::int from scans s
+          where s.status = 'blocked' and s.detected_at > now() - interval '7 days'
+            and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as blocked,
+        (select count(*)::int from scans s
+          where s.status = 'warning' and s.detected_at > now() - interval '7 days'
+            and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as warnings,
+        exists (select 1 from family_links where guardian_id = d.id) as family
+      from devices d where d.id in ${sql(ids)}`;
+    const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+    // Not all zero, and blocked ≠ warnings per guardian: a fixture that counts nothing, or the same
+    // number twice, would match a query that drops or swaps a count.
+    expect(before.map(({ id, blocked, warnings, family }) => ({ id, blocked, warnings, family })).sort(byId)).toEqual([
+      { id: g1.deviceId, blocked: 4, warnings: 3, family: true },
+      { id: g2.deviceId, blocked: 1, warnings: 2, family: true },
+      { id: g3.deviceId, blocked: 0, warnings: 1, family: false },
+    ].sort(byId));
+    const sender = new Recorder();
+
+    expect((await runNotifications(sql, env, { sender, now: MONDAY_0810_WIB })).summaries).toBe(3);
+    const toId = (m: PushMessage) => ({ ...m, id: m.toDeviceId });
+    expect(sender.sent.map(toId).sort(byId)).toEqual([...before].sort(byId).map((r) =>
+      toId({ toDeviceId: r.id, apnsToken: r.apnsToken, body: summaryText(r.language, r) })));
+  });
+
+  // Fase 28k (H5-02, K13): a summary claim that throws (a statement timeout at volume) used to throw
+  // before the send loop, so the "protection off" pushes already claimed in the same run were lost.
+  // Seam: `sql` behind a Proxy that throws on the claim statement only; every other statement runs.
+  it("a summary claim that throws still sends the claimed protection-off push, and the run is failed", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const g = await createDevice("G", "guardian");
+    const p = await createDevice("Renatta");
+    await link(g, p);
+    await patch(g, { apnsToken: TOKEN_G, notifications: { weeklySummary: true, quietHours: false } });
+    await sql`update devices set ext_last_seen_at = now() - interval '30 hours' where id = ${p.deviceId}`;
+    let thrown = 0;
+    const failing = new Proxy(sql, {
+      apply(target, self, args: unknown[]) {
+        const strings = args[0];
+        if (Array.isArray(strings) && "raw" in strings && strings.join("").includes("summary_sent_on = v.day")) {
+          thrown++;
+          throw new Error("canceling statement due to statement timeout");
+        }
+        return Reflect.apply(target, self, args);
+      },
+    });
+    const sender = new Recorder();
+
+    const error = await runNotifications(failing, env, { sender, now: MONDAY_0810_WIB }).then(() => null, (e: unknown) => e);
+    expect(thrown).toBe(1); // the claim was reached: without it this test is green on any code
+    expect(error).toBeInstanceOf(Error);
+    expect(sender.sent).toEqual([{ toDeviceId: g.deviceId, apnsToken: TOKEN_G, body: "Renatta's protection is off: Shoo has not run in Safari for a day" }]);
+    expect((await sql`select failed > 0 as failed, ok_at is not null as ok from ops_jobs where job = 'notifications'`)[0])
+      .toEqual({ failed: true, ok: false });
+
+    // Nothing was claimed for the summary: the next run sends it.
+    await runNotifications(sql, env, { sender, now: MONDAY_0810_WIB });
+    expect(sender.sent.map((m) => m.body)).toEqual([
+      "Renatta's protection is off: Shoo has not run in Safari for a day",
+      "Your week: no dangerous sites for you and your family.",
+    ]);
+  });
 });
 
 describe("Tentang Shoo pages", () => {
