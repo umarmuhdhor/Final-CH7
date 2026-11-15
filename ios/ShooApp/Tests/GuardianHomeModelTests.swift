@@ -337,6 +337,84 @@ struct GuardianHomeModelTests {
         #expect(familyRepository.scanCalls == 6)
     }
 
+    /// Family pages for OPT-02 (fase 28i): `rows[n]` is page n, each row `(owner, hours ago, decided)`. Pages are
+    /// newest first, like the server's, and each one but the last points at the next.
+    private func familyPages(_ rows: [[(owner: String, hoursAgo: Double, decided: Bool)]]) async throws -> CountingScansRepository {
+        let base = MockRepository(mode: .guardian, latency: .zero)
+        let template = try #require(try await base.scans(owner: .family, status: nil, cursor: nil).items.first)
+        let repository = CountingScansRepository(base: base)
+        for (number, page) in rows.enumerated() {
+            let items = page.enumerated().map { index, row in
+                var scan = template
+                scan.id = "p\(number)-\(index)"
+                scan.ownerDeviceId = row.owner
+                scan.status = .warning
+                scan.detectedAt = Self.fixtureNow.addingTimeInterval(-row.hoursAgo * 3600)
+                scan.verdict = row.decided
+                    ? Verdict(value: .safe, byDeviceId: "dev_me", byName: "Adhella", decidedAt: Self.fixtureNow)
+                    : nil
+                return scan
+            }
+            repository.pages[number == 0 ? "" : "c\(number)"] =
+                ScanPage(items: items, nextCursor: number + 1 < rows.count ? "c\(number + 1)" : nil)
+        }
+        return repository
+    }
+
+    private var me: String { MockRepository.guardianProfile.deviceId }
+
+    /// OPT-02 (a): page 1 already reaches past the last day and holds 3 members' rows: Family Home has its pending
+    /// card and its 3 rows, so it asks for no second page. Before: every page, up to 10 per foreground.
+    @Test func BUG_OPT02_familyHomeStopsAfterAPagePastTheLastDayWithThreeMemberRows() async throws {
+        let repository = try await familyPages([
+            [("dev_mom", 1, false), ("dev_dad", 2, true), ("dev_mom", 3, true), ("dev_dad", 30, true)],
+            [("dev_mom", 40, false), ("dev_dad", 50, false)],
+            [("dev_mom", 60, false)],
+        ])
+        let model = model(repository: repository, settings: try settings())
+        await model.refresh()
+        #expect(repository.scanCalls == 1)
+        #expect(model.pendingScan?.id == "p0-0")
+        #expect(model.recent.map(\.id) == ["p0-0", "p0-1", "p0-2"])
+    }
+
+    /// OPT-02 (b), guard: the guardian's own rows are not listed on Family Home (`recent`), so they don't count
+    /// towards the 3 rows: a page 1 of own rows only goes on to page 2.
+    @Test func familyHomeReadsOnWhenPageOneHoldsOnlyTheGuardiansOwnRows() async throws {
+        let repository = try await familyPages([
+            [(me, 1, false), (me, 2, false), (me, 3, false), (me, 30, false)],
+            [("dev_mom", 31, false), ("dev_dad", 32, true), ("dev_mom", 33, true)],
+        ])
+        let model = model(repository: repository, settings: try settings())
+        await model.refresh()
+        #expect(repository.scanCalls == 2)
+        #expect(model.recent.map(\.id) == ["p1-0", "p1-1", "p1-2"])
+        #expect(model.pendingScan == nil, "page 2 is older than a day")
+    }
+
+    /// OPT-02 (c), guard: 3 members' rows are not enough to stop while the page is still inside the last day: a
+    /// member's undecided site on page 2, 20 hours old, still gets the card. Page 1's decided rows don't hide it.
+    @Test func familyHomeStillFindsAPendingSiteOnPageTwo() async throws {
+        let repository = try await familyPages([
+            [("dev_mom", 1, true), ("dev_dad", 2, true), ("dev_mom", 3, true), ("dev_dad", 4, true)],
+            [("dev_mom", 20, false), ("dev_dad", 30, false)],
+            [("dev_mom", 40, false)],
+        ])
+        let model = model(repository: repository, settings: try settings())
+        await model.refresh()
+        #expect(model.pendingScan?.id == "p1-0")
+        #expect(model.recent.map(\.id) == ["p0-0", "p0-1", "p0-2"])
+        // `>= 2`: on main Family read every page (3 here); this guard holds there and after the fix.
+        #expect(repository.scanCalls >= 2)
+    }
+
+    /// A last day busier than 10 pages still stops at `maxPages` (a runaway cursor).
+    @Test func familyHomeReadsAtMostTenPages() async throws {
+        let repository = try await familyPages((0..<12).map { [("dev_mom", Double($0) + 1, false)] })
+        await model(repository: repository, settings: try settings()).refresh()
+        #expect(repository.scanCalls == GuardianHomeModel.maxPages)
+    }
+
     /// PF-01: a scan's owner shows their picked avatar: a member's from the family list, the guardian's own
     /// from `GET /devices/me`; anyone else (or before the load) gets `nil`, the neutral person.
     @Test func scanOwnerAvatarComesFromTheFamilyOrTheGuardianThemself() async throws {

@@ -28,11 +28,12 @@ struct GuardianHomeView: View {
         settings: AppSettings,
         scope: GuardianHomeModel.Scope,
         extensionStatus: @escaping () async -> ExtensionStatus,
+        profile: (() async throws -> DeviceProfile)? = nil,
         onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
         _model = State(initialValue: GuardianHomeModel(
             repository: repository, settings: settings, scope: scope, extensionStatus: extensionStatus,
-            onVerdictSaved: onVerdictSaved
+            profile: profile, onVerdictSaved: onVerdictSaved
         ))
     }
 

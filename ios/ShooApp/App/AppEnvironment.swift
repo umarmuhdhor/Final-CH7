@@ -41,6 +41,10 @@ final class AppEnvironment {
     @ObservationIgnored private var switchingSessions = 0
     /// EX-03 (#49): the Dynamic Island's push tokens for the backend. Started at the first activation.
     @ObservationIgnored private var liveActivityTokens: LiveActivityTokens?
+    /// OPT-06: the last `GET /devices/me` asked by the foreground sync or by Home, for the other side to share.
+    @ObservationIgnored private var profileCall: ProfileCall?
+    /// How long a profile call is shared: covers the heartbeat `PATCH` that runs before the sync's own ask.
+    static let profileShareWindow: TimeInterval = 10
     /// UI tests (`-UITestReduceMotion YES`, Debug only): no endless shield animation keeping the app busy,
     /// so XCUITest finds it idle (fase 23a K2). Not for screenshots or the accessibility audit.
     @ObservationIgnored private(set) var reducesMotionForUITests = false
@@ -332,7 +336,7 @@ final class AppEnvironment {
             }
         }
         do {
-            _ = try await repository.me()
+            _ = try await sharedProfile(forSync: true)
         } catch {
             guard !error.isCancellation else { return }
             Log.app.error("Profile refresh failed", error)
@@ -340,6 +344,44 @@ final class AppEnvironment {
         await registerForPushIfAllowed()
         startLiveActivityTokens()
         await liveActivityTokens?.sync()
+    }
+
+    /// `GET /devices/me` for Home (OPT-06, fase 28i K11). Coming to the foreground, `sceneBecameActive` and Home both
+    /// need it, for the same answer: Home takes the sync's call (still running, or answered moments ago) and the
+    /// sync takes Home's. One request per foreground instead of two.
+    @MainActor
+    func foregroundProfile() async throws -> DeviceProfile {
+        try await sharedProfile(forSync: false)
+    }
+
+    /// The other side's call is taken once, if it started under the same token and repository less than
+    /// `profileShareWindow` ago. A second ask from the same side (pull to refresh, the next foreground) asks anew.
+    @MainActor
+    private func sharedProfile(forSync: Bool, now: Date = Date()) async throws -> DeviceProfile {
+        let token = session?.token
+        let source = ObjectIdentifier(repository)
+        let task: Task<DeviceProfile, any Error>
+        if var shared = profileCall, !shared.taken, shared.forSync != forSync, shared.token == token,
+           shared.source == source, (0..<Self.profileShareWindow).contains(now.timeIntervalSince(shared.startedAt)) {
+            shared.taken = true
+            profileCall = shared
+            task = shared.task
+        } else {
+            let repository = repository
+            task = Task { try await repository.me() }
+            profileCall = ProfileCall(task: task, token: token, source: source, startedAt: now, forSync: forSync)
+        }
+        let profile: DeviceProfile
+        do {
+            profile = try await task.value
+        } catch {
+            // A failed call is never handed on: the next ask tries anew.
+            if profileCall?.task == task { profileCall = nil }
+            throw error
+        }
+        // The shared call is not cancelled with one asker; this asker still stops like a cancelled request.
+        try Task.checkCancellation()
+        return profile
     }
 
     /// EX-03 (#49, QA 2026-11-10 #5): without the start token the backend answered `no_start_token` to every
@@ -688,4 +730,15 @@ final class SessionExpiry: @unchecked Sendable {
     func report(usedToken: String) {
         Task { @MainActor [weak self] in self?.environment?.handleUnauthorized(usedToken: usedToken) }
     }
+}
+
+/// One shared `GET /devices/me` (OPT-06): asked by the foreground sync (`forSync`) or by Home, under `token` and
+/// the repository `source`, at `startedAt`. `taken`: the other side used it already.
+private struct ProfileCall {
+    let task: Task<DeviceProfile, any Error>
+    let token: String?
+    let source: ObjectIdentifier
+    let startedAt: Date
+    let forSync: Bool
+    var taken = false
 }

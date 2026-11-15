@@ -57,6 +57,8 @@ final class GuardianHomeModel {
     @ObservationIgnored private let readExtensionStatus: () async -> ExtensionStatus
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private let now: () -> Date
+    /// `GET /devices/me`. The app passes `AppEnvironment.foregroundProfile`, shared with the foreground sync (OPT-06).
+    @ObservationIgnored private let loadProfile: () async throws -> DeviceProfile
     /// Told after every verdict the server confirmed (`AppEnvironment.verdictSaves`, K8).
     @ObservationIgnored private let onVerdictSaved: @MainActor () -> Void
     @ObservationIgnored private var generation = 0
@@ -72,6 +74,7 @@ final class GuardianHomeModel {
         scope: Scope = .family,
         extensionStatus: @escaping () async -> ExtensionStatus = { await ExtensionStatus.load() },
         now: @escaping () -> Date = Date.init,
+        profile: (() async throws -> DeviceProfile)? = nil,
         onVerdictSaved: @escaping @MainActor () -> Void = {}
     ) {
         self.repository = repository
@@ -79,6 +82,7 @@ final class GuardianHomeModel {
         self.scope = scope
         readExtensionStatus = extensionStatus
         self.now = now
+        loadProfile = profile ?? { [repository] in try await repository.me() }
         self.onVerdictSaved = onVerdictSaved
     }
 
@@ -158,10 +162,13 @@ final class GuardianHomeModel {
         extensionStatus = await readExtensionStatus()
         guard request == generation else { return }
         do {
-            async let me = repository.me()
+            async let me = loadProfile()
             async let family: [FamilyMember] = scope == .family ? repository.familyMembers() : []
-            async let all = allScans()
-            let (loadedProfile, loadedMembers, loadedScans) = try await (me, family, all)
+            async let firstPage = repository.scans(owner: scope == .family ? .family : .me, status: nil, cursor: nil)
+            // Family's paging tells the members' rows from the guardian's own: it needs the profile after page 1.
+            let loadedProfile = try await me
+            let loadedScans = try await allScans(from: firstPage, ownDeviceId: loadedProfile.deviceId)
+            let loadedMembers = try await family
             guard request == generation else { return }
             profile = loadedProfile
             // Personal reads the family on its own, after the screen (`refreshPersonalMembers`).
@@ -286,20 +293,20 @@ final class GuardianHomeModel {
         }
     }
 
-    /// Pages arrive newest first. Personal needs only the last day (the hero) and the list's rows: it stops once
-    /// a page reaches past the window with enough rows. Family reads every page (members' sites, pending card).
-    private func allScans() async throws -> [ScanResult] {
+    /// Pages arrive newest first. Home needs only the last day (the hero, the pending card) and the list's rows: it
+    /// stops once a page reaches past the window with enough rows. Family counts the members' rows only, the ones
+    /// `recent` lists (OPT-02, fase 28i K11); before, it read every page.
+    private func allScans(from firstPage: ScanPage, ownDeviceId: String) async throws -> [ScanResult] {
         let owner: ScanOwnerFilter = scope == .family ? .family : .me
         let since = now().addingTimeInterval(-Self.pendingWindow)
         var items: [ScanResult] = []
-        var cursor: String?
-        for _ in 0..<Self.maxPages {
-            let page = try await repository.scans(owner: owner, status: nil, cursor: cursor)
+        var page = firstPage
+        for read in 1...Self.maxPages {
             items += page.items
-            guard let next = page.nextCursor else { break }
-            if scope == .personal, let oldest = page.items.last, oldest.detectedAt < since,
-               items.count >= Self.recentCount { break }
-            cursor = next
+            guard let next = page.nextCursor, read < Self.maxPages else { break }
+            let listed = scope == .family ? items.filter { $0.ownerDeviceId != ownDeviceId }.count : items.count
+            if let oldest = page.items.last, oldest.detectedAt < since, listed >= Self.recentCount { break }
+            page = try await repository.scans(owner: owner, status: nil, cursor: next)
         }
         return items
     }

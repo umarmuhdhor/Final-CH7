@@ -427,4 +427,52 @@ struct AppEnvironmentSessionTests {
         #expect(server.session.token == "shoo_test_token_123")
         #expect(env.settings.mode == .guardian)
     }
+
+    /// OPT-06 (fase 28i, K11): coming to the foreground asked `GET /devices/me` twice, once for the App Group sync
+    /// (`sceneBecameActive`) and once for Home, the same answer both times. Home now shares the app's call.
+    @Test func BUG_OPT06_oneProfileRequestPerForeground() async throws {
+        let server = StubServer()
+        server.reply { seen in
+            switch (seen.method, seen.path) {
+            case ("PATCH", _): Self.ok
+            case (_, "/devices/me"): Self.profile
+            case (_, "/family/members"): .json(200, #"{"members":[]}"#)
+            default: .json(200, #"{"items":[],"nextCursor":null}"#)
+            }
+        }
+        let env = environment(server: server, mode: .guardian)
+        let home = GuardianHomeModel(
+            repository: env.repository, settings: env.settings, scope: .family,
+            extensionStatus: { .off(lastSeen: nil) }, profile: { try await env.foregroundProfile() }
+        )
+        async let sync: Void = env.sceneBecameActive()
+        async let shown: Void = home.refresh()
+        _ = await (sync, shown)
+        #expect(home.state == .loaded)
+        #expect(home.profile?.name == "Rina")
+        #expect(server.requests.filter { $0.method == "GET" && $0.path == "/devices/me" }.count == 1)
+
+        // Each side shares once: the next foreground asks again.
+        await env.sceneBecameActive()
+        #expect(server.requests.filter { $0.method == "GET" && $0.path == "/devices/me" }.count == 2)
+    }
+
+    /// OPT-06: a failed `GET /devices/me` is not handed on; the foreground sync asks again.
+    @Test func failedProfileCallIsNotShared() async throws {
+        let server = StubServer()
+        let host = server.host
+        server.reply { seen in
+            let asked = HostStubProtocol.requests(host: host).filter { $0.method == "GET" && $0.path == "/devices/me" }.count
+            return switch (seen.method, seen.path) {
+            case ("PATCH", _): Self.ok
+            case (_, "/devices/me"): asked == 1 ? .json(500, #"{"error":{"code":"internal","message":"x"}}"#) : Self.profile
+            default: .json(200, #"{"items":[],"nextCursor":null}"#)
+            }
+        }
+        let env = environment(server: server, mode: .guardian)
+        await #expect(throws: RepositoryError.self) { _ = try await env.foregroundProfile() }
+        await env.sceneBecameActive()
+        #expect(server.requests.filter { $0.method == "GET" && $0.path == "/devices/me" }.count == 2)
+        #expect(server.session.defaults.string(forKey: AppGroup.Key.deviceName) == "Rina")
+    }
 }
