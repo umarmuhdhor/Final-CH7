@@ -539,6 +539,9 @@ struct ProfileModelTests {
         let justNow = language == .english ? "just now" : "baru saja"
         #expect(MemberText.ago(now.addingTimeInterval(3), now: now, language: language) == justNow)
         #expect(MemberText.ago(now, now: now, language: language) == justNow)
+        #expect(MemberText.ago(now.addingTimeInterval(-0.5), now: now, language: language) == justNow)
+        // One second ago is the first time that reads as a time ago.
+        #expect(MemberText.ago(now.addingTimeInterval(-1), now: now, language: language) != justNow)
         // Guard: two minutes ago still reads as a time ago.
         let past = MemberText.ago(now.addingTimeInterval(-120), now: now, language: language)
         #expect(past != justNow)
