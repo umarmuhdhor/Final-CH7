@@ -86,8 +86,9 @@ family.delete("/family/members/:deviceId", requireMode("guardian"), async (c) =>
 
 /** PF-01 "Kabari saya" (proposed): `{ notify }` turns the scan push for this member on or off. */
 family.patch("/family/members/:deviceId", requireMode("guardian"), async (c) => {
+  const memberId = memberParam(c);
   const { notify } = await readJson(c, memberBody);
-  if (!(await setMemberNotify(c.get("sql"), c.get("principal").deviceId, memberParam(c), notify))) {
+  if (!(await setMemberNotify(c.get("sql"), c.get("principal").deviceId, memberId, notify))) {
     throw errors.notFound();
   }
   return c.json({ ok: true });
