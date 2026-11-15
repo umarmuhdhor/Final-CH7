@@ -304,6 +304,47 @@ struct GuardianHomeModelTests {
         #expect(model.scans.count == 5)
     }
 
+    /// A-01 (fase 28a, K1, D-alief-A12): a failed refresh keeps the loaded Home and says it may be old; the next
+    /// good refresh clears that. Before: "Family protected!" stayed with no sign while a member's blocked site waited.
+    @Test func BUG_A01_guardianHomeSaysItMayBeOldAfterAFailedRefresh() async throws {
+        for scope in [GuardianHomeModel.Scope.family, .personal] {
+            let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+            let model = model(repository: repository, settings: try settings(), scope: scope)
+            await model.refresh()
+            #expect(model.state == .loaded)
+            #expect(!model.refreshFailed)
+            let shown = model.scans
+
+            repository.failure = RepositoryError.network
+            await model.refresh()
+            #expect(model.state == .loaded, "\(scope)")
+            #expect(model.scans == shown, "\(scope): the old content stays")
+            #expect(model.refreshFailed, "\(scope): says it may be old")
+
+            repository.failure = nil
+            await model.refresh()
+            #expect(!model.refreshFailed, "\(scope): a good refresh clears it")
+        }
+    }
+
+    /// A first load that fails is the error card, not "may be old" (nothing was shown).
+    @Test func firstLoadFailureIsNotARefreshFailure() async throws {
+        let model = model(repository: FailingRepository(), settings: try settings())
+        await model.refresh()
+        #expect(model.state == .failed)
+        #expect(!model.refreshFailed)
+    }
+
+    /// A-06 (fase 28a, K3): before the first read of the extension's status Pribadi Home has no answer yet,
+    /// so the hero cannot say "You're not protected yet".
+    @Test func BUG_A06_personalHomeHasNotReadTheExtensionBeforeTheFirstRefresh() async throws {
+        let model = model(settings: try settings(), scope: .personal, extensionStatus: .active(lastSeen: Date()))
+        #expect(!model.extensionChecked)
+        await model.refresh()
+        #expect(model.extensionChecked)
+        #expect(model.extensionStatus.isActive)
+    }
+
     @Test func extensionStatusComesFromTheReader() async throws {
         let model = model(settings: try settings(), extensionStatus: .off(lastSeen: nil, reason: .switchedOff))
         await model.refresh()

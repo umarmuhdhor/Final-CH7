@@ -70,6 +70,7 @@ struct GuardianHomeView: View {
             .animation(handOver, value: model.verdictSaves)
             // Someone joined from the invite card: the family replaces the invite the same way. Only that refresh.
             .animation(joinAnimates ? handOver : nil, value: model.hasNoFamily)
+            .animation(StateMotion.enter(reduceMotion: reduceMotion), value: model.refreshFailed)
             // Light only, like the Figma; scoped to the page so the bars keep their own scheme.
             .environment(\.colorScheme, .light)
         }
@@ -117,6 +118,12 @@ struct GuardianHomeView: View {
         .onChange(of: env.pushesWhileOpen) {
             Task { await model.refresh() }
         }
+        .onChange(of: model.refreshFailed) { _, failed in
+            guard failed else { return }
+            AccessibilityNotification.Announcement(
+                L10n.string("Couldn't refresh. Pull down to try again.", language: language)
+            ).post()
+        }
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded, !isFamily else { return }
             AccessibilityNotification.Announcement(
@@ -147,21 +154,28 @@ struct GuardianHomeView: View {
     @ViewBuilder
     private var hero: some View {
         if !isFamily {
+            // A-06 (fase 28a K3): until Safari has answered, neither "protected" nor "not protected yet".
+            let isUnread = !model.extensionChecked
             let isActive = model.extensionStatus.isActive
+            let isOff = !isUnread && !isActive
             // The level reads the last day's sites: while they load (or never loaded) the hero only says Shoo is
             // on, never "You're protected!" without the data behind it.
             let isChecking = isActive && model.state != .loaded
             // Shoo being off outranks what it saw while it was on.
             let level = isActive && !isChecking ? model.level : .normal
+            let title: LocalizedStringKey = isUnread ? "Checking Shoo…"
+                : isOff ? "You're not protected yet" : isChecking ? "Shoo is on" : level.title
+            let identifier = isUnread ? "home.status.extensionChecking"
+                : isOff ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier
             HomeHero(
                 style: level.heroStyle,
-                title: !isActive ? "You're not protected yet" : isChecking ? "Shoo is on" : level.title,
-                titleIdentifier: !isActive ? "home.status.off" : isChecking ? "home.status.checking" : level.titleIdentifier,
-                shieldOn: isActive,
+                title: title,
+                titleIdentifier: identifier,
+                shieldOn: !isOff,
                 shieldTint: level.shieldTint,
-                bottomPadding: isActive ? nil : 20
+                bottomPadding: isOff ? 20 : nil
             ) {
-                if !isActive {
+                if isOff {
                     Button { env.router.isTurnOnPresented = true } label: {
                         Text("Turn on now")
                             .onboardingFont(15, weight: .medium, relativeTo: .subheadline)
@@ -179,6 +193,11 @@ struct GuardianHomeView: View {
             // Figma "Guardian/Home · Gagal memuat" (1665:3038): nothing loaded, so no "Family protected!".
             HomeHero(style: .teal, title: "Status not available yet", titleIdentifier: "home.family.unavailable",
                      shieldTint: .teal, layout: .family)
+        } else if model.state == .loading {
+            // U-01 (fase 28a K2): no "Family protected!" before the family's sites are in. Pribadi's pattern and
+            // strings while it loads: "Shoo is on" once Safari said so, "Checking Shoo…" before that or when it's off.
+            let title: LocalizedStringKey = model.extensionChecked && model.extensionStatus.isActive ? "Shoo is on" : "Checking Shoo…"
+            HomeHero(style: .teal, title: title, titleIdentifier: "home.family.checking", shieldTint: .teal, layout: .family)
         } else if model.hasNoFamily {
             // Figma 1382:10466: the teal hero, white headline and line.
             HomeHero(style: .teal, title: "Protect your loved ones", titleIdentifier: "home.family.empty",
@@ -231,6 +250,10 @@ struct GuardianHomeView: View {
                 // 37 pt between the three.
                 let showsCard = model.showsSupervisedCard
                 VStack(spacing: 0) {
+                    if model.refreshFailed {
+                        refreshFailedNotice
+                            .padding(.bottom, 24)
+                    }
                     if showsCard {
                         // "Hubungkan": joining a family as protected lives in Profile › Account mode
                         // ("Have an invite code?"), which checks that nobody is looked after first.
@@ -302,6 +325,9 @@ struct GuardianHomeView: View {
     @ViewBuilder
     private var below: some View {
         if model.state == .loaded {
+            if model.refreshFailed {
+                refreshFailedNotice
+            }
             if model.hasNoFamily {
                 HowItWorks()
                 // Figma "Guardian/Home · Belum ada orang" (1253:2381): 42 under How it works.
@@ -318,6 +344,14 @@ struct GuardianHomeView: View {
                 )
             }
         }
+    }
+
+    /// A refresh after the first load failed: what is shown stays, and this says it may be old (D-alief-A12,
+    /// fase 28a K1). The same notice as Activity's.
+    private var refreshFailedNotice: some View {
+        RefreshFailedNotice(retryIdentifier: "home.refreshRetry") { await model.refresh() }
+            .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
+            .accessibilityIdentifier("home.refreshFailed")
     }
 }
 

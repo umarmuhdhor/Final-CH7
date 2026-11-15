@@ -38,6 +38,12 @@ final class GuardianHomeModel {
 
     private(set) var state: State = .loading
     private(set) var extensionStatus: ExtensionStatus = .off(lastSeen: nil)
+    /// `false` until the first read of the extension's status: Pribadi's hero stays neutral instead of guessing
+    /// "You're not protected yet" (A-06, fase 28a K3; `ShieldModel.extensionChecked`).
+    private(set) var extensionChecked = false
+    /// A refresh after a successful load failed: the screen keeps what it shows and says it may be old
+    /// (D-alief-A12, A-01, fase 28a K1). The next successful load clears it.
+    private(set) var refreshFailed = false
     private(set) var profile: DeviceProfile?
     private(set) var members: [FamilyMember] = []
     private(set) var scans: [ScanResult] = []
@@ -156,6 +162,7 @@ final class GuardianHomeModel {
         let request = generation
         let epoch = verdictEpoch
         extensionStatus = await readExtensionStatus()
+        extensionChecked = true
         guard request == generation else { return }
         do {
             async let me = repository.me()
@@ -168,10 +175,12 @@ final class GuardianHomeModel {
             if scope == .family { members = loadedMembers }
             scans = merged(loadedScans, readAt: epoch)
             state = .loaded
+            refreshFailed = false
         } catch {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Guardian Home load failed", error)
-            if state != .loaded { state = .failed }
+            // A failed refresh keeps what is on screen, with the "Couldn't refresh" notice (D-alief-A12).
+            if state == .loaded { refreshFailed = true } else { state = .failed }
             return
         }
         if scope == .personal {
