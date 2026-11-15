@@ -7,6 +7,7 @@ import UIKit
 struct DetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.screenshotLoader) private var screenshotLoader
     @Environment(\.replicaLoader) private var replicaLoader
     @State private var model: DetailModel
@@ -26,6 +27,10 @@ struct DetailView: View {
     @State private var pillHeight: CGFloat = 34
     /// "Aman" on a site Shoo flagged asks why first (SafeReasonSheet); "Bahaya" still applies at once.
     @State private var askingSafeReason = false
+    /// U-07: what decides whether the guardian's footer stays pinned (`footerInPage`).
+    @State private var footerRoom = FooterRoom()
+    /// "Ubah" on the footer, kept here so moving the footer (`footerRoom`) never drops it.
+    @State private var changingVerdict = false
 
     init(scanId: String, repository: any ShooRepository, onVerdictSaved: @escaping @MainActor () -> Void = {}) {
         _model = State(initialValue: DetailModel(scanId: scanId, repository: repository, onVerdictSaved: onVerdictSaved))
@@ -156,6 +161,7 @@ struct DetailView: View {
                 DetailHero(look: look, guardianAvatarId: model.deciderAvatarId) { env.router.pop() }
                 sheet(scan, reasons: reasons, look: look)
             }
+            .coordinateSpace(.named(FooterRoom.page))
             .background(alignment: .top) {
                 // Figma "Hero BG" (402 × 360, rings in it); its top colour carries on when pulled down.
                 DetailHeroBackground(look: look)
@@ -178,27 +184,15 @@ struct DetailView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             // Only the guardian answers here; the protected person reads the decision in "Status situs"
             // (the Ortu frames of 1211:19924 have no footer).
-            if model.canValidate {
-                DetailFooter(
-                    verdict: scan.verdict,
-                    viewerDeviceId: model.viewer?.deviceId,
-                    canValidate: model.canValidate,
-                    failure: model.verdictError,
-                    ownerName: ownerName(scan),
-                    isBlocked: scan.status == .blocked,
-                    onDecide: { value in
-                        if value == .safe {
-                            askingSafeReason = true
-                            return
-                        }
-                        Task {
-                            let outcome = await model.setVerdict(value)
-                            announce(outcome)
-                        }
-                    }
-                )
+            if model.canValidate, !footerRoom.footerInPage {
+                footer(scan)
             }
         }
+        // Where a pinned footer ends: this frame stops at the home indicator. Read outside the inset, so the footer
+        // never feeds it.
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { footerRoom.bottom = $0 }
+        // A new text size can shrink the footer again: decide afresh.
+        .onChange(of: dynamicTypeSize) { _, _ in footerRoom.footer = 0 }
         .sensoryFeedback(.success, trigger: model.verdictSaves)
         .sheet(isPresented: $askingSafeReason) {
             SafeReasonSheet { notes in
@@ -211,10 +205,38 @@ struct DetailView: View {
         }
     }
 
+    /// The guardian's question with Aman / Bahaya, or who verified it. Pinned at the bottom, or in the page under
+    /// the score when pinned would cover the title (`FooterRoom`). Its height is read in both places.
+    private func footer(_ scan: ScanResult) -> some View {
+        DetailFooter(
+            verdict: scan.verdict,
+            viewerDeviceId: model.viewer?.deviceId,
+            canValidate: model.canValidate,
+            failure: model.verdictError,
+            ownerName: ownerName(scan),
+            isBlocked: scan.status == .blocked,
+            changing: $changingVerdict,
+            onDecide: { value in
+                if value == .safe {
+                    askingSafeReason = true
+                    return
+                }
+                Task {
+                    let outcome = await model.setVerdict(value)
+                    announce(outcome)
+                }
+            }
+        )
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerRoom.measured(footer: $0) }
+    }
+
     /// Figma "Sheet": white from y 284 with 32 pt corners; the link pill sits on its top edge.
     private func sheet(_ scan: ScanResult, reasons: [Evidence], look: DetailLook) -> some View {
         VStack(spacing: 0) {
             summary(scan, look: look)
+            if model.canValidate, footerRoom.footerInPage {
+                footer(scan)
+            }
             DetailStyle.divider
                 .frame(height: 1)
                 .padding(.horizontal, 24)
@@ -291,6 +313,10 @@ struct DetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("detail.title")
+                    // In the page's own space, so scrolling never changes it.
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(FooterRoom.page)).maxY } action: {
+                        footerRoom.titleBottom = $0
+                    }
                 Text(verbatim: openedText(scan.detectedAt))
                     .activityFont(13, rounded: true, tracking: -0.08)
                     .figmaLineHeight(18, relativeTo: .footnote)
