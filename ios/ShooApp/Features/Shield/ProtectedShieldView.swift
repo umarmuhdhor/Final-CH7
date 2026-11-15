@@ -76,6 +76,12 @@ struct ProtectedShieldView: View {
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
         .privacyCover()
         .refreshable { await model.refresh() }
+        .onChange(of: model.refreshFailed) { _, failed in
+            guard failed else { return }
+            AccessibilityNotification.Announcement(
+                L10n.string("Couldn't refresh. Pull down to try again.", language: language)
+            ).post()
+        }
         // Coming back from Settings can flip Off → Active: say it (not on the first load).
         .onChange(of: model.extensionStatus.isActive) { _, isActive in
             guard model.state == .loaded else { return }
@@ -240,6 +246,18 @@ struct ProtectedShieldView: View {
         case (false, false): (32, 0, 58)
         }
         Color.clear.frame(height: gaps.top)
+        // A-01 (fase 28b K4, D-alief-A12): what is shown stays, the pill included, and this says it may be old.
+        // The same notice as Activity's and Guardian Home's. Only the notice animates: the rows a good refresh
+        // brings in the same update do not.
+        VStack(spacing: 0) {
+            if model.refreshFailed {
+                RefreshFailedNotice(retryIdentifier: "shield.refreshRetry") { await model.refresh() }
+                    .transition(StateMotion.transition(reduceMotion: reduceMotion, edge: .top))
+                    .accessibilityIdentifier("shield.refreshFailed")
+                    .padding(.bottom, 24)
+            }
+        }
+        .animation(StateMotion.enter(reduceMotion: reduceMotion), value: model.refreshFailed)
         if let card {
             ProtectedSiteCard(scan: card, guardian: model.guardian, language: language) {
                 env.router.showDetail(scanId: card.id)

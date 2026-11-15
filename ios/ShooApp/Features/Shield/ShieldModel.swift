@@ -18,6 +18,9 @@ final class ShieldModel {
     /// `false` until the first read of the extension's status: the hero says "Checking Shoo…" instead of a guess
     /// (Figma "protected/Home · Mengecek ekstensi" 1681:5275).
     private(set) var extensionChecked = false
+    /// A refresh after a successful load failed: the screen keeps what it shows and says it may be old
+    /// (D-alief-A12, A-01, fase 28b K4). The next successful load clears it.
+    private(set) var refreshFailed = false
     /// `GET /devices/me` → `guardian`; `nil` when not (or no longer) connected.
     private(set) var guardian: GuardianInfo?
     /// The picked avatar for the profile circle top right.
@@ -87,11 +90,12 @@ final class ShieldModel {
             profileAvatarId = me.avatarId
             scans = loaded.sorted { $0.detectedAt > $1.detectedAt }
             state = .loaded
+            refreshFailed = false
         } catch {
             guard request == generation, !error.isCancellation else { return }
             Log.ui.error("Shield load failed", error)
-            // A failed foreground refresh keeps what is already on screen.
-            if state != .loaded { state = .failed }
+            // A failed foreground refresh keeps what is on screen, with the "Couldn't refresh" notice (D-alief-A12).
+            if state == .loaded { refreshFailed = true } else { state = .failed }
             return
         }
         await refreshScamCases(request: request)

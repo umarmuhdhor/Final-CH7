@@ -147,6 +147,48 @@ struct ShieldModelTests {
         #expect(model.guardian?.name == "Adhella")
     }
 
+    /// A-01 (fase 28b, K4, D-alief-A12): a failed refresh keeps the loaded Home, the "Connected with …" pill
+    /// included, and says it may be old; the next good refresh clears that. Before: "Connected with Adhella" stayed
+    /// with no sign after Adhella had let this phone go.
+    @Test func BUG_A01_protectedHomeSaysItMayBeOldAfterAFailedRefresh() async throws {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
+        let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) })
+        await model.refresh()
+        #expect(model.state == .loaded)
+        #expect(!model.refreshFailed)
+        let shown = model.scans
+
+        repository.failure = RepositoryError.network
+        await model.refresh()
+        #expect(model.state == .loaded)
+        #expect(model.scans == shown, "the old content stays")
+        #expect(model.guardian?.name == "Adhella", "the pill stays")
+        #expect(model.refreshFailed, "says it may be old")
+
+        repository.failure = nil
+        await model.refresh()
+        #expect(!model.refreshFailed, "a good refresh clears it")
+    }
+
+    /// A first load that fails is the error card, not "may be old" (nothing was shown).
+    @Test func firstLoadFailureIsNotARefreshFailure() async {
+        let model = ShieldModel(repository: FailingRepository(), extensionStatus: { .active(lastSeen: Date()) })
+        await model.refresh()
+        #expect(model.state == .failed)
+        #expect(!model.refreshFailed)
+    }
+
+    /// A refresh cancelled after a good load (the view went away, a newer refresh took over) is not "may be old".
+    @Test func cancelledRefreshAfterALoadIsNotARefreshFailure() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
+        let model = ShieldModel(repository: repository, extensionStatus: { .active(lastSeen: Date()) })
+        await model.refresh()
+        repository.failure = URLError(.cancelled)
+        await model.refresh()
+        #expect(model.state == .loaded)
+        #expect(!model.refreshFailed)
+    }
+
     @Test func cancelledURLRequestIsNotAFailure() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .protected, latency: .zero))
         repository.failure = URLError(.cancelled)
