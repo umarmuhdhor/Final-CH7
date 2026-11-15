@@ -26,6 +26,9 @@ final class ProfileModel {
     private(set) var members: [FamilyMember] = []
     /// The family list could not be read; the rest of Profile still works.
     private(set) var membersFailed = false
+    /// Why the profile (`state == .failed`) or the family list (`membersFailed`) could not be read (A-03).
+    private(set) var loadFailure: LoadFailure = .connection
+    private(set) var membersLoadFailure: LoadFailure = .connection
     private(set) var isWorking = false
     /// Counts the name and avatar saves the server confirmed, so the view gives a success haptic.
     private(set) var profileSaves = 0
@@ -212,7 +215,10 @@ final class ProfileModel {
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Profile load failed", error)
-            if state != .loaded { state = .failed }
+            if state != .loaded {
+                loadFailure = LoadFailure(error)
+                state = .failed
+            }
             return
         }
         guard settings.mode == .guardian else { return }
@@ -222,6 +228,7 @@ final class ProfileModel {
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Profile members failed", error)
+            membersLoadFailure = LoadFailure(error)
             membersFailed = true
         }
     }

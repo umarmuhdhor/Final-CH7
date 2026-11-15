@@ -294,6 +294,16 @@ struct GuardianHomeModelTests {
         #expect(model.state == .failed)
     }
 
+    /// A-03 (fase 28m): a list the app can't read says "Something went wrong", not "Check your connection".
+    @Test(arguments: [RepositoryError.decoding, .api(.internal, message: "HTTP 500")])
+    func aServerFailureShowsTheGeneralSentence(_ error: RepositoryError) async throws {
+        let model = model(repository: FailingRepository(error: error), settings: try settings())
+        await model.refresh()
+        #expect(model.state == .failed)
+        #expect(L10n.string(model.loadFailure.message(connection: "Check your connection."), language: .english)
+            == "Something went wrong. Try again.")
+    }
+
     @Test func failedRefreshKeepsWhatIsShown() async throws {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
         let model = model(repository: repository, settings: try settings())

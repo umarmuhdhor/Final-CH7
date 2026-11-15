@@ -31,7 +31,7 @@ struct ProfileView: View {
             case .failed:
                 // Figma "Profile/Pribadi · Gagal memuat profil" (1681:6986): the card takes the profile card's
                 // place (370 × 344, r 20); the settings below still work.
-                ProfileLoadFailed { await model.load() }
+                ProfileLoadFailed(failure: model.loadFailure) { await model.load() }
                     .frame(minHeight: 344)
                     .background(ProfileStyle.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     // Figma: #1A264D at 6 %, y 4, blur 16.
@@ -232,7 +232,7 @@ struct ProfileView: View {
         ProfileSection(title: "People you protect", top: 32) {
             if model.membersFailed {
                 // Figma "Profile/Guardian · Gagal memuat" (1681:7088): the same card inside the section.
-                ProfileLoadFailed(identifier: "profile.members.retry") { await model.load() }
+                ProfileLoadFailed(identifier: "profile.members.retry", failure: model.membersLoadFailure) { await model.load() }
                     .transition(.opacity)
             } else if model.members.isEmpty {
                 FamilyEmptyCard { isInvitePresented = true }

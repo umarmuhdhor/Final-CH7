@@ -63,7 +63,7 @@ struct StateNoticeCard: View {
 
     var tone: Tone = .error
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
+    let message: Text
     var actionTitle: LocalizedStringKey?
     var cornerRadius: CGFloat = 12
     var action: (() async -> Void)?
@@ -86,7 +86,7 @@ struct StateNoticeCard: View {
                     .onboardingFont(17, weight: .semibold, design: .rounded, tracking: -0.43, relativeTo: .body)
                     .figmaLineHeight(22, relativeTo: .body)
                     .foregroundStyle(Self.ink)
-                Text(message)
+                message
                     .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                     .figmaLineHeight(18, relativeTo: .footnote)
                     .foregroundStyle(Self.line)
@@ -176,7 +176,7 @@ struct StateMessage: View {
     /// nil: the tint at 12 %.
     var tileFill: Color?
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
+    let message: Text
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var shown = false
 
@@ -195,7 +195,7 @@ struct StateMessage: View {
                 .foregroundStyle(Color(hex: 0x151617))
                 .padding(.top, 24)
                 .accessibilityAddTraits(.isHeader)
-            Text(message)
+            message
                 .onboardingFont(17, design: .rounded, relativeTo: .body)
                 .figmaLineHeight(22, relativeTo: .body)
                 .foregroundStyle(Color(hex: 0x6A717E))
@@ -287,10 +287,10 @@ struct SkeletonActivity: View {
 
 #Preview {
     VStack(spacing: 20) {
-        StateNoticeCard(title: "Couldn't load", message: "Check your connection.", actionTitle: "Try again") {
+        StateNoticeCard(title: "Couldn't load", message: Text("Check your connection."), actionTitle: "Try again") {
             try? await Task.sleep(for: .seconds(1))
         }
-        StateNoticeCard(tone: .info, title: "Can't be marked yet", message: "Open this site's details first.",
+        StateNoticeCard(tone: .info, title: "Can't be marked yet", message: Text("Open this site's details first."),
                         actionTitle: "Open details") {}
         SkeletonActivity(animating: true)
     }

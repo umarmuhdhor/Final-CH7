@@ -142,6 +142,26 @@ struct ProfileModelTests {
         #expect(model.state == .loaded)
         #expect(model.profile?.name == "Adhella")
         #expect(model.membersFailed)
+        #expect(model.membersLoadFailure == .connection)
+    }
+
+    /// A-03 (fase 28m): a family list or profile the app can't read says "Something went wrong", not
+    /// "Check your internet connection".
+    @Test func aServerFailureShowsTheGeneralSentence() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        repository.membersFailure = RepositoryError.decoding
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian))
+        await model.load()
+        #expect(model.membersFailed)
+        #expect(L10n.string(model.membersLoadFailure.message(connection: "Check your internet connection, then try again."),
+                            language: .english) == "Something went wrong. Try again.")
+
+        let failed = ProfileModel(repository: FailingRepository(error: .api(.internal, message: "HTTP 500")),
+                                  settings: settings(mode: .guardian))
+        await failed.load()
+        #expect(failed.state == .failed)
+        #expect(L10n.string(failed.loadFailure.message(connection: "Check your internet connection, then try again."),
+                            language: .indonesian) == "Ada yang salah. Coba lagi.")
     }
 
     @Test func editingTheNameClearsTheOldError() async {

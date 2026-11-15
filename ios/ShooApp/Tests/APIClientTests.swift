@@ -177,6 +177,47 @@ struct APIClientTests {
         }
     }
 
+    /// A-03 (fase 28m): a 5xx or an answer the app can't read is not the person's connection. The screen shows
+    /// the general sentence ("Something went wrong. Try again."), never "Check your connection".
+    @Test(arguments: ["500 contract", "500 empty", "502 html", "200 not the contract"])
+    func aServerFailureDoesNotAskToCheckTheConnection(_ kind: String) async throws {
+        let server = StubServer()
+        server.reply { _ in
+            switch kind {
+            case "500 contract": .json(500, #"{"error":{"code":"internal","message":"Something went wrong"}}"#)
+            case "500 empty": .json(500, "")
+            case "502 html": .json(502, "<html>Bad gateway</html>")
+            default: .json(200, #"{"unexpected":true}"#)
+            }
+        }
+        var thrown: (any Error)?
+        do {
+            let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
+        } catch {
+            thrown = error
+        }
+        let failure = LoadFailure(try #require(thrown))
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .english)
+            == "Something went wrong. Try again.")
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .indonesian)
+            == "Ada yang salah. Coba lagi.")
+    }
+
+    /// A-03 guard: no connection still asks to check it, in the screen's own words.
+    @Test func offlineStillAsksToCheckTheConnection() async throws {
+        let server = StubServer()
+        server.reply { _ in .offline() }
+        var thrown: (any Error)?
+        do {
+            let _: DeviceProfile = try await server.client().send(.init(method: .get, path: ["devices", "me"]))
+        } catch {
+            thrown = error
+        }
+        let failure = LoadFailure(try #require(thrown))
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .english) == "Check your connection.")
+        #expect(L10n.string(failure.message(connection: "Check your connection."), language: .indonesian) == "Periksa koneksi Anda.")
+    }
+
     @Test func offlineIsANetworkError() async {
         let server = StubServer()
         server.reply { _ in .offline() }

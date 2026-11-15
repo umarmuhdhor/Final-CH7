@@ -159,7 +159,10 @@ struct ActivityView: View {
                 .frame(maxWidth: .infinity, minHeight: 200)
                 .transition(.opacity)
         case .failed:
-            ActivityMessage(systemImage: "wifi.exclamationmark", title: "Couldn't load activity", message: "Check your connection and try again.") {
+            ActivityMessage(
+                systemImage: "wifi.exclamationmark", title: "Couldn't load activity",
+                message: Text(verbatim: L10n.string(model.loadFailure.message(connection: "Check your connection and try again."), language: language))
+            ) {
                 Button { Task { await model.retry() } } label: {
                     Text("Try again")
                         .activityFont(15, .semibold, tracking: -0.15)
@@ -665,7 +668,7 @@ struct ActivityRow: View {
 struct ActivityMessage<Action: View>: View {
     let systemImage: String
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
+    let message: Text
     @ViewBuilder var action: Action
 
     var body: some View {
@@ -682,7 +685,7 @@ struct ActivityMessage<Action: View>: View {
                     .activityFont(17, .semibold, tracking: -0.17)
                     .foregroundStyle(ActivityStyle.ink)
                     .accessibilityAddTraits(.isHeader)
-                Text(message)
+                message
                     .activityFont(15, tracking: -0.15)
                     .foregroundStyle(ActivityStyle.secondary)
             }
@@ -702,7 +705,7 @@ struct ActivityMessage<Action: View>: View {
 }
 
 extension ActivityMessage where Action == EmptyView {
-    init(systemImage: String, title: LocalizedStringKey, message: LocalizedStringKey) {
+    init(systemImage: String, title: LocalizedStringKey, message: Text) {
         self.init(systemImage: systemImage, title: title, message: message) { EmptyView() }
     }
 }

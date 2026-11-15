@@ -217,7 +217,11 @@ struct ProtectedShieldView: View {
             // Figma "protected/Home · Gagal memuat" (1665:3122): the card 28 under the sheet's top, "Aktivitas
             // Terakhir" 22 under it, then four grey rows.
             VStack(alignment: .leading, spacing: 22) {
-                StateNoticeCard(title: "Couldn't load", message: "Check your connection.", actionTitle: "Try again") {
+                StateNoticeCard(
+                    title: "Couldn't load",
+                    message: Text(verbatim: L10n.string(model.loadFailure.message(connection: "Check your connection."), language: language)),
+                    actionTitle: "Try again"
+                ) {
                     await model.retry()
                 }
                 .accessibilityIdentifier("shield.loadError")
