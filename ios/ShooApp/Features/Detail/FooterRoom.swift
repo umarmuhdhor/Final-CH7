@@ -10,6 +10,10 @@ import CoreGraphics
 /// (scrolling doesn't change it, and the footer in the page sits below it), the screen room outside the
 /// bottom inset, and the footer's own height (the same pinned or in the page: full width either way).
 /// So placing the footer can't change what decided it, and the layout settles in one pass.
+///
+/// The footer's height counts at its tallest at this text size: "Ubah" brings the buttons back and a saved choice
+/// swaps them for the verified card, and neither may send the footer back and forth under the guardian's finger.
+/// So it moves from the bottom into the page at most once, never back (Detail resets it for a new text size).
 struct FooterRoom: Equatable {
     /// The named coordinate space of Detail's scrolling page. The page is drawn from the top of the screen
     /// (under the status bar), so before any scroll a y in it is the same y on screen.
@@ -22,8 +26,12 @@ struct FooterRoom: Equatable {
     var titleBottom: CGFloat = 0
     /// Where a pinned footer ends on screen (global y, at the home indicator).
     var bottom: CGFloat = .infinity
-    /// The footer's height, its top padding and fade included. 0 until measured.
+    /// The footer's tallest height so far, its top padding and fade included. 0 until measured.
     var footer: CGFloat = 0
+
+    mutating func measured(footer height: CGFloat) {
+        footer = max(footer, height)
+    }
 
     /// True when a pinned footer would cover part of the title at the first look.
     var footerInPage: Bool {

@@ -24,6 +24,17 @@ struct FooterRoomTests {
         #expect(FooterRoom(titleBottom: 369 + FooterRoom.clearTop + 1, bottom: 667, footer: 298).footerInPage)
     }
 
+    /// "Ubah" grows the footer into the page; the shorter card after a save keeps it there (no jump back).
+    @Test func movesIntoThePageOnceAndStays() {
+        var room = FooterRoom(titleBottom: 441.5, bottom: 667)
+        room.measured(footer: 200)
+        #expect(!room.footerInPage)
+        room.measured(footer: 298)
+        #expect(room.footerInPage)
+        room.measured(footer: 200)
+        #expect(room.footerInPage)
+    }
+
     /// Before the footer has been measured nothing moves.
     @Test func staysPinnedUntilMeasured() {
         #expect(!FooterRoom(titleBottom: 441.5, bottom: 667).footerInPage)

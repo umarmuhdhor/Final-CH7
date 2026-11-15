@@ -7,6 +7,7 @@ import UIKit
 struct DetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.screenshotLoader) private var screenshotLoader
     @Environment(\.replicaLoader) private var replicaLoader
     @State private var model: DetailModel
@@ -190,6 +191,8 @@ struct DetailView: View {
         // Where a pinned footer ends: this frame stops at the home indicator. Read outside the inset, so the footer
         // never feeds it.
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { footerRoom.bottom = $0 }
+        // A new text size can shrink the footer again: decide afresh.
+        .onChange(of: dynamicTypeSize) { _, _ in footerRoom.footer = 0 }
         .sensoryFeedback(.success, trigger: model.verdictSaves)
         .sheet(isPresented: $askingSafeReason) {
             SafeReasonSheet { notes in
@@ -224,7 +227,7 @@ struct DetailView: View {
                 }
             }
         )
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerRoom.footer = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerRoom.measured(footer: $0) }
     }
 
     /// Figma "Sheet": white from y 284 with 32 pt corners; the link pill sits on its top edge.
