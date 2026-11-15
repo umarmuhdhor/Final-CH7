@@ -14,12 +14,19 @@ struct DetailFooter: View {
     let ownerName: String?
     /// Blocked sites ask "Apakah situs ini berbahaya?", warnings "Apakah situs ini benar penipuan?".
     var isBlocked = false
+    /// "Ubah" pressed: the buttons are back. Owned by Detail, so it survives the footer moving between the bottom
+    /// and the page (U-07); a footer of its own keeps it here.
+    var changing: Binding<Bool>?
     let onDecide: (Verdict.Value) -> Void
 
     @Environment(\.locale) private var locale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.shooReduceMotion) private var reduceMotion
-    @State private var isChanging = false
+    @State private var ownChanging = false
+    private var isChanging: Bool {
+        get { changing?.wrappedValue ?? ownChanging }
+        nonmutating set { if let changing { changing.wrappedValue = newValue } else { ownChanging = newValue } }
+    }
     private var language: AppLanguage { AppLanguage(locale: locale) }
 
     static func message(_ failure: DetailModel.VerdictError) -> LocalizedStringKey {
