@@ -530,4 +530,18 @@ struct ProfileModelTests {
         await model.load()
         #expect(model.username == "@adhella")
     }
+
+    /// A-08 (fase 28m): a member's heartbeat a few seconds ahead of this phone (a normal clock gap, the server
+    /// allows 5 min) or at the same second reads "just now", not "in 0s" / "dlm 0 dtk".
+    @Test(arguments: AppLanguage.allCases)
+    func BUG_A08_memberLastSeenAheadOfThisPhoneReadsAsJustNow(_ language: AppLanguage) {
+        let now = Date(timeIntervalSince1970: 1_792_584_000)
+        let justNow = language == .english ? "just now" : "baru saja"
+        #expect(MemberText.ago(now.addingTimeInterval(3), now: now, language: language) == justNow)
+        #expect(MemberText.ago(now, now: now, language: language) == justNow)
+        // Guard: two minutes ago still reads as a time ago.
+        let past = MemberText.ago(now.addingTimeInterval(-120), now: now, language: language)
+        #expect(past != justNow)
+        #expect(past.contains("2"))
+    }
 }

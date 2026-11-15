@@ -396,8 +396,10 @@ enum MemberText {
         return L10n.string("Extension off for \(duration(from: seen, to: now, language: language))", language: language)
     }
 
-    /// "2 mnt lalu".
+    /// "2 mnt lalu". Under a second ago, or ahead of this phone's clock (a normal gap between two phones): "baru saja",
+    /// never "in 0s" (A-08).
     static func ago(_ date: Date, now: Date = Date(), language: AppLanguage) -> String {
+        guard now.timeIntervalSince(date) >= 1 else { return L10n.string("just now", language: language) }
         let formatter = RelativeDateTimeFormatter()
         formatter.locale = language.locale
         formatter.unitsStyle = .abbreviated
