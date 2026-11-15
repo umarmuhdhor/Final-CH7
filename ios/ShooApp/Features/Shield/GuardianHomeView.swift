@@ -499,7 +499,29 @@ private struct PendingSiteCard: View {
         return LinearGradient(colors: stops, startPoint: .top, endPoint: .bottom)
     }
 
+    /// The "Couldn't save" notice's scroll target.
+    private static let verdictErrorAnchor = "home.verdictError.anchor"
+
     var body: some View {
+        // U-02 (fase 28e, K7): the notice stays at the card's foot (Figma 1665:3183), which can sit under the tab bar.
+        // When it shows, the page scrolls the least it can to show it whole; no motion with Reduce Motion. The card
+        // must stay inside Home's ScrollView for this to work. VoiceOver hears it, since the scroll doesn't move focus.
+        ScrollViewReader { proxy in
+            card
+                .onChange(of: failed) { _, failed in
+                    guard failed else { return }
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) {
+                        proxy.scrollTo(Self.verdictErrorAnchor)
+                    }
+                    AccessibilityNotification.Announcement(
+                        L10n.string("Couldn't save", language: language) + ". "
+                            + L10n.string("Check your connection.", language: language)
+                    ).post()
+                }
+        }
+    }
+
+    private var card: some View {
         VStack(spacing: 0) {
             Button(action: onOpen) {
                 VStack(spacing: 0) {
@@ -558,6 +580,7 @@ private struct PendingSiteCard: View {
                     .padding(.top, 26)
                     .transition(StateMotion.transition(reduceMotion: reduceMotion))
                     .accessibilityIdentifier("home.verdictError")
+                    .id(Self.verdictErrorAnchor)
             } else if notAllowed {
                 StateNoticeCard(tone: .info, title: "Can't be marked yet", message: "Open this site's details first.",
                                 actionTitle: "Open details", cornerRadius: 16) { onOpen() }
