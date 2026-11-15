@@ -50,7 +50,22 @@ const signal = z.object({
 // accepted and ignored: the owner is always the token's device (R3 §4).
 const scanBody = z
   .object({
-    url: z.string().max(2048).refine((s) => httpUrl(s) !== undefined, "must be an http(s) URL"),
+    // B-04, A-09 (fase 28 K12): the URL is stored in its normal form, new URL(url).href, the form GET /verdicts
+    // reads, public.verdict_link() expects and Foundation decodes (no dot segment, empty port, backslash, raw
+    // non-ASCII or edge space). Percent-encoding can make href longer than the raw string, so the 2048 limit is
+    // checked again on href (verdict_link() is null above it, and the scan would lose its row and verdict).
+    url: z
+      .string()
+      .max(2048)
+      .transform((s, ctx) => {
+        const u = httpUrl(s);
+        if (!u) {
+          ctx.addIssue({ code: "custom", message: "must be an http(s) URL" });
+          return z.NEVER;
+        }
+        return u.href;
+      })
+      .pipe(z.string().max(2048, "must be at most 2048 characters once normalized")),
     domain: z.string().max(253).regex(DOMAIN, "must be a lowercase registrable domain without www."),
     pageTitle: z.string().nullish(),
     faviconUrl: z.unknown().optional(),

@@ -313,6 +313,77 @@ describe("POST /scans: one Activity row per link (#241)", () => {
   });
 });
 
+describe("POST /scans stores the URL in its normal form (B-04, A-09, A-03 backend half; fase 28 K12)", () => {
+  // The extension sends origin + pathname from the WHATWG parser, so it never sends these forms. A crafted
+  // client with a connected member's token can. The stored URL is new URL(url).href: the form GET /verdicts
+  // reads, public.verdict_link() expects, and Foundation decodes in the app.
+  const toko = (url: string, extra: Record<string, unknown> = {}) => extensionBody(blocked92, { url, domain: "toko.example", ...extra });
+  const storedUrl = async (id: string) => (await sql`select url from scans where id = ${id}`)[0]!.url as string;
+  /** RFC 3986 characters only: no space, backslash, raw non-ASCII or control character (Foundation's URL decodes it). */
+  const RFC3986 = /^[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+$/;
+
+  it.each([
+    ["dot segment", "https://toko.example/x/../a", "https://toko.example/a"],
+    ["empty port", "https://toko.example:/a", "https://toko.example/a"],
+    ["unicode path", "https://toko.example/päth", "https://toko.example/p%C3%A4th"],
+    ["backslash for slash", "https://toko.example\\path", "https://toko.example/path"],
+    ["leading and trailing space", " https://toko.example/a ", "https://toko.example/a"],
+  ])("%s → 201, stored and listed as the normal form", async (_name, url, normal) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Mom");
+    await connect(g, p);
+    const id = await postOk(p, toko(url));
+    expect(await storedUrl(id)).toBe(normal);
+    const listed = (await list(g, "?owner=family")).body.items[0]!.url as string;
+    const members = (await (await call("/family/members", { token: g.token })).json()) as { members: { lastScan: { url: string } | null }[] };
+    expect([listed, members.members[0]!.lastScan!.url]).toEqual([normal, normal]);
+    expect(listed).toMatch(RFC3986);
+  });
+
+  it.each([
+    ["dot segment", "https://toko.example/x/../a"],
+    ["empty port", "https://toko.example:/a"],
+  ])("%s is the same Activity row as the plain link", async (_name, url) => {
+    const p = await createDevice("Mom");
+    const first = await postOk(p, toko("https://toko.example/a"));
+    expect(await postOk(p, toko(url))).toBe(first);
+    expect(await postOk(p, toko(url))).toBe(first);
+    expect((await list(p)).body.items).toHaveLength(1);
+  });
+
+  it.each([["tab inside", "https://toko.example/a\tb"], ["newline at the end", "https://toko.example/a\n"]])(
+    "%s → 422 invalid_body (control characters are refused, not stripped)",
+    async (_name, url) => {
+      const p = await createDevice("Mom");
+      const res = await post(p, toko(url));
+      expect(res.status).toBe(422);
+      expect(await errorCode(res)).toBe("invalid_body");
+    },
+  );
+
+  it("an IPv6 host → 422 invalid_body (no registrable domain; public.verdict_link() has no IPv6 form)", async () => {
+    const p = await createDevice("Mom");
+    for (const [url, domain] of [["https://[2001:db8::1]/a", "toko.example"], ["http://[::1]/a", "toko.example"]] as const) {
+      const res = await post(p, extensionBody(blocked92, { url, domain }));
+      expect(res.status, url).toBe(422);
+      expect(await errorCode(res)).toBe("invalid_body");
+    }
+  });
+
+  it("a raw non-ASCII path ≤ 2048 characters that is > 2048 once encoded → 422 invalid_body; exactly 2048 encoded → 201", async () => {
+    const p = await createDevice("Mom");
+    const over = `https://toko.example/${"ä".repeat(400)}`; // 421 raw, 2421 encoded
+    expect(over.length).toBeLessThanOrEqual(2048);
+    const res = await post(p, toko(over));
+    expect(res.status).toBe(422);
+    expect(await errorCode(res)).toBe("invalid_body");
+    expect((await sql`select count(*)::int as n from scans`)[0]!.n).toBe(0);
+    const at = `https://toko.example/${"ä".repeat(337)}aaaaa`; // 363 raw, 2048 encoded
+    const id = await postOk(p, toko(at));
+    expect((await storedUrl(id)).length).toBe(2048);
+  });
+});
+
 describe("POST /scans screenshotBase64 (ignored since fase 20a, K3 a)", () => {
   const ignoredLines = (spy: { mock: { calls: unknown[][] } }) =>
     spy.mock.calls.map((a) => a.map(String).join(" ")).filter((l) => l.includes("screenshot_ignored"));
