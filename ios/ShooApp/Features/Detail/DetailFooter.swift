@@ -53,6 +53,7 @@ struct DetailFooter: View {
                     .foregroundStyle(DetailStyle.secondary)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("detail.verdictQuestion")
                 buttons
             } else if let verdict {
                 VerifiedCard(
