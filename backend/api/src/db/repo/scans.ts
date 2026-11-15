@@ -1,4 +1,4 @@
-import type { Sql, TransactionSql } from "postgres";
+import type { PendingQuery, Row, Sql, TransactionSql } from "postgres";
 import { LOCK } from "../locks";
 import { addTombstones } from "./tombstones";
 import { lockedUntilSql } from "./verdictLock";
@@ -530,7 +530,13 @@ export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 // for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
 // else a not_safe on the domain unless the link is on a shared host. recordScan repeats this rule
 // ("has a verdict", B-02): change both together.
-function selectScans(sql: Sql) {
+// `from` yields the scan rows as `s`: the table for a detail, the already-cut page for a list
+// (fase 28o, OPT-01), so devices and the verdict lateral only run for rows that are returned.
+// A new `s.` column here must also be added to the page's column list in listScans.
+// The link is computed once per row: `offset 0` keeps the planner from inlining verdict_link into
+// every verdict comparison. And only when the owner has a verdict at all: without one nothing can
+// match, and the regexp costs about 45 µs per row (S17b median owner: 0.97 ms → 0.09 ms).
+function selectScans(sql: Sql, from: PendingQuery<Row[]>) {
   return sql`
     select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain,
            s.page_title as "pageTitle", s.score, s.status, s.signals,
@@ -544,10 +550,15 @@ function selectScans(sql: Sql) {
            ) || jsonb_strip_nulls(jsonb_build_object(
              'lockedUntil', ${lockedUntilSql(sql, "v.value", "v.decided_at")}
            )) end as verdict
-    from scans s
+    from ${from} s
     join devices d on d.id = s.owner_id
+    cross join lateral (
+      select case when exists (select 1 from verdicts x where x.owner_id = s.owner_id)
+                  then public.verdict_link(s.url) end as link
+      offset 0
+    ) k
     left join lateral (
-      select v.* from (select public.verdict_link(s.url) as link) k, verdicts v
+      select v.* from verdicts v
       where v.owner_id = s.owner_id
         and (v.url = k.link
              or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
@@ -563,21 +574,42 @@ export interface ListQuery {
   limit: number;
 }
 
-/** Newest first, keyset paging on (detected_at, id). Returns up to limit + 1 rows. */
+/**
+ * Newest first, keyset paging on (detected_at, id). Returns up to limit + 1 rows.
+ *
+ * The page is cut before anything is joined (fase 28o, OPT-01): per owner the newest limit + 1 rows
+ * after the cursor and with the status, through scans_owner_time, then the newest limit + 1 of those.
+ * Status and cursor sit inside the per-owner subquery: outside it, an owner's limit + 1 rows could be
+ * spent on rows the filter drops. Owners come from devices, so a repeated id counts once (as `in`).
+ */
 export async function listScans(sql: Sql, q: ListQuery): Promise<ScanRow[]> {
+  const n = q.limit + 1;
+  const page = sql`(
+    select t.* from devices o
+    cross join lateral (
+      -- Every s. column selectScans reads, no more.
+      select s.id, s.owner_id, s.url, s.domain, s.page_title, s.score, s.status, s.signals, s.screenshot_path,
+             s.favicon_path, s.favicon_ready_at, s.replica_path, s.replica_ready_at, s.detected_at
+      from scans s
+      where s.owner_id = o.id
+        ${q.status ? sql`and s.status = ${q.status}` : sql``}
+        ${q.cursor ? sql`and (s.detected_at, s.id) < (${q.cursor.at}::text::timestamptz, ${q.cursor.id})` : sql``}
+      order by s.detected_at desc, s.id desc
+      limit ${n}
+    ) t
+    where o.id in ${sql(q.owners)}
+    order by t.detected_at desc, t.id desc
+    limit ${n}
+  )`;
   return sql<ScanRow[]>`
-    ${selectScans(sql)}
-    where s.owner_id in ${sql(q.owners)}
-      ${q.status ? sql`and s.status = ${q.status}` : sql``}
-      ${q.cursor ? sql`and (s.detected_at, s.id) < (${q.cursor.at}::text::timestamptz, ${q.cursor.id})` : sql``}
-    order by s.detected_at desc, s.id desc
-    limit ${q.limit + 1}`;
+    ${selectScans(sql, page)}
+    order by s.detected_at desc, s.id desc`;
 }
 
 /** A scan the viewer may see: their own, or a member's while the family link exists (T1, T12). */
 export async function findVisibleScan(sql: Sql, id: string, viewerId: string): Promise<ScanRow | undefined> {
   const [row] = await sql<ScanRow[]>`
-    ${selectScans(sql)}
+    ${selectScans(sql, sql`scans`)}
     where s.id = ${id}
       and (s.owner_id = ${viewerId}
            or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = ${viewerId}))`;
