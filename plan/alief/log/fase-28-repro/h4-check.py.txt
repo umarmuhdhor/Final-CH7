@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""Fase 28 hunter 4: layout facts from the accessibility-tree dumps of Fase28MatrixUITests.
+usage: h4-check.py <shots dir> <xcstrings> [tag ...]   -> prints one line per flagged cell + totals."""
+import json, sys, os, glob, collections
+root, catalog = sys.argv[1], sys.argv[2]
+tags = sys.argv[3:] or sorted(os.listdir(root))
+BUTTON, SWITCH, LINK, TEXT, FIELD, KEYBOARD, TABBAR, ALERT, IMAGE = 9, 40, 42, 48, 49, 19, 22, 7, 43
+cat = json.load(open(catalog))["strings"]
+en_only = {}
+for key, v in cat.items():
+    idv = v.get("localizations", {}).get("id", {}).get("stringUnit", {}).get("value")
+    if idv and idv != key and len(key) > 3 and "%" not in key: en_only[key] = idv
+def inter(a, b):
+    w = min(a["x"]+a["w"], b["x"]+b["w"]) - max(a["x"], b["x"]); h = min(a["y"]+a["h"], b["y"]+b["h"]) - max(a["y"], b["y"])
+    return w*h if w > 0 and h > 0 else 0
+tot = collections.Counter()
+for tag in tags:
+    lang_id = "-id-" in tag or tag.split("-")[0] in ("A", "D", "F")
+    for f in sorted(glob.glob(os.path.join(root, tag, "*.json"))):
+        d = json.load(open(f)); nodes = d["nodes"]; name = d["name"]
+        if not nodes: print(tag, name, "EMPTY TREE"); continue
+        W, Hh = nodes[0]["w"], nodes[0]["h"]
+        # ancestors
+        stack = []; kb = None; tab = None
+        for i, n in enumerate(nodes):
+            while stack and nodes[stack[-1]]["d"] >= n["d"]: stack.pop()
+            n["anc"] = list(stack); stack.append(i)
+            if n["t"] == KEYBOARD and n["h"] > 100: kb = i
+            if n["t"] == TABBAR: tab = i
+        def under(i, a): return a is not None and (i == a or a in nodes[i]["anc"])
+        vis = lambda n: n["w"] > 1 and n["h"] > 1 and n["y"] + n["h"] > 0 and n["y"] < Hh
+        full = lambda n: vis(n) and n["y"] >= 0 and n["y"] + n["h"] <= Hh
+        flags = []
+        alert = any(n["t"] == ALERT for n in nodes)
+        for i, n in enumerate(nodes):
+            if not vis(n) or under(i, kb): continue
+            lab = n.get("l", ""); ident = n.get("id", "")
+            if n["t"] in (BUTTON, SWITCH, LINK, TEXT, FIELD) and (n["x"] < -1 or n["x"] + n["w"] > W + 1) and n["w"] <= W * 1.5:
+                flags.append(f"OFFX {ident or lab[:30]} x={n['x']:.0f} w={n['w']:.0f}")
+            if n["t"] in (BUTTON, SWITCH, LINK) and full(n) and n["en"] and min(n["w"], n["h"]) < 43.5 and not under(i, tab) and not alert:
+                flags.append(f"SMALL {ident or lab[:30]} {n['w']:.0f}x{n['h']:.0f}")
+            if n["t"] == BUTTON and not lab and full(n) and not alert:
+                flags.append(f"NOLABEL {ident or '?'} at {n['x']:.0f},{n['y']:.0f}")
+            if n["t"] == IMAGE and not lab and ident and full(n): pass
+            if kb is not None and n["t"] in (BUTTON, FIELD) and not under(i, kb):
+                k = nodes[kb]
+                if inter(n, k) > 0.3 * n["w"] * n["h"]: flags.append(f"UNDERKB {ident or lab[:30]}")
+            if tab is not None and n["t"] in (BUTTON, SWITCH, LINK) and not under(i, tab) and name.endswith("-end"):
+                t = nodes[tab]
+                if inter(n, t) > 0.3 * n["w"] * n["h"]: flags.append(f"UNDERTAB {ident or lab[:30]}")
+            if lang_id and n["t"] in (TEXT, BUTTON) and lab in en_only:
+                flags.append(f"EN '{lab[:40]}' (id: '{en_only[lab][:30]}')")
+        texts = [(i, n) for i, n in enumerate(nodes) if n["t"] == TEXT and vis(n) and n.get("l") and not under(i, kb)]
+        for a in range(len(texts)):
+            for b in range(a + 1, len(texts)):
+                (i, x), (j, y) = texts[a], texts[b]
+                if i in y["anc"] or j in x["anc"] or x["l"] == y["l"]: continue
+                ov = inter(x, y)
+                if ov > 0.25 * min(x["w"]*x["h"], y["w"]*y["h"]) and ov > 60:
+                    flags.append(f"OVERLAP '{x['l'][:25]}' ~ '{y['l'][:25]}'")
+        for note in d["notes"]:
+            if note.startswith("missing") or "not hittable" in note or "snapshot failed" in note: flags.append("NOTE " + note)
+        tot[tag, "cells"] += 1
+        if "MISSING" in name: flags.append("CELL-MISSING")
+        if flags:
+            tot[tag, "flagged"] += 1
+            seen = []
+            for fl in flags:
+                if fl not in seen: seen.append(fl)
+            print(f"{tag} | {name} | " + " ; ".join(seen[:12]))
+for k in sorted(tot): print("TOTAL", k, tot[k])

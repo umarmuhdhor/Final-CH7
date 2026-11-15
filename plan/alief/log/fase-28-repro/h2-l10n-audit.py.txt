@@ -1,0 +1,80 @@
+import json, re, sys, os, glob
+root = sys.argv[1]
+cat = json.load(open(os.path.join(root, 'Resources/Localizable.xcstrings')))
+S = cat['strings']; src = cat.get('sourceLanguage')
+def val(entry, lang):
+    loc = entry.get('localizations', {}).get(lang)
+    if not loc: return None
+    if 'stringUnit' in loc: return loc['stringUnit'].get('value')
+    if 'variations' in loc: return 'VARIATIONS:' + ','.join(loc['variations'].keys())
+    return None
+def state(entry, lang):
+    loc = entry.get('localizations', {}).get(lang, {})
+    return loc.get('stringUnit', {}).get('state')
+print('source', src, 'keys', len(S))
+missing_id = [k for k,e in S.items() if val(e,'id') is None]
+empty_id = [k for k,e in S.items() if val(e,'id') == '']
+print('missing id', len(missing_id), missing_id[:40])
+print('empty id', len(empty_id))
+states = {}
+for k,e in S.items():
+    for l in e.get('localizations', {}):
+        states.setdefault((l, state(e,l)), []).append(k)
+print({k: len(v) for k,v in states.items()})
+for (l,s),v in states.items():
+    if s not in ('translated', None): print('STATE', l, s, v[:30])
+stale = [k for k,e in S.items() if e.get('extractionState') == 'stale']
+print('extractionState stale', len(stale))
+# symbolic keys (foo.bar) need an explicit en value
+symbolic = [k for k in S if re.fullmatch(r'[a-z][A-Za-z0-9]*(\.[A-Za-z0-9]+)+', k)]
+print('symbolic keys', len(symbolic), 'without en:', [k for k in symbolic if val(S[k],'en') is None])
+def en(k): return val(S[k],'en') or k
+same = [k for k,e in S.items() if val(e,'id') is not None and val(e,'id') == en(k) and re.search(r'[A-Za-z]{3}', en(k))]
+print('id == en', len(same)); [print('   SAME', repr(k)) for k in same]
+ph = re.compile(r'%(?:\d+\$)?(?:lld|ld|d|@|lf|f|u|llu)')
+bad = []
+for k,e in S.items():
+    i = val(e,'id')
+    if i is None or i.startswith('VARIATIONS'): continue
+    a = sorted(re.sub(r'\d+\$','',p) for p in ph.findall(en(k))); b = sorted(re.sub(r'\d+\$','',p) for p in ph.findall(i))
+    if a != b: bad.append((k, i))
+print('placeholder mismatch', len(bad), bad[:10])
+plural = [k for k,e in S.items() if any('variations' in l for l in e.get('localizations', {}).values())]
+print('keys with plural variations', len(plural), plural[:20])
+counted = [k for k in S if re.search(r'%(lld|d)', en(k)) and k not in plural]
+print('keys with a number and no plural rule', len(counted)); [print('   COUNT', repr(en(k)), '|', repr(val(S[k],'id'))) for k in counted]
+# usage
+code = ''
+for f in glob.glob(os.path.join(root, '**/*.swift'), recursive=True):
+    if '/Tests/' in f or '/UITests/' in f: continue
+    code += open(f).read() + '\n'
+def norm_key(k): return re.sub(r'%(?:\d+\$)?(?:lld|ld|d|@|lf|f|u|llu)', '\x00', k)
+lits = set(re.findall(r'"((?:[^"\\\n]|\\.)*)"', code))
+def norm_lit(s):
+    out=''; i=0
+    while i < len(s):
+        if s.startswith('\\(', i):
+            d=1; i+=2
+            while i < len(s) and d:
+                d += s[i]=='('; d -= s[i]==')'; i+=1
+            out += '\x00'
+        else: out += s[i]; i+=1
+    return out.replace('\\"','"').replace('\\n','\n').replace('%%','%')
+nl = {norm_lit(s) for s in lits}
+unused = [k for k in S if norm_key(k).replace('%%','%') not in nl]
+print('catalog keys not found as a Swift literal', len(unused), 'of which marked stale', len([k for k in unused if k in stale]))
+print('   not stale but unused:', [k for k in unused if k not in stale][:60])
+used_stale = [k for k in stale if k not in unused]
+print('marked stale but used in Swift', len(used_stale), used_stale[:40])
+# literals in Text(...)/Label/Button/L10n.string/LocalizationValue not in the catalog
+keysn = {norm_key(k).replace('%%','%') for k in S}
+cands = set()
+for m in re.finditer(r'(?:Text|Label|Button|L10n\.string|accessibilityLabel|accessibilityHint|accessibilityValue|navigationTitle|LocalizedStringKey|HomeSectionTitle|title:|message:|actionTitle:|subtitle:|label:)\s*\(?\s*"((?:[^"\\\n]|\\.)*)"', code):
+    s = m.group(1)
+    pre = code[max(0,m.start()-0):m.start()+30]
+    if 'verbatim' in pre: continue
+    cands.add(s)
+for m in re.finditer(r'(?:LocalizationValue\??|LocalizedStringKey\??)\s*(?:\{|=)[^}]*?\}', code, re.S):
+    for s in re.findall(r'"((?:[^"\\\n]|\\.)*)"', m.group(0)): cands.add(s)
+missing = sorted(s for s in cands if norm_lit(s) not in keysn and re.search(r'[A-Za-z]{2}', s) and not re.fullmatch(r'[a-z0-9_.\-]+', s))
+print('UI literals not in the catalog', len(missing)); [print('   MISSING', repr(s)) for s in missing]

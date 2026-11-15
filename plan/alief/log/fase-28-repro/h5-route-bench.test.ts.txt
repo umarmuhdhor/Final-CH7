@@ -1,0 +1,148 @@
+// Fase 28 hunter 5 (performance): TEMPORARY measurement, not a suite test. Lives in plan/alief/log/fase-28-repro/
+// as h5-route-bench.test.ts.txt; copy to backend/api/test/ to run it, then delete it again.
+// Runs every hot route through the real Worker code (workerd, vitest pool) against the volume DB shoo_f28_perf
+// (h5-seed.sql) and prints, per route: statements and SQL time (pg_stat_statements, role shoo_api), WAL bytes,
+// wall time in workerd and response size. Never calls resetDb. Refuses any other database.
+//   Set both SHOO_TEST_DB_URL and SHOO_TEST_ADMIN_DB_URL to the volume DB shoo_f28_perf (never port 54322),
+//   see plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah" for db_guard, then:
+//   cd backend/api && db_guard && npx vitest run test/zz-h5-perf.test.ts
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+import postgres from "postgres";
+import { expect, it } from "vitest";
+import blocked92 from "../../../contracts/fixtures/blocked-92.json";
+import { app } from "../src/app";
+import { gzipBase64, SAMPLE_HTML } from "./helpers/replica";
+
+const admin = postgres(env.DB_ADMIN.connectionString, { max: 1, fetch_types: false });
+
+interface Row { route: string; n: number; status: number; stmts: number; sqlMs: number; walBytes: number; wallP50: number; wallMax: number; bytes: number }
+const rows: Row[] = [];
+
+async function stats(): Promise<{ calls: number; ms: number; wal: number }> {
+  const [r] = await admin<{ calls: number; ms: number; wal: number }[]>`
+    select coalesce(sum(calls), 0)::float8 as calls, coalesce(sum(total_exec_time), 0)::float8 as ms, coalesce(sum(wal_bytes), 0)::float8 as wal
+    from extensions.pg_stat_statements s
+    where s.dbid = (select oid from pg_database where datname = current_database())
+      and s.userid = (select oid from pg_roles where rolname = 'shoo_api')`;
+  return r!;
+}
+
+/** One request with its waitUntil work finished (favicon, push, replica), like a whole invocation. */
+async function once(path: string, init: RequestInit & { token: string; json?: unknown }): Promise<{ res: Response; ms: number; bytes: number }> {
+  const headers = new Headers(init.headers);
+  headers.set("authorization", `Bearer ${init.token}`);
+  headers.set("cf-connecting-ip", "198.51.100.77");
+  let body = init.body;
+  if (init.json !== undefined) {
+    headers.set("content-type", "application/json");
+    body = JSON.stringify(init.json);
+  }
+  const ctx = createExecutionContext();
+  const t = performance.now();
+  const res = await app.fetch(new Request(`http://api.test${path}`, { ...init, headers, body }), env, ctx);
+  const text = await res.clone().text();
+  await waitOnExecutionContext(ctx);
+  const ms = performance.now() - t;
+  // The Worker opens one postgres.js client per request and never ends it (Hyperdrive does in the cloud).
+  // Here nothing closes them, so the bench drops its own idle shoo_api sessions on this database only (else 53300).
+  await admin`select pg_terminate_backend(pid) from pg_stat_activity
+              where datname = 'shoo_f28_perf' and usename = 'shoo_api' and state = 'idle' and pid <> pg_backend_pid()`;
+  return { res, ms, bytes: text.length };
+}
+
+async function bench(route: string, n: number, make: (i: number) => { path: string; init: RequestInit & { token: string; json?: unknown } }): Promise<Response> {
+  const warm = make(-1);
+  await once(warm.path, warm.init); // connection + prepared statements
+  const before = await stats();
+  const times: number[] = [];
+  let last!: Response;
+  let bytes = 0;
+  for (let i = 0; i < n; i++) {
+    const { path, init } = make(i);
+    const r = await once(path, init);
+    times.push(r.ms);
+    last = r.res;
+    bytes = r.bytes;
+  }
+  const after = await stats();
+  times.sort((a, b) => a - b);
+  rows.push({
+    route, n, status: last.status,
+    stmts: +((after.calls - before.calls) / n).toFixed(1),
+    sqlMs: +((after.ms - before.ms) / n).toFixed(2),
+    walBytes: Math.round((after.wal - before.wal) / n),
+    wallP50: +times[Math.floor(n / 2)]!.toFixed(1), wallMax: +times[n - 1]!.toFixed(1), bytes,
+  });
+  return last;
+}
+
+it("h5 route bench on shoo_f28_perf", async () => {
+  const [db] = await admin<{ db: string }[]>`select current_database() as db`;
+  if (db!.db !== "shoo_f28_perf") throw new Error(`refusing to run on ${db!.db}`);
+
+  // Devices from the seed: the family with most scans, the single owner with most scans, a median family.
+  const [g] = await admin<{ id: string }[]>`
+    select l.guardian_id as id from family_links l join scans s on s.owner_id = l.protected_id group by 1 order by count(*) desc limit 1`;
+  const [m] = await admin<{ id: string }[]>`select protected_id as id from family_links where guardian_id = ${g!.id} order by protected_id limit 1`;
+  const [h] = await admin<{ id: string }[]>`select owner_id as id from scans group by 1 order by count(*) desc limit 1`;
+  const [a] = await admin<{ id: string }[]>`
+    select guardian_id as id from (select l.guardian_id, count(*) n from family_links l join scans s on s.owner_id = l.protected_id group by 1) c
+    order by n offset 750 limit 1`;
+  const tokens = { guardian: "shoo_h5perf_guardian_0001", member: "shoo_h5perf_member_00001", heavy: "shoo_h5perf_heavy_000001", avg: "shoo_h5perf_avgguard_0001" };
+  for (const [k, id] of [["guardian", g!.id], ["member", m!.id], ["heavy", h!.id], ["avg", a!.id]] as const) {
+    await admin`update devices set token_hash = sha256(${tokens[k]}::bytea), last_seen_at = now() where id = ${id}`;
+  }
+  const [ms] = await admin<{ id: string; url: string; domain: string }[]>`
+    select id, url, domain from scans where owner_id = ${m!.id} order by detected_at desc limit 1`;
+  const undecided = await admin<{ id: string }[]>`
+    select s.id from scans s where s.owner_id = ${m!.id}
+      and not exists (select 1 from verdicts v where v.owner_id = s.owner_id and v.domain = s.domain)
+    order by s.detected_at desc limit 20`;
+  const counts = await admin`select (select count(*)::int from scans where owner_id = ${h!.id}) as heavy,
+    (select count(*)::int from scans where owner_id in (select ${g!.id} union select protected_id from family_links where guardian_id = ${g!.id})) as family,
+    (select count(*)::int from scans where owner_id in (select ${a!.id} union select protected_id from family_links where guardian_id = ${a!.id})) as avgfamily,
+    (select count(*)::int from verdicts where owner_id = ${m!.id}) as member_verdicts`;
+  console.log("H5 DATA " + JSON.stringify(counts[0]));
+
+  const get = (token: string, path: string) => ({ path, init: { method: "GET", token } });
+  await bench("GET /devices/me (guardian)", 15, () => get(tokens.guardian, "/devices/me"));
+  await bench("GET /devices/me (protected)", 15, () => get(tokens.member, "/devices/me"));
+  await bench("PATCH /devices/me heartbeat", 15, () => ({ path: "/devices/me", init: { method: "PATCH", token: tokens.member, json: { extensionLastSeenAt: new Date().toISOString() } } }));
+  await bench("GET /family/members", 15, () => get(tokens.guardian, "/family/members"));
+  await bench("GET /scans owner=me, median-ish (avg guardian own)", 15, () => get(tokens.avg, "/scans?owner=me"));
+  await bench("GET /scans owner=me, heaviest owner", 10, () => get(tokens.heavy, "/scans?owner=me"));
+  await bench("GET /scans owner=me limit=50, heaviest owner", 6, () => get(tokens.heavy, "/scans?owner=me&limit=50"));
+  await bench("GET /scans owner=family, median family", 10, () => get(tokens.avg, "/scans?owner=family"));
+  const first = await bench("GET /scans owner=family, heaviest family, page 1", 5, () => get(tokens.guardian, "/scans?owner=family"));
+  const cursor = ((await first.json()) as { nextCursor: string }).nextCursor;
+  await bench("GET /scans owner=family, heaviest family, page 2", 5, () => get(tokens.guardian, `/scans?owner=family&cursor=${encodeURIComponent(cursor)}`));
+  await bench("GET /scans owner=<member>, heaviest family", 5, () => get(tokens.guardian, `/scans?owner=${m!.id}`));
+  await bench("GET /scans/:id (guardian views member scan)", 15, () => get(tokens.guardian, `/scans/${ms!.id}`));
+  await bench("GET /verdicts?url=&domain= (poll)", 15, () => get(tokens.member, `/verdicts?url=${encodeURIComponent(ms!.url)}&domain=${ms!.domain}`));
+  await bench("GET /config/public", 10, () => get(tokens.member, "/config/public"));
+  await bench("GET /blocklist (full, 1440 domains)", 5, () => get(tokens.member, "/blocklist"));
+  await bench("GET /blocklist?since=now-1h (delta)", 10, () => get(tokens.member, `/blocklist?since=${encodeURIComponent(new Date(Date.now() - 3600_000).toISOString())}`));
+
+  const scanBody = (i: number, extra: Record<string, unknown> = {}) => ({
+    url: `https://h5-bench-${i}.bca-verifikasi.site/login?ref=wa`, domain: "bca-verifikasi.site", pageTitle: blocked92.pageTitle, faviconUrl: null,
+    score: 92, status: "blocked", signals: blocked92.signals, detectedAt: new Date().toISOString(), thresholdsVersion: 0, ...extra,
+  });
+  const stamp = Date.now() % 100000;
+  await bench("POST /scans new link, protected member (no replica)", 15, (i) => ({ path: "/scans", init: { method: "POST", token: tokens.member, json: scanBody(stamp * 100 + i + 50) } }));
+  await bench("POST /scans repeat visit of a known link", 15, () => ({ path: "/scans", init: { method: "POST", token: tokens.member, json: scanBody(stamp * 100 + 50) } }));
+  const replica = await gzipBase64(SAMPLE_HTML + "<p>" + "bukti halaman ".repeat(4000) + "</p>");
+  const fragments = await gzipBase64("<section>" + "bukti ".repeat(500) + "</section>");
+  await bench("POST /scans new link + page replica + evidence fragments", 10, (i) => ({
+    path: "/scans",
+    init: { method: "POST", token: tokens.member, json: { ...scanBody(stamp * 100 + i + 80), domain: `h5r${stamp}-${i + 2}.site`, url: `https://h5r${stamp}-${i + 2}.site/login`, pageReplicaBase64: replica, evidenceFragmentsBase64: fragments } },
+  }));
+  await bench("POST /verdicts not_safe on a member scan", Math.min(10, undecided.length - 1), (i) => ({
+    path: "/verdicts", init: { method: "POST", token: tokens.guardian, json: { scanId: undecided[i + 1]!.id, value: "not_safe", notes: "catatan" } },
+  }));
+  await bench("POST /family/code", 4, () => ({ path: "/family/code", init: { method: "POST", token: tokens.avg } }));
+
+  console.log("H5 ROUTES\n" + ["route | n | status | statements/req | SQL ms/req | WAL bytes/req | wall p50 ms | wall max ms | response bytes",
+    ...rows.map((r) => `${r.route} | ${r.n} | ${r.status} | ${r.stmts} | ${r.sqlMs} | ${r.walBytes} | ${r.wallP50} | ${r.wallMax} | ${r.bytes}`)].join("\n"));
+  expect(rows.length).toBeGreaterThan(10);
+}, 600_000);

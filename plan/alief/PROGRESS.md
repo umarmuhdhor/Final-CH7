@@ -37,6 +37,7 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 | 25 | Verdict realtime | be | feat/EX-06-verdict-latency-log → spike DO | [m] | 1 Nov 2026 | | #217 (merged) | 25a log `verdict_seen` merged; berhenti di LANGKAH MANUAL 1–3, 7 (baseline cloud + 2 iPhone); 25b/25c menunggu jawaban Umar Q1–Q5 (EX-06), dipindah dari PR #217 ke issue #350 (9 Nov) | log/fase-25.md |
 | 26 | Undangan setelah install | c | feat/PR-03-deferred-invite-page | [x] | 1 Nov 2026 | 1 Nov 2026 | #216 (merged) | 26b teks halaman undangan merged (teks dirapikan lagi di #223); d1/U6 #208 dan 26a #220 dibatalkan (ditutup 1 Nov); `APP_STORE_URL` masih kosong, pertanyaan link Install dipindah dari PR #216 ke issue #351 | log/fase-26.md |
 | 27 | Audit state machine tersirat + perbaikan | c | docs/alief-fase-27-state-machines → fix/* (27a–27k), docs/alief-R4-state-machine | [~] | 11 Nov 2026 | | | 27-0 plan + bukti: 1 tinggi (onboarding undangan), 14 sedang, ±20 rendah; semua sedang/tinggi dibuktikan test repro yang gagal di `02d590e4` (backend 6, app 5/7 asersi) atau dibaca dari kode; Q1–Q5 menunggu persetujuan Alief | log/fase-27.md |
+| 28 | Truth hunt: fakta salah, bug, edge case, celah, jalur lambat + perbaikan | c | docs/alief-fase-28-truth-hunt → fix/* (28a–28p; 28n = docs/alief-fase-28n-ax3; 28p hanya kalau 28n memintanya) | [ ] | | | | Plan ditulis 13 Nov 2026, belum dikerjakan. Audit 6 hunter + 3 reviewer di `9e5403ba`: P0 0, P1 2 (A-01 dua Home, U-01; P0 menurut bacaan ketat, Alief memutuskan), P2 6 milik Alief + 1 performa (OPT-02), P3 26 baris; 4 ditolak reviewer, 7 sudah diketahui, 7 lapor saja (Umar / Imelda), 37 draf pertanyaan belum dibuka (Q1 sampai Q35, Q7 dan Q22 dipecah); butir produk menunggu persetujuan Alief | log/fase-28.md |
 
 ## Gate & milestone
 
@@ -92,3 +93,4 @@ Waktu dalam WITA. Setiap track **hanya mengedit baris fasenya sendiri** (supaya 
 |---|---|---|---|---|---|---|---|---|
 | QA-A | 06Q | 22 Okt 2026 | 0 | 0 | 7 (6 ditutup) | 2 | Siap | qa/QA-A-2026-10-22.md |
 | QA-E2E | 16 | | | | | | | |
+| Truth hunt (fase 28) | 28 | 13 Nov 2026 | 0 (2 kalau bacaan ketat, K19) | 2 | 6 | 26 | Menunggu K19: diisi setelah Alief memutuskan P0 atau P1 untuk A-01 / U-01 (plan K19, DoD) | qa/edge-matrix-2026-11-13.md |

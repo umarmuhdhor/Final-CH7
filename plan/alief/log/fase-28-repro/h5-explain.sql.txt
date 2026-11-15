@@ -1,0 +1,343 @@
+-- Fase 28 hunter 5: EXPLAIN (ANALYZE, BUFFERS) for every statement the Worker runs on a route or cron.
+-- DB shoo_f28_perf only, after h5-seed.sql. Run:
+--   ./p.sh -c "create schema if not exists h5; drop table if exists h5.idx_before; create table h5.idx_before as select indexrelid, idx_scan from pg_stat_user_indexes; grant usage on schema h5 to shoo_api; grant select on h5.idx_before to shoo_api"
+--   ./pa.sh < h5-explain.sql > h5-explain.out 2>&1      (pa.sh = psql as role shoo_api, the Worker's role)
+-- Statements are copied from backend/api/src (file named in each \echo). Parameters are literals picked below
+-- (custom plans; postgres.js sends them as bind parameters, so a generic plan can differ after 5 runs).
+-- Every statement runs as role shoo_api (RLS on, policy `using (true)`), as the Worker does through Hyperdrive.
+-- Writes run inside begin/rollback, so the data set stays the same for the next statement.
+\set ON_ERROR_STOP 0
+\timing off
+select current_database() = 'shoo_f28_perf' as ok \gset
+\if :ok
+\else
+  \echo 'wrong database' \quit
+\endif
+
+-- ---------- parameters ----------
+-- heavy owner: most scans in 14 days. avg owner: the median. guardian: the family with most scans.
+select owner_id as heavy from scans group by 1 order by count(*) desc limit 1 \gset
+select owner_id as avg_owner from (select owner_id, count(*) n from scans group by 1) c order by n offset 3000 limit 1 \gset
+select l.guardian_id as guardian from family_links l join scans s on s.owner_id = l.protected_id group by 1 order by count(*) desc limit 1 \gset
+select protected_id as member from family_links where guardian_id = :'guardian' order by protected_id limit 1 \gset
+select guardian_id as avg_guardian from (select l.guardian_id, count(*) n from family_links l join scans s on s.owner_id = l.protected_id group by 1) c order by n offset 750 limit 1 \gset
+select protected_id as avg_member from family_links where guardian_id = :'avg_guardian' order by protected_id limit 1 \gset
+select encode(token_hash, 'hex') as tokhash from devices where id = :'heavy' \gset
+select domain as heavy_domain, count(*) from scans where owner_id = :'heavy' group by 1 order by 2 desc limit 1 \gset
+select id as heavy_scan, url as heavy_url from scans where owner_id = :'heavy' and domain = :'heavy_domain' order by created_at desc limit 1 \gset
+select id as member_scan, url as member_url, domain as member_domain from scans where owner_id = :'member' order by detected_at desc limit 1 \gset
+select s.id as replica_scan, s.owner_id as replica_owner, s.domain as replica_domain from scans s where replica_bytes is not null and created_at > now() - interval '20 hours' order by created_at limit 1 \gset
+select v.owner_id as v_owner, v.url as v_url, v.domain as v_domain from verdicts v where v.owner_id = :'member' limit 1 \gset
+select code as live_code, guardian_id as code_guardian from family_codes where expires_at > now() limit 1 \gset
+select encode(key_hash, 'hex') as rl_dev from rate_limit_hits where bucket = 'scans_create' and hit_at > now() - interval '1 hour' group by 1 order by count(*) desc limit 1 \gset
+select encode(sha256('scans_create_all:all'::bytea), 'hex') as rl_all \gset
+select to_char(detected_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as cur_at, id as cur_id
+  from scans where owner_id in (select :'guardian' union select protected_id from family_links where guardian_id = :'guardian')
+  order by detected_at desc, id desc offset 180 limit 1 \gset
+select string_agg(quote_literal(id), ',') as fam_ids from (select :'guardian'::text as id union select protected_id from family_links where guardian_id = :'guardian') f \gset
+\echo PARAMS heavy/avg owner scans, family scans:
+select (select count(*) from scans where owner_id = :'heavy') heavy_scans, (select count(*) from scans where owner_id = :'avg_owner') avg_scans,
+       (select count(*) from scans where owner_id in (:fam_ids)) family_scans,
+       (select count(*) from scans where owner_id = :'heavy' and domain = :'heavy_domain') heavy_domain_rows;
+
+\set X 'explain (analyze, buffers, costs off, timing on, summary on)'
+
+\echo ===== S01 auth findByTokenHash (http/auth.ts, every authenticated request)
+:X select id, mode, name, language, last_seen_at < now() - interval '5 minutes' as stale from devices where token_hash = decode(:'tokhash', 'hex');
+\echo ===== S02 auth touchLastSeen (once per 5 min per device)
+begin; :X update devices set last_seen_at = now() where id = :'heavy' and last_seen_at < now() - interval '5 minutes'; rollback;
+
+\echo ===== S03 rate limit hit(): count for one device, 1 h window (scans_create)
+:X select count(*)::int as n, ceil(extract(epoch from (min(hit_at) + make_interval(secs => 3600) - now())))::int as retry
+   from rate_limit_hits where bucket = 'scans_create' and key_hash = decode(:'rl_dev', 'hex') and hit_at > now() - make_interval(secs => 3600);
+\echo ===== S03b rate limit hit(): insert
+begin; :X insert into rate_limit_hits (bucket, key_hash) values ('scans_create', decode(:'rl_dev', 'hex')); rollback;
+\echo ===== S04 rate limit hitLight(): scans_create_all key "all", 1 h window (every POST /scans)
+begin; :X with recent as (
+      select count(*)::int as n, ceil(extract(epoch from (min(hit_at) + make_interval(secs => 3600) - now())))::int as retry
+      from rate_limit_hits where bucket = 'scans_create_all' and key_hash = decode(:'rl_all', 'hex') and hit_at > now() - make_interval(secs => 3600)
+    ), added as (insert into rate_limit_hits (bucket, key_hash) select 'scans_create_all', decode(:'rl_all', 'hex') from recent where n < 2000)
+    select n, retry from recent; rollback;
+
+\echo ===== S05 publicThresholds (POST /scans with thresholdsVersion, GET /config/public)
+:X select warn_at, block_at, version, to_char(updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as updated_at from admin.public_config;
+
+\echo ===== S06 recordScan: site state, heavy owner + its busiest domain (db/repo/scans.ts)
+:X select count(*) > 0 as seen, coalesce(bool_or(status = 'blocked'), false) as blocked,
+          (array_agg(id order by created_at desc, id desc) filter (where public.verdict_link(url) = public.verdict_link(:'heavy_url')))[1] as "linkId"
+   from scans where owner_id = :'heavy' and domain = :'heavy_domain';
+\echo ===== S07 recordScan: repeat visit (update kept row + device counters)
+begin; :X with kept as (
+     update scans set detected_at = greatest(detected_at, now()), rdap_registered_at = coalesce(rdap_registered_at, '2026-10-01'::date),
+       url = case when 90 > score then :'heavy_url' else url end, page_title = case when 90 > score then 'x' else page_title end,
+       signals = case when 90 > score then '[]'::jsonb else signals end, status = case when 90 > score then 'blocked' else status end,
+       score = greatest(score, 90)
+     where id = :'heavy_scan' returning id)
+   update devices d set blocked_total = d.blocked_total + 1, warning_total = d.warning_total + 0 where d.id = :'heavy' and exists (select 1 from kept); rollback;
+\echo ===== S08 insertScan: new link (insert + triggers admin_scan_intel + device counters): existing popular domain
+begin; :X with ins as (
+     insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, thresholds_version, rdap_registered_at)
+     select :'heavy', 'https://' || :'heavy_domain' || '/new/page', :'heavy_domain', 'Title', null, 92, 'blocked', signals, now(), 0, '2026-10-01'::date
+       from scans where id = :'heavy_scan'
+     returning id, owner_id, status),
+   counted as (update devices d set blocked_total = d.blocked_total + (ins.status = 'blocked')::int, warning_total = d.warning_total + (ins.status = 'warning')::int from ins where d.id = ins.owner_id)
+   select id from ins; rollback;
+\echo ===== S08b insertScan: new link on a domain never seen (domain_intel insert path)
+begin; :X with ins as (
+     insert into scans (owner_id, url, domain, page_title, favicon_url, score, status, signals, detected_at, thresholds_version, rdap_registered_at)
+     select :'heavy', 'https://brand-new-h5.example/new/page', 'brand-new-h5.example', 'Title', null, 92, 'blocked', signals, now(), 0, null from scans where id = :'heavy_scan'
+     returning id, owner_id, status),
+   counted as (update devices d set blocked_total = d.blocked_total + 1 from ins where d.id = ins.owner_id)
+   select id from ins; rollback;
+
+\echo ===== S09 guardianPush target (services/push/notify.ts)
+:X select d.id, d.name, d.apns_token, d.language,
+     (select count(*)::int from push_log p where p.to_device_id = d.id and p.created_at > now() - make_interval(mins => 10)) as recent,
+     d.quiet_hours, d.quiet_start, d.quiet_end, d.time_zone
+   from family_links l join devices d on d.id = l.guardian_id where l.protected_id = :'member' and l.notify and d.notify_family;
+\echo ===== S10 ownPush target
+:X select d.id, d.name, d.apns_token, d.language,
+     (select count(*)::int from push_log p where p.to_device_id = d.id and p.created_at > now() - make_interval(mins => 10)) as recent,
+     d.quiet_hours, d.quiet_start, d.quiet_end, d.time_zone
+   from devices d where d.id = :'heavy' and (case when 'blocked' = 'blocked' then d.notify_blocked else d.notify_warning end);
+\echo ===== S11 recordPush (push_log insert with key share locks)
+begin; :X insert into push_log (to_device_id, scan_id, result) select d.id, s.id, 'sent' from devices d, scans s where d.id = :'heavy' and s.id = :'heavy_scan' for key share of d, s; rollback;
+
+\echo ===== S12 recentFavicon (reserveFavicon)
+:X select favicon_path as path from scans where owner_id = :'heavy' and domain = :'heavy_domain' and favicon_path is not null and favicon_ready_at is not null
+     and (starts_with(favicon_path, owner_id || '/' || id || '-favicon.') or starts_with(favicon_path, owner_id || '/' || id || '-icon.'))
+     and created_at > now() - interval '24 hours' order by created_at desc limit 1;
+\echo ===== S12b reserveFavicon update + markFaviconReady
+begin; :X update scans set favicon_path = :'heavy' || '/' || :'heavy_scan' || '-icon.png', favicon_ready_at = null where id = :'heavy_scan' returning id; rollback;
+\echo ===== S12c addTombstones (1 path)
+begin; :X insert into storage_tombstones (path, created_at) select p, now() - interval '0' from jsonb_array_elements_text('["aaa/bbb-icon.png"]'::jsonb) as p on conflict (path) do nothing; rollback;
+
+\echo ===== S13 precheckReplica: reuse lookup + owner/family/global counts of 24 h (one statement)
+:X select (select r.replica_path from scans r where r.owner_id = :'replica_owner' and r.domain = :'replica_domain' and r.replica_bytes is not null
+            and r.replica_ready_at is not null and r.created_at > now() - interval '24 hours'
+            and public.verdict_link(r.url) = (select public.verdict_link(s.url) from scans s where s.id = :'replica_scan') order by r.created_at desc limit 1) as reuse, c.*
+   from (with root as (select coalesce((select guardian_id from family_links where protected_id = :'replica_owner'), :'replica_owner') as id),
+              members as (select id from root union select protected_id from family_links where guardian_id = (select id from root))
+         select count(*) filter (where s.owner_id = :'replica_owner')::int as mine,
+                count(*) filter (where s.owner_id in (select id from members))::int as family,
+                coalesce(sum(s.replica_bytes) filter (where s.owner_id in (select id from members)), 0)::float8 as "familyBytes",
+                count(*)::int as "all", coalesce(sum(s.replica_bytes), 0)::float8 as "allBytes"
+         from scans s where s.replica_bytes is not null and s.created_at > now() - interval '24 hours') c;
+\echo ===== S15 reserveFragments (count 24 h + update, one statement)
+begin; :X with u as (
+      select count(*) filter (where owner_id = :'heavy')::int as n_owner, coalesce(sum(fragments_bytes) filter (where owner_id = :'heavy'), 0)::int as b_owner,
+             count(*)::int as n_all, coalesce(sum(fragments_bytes), 0)::bigint as b_all
+        from scans where fragments_bytes is not null and created_at > now() - interval '24 hours'),
+    upd as (update scans s set fragments_bytes = 9000 from u where s.id = :'heavy_scan' and s.owner_id = :'heavy' and s.fragments_bytes is null
+              and u.n_owner < 100000 and u.n_all < 100000000 returning s.id)
+    select (select count(*) from upd)::int as done, exists (select 1 from scans where id = :'heavy_scan' and owner_id = :'heavy') as present,
+           exists (select 1 from scans where id = :'heavy_scan' and owner_id = :'heavy' and fragments_bytes is null) as empty, u.n_owner, u.b_owner, u.n_all, u.b_all::float8 from u; rollback;
+
+-- ---------- GET /scans ----------
+\set SELECT_SCANS 'select s.id, s.owner_id as "ownerId", d.name as "ownerName", s.url, s.domain, s.page_title as "pageTitle", s.score, s.status, s.signals, s.screenshot_path as "screenshotPath", case when s.favicon_ready_at is not null then s.favicon_path end as "faviconPath", case when s.replica_ready_at is not null then s.replica_path end as "replicaPath", to_char(s.detected_at at time zone ''UTC'', ''YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'') as "detectedAt", to_char(s.detected_at at time zone ''UTC'', ''YYYY-MM-DD"T"HH24:MI:SS.US"Z"'') as "cursorAt", case when v.owner_id is not null then jsonb_build_object(''value'', v.value, ''byDeviceId'', v.by_device_id, ''byName'', v.by_name, ''decidedAt'', to_char(v.decided_at at time zone ''UTC'', ''YYYY-MM-DD"T"HH24:MI:SS.MS"Z"''), ''url'', v.url) end as verdict from scans s join devices d on d.id = s.owner_id left join lateral (select v.* from (select public.verdict_link(s.url) as link) k, verdicts v where v.owner_id = s.owner_id and (v.url = k.link or (v.domain = s.domain and v.value = ''not_safe'' and not public.verdict_shared(k.link, s.domain))) order by (v.url = k.link) desc, v.decided_at desc limit 1) v on true'
+\echo ===== S16 memberIds (GET /scans owner=family or owner=<member>)
+:X select protected_id as id from family_links where guardian_id = :'guardian';
+\echo ===== S17 listScans owner=me, heavy owner, first page (limit 21)
+:X :SELECT_SCANS where s.owner_id in (:'heavy') order by s.detected_at desc, s.id desc limit 21;
+\echo ===== S17b listScans owner=me, median owner, first page (limit 21)
+:X :SELECT_SCANS where s.owner_id in (:'avg_owner') order by s.detected_at desc, s.id desc limit 21;
+\echo ===== S18 listScans owner=family (guardian + members), first page (limit 21)
+:X :SELECT_SCANS where s.owner_id in (:fam_ids) order by s.detected_at desc, s.id desc limit 21;
+\echo ===== S19 listScans owner=family, page 10 (keyset cursor after 180 rows)
+:X :SELECT_SCANS where s.owner_id in (:fam_ids) and (s.detected_at, s.id) < (:'cur_at'::text::timestamptz, :'cur_id') order by s.detected_at desc, s.id desc limit 21;
+\echo ===== S20 listScans owner=family, status=blocked filter, first page
+:X :SELECT_SCANS where s.owner_id in (:fam_ids) and s.status = 'blocked' order by s.detected_at desc, s.id desc limit 21;
+\echo ===== S21 listScans owner=me heavy, limit=50 (max page, limit 51)
+:X :SELECT_SCANS where s.owner_id in (:'heavy') order by s.detected_at desc, s.id desc limit 51;
+\echo ===== S22 findVisibleScan (GET /scans/:id) as guardian of the owner
+:X :SELECT_SCANS where s.id = :'member_scan' and (s.owner_id = :'guardian' or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = :'guardian'));
+
+\echo ===== S23 findProfile (GET /devices/me)
+:X select id, name, avatar_id, mode, language, json_build_object('blocked', blocked_total, 'warnings', warning_total, 'since', created_at) as stats, time_zone,
+     json_build_object('warning', notify_warning, 'blocked', notify_blocked) as notifications from devices where id = :'heavy';
+\echo ===== S24 guardianOf (GET /devices/me in protected mode)
+:X select d.id, d.name, d.avatar_id from family_links l join devices d on d.id = l.guardian_id where l.protected_id = :'member';
+\echo ===== S25 updateDevice (PATCH /devices/me heartbeat: extensionLastSeenAt)
+begin; :X update devices set name = case when false then null::text else name end, ext_last_seen_at = case when true then greatest(ext_last_seen_at, now()) else ext_last_seen_at end where id = :'member'; rollback;
+\echo ===== S26 listMembers (GET /family/members): lateral newest scan per member
+:X select d.id, d.name, d.avatar_id, (d.ext_last_seen_at is null or d.ext_last_seen_at > now() - interval '24 hours') as "extensionActive",
+     case when s.id is null then null else json_build_object('status', s.status, 'score', s.score, 'url', s.url, 'detectedAt', s.detected_at) end as "lastScan",
+     l.created_at, d.ext_last_seen_at, d.device_model, d.os_version, l.notify, l.reminded_at, json_build_object('blocked', d.blocked_total, 'warnings', d.warning_total) as stats
+   from family_links l join devices d on d.id = l.protected_id
+   left join lateral (select id, status, score, url, detected_at from scans where owner_id = d.id order by detected_at desc, id desc limit 1) s on true
+   where l.guardian_id = :'guardian' order by l.created_at, d.id;
+
+-- ---------- verdicts ----------
+\echo ===== S27 findVerdict (GET /verdicts?url=&domain=, polled every 2-15 s by an open block/warning page)
+:X with k as (select public.verdict_link(:'v_url') as link)
+   select v.value, v.by_device_id, v.by_name, v.decided_at, v.url from verdicts v, k
+   where v.owner_id = :'v_owner' and (v.url = k.link or (v.domain = :'v_domain' and v.value = 'not_safe' and not public.verdict_shared(k.link, :'v_domain')))
+   order by (v.url = k.link) desc, v.decided_at desc limit 1;
+\echo ===== S27b findVerdict miss (no verdict for that link: the common polling case)
+:X with k as (select public.verdict_link('https://no-verdict.example/x') as link)
+   select v.value, v.by_device_id, v.by_name, v.decided_at, v.url from verdicts v, k
+   where v.owner_id = :'heavy' and (v.url = k.link or (v.domain = 'no-verdict.example' and v.value = 'not_safe' and not public.verdict_shared(k.link, 'no-verdict.example')))
+   order by (v.url = k.link) desc, v.decided_at desc limit 1;
+\echo ===== S28 findDomainVerdict (deprecated ?domain= only)
+:X select value, by_device_id, by_name, decided_at, url from verdicts where owner_id = :'v_owner' and domain = :'v_domain' order by (value = 'not_safe') desc, decided_at desc limit 1;
+\echo ===== S29 decideVerdict: scan + owner mode
+:X select s.owner_id, s.domain, s.status, d.mode, coalesce(public.verdict_link(s.url), 'https://' || s.domain || '/') as url from scans s join devices d on d.id = s.owner_id where s.id = :'member_scan';
+\echo ===== S30 decideVerdict: family link for share
+begin; :X select 1 from family_links where protected_id = :'member' and guardian_id = :'guardian' for share; rollback;
+\echo ===== S31 decideVerdict: isProtected (admin.v_domain_lists_public, 276 rows)
+:X select exists (select 1 from admin.v_domain_lists_public where domain in ('login.site-1.site', 'site-1.site', 'site') and (protect = 'subtree' or (protect = 'apex' and domain = 'login.site-1.site'))) as hit;
+\echo ===== S32 decideVerdict: held verdict for update
+begin; :X select value, decided_at from verdicts where owner_id = :'member' and url = public.verdict_link(:'member_url') for update; rollback;
+\echo ===== S33 decideVerdict: already queued by this owner?
+:X select exists (select 1 from verdicts where owner_id = :'member' and domain = :'member_domain' and global_eligible) as e;
+\echo ===== S34 decideVerdict: guardian daily queue count
+:X select count(distinct domain)::int as n from verdicts where by_device_id = :'guardian' and global_eligible and value = 'not_safe' and decided_at > now() - interval '24 hours' and domain <> :'member_domain';
+\echo ===== S35 decideVerdict: upsert (triggers verdicts_default_url + admin_verdict_label)
+begin; :X insert into verdicts (owner_id, url, domain, value, notes, scan_id, by_device_id, by_name, decided_at, global_eligible)
+   values (:'member', public.verdict_link(:'member_url') || 'h5', :'member_domain', 'not_safe', 'catatan', :'member_scan', :'guardian', 'Wali', clock_timestamp(), true)
+   on conflict (owner_id, url) do update set value = excluded.value, notes = excluded.notes, scan_id = excluded.scan_id, by_device_id = excluded.by_device_id, decided_at = excluded.decided_at
+   returning value; rollback;
+\echo ===== S36 recountFamilies: count + queue_blocklist_domain
+:X select count(distinct by_device_id)::int as n from verdicts where domain = :'member_domain' and value = 'not_safe' and global_eligible;
+begin; :X select public.queue_blocklist_domain(:'member_domain', 1); rollback;
+
+-- ---------- pairing ----------
+\echo ===== S37 activeGuardianCode / claimCode / findCode (POST /family/code, /family/join)
+:X select code, expires_at from family_codes where guardian_id = :'code_guardian' and expires_at > now() + make_interval(secs => 300);
+begin; :X delete from family_codes where guardian_id = :'code_guardian'; rollback;
+begin; :X insert into family_codes (code, guardian_id, expires_at) values ('999999', :'guardian', now() + make_interval(secs => 1800))
+   on conflict (code) do update set guardian_id = excluded.guardian_id, expires_at = excluded.expires_at, created_at = now() where family_codes.expires_at <= now() returning code; rollback;
+:X select guardian_id, expires_at <= now() as expired from family_codes where code = :'live_code';
+\echo ===== S38 attemptsRetryAfter (join_attempts per device + per ip)
+:X select 5::int as max, count(*)::int as n, min(attempted_at) from join_attempts where not success and attempted_at > now() - make_interval(secs => 600) and device_id = :'member'
+   union all select 20::int, count(*)::int, min(attempted_at) from join_attempts where not success and attempted_at > now() - make_interval(secs => 600) and ip_hash = sha256('ip7'::bytea);
+\echo ===== S39 memberCount + recordAttempt
+:X select count(*)::int as n from family_links where guardian_id = :'guardian';
+begin; :X insert into join_attempts (device_id, ip_hash, success) values (:'member', sha256('ip7'::bytea), true); rollback;
+
+-- ---------- lists and views ----------
+\echo ===== S40 GET /blocklist full (since = null, LIMIT 1000)
+:X select domain, 'added' as kind, approved_at from blocklist_entries where approved_at is not null and removed_at is null order by approved_at, domain limit 1000;
+\echo ===== S40b GET /blocklist?since= (delta)
+:X select domain, kind, t from (select domain, 'added' as kind, approved_at as t from blocklist_entries where approved_at is not null and removed_at is null and approved_at > now() - interval '1 day'
+     union all select domain, 'removed', removed_at from blocklist_entries where approved_at is not null and removed_at is not null and removed_at > now() - interval '1 day') e order by t, domain limit 1000;
+\echo ===== S41 faviconPathForViewer (GET /favicons/:id, up to 20-50 per list page)
+:X select s.favicon_path as path from scans s where s.id = :'member_scan' and s.favicon_path is not null and s.favicon_ready_at is not null
+     and (s.owner_id = :'guardian' or exists (select 1 from family_links l where l.protected_id = s.owner_id and l.guardian_id = :'guardian'));
+\echo ===== S42 familyContacts (DELETE /devices/me)
+:X select d.id, d.apns_token, d.language from family_links l join devices d on d.id = case when l.guardian_id = :'guardian' then l.protected_id else l.guardian_id end
+   where (l.guardian_id = :'guardian' or l.protected_id = :'guardian') and d.apns_token is not null order by d.id;
+
+-- ---------- DELETE /devices/me: heavy owner (deleteDeviceInTx), whole transaction ----------
+\echo ===== S43 DELETE /devices/me heavy owner: lock scans, delete scans, delete device (cascades + admin triggers)
+begin;
+:X delete from family_links where protected_id = :'heavy' or guardian_id = :'heavy';
+:X select domain from (select distinct domain from verdicts where (owner_id = :'heavy' or by_device_id = :'heavy')) d order by hashtext(domain), domain;
+:X delete from verdicts where (owner_id = :'heavy' or by_device_id = :'heavy');
+:X select 1 from scans where owner_id = :'heavy' order by id for update;
+:X delete from scans where owner_id = :'heavy' returning screenshot_path as path, favicon_path as favicon, replica_path as replica;
+:X delete from devices where id = :'heavy' returning 1;
+rollback;
+
+-- ---------- cron 0 19 * * * retention ----------
+\echo ===== R01 retention: plain scan ids (limit 2000)
+:X select id from scans where created_at < now() - make_interval(days => 14) and screenshot_path is null and favicon_path is null and replica_path is null order by created_at, id limit 2000;
+select string_agg(quote_literal(id), ',') as plain_ids from (select id from scans where created_at < now() - make_interval(days => 14) and screenshot_path is null and favicon_path is null and replica_path is null order by created_at, id limit 2000) x \gset
+select string_agg(quote_literal(id), ',') as shot_ids from (select id from scans where created_at < now() - make_interval(days => 14) and (screenshot_path is not null or favicon_path is not null or replica_path is not null) order by created_at, id limit 2000) x \gset
+\echo ===== R02 retention deleteScans (one chunk of 2000 plain ids, one transaction): lock verdicts, null scan_id, lock scans, delete
+begin;
+select set_config('lock_timeout', '3000ms', true), set_config('statement_timeout', '20s', true);
+:X select 1 from verdicts where scan_id in (:plain_ids) order by owner_id, url for update;
+:X update verdicts set scan_id = null where scan_id in (:plain_ids);
+:X select 1 from scans where id in (:plain_ids) order by id for update;
+:X delete from scans where id in (:plain_ids) and created_at < now() - make_interval(days => 14) and screenshot_path is null and favicon_path is null and replica_path is null;
+select count(*) as locks_held, count(*) filter (where mode = 'RowExclusiveLock') as row_excl, count(*) filter (where mode = 'AccessExclusiveLock') as access_excl from pg_locks where pid = pg_backend_pid();
+rollback;
+\echo ===== R03 retention: ids of scans with stored objects (limit 2000)
+:X select id from scans where created_at < now() - make_interval(days => 14) and (screenshot_path is not null or favicon_path is not null or replica_path is not null) order by created_at, id limit 2000;
+\echo ===== R04 retention: paths no scan outside the chunk points at (2000 ids twice per branch, 3 branches)
+:X select path from (
+     select s.screenshot_path as path, s.created_at from scans s where s.id in (:shot_ids) and s.screenshot_path is not null
+       and not exists (select 1 from scans o where o.owner_id = s.owner_id and o.screenshot_path = s.screenshot_path and o.id not in (:shot_ids))
+     union all select s.favicon_path, s.created_at from scans s where s.id in (:shot_ids) and s.favicon_path is not null
+       and not exists (select 1 from scans o where o.owner_id = s.owner_id and o.favicon_path = s.favicon_path and o.id not in (:shot_ids))
+     union all select s.replica_path, s.created_at from scans s where s.id in (:shot_ids) and s.replica_path is not null
+       and not exists (select 1 from scans o where o.owner_id = s.owner_id and o.replica_path = s.replica_path and o.id not in (:shot_ids))
+   ) p group by path order by min(created_at), path;
+\echo ===== R05 retention deleteScans (2000 ids with objects)
+begin;
+:X select 1 from scans where id in (:shot_ids) order by id for update;
+:X delete from scans where id in (:shot_ids) and created_at < now() - make_interval(days => 14);
+rollback;
+\echo ===== R06 retention: dueTombstones supabase (limit 500) / r2 (limit 4000) / archive
+:X select t.path from storage_tombstones t where t.created_at < now() - interval '10 minutes'
+     and not (t.path like '%-replica.html.gz' or t.path ~ '-icon\.[a-z]+$') and not (t.path like '%.fragments.html.gz' and t.path not like '%/%')
+     and not exists (select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.screenshot_path = t.path)
+     and not exists (select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.favicon_path = t.path)
+     and not exists (select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.replica_path = t.path)
+   order by t.last_try_at nulls first, t.created_at, t.path limit 500;
+:X select t.path from storage_tombstones t where t.created_at < now() - interval '10 minutes'
+     and (t.path like '%-replica.html.gz' or t.path ~ '-icon\.[a-z]+$')
+     and not exists (select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.screenshot_path = t.path)
+     and not exists (select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.favicon_path = t.path)
+     and not exists (select 1 from scans s where s.owner_id = split_part(t.path, '/', 1) and s.replica_path = t.path)
+   order by t.last_try_at nulls first, t.created_at, t.path limit 4000;
+\echo ===== R07 retention: verdict notes older than 14 days (chunk 5000)
+begin; :X update verdicts set notes = null where (owner_id, url) in (
+     select owner_id, url from verdicts where notes is not null and decided_at < now() - make_interval(days => 14) order by owner_id, url limit 5000 for update skip locked); rollback;
+\echo ===== R08 retention: family_codes, join_attempts, push_log
+begin; :X delete from family_codes where expires_at < now() - interval '1 hour'; rollback;
+begin; :X delete from join_attempts where attempted_at < now() - interval '1 day'; rollback;
+begin; :X delete from push_log where created_at < now() - make_interval(days => 14); rollback;
+\echo ===== R09 retention: rate_limit_hits older than 1 day (chunk 20000)
+begin; :X delete from rate_limit_hits where id in (select id from rate_limit_hits where hit_at < now() - interval '1 day' limit 20000); rollback;
+\echo ===== R10 retention: countInactiveDevices (E7 dry run, every night)
+:X select count(*)::int as n from (
+    select d.id from devices d left join family_links l on l.protected_id = d.id
+    where d.last_seen_at < now() - make_interval(days => 90)
+      and not exists (select 1 from devices g where g.id = coalesce(l.guardian_id, d.id) and g.last_seen_at >= now() - make_interval(days => 90))
+      and not exists (select 1 from family_links m join devices p on p.id = m.protected_id where m.guardian_id = coalesce(l.guardian_id, d.id) and p.last_seen_at >= now() - make_interval(days => 90))
+    union
+    select d.id from devices d where d.last_seen_at < now() - make_interval(days => 30) + interval '1 hour'
+      and d.created_at < now() - make_interval(days => 30) and d.last_seen_at < d.created_at + interval '1 hour'
+      and not exists (select 1 from family_links f where f.protected_id = d.id or f.guardian_id = d.id)) c;
+\echo ===== R11 ops: opsSnapshot (GET /ops/status, 4x/h by ops-watch)
+:X select exists (select 1 from scans where created_at < now() - make_interval(days => 15, hours => 6)) as overdue,
+     (select count(*)::int from storage_tombstones where created_at < now() - interval '2 days') as stuck,
+     pg_database_size(current_database())::float8 as "dbBytes", q.n
+   from (select 1) one cross join (select count(*)::int as n, min(first_seen_at) as oldest from blocklist_entries where approved_at is null and rejected_at is null and removed_at is null and families > 0) q;
+
+-- ---------- cron 5 * * * * notifications ----------
+\echo ===== N01 notifications: clear off marks (hourly)
+begin; :X update family_links l set off_notified_at = null from devices m where m.id = l.protected_id and l.off_notified_at is not null and m.ext_last_seen_at > now() - interval '24 hours'; rollback;
+\echo ===== N02 notifications: protection-off candidates with quiet hours in SQL (limit 40)
+:X select l.protected_id from family_links l join devices m on m.id = l.protected_id join devices g on g.id = l.guardian_id
+   where l.off_notified_at is null and m.ext_last_seen_at <= now() - interval '24 hours' and g.notify_protection_off and g.apns_token is not null
+     and not (g.quiet_hours and (select g.quiet_start = g.quiet_end or (g.quiet_start < g.quiet_end and x.m >= g.quiet_start and x.m < g.quiet_end)
+                or (g.quiet_start > g.quiet_end and (x.m >= g.quiet_start or x.m < g.quiet_end))
+          from (select (extract(hour from t.local) * 60 + extract(minute from t.local))::int as m
+                from (select now() at time zone coalesce((select jsonb_object_agg(lower(z.name), z.name) from pg_timezone_names z) ->> lower(g.time_zone), 'Asia/Jakarta') as local offset 0) t) x))
+   order by m.ext_last_seen_at, l.protected_id limit 40;
+\echo ===== N03 notifications: weekly summary candidates (no LIMIT: every opted-in guardian, every hour)
+:X select id, quiet_hours, quiet_start, quiet_end, time_zone, summary_sent_on from devices
+   where weekly_summary and mode = 'guardian' and apns_token is not null and (summary_sent_on is null or summary_sent_on < (now() at time zone 'UTC')::date - 1);
+select string_agg(id, ',') as sum_ids, string_agg(current_date::text, ',') as sum_days from (select id from devices where weekly_summary and mode = 'guardian' and apns_token is not null order by (select count(*) from family_links where guardian_id = devices.id) desc, id limit 40) x \gset
+\echo ===== N04 notifications: claim 40 summaries + count 7 days of blocked/warning scans per guardian (2 count subqueries each)
+begin; :X update devices d set summary_sent_on = v.day
+   from unnest(string_to_array(:'sum_ids', ','), string_to_array(:'sum_days', ',')::date[]) as v(id, day)
+   where d.id = v.id and d.weekly_summary and d.mode = 'guardian' and d.apns_token is not null and d.summary_sent_on is distinct from v.day
+   returning d.id,
+     (select count(*)::int from scans s where s.status = 'blocked' and s.detected_at > now() - interval '7 days' and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as blocked,
+     (select count(*)::int from scans s where s.status = 'warning' and s.detected_at > now() - interval '7 days' and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as warnings; rollback;
+\echo ===== N05 notifications: replicaUsage gauge (hourly, and GET /ops/status)
+:X with up as (select coalesce(f.guardian_id, s.owner_id) as root, s.replica_bytes as b from scans s left join family_links f on f.protected_id = s.owner_id
+              where s.replica_bytes is not null and s.created_at > now() - interval '24 hours'),
+        fam as (select count(*)::int as n, sum(b)::float8 as b from up group by root)
+   select coalesce(sum(n), 0)::int as uploads, coalesce(sum(b), 0)::float8 as bytes, count(*)::int as families from fam;
+
+select current_user;
+\echo ===== index usage after the run (idx_scan = 0 → not used by any statement above)
+select pg_sleep(1);
+select i.relname, i.indexrelname, i.idx_scan - b.idx_scan as idx_scan_in_run, pg_size_pretty(pg_relation_size(i.indexrelid)) size
+from pg_stat_user_indexes i join h5.idx_before b using (indexrelid) where i.schemaname = 'public' order by i.relname, 3 desc, i.indexrelname;
+select relname, seq_scan, seq_tup_read, idx_scan from pg_stat_user_tables where schemaname = 'public' order by seq_tup_read desc;

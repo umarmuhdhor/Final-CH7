@@ -1,0 +1,76 @@
+# h5-explain.out (Execution Time per statement, ms; full plans are not kept in the repo)
+# [S08 and S26 labels: dash changed to ':' in review round 3; values unchanged]
+S01 auth findByTokenHash (http/auth.ts, every authenticated request) | exec_ms=0.014 | seq_scans=-
+S02 auth touchLastSeen (once per 5 min per device) | exec_ms=0.245 | seq_scans=-
+S03 rate limit hit(): count for one device, 1 h window (scans_create) | exec_ms=0.044 | seq_scans=-
+S03b rate limit hit(): insert | exec_ms=0.128 | seq_scans=-
+S04 rate limit hitLight(): scans_create_all key "all", 1 h window (every POST /scans) | exec_ms=0.498 | seq_scans=-
+S05 publicThresholds (POST /scans with thresholdsVersion, GET /config/public) | exec_ms=0.038 | seq_scans=admin_config
+S06 recordScan: site state, heavy owner + its busiest domain (db/repo/scans.ts) | exec_ms=1.210 | seq_scans=-
+S07 recordScan: repeat visit (update kept row + device counters) | exec_ms=0.874 | seq_scans=-
+S08 insertScan: new link (insert + triggers admin_scan_intel + device counters): existing popular domain | exec_ms=3.440 | seq_scans=-
+S08b insertScan: new link on a domain never seen (domain_intel insert path) | exec_ms=0.563 | seq_scans=-
+S09 guardianPush target (services/push/notify.ts) | exec_ms=0.047 | seq_scans=-
+S10 ownPush target | exec_ms=0.035 | seq_scans=-
+S11 recordPush (push_log insert with key share locks) | exec_ms=0.296 | seq_scans=-
+S12 recentFavicon (reserveFavicon) | exec_ms=0.012 | seq_scans=-
+S12b reserveFavicon update + markFaviconReady | exec_ms=0.125 | seq_scans=-
+S12c addTombstones (1 path) | exec_ms=0.124 | seq_scans=-
+S13 precheckReplica: reuse lookup + owner/family/global counts of 24 h (one statement) | exec_ms=0.664 | seq_scans=-
+S15 reserveFragments (count 24 h + update, one statement) | exec_ms=0.602 | seq_scans=-
+S16 memberIds (GET /scans owner=family or owner=<member>) | exec_ms=0.008 | seq_scans=-
+S17 listScans owner=me, heavy owner, first page (limit 21) | exec_ms=43.188 | seq_scans=-
+S17b listScans owner=me, median owner, first page (limit 21) | exec_ms=0.154 | seq_scans=-
+S18 listScans owner=family (guardian + members), first page (limit 21) | exec_ms=1426.820 | seq_scans=devices
+S19 listScans owner=family, page 10 (keyset cursor after 180 rows) | exec_ms=1116.853 | seq_scans=devices
+S20 listScans owner=family, status=blocked filter, first page | exec_ms=406.031 | seq_scans=devices
+S21 listScans owner=me heavy, limit=50 (max page, limit 51) | exec_ms=108.104 | seq_scans=-
+S22 findVisibleScan (GET /scans/:id) as guardian of the owner | exec_ms=1.649 | seq_scans=-
+S23 findProfile (GET /devices/me) | exec_ms=0.013 | seq_scans=-
+S24 guardianOf (GET /devices/me in protected mode) | exec_ms=0.015 | seq_scans=-
+S25 updateDevice (PATCH /devices/me heartbeat: extensionLastSeenAt) | exec_ms=0.062 | seq_scans=-
+S26 listMembers (GET /family/members): lateral newest scan per member | exec_ms=0.046 | seq_scans=-
+S27 findVerdict (GET /verdicts?url=&domain=, polled every 2-15 s by an open block/warning page) | exec_ms=0.015 | seq_scans=-
+S27b findVerdict miss (no verdict for that link: the common polling case) | exec_ms=0.036 | seq_scans=-
+S28 findDomainVerdict (deprecated ?domain= only) | exec_ms=0.008 | seq_scans=-
+S29 decideVerdict: scan + owner mode | exec_ms=0.082 | seq_scans=-
+S30 decideVerdict: family link for share | exec_ms=0.012 | seq_scans=-
+S31 decideVerdict: isProtected (admin.v_domain_lists_public, 276 rows) | exec_ms=0.022 | seq_scans=-
+S32 decideVerdict: held verdict for update | exec_ms=0.005 | seq_scans=-
+S33 decideVerdict: already queued by this owner? | exec_ms=0.008 | seq_scans=-
+S34 decideVerdict: guardian daily queue count | exec_ms=0.015 | seq_scans=-
+S35 decideVerdict: upsert (triggers verdicts_default_url + admin_verdict_label) | exec_ms=1.879 | seq_scans=-
+S36 recountFamilies: count + queue_blocklist_domain | exec_ms=0.029+0.314 | seq_scans=-
+S37 activeGuardianCode / claimCode / findCode (POST /family/code, /family/join) | exec_ms=0.036+0.019+0.098+0.010 | seq_scans=-
+S38 attemptsRetryAfter (join_attempts per device + per ip) | exec_ms=0.028 | seq_scans=-
+S39 memberCount + recordAttempt | exec_ms=0.062+0.139 | seq_scans=-
+S40 GET /blocklist full (since = null, LIMIT 1000) | exec_ms=0.247 | seq_scans=-
+S40b GET /blocklist?since= (delta) | exec_ms=0.065 | seq_scans=-
+S41 faviconPathForViewer (GET /favicons/:id, up to 20-50 per list page) | exec_ms=0.031 | seq_scans=-
+S42 familyContacts (DELETE /devices/me) | exec_ms=0.022 | seq_scans=-
+S43 DELETE /devices/me heavy owner: lock scans, delete scans, delete device (cascades + admin triggers) | exec_ms=24.086+0.069+0.046+2.747+9.870+32.020 | seq_scans=-
+R01 retention: plain scan ids (limit 2000) | exec_ms=4.025 | seq_scans=-
+R02 retention deleteScans (one chunk of 2000 plain ids, one transaction): lock verdicts, null scan_id, lock scans, delete | exec_ms=1.445+1.582+11.030+21.799 | seq_scans=verdicts
+R03 retention: ids of scans with stored objects (limit 2000) | exec_ms=1.065 | seq_scans=-
+R04 retention: paths no scan outside the chunk points at (2000 ids twice per branch, 3 branches) | exec_ms=72.047 | seq_scans=-
+R05 retention deleteScans (2000 ids with objects) | exec_ms=5.360+17.506 | seq_scans=-
+R06 retention: dueTombstones supabase (limit 500) / r2 (limit 4000) / archive | exec_ms=16.910+43.413 | seq_scans=storage_tombstones
+R07 retention: verdict notes older than 14 days (chunk 5000) | exec_ms=8.418 | seq_scans=verdicts
+R08 retention: family_codes, join_attempts, push_log | exec_ms=0.181+0.749+1.858 | seq_scans=family_codes,join_attempts
+R09 retention: rate_limit_hits older than 1 day (chunk 20000) | exec_ms=55.672 | seq_scans=rate_limit_hits
+R10 retention: countInactiveDevices (E7 dry run, every night) | exec_ms=2.317 | seq_scans=devices,family_links
+R11 ops: opsSnapshot (GET /ops/status, 4x/h by ops-watch) | exec_ms=1.393 | seq_scans=blocklist_entries
+N01 notifications: clear off marks (hourly) | exec_ms=5.524 | seq_scans=devices,family_links
+N02 notifications: protection-off candidates with quiet hours in SQL (limit 40) | exec_ms=22.221 | seq_scans=devices,family_links
+N03 notifications: weekly summary candidates (no LIMIT: every opted-in guardian, every hour) | exec_ms=0.437 | seq_scans=devices
+N04 notifications: claim 40 summaries + count 7 days of blocked/warning scans per guardian (2 count subqueries each) | exec_ms=6100.631 | seq_scans=scans
+N05 notifications: replicaUsage gauge (hourly, and GET /ops/status) | exec_ms=1.176 | seq_scans=family_links
+index usage after the run (idx_scan = 0 → not used by any statement above) | exec_ms= | seq_scans=-
+# h5-proto.out (Execution Time per statement, ms; full plans are not kept in the repo)
+P1 family list, page of scans picked first (limit inside), link computed once per row (offset 0), then verdict lookup for 21 rows only | exec_ms=5.332 | seq_scans=-
+P2 as P1, plus per-owner top-N so the page comes from scans_owner_time (no fetch of every family row) | exec_ms=1.419 | seq_scans=-
+P3 heavy single owner, limit 51: link computed once per row (offset 0) only | exec_ms=2.849 | seq_scans=-
+P4 weekly summary counts for 40 guardians: owners as a list (index scans_owner_time), not `owner_id = d.id or owner_id in (...)` [label restored from h5-proto.sql.txt:30; the hunter run printed a shell error here] | exec_ms=44.136 | seq_scans=-
+P5 rate_limit_hits retention chunk through the hit_at index (order by hit_at) instead of an unordered LIMIT + hash join over the table | exec_ms=216.219 | seq_scans=rate_limit_hits
+P6 cost of public.verdict_link alone (10 000 calls) | exec_ms=405.276 | seq_scans=scans
+P7 median family, current statement (for the before number): see h5-explain.sql S18 with the median guardian | exec_ms= | seq_scans=-

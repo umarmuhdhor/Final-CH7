@@ -1,0 +1,38 @@
+// Fase 28 hunter 5: node timing of the on-device detector (layer 1-2) and of the content-script bundle parse.
+// Run: node h5-detector-bench.mjs <repo root>.  Node on a Mac, not Safari on an iPhone: indicative only.
+import vm from "node:vm";
+import { readFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
+const root = process.argv[2];
+const R = `${root}/ios/ShooExtension/Resources/`;
+const scripts = ["dom.js", "lists-client.js", "detector.js", "pipeline.js", "thresholds-client.js", "pill.js", "live-island.js", "gauge.js", "popup.js", "marks.js", "replica.js", "report.js", "block.js", "snapshot.js", "content.js"];
+const src = Object.fromEntries(scripts.map((f) => [f, readFileSync(R + f, "utf8")]));
+const total = Object.values(src).reduce((n, s) => n + s.length, 0);
+// 1. compile cost of the 15 content scripts (what Safari does per page load, before any caching)
+const compile = [];
+for (let i = 0; i < 30; i++) {
+  const t = performance.now();
+  for (const f of scripts) new vm.Script(src[f] + `\n//${i}`, { filename: f });
+  compile.push(performance.now() - t);
+}
+// 2. detector.analyzeLocal on realistic snapshots (no list hit: ShooLists.match → null)
+const ctx = { URL, ShooLists: { match: async () => null } };
+vm.createContext(ctx);
+vm.runInContext(src["detector.js"], ctx);
+const text = "Selamat datang di layanan verifikasi akun. Masukkan PIN dan kode OTP Anda untuk melanjutkan. ".repeat(220).slice(0, 20000);
+const cases = {
+  benign: { url: "https://www.tokopedia-review-blog.example.com/artikel/2026/11/cara-belanja-aman?utm_source=wa", domain: "example.com" },
+  lookalike: { url: "http://login.bca-verifikasi-akun2026.my.id/klikbca/index.php?redirect=https://bca.co.id&email=a@b.c", domain: "bca-verifikasi-akun2026.my.id" },
+  longUrl: { url: "https://a-b-c-d.pages.dev/" + "x9".repeat(900) + "?q=" + "z".repeat(150), domain: "a-b-c-d.pages.dev" },
+};
+const pct = (a, p) => a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * p))];
+const out = { contentScriptBytes: total, compileMs: { p50: +pct(compile, 0.5).toFixed(3), p95: +pct(compile, 0.95).toFixed(3) }, analyzeLocalMs: {} };
+for (const [name, s] of Object.entries(cases)) {
+  const snap = { ...s, title: "KlikBCA - Verifikasi Akun", lang: "id", text, forms: [], imageAlts: [], capturedAt: new Date().toISOString() };
+  for (let i = 0; i < 200; i++) await ctx.ShooDetector.analyzeLocal(snap); // warm up
+  const t = [];
+  for (let i = 0; i < 2000; i++) { const a = performance.now(); await ctx.ShooDetector.analyzeLocal(snap); t.push(performance.now() - a); }
+  const signals = await ctx.ShooDetector.analyzeLocal(snap);
+  out.analyzeLocalMs[name] = { p50: +pct(t, 0.5).toFixed(4), p95: +pct(t, 0.95).toFixed(4), max: +Math.max(...t).toFixed(3), signals: signals.map((x) => x.id) };
+}
+console.log(JSON.stringify(out, null, 1));

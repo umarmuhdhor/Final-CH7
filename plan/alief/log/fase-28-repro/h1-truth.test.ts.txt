@@ -1,0 +1,287 @@
+// Fase 28 hunt, hunter 1 (backend). Repro + truth tests. NOT part of the suite.
+// Run: copy to backend/api/test/h1-truth.test.ts, then
+//   cd backend/api && db_guard && npx vitest run test/h1-truth.test.ts
+//   db_guard + SHOO_TEST_DB_URL + SHOO_TEST_ADMIN_DB_URL (both to a separate DB, never 54322): plan/alief/log/fase-28.md "Cara menunjuk vitest ke DB terpisah"
+// Tests named "BUG B-xx" assert the CORRECT behaviour and FAIL on main 9e5403ba.
+import { env } from "cloudflare:workers";
+import { beforeEach, describe, expect, it } from "vitest";
+import { runRetention } from "../src/cron/retention";
+import { runNotifications } from "../src/cron/notifications";
+import { adminSql, resetDb, testSql, withoutTriggers } from "./helpers/resetDb";
+import { call, callWithEnv, createDevice, type Created } from "./helpers/seed";
+
+const sql = testSql();
+const admin = adminSql();
+beforeEach(() => resetDb(sql));
+
+const APNS = "a".repeat(64);
+const now = () => new Date().toISOString();
+const scanBody = (url: string, domain: string, score: number, status: "warning" | "blocked", extra: Record<string, unknown> = {}) => ({
+  url, domain, score, status, signals: [], detectedAt: now(), ...extra,
+});
+/** POST /scans and wait for the waitUntil work (push_log rows). */
+const post = (d: Created, json: unknown) =>
+  callWithEnv({}, "/scans", { method: "POST", token: d.token, headers: { "content-type": "application/json" }, body: JSON.stringify(json) });
+const postId = async (d: Created, json: unknown) => {
+  const res = await post(d, json);
+  expect(res.status, await res.clone().text()).toBe(201);
+  return (await res.json()) as { id: string; notified: { name: string } | null };
+};
+const patch = (d: Created, json: unknown) => call("/devices/me", { method: "PATCH", token: d.token, json });
+async function pair(g: Created, p: Created) {
+  const { code } = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+  const res = await call("/family/join", { method: "POST", token: p.token, json: { code } });
+  expect(res.status).toBe(200);
+  return code;
+}
+const pushes = async (to: Created) =>
+  (await sql<{ n: number }[]>`select count(*)::int as n from push_log where to_device_id = ${to.deviceId}`)[0]!.n;
+const verdict = (g: Created, scanId: string, value: string, notes?: string) =>
+  call("/verdicts", { method: "POST", token: g.token, json: { scanId, value, ...(notes ? { notes } : {}) } });
+const getVerdict = async (d: Created, url: string, domain: string) => {
+  const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+  return { status: res.status, body: (await res.json()) as { verdict: { value: string; url: string; lockedUntil?: string } | null } };
+};
+type Item = { id: string; url: string; score: number; status: string; ownerDeviceId: string; ownerName: string; detectedAt: string; verdict: { value: string } | null };
+const list = async (d: Created, q = "") => {
+  const res = await call(`/scans${q}`, { token: d.token });
+  return (await res.json()) as { items: Item[]; nextCursor: string | null };
+};
+
+describe("1. truth: hand-computed fixture", () => {
+  it("GET /scans, /scans/{id}, /family/members, /devices/me match the seeded facts", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const a = await createDevice("Ibu");
+    const b = await createDevice("Bapak");
+    await pair(g, a);
+    await pair(g, b);
+    // Ibu: 2 links on one site (1 blocked 92, 1 warning 41), the blocked link visited 3 times; Bapak: nothing; Gita: 1 warning.
+    const a1 = await postId(a, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked", { detectedAt: "2026-11-10T01:00:00.000Z" }));
+    await postId(a, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked", { detectedAt: "2026-11-10T02:00:00.000Z" }));
+    await postId(a, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked", { detectedAt: "2026-11-10T03:00:00.000Z" }));
+    const a2 = await postId(a, scanBody("https://hadiah.example/b", "hadiah.example", 41, "warning", { detectedAt: "2026-11-10T02:30:00.000Z" }));
+    const g1 = await postId(g, scanBody("https://lain.example/", "lain.example", 55, "warning", { detectedAt: "2026-11-09T00:00:00.000Z" }));
+    expect((await verdict(g, a2.id, "safe")).status).toBe(200);
+
+    const fam = await list(g, "?owner=family");
+    expect(fam.items.map((i) => i.id)).toEqual([a1.id, a2.id, g1.id]); // newest detectedAt first
+    expect(fam.items.map((i) => [i.ownerName, i.score, i.status, i.detectedAt, i.verdict?.value ?? null])).toEqual([
+      ["Ibu", 92, "blocked", "2026-11-10T03:00:00.000Z", null],
+      ["Ibu", 41, "warning", "2026-11-10T02:30:00.000Z", "safe"],
+      ["Gita", 55, "warning", "2026-11-09T00:00:00.000Z", null],
+    ]);
+    expect(fam.nextCursor).toBeNull();
+    expect((await list(g, "?owner=family&status=blocked")).items.map((i) => i.id)).toEqual([a1.id]);
+    expect((await list(g, `?owner=${a.deviceId}`)).items).toHaveLength(2);
+    expect((await list(g, `?owner=${b.deviceId}`)).items).toHaveLength(0);
+    expect((await list(g)).items.map((i) => i.id)).toEqual([g1.id]);
+
+    const members = ((await (await call("/family/members", { token: g.token })).json()) as { members: { name: string; extensionActive: boolean; lastScan: { score: number; status: string; url: string; detectedAt: string } | null; stats: { blocked: number; warnings: number } }[] }).members;
+    expect(members.map((m) => m.name)).toEqual(["Ibu", "Bapak"]);
+    expect(members[0]!.lastScan).toEqual({ status: "blocked", score: 92, url: "https://hadiah.example/a", detectedAt: "2026-11-10T03:00:00.000Z" });
+    expect(members[0]!.stats).toEqual({ blocked: 3, warnings: 1 }); // lifetime visits, not rows
+    expect(members[1]!.lastScan).toBeNull();
+    expect(members[1]!.stats).toEqual({ blocked: 0, warnings: 0 });
+    expect(members.every((m) => m.extensionActive)).toBe(true); // no heartbeat yet = no evidence
+
+    const me = (await (await call("/devices/me", { token: a.token })).json()) as { stats: { blocked: number; warnings: number }; guardian: { name: string } | null };
+    expect(me.stats).toMatchObject({ blocked: 3, warnings: 1 });
+    expect(me.guardian?.name).toBe("Gita");
+    const detail = (await (await call(`/scans/${a2.id}`, { token: g.token })).json()) as Item;
+    expect([detail.score, detail.status, detail.verdict?.value]).toEqual([41, "warning", "safe"]);
+  });
+
+  it("weekly summary counts rows (links), profile stats count visits: same week, different numbers", async () => {
+    const g = await createDevice("Gita", "guardian");
+    await patch(g, { apnsToken: APNS, timeZone: "UTC", notifications: { weeklySummary: true, quietHours: false } });
+    for (let i = 0; i < 3; i++) await postId(g, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"));
+    // A Monday 09:00 UTC that is "now" for the cron clock; SQL counts use the DB clock (last 7 days).
+    const monday = new Date("2026-11-16T09:00:00Z");
+    const sent: string[] = [];
+    await runNotifications(sql, env, { now: monday, sender: { send: async (m) => (sent.push(m.body), { result: "sent" }) } });
+    const me = (await (await call("/devices/me", { token: g.token })).json()) as { stats: { blocked: number } };
+    console.log("H1 weekly-vs-stats", JSON.stringify({ summary: sent, statsBlocked: me.stats.blocked }));
+    expect(sent).toEqual(["Your week for you: 1 site blocked, 0 warnings."]);
+    expect(me.stats.blocked).toBe(3);
+  });
+});
+
+describe("B-02 status / push truth when a link is reported blocked after a warning of the same or a higher score", () => {
+  it("BUG B-02a: the Activity row says what the member last saw (blocked), not the older warning", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    // Thresholds 30/80: 75 = warning. The admins then go live with blockAt 70 (GET /config/public), the same page is now blocked.
+    const first = await postId(p, scanBody("https://hadiah.example/a", "hadiah.example", 75, "warning"));
+    const again = await postId(p, scanBody("https://hadiah.example/a", "hadiah.example", 72, "blocked"));
+    expect(again.id).toBe(first.id);
+    const row = (await list(g, "?owner=family")).items[0]!;
+    expect([row.status, row.score]).toEqual(["blocked", 72]);
+  });
+
+  it("BUG B-02b: a site pushes at most twice (first visit, first block)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await patch(g, { apnsToken: APNS, notifications: { quietHours: false } });
+    await pair(g, p);
+    await postId(p, scanBody("https://hadiah.example/a", "hadiah.example", 75, "warning"));
+    for (let i = 0; i < 4; i++) await postId(p, scanBody("https://hadiah.example/a", "hadiah.example", 72, "blocked"));
+    console.log("H1 B-02b guardian pushes", await pushes(g), "status", (await sql`select status, score from scans`)[0]);
+    expect(await pushes(g)).toBe(2);
+  });
+});
+
+describe("B-01 a first push that was held back is never sent later", () => {
+  it("BUG B-01: warning during the Guardian's quiet hours, then the member opens the site again in the day", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await patch(g, { apnsToken: APNS, notifications: { quietHours: true, quietStart: "00:00", quietEnd: "00:00" } }); // all day
+    await pair(g, p);
+    const night = await postId(p, scanBody("https://hadiah.example/a", "hadiah.example", 45, "warning"));
+    expect(night.notified).toBeNull();
+    expect(await pushes(g)).toBe(0);
+    await patch(g, { notifications: { quietHours: false } }); // morning
+    const day = await postId(p, scanBody("https://hadiah.example/a", "hadiah.example", 45, "warning"));
+    const other = await postId(p, scanBody("https://hadiah.example/b", "hadiah.example", 45, "warning"));
+    console.log("H1 B-01", JSON.stringify({ day: day.notified, other: other.notified, pushes: await pushes(g) }));
+    expect(await pushes(g)).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("B-03 device clock ahead", () => {
+  it("BUG B-03: a phone whose clock is 10 min fast still reports its blocked page", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    const res = await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked", { detectedAt: new Date(Date.now() + 10 * 60_000).toISOString() }));
+    console.log("H1 B-03", res.status, await res.clone().text());
+    expect(res.status).toBe(201);
+  });
+  it.each([[4 * 60_000, 201], [6 * 60_000, 422], [-400 * 86400_000, 201]])("detectedAt now%+d ms → %d (current rule)", async (delta, status) => {
+    const p = await createDevice("Ibu");
+    const res = await post(p, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked", { detectedAt: new Date(Date.now() + delta).toISOString() }));
+    expect(res.status).toBe(status);
+  });
+});
+
+describe("2. boundaries", () => {
+  it.each([[301, true], [299, false]])("family code with %d s left: reused = %s", async (left, reused) => {
+    const g = await createDevice("Gita", "guardian");
+    const first = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string; expiresAt: string };
+    await sql`update family_codes set expires_at = now() + make_interval(secs => ${left}) where guardian_id = ${g.deviceId}`;
+    const second = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string; expiresAt: string };
+    // 10^-6 chance the new random code equals the old one.
+    expect(second.code === first.code).toBe(reused);
+    const left2 = (Date.parse(second.expiresAt) - Date.now()) / 1000;
+    if (!reused) expect(left2).toBeGreaterThan(1795);
+    else expect(left2).toBeLessThanOrEqual(301);
+  });
+
+  it.each([[2, 200, null], [-1, 410, "code_expired"]])("join with the code %d s from expiry → %d", async (left, status, code) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    const c = (await (await call("/family/code", { method: "POST", token: g.token })).json()) as { code: string };
+    await sql`update family_codes set expires_at = now() + make_interval(secs => ${left}) where guardian_id = ${g.deviceId}`;
+    const res = await call("/family/join", { method: "POST", token: p.token, json: { code: c.code } });
+    expect(res.status).toBe(status);
+    if (code) expect(((await res.json()) as { error: { code: string } }).error.code).toBe(code);
+  });
+
+  it("max 3 protected: the 4th gets family_full, and a 4th after one leaves gets in", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const ps = [await createDevice("A"), await createDevice("B"), await createDevice("C"), await createDevice("D")];
+    const code = await pair(g, ps[0]!);
+    for (const p of ps.slice(1, 3)) expect((await call("/family/join", { method: "POST", token: p.token, json: { code } })).status).toBe(200);
+    const full = await call("/family/join", { method: "POST", token: ps[3]!.token, json: { code } });
+    expect([full.status, ((await full.json()) as { error: { code: string } }).error.code]).toEqual([409, "family_full"]);
+    expect((await call(`/family/members/${ps[0]!.deviceId}`, { method: "DELETE", token: g.token })).status).toBe(200);
+    expect((await call("/family/join", { method: "POST", token: ps[3]!.token, json: { code } })).status).toBe(200);
+    const members = ((await (await call("/family/members", { token: g.token })).json()) as { members: unknown[] }).members;
+    expect(members).toHaveLength(3);
+  });
+
+  it("retention edge: 14 d + 1 s goes, 14 d − 3 s stays; a row re-visited yesterday goes too (F-B13 known)", async () => {
+    const p = await createDevice("Ibu");
+    await withoutTriggers(async (tx) => {
+      await tx`insert into scans (id, owner_id, url, domain, score, status, detected_at, created_at) values
+        ('00000000-0000-4000-8000-000000000001', ${p.deviceId}, 'https://a.example/old', 'a.example', 90, 'blocked', now() - interval '14 days 1 second', now() - interval '14 days 1 second'),
+        ('00000000-0000-4000-8000-000000000002', ${p.deviceId}, 'https://a.example/new', 'a.example', 90, 'blocked', now() - interval '14 days' + interval '3 seconds', now() - interval '14 days' + interval '3 seconds'),
+        ('00000000-0000-4000-8000-000000000003', ${p.deviceId}, 'https://a.example/revisit', 'a.example', 90, 'blocked', now() - interval '1 day', now() - interval '14 days 1 second')`;
+    });
+    // Before the cron: the API still serves the over-age rows (they wait for 19:00 UTC).
+    expect((await list(p)).items).toHaveLength(3);
+    const r = await runRetention(sql, env, {});
+    expect(r.plainScans).toBe(2);
+    expect((await list(p)).items.map((i) => i.url)).toEqual(["https://a.example/new"]);
+  });
+
+  it.each([["24 hours 1 second", false], ["23 hours 59 minutes 58 seconds", true]])("extensionActive with a heartbeat %s old = %s", async (age, active) => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await pair(g, p);
+    await sql`update devices set ext_last_seen_at = now() - ${age}::interval where id = ${p.deviceId}`;
+    const members = ((await (await call("/family/members", { token: g.token })).json()) as { members: { extensionActive: boolean }[] }).members;
+    expect(members[0]!.extensionActive).toBe(active);
+  });
+
+  it("verdict lock: unlocks at the first Sunday 18:00 UTC strictly after the decision", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const { id } = await postId(g, scanBody("https://hadiah.example/a", "hadiah.example", 92, "blocked"));
+    expect((await verdict(g, id, "safe")).status).toBe(200);
+    const d = new Date();
+    const lastSun = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - d.getUTCDay(), 18));
+    if (lastSun > d) lastSun.setUTCDate(lastSun.getUTCDate() - 7);
+    const nextSun = new Date(lastSun.getTime() + 7 * 86400_000);
+    const at = async (t: Date) => {
+      await admin`update verdicts set decided_at = ${t.toISOString()}::text::timestamptz`;
+      return (await getVerdict(g, "https://hadiah.example/a", "hadiah.example")).body.verdict?.lockedUntil ?? null;
+    };
+    expect(await at(new Date(lastSun.getTime() - 1))).toBeNull(); // decided 1 ms before last Sunday 18:00 → already read
+    expect(await at(lastSun)).toBe(nextSun.toISOString()); // exactly at 18:00 → the next one
+    expect(await at(new Date(lastSun.getTime() + 1))).toBe(nextSun.toISOString());
+    // Locked: not_safe is refused with the same time; unlocked: accepted.
+    const locked = await verdict(g, id, "not_safe");
+    expect([locked.status, ((await locked.json()) as { error: { code: string; lockedUntil: string } }).error.lockedUntil]).toEqual([409, nextSun.toISOString()]);
+    await at(new Date(lastSun.getTime() - 1));
+    expect((await verdict(g, id, "not_safe")).status).toBe(200);
+  });
+});
+
+describe("2b. cursor paging", () => {
+  it.each([[1, 5], [2, 5], [5, 5], [5, 6], [3, 10], [50, 51]])("limit %d over %d rows with tied detectedAt: every row once, in order", async (limit, n) => {
+    const p = await createDevice("Ibu");
+    const tie = "2026-11-10T00:00:00.000Z";
+    await withoutTriggers(async (tx) => {
+      for (let i = 0; i < n; i++) {
+        // Half share one timestamp, the rest differ by a microsecond step the ms cursor text cannot show.
+        await tx`insert into scans (owner_id, url, domain, score, status, detected_at)
+                 values (${p.deviceId}, ${`https://a.example/${i}`}, 'a.example', 50, 'warning',
+                         ${tie}::timestamptz + make_interval(secs => ${i % 2 === 0 ? 0 : i * 0.000001}))`;
+      }
+    });
+    const truth = (await sql<{ id: string }[]>`select id from scans order by detected_at desc, id desc`).map((r) => r.id);
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    let pages = 0;
+    do {
+      const page: { items: Item[]; nextCursor: string | null } = await list(p, `?limit=${limit}${cursor ? `&cursor=${cursor}` : ""}`);
+      seen.push(...page.items.map((i) => i.id));
+      cursor = page.nextCursor;
+      pages++;
+    } while (cursor && pages < 100);
+    expect(seen).toEqual(truth);
+    expect(pages).toBe(Math.ceil(n / limit)); // exactly one page → nextCursor null, no empty trailing page
+  });
+
+  it("a row re-visited while paging moves to the top: later pages skip it, none repeats (keyset on a mutable time)", async () => {
+    const p = await createDevice("Ibu");
+    for (let i = 0; i < 4; i++) await postId(p, scanBody(`https://a.example/${i}`, "a.example", 50, "warning", { detectedAt: `2026-11-10T00:00:0${i}.000Z` }));
+    const p1 = await list(p, "?limit=2");
+    await postId(p, scanBody("https://a.example/0", "a.example", 50, "warning")); // oldest row, now newest
+    const p2 = await list(p, `?limit=2&cursor=${p1.nextCursor}`);
+    const urls = [...p1.items, ...p2.items].map((i) => i.url);
+    console.log("H1 paging-mutation", JSON.stringify(urls), "nextCursor", p2.nextCursor);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+});
+
