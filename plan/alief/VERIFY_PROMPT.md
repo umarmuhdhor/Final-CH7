@@ -38,7 +38,7 @@ E. KELAYAKAN TEKNIS. Workers Free (CPU 10 ms, subrequest), Hyperdrive + postgres
    (dan fallback Edge Function), Supabase Free (500 MB DB, 1 GB Storage, 5 GB egress, pause 7 hari), pg/cron retensi,
    bahasa in-app dengan String Catalog, deep link shoo:// dari WhatsApp. Tandai asumsi yang belum terbukti dan apakah
    ada langkah spike/uji untuknya.
-F. KEAMANAN. IDOR (Guardian hanya melihat perangkat terhubung), brute force kode 4 digit, penyimpanan token, scan palsu,
+F. KEAMANAN. IDOR (Guardian hanya melihat perangkat terhubung), brute force kode keluarga 6 digit (30 menit), penyimpanan token, scan palsu,
    peracunan blocklist, screenshot berisi data pribadi, secret APNs/Supabase. Apakah SECURITY.md + fase menutupnya?
 G. EKSEKUSI OTOMATIS. Apakah PROMPT.md cukup jelas agar AI bekerja tanpa manusia (worktree, branch stacked, PR,
    LANGKAH MANUAL, gerbang UI, QA)? Sebutkan instruksi yang ambigu.

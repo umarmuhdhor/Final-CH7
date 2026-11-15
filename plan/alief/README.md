@@ -149,7 +149,7 @@ Garis putus-putus = endpoint yang dipakai tim lain sebelum app kita tersambung.
 
 Diambil dari mandat:
 1. Semua requirement P0 di PRD 8.1–8.4 dan 8.6 lolos "Selesai kalau", dengan bukti di log fase, termasuk ON-04 (fase 02, fallback PRD §10 + hasil spike 01S). Spike S1 dan S2 selesai (fase 01S).
-2. Keluarga terhubung lewat kode 4 digit atau QR, dan Guardian menerima push saat orang tuanya membuka situs berbahaya.
+2. Keluarga terhubung lewat kode 6 digit (30 menit), QR, atau link undangan `/j/<kode>`, dan Guardian menerima push saat orang tuanya membuka situs berbahaya.
 3. Guardian menekan **It's safe** → layar blokir di HP orang tua terbuka (EX-06) tanpa layar konfirmasi.
 4. Semua teks tersedia EN + ID.
 5. QA-E2E tanpa temuan P0/P1 terbuka (retest LULUS).
