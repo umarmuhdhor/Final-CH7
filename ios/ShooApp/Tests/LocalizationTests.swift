@@ -22,6 +22,16 @@ struct LocalizationTests {
         #expect(L10n.string("Hi, \("Rina")!", language: .indonesian) == "Hai, Rina!")
     }
 
+    /// A-14 (fase 28m): "Hapus akun" with one protected person says "1 person", not "1 people".
+    @Test func disconnectedPeopleFollowEnglishPlural() {
+        #expect(L10n.string("\(1) people you protect will be disconnected.", language: .english)
+            == "1 person you protect will be disconnected.")
+        #expect(L10n.string("\(2) people you protect will be disconnected.", language: .english)
+            == "2 people you protect will be disconnected.")
+        #expect(L10n.string("\(1) people you protect will be disconnected.", language: .indonesian)
+            == "1 orang yang kamu lindungi akan terputus.")
+    }
+
     @Test func everyCatalogKeyHasAnIndonesianTranslation() throws {
         let url = RepoPaths.root.appending(path: "ios/ShooApp/Resources/Localizable.xcstrings")
         let catalog = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
