@@ -3,17 +3,6 @@ import XCTest
 /// QA-A (fase 06Q): layout at accessibility text sizes, where the floating tab bar and pinned
 /// footers can cover content (report `plan/alief/qa/QA-A-2026-10-22.md`).
 final class QALayoutUITests: XCTestCase {
-    override func setUp() {
-        continueAfterFailure = false
-    }
-
-    @MainActor
-    private func launch(
-        _ arguments: [String], textSize: String = "UICTContentSizeCategoryAccessibilityXL", language: String = "en"
-    ) -> XCUIApplication {
-        XCUIApplication.mock(["-UIPreferredContentSizeCategoryName", textSize, "-settings.language", language] + arguments)
-    }
-
     /// U-12 (fase 28n, GD-05): at AX3 each Activity filter word stays on one line. Family Activity, scenario
     /// `figma`, ID. Red on main 9e5403ba (28n): three equal segments, so on SE "Waspa / da" and "Bahay / a" were
     /// h 70.5 beside "Semua" h 35.5 (segments 105 pt wide), on iPhone 17 "Waspa / da" h 71 beside h 35.7 (114 pt).
@@ -53,6 +42,17 @@ final class QALayoutUITests: XCTestCase {
             XCTAssertLessThan(frame.height, lineHeight * 1.5, "\(filter.label) wraps: \(frame)")
             XCTAssertTrue(frame.minX >= 0 && frame.maxX <= screenWidth, "\(filter.label) leaves the screen: \(frame)")
         }
+    }
+
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    @MainActor
+    private func launch(
+        _ arguments: [String], textSize: String = "UICTContentSizeCategoryAccessibilityXL", language: String = "en"
+    ) -> XCUIApplication {
+        XCUIApplication.mock(["-UIPreferredContentSizeCategoryName", textSize, "-settings.language", language] + arguments)
     }
 
     /// P2-1: at large text the slide text scrolls above Skip / Next instead of running under them.
