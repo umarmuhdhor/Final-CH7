@@ -22,6 +22,14 @@ struct LocalizationTests {
         #expect(L10n.string("Hi, \("Rina")!", language: .indonesian) == "Hai, Rina!")
     }
 
+    /// A-15 (fase 28m): "Connect" is "Hubungkan" (link up), not "Hubungi" (contact someone).
+    @Test(arguments: ["Connect so someone you love can double-check for you", "Connect so someone you love can check it again"])
+    func connectCopyLinksUpInsteadOfContacting(key: String) {
+        let indonesian = L10n.string(String.LocalizationValue(key), language: .indonesian)
+        #expect(!indonesian.contains("Hubungi agar"))
+        #expect(indonesian.hasPrefix("Hubungkan "))
+    }
+
     @Test func everyCatalogKeyHasAnIndonesianTranslation() throws {
         let url = RepoPaths.root.appending(path: "ios/ShooApp/Resources/Localizable.xcstrings")
         let catalog = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
