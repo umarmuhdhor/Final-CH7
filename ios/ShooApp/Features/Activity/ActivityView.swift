@@ -436,6 +436,9 @@ struct ActivityRow: View {
     /// Own list: Figma 450:8443 badges (solid "Diblokir"), the verdict goes in `note`.
     var ownList = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// The least room the path gets next to a whole domain: "/" and "…" at the title size, so the domain is
+    /// never followed by a bare "…".
+    @ScaledMetric(relativeTo: .body) private var pathRoom: CGFloat = 24
 
     /// Host and path only: query strings and fragments can carry personal data or tokens, and
     /// the link is visible to anyone looking at the screen (SECURITY §3 P9). Detail shows the full link.
@@ -450,8 +453,15 @@ struct ActivityRow: View {
     /// path when it is not the root, so two pages of one site read apart. Percent-encoded (BH-36): bidi
     /// or invisible characters in a path cannot reorder what is shown. No query or fragment (SECURITY §3 P9).
     static func pageTitle(url: URL, domain: String) -> String {
+        let parts = titleParts(url: url, domain: domain)
+        return parts.domain + parts.path
+    }
+
+    /// The row title split in two (U-05, K8): the registrable domain, drawn whole or cut in the middle, and the
+    /// path after it (empty for the root), the only part cut at its tail. Same encoding rules as `pageTitle`.
+    static func titleParts(url: URL, domain: String) -> (domain: String, path: String) {
         let path = url.path(percentEncoded: true)
-        return path.isEmpty || path == "/" ? domain : domain + path
+        return (domain, path == "/" ? "" : path)
     }
 
     var body: some View {
@@ -512,21 +522,18 @@ struct ActivityRow: View {
     private var time: String { Formatters.time(scan.detectedAt, language: language) }
 
 
-    /// Icon + page title (domain, then path: `pageTitle`) + subline. One line as in Figma: a long title
-    /// ends in "…" at the tail, so the domain stays and the path is what is cut; Detail shows the whole link. The badge shares its width
-    /// with the domain line only, so "name | time" runs on under it: next to a wide verdict badge
-    /// ("Penipuan terverifikasi") the name was cut to "M …" (QA 2026-11-10 #14).
+    /// Icon + page title (domain, then path: `title`) + subline. One line as in Figma; Detail shows the whole
+    /// link. The badge shares its width with the domain line only, so "name | time" runs on under it: next to a
+    /// wide verdict badge ("Penipuan terverifikasi") the name was cut to "M …" (QA 2026-11-10 #14).
     private func site(badge: Bool) -> some View {
         HStack(spacing: 12) {
             SiteIcon(url: scan.faviconUrl)
             // Figma "stack": 2 pt between domain and the "avatar name | time" line, none above a bare time.
             VStack(alignment: .leading, spacing: owner == nil ? 0 : 2) {
                 HStack(alignment: .top, spacing: 16) {
-                    Text(verbatim: Self.pageTitle(url: scan.url, domain: scan.domain))
+                    title
                         .activityFont(17, tracking: -0.17)
                         .foregroundStyle(ActivityStyle.ink)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
-                        .truncationMode(.tail)
                         .frame(minHeight: 24)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if badge { statusBadge }
@@ -536,6 +543,35 @@ struct ActivityRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// U-05 (K8): the start of the domain is free text the scammer picks ("bca-verifikasi-…"); its end holds the
+    /// public suffix (".site"), which no fake can make read as the bank's own. So the domain is never cut at its
+    /// tail: whole, or cut in the middle as on the Home card. The path only gets the
+    /// room the whole domain leaves (at least `pathRoom`), cut at its tail; with less, the row shows the domain
+    /// alone rather than a "…" right after it that reads as more domain.
+    @ViewBuilder
+    private var title: some View {
+        let parts = Self.titleParts(url: scan.url, domain: scan.domain)
+        let domain = Text(verbatim: parts.domain).truncationMode(.middle)
+        if parts.path.isEmpty {
+            domain.lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
+        } else if dynamicTypeSize.isAccessibilitySize {
+            // Large text wraps: the domain on up to three lines (as without a path), the path on its own line under it.
+            VStack(alignment: .leading, spacing: 0) {
+                domain.lineLimit(3)
+                Text(verbatim: parts.path).lineLimit(1).truncationMode(.tail)
+            }
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 0) {
+                    domain.lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                    Text(verbatim: parts.path).lineLimit(1).truncationMode(.tail)
+                        .frame(idealWidth: pathRoom, alignment: .leading)
+                }
+                domain.lineLimit(1)
+            }
+        }
     }
 
     @ViewBuilder
