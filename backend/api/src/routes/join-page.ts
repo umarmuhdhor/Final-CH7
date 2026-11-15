@@ -9,6 +9,7 @@ import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
 import ogImage from "../assets/og-invite.jpg";
 import heroImage from "../assets/join-hero.png";
+import { ICON_LINKS } from "./site-icons";
 
 // Invite page behind `inviteUrl` (R3 §4, SECURITY T13, PR-03 issue #128). No auth. Only a strict 6-digit
 // code is echoed. A 6-digit code is looked up read-only (the code is never consumed): an unknown or expired
@@ -255,7 +256,7 @@ joinPage.get("/j/:code", async (c) => {
 <div class="actions"><button id="request" class="btn" type="button" data-msg="${escapeHtml(t.requestMsg)}" data-label="${escapeHtml(t.requestNew)}" data-done="${escapeHtml(t.requested)}">${escapeHtml(t.requestNew)}</button>
 <p class="install">${escapeHtml(t.installLead)}<a href="${store}">${escapeHtml(t.install)}</a></p></div><script nonce="${nonce}">${ACTIVE_SCRIPT}${REQUEST_SCRIPT}</script>`;
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(t.title)}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escapeHtml(t.title)}</title>${ICON_LINKS}
 ${ogTags(c.env.INVITE_BASE_URL.replace(/\/+$/, ""), lang)}
 <style>${STYLE}</style></head><body><main class="enter${code ? "" : " invalid"}">${code ? hero : ""}${body}</main></body></html>`;
 

@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { ICON_LINKS } from "./site-icons";
 import type { AppEnv } from "../env";
 
 // Privacy policy (SECURITY §3 P12): what Shoo stores, for how long, and how to delete it.
@@ -175,7 +176,7 @@ const TEXT: Record<"en" | "id", LegalText> = {
   },
 };
 
-const CSP = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 const STYLE = `body{font:17px/1.5 -apple-system,system-ui,sans-serif;margin:0;padding:32px 20px;color:#111;background:#fff}
 main{max-width:640px;margin:0 auto}h2{font-size:20px;margin-top:28px}li{margin:6px 0}.muted{color:#666}
 @media (prefers-color-scheme:dark){body{color:#f2f2f2;background:#000}.muted{color:#aaa}}`;
@@ -194,7 +195,7 @@ export function legalPage(c: Context<AppEnv>, lang: "en" | "id", t: LegalText) {
     .map((s) => `<h2>${s.h}</h2><ul>${s.items.map((i) => `<li>${i}</li>`).join("")}</ul>`)
     .join("\n");
   const html = `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>${t.title}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>${t.title}</title>${ICON_LINKS}
 <style>${STYLE}</style></head><body><main><h1>${t.title}</h1><p class="muted">${t.updated}</p>
 <p>${t.lead}</p>${sections}
 <p class="muted"><a href="?lang=${lang === "en" ? "id" : "en"}">${lang === "en" ? "Bahasa Indonesia" : "English"}</a></p></main></body></html>`;
