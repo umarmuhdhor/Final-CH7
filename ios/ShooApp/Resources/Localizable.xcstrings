@@ -6604,6 +6604,35 @@
         }
       }
     },
+    "Try again in %lld hours" : {
+      "comment" : "Grey wait button on Connect after a sign-up limit; counts down to minutes under an hour (U-18).",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Try again in %lld hour"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Try again in %lld hours"
+                }
+              }
+            }
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi dalam %lld jam"
+          }
+        }
+      }
+    },
     "Try again in %lld minutes" : {
       "localizations" : {
         "id" : {

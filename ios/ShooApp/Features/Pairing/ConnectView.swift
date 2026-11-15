@@ -271,21 +271,18 @@ private struct ConnectInlineLinkStyle: ButtonStyle {
 private struct WaitButton: View {
     let model: ConnectModel
     @Environment(\.shooReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
 
-    /// Waits of 10 minutes or more count in minutes ("59 menit"); shorter ones as mm:ss.
-    static func label(seconds: Int) -> Text {
-        if seconds >= 600 {
-            let minutes = Int((Double(seconds) / 60).rounded(.up))
-            return Text("Try again in \(minutes) minutes")
-        }
-        return Text("Try again in \(String(format: "%02d:%02d", seconds / 60, seconds % 60))")
+    /// `ConnectModel.waitLabel`, in the app's language.
+    func label(seconds: Int) -> Text {
+        Text(verbatim: L10n.string(ConnectModel.waitLabel(seconds: seconds), language: AppLanguage(locale: locale)))
     }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let seconds = model.secondsToWait(now: context.date) ?? 0
             Button {} label: {
-                Self.label(seconds: seconds)
+                label(seconds: seconds)
                     .monospacedDigit()
                     .contentTransition(reduceMotion ? .opacity : .numericText(countsDown: true))
                     .animation(.snappy(duration: 0.3), value: seconds)
