@@ -22,6 +22,14 @@ struct LocalizationTests {
         #expect(L10n.string("Hi, \("Rina")!", language: .indonesian) == "Hai, Rina!")
     }
 
+    /// A-15 (fase 28m): "Connect" is "Hubungkan" (link up), not "Hubungi" (contact someone).
+    @Test(arguments: ["Connect so someone you love can double-check for you", "Connect so someone you love can check it again"])
+    func connectCopyLinksUpInsteadOfContacting(key: String) {
+        let indonesian = L10n.string(String.LocalizationValue(key), language: .indonesian)
+        #expect(!indonesian.contains("Hubungi agar"))
+        #expect(indonesian.hasPrefix("Hubungkan "))
+    }
+
     /// A-14 (fase 28m): "Hapus akun" with one protected person says "1 person", not "1 people".
     @Test func disconnectedPeopleFollowEnglishPlural() {
         #expect(L10n.string("\(1) people you protect will be disconnected.", language: .english)
