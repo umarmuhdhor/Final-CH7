@@ -41,11 +41,22 @@ export async function runNotifications(
   const ops = opts.ops ?? opsWriter;
   await writeOps(() => ops.start(sql, "notifications"));
   const off = await protectionOff(sql, now, MAX_PUSHES);
-  const summaries = await weeklySummaries(sql, now, MAX_PUSHES - off.length);
+  // Fase 28k (H5-02, K13): the "protection off" rows are claimed already. A summary query that
+  // throws (e.g. a statement timeout) must not lose those pushes: they are sent first, the run is
+  // marked failed, and the error is thrown again after. A claim that times out is rolled back as one
+  // statement, so its summaries go out on the next run. (A connection lost after the commit would
+  // lose them: the same at-most-once rule as every claimed push.)
+  let summaries: PushMessage[] = [];
+  let summaryError: unknown = null;
+  try {
+    summaries = await weeklySummaries(sql, now, MAX_PUSHES - off.length);
+  } catch (err) {
+    summaryError = err;
+  }
   const messages = [...off, ...summaries];
   // A run fails (fase 21a, ops_jobs) on pushes that threw or found the APNs config broken. An APNs
   // rejection of one device (bad or expired token) is normal and only lands in push_log.
-  let failed = 0;
+  let failed = summaryError === null ? 0 : 1;
   for (const m of messages) {
     try {
       if ((await deliverPush(sql, sender, m)) === "failed:config") failed++;
@@ -57,6 +68,7 @@ export async function runNotifications(
   const result = { protectionOff: off.length, summaries: summaries.length };
   await writeOps(() => ops.finish(sql, "notifications", { failed, backlog: false }));
   console.log(JSON.stringify({ event: "notifications", ...result }));
+  if (summaryError !== null) throw summaryError;
   return result;
 }
 
@@ -131,6 +143,10 @@ async function protectionOff(sql: Sql, now: Date, limit: number): Promise<PushMe
  * Monday from 08:00 local (outside quiet hours), once per local Monday: the last 7 days of
  * blocked and warned sites, the guardian's members included. Counts only, no sites. Guardian
  * devices only: the Protected settings page has no switch for it (fase 27j, F-N4).
+ * The counts take the owners as one list (the guardian plus its members), so each owner is an
+ * index range on scans_owner_time. `owner_id = d.id or owner_id in (…)` read every scan instead:
+ * 6.8 s for 40 guardians on the local volume DB, against 52 ms for the same counts in the read-only
+ * prototype (fase 28 hunt, N04 and P4; fase 28k, H5-02, OPT-03).
  */
 async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<PushMessage[]> {
   if (limit <= 0) return [];
@@ -155,11 +171,11 @@ async function weeklySummaries(sql: Sql, now: Date, limit: number): Promise<Push
       and d.summary_sent_on is distinct from v.day
     returning d.id, d.apns_token as "apnsToken", d.language,
       (select count(*)::int from scans s
-        where s.status = 'blocked' and s.detected_at > now() - interval '7 days'
-          and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as blocked,
+        where s.owner_id in (select d.id union all select protected_id from family_links where guardian_id = d.id)
+          and s.status = 'blocked' and s.detected_at > now() - interval '7 days') as blocked,
       (select count(*)::int from scans s
-        where s.status = 'warning' and s.detected_at > now() - interval '7 days'
-          and (s.owner_id = d.id or s.owner_id in (select protected_id from family_links where guardian_id = d.id))) as warnings,
+        where s.owner_id in (select d.id union all select protected_id from family_links where guardian_id = d.id)
+          and s.status = 'warning' and s.detected_at > now() - interval '7 days') as warnings,
       exists (select 1 from family_links where guardian_id = d.id) as family`;
   return claimed.map((r) => ({ toDeviceId: r.id, apnsToken: r.apnsToken, body: summaryText(r.language, r) }));
 }
