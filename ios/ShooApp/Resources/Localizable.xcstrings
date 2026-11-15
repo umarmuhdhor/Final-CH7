@@ -2641,6 +2641,17 @@
         }
       }
     },
+    "just now" : {
+      "comment" : "A family member's Safari was seen less than a second ago, or a few seconds ahead of this phone's clock (A-08). Lowercase: it follows \"active\".",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "baru saja"
+          }
+        }
+      }
+    },
     "Language" : {
       "localizations" : {
         "id" : {
