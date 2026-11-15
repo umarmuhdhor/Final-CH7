@@ -309,16 +309,15 @@ struct ActivitySegments: View {
                 withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.1)) { select(filter) }
             } label: {
                 // The semibold word sets the width, so selecting a segment never changes which layout fits.
+                // No line limit: if a word ever lacks room it wraps (the AX3 UI test sees that), never "…".
                 Text(filter.title(family: family))
                     .activityFont(13.33, .semibold, tracking: -0.08)
-                    .lineLimit(1)
                     .hidden()
                     .accessibilityHidden(true)
                     .overlay {
                         Text(filter.title(family: family))
                             .activityFont(13.33, isSelected ? .semibold : .medium, tracking: -0.08)
                             .foregroundStyle(.black)
-                            .lineLimit(1)
                     }
                     .padding(.horizontal, 6)
                     .frame(maxWidth: .infinity, minHeight: 28)
@@ -360,7 +359,7 @@ private struct ActivitySegmentRow: Layout {
         var x = bounds.minX
         for (subview, width) in zip(subviews, widths) {
             subview.place(
-                at: CGPoint(x: x, y: bounds.minY), anchor: .topLeading,
+                at: CGPoint(x: x, y: bounds.midY), anchor: .leading,
                 proposal: ProposedViewSize(width: width, height: bounds.height)
             )
             x += width + spacing
