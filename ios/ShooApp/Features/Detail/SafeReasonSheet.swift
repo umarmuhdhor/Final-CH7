@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Why the Guardian overrides Shoo with "Aman" (GD-07). Shoo flagged the site; the Guardian says it is fine.
 /// The ids are stable English slugs so Team AI can learn from them (layer 5, #241); the chip text is localized.
@@ -54,17 +55,53 @@ struct SafeReasonSheet: View {
     @State private var failed = false
     @State private var height: CGFloat = 600
     @FocusState private var noteFocused: Bool
+    /// Screen y of the keyboard's top edge, suggestion bar included; `nil` while it is down. Screen and window
+    /// coordinates are the same here: the app is iPhone only, always full screen.
+    @State private var keyboardTop: CGFloat?
+    /// Screen y of the scroll view's bottom edge, after the room the sheet already made for the keys.
+    @State private var scrollBottom: CGFloat = 0
+
+    /// How far the keyboard still reaches into the scroll view.
+    private var keyboardOverlap: CGFloat {
+        guard let keyboardTop else { return 0 }
+        return max(0, scrollBottom - keyboardTop)
+    }
+
+    private static let submitID = "safeReason.submit"
 
     private var canSubmit: Bool { !reasons.isEmpty && !isSaving }
 
     var body: some View {
         // Scrolls once the keyboard leaves less room than the content needs; the header never clips.
-        ScrollView {
-            content
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+        ScrollViewReader { proxy in
+            ScrollView {
+                content
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollDismissesKeyboard(.interactively)
+            // U-11: "Mark Safe" sat under the keyboard while typing. On iPhone 17 the sheet makes room for the
+            // keys and their suggestion bar but stays scrolled to the top; on SE it makes room for less than the
+            // keyboard takes. So: room for whatever the keyboard still covers, then scroll the button into view.
+            .contentMargins(.bottom, keyboardOverlap, for: .scrollContent)
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { scrollBottom = $0 }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+                keyboardTop = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect)?.minY
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                keyboardTop = nil
+            }
+            // Once the keyboard and the room above it have settled while typing (keys up, the sheet resized).
+            // A new value cancels the wait, so a drag or the resize itself does not queue a scroll per frame.
+            .task(id: [keyboardTop ?? -1, scrollBottom]) {
+                guard keyboardTop != nil, noteFocused else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                guard !Task.isCancelled else { return }
+                withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) {
+                    proxy.scrollTo(Self.submitID, anchor: .bottom)
+                }
+            }
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollDismissesKeyboard(.interactively)
         .presentationDetents([.height(height)])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(32)
@@ -257,6 +294,7 @@ struct SafeReasonSheet: View {
         .padding(.top, 4)
         .accessibilityHint(reasons.isEmpty ? Text("Pick at least one reason first") : Text(""))
         .accessibilityIdentifier("safeReason.submit")
+        .id(Self.submitID)
     }
 
     private func submit() async {

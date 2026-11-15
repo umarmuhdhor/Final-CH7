@@ -259,4 +259,53 @@ final class DetailUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    /// U-11 (fase 28m, GD-07): while the Guardian types a note, "Tandai Aman" stays above the keyboard and its
+    /// suggestion bar. iPhone 17, ID, default size. Red on main (fase 28 cell A `sheet-safeReason-kb`): the
+    /// button at y 557.3 to 613.3, the keyboard from y 590, the suggestion bar above it from y 546.
+    @MainActor
+    func testSafeReasonSubmitStaysAboveTheKeyboardOnIPhone17() throws {
+        try XCTSkipUnless(UIScreen.main.bounds.width == 402, "measured on iPhone 17 only")
+        try assertSafeReasonSubmitAboveTheKeyboard(language: "id")
+    }
+
+    /// U-11 on iPhone SE, EN, default size. Recorded on main (28m, software keyboard on screen): the button at
+    /// y 497.5 to 553.5, the keyboard from y 451, the suggestion bar from y 407. The matrix cell E said pass, but
+    /// its screenshot had no keyboard (notes [f]).
+    @MainActor
+    func testSafeReasonSubmitStaysAboveTheKeyboardOnSE() throws {
+        try XCTSkipUnless(UIScreen.main.bounds.width == 375, "measured on iPhone SE only")
+        try assertSafeReasonSubmitAboveTheKeyboard(language: "en")
+    }
+
+    @MainActor
+    private func assertSafeReasonSubmitAboveTheKeyboard(language: String) throws {
+        let app = openDetail(Self.blocked92, language: language, extra: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL"])
+        app.buttons["detail.verdict.safe"].tap()
+        let reason = app.buttons["safeReason.chip.official_site"]
+        XCTAssertTrue(reason.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        reason.tap()
+        let note = app.descendants(matching: .any)["safeReason.note"].firstMatch
+        note.tap()
+        // A simulator with a hardware keyboard shows none, and without one this test proves nothing.
+        // A minimized keyboard also "exists", below the screen's bottom edge: it has to be on the screen.
+        let keyboard = app.keyboards.firstMatch
+        let screenBottom = app.frame.maxY
+        let onScreen = NSPredicate { _, _ in keyboard.exists && keyboard.frame.minY < screenBottom }
+        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: onScreen, object: nil)], timeout: UITestTimeout.screen)
+        XCTAssertLessThan(keyboard.frame.minY, screenBottom, "no software keyboard on screen: \(keyboard.frame)")
+        note.typeText("Situs resmi bank saya")
+        let submit = app.buttons["safeReason.submit"]
+        // The suggestion bar sits on top of the keyboard when it shows. Without it (or if its private name
+        // changes) the keys alone still put main's button under them on both devices (613.3 > 590, 553.5 > 451).
+        func keyboardTop() -> CGFloat {
+            let bar = app.otherElements["SystemInputAssistantView"]
+            return bar.exists && bar.frame.height > 0 ? min(keyboard.frame.minY, bar.frame.minY) : keyboard.frame.minY
+        }
+        // The sheet may still be moving: wait for it before measuring.
+        let above = NSPredicate { _, _ in submit.frame.maxY <= keyboardTop() }
+        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: above, object: nil)], timeout: UITestTimeout.screen)
+        XCTAssertLessThanOrEqual(submit.frame.maxY, keyboardTop(), "Tandai Aman \(submit.frame) under the keyboard from y \(keyboardTop())")
+        XCTAssertTrue(submit.isHittable, "Tandai Aman \(submit.frame) can't be tapped")
+    }
 }
