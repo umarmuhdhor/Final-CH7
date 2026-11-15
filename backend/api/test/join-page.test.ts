@@ -76,11 +76,52 @@ describe("GET /j/:code", () => {
 
   it("the install hint says to open the link again, not to tap Paste (26a cancelled), in English and Indonesian", async () => {
     const { html: en } = await page("/j/482193");
-    expect(en).toContain("We copy the invite link. After installing, open it again to join.");
+    expect(en).toContain('<p class="hint">After installing, open this invite link again to join.</p>');
     expect(en).not.toContain("tap Paste");
     const { html: id } = await page("/j/482193", "id-ID,id;q=0.9");
-    expect(id).toContain("Link undangan sudah kami salin. Setelah install, buka lagi link itu untuk bergabung.");
+    expect(id).toContain('<p class="hint">Setelah install, buka lagi link undangan ini untuk bergabung.</p>');
     expect(id).not.toContain("Tempel");
+  });
+
+  // U-15: the link is copied only on the Install tap, and only when navigator.clipboard exists, so the
+  // hint shown before any tap must not say it was (or will be) copied.
+  it.each([
+    ["en", undefined, /cop(y|ied)/i],
+    ["id", "id-ID,id;q=0.9", /salin/i],
+  ] as const)("the install hint (%s) does not claim the link is copied before the tap (U-15)", async (_, lang, copyWord) => {
+    const { html } = await page("/j/482193", lang);
+    const hint = /<p class="hint">([^<]*)<\/p>/.exec(html)?.[1];
+    expect(hint).toBeTruthy();
+    expect(hint).not.toMatch(copyWord);
+  });
+
+  // U-13: vitest has no layout engine, so the code row width comes from the page CSS. At a 320 px
+  // viewport (SE with Display Zoom) the row (6 digits + dash + 6 gaps) must fit inside main's padding.
+  it("the code row fits a 320 px viewport inside main's side padding (U-13)", async () => {
+    const { html } = await page("/j/482193");
+    const css = /<style>([\s\S]*?)<\/style>/.exec(html)![1]!;
+    const viewport = 320;
+    // Base rules plus every max-width media block that applies at this viewport (later rules win).
+    const blocks = [...css.matchAll(/@media \(max-width:(\d+)px\)\{((?:[^{}]*\{[^}]*\})*)\}/g)];
+    const base = blocks.reduce((acc, m) => acc.replace(m[0], ""), css);
+    const applied = base + blocks.filter((m) => Number(m[1]) >= viewport).map((m) => m[2]).join("");
+    const prop = (selector: string, name: string) => {
+      const esc = selector.replace(/\./g, "\\.");
+      let value: string | undefined;
+      for (const m of applied.matchAll(new RegExp(`(?:^|[}\\s])${esc}\\{([^}]*)\\}`, "g"))) {
+        const v = new RegExp(`(?:^|;)${name}:([^;]+)`).exec(m[1]!)?.[1];
+        if (v !== undefined) value = v;
+      }
+      return value;
+    };
+    const px = (v: string | undefined) => Number(/^(\d+(?:\.\d+)?)px$/.exec(v ?? "")?.[1] ?? NaN);
+    const digit = px(prop(".digit", "width"));
+    const gap = px(prop(".code", "gap"));
+    const dash = px(prop(".dash", "width"));
+    const side = px(prop("main", "padding")?.split(" ")[1]);
+    expect([digit, gap, dash, side].every(Number.isFinite)).toBe(true);
+    const row = 6 * digit + 6 * gap + dash;
+    expect(row).toBeLessThanOrEqual(viewport - 2 * side);
   });
 
   it("Install goes to APP_STORE_URL when it is a TestFlight link (fase 26 Q1, var not set yet)", async () => {

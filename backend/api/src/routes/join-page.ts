@@ -40,7 +40,7 @@ const TEXT = {
     requested: "Message copied",
     installLead: "Don't have Shoo yet?",
     install: "Install it",
-    installHint: "We copy the invite link. After installing, open it again to join.",
+    installHint: "After installing, open this invite link again to join.",
     preview: "Tap to join and get protected from scam sites.",
     imageAlt: "Shoo logo",
     heroAlt: "Your family on Shoo, and you",
@@ -59,7 +59,7 @@ const TEXT = {
     requested: "Pesan tersalin",
     installLead: "Belum punya Shoo?",
     install: "Unduh",
-    installHint: "Link undangan sudah kami salin. Setelah install, buka lagi link itu untuk bergabung.",
+    installHint: "Setelah install, buka lagi link undangan ini untuk bergabung.",
     preview: "Ketuk untuk bergabung dan terlindungi dari situs penipuan.",
     imageAlt: "Logo Shoo",
     heroAlt: "Keluargamu di Shoo, dan kamu",
@@ -111,6 +111,9 @@ h1{margin:20px 0 0;font-size:28px;line-height:34px;font-weight:600;letter-spacin
 .code{display:flex;align-items:center;gap:6px;margin:16px 0 0;padding:0}
 .digit{display:flex;align-items:center;justify-content:center;width:44px;height:58px;background:#fff;border:1px solid #e4e8ef;border-radius:12px;font:600 26px/32px ui-rounded,-apple-system,system-ui,sans-serif;color:#151617;font-variant-numeric:tabular-nums}
 .dash{width:8px;height:2px;background:#c7c7ce}
+/* U-13: 6 x 44 + 6 gaps x 6 + dash 8 = 308 px is wider than the 272 px inside main's padding at a 320 px
+   viewport (SE with Display Zoom). Below 360 px: 6 x 38 + 6 x 4 + 8 = 260 px. */
+@media (max-width:359px){.digit{width:38px}.code{gap:4px}}
 .meta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:8px}
 .ttl{display:flex;align-items:center;gap:6px;color:#6a717e;font-size:13px;line-height:18px;letter-spacing:-.08px}
 .copy{display:flex;align-items:center;gap:6px;min-height:44px;padding:0;border:0;background:none;color:#186fb9;font:inherit;letter-spacing:-.01em;cursor:pointer}
@@ -139,7 +142,8 @@ const ICON_CLOCK = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden=
 const ICON_COPY = `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="#186fb9" stroke-width="1.6" stroke-linejoin="round"><rect x="6" y="6" width="10" height="10" rx="2.2"/><path d="M12 6V4.2A2.2 2.2 0 0 0 9.8 2H4.2A2.2 2.2 0 0 0 2 4.2v5.6A2.2 2.2 0 0 0 4.2 12H6"/></svg>`;
 
 // Copies the invite link before going to the store, so the person can open it again after installing
-// (PR-03). The link is the only thing copied; nothing else runs and nothing is sent.
+// (PR-03). The link is the only thing copied; nothing else runs and nothing is sent. The copy happens
+// only on this tap and only with navigator.clipboard, so the hint never says it was copied (U-15).
 // "Salin kode" copies the 6-digit code the same way (Figma 1326:12651), then shows "Tersalin" for 2 s.
 const INSTALL_SCRIPT = `document.getElementById("install").addEventListener("click",function(e){var a=this,l=a.dataset.invite;
 if(!l||!navigator.clipboard)return;e.preventDefault();navigator.clipboard.writeText(l).finally(function(){location.href=a.href})});
