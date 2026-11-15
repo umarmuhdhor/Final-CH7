@@ -7013,6 +7013,96 @@
           }
         }
       }
+    },
+    "Address is 1 day old" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umur alamat 1 hari"
+          }
+        }
+      }
+    },
+    "Address is %lld days old" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Umur alamat %lld hari"
+          }
+        }
+      }
+    },
+    "Address made recently" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alamat baru dibuat"
+          }
+        }
+      }
+    },
+    "On a scam list" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada di daftar penipuan"
+          }
+        }
+      }
+    },
+    "Cheap ending often used by scam sites" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akhiran murah yang sering dipakai situs penipuan"
+          }
+        }
+      }
+    },
+    "Not the brand's official address" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bukan alamat resmi brand ini"
+          }
+        }
+      }
+    },
+    "Brand name with extra words" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama brand ditambah kata lain"
+          }
+        }
+      }
+    },
+    "The link itself looks like a scam link" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link-nya sendiri mirip link penipuan"
+          }
+        }
+      }
+    },
+    "Something is off with this address" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ada yang janggal dengan alamat ini"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

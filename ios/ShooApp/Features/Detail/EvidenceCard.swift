@@ -286,7 +286,7 @@ struct EvidencePhoto: View {
 
 /// Dim everything but the holes (#0B1A2E at 50 %). One hole: white outline, soft white glow, white tag
 /// at its top right. Several: yellow outlines (#FFD60A) with a numbered dot at each top left.
-private struct Spotlight: View {
+struct Spotlight: View {
     let holes: [CGRect]
     let size: CGSize
     let tag: String?
@@ -299,7 +299,9 @@ private struct Spotlight: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Path { path in
-                path.addRect(CGRect(origin: .zero, size: size))
+                // Past the edges: in the full screen view the zoomed page runs under the safe areas, where an
+                // undimmed strip would show. The card clips it to its panel.
+                path.addRect(CGRect(origin: .zero, size: size).insetBy(dx: -size.width, dy: -size.height))
                 for hole in holes { path.addRoundedRect(in: hole, cornerSize: CGSize(width: 8, height: 8)) }
             }
             .fill(DetailStyle.spotlight.opacity(0.5), style: FillStyle(eoFill: true))
@@ -346,8 +348,12 @@ private struct Spotlight: View {
 struct EvidenceCard: View {
     let reason: Evidence
     let image: UIImage?
+    /// Where this reason sits on `image`, in page CSS px; `nil` = the reason's own marks.
+    var highlights: [CGRect]?
     let isLoadingImage: Bool
     var pageCSSWidth: CGFloat?
+    /// The scan's registrable domain: a reason about the address shows it instead of the page (DT-04).
+    var domain: String?
     var onOpenImage: () -> Void = {}
 
     @Environment(\.locale) private var locale
@@ -355,11 +361,14 @@ struct EvidenceCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if image != nil || isLoadingImage {
+            if reason.kind.isAddress, let domain {
+                AddressEvidence(domain: domain, kind: reason.kind, reasonText: reason.text)
+                    .accessibilityIdentifier("detail.address.\(reason.index)")
+            } else if image != nil || isLoadingImage {
                 Button(action: onOpenImage) {
                     EvidencePhoto(
                         image: image,
-                        highlights: reason.kind.isOnPage ? reason.highlights : [],
+                        highlights: reason.kind.isOnPage ? (highlights ?? reason.highlights) : [],
                         pageCSSWidth: pageCSSWidth,
                         tag: L10n.string(reason.kind.title, language: language),
                         isLoading: isLoadingImage
