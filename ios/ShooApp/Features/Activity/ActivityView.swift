@@ -279,6 +279,9 @@ private struct PickerAnchorKey: PreferenceKey {
 
 /// "Semua / Waspada / Diblokir" (own) or "… / Bahaya" (Family): Figma "Segmented Control" (iOS 26 style).
 /// Selected segment is white; VoiceOver hears "selected".
+/// U-12: a filter word never breaks in the middle. Three equal segments while the longest word fits a third;
+/// at large text sizes each segment as wide as its word; and when the words no longer fit side by side, one
+/// segment per line.
 struct ActivitySegments: View {
     let selection: ActivityFilter
     let family: Bool
@@ -287,37 +290,91 @@ struct ActivitySegments: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(ActivityFilter.allCases, id: \.self) { filter in
-                let isSelected = filter == selection
-                Button {
-                    withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.1)) { select(filter) }
-                } label: {
-                    Text(filter.title(family: family))
-                        .activityFont(13.33, isSelected ? .semibold : .medium, tracking: -0.08)
-                        .foregroundStyle(.black)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 6)
-                        .frame(maxWidth: .infinity, minHeight: 28)
-                        .background {
-                            if isSelected {
-                                Capsule()
-                                    .fill(.white)
-                                    .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
-                                    .matchedGeometryEffect(id: "thumb", in: thumb)
-                            }
-                        }
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-                .accessibilityIdentifier("filter.\(filter.rawValue)")
-            }
+        ViewThatFits(in: .horizontal) {
+            ActivitySegmentRow(spacing: 4) { segments(stacked: false) }
+                .padding(2)
+                .background(ActivityStyle.segmentTrack, in: Capsule())
+            VStack(spacing: 4) { segments(stacked: true) }
         }
-        .padding(2)
-        .background(ActivityStyle.segmentTrack, in: Capsule())
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Filter"))
+    }
+
+    /// `stacked`: one segment per line, each on its own track (one capsule track around three lines would
+    /// round off the top and bottom segments).
+    private func segments(stacked: Bool) -> some View {
+        ForEach(ActivityFilter.allCases, id: \.self) { filter in
+            let isSelected = filter == selection
+            Button {
+                withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.1)) { select(filter) }
+            } label: {
+                // The semibold word sets the width, so selecting a segment never changes which layout fits.
+                Text(filter.title(family: family))
+                    .activityFont(13.33, .semibold, tracking: -0.08)
+                    .lineLimit(1)
+                    .hidden()
+                    .accessibilityHidden(true)
+                    .overlay {
+                        Text(filter.title(family: family))
+                            .activityFont(13.33, isSelected ? .semibold : .medium, tracking: -0.08)
+                            .foregroundStyle(.black)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 6)
+                    .frame(maxWidth: .infinity, minHeight: 28)
+                    .background {
+                        if isSelected {
+                            Capsule()
+                                .fill(.white)
+                                .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
+                                .matchedGeometryEffect(id: "thumb", in: thumb)
+                        }
+                    }
+                    .background(stacked ? ActivityStyle.segmentTrack : .clear, in: Capsule())
+                    .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            .accessibilityIdentifier("filter.\(filter.rawValue)")
+        }
+    }
+}
+
+/// The segments side by side: equal widths while the widest fits a third of the row, otherwise each as wide
+/// as its word plus an equal share of what is left. Its ideal width is the words side by side, so
+/// `ViewThatFits` stacks the segments only when the words cannot share one line.
+private struct ActivitySegmentRow: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let ideal = subviews.map { $0.sizeThatFits(.unspecified).width }
+        let gaps = spacing * CGFloat(max(subviews.count - 1, 0))
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? ideal.reduce(gaps, +)
+        let widths = widths(in: width, ideal: ideal)
+        let height = zip(subviews, widths).map { $0.sizeThatFits(ProposedViewSize(width: $1, height: nil)).height }.max()
+        return CGSize(width: width, height: height ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let widths = widths(in: bounds.width, ideal: subviews.map { $0.sizeThatFits(.unspecified).width })
+        var x = bounds.minX
+        for (subview, width) in zip(subviews, widths) {
+            subview.place(
+                at: CGPoint(x: x, y: bounds.minY), anchor: .topLeading,
+                proposal: ProposedViewSize(width: width, height: bounds.height)
+            )
+            x += width + spacing
+        }
+    }
+
+    private func widths(in width: CGFloat, ideal: [CGFloat]) -> [CGFloat] {
+        guard !ideal.isEmpty else { return [] }
+        let count = CGFloat(ideal.count)
+        let available = width - spacing * (count - 1)
+        let equal = available / count
+        if ideal.allSatisfy({ $0 <= equal }) { return ideal.map { _ in equal } }
+        let share = max(available - ideal.reduce(0, +), 0) / count
+        return ideal.map { $0 + share }
     }
 }
 
