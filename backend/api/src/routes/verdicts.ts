@@ -27,13 +27,15 @@ const body = z.strictObject({ scanId: z.string().max(64), value: z.enum(["safe",
 // The extension sends the registrable domain; tolerate case, spaces and a leading www.
 const domainParam = z
   .string()
-  .max(260)
+  .max(260, { abort: true })
   .transform((s) => s.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, ""))
   .pipe(z.string().max(253).regex(DOMAIN, "must be a registrable domain"));
 // The link (origin + path) as the extension's shareableUrl gives it; a query or fragment is dropped.
+// B-06: the length check aborts, so a too-long url never reaches the transform or the object refine
+// below (which reads url.hostname and threw a TypeError → 500 instead of 422).
 const linkParam = z
   .string()
-  .max(2048)
+  .max(2048, { abort: true })
   .transform((s, ctx) => {
     let u: URL | undefined;
     try {
@@ -52,6 +54,8 @@ const lookupQuery = z.union([
     .object({ url: linkParam, domain: domainParam })
     .refine(
       ({ url, domain }) => {
+        // Zod skips this refine after an aborted field issue; the guard keeps it safe if that changes.
+        if (!(url instanceof URL) || typeof domain !== "string") return false;
         const host = url.hostname.replace(/\.$/, "");
         return host === domain || host.endsWith(`.${domain}`);
       },
