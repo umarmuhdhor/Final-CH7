@@ -410,6 +410,9 @@ actor MockRepository: ShooRepository {
             && allScans[index].ownerDeviceId == scan.ownerDeviceId {
             allScans[index].verdict = verdict
         }
+        // `setVerdict.lost`: saved, but the answer never arrives (a timeout). A-02 stages the 409 after it with
+        // `-mock.fail setVerdict.lost,setVerdict~1=verdict_locked`.
+        try failIfAsked("setVerdict.lost")
         return verdict
     }
 
@@ -453,6 +456,8 @@ actor MockRepository: ShooRepository {
     /// Debug: `-mock.fail me,scans,setVerdict=verdict_not_allowed` makes those calls fail (no value = no
     /// connection; `name=code` = that contract error), to stage the error states in the simulator.
     /// `name~N` lets the first N calls through (`scans~1`: Activity loads, then its refresh fails).
+    /// `setVerdict.lost` fails after the verdict was saved, like an answer lost to a timeout. It applies to
+    /// every call that gets that far, so pair it with `setVerdict~1=…` to make the second call fail first.
     private func failIfAsked(_ name: String) throws {
         let call = (callCounts[name] ?? 0) + 1
         callCounts[name] = call
