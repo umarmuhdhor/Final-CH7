@@ -148,12 +148,12 @@ sequenceDiagram
   API->>G: push: "A page was blocked"
   G->>API: GET /scans/{id} (reasons, page copy)
   G->>API: POST /verdicts (safe / not safe)
-  X->>API: GET /verdicts?domain= (block page polls)
+  X->>API: GET /verdicts?url=&domain= (block page polls: 2 s, then 5 s, then 15 s)
   API-->>X: safe
   X->>X: block page opens the site
 ```
 
-Only pages that reach 30 are ever sent to the backend. The verdict lookup also starts only at 30, so ordinary browsing never reaches the server.
+Only pages that reach 30 are ever stored by the backend. The verdict lookup also starts only at 30. With the online check on, the extension also sends the registrable domain and score of the page on screen to `POST /live` for the Dynamic Island; the backend forwards them to APNs and stores nothing (#49).
 
 ## Architecture
 
@@ -294,7 +294,7 @@ Threat model and secret rules: [`plan/alief/SECURITY.md`](plan/alief/SECURITY.md
 ## Limits
 
 - **Weights are estimates.** Signal weights are tuned against an eval set, not real traffic. Some scam pages score under 30, and some real pages score above it.
-- **No Dynamic Island.** A Safari extension cannot start a Live Activity, so the live score is an in-page bubble ([spike](docs/spikes/dynamic-island.md)).
+- **Dynamic Island needs the server.** A Safari extension cannot start a Live Activity itself, so the island is started and updated by APNs push from the backend (`POST /live`, path C, #49) while the online check is on. The in-page bubble stays as the offline, instant score ([spike](docs/spikes/dynamic-island.md)).
 - **Chrome runs layers 1–2 only**, with no pairing and no Guardian.
 - **If the AI service is down,** layers 3–4 are skipped and the score comes from layers 1–2 alone.
 - **Hoax detection is Phase 2**, not part of this version.

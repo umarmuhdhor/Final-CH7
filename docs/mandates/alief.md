@@ -34,23 +34,23 @@ Pakai `contracts/fixtures/*.json` sebagai data palsu lewat satu protocol/reposit
 - [x] **ON-01** Splash interaktif 3 slide, ada tombol Skip
 - [x] **ON-02** Isi nama (1–20 karakter) + avatar acak
 - [x] **ON-03** Pilih mode Guardian / Protected (permanen)
-- [ ] **ON-04** Turn on extension: ilustrasi letak switch, tombol Turn on, cek status saat kembali ke app, link "Still can't? Watch video" (PiP). Mulai dengan fallback PRD §10, sempurnakan dari hasil S1 + S2.
+- [ ] **ON-04** Turn on extension: ilustrasi letak switch, tombol Turn on, cek status saat kembali ke app, link "Still can't? Watch video" (PiP). Mulai dengan fallback PRD §10, sempurnakan dari hasil S1 + S2. *Status 15 Nov 2026: layar sudah jadi dan merged (#123, #131, #137, #282, #398, #422, #431, #446; video tutorial dari issue #37 lewat `TutorialVideoPlayer`). Belum dicentang karena angka spike S1/S2 dari iPhone asli (C14, issue #40) belum ada; #484 (frame Figma setelah Settings) masih terbuka.*
 - [x] **ON-05** Izin notifikasi + pengingat di Home kalau ditolak
 - [x] **DT-01 s.d. DT-06** Layar Detail: ring skor, label, link & waktu, 1–3 bukti (`labelSimple` untuk Protected), tombol validasi khusus Guardian, catatan "Verified scam by / Marked safe by"
 - [x] **PR-04, PR-05** Shield + Activity untuk Protected
 - [x] **GD-01, GD-02, GD-03, GD-05** Shield Guardian, toggle Family mode, Shield Family, Activity Family
 - [x] **PF-01** Profile (nama, avatar, bahasa, status extension)
 
-Status extension Active/Off cukup baca `AppGroup.Key.extensionLastSeenAt`. Contohnya sudah ada di `ContentView.swift`.
+Status extension Active/Off cukup baca `AppGroup.Key.extensionLastSeenAt`. Contohnya sudah ada di `ContentView.swift`. *Sekarang (issue #40, #131): di iOS 26.2+ switch Safari (`SFSafariExtensionManager`) dibaca dulu, heartbeat jadi fallback; aturannya di `ios/ShooApp/CLAUDE.md`.*
 - [x] **EX-01 (dari Umar U7)** `ExtensionStatus`: kalau `AppGroup.Key.extensionAllSites` bernilai `false` → Off walaupun heartbeat masih baru (izin Safari dipersempit ke beberapa situs). Key tidak ada → anggap `true`. Lihat contracts/app-group-keys.md.
 Layout dan copy final mengikuti designer. Wireframe di PRD bagian 7 hanya referensi.
 
 ### Fase B · Backend — `backend/`
 Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk JSON **wajib** sama dengan `contracts/api.md`.
 - [x] **Devices:** `POST /devices`, `PATCH /devices/me`, auth token per perangkat (tanpa login)
-- [x] **Family:** `POST /family/code` (4 digit, berlaku 60 detik, batas jumlah percobaan), `POST /family/join`, `GET/DELETE /family/members`, `DELETE /family/guardian`, maks. 3 orang per guardian
+- [x] **Family:** `POST /family/code` (4 digit, berlaku 60 detik, batas jumlah percobaan; *sekarang 6 digit, 30 menit, dipakai ulang selama sisa > 5 menit, issue #128*), `POST /family/join`, `GET/DELETE /family/members`, `DELETE /family/guardian`, maks. 3 orang per guardian
 - [x] **Scans:** `POST /scans` (+ upload screenshot), `GET /scans` dengan filter + cursor, `GET /scans/{id}`
-- [x] **Verdicts:** `POST /verdicts` (berlaku per domain), `GET /verdicts?domain=`
+- [x] **Verdicts:** `POST /verdicts` (berlaku per domain), `GET /verdicts?domain=` (*sekarang per link, origin + path: `GET /verdicts?url=&domain=`, #241*)
 - [x] **Blocklist:** `GET /blocklist` (dibutuhkan Imelda untuk layer 1, jadi kerjakan lebih awal kalau bisa)
 - [x] **Push (APNs):** dikirim saat device Protected memanggil `POST /scans`. Payload sesuai `contracts/api.md`.
 - [x] **Retensi:** data scan + screenshot otomatis dihapus setelah 14 hari
@@ -59,14 +59,14 @@ Stack bebas (saran: Supabase). Tulis cara setup di `backend/README.md`. Bentuk J
 ### Fase C · Sambungkan app ke backend
 - [x] `ApiRepository` menggantikan `MockRepository`
 - [x] Setelah onboarding, tulis key sesi ke App Group (`contracts/app-group-keys.md`) supaya extension bisa memanggil API
-- [x] **GD-04** Family code: QR + kode yang berganti tiap 60 detik + hitung mundur + "Copy invite link" + daftar terhubung (x/3)
+- [x] **GD-04** Family code: QR + kode yang berganti tiap 60 detik (*sekarang 30 menit, issue #128*) + hitung mundur + "Copy invite link" + daftar terhubung (x/3)
 - [x] **PR-01, PR-02** Connect lewat Scan QR / Enter code → layar "You're protected by …"
-- [x] **PR-03** Link undangan `shoo://join?code=1234` membuka app dengan kode terisi (P0). Deferred deep link setelah install = P1.
+- [x] **PR-03** Link undangan `shoo://join?code=1234` membuka app dengan kode terisi (P0; *sekarang kode 6 digit dan Universal Link `/j/<kode>`, issue #129*). Deferred deep link setelah install = P1.
 - [x] **GD-06** Tap push → buka Detail sesuai `scanId`
 - [x] **GD-07** Tombol It's safe / Not safe langsung berlaku, tanpa konfirmasi
 
 ### Ditahan dulu
-- **Live Activity lewat push:** kalau spike Dynamic Island memutuskan jalur push-to-start, nanti ada endpoint tambahan. Umar akan memberi kabar.
+- **Live Activity lewat push:** kalau spike Dynamic Island memutuskan jalur push-to-start, nanti ada endpoint tambahan. Umar akan memberi kabar. *Selesai: Umar memutuskan path C di issue #49; `POST /live` + token Live Activity (#356), app mengirim token (#386), status di content-state (#442).*
 
 ## Bukan tugasmu
 Popup warning, highlight, dan layar blokir di Safari (Umar). Skor, sinyal, dan teks alasan (Imelda). Hoaks (Fase 2).
