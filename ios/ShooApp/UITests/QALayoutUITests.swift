@@ -246,4 +246,29 @@ final class QALayoutUITests: XCTestCase {
         // Not scrolled past either: still on screen.
         XCTAssertGreaterThanOrEqual(notice.frame.minY, 0, "notice \(notice.frame)")
     }
+
+    /// U-09 (fase 28m, PR-01): on the Scan QR tab the 14-day note ends above "Nanti saja" instead of running
+    /// under it. iPhone 17, ID, default size. Red on main (fase 28 cell A `connect-scan-tab`): note y 773 to
+    /// 819.7, "Nanti saja" from y 802, 17.7 pt under the link. No guard cell at the default size.
+    @MainActor
+    func testConnectScanNoteEndsAboveNotNowOnIPhone17() throws {
+        try XCTSkipUnless(UIScreen.main.bounds.width == 402, "measured on iPhone 17 only")
+        // `unpaired`: Protected Home shows the "Connect" card, which opens Connect as a sheet.
+        let app = launch([
+            "-settings.onboardingCompleted", "YES",
+            "-settings.onboardingConnectPassed", "YES",
+            "-settings.mode", "protected",
+            "-mock.scenario", "unpaired",
+            "-UITestNotifications", "denied",
+            "-UITestExtensionActive", "YES",
+        ], textSize: "UICTContentSizeCategoryL", language: "id")
+        let scanTab = app.buttons["connect.tab.scan"]
+        app.tap(app.buttons["home.supervised.connect"], until: scanTab)
+        scanTab.tapWhenHittable()
+        XCTAssertTrue(app.descendants(matching: .any)["connect.scanner"].firstMatch.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        let note = app.descendants(matching: .any)["connect.copyNote"].firstMatch
+        let skip = app.buttons["connect.skip"]
+        XCTAssertTrue(note.exists && skip.exists, app.debugDescription)
+        XCTAssertLessThanOrEqual(note.frame.maxY, skip.frame.minY, "note \(note.frame) under Nanti saja \(skip.frame)")
+    }
 }

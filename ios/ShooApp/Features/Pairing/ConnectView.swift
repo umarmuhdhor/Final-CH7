@@ -377,6 +377,8 @@ private struct ConnectTabs: View {
 private struct ScannerFrame<Content: View>: View {
     @ViewBuilder let content: Content
 
+    private static var height: CGFloat { 390 }
+
     var body: some View {
         ZStack {
             Rectangle().fill(Color(red: 0x77 / 255, green: 0x75 / 255, blue: 0x75 / 255).opacity(0.25))
@@ -388,8 +390,12 @@ private struct ScannerFrame<Content: View>: View {
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
-        .aspectRatio(354 / 433, contentMode: .fit)
-        .frame(maxHeight: 433)
+        // Figma's frame is 354 × 433, drawn before the 14-day note sat under it. At that height the note ran
+        // under "Nanti saja" on an 874 pt iPhone (U-09: y 773 to 819.7, the link from y 802); 43 pt shorter
+        // it ends above the footer's fade at the default text size. Larger sizes and the "not a Shoo QR" line
+        // still scroll the note into view, as the rest of the page does.
+        .aspectRatio(354 / Self.height, contentMode: .fit)
+        .frame(maxHeight: Self.height)
         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 }
