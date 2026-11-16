@@ -482,8 +482,9 @@ struct DetailView: View {
         .padding(.top, 4)
     }
 
-    /// Figma shows "bca-verifikasi.site/login"; the full link is what "Copy link" copies. The registrable
-    /// domain, then the path (BH-13): a deceiving subdomain (`klikbca.co.id.secure-login.<domain>`) is left
+    /// Figma shows "bca-verifikasi.site/login"; the full link is what "Copy link" copies. The scan's
+    /// `domain` (the registrable domain; the full host on a shared platform such as `sites.google.com`,
+    /// contracts/api.md Scans "`domain`", #495), then the path (BH-13): a deceiving subdomain (`klikbca.co.id.secure-login.<domain>`) is left
     /// out and the domain is never the part the pill cuts, as on the block page (#382). The path stays
     /// percent-encoded (BH-36), as in Activity: bidi or invisible characters cannot reorder it.
     static func shownLink(_ url: URL, domain: String) -> String {

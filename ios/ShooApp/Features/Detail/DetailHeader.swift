@@ -114,7 +114,7 @@ struct DetailHero: View {
 struct DetailLinkPill: View {
     let look: DetailLook
     let text: String
-    /// Tail, not middle (BH-13): the text starts with the registrable domain (`DetailView.shownLink`),
+    /// Tail, not middle (BH-13): the text starts with the scan's `domain` (`DetailView.shownLink`),
     /// so a long path is what gets cut, never the domain.
     static let truncation: Text.TruncationMode = .tail
 
