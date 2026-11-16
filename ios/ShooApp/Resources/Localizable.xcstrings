@@ -537,6 +537,16 @@
         }
       }
     },
+    "Anyone you protect will be disconnected." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Semua orang yang kamu lindungi akan terputus."
+          }
+        }
+      }
+    },
     "Before you start" : {
       "localizations" : {
         "id" : {
