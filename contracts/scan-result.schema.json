@@ -50,7 +50,7 @@
         "warning",
         "blocked"
       ],
-      "description": "30–79 = warning, >= 80 = blocked. 'normal' results are never stored."
+      "description": "Follows the thresholds from GET /config/public (warnAt / blockAt; default 30 / 80): warnAt..blockAt-1 = warning, >= blockAt = blocked. 'normal' results are never stored."
     },
     "signals": {
       "type": "array",
