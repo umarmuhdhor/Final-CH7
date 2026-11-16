@@ -892,6 +892,19 @@ Catatan penjaga U-07: `dt-g-warning` / `dt-g-safe` di A dan E tetap kena U-17 (l
 - Kolom nama: "bisa difokus" = `typeText` berhasil (simulator dengan keyboard perangkat keras, keyboard di layar tidak muncul).
 - Tema terang saja; Bold Text dan Increase Contrast tidak dijalankan.
 
+### 28h langkah 1: ON-04 diukur ulang setelah PR #484
+
+Dijalankan 16 Nov 2026 di `origin/main` `4138129a` (berisi #484, merge `b39e5f10`), branch `fix/ON-04-onboarding-footer-scroll`. Rekam dengan kelas XCUITest sementara (dihapus sebelum commit); gesekan pelan di area isi **di atas** footer, bukan `swipeUp` di tengah layar.
+
+| Konfigurasi | `extension.step.1` | Tepi atas footer (`extension.consent`) | Putusan |
+|---|---|---|---|
+| SE · EN · default | y 453 sampai 494 | y 463,5 | **masih tertutup** 30,5 pt (#484 tidak mengubahnya). Screenshot: [`U-06_se-default-en-after-484.jpg`](../qa/img/fase-28/U-06_se-default-en-after-484.jpg) |
+| SE · ID · default | y 412 sampai 453 | y 463,5 | lulus (judul satu baris), sama dengan 28n. Screenshot: [`U-06_se-default-id-after-484.jpg`](../qa/img/fase-28/U-06_se-default-id-after-484.jpg) |
+| SE · ID · AX3 | y 493 sampai 758 (tinggi 265) | y 221 | **rusak**: langkah 1 lebih tinggi dari ruang di atas footer (221 pt), jadi tidak pernah utuh terlihat. Gesekan di area isi **menggulung** halaman (langkah 3 sampai y 4 sampai 181): koreksi untuk "isi tidak tergulung" di §Putusan per temuan, yang berasal dari gesekan di footer |
+| iPhone 17 · ID · AX3 | tinggi 221 | y 394 | **lulus** dengan gesekan di area isi: tiap langkah bisa digulung utuh ke atas footer (test 28h hijau di `main`). Putusan "rusak" 28n untuk iPhone 17 berasal dari gesekan di footer |
+
+Jadi U-06 belum beres setelah #484: 28h lanjut ke langkah 2 (merah SE EN default) dan menambah test AX3 (merah SE, penjaga iPhone 17).
+
 ## Batas bukti yang diketahui
 
 1. **Asersi diperlebar setelah run terakhir hunter.** Setelah run final, satu asersi di `BUG_A08` diperlebar supaya juga menolak bentuk pendek Indonesia "dlm ". File yang dipindah memuat perubahan satu baris itu dan tidak dijalankan ulang oleh hunter. **r2 menjalankannya ulang:** 40 issue (hunter 39); yang ke-40 adalah asersi itu, dan gagal seperti dimaksud.
