@@ -27,7 +27,8 @@
     },
     "domain": {
       "type": "string",
-      "description": "Registrable domain, lowercase, no www. A verdict applies per link, see contracts/api.md Verdicts."
+      "maxLength": 253,
+      "description": "The url's host or a parent of it, lowercase, no trailing dot, no port (contracts/api.md Scans `domain`, #487, #495). The registrable domain, no www (login.bca.co.id -> bca.co.id); the full host on a shared host_path platform (sites.google.com, docs.google.com, forms.office.com, sway.cloud.microsoft) and for a host with no registrable domain ([2001:db8::1], router, www.co.id, www.com, 192.168.1.1). A verdict applies per link; a not_safe made on a shared host covers only that link, see contracts/api.md Verdicts."
     },
     "pageTitle": {
       "type": "string"
