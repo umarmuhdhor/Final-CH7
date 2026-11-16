@@ -51,7 +51,7 @@
         "warning",
         "blocked"
       ],
-      "description": "Follows the thresholds from GET /config/public (warnAt / blockAt; default 30 / 80): warnAt..blockAt-1 = warning, >= blockAt = blocked. 'normal' results are never stored."
+      "description": "Follows the thresholds from GET /config/public (warnAt / blockAt; default 30 / 80): warnAt..blockAt-1 = warning, >= blockAt = blocked. 'normal' results are never stored. Clients must accept a value not listed here: show it as unknown, never drop the row (contracts/api.md, #493)."
     },
     "signals": {
       "type": "array",
@@ -187,7 +187,8 @@
           "enum": [
             "safe",
             "not_safe"
-          ]
+          ],
+          "description": "Clients must accept a value not listed here: show it as unknown, never drop the scan (contracts/api.md, #493)."
         },
         "byDeviceId": {
           "type": "string"

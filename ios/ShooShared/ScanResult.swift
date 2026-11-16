@@ -18,9 +18,17 @@ struct ScanResult: Codable, Identifiable, Hashable {
     var verdict: Verdict?
 }
 
+/// `unknown` = a status this build does not know (a newer backend, #493). Decoding never throws on a new
+/// string, so one new value can't make a whole list fail; show it as "unknown status", don't drop the row.
 enum ScanStatus: String, Codable, Hashable {
     case warning
     case blocked
+    case unknown
+
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = ScanStatus(rawValue: raw) ?? .unknown
+    }
 }
 
 struct Signal: Codable, Hashable {
@@ -55,9 +63,17 @@ struct LocalizedText: Codable, Hashable {
 }
 
 struct Verdict: Codable, Hashable {
+    /// `unknown` = a verdict this build does not know (#493), decoded instead of throwing. Read-only:
+    /// never send it back (`POST /verdicts` takes `safe` / `not_safe` only).
     enum Value: String, Codable, Hashable {
         case safe
         case notSafe = "not_safe"
+        case unknown
+
+        init(from decoder: Decoder) throws {
+            let raw = try decoder.singleValueContainer().decode(String.self)
+            self = Value(rawValue: raw) ?? .unknown
+        }
     }
 
     var value: Value

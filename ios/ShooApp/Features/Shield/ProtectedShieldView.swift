@@ -358,7 +358,8 @@ private struct ProtectedSiteCard: View {
 
     private static let space = "protectedSiteCard"
 
-    private var decision: Verdict.Value? { scan.verdict?.value }
+    /// #493: a verdict this build can't read counts as none, so the card follows the detection status, never "safe".
+    private var decision: Verdict.Value? { scan.verdict?.known?.value }
     private var isDanger: Bool { decision == .notSafe || (decision == nil && scan.status == .blocked) }
     /// Who the line under the panel names: who decided, else the guardian who will.
     private var checker: String? { scan.verdict?.byName ?? guardian?.name }
@@ -439,7 +440,8 @@ private struct ProtectedSiteCard: View {
             avatar
             Group {
                 switch decision {
-                case nil: Text("\(Text(verbatim: name).fontWeight(.semibold)) will check it again")
+                // `.unknown` never gets here (`decision` maps it to nil); listed for the exhaustive switch.
+                case nil, .unknown: Text("\(Text(verbatim: name).fontWeight(.semibold)) will check it again")
                 case .notSafe: Text("\(Text(verbatim: name).fontWeight(.semibold)) marked it dangerous")
                 case .safe: Text("\(Text(verbatim: name).fontWeight(.semibold)) marked it safe")
                 }

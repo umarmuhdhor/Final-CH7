@@ -109,6 +109,19 @@ struct ApiRepositoryTests {
         #expect(bodies[1].keys.contains("notes") == false)
     }
 
+    /// #493: `.unknown` only comes from the server; `POST /verdicts` takes `safe` / `not_safe` only, so it is never sent.
+    @Test func unknownVerdictIsNeverSent() async throws {
+        let server = StubServer()
+        server.reply { _ in
+            .json(200, #"{"verdict":{"value":"unknown","byDeviceId":"dev_me","byName":"Adhella","decidedAt":"2026-10-22T03:00:00Z"}}"#)
+        }
+        let repository = server.repository()
+        await #expect(throws: RepositoryError.self) {
+            _ = try await repository.setVerdict(scanId: "scan_1", value: .unknown, notes: nil)
+        }
+        #expect(server.requests.isEmpty)
+    }
+
     /// No body asks for the active code; `{"refresh":true}` only from "Refresh code" (contracts/api.md).
     @Test func familyCodeSendsRefreshOnlyWhenAsked() async throws {
         let server = StubServer()

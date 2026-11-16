@@ -11,7 +11,8 @@ enum DetailLook: Equatable {
         switch scan.verdict?.value {
         case .notSafe: self = .danger
         case .safe: self = .caution
-        case nil: self = scan.status == .blocked ? .danger : .caution
+        // #493: an unknown verdict shows the detection status; an unknown status the warning look.
+        case nil, .unknown: self = scan.status == .blocked ? .danger : .caution
         }
     }
 

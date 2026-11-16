@@ -179,6 +179,10 @@ final class ApiRepository: ShooRepository {
             /// Left out when empty, as older builds send it.
             var notes: String?
         }
+        // #493: `.unknown` only comes from the server; `POST /verdicts` takes `safe` / `not_safe` only.
+        guard value != .unknown else {
+            throw RepositoryError.api(.invalidBody, message: "A verdict must be safe or not_safe")
+        }
         let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
         let response: VerdictResponse = try await client.send(.init(
             method: .post, path: ["verdicts"],

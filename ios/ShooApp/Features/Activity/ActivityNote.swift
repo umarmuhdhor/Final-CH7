@@ -11,10 +11,15 @@ enum ActivityNote: Equatable {
 
     /// A verdict always shows. Without one, only a blocked scan of a Protected user (one with a
     /// guardian) says the guardian has not looked yet; a warning row stays plain, as in Figma.
+    /// A verdict this build can't read (#493) gets no note: never "safe", and not "unseen" either.
     init?(scan: ScanResult, guardianName: String?, viewerDeviceId: String?) {
         if let verdict = scan.verdict {
             let name = verdict.byDeviceId == viewerDeviceId ? nil : verdict.byName
-            self = verdict.value == .notSafe ? .notSafe(name: name) : .safe(name: name)
+            switch verdict.value {
+            case .notSafe: self = .notSafe(name: name)
+            case .safe: self = .safe(name: name)
+            case .unknown: return nil
+            }
         } else if scan.status == .blocked, let guardianName, !guardianName.isEmpty {
             self = .unseen(guardianName: guardianName)
         } else {
