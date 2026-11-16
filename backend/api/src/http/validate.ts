@@ -77,8 +77,18 @@ export const codePoints = (s: string) => [...s].length;
 
 // Control characters (NUL included: Postgres text rejects it) and bidi overrides that could
 // disguise a name in push text and the Guardian UI.
-/** Lowercase registrable domain without `www.` (R3 §4; same rule as the DB checks). */
-export const DOMAIN = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+/**
+ * A scan's `domain` (contracts/api.md Scans "`domain`", #487): lowercase, no trailing dot, no port. The
+ * registrable domain, or the full host when there is none: an IPv4 address, an IPv6 literal in brackets
+ * (`[2001:db8::1]`, the form `new URL().hostname` gives), a single label (`router`) or `www.<public suffix>`
+ * (`www.co.id`). The backend keeps no Public Suffix List, so a leading `www.` is not checked further: the
+ * extension strips it from every registrable domain, and the url host check on each route still binds the
+ * value to the page. The DB checks only ask for lowercase (20261116120000_domain_odd_hosts.sql).
+ */
+export const DOMAIN =
+  /^(?:\[[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7}\]|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*)$/;
+/** The 422 text for a `domain` that does not fit DOMAIN. */
+export const DOMAIN_MESSAGE = "must be a lowercase host or registrable domain (contracts/api.md Scans domain)";
 
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 

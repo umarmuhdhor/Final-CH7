@@ -306,6 +306,18 @@ describe("POST /live (#49)", () => {
     }
   });
 
+  // #487 (contracts/api.md Scans "`domain`"): the same values POST /scans takes. The extension sends no
+  // POST /live for a host without a registrable domain, but the rule is one rule on every route.
+  it("takes every domain form POST /scans takes; 422 on an unbracketed IPv6 or uppercase", async () => {
+    const d = await createDevice();
+    for (const domain of ["[2001:db8::1]", "router", "www.co.id", "192.168.1.1"]) {
+      expect((await live(d, page({ domain }))).status, domain).toBe(202);
+    }
+    for (const domain of ["2001:db8::1", "[Router]", "ROUTER", "www."]) {
+      expect((await live(d, page({ domain }))).status, domain).toBe(422);
+    }
+  });
+
   it("forwards, never stores: domain and score land in no table and no log line", async () => {
     const lines: string[] = [];
     for (const m of ["log", "info", "warn", "error", "debug"] as const) {

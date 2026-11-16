@@ -54,7 +54,11 @@ Authorization: Bearer shoo_<43 characters>
   A larger body returns `413 too_large`.
 - Times are ISO 8601 with an offset, e.g. `2026-10-22T03:05:00Z`, between 1970 and 2100.
 - Names are 1–20 characters after trimming, without control or bidi-override characters.
-- Domains are lowercase registrable domains without `www.`, e.g. `bca-verifikasi.site`.
+- A `domain` follows `contracts/api.md` Scans "`domain`" (#487): lowercase, no trailing dot, no port; the
+  registrable domain (`bca-verifikasi.site`), the full host on a shared `host_path` platform, or the full host
+  when there is no registrable domain (`192.168.1.1`, `[2001:db8::1]`, `router`, `www.co.id`). The backend
+  keeps no Public Suffix List, so it checks the shape only (`src/http/validate.ts` `DOMAIN`) and, where a url
+  comes with it, that the url host is the domain or a subdomain of it.
 
 ### Errors
 
@@ -814,10 +818,11 @@ adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes
 - **Auth:** Bearer, either mode (a Guardian's own extension polls for pages it blocked itself)
 - **Rate limit:** 30 per 10 seconds per device. On 429, wait `Retry-After` and poll again; it does not
   mean "no verdict".
-- **Query:** `url`, the page (an http(s) URL; query and fragment are ignored), and `domain`, its
-  registrable domain. Case, surrounding spaces, a trailing dot and a leading `www.` are tolerated in
-  `domain`. The url's host must be the domain or a subdomain of it, else `422`.
-- **Deprecated:** `?domain=` alone, for builds from before #241: any `not_safe` on that domain, else the
+- **Query:** `url`, the page (an http(s) URL; query and fragment are ignored), and `domain`, the scan's
+  `domain` (`contracts/api.md` Scans "`domain`", #487). Case, surrounding spaces and a trailing dot are
+  tolerated in `domain`; a leading `www.` stays (`www.co.id` is not `co.id`). The url's host must be the
+  domain or a subdomain of it, else `422`.
+- **Deprecated:** `?domain=` alone, for builds from before #241 (a leading `www.` is still dropped there): any `not_safe` on that domain, else the
   newest `safe`. A `not_safe` made on a shared host (step 2 below) covers only its own link, so it never
   counts here (#495). It goes once the last older build is gone.
 

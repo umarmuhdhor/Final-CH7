@@ -435,7 +435,7 @@ describe("POST /scans stores the URL in its normal form (B-04, A-09, A-03 backen
     },
   );
 
-  it("an IPv6 host → 422 invalid_body (no registrable domain; public.verdict_link() has no IPv6 form)", async () => {
+  it("an IPv6 host sent with a registrable domain → 422 invalid_body (its domain is the bracketed host, #487)", async () => {
     const p = await createDevice("Mom");
     for (const [url, domain] of [["https://[2001:db8::1]/a", "toko.example"], ["http://[::1]/a", "toko.example"]] as const) {
       const res = await post(p, extensionBody(blocked92, { url, domain }));

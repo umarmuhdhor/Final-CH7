@@ -3,14 +3,14 @@ import * as z from "zod";
 import type { AppEnv } from "../env";
 import { requireDevice } from "../http/auth";
 import { hitEdge, limits } from "../http/rateLimit";
-import { DOMAIN, readJson } from "../http/validate";
+import { DOMAIN, DOMAIN_MESSAGE, readJson } from "../http/validate";
 import { LIVE_LABELS, relayLive } from "../services/push/live";
 import { liveSender } from "../services/push/sender";
 
 const liveBody = z
   .object({
-    // Registrable domain only (same rule as verdicts/scans), never a URL.
-    domain: z.string().max(253).regex(DOMAIN, "must be a registrable domain"),
+    // The scan's `domain` (same rule as verdicts/scans, #487), never a URL.
+    domain: z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE),
     score: z.number().int().min(0).max(100),
     status: z.enum(["normal", "warning", "blocked"]),
     analyzing: z.boolean(),
