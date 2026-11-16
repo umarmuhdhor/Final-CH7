@@ -344,6 +344,92 @@ struct ProfileModelTests {
         #expect(empty.deleteMessage(language: .indonesian).hasPrefix("Semua data yang ada di aplikasi ini"))
     }
 
+    /// PF-01 (#494): the family list loaded → the sheet counts the people who lose protection, in both languages.
+    @Test(arguments: [(MockRepository.Scenario.oneMember, 1), (.standard, 2), (.threeMembers, 3)])
+    func deleteMessageCountsTheLoadedFamily(scenario: MockRepository.Scenario, count: Int) async {
+        let model = redesignModel(mode: .guardian, familyMode: true,
+                                  repository: MockRepository(mode: .guardian, scenario: scenario, latency: .zero))
+        await model.load()
+        #expect(model.members.count == count)
+        let people = count == 1 ? "person" : "people"
+        #expect(model.deleteMessage(language: .english).hasSuffix(" \(count) \(people) you protect will be disconnected."))
+        #expect(model.deleteMessage(language: .indonesian).hasSuffix(" \(count) orang yang kamu lindungi akan terputus."))
+        #expect(!model.deleteMessage(language: .english).contains("Anyone you protect"))
+    }
+
+    /// PF-01 (#494, Umar's wording): the family list did not load → a Guardian still reads that the people they
+    /// protect lose protection, without a count. Family mode off (Pribadi) keeps its members too (D Q5).
+    @Test(arguments: [true, false])
+    func deleteMessageWarnsAboutTheFamilyWhenItsListFailed(familyMode: Bool) async {
+        let repository = MockRepository(mode: .guardian, latency: .zero, failures: ["familyMembers": .network])
+        let model = redesignModel(mode: .guardian, familyMode: familyMode, repository: repository)
+        await model.load()
+        #expect(model.membersFailed)
+        #expect(model.deleteMessage(language: .english).hasSuffix(" Anyone you protect will be disconnected."))
+        #expect(model.deleteMessage(language: .indonesian).hasSuffix(" Semua orang yang kamu lindungi akan terputus."))
+    }
+
+    /// PF-01 (#494): a refresh that fails after the list loaded once: the sheet follows the failure card, not
+    /// the old count (someone may have joined or left since).
+    @Test func deleteMessageDropsAStaleCountWhenARefreshFails() async {
+        let repository = MockRepository(mode: .guardian, latency: .zero, failures: ["familyMembers~1": .network])
+        let model = redesignModel(mode: .guardian, familyMode: true, repository: repository)
+        await model.load()
+        #expect(model.deleteMessage(language: .english).hasSuffix("2 people you protect will be disconnected."))
+        await model.load()
+        #expect(model.membersFailed)
+        #expect(model.deleteMessage(language: .english).hasSuffix(" Anyone you protect will be disconnected."))
+    }
+
+    /// PF-01 (#494): "Try again" on the family card reads the list again; the count comes back with it.
+    @Test func deleteMessageCountsAgainOnceARetryLoadsTheList() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        repository.membersFailure = RepositoryError.network
+        let model = redesignModel(mode: .guardian, familyMode: true, repository: repository)
+        await model.load()
+        #expect(model.deleteMessage(language: .english).hasSuffix(" Anyone you protect will be disconnected."))
+        repository.membersFailure = nil
+        await model.load()
+        #expect(!model.membersFailed)
+        #expect(model.deleteMessage(language: .english).hasSuffix(" 2 people you protect will be disconnected."))
+    }
+
+    /// PF-01 (#494): a profile refresh that fails stops before the family list, and Profile keeps showing the list it
+    /// has, so the sheet keeps that count too.
+    @Test func deleteMessageKeepsTheCountWhenOnlyAProfileRefreshFails() async {
+        let repository = MockRepository(mode: .guardian, latency: .zero, failures: ["me~1": .network])
+        let model = redesignModel(mode: .guardian, familyMode: true, repository: repository)
+        await model.load()
+        await model.load()
+        #expect(model.state == .loaded)
+        #expect(!model.membersFailed)
+        #expect(model.deleteMessage(language: .english).hasSuffix(" 2 people you protect will be disconnected."))
+    }
+
+    /// PF-01 (#494): the profile itself failed, so the family list was never asked for: same general sentence.
+    @Test func deleteMessageWarnsAboutTheFamilyWhenItWasNeverRead() async {
+        let repository = MockRepository(mode: .guardian, latency: .zero, failures: ["me": .network])
+        let model = redesignModel(mode: .guardian, familyMode: true, repository: repository)
+        await model.load()
+        #expect(model.state == .failed)
+        #expect(model.deleteMessage(language: .english).hasSuffix(" Anyone you protect will be disconnected."))
+    }
+
+    /// PF-01 (#494): delete is never blocked (Apple 5.1.1(v)), whether the family list loaded or not.
+    @Test(arguments: [false, true])
+    func deleteWorksWhetherTheFamilyListLoadedOrNot(listFails: Bool) async throws {
+        let repository = MockRepository(mode: .guardian, latency: .zero,
+                                        failures: listFails ? ["familyMembers": .network] : [:])
+        let settings = settings(mode: .guardian)
+        settings.familyModeOn = true
+        let model = ProfileModel(repository: repository, settings: settings, linked: linked())
+        await model.load()
+        #expect(model.membersFailed == listFails)
+        #expect(await model.deleteMyData())
+        #expect(model.actionError == nil)
+        #expect(settings.mode == nil)
+    }
+
     final class StubNotifications: NotificationPermission, @unchecked Sendable {
         var current: NotificationAuthorization
         let answer: NotificationAuthorization
