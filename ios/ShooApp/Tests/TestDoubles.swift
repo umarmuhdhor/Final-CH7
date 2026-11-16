@@ -244,3 +244,13 @@ actor GatedScansRepository: ShooRepository {
     func scan(id: String) async throws -> ScanResult { try await base.scan(id: id) }
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict { try await base.setVerdict(scanId: scanId, value: value) }
 }
+
+/// A real `AppEnvironment` with the tabs on screen (mode chosen, onboarded), so `pushArrivedWhileOpen()`
+/// bumps `pushesWhileOpen` as it does in the app (A-12).
+@MainActor
+func tabsEnvironment(mode: UserMode) -> AppEnvironment {
+    let settings = AppSettings(defaults: UserDefaults(suiteName: "test.tabs.\(UUID().uuidString)")!)
+    _ = settings.chooseMode(mode)
+    settings.onboardingCompleted = true
+    return AppEnvironment(repository: MockRepository(mode: mode, latency: .zero), settings: settings)
+}

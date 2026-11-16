@@ -85,6 +85,10 @@ struct ActivityView: View {
                 L10n.string("Couldn't refresh. Pull down to try again.", language: language)
             ).post()
         }
+        // A push while this screen is open (new scan, verdict, member change): reload, as Guardian Home does (A-12).
+        .onChange(of: env.pushesWhileOpen) { _, count in
+            Task { await model.pushesWhileOpenChanged(to: count) }
+        }
         #if DEBUG
         .onAppear { if UserDefaults.standard.bool(forKey: "debug.activityPicker") { isPickerOpen = true } }
         #endif

@@ -63,6 +63,10 @@ struct MemberDetailView: View {
             }
         }
         .task { await model.load() }
+        // A push while this screen is open (new scan, verdict, member change): reload, as Guardian Home does (A-12).
+        .onChange(of: env.pushesWhileOpen) { _, count in
+            Task { await model.pushesWhileOpenChanged(to: count) }
+        }
         .sheet(isPresented: $isDisconnectConfirming) {
             if let member = model.member {
                 ProfileConfirmSheet(

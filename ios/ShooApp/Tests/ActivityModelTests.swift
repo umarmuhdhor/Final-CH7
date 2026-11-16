@@ -439,4 +439,20 @@ struct ActivityModelTests {
         #expect(model.state == .loaded)
         #expect(!model.items.contains { $0.ownerDeviceId == "dev_dad" })
     }
+
+    /// A-12: a push while Activity is open reloads it once, so the list matches the banner.
+    /// The same counter value again (a view redrawn) does not reload a second time.
+    @Test(arguments: [(UserMode.protected, ScanOwnerFilter.me), (.guardian, .family)])
+    func pushWhileOpenReloadsOnce(mode: UserMode, owner: ScanOwnerFilter) async {
+        let env = tabsEnvironment(mode: mode)
+        let repository = CountingScansRepository(base: MockRepository(mode: mode, latency: .zero))
+        let model = ActivityModel(repository: repository, owner: owner)
+        await model.load()
+        let oneLoad = repository.scanCalls
+        env.pushArrivedWhileOpen()
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2 * oneLoad)
+        await model.pushesWhileOpenChanged(to: env.pushesWhileOpen)
+        #expect(repository.scanCalls == 2 * oneLoad)
+    }
 }
