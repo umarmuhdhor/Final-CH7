@@ -220,6 +220,9 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
     @ViewBuilder let content: Content
     @ViewBuilder let footer: Footer
     @State private var footerHeight: CGFloat = 92
+    /// The page between the safe areas, keyboard left out: the hero scales with it, and it decides `footerScrolls`.
+    /// It only grows: a sheet can still shrink with the keyboard, and the footer must not move while the user types.
+    @State private var pageHeight: CGFloat = 0
     /// The footer's top padding, where the page fades out under it.
     private static var footerFade: CGFloat { 24 }
     /// Figma "Footer": a lone button ends 68 pt above the screen bottom (34 over the home indicator inset);
@@ -277,13 +280,16 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
 
                     content
                         .padding(.horizontal, 24)
+
+                    if footerScrolls { footerStack }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.bottom, 16)
+                // A scrolling footer brings its own bottom padding.
+                .padding(.bottom, footerScrolls ? 0 : 16)
             }
             // The footer is an overlay, not `safeAreaInset`: with the keyboard up, a ScrollView ignores the
             // inset and the field ends up under the button. This margin keeps the last content above it.
-            .contentMargins(.bottom, footerHeight, for: .scrollContent)
+            .contentMargins(.bottom, footerScrolls ? 0 : footerHeight, for: .scrollContent)
             .scrollBounceBehavior(.basedOnSize)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: scrollTarget) { _, target in
@@ -295,6 +301,14 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                 }
             }
             .mask { scrollMask }
+        }
+        .environment(\.onboardingPageHeight, pageHeight)
+        .background {
+            // The keyboard is left out, so it never shrinks the hero or moves the footer into the page.
+            // `onGeometryChange` reports before the first frame: the page never opens with the 300 pt hero on SE.
+            Color.clear
+                .ignoresSafeArea(.keyboard)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = max(pageHeight, $0) }
         }
         .background(alignment: .top) {
             // Figma "box": 252 pt, 345 where an illustration sits on it.
@@ -310,36 +324,44 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
             }
         }
         .overlay(alignment: .bottom) {
-            // Figma "Footer": 16 between the button and the text link under it.
-            VStack(spacing: 16) { footer }
-                .padding(.horizontal, 24)
-                .padding(.top, Self.footerFade)
-                .padding(.bottom, footerBottom)
-                .background {
-                    // Only the 24 pt above the first row fades; behind the rows it is solid. A fade that
-                    // scaled with the footer let a tall one (ON-04's consent box) show the steps scrolled
-                    // under it through its own text (QA 2026-11-11 #7).
-                    VStack(spacing: 0) {
-                        LinearGradient(
-                            colors: [OnboardingTheme.background.opacity(0), OnboardingTheme.background],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(height: Self.footerFade)
-                        OnboardingTheme.background
+            if !footerScrolls {
+                footerStack
+                    .background {
+                        // Only the 24 pt above the first row fades; behind the rows it is solid. A fade that
+                        // scaled with the footer let a tall one (ON-04's consent box) show the steps scrolled
+                        // under it through its own text (QA 2026-11-11 #7).
+                        VStack(spacing: 0) {
+                            LinearGradient(
+                                colors: [OnboardingTheme.background.opacity(0), OnboardingTheme.background],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: Self.footerFade)
+                            OnboardingTheme.background
+                        }
+                        .ignoresSafeArea(edges: .bottom)
                     }
-                    .ignoresSafeArea(edges: .bottom)
-                }
-                .background {
-                    GeometryReader { geometry in
-                        Color.clear
-                            .onAppear { footerHeight = geometry.size.height }
-                            .onChange(of: geometry.size.height) { _, height in footerHeight = height }
-                    }
-                }
+            }
         }
         .modifier(SheetTopClearance())
         .environment(\.colorScheme, .light)
+    }
+
+    /// U-06 (fase 28h): at large text the pinned footer can cover most of the page (ON-04 at AX3 on iPhone SE:
+    /// from y 221 of 667, so step 1, 265 pt tall, never fit above it). Past half the page it scrolls after the
+    /// content instead (the button is then reached by scrolling, like the rest of the page). It stays pinned at the
+    /// sizes Figma draws, and `pageHeight` leaves the keyboard out, so a keyboard never moves it (the reason it is
+    /// an overlay).
+    private var footerScrolls: Bool { pageHeight > 0 && footerHeight > pageHeight / 2 }
+
+    /// Figma "Footer": 16 between the button and the text link under it. Same padding pinned or scrolling, so
+    /// its measured height (and `footerScrolls`) does not change when it moves.
+    private var footerStack: some View {
+        VStack(spacing: 16) { footer }
+            .padding(.horizontal, 24)
+            .padding(.top, Self.footerFade)
+            .padding(.bottom, footerBottom)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
     }
 
     /// A scrolled headline fades out under the back button instead of running through it and the status
@@ -420,6 +442,7 @@ extension OnboardingFormPage where Hero == EmptyView {
 /// 300 pt illustration at the top of an onboarding page (Figma "image 1").
 struct OnboardingHeroImage: View {
     let name: String
+    @Environment(\.onboardingPageHeight) private var pageHeight
     /// From the top safe area (62 on the 402 × 874 Figma iPhone) to the image.
     var top: CGFloat = 0
     /// From the image to the headline.
@@ -429,10 +452,29 @@ struct OnboardingHeroImage: View {
         Image(name)
             .resizable()
             .scaledToFit()
-            .frame(width: 300, height: 300)
+            .frame(width: side, height: side)
             .padding(.top, top)
             .padding(.bottom, bottom)
             .accessibilityHidden(true)
+    }
+
+    /// U-06 (fase 28h): 300 pt on Figma's page (874 − 62 − 34 = 778 pt between the safe areas), the same share of a
+    /// shorter one, never more. On iPhone SE (647 pt) that is 249 pt, so step 1 of ON-04 opens above the footer.
+    private var side: CGFloat {
+        guard pageHeight > 0 else { return 300 }
+        return min(300, (pageHeight * 300 / 778).rounded())
+    }
+}
+
+private struct OnboardingPageHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    /// The onboarding page's height between the safe areas, keyboard left out (0 until measured).
+    var onboardingPageHeight: CGFloat {
+        get { self[OnboardingPageHeightKey.self] }
+        set { self[OnboardingPageHeightKey.self] = newValue }
     }
 }
 

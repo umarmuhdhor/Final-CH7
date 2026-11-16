@@ -44,6 +44,61 @@ final class QALayoutUITests: XCTestCase {
         }
     }
 
+    /// U-06 (fase 28h, ON-04): when "Turn on the extension" opens, step 1 is whole above the footer without
+    /// scrolling. EN on SE (its title takes two lines there), ID on iPhone 17, as the plan's cells E and A.
+    /// Red on main (iPhone SE, EN, default size): step 1 ran from y 453 to 494, the consent row started at y 463.5.
+    /// Guard: iPhone 17, ID, default size (step 1 ends at y 494.7, consent at y 636.7).
+    @MainActor
+    func testFirstExtensionStepIsAboveTheFooterAtDefaultSize() throws {
+        let width = UIScreen.main.bounds.width
+        try XCTSkipUnless([375, 402].contains(width), "measured on iPhone SE and iPhone 17 only")
+        let app = launchTurnOnExtension(textSize: "UICTContentSizeCategoryL", language: width == 375 ? "en" : "id")
+        let step = app.descendants(matching: .any)["extension.step.1"]
+        let consent = app.descendants(matching: .any)["extension.consent"]
+        XCTAssertTrue(step.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        XCTAssertTrue(consent.exists, app.debugDescription)
+        // The footer settles after its height is measured: wait for that, never for a fixed time.
+        let above = NSPredicate { _, _ in step.frame.maxY <= consent.frame.minY }
+        _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: above, object: nil)], timeout: UITestTimeout.optional)
+        XCTAssertLessThanOrEqual(step.frame.maxY, consent.frame.minY, "step 1 \(step.frame) consent \(consent.frame)")
+    }
+
+    /// U-06 (fase 28h, ON-04): at AX3 each setup step can be scrolled whole into the part of the screen the footer
+    /// leaves free (the screen, once the footer scrolls after the steps). ID, iPhone SE and iPhone 17. Red on main (SE): the footer started at y 221 (consent row) and
+    /// step 1 was 265 pt tall, so it never fit above the footer. iPhone 17 (footer from y 394, step 1 221 pt) fit.
+    @MainActor
+    func testExtensionStepsScrollAboveTheFooterAtAX3() throws {
+        try XCTSkipUnless([375, 402].contains(UIScreen.main.bounds.width), "measured on iPhone SE and iPhone 17 only")
+        let app = launchTurnOnExtension(textSize: "UICTContentSizeCategoryAccessibilityXL", language: "id")
+        let window = app.windows.firstMatch
+        let consent = app.descendants(matching: .any)["extension.consent"]
+        XCTAssertTrue(consent.waitForExistence(timeout: UITestTimeout.screen), app.debugDescription)
+        /// Where the footer starts, or the screen bottom while the footer is off screen (it scrolls with the page).
+        func room() -> CGFloat { min(window.frame.maxY, consent.frame.minY) }
+        for number in 1...3 {
+            let step = app.descendants(matching: .any)["extension.step.\(number)"]
+            XCTAssertTrue(step.exists, app.debugDescription)
+            XCTAssertLessThanOrEqual(step.frame.height, room(), "step \(number) \(step.frame) is taller than the room above the footer, from y \(room())")
+            // Slow drags in the free part, no fling. At least 60 pt (a shorter drag can stay under the scroll slop),
+            // never more than the step's distance from the top: it can't jump past it.
+            for _ in 0..<12 where step.frame.maxY > room() {
+                let free = room()
+                let distance = min(max(step.frame.maxY - free + 8, 60), free * 0.4, step.frame.minY - window.frame.minY)
+                guard distance > 0 else { break }
+                let start = window.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: window.frame.midX, dy: free * 0.7))
+                start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -distance)), withVelocity: .slow, thenHoldForDuration: 0.3)
+            }
+            XCTAssertGreaterThanOrEqual(step.frame.minY, window.frame.minY, "step \(number) scrolled past the top: \(step.frame)")
+            XCTAssertLessThanOrEqual(step.frame.maxY, room(), "step \(number) \(step.frame) still under the footer, from y \(room())")
+        }
+    }
+
+    /// Onboarding's "Turn on the extension" (ON-04) with the consent row, extension not on yet.
+    @MainActor
+    private func launchTurnOnExtension(textSize: String, language: String) -> XCUIApplication {
+        launch(["-debug.onboardingStep", "turnOnExtension", "-UITestNotifications", "granted"], textSize: textSize, language: language)
+    }
+
     override func setUp() {
         continueAfterFailure = false
     }
