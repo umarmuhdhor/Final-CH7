@@ -44,6 +44,14 @@ const signal = z.object({
   label: localized,
   labelSimple: localized,
   evidence: text(500).optional(),
+  // DT-04 (#497, $defs.SignalHost): which part of `domain` the address card marks, and the brand's real domain.
+  // Stored and returned unchanged (jsonb); unknown keys inside are dropped too.
+  host: z
+    .object({
+      marks: z.array(text(253).pipe(z.string().min(1))).min(1).max(4).optional(),
+      official: text(253).pipe(z.string().min(1)).optional(),
+    })
+    .optional(),
 });
 
 // ScanResult without id/verdict/screenshotUrl/pageReplicaUrl (contracts/api.md). ownerDeviceId/ownerName are

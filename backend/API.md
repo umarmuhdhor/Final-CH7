@@ -532,6 +532,7 @@ Each signal:
 | `label` | `{ en, id }` | Technical text for the Guardian, 1–500 characters each |
 | `labelSimple` | `{ en, id }` | Plain text for the Protected user, 1–500 characters each |
 | `evidence` | string | Optional, ≤ 500 characters |
+| `host` | `{ marks?, official? }` | Optional (DT-04, #497). `marks`: 1–4 strings, 1–253 characters each; `official`: 1–253 characters. Other keys are dropped. Returned unchanged in every scan response; absent on older scans |
 
 `ownerDeviceId` and `ownerName` are accepted but ignored. Control and bidi characters are removed from
 all text.

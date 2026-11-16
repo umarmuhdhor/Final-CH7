@@ -505,6 +505,64 @@ describe("POST /scans screenshotBase64 (ignored since fase 20a, K3 a)", () => {
   });
 });
 
+// DT-04 (#497): optional signals[].host { marks, official } for the address card.
+describe("POST /scans signals[].host (DT-04, #497)", () => {
+  const hostSig = (host: unknown) => ({
+    id: "brand_plus_keyword",
+    layer: 2,
+    weight: 14,
+    label: { en: "Brand name plus a bait word", id: "Nama merek plus kata pancingan" },
+    labelSimple: { en: "Looks like BCA but is not", id: "Mirip BCA tapi bukan" },
+    evidence: "bca · level 2 · verifikasi",
+    host,
+  });
+
+  it("survives POST /scans → GET /scans/{id} and GET /scans", async () => {
+    const p = await createDevice("Mom");
+    const withHost = hostSig({ marks: ["bca", "verifikasi"], official: "bca.co.id" });
+    const cheap = { ...hostSig({ marks: [".site"] }), id: "cheap_tld", evidence: undefined };
+    const old = blocked92.signals[0]!;
+    const id = await postOk(p, extensionBody(blocked92, { signals: [withHost, cheap, old] }));
+    const item = (await (await call(`/scans/${id}`, { token: p.token })).json()) as Item & { signals: unknown[] };
+    expectScanResult(item);
+    expect(item.signals).toEqual([
+      expect.objectContaining({ id: "brand_plus_keyword", host: { marks: ["bca", "verifikasi"], official: "bca.co.id" } }),
+      expect.objectContaining({ id: "cheap_tld", host: { marks: [".site"] } }),
+      old,
+    ]);
+    expect(item.signals[2]).not.toHaveProperty("host");
+    const { body } = await list(p);
+    expect(body.items[0]!.signals).toEqual(item.signals);
+  });
+
+  it("only marks and official are kept, text is cleaned; bad shapes → 422", async () => {
+    const p = await createDevice("Mom");
+    const id = await postOk(
+      p,
+      extensionBody(blocked92, {
+        signals: [hostSig({ marks: ["bca\u202E", "verifikasi"], official: "bca.co.id\u0007", extra: "x" })],
+      }),
+    );
+    const [row] = await sql`select signals from scans where id = ${id}`;
+    expect(row!.signals[0].host).toEqual({ marks: ["bca", "verifikasi"], official: "bca.co.id" });
+
+    for (const host of [
+      { marks: [] },
+      { marks: ["a", "b", "c", "d", "e"] },
+      { marks: [""] },
+      { marks: ["\u202E"] },
+      { marks: ["x".repeat(254)] },
+      { official: "" },
+      { official: "x".repeat(254) },
+      { marks: "bca" },
+      "bca.co.id",
+    ]) {
+      const res = await post(p, extensionBody(blocked92, { signals: [hostSig(host)] }));
+      expect(res.status, JSON.stringify(host)).toBe(422);
+    }
+  });
+});
+
 // The service POST /scans called until fase 20a. It still stores the seeds that the screenshot
 // serving, deletion and retention tests use; 20b removes it with this block.
 describe("attachScreenshot (until fase 20b)", () => {
