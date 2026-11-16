@@ -2,7 +2,8 @@
 // Fase 22 (22a-1): Worker bundle size check. Builds with `wrangler deploy --dry-run --outdir`, prints
 // the size of index.js (raw + gzip) and the 5 largest packages, and fails when a limit is passed.
 // Usage (from the repo root): node backend/ci/bundle-size.mjs [--json]
-// Limits = size after fase 22 O2 + O3 (1 Nov 2026: 267 988 B raw, 88 842 B gzip -9) + 10 %.
+// Limits = size on main + 10 %. Reset 16 Nov 2026 (#496, fase 28 H5-03) from the fase 28 measurement
+// (317 017 B raw, 103 739 B gzip -9); was 295 000 / 97 500 from fase 22 O2 + O3 (267 988 / 88 842 B).
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -10,8 +11,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-const LIMIT_RAW = 295_000;
-const LIMIT_GZIP = 97_500;
+const LIMIT_RAW = 349_000;
+const LIMIT_GZIP = 114_000;
 
 const api = join(dirname(fileURLToPath(import.meta.url)), "..", "api");
 const out = mkdtempSync(join(tmpdir(), "shoo-bundle-"));
