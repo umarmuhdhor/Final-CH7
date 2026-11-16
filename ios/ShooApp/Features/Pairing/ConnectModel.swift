@@ -90,6 +90,21 @@ final class ConnectModel {
     var canJoin: Bool { state == .entering && !isHeld && retryAt == nil && DeepLink.isCode(code) }
 
     /// Seconds left of the wait, rounded up; `nil` with no wait.
+    /// The grey wait button (Figma "Coba lagi dalam 04:59", 1681:4787 / 4824). An hour or more counts in hours, so the
+    /// sign-up limit's "Try again in 1 hour." and the button use one unit (U-18); 10 minutes or more in minutes
+    /// ("59 menit"); shorter ones as mm:ss. Every unit rounds up: the button never promises a wait shorter than it is.
+    static func waitLabel(seconds: Int) -> String.LocalizationValue {
+        let minutes = Int((Double(seconds) / 60).rounded(.up))
+        if minutes >= 60 {
+            let hours = Int((Double(minutes) / 60).rounded(.up))
+            return "Try again in \(hours) hours"
+        }
+        if seconds >= 600 {
+            return "Try again in \(minutes) minutes"
+        }
+        return "Try again in \(String(format: "%02d:%02d", seconds / 60, seconds % 60))"
+    }
+
     func secondsToWait(now: Date = Date()) -> Int? {
         retryAt.map { max(0, Int($0.timeIntervalSince(now).rounded(.up))) }
     }

@@ -158,6 +158,27 @@ struct ConnectModelTests {
             == "Terlalu banyak pendaftaran dari jaringan ini. Coba lagi dalam 1 jam.")
     }
 
+    /// U-18 (fase 28m): the sign-up limit says "1 hour" above the wait button, so the button starts at "1 hour" too,
+    /// not "60 minutes". Under an hour it counts minutes, under 10 minutes mm:ss.
+    @Test(arguments: AppLanguage.allCases)
+    func signUpLimitMessageAndWaitButtonUseOneUnit(_ language: AppLanguage) {
+        let english = language == .english
+        let message = L10n.string(ConnectModel.Problem.signUpLimit.message, language: language)
+        #expect(message.hasSuffix(english ? "Try again in 1 hour." : "Coba lagi dalam 1 jam."))
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 3600), language: language)
+            == (english ? "Try again in 1 hour" : "Coba lagi dalam 1 jam"))
+        // Still the hour for the last seconds of it, and a longer wait rounds up to whole hours.
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 3541), language: language)
+            == (english ? "Try again in 1 hour" : "Coba lagi dalam 1 jam"))
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 7200), language: language)
+            == (english ? "Try again in 2 hours" : "Coba lagi dalam 2 jam"))
+        // Guard: below the hour the button keeps counting down in minutes, then mm:ss.
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 3540), language: language)
+            == (english ? "Try again in 59 minutes" : "Coba lagi dalam 59 menit"))
+        #expect(L10n.string(ConnectModel.waitLabel(seconds: 299), language: language)
+            == (english ? "Try again in 04:59" : "Coba lagi dalam 04:59"))
+    }
+
     @Test func offlineIsItsOwnProblem() async {
         let model = ConnectModel(repository: FailingRepository(), code: "482193")
         await model.join()

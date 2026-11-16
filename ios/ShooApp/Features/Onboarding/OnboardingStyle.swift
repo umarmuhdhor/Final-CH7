@@ -152,6 +152,24 @@ struct OnboardingBackButton: View {
     }
 }
 
+/// A page shown in a sheet has no status bar above it: its top safe area is 0, so a back button pinned to the
+/// safe area sat on the sheet's rounded corner (Connect from Profile, Turn on from Activity). There the page
+/// gets 16 pt of top room; full screen it already sits under the status bar and nothing changes.
+struct SheetTopClearance: ViewModifier {
+    @State private var outerTop: CGFloat = 0
+    @State private var measured = false
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaPadding(.top, measured && outerTop < 20 ? 16 : 0)
+            // Read outside the padding, so the padding never feeds back into the measurement.
+            .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: {
+                outerTop = $0
+                measured = true
+            }
+    }
+}
+
 private struct GlassCircle: ViewModifier {
     @Environment(\.shooReduceGlass) private var reduceGlass
 
@@ -320,6 +338,7 @@ struct OnboardingFormPage<Hero: View, Content: View, Footer: View>: View {
                     }
                 }
         }
+        .modifier(SheetTopClearance())
         .environment(\.colorScheme, .light)
     }
 
