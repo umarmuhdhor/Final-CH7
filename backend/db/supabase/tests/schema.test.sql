@@ -66,11 +66,12 @@ select lives_ok(
     values ('t_s1', 't_p1', 'https://a.example/x', 'a.example', 92, 'blocked', now())$$,
   'I5: valid blocked scan');
 
--- I8
+-- I8 (#487: a leading www. fits since 20261116120000_domain_odd_hosts.sql, as in www.co.id; the DB has no
+-- Public Suffix List, so the extension and the Worker decide)
 select throws_ok(
   $$insert into scans (owner_id, url, domain, score, status, detected_at)
-    values ('t_p1', 'https://www.a.example', 'www.a.example', 40, 'warning', now())$$,
-  '23514', null, 'I8: domain without www.');
+    values ('t_p1', 'https://www.a.example', 'WWW.a.example', 40, 'warning', now())$$,
+  '23514', null, 'I8: domain lowercase');
 select throws_ok(
   $$insert into blocklist_entries (domain) values ('Bad.Example')$$,
   '23514', null, 'I8: blocklist domain lowercase');
