@@ -555,11 +555,28 @@ describe("POST /scans signals[].host (DT-04, #497)", () => {
       { official: "" },
       { official: "x".repeat(254) },
       { marks: "bca" },
+      { marks: [1] },
       "bca.co.id",
+      [],
+      null,
     ]) {
       const res = await post(p, extensionBody(blocked92, { signals: [hostSig(host)] }));
       expect(res.status, JSON.stringify(host)).toBe(422);
+      const { error } = (await res.json()) as { error: { code: string; message: string } };
+      expect(error.code).toBe("invalid_body");
+      expect(error.message, JSON.stringify(host)).toMatch(/^signals\.0\.host\b/);
     }
+  });
+
+  it("accepts the limits: 4 marks, 253 characters, an empty host", async () => {
+    const p = await createDevice("Mom");
+    const long = "x".repeat(253);
+    const id = await postOk(
+      p,
+      extensionBody(blocked92, { signals: [hostSig({ marks: ["a", "b", "c", long], official: long }), hostSig({})] }),
+    );
+    const [row] = await sql`select signals from scans where id = ${id}`;
+    expect(row!.signals.map((s: { host: unknown }) => s.host)).toEqual([{ marks: ["a", "b", "c", long], official: long }, {}]);
   });
 });
 
