@@ -259,9 +259,17 @@ describe("GET /verdicts?domain=", () => {
   });
 
   // A single label (`localhost`) is a valid domain since #487 (contracts/api.md Scans "`domain`" case 4).
-  it.each(["", "not a domain", "-localhost", "2001:db8::1", "a".repeat(254) + ".com", "https://x.com/"])("422 for %j", async (q) => {
+  it.each(["", "not a domain", "-localhost", "2001:db8::1", "[router]", "[2001:db8::1", "a".repeat(254) + ".com", "https://x.com/"])("422 for %j", async (q) => {
     const p = await createDevice("Mom");
     expect((await call(`/verdicts?domain=${encodeURIComponent(q)}`, { token: p.token })).status).toBe(422);
+  });
+
+  it("#487: takes a host with no registrable domain; still drops a leading www. (older builds strip it themselves)", async () => {
+    const { g, p } = await family();
+    for (const q of ["localhost", "[2001:db8::1]", "192.168.1.1"]) expect(await lookup(p, q), q).toBeNull();
+    const id = await scan(p, blocked92 as Fixture, "co.id");
+    await verdict(g, id, "not_safe");
+    expect((await lookup(p, "www.co.id"))?.value).toBe("not_safe");
   });
 
   it("401 without token", async () => {
@@ -886,6 +894,7 @@ describe("a host with no registrable domain (#487)", () => {
     { url: "http://router/login", domain: "router", link: "http://router/login" },
     { url: "https://www.co.id/login", domain: "www.co.id", link: "https://www.co.id/login" },
     { url: "https://www.com/login", domain: "www.com", link: "https://www.com/login" },
+    { url: "https://com/login", domain: "com", link: "https://com/login" },
   ];
   const post = (d: Created, url: string, domain: string) =>
     call("/scans", {

@@ -26,13 +26,18 @@ const notes = z
 const body = z.strictObject({ scanId: z.string().max(64), value: z.enum(["safe", "not_safe"]), notes });
 // The extension sends the scan's `domain` (contracts/api.md Scans "`domain`"); tolerate case, spaces and a
 // trailing dot. With url= a leading www. stays (#487: `www.co.id` is the full host, not `co.id`).
+const normDomain = (s: string) => s.trim().toLowerCase().replace(/\.$/, "");
 const domainParam = z
   .string()
   .max(260, { abort: true })
-  .transform((s) => s.trim().toLowerCase().replace(/\.$/, ""))
+  .transform(normDomain)
   .pipe(z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE));
-// Deprecated ?domain= alone (builds from before #241, which strip www. themselves): a leading www. still goes.
-const legacyDomainParam = domainParam.transform((s) => s.replace(/^www\./, ""));
+// Deprecated ?domain= alone (builds from before #241): a leading www. still goes, and what is left is checked.
+const legacyDomainParam = z
+  .string()
+  .max(260, { abort: true })
+  .transform((s) => normDomain(s).replace(/^www\./, ""))
+  .pipe(z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE));
 // The link (origin + path) as the extension's shareableUrl gives it; a query or fragment is dropped.
 // B-06: the length check aborts, so a too-long url never reaches the transform or the object refine
 // below (which reads url.hostname and threw a TypeError → 500 instead of 422).
