@@ -4,7 +4,7 @@
 // A service worker stops when idle: nothing here may rely on memory surviving; listeners register at top level.
 
 import { PSL_RULES } from "./psl.js";
-import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "./domain.js";
+import { parseRules, registrableDomain, naiveDomain, pageDomain, shareableUrl } from "./domain.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
 import { createSession } from "./session.js";
@@ -24,6 +24,9 @@ function domainFor(hostname) {
         return naiveDomain(hostname);
     }
 }
+// The `domain` a page carries (#487, #495): full host on host_path platforms and for hosts without a registrable
+// domain. Layer-1 list matching keeps `domainFor`.
+const pageDomainFor = (hostname) => pageDomain(hostname, domainFor);
 
 const getSession = createSession({ storage: chrome.storage.local });
 
@@ -69,7 +72,7 @@ async function analyze(snapshot, localSignals) {
 const verdicts = createVerdicts({ getSession, fetchJSON });
 const lists = createLists({ storage: chrome.storage.local, getSession, fetchJSON, registrableDomain: domainFor });
 
-listen(chrome.runtime.onMessage, createRouter({ getSession, lists, verdicts, domainFor, analyze }));
+listen(chrome.runtime.onMessage, createRouter({ getSession, lists, verdicts, domainFor: pageDomainFor, analyze }));
 
 // create() replaces an alarm of the same name and restarts its period, and this file runs on every wake-up.
 chrome.alarms.onAlarm.addListener((alarm) => {
