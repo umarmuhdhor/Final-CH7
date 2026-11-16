@@ -7,11 +7,11 @@ import Foundation
 /// Only the elements are forgiven: a value that is not an array still throws, so a response that
 /// breaks the contract is still `RepositoryError.decoding`.
 struct LossyList<Element: Decodable>: Decodable {
-    private(set) var elements: [Element]
+    let elements: [Element]
     /// How many elements were left out.
-    private(set) var dropped: Int
+    let dropped: Int
     /// Where the first left-out element failed, as contract field names only (logged; never a row value).
-    private(set) var firstProblem: String?
+    let firstProblem: String?
 
     init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
@@ -25,7 +25,8 @@ struct LossyList<Element: Decodable>: Decodable {
             } catch {
                 dropped += 1
                 if firstProblem == nil { firstProblem = Self.field(of: error, below: decoder.codingPath.count) }
-                // A failed decode leaves the container on the same element: step over it.
+                // A failed decode leaves the container on the same element (both Foundation JSONDecoders do;
+                // the protocol does not promise it, hence the index check): step over it.
                 if container.currentIndex == index, try !container.decodeNil() {
                     _ = try container.decode(Skipped.self)
                 }
@@ -46,7 +47,9 @@ struct LossyList<Element: Decodable>: Decodable {
         }
     }
 
-    /// Where in the row decoding failed, as contract field names (`signals[].label`); `[]` stands for an index.
+    /// Where in the row decoding failed, as contract field names (`signals.[].label`); `[]` stands for an index.
+    /// Keys are only ever struct field names: if a row ever gets a `[String: X]` field, its keys are data and
+    /// must not be printed here.
     private static func field(of error: any Error, below depth: Int) -> String {
         guard let error = error as? DecodingError else { return "?" }
         var path: [any CodingKey]

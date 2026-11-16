@@ -151,6 +151,22 @@ struct LossyListTests {
         #expect(list.firstProblem == field)
     }
 
+    @Test func lossyListOfGoodRowsDropsNothing() throws {
+        let list = try JSONDecoder.shoo.decode(LossyList<ScanResult>.self, from: Data("[\(Self.scan("a")),\(Self.scan("b"))]".utf8))
+        #expect(list.elements.map(\.id) == ["a", "b"])
+        #expect(list.dropped == 0 && list.firstProblem == nil)
+    }
+
+    /// Broken JSON is not a bad row: the whole answer is unreadable.
+    @Test func scansBodyThatIsNotJSONIsStillADecodingError() async {
+        let server = StubServer()
+        let body = #"{"items":[\#(Self.scan("good_1")), {"id":"#
+        server.reply { _ in .json(200, body) }
+        await #expect(throws: RepositoryError.decoding) {
+            try await server.repository().scans(owner: .family, status: nil, cursor: nil)
+        }
+    }
+
     @Test func lossyListOfNothingIsEmpty() throws {
         let list = try JSONDecoder.shoo.decode(LossyList<Int>.self, from: Data("[]".utf8))
         #expect(list.elements.isEmpty)
