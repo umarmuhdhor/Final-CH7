@@ -482,8 +482,15 @@ page. One page is one scan, one Activity item and (for a Protected device) one p
 **One row per link (#241, was one row per site, PR-05):** a link is origin + path, without query or
 fragment (`verdict_link`, the same rule as verdicts). When the owner already has a scan of the same
 link, no new row is made. The response is `201 { id, notified: null }` with that row's id, and no
-favicon or page replica is stored. The row's `detectedAt` moves to the newest visit, and a higher
-`score` replaces its `url`, `pageTitle`, `score`, `status` and `signals`. Another page of the site gets
+favicon or page replica is stored. The row's `detectedAt` moves to the newest visit. Which visit
+replaces the row's `url`, `pageTitle`, `score`, `status`, `signals` and `thresholdsVersion`
+(fase 28, K14):
+- Row without a verdict: a `blocked` visit replaces a `warning` row at any score (the admins may have
+  lowered `blockAt`), a `warning` visit never replaces a `blocked` row, and within the same status a
+  higher `score` replaces it.
+- Row with a verdict: only a higher `score` replaces it (until fase 27 Q4 is decided).
+
+Another page of the site gets
 its own row, so the Guardian can decide on `/b` after marking `/a` safe. The lifetime totals (profile
 stats) still count every scan. Once retention deletes the row (14 days after the first visit), the next
 visit makes a new one.
@@ -502,7 +509,7 @@ optional page replica. Older builds may still send a screenshot, which is ignore
 
 | Field | Type | Required | Rules |
 |---|---|---|---|
-| `url` | string | yes | http(s) URL, ≤ 2048 characters |
+| `url` | string | yes | http(s) URL, ≤ 2048 characters. Stored in its normal form (`new URL(url).href`: dot segments resolved, empty port and edge spaces dropped, non-ASCII percent-encoded), which must also be ≤ 2048 characters, else `422 invalid_body` (fase 28j) |
 | `domain` | string | yes | Registrable domain; the URL's host must be this domain or a subdomain of it |
 | `pageTitle` | string \| null | no | Trimmed and cut to 300 characters |
 | `faviconUrl` | string \| null | no | The site's icon. Kept only if it is an http(s) URL ≤ 2048 characters; the server downloads it (see Favicon rules) |
@@ -799,8 +806,9 @@ confirmation step.
 
 ### `GET /verdicts?url=&domain=`
 
-**For:** the extension's block screen (EX-06). While it is open, the extension polls this every
-5 seconds; when the Guardian taps "It's safe" the page opens.
+**For:** the extension's block screen (EX-06). While it is open, the extension polls this on an
+adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes, then every 15 s;
+#414, issue #350); when the Guardian taps "It's safe" the page opens.
 
 - **Auth:** Bearer, either mode (a Guardian's own extension polls for pages it blocked itself)
 - **Rate limit:** 30 per 10 seconds per device. On 429, wait `Retry-After` and poll again; it does not
@@ -1078,3 +1086,6 @@ sending, so two runs never push twice.
   - `id`: `Ringkasan minggu ini untuk kamu dan keluargamu: 2 situs diblokir, 1 peringatan.`
 
 These pushes carry no `scanId`; tapping one opens the app.
+
+If the weekly summary step fails, the "protection off" pushes already claimed in that run are still
+sent, and the run is recorded as failed in `ops_jobs` (fase 28k).

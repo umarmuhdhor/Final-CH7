@@ -42,7 +42,7 @@ create index family_links_guardian on family_links(guardian_id);
 -- dan count(*) per guardian_id < 3 sebelum insert (dikunci dengan pg_advisory_xact_lock(hashtext(guardian_id))).
 
 create table family_codes (
-  code          char(4) primary key check (code ~ '^[0-9]{4}$'),
+  code          char(6) primary key check (code ~ '^[0-9]{6}$'),   -- awal char(4); 6 digit sejak 20261026100000_family_code_6_digits.sql, berlaku 30 menit (#128)
   guardian_id   text not null references devices(id) on delete cascade,
   expires_at    timestamptz not null,
   created_at    timestamptz not null default now()
@@ -52,12 +52,12 @@ create index family_codes_guardian on family_codes(guardian_id);
 create table join_attempts (
   id            bigint generated always as identity primary key,
   device_id     text references devices(id) on delete cascade,
-  ip            inet,
+  ip_hash       bytea not null,                           -- HMAC IP (/64 untuk IPv6); kolom awal `ip inet` diganti di 20261021160000_family.sql
   success       boolean not null,
   attempted_at  timestamptz not null default now()
 );
 create index join_attempts_device_time on join_attempts(device_id, attempted_at desc);
-create index join_attempts_ip_time on join_attempts(ip, attempted_at desc);
+create index join_attempts_ip_time on join_attempts(ip_hash, attempted_at desc);
 
 create table scans (
   id              text primary key default gen_random_uuid()::text,
@@ -75,7 +75,7 @@ create table scans (
   -- replica_bytes: 1–307200, hanya di baris upload asli (reuse 24 jam: path tanpa bytes), check bytes → path
   detected_at     timestamptz not null,
   created_at      timestamptz not null default now(),
-  check ((status = 'blocked') = (score >= 80))
+  check ((status = 'blocked') = (score >= 80))            -- sekarang (15 Nov 2026): diganti pagar scans_blocked_floor `status <> 'blocked' or score >= 50` (20261103080245_admin_public_config.sql:54,57); ambang aktif dari dashboard
 );
 create index scans_owner_time on scans(owner_id, detected_at desc, id desc);
 create index scans_owner_domain_time on scans(owner_id, domain, created_at desc);
@@ -83,13 +83,15 @@ create index scans_created on scans(created_at);
 
 create table verdicts (
   owner_id      text not null references devices(id) on delete cascade,   -- pemilik halaman (Protected atau Guardian sendiri)
-  domain        text not null,
+  url           text not null,                            -- sekarang (15 Nov 2026): link = public.verdict_link(scan.url), origin + path (#241, 20261108100000_verdicts_per_link.sql)
+  domain        text not null,                            -- tetap untuk antrean blocklist
   value         verdict_value not null,
+  notes         text check (char_length(notes) between 1 and 280),   -- alasan Guardian, dikosongkan retensi setelah 14 hari
   scan_id       text references scans(id) on delete set null,
   by_device_id  text not null references devices(id) on delete cascade,   -- wajib string di kontrak Verdict; device tidak dihapus di MVP
   by_name       text not null,                            -- snapshot nama saat memutuskan (DT-06)
   decided_at    timestamptz not null default now(),
-  primary key (owner_id, domain)
+  primary key (owner_id, url)                             -- awal (owner_id, domain); per link sejak #241
 );
 create index verdicts_not_safe on verdicts(decided_at) where value = 'not_safe';
 -- kolom tambahan verdicts: global_eligible boolean not null default false  -- snapshot kelayakan blocklist saat POST /verdicts (R2 §5)
@@ -170,7 +172,7 @@ Password role `shoo_api` tidak pernah ada di file migrasi (migrasi `supabase db 
 | I3 | Satu Guardian paling banyak 3 Protected | trigger + advisory lock |
 | I4 | Guardian di link = device mode guardian; Protected = mode protected | trigger |
 | I5 | Scan selalu skor ≥ 30 dan status konsisten dengan skor | check constraint |
-| I6 | Satu verdict per (pemilik, domain), keputusan terakhir menang | PK + `on conflict do update` |
+| I6 | Satu verdict per (pemilik, link), keputusan terakhir menang; `safe` terkunci sampai review mingguan (#476, Worker) | PK `(owner_id, url)` + `on conflict do update` (awal: per domain) |
 | I7 | `anon`/`authenticated` tidak bisa membaca tabel mana pun | grant + test `has_table_privilege` |
 | I8 | `domain` lowercase tanpa `www.` | check constraint |
 | I9 | Role `shoo_api` ada dan hanya punya grant di tabel kita | `has_role`, `table_privs_are` |
@@ -179,10 +181,10 @@ Password role `shoo_api` tidak pernah ada di file migrasi (migrasi `supabase db 
 
 Kontrak: "all domains with a `not_safe` verdict from any family". Filter otomatis saja bisa dilewati (satu orang mendaftarkan Guardian + Protected anonim, join, kirim scan palsu, lalu Not safe; verify run 02 #N2). Karena itu default fase 10 = **antrean + review manual** sampai Umar + Imelda memutuskan (TODO C6, D-alief-25):
 
-1. **Saat `POST /verdicts`** (satu transaksi): `global_eligible = true` hanya kalau `value = 'not_safe'`, pemilik scan bermode **protected**, `family_links` pemilik itu aktif ke Guardian pemutus, dan domain tidak ada di allowlist statis (`backend/api/src/data/allowlist.ts`: domain resmi brand Indonesia + domain populer). Kelayakan disimpan saat keputusan (snapshot), jadi disconnect setelahnya tidak mengubah isi blocklist diam-diam.
+1. **Saat `POST /verdicts`** (satu transaksi): `global_eligible = true` hanya kalau `value = 'not_safe'`, pemilik scan bermode **protected**, `family_links` pemilik itu aktif ke Guardian pemutus, dan domain tidak ada di allowlist statis (`backend/api/src/data/allowlist.ts`: domain resmi brand Indonesia + domain populer). Sekarang (15 Nov 2026): allowlist = `admin.v_domain_lists_public` yang diedit dashboard (`backend/api/src/db/repo/domainLists.ts:11`, ADM-09); file `allowlist.ts` sudah tidak ada. Kelayakan disimpan saat keputusan (snapshot), jadi disconnect setelahnya tidak mengubah isi blocklist diam-diam.
 2. Kalau layak: upsert `blocklist_entries(domain)` dengan `families = (select count(distinct by_device_id) from verdicts where domain = $d and value = 'not_safe' and global_eligible)`. `approved_at` tetap null.
-3. Verdict yang berubah dari `not_safe` ke `safe` → hitung ulang `families`; tidak menghapus entri yang sudah disetujui (reviewer yang memutuskan `removed_at`). Entri dengan `removed_at` tidak dihidupkan otomatis oleh verdict baru (upsert hanya memperbarui `families`); reviewer yang memutuskan (`update … set removed_at = null, approved_at = clock_timestamp()`).
-4. **Review manual (LANGKAH MANUAL berkala, Alief/Umar di SQL editor Supabase):**
+3. Verdict yang berubah dari `not_safe` ke `safe` → hitung ulang `families` (sekarang lewat fungsi `public.queue_blocklist_domain`, fase 27c: domain yang terakhir di-`reject` reviewer disisipkan lagi sudah ditolak; baris antrean tanpa dukungan dihapus, D-alief-40, `verdicts.ts:119-134`); tidak menghapus entri yang sudah disetujui (reviewer yang memutuskan `removed_at`). Entri dengan `removed_at` tidak dihidupkan otomatis oleh verdict baru (upsert hanya memperbarui `families`); reviewer yang memutuskan (`update … set removed_at = null, approved_at = clock_timestamp()`).
+4. **Review manual (LANGKAH MANUAL berkala, Alief/Umar di SQL editor Supabase):** sekarang (15 Nov 2026) lewat dashboard admin (`admin.vote`, tercatat di `admin.review_decisions`); SQL di bawah = cara awal.
    ```sql
    select domain, families, first_seen_at from blocklist_entries where approved_at is null and removed_at is null and families > 0 order by families desc, first_seen_at;
    update blocklist_entries set approved_at = clock_timestamp(), approved_by = 'alief' where domain = 'contoh-scam.id';   -- satu domain per eksekusi: pilih satu baris lalu Run (SQL editor mengirim semua statement sebagai satu transaksi)
@@ -211,4 +213,4 @@ insert into ops_heartbeat (source, at) values ($source, now()) on conflict (sour
 delete from rate_limit_hits where id in (select id from rate_limit_hits where hit_at < now() - interval '1 day' limit 20000);  -- maks 50 chunk
 -- storage_tombstones: maks 500 path per run → hapus objek Storage → hapus tombstone (D-alief-B12 g)
 ```
-Scan tanpa screenshot: chunk 2000 × maks 25 per run tanpa Storage. Urutan lock di retensi dan `deleteDevice`: verdicts `(owner_id, domain)` → scans `(id)`. Verdict tidak dihapus (D-alief-14). Batas per run (scan dengan screenshot): maks 10 batch × **100** scan (D-alief-B12: satu `DELETE` Storage per batch; Workers Free: 50 subrequest per Cron). Baris + tombstone path dihapus/ditulis dalam satu transaksi, lalu objek Storage (gagal → tombstone dicoba ulang; baris tetap hilang di hari ke-14); dedupe hanya memakai ulang upload asli, jadi objek hilang ≤ 15 hari setelah upload.
+Scan tanpa screenshot: chunk 2000 × maks 25 per run tanpa Storage. Urutan lock di retensi dan `deleteDevice`: verdicts `(owner_id, url)` (awal `(owner_id, domain)`) → scans `(id)`. Verdict tidak dihapus retensi (D-alief-14); hanya `notes` dikosongkan setelah 14 hari (#241, `cron/retention.ts:178-193`). Verdict **dihapus** saat putus/hapus device (`dropVerdicts`, P13). Batas per run (scan dengan screenshot): maks 10 batch × **100** scan (D-alief-B12: satu `DELETE` Storage per batch; Workers Free: 50 subrequest per Cron). Baris + tombstone path dihapus/ditulis dalam satu transaksi, lalu objek Storage (gagal → tombstone dicoba ulang; baris tetap hilang di hari ke-14); dedupe hanya memakai ulang upload asli, jadi objek hilang ≤ 15 hari setelah upload.

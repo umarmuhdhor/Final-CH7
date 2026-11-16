@@ -43,10 +43,13 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | POST | [`/devices`](API.md#post-devices) | app, onboarding | Register this phone, get its device token |
 | GET | [`/devices/me`](API.md#get-devicesme) | app | My profile, and my Guardian if I am Protected |
 | PATCH | [`/devices/me`](API.md#patch-devicesme) | app, extension | Rename, APNs token, language, extension heartbeat |
+| POST | [`/devices/me/protected`](API.md#post-devicesmeprotected) | Guardian app, Mode akun | A Guardian who protects nobody joins another family as Protected |
 | DELETE | [`/devices/me`](API.md#delete-devicesme) | app, Profile | Delete my data now |
 | POST | [`/family/code`](API.md#post-familycode) | Guardian app | 6-digit code + QR + invite link, valid 30 min; `refresh` makes a new one |
 | POST | [`/family/join`](API.md#post-familyjoin) | Protected app | Connect to a Guardian with the code |
 | GET | [`/family/members`](API.md#get-familymembers) | Guardian app | Family cards: members, extension status, last scan |
+| PATCH | [`/family/members/{deviceId}`](API.md#patch-familymembersdeviceid) | Guardian app | "Kabari saya": push on or off for one member |
+| POST | [`/family/members/{deviceId}/remind`](API.md#post-familymembersdeviceidremind) | Guardian app | "Ingatkan": push the member to turn Shoo on in Safari |
 | DELETE | [`/family/members/{deviceId}`](API.md#delete-familymembersdeviceid) | Guardian app | Remove a member |
 | DELETE | [`/family/guardian`](API.md#delete-familyguardian) | Protected app | Disconnect from my Guardian |
 | POST | [`/scans`](API.md#post-scans) | extension | Report a warned or blocked page (+ page replica); pushes the Guardian |
@@ -58,22 +61,26 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | POST | [`/verdicts`](API.md#post-verdicts) | Guardian app | It's safe / Not safe for a blocked domain |
 | GET | [`/verdicts?url=&domain=`](API.md#get-verdictsurldomain) | extension | Poll for the Guardian's decision on a block screen (`?domain=` alone: deprecated) |
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
+| GET | [`/config/public`](API.md#get-configpublic) | extension | Score thresholds set in the admin dashboard (warning / blocked) |
+| POST | [`/live`](API.md#post-live) | extension | Live score in the Dynamic Island via push-to-start (EX-03, #49) |
 | GET | [`/j/{code}`](API.md#get-jcode) | browser (WhatsApp / AirDrop link) | Invite page when the app is not installed: open Shoo, or copy + install |
 | GET | [`/og/invite.jpg`](API.md#get-oginvitejpg) | WhatsApp / Messages crawler | Link preview image for `/j/{code}` |
 | GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
 | GET | [`/privacy`](API.md#get-privacylangenid) | browser | Privacy policy, EN/ID |
 | GET | [`/support`](API.md#get-supportlangenid) | browser, App Store Connect | Support page: contact, delete data, EN/ID |
+| GET | [`/terms`](API.md#get-termslangenid) | browser, Profile | Terms of use, EN/ID |
+| GET | [`/get`](API.md#get-get) | browser ("Bagikan Shoo" link) | `302` to the App Store |
 
 All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`. Every response is
 `Cache-Control: private, no-store` except `GET /blocklist`. Details: [API.md, General rules](API.md#general-rules).
 
 ## Schema summary
 
-Migrations: `db/supabase/migrations/20261021130000_init.sql`, `20261021150000_blocklist_times.sql`, `20261021160000_family.sql`, `20261021170000_screenshot_bucket.sql`, `20261021180000_verdicts.sql`, `20261022100000_push_log_privacy.sql` (details: `plan/alief/ref/R2-skema-db.md`).
+Migrations: every file in `db/supabase/migrations/` (40 as of 15 Nov 2026, oldest `20261021130000_init.sql`, newest `20261113030000_admin_guardian_decisions.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
 
 | Table | Purpose |
 |---|---|
-| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt` |
+| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. `live_start_token`, `live_update_token` + `live_activity_id`, `live_started_at`: Live Activity APNs tokens for `POST /live` (EX-03, migration `20261110100000_live_activity_tokens.sql`); the page shown is never stored |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase without `www.`. `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
@@ -112,8 +119,11 @@ Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<
 
 - `admin.domain_review`: one row per LLM review of a queued domain. The dashboard cron calls `admin.review_due(limit)` (pending, not a shared host, no review since the last label change; counts only, no notes or page text) and stores `POST /review` answers with `admin.review_record(results, model, prompt, actor)`, which cleans model output and never touches `blocklist_entries`. `admin.vote` copies its decision to the latest review (trigger on `review_decisions`). Off until `review_enabled` (config, default `false`).
 - Shared hosts: the view `admin.v_shared_hosts` (rows of `admin.domain_lists` with `hosting <> 'none'`, see below). The `admin.shared_hosts` table and `shared_hosts_set` were dropped in ADM-09.
-- `admin.ai_dataset` (view): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
+- `admin.guardian_decisions` (QA-D-H01, migration `20261113030000_admin_guardian_decisions.sql`): append-only, one row per verdict insert and per change of value or Guardian, written by `on_verdict`. Unlink, device delete and the forget drain delete its rows; a failed delete queues `label_forget` so the rows are hidden at once (fail closed).
+- `admin.ai_dataset` (view, reads `admin.guardian_decisions` since QA-D-H01): one row per Guardian decision with the detector result per layer at scan time, RDAP age, the domain summary and the latest review. URL = `https://` + host + tokenised path, note masked by `admin.mask_note` (e-mail, digit runs ≥ 8). No `owner_id`, `by_device_id`, name, `owner_ref` or `by_ref`.
 - Role `shoo_ai` (Team AI, login, read-only transactions, 3 connections): `select` on `admin.ai_dataset` only. Cloud setup (once, SQL editor as `postgres`): `alter role shoo_ai password '<from the password manager>';`.
+
+`admin.scan_archive` has an index on `(created_at, scan_id)` (QA-D-H02, migration `20261113020000_admin_scan_archive_created_index.sql`) for the dashboard's `scans.jsonl` export, which pages in insert order and stops at the last full hour minus 5 minutes.
 
 ### Domain lists (ADM-09, migration `20261107095337_admin_domain_lists.sql`)
 
@@ -165,7 +175,7 @@ Logs: one `{"event":"retention", …counts}` line. Local trigger while `wrangler
 
 ## Notifications (hourly cron, PF-01 proposed)
 
-`"5 * * * *"` runs `src/cron/notifications.ts` (`scheduled()` picks the job by `controller.cron`, see `CRONS` in `src/index.ts`): "Perlindungan mati" for members whose extension has been silent 24 h, and the Monday "Ringkasan mingguan", at most 40 pushes per run. Quiet hours (`devices.quiet_*` in `devices.time_zone`) are worked out in TypeScript with `Intl`. Migration `20261028130000_notification_settings.sql` adds the switches to `devices` and `family_links.off_notified_at`. Logs: one `{"event":"notifications","protectionOff":n,"summaries":n}` line. The same run then logs the page-replica quota gauge (fase 19 K5.2): one `{"event":"replica_quota_usage","level":"ok|reserve|full",…}` line with aggregates only (`console.log`/`warn`/`error` by level); a failing gauge logs `replica_usage_failed` and never fails the run. Drops stay `{"event":"replica_dropped","reason":…}` (reasons include `family_quota`, `family_bytes`, `reserve`). Local trigger: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=5+*+*+*+*"`.
+`"5 * * * *"` runs `src/cron/notifications.ts` (`scheduled()` picks the job by `controller.cron`, see `CRONS` in `src/index.ts`): "Perlindungan mati" for members whose extension has been silent 24 h, and the Monday "Ringkasan mingguan", at most 40 pushes per run. Quiet hours (`devices.quiet_*` in `devices.time_zone`) are worked out in TypeScript with `Intl`. Migration `20261028130000_notification_settings.sql` adds the switches to `devices` and `family_links.off_notified_at`. Logs: one `{"event":"notifications","protectionOff":n,"summaries":n}` line. If the weekly summary step throws, the run still sends the "protection off" pushes it already claimed, records itself as failed in `ops_jobs`, then rethrows (fase 28k). The summary counts scans with `owner_id in (guardian, members)`, one index range per owner on `scans_owner_time`. The same run then logs the page-replica quota gauge (fase 19 K5.2): one `{"event":"replica_quota_usage","level":"ok|reserve|full",…}` line with aggregates only (`console.log`/`warn`/`error` by level); a failing gauge logs `replica_usage_failed` and never fails the run. Drops stay `{"event":"replica_dropped","reason":…}` (reasons include `family_quota`, `family_bytes`, `reserve`). Local trigger: `curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=5+*+*+*+*"`.
 
 Check for a backlog (SQL editor): `select count(*) from scans where created_at < now() - interval '15 days';` should be 0.
 
