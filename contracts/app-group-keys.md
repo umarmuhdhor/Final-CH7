@@ -11,7 +11,7 @@ Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, ne
 |---|---|---|---|---|
 | `device.id` | String | App | Extension | Backend device id (after `POST /devices`) |
 | `device.token` | String | App | Extension | Bearer token for API calls |
-| `device.mode` | `"guardian"` \| `"protected"` | App | Extension | Chosen in ON-03, never changes |
+| `device.mode` | `"guardian"` \| `"protected"` | App | Extension | Chosen in ON-03. Changes when a Pribadi user becomes supervised, and back when that link ends |
 | `device.name` | String | App | Extension | ON-02 name |
 | `guardian.name` | String? | App | Extension | Protected only: "Waiting for [name] to check" (EX-06) |
 | `extension.lastSeenAt` | Date | Extension | App | Heartbeat. App shows Active if recent (ON-04, PR-04, GD-01). On iOS 26.2+ the app asks Safari's switch first and uses this only as fallback (#40) |

@@ -89,6 +89,26 @@ Optional, but it drives what the extension marks on the page:
 - **Field signals** (`asks_*`): `evidence` is the field's `name`/`id` (e.g. `"pin"`). Not highlighted as text — the extension strikes sensitive fields itself at score ≥ 50.
 - Never put typed values in `evidence`.
 
+## `host` (DT-04 address card, #497)
+Optional, only on the layer 1–2 address signals the detector makes: `lookalike_domain`, `brand_plus_keyword`, `cheap_tld`,
+`suspicious_link`. It tells the app which part of the address to mark and the brand's real domain:
+```json
+{ "id": "brand_plus_keyword", "layer": 2, "weight": 14, "label": { … }, "labelSimple": { … },
+  "evidence": "bca · level 2 · verifikasi",
+  "host": { "marks": ["bca", "verifikasi"], "official": "bca.co.id" } }
+```
+- `marks` (optional): 1–4 substrings of the scan's `domain` to highlight, exactly as written there (lowercase, punycode
+  for an IDN: a `xn--` label is marked whole), in the order they read, never overlapping. Only parts the detector found
+  inside the registrable domain: a brand found in a subdomain gives no mark. `cheap_tld` → the ending (`[".site"]`);
+  `suspicious_link` → only host parts behind its reasons (rare ending, bait word or number in a free-hosting name,
+  digit-mixed piece, punycode label, hyphen-heavy label), never path, query or fragment.
+- `official` (optional): the brand's real domain = the **first** entry of its `domains` in `detector/data/brands.json`.
+  Only on `lookalike_domain` and `brand_plus_keyword`. Public data.
+- No precise part → no `marks`; nothing at all → no `host`. `db_match` and `new_domain` never have one; `asks_*` neither.
+- Missing `host` = the app marks the whole domain (behaviour before #497); old scans keep decoding. The app ignores a
+  mark it does not find in `domain`.
+- `evidence` stays free-form for layer 1–2: read `host`, never parse `evidence`.
+
 ## Known signal ids
 | id | Layer | Meaning |
 |---|---|---|
