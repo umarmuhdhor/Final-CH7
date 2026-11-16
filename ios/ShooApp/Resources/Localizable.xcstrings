@@ -7132,6 +7132,16 @@
         }
       }
     },
+    "Real: %@" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yang asli: %@"
+          }
+        }
+      }
+    },
     "Brand name with extra words" : {
       "localizations" : {
         "id" : {

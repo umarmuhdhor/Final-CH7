@@ -14,6 +14,8 @@ struct Evidence: Identifiable, Equatable, Sendable {
     let runningWeights: [Int]
     /// Areas on the page for this signal (`marks` in the page copy's meta), in page CSS px.
     var highlights: [CGRect] = []
+    /// The signal's `host` (#497): which parts of the address to mark and the brand's real address.
+    var host: Signal.Host?
 
     var kind: SignalKind { SignalKind(signalId: signalId) }
 
@@ -37,7 +39,8 @@ struct Evidence: Identifiable, Equatable, Sendable {
                 text: text.text(for: language.code),
                 weight: signal.weight,
                 runningWeights: running,
-                highlights: marks.filter { $0.signalId == signal.id }.map(\.rect)
+                highlights: marks.filter { $0.signalId == signal.id }.map(\.rect),
+                host: signal.host
             )
         }
     }
