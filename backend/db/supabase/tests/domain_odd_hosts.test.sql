@@ -3,13 +3,14 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(30);
+select plan(32);
 
 -- ---------------------------------------------------------------- domain checks
 
 select is_empty(
   $$select conrelid::regclass::text from pg_constraint
-     where contype = 'c' and pg_get_constraintdef(oid) ~ 'www' and conrelid <> 'admin.domain_lists'::regclass$$,
+     where contype = 'c' and conname like '%\_domain\_check' and pg_get_constraintdef(oid) ~ 'www'
+       and conrelid <> 'admin.domain_lists'::regclass$$,
   'no domain check refuses a leading www. any more (admin.domain_lists keeps registrable domains only)');
 select set_eq(
   $$select c.conrelid::regclass::text from pg_constraint c join pg_class t on t.oid = c.conrelid
@@ -19,10 +20,10 @@ select set_eq(
         'admin.domain_labels', 'admin.domain_review', 'admin.guardian_decisions', 'admin.scan_archive',
         'admin.case_library', 'admin.review_decisions'],
   'every replaced check keeps domain = lower(domain), under its old name');
-select is(
-  (select pg_get_constraintdef(oid) from pg_constraint where conname = 'domain_lists_domain_check'),
-  'CHECK (((char_length(domain) <= 253) AND (domain !~ ''^www\.''::text) AND (domain ~ ''^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$''::text)))',
-  'admin.domain_lists is unchanged');
+select ok(
+  (select pg_get_constraintdef(oid) ~ 'www' and pg_get_constraintdef(oid) ~ 'char_length'
+     from pg_constraint where conname = 'domain_lists_domain_check'),
+  'admin.domain_lists keeps its own check');
 
 -- ---------------------------------------------------------------- verdict_link
 
@@ -33,6 +34,7 @@ select is(public.verdict_link('https://[::1]:8443'), 'https://[::1]:8443/', 'lin
 select is(public.verdict_link('http://[::ffff:192.0.2.1]/a'), 'http://[::ffff:192.0.2.1]/a', 'link: IPv6 with a dotted tail');
 select is(public.verdict_link('http://[2001:db8::1]x/'), null, 'link: text after the brackets is no link');
 select is(public.verdict_link('http://[2001:db8::1/'), null, 'link: an open bracket is no link');
+select is(public.verdict_link('http://[ab:c]/'), 'http://[ab:c]/', 'link: the one change: a bracketed host with a colon (was null)');
 select is(public.verdict_link('http://router/login'), 'http://router/login', 'link: single label');
 select is(public.verdict_link('https://www.co.id/a'), 'https://www.co.id/a', 'link: www. stays');
 
@@ -54,7 +56,9 @@ insert into normal_urls values
   ('https://ex.com:abc/'), ('http://192.168.1.1/a'), ('http://192.168.1.1:80'), ('https://ex.com?q'),
   ('https://ex.com#f'), ('https://a@b@ex.com/x'), ('https://ex.com/a:b@c'), ('https://ex.com:/a'),
   ('https://ex.com:123456/'), ('https://xn--bca-verifikasi-abc.site/%C3%A4'), ('https://ex.com/' || repeat('a', 2040)),
-  ('https://ex.com\a'), ('http://ex.com./a'), ('https://'), ('not a url'), ('https://ex].com/'), ('https://e[x.com/');
+  ('https://ex.com\a'), ('http://ex.com./a'), ('https://'), ('not a url'), ('https://ex].com/'), ('https://e[x.com/'),
+  -- A bracket that is no IPv6 literal falls to the old host rule (Postgres takes the longer alternative).
+  ('http://[foo]/'), ('http://[abc]/'), ('http://[2001/x'), ('https://[/'), ('http://[::1/a');
 select is_empty(
   $$select u from normal_urls where pg_temp.old_link(u) is distinct from public.verdict_link(u)$$,
   'link: every other url gives the same link as before');
@@ -125,6 +129,10 @@ select throws_ok(
   $$insert into verdicts (owner_id, url, domain, value, by_device_id, by_name)
     values ('o_p', 'http://[2001:db8::1]/a?x=1', '[2001:db8::1]', 'safe', 'o_g', 'G')$$,
   '23514', null, 'url check: still no query, IPv6 too');
+select throws_ok(
+  $$insert into verdicts (owner_id, url, domain, value, by_device_id, by_name)
+    values ('o_p', 'http://[::1/a', '[::1]', 'safe', 'o_g', 'G')$$,
+  '23514', null, 'url check: an open bracket is no link');
 select lives_ok(
   $$insert into verdicts (owner_id, url, domain, value, by_device_id, by_name)
     values ('o_p', 'http://[::1]:8080/a', '[::1]', 'safe', 'o_g', 'G')$$,

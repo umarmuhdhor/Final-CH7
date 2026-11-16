@@ -13,13 +13,20 @@
 --     gives exactly the same result as before (tests/domain_odd_hosts.test.sql compares both).
 --   * verdicts_url_link and public.verdicts_default_url read the host the same way.
 --
--- Not changed: admin.on_scan_insert still stores scan_archive.host cut at the first `:` for an IPv6 host
--- (dashboard only; the archive row and its domain are right). Follow-up if the dashboard needs it.
+-- Not changed (dashboard only, no behaviour change today):
+--   * admin.on_scan_insert stores scan_archive.host cut at the first `:` for an IPv6 host: `[2001`, not
+--     null (the archive row and its domain are right). Nothing joins it to a list row that could be IPv6.
+--   * admin.v_scans (20261116100000) reads the host the old way too; no admin.domain_lists row is an IPv6
+--     host or a parent of one, so its verdict is the same as with verdict_shared.
+--   * admin._check_domain still refuses `www.` for the review queue RPCs (admin.vote, unreject,
+--     remove_domain, domain_remove): a name with no registrable domain never enters the queue
+--     (contracts/api.md Blocklist 1, src/db/repo/domainLists.ts lacksRegistrableDomain), and
+--     admin.domain_lists keeps its own check.
 --
 -- Rollback (one transaction; only while no row holds one of the new values, else delete those first):
---   re-add `and domain !~ '^www\.'` to each check below, put verdicts_url_link back as in
---   20261108100000_verdicts_per_link.sql, and re-run verdict_link, verdict_shared and
---   verdicts_default_url from that file.
+--   re-add `and domain !~ '^www\.'` to each of the 11 checks below (lines "domain checks"), put
+--   verdicts_url_link back as in 20261108100000_verdicts_per_link.sql, and run verdict_link,
+--   verdict_shared and verdicts_default_url from that file as `create or replace`.
 
 set local lock_timeout = '1s';
 set local statement_timeout = '60s';
