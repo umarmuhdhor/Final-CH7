@@ -62,8 +62,8 @@ jobs:
       fail-fast: false
       matrix:
         kind: [unit, ui]
-    # The UI suite takes about 30 minutes on this runner; the unit tests a few.
-    timeout-minutes: ${{ matrix.kind == 'ui' && 45 || 20 }}
+    # The UI suite takes about 40 minutes on this runner (a retried flaky test adds more); the unit tests a few (#533).
+    timeout-minutes: ${{ matrix.kind == 'ui' && 65 || 20 }}
     name: ${{ matrix.kind }}
     steps:
       # Unit tests compare Data/Fixtures with contracts/fixtures by source path, so the repo is checked out
@@ -96,7 +96,7 @@ jobs:
 
       # The UI step stops before the job timeout, so a slow run still keeps its log and result bundle.
       - name: Test
-        timeout-minutes: ${{ matrix.kind == 'ui' && 40 || 15 }}
+        timeout-minutes: ${{ matrix.kind == 'ui' && 60 || 15 }}
         run: ios/ShooApp/ci/run-tests.sh ${{ matrix.kind }} "${{ steps.build.outputs.xctestrun }}" "${{ steps.sim.outputs.udid }}"
 
       # Mock data only (-UITestMock), so the result bundle is safe in a public repo.
