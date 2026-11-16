@@ -105,8 +105,11 @@ struct ReplicaMeta: Equatable, Sendable {
     /// Only for the scan's domain or a subdomain: the device could write any URL here. Plain text, shortened.
     func copiedFrom(scanURL: URL, domain: String) -> String? {
         guard let url, url != scanURL, ["http", "https"].contains(url.scheme?.lowercased()),
-              let host = url.host()?.lowercased()
+              let bare = url.host()?.lowercased()
         else { return nil }
+        // `host()` drops an IPv6 literal's brackets; the scan's `domain` keeps them (#487, `[2001:db8::1]`).
+        // Only an IPv6 literal has a colon in its host.
+        let host = bare.contains(":") ? "[\(bare)]" : bare
         let domain = domain.lowercased()
         guard host == domain || host.hasSuffix("." + domain) else { return nil }
         // The decoded path is device text: no line breaks or bidi controls that could reorder the line.
