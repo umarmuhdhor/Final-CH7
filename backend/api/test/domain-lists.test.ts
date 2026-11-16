@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import blocked92 from "../../../contracts/fixtures/blocked-92.json";
+import { lacksRegistrableDomain } from "../src/db/repo/domainLists";
 import { useRateKeySecret } from "../src/http/keyHash";
 import { adminSql, resetDb, testSql } from "./helpers/resetDb";
 import { call, createDevice, type Created } from "./helpers/seed";
@@ -79,5 +80,16 @@ describe("verdicts read the domain lists (W16)", () => {
     await notSafe(g, await scan(p, DOMAIN));
     expect(await eligible(DOMAIN)).toBe(true);
     expect(await queued(DOMAIN)).toBe(true);
+  });
+});
+
+// #487, #495 (contracts/api.md Scans "`domain`" case 4): a domain that is the full host because there is no
+// registrable domain never enters the review queue. Some of these pass the DOMAIN check only after #487.
+describe("lacksRegistrableDomain", () => {
+  it.each(["192.168.1.1", "[2001:db8::1]", "router", "www.co.id", "www.com", "WWW.CO.ID"])("%s has none", (d) => {
+    expect(lacksRegistrableDomain(d)).toBe(true);
+  });
+  it.each(["bca.co.id", "sites.google.com", "evil.github.io", "1.example", "wwwbank.com", "example.123"])("%s has one", (d) => {
+    expect(lacksRegistrableDomain(d)).toBe(false);
   });
 });

@@ -817,7 +817,8 @@ adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes
   registrable domain. Case, surrounding spaces, a trailing dot and a leading `www.` are tolerated in
   `domain`. The url's host must be the domain or a subdomain of it, else `422`.
 - **Deprecated:** `?domain=` alone, for builds from before #241: any `not_safe` on that domain, else the
-  newest `safe`. It goes once the last older build is gone.
+  newest `safe`. A `not_safe` made on a shared host (step 2 below) covers only its own link, so it never
+  counts here (#495). It goes once the last older build is gone.
 
 **Response 200**
 
@@ -827,10 +828,12 @@ adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes
 
 Lookup, first match wins:
 1. A verdict on exactly this link, `safe` or `not_safe`.
-2. A `not_safe` by this owner on another link of the same domain, unless the link is on a shared host:
-   its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
-   `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). A
-   tenant domain such as `evil.github.io` is one owner, so its pages share step 2.
+2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared
+   host: its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
+   `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). Either
+   link means the one asked about and the one the `not_safe` was made on (#495): a scam Google Form filed
+   under `google.com` by an older build never answers for `accounts.google.com`. A tenant domain such as
+   `evil.github.io` is one owner, so its pages share step 2.
 3. Otherwise `null`. A `safe` never reaches past its own link.
 
 Every `Verdict` (here, in `POST /verdicts` and on a scan) carries `url`: the link it was made on. A
