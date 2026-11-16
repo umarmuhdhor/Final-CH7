@@ -8,7 +8,7 @@ import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { clientIp, hit, hitLight, limits } from "../http/rateLimit";
 import { maxRequestBytes } from "../http/bodyLimit";
-import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
+import { DOMAIN, DOMAIN_MESSAGE, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
 import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
@@ -74,7 +74,7 @@ const scanBody = z
         return u.href;
       })
       .pipe(z.string().max(2048, "must be at most 2048 characters once normalized")),
-    domain: z.string().max(253).regex(DOMAIN, "must be a lowercase registrable domain without www."),
+    domain: z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE),
     pageTitle: z.string().nullish(),
     faviconUrl: z.unknown().optional(),
     score: z.number().int().min(30).max(100),
