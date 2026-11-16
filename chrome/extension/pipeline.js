@@ -194,7 +194,9 @@
             const reply = await analyzeRemote(snapshot, local.filter((s) => !s.id.startsWith("asks_")));
             remote = validSignals(reply?.signals, [3, 4]);
             state.rdapRegisteredAt = reply?.rdapRegisteredAt ?? state.rdapRegisteredAt;
-            state.onlineChecked = Boolean(reply) && !reply.skipped;
+            // #490: signals that all fail the filter are no answer; `signals: []` is a real "nothing found".
+            const allDropped = Array.isArray(reply?.signals) && reply.signals.length > 0 && remote.length === 0;
+            state.onlineChecked = Boolean(reply) && !reply.skipped && !allDropped;
         } catch {
             remote = [];
             state.onlineChecked = false;

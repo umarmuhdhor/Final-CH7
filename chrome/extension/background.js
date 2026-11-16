@@ -48,6 +48,8 @@ async function fetchJSON(url, { timeoutMs, token, ...init }) {
     }
 }
 
+const isPlainObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
 /** Layer 3–4. Never rejects: no session, server down or slow → no signals (PRD §5). */
 async function analyze(snapshot, localSignals) {
     const session = await getSession();
@@ -59,7 +61,9 @@ async function analyze(snapshot, localSignals) {
             timeoutMs: ANALYZE_TIMEOUT_MS,
             body: JSON.stringify({ snapshot: { ...snapshot, url: shareableUrl(snapshot.url) }, localSignals }),
         });
-        return { ok: true, signals: Array.isArray(body?.signals) ? body.signals : [] };
+        // #490: a 200 with no usable answer ({}, null, an error object, signals not a list) was not a check.
+        if (!isPlainObject(body) || !Array.isArray(body.signals)) return { ok: true, signals: [], skipped: "bad_body" };
+        return { ok: true, signals: body.signals };
     } catch (error) {
         console.warn("[Shoo] /analyze failed", error);
         return { ok: true, signals: [], skipped: "error" };
