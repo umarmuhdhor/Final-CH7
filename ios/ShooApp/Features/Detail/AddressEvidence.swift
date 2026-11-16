@@ -5,7 +5,8 @@ import SwiftUI
 /// so the card shows the address the way Safari does, with the suspicious part marked, and one line that says
 /// what is wrong with it.
 ///
-/// Only the registrable domain is shown, as in the link pill (BH-13): a deceiving subdomain
+/// Only the scan's `domain` is shown (the registrable domain; the full host on a shared platform such as
+/// `sites.google.com`, #495), as in the link pill (BH-13): a deceiving subdomain
 /// (`klikbca.co.id.secure-login.<domain>`) never gets a second, bigger stage here.
 /// Which part to mark: `cheap_tld` marks the ending; every other reason marks the whole domain until the
 /// detector says which part it matched (#497).

@@ -512,7 +512,8 @@ struct ActivityRow: View {
         return path.isEmpty || path == "/" ? host : host + path
     }
 
-    /// The row title (BH-25): the registrable domain first, so it is the part that always shows, then the
+    /// The row title (BH-25): the scan's `domain` first (the registrable domain, or the full host on a shared
+    /// platform such as `sites.google.com`, #495), so it is the part that always shows, then the
     /// path when it is not the root, so two pages of one site read apart. Percent-encoded (BH-36): bidi
     /// or invisible characters in a path cannot reorder what is shown. No query or fragment (SECURITY §3 P9).
     static func pageTitle(url: URL, domain: String) -> String {
@@ -520,7 +521,7 @@ struct ActivityRow: View {
         return parts.domain + parts.path
     }
 
-    /// The row title split in two (U-05, K8): the registrable domain, drawn whole or cut in the middle, and the
+    /// The row title split in two (U-05, K8): the scan's `domain`, drawn whole or cut in the middle, and the
     /// path after it (empty for the root), the only part cut at its tail. Same encoding rules as `pageTitle`.
     static func titleParts(url: URL, domain: String) -> (domain: String, path: String) {
         let path = url.path(percentEncoded: true)

@@ -220,7 +220,8 @@ enum MockScenarios {
                 signals: Site.bcaBlocked.signals + Site.bansos.signals, screenshotUrl: nil, pageReplicaUrl: nil,
                 ownerDeviceId: "dev_syahnaz", ownerName: data.members[0].name, detectedAt: now.addingTimeInterval(-60), verdict: nil
             ),
-            // U-05: the backend stores only the registrable domain, so a long one is what a real row shows.
+            // U-05: the backend stores the `domain` the extension sends (the registrable domain here; the full
+            // host only on a shared platform such as sites.google.com, #495), so a long one is what a real row shows.
             ScanResult(
                 id: "edge-long-registrable",
                 url: URL(string: "https://login.\(longRegistrable)/login/verifikasi/pin?ref=wa")!,
