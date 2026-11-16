@@ -1004,7 +1004,7 @@ The in-page pill stays the offline, instant score; the island is extra.
 - **Privacy:** domain and score go into the APNs payload only. No table row, no `push_log` row, and
   the log line holds `kind` and `result` only.
 
-**Request body** (all fields required, unknown keys → `422`)
+**Request body** (all fields required except `label` and `secondWarning`, unknown keys → `422`)
 
 | Field | Type | Rules |
 |---|---|---|
@@ -1013,6 +1013,8 @@ The in-page pill stays the offline, instant score; the island is extra.
 | `status` | `"normal"` \| `"warning"` \| `"blocked"` | |
 | `analyzing` | boolean | Online check still running |
 | `open` | boolean | `false`: the page left the screen, end the island |
+| `label` | `"offline_check"` \| `"marked_safe"` | Optional (#486). The in-page pill's words for a low score: online check skipped or failed (#379), or a Guardian marked the link safe (#369). Left off otherwise; any other value (also `null`) → `422` |
+| `secondWarning` | integer | Optional (#486), 1–100: the extension's second warning, where the island's darker "danger" tone starts (50 without it). `null` → `422` |
 
 ```json
 { "domain": "bca-verifikasi.site", "score": 81, "status": "warning", "analyzing": false, "open": true }
@@ -1032,7 +1034,7 @@ for the app's update token). Answered after the push, so one device's calls stay
 | `open: false`, update token known | `end` with `dismissal-date` now | update | 10 |
 | `open: false`, no update token yet | nothing; logged as `kind: "none"`, `reason: "no_update_token"`. The app ends older islands itself when a new one starts | | |
 
-`content-state` is `{ domain, score, isAnalyzing, isBlocked, status }` (`isBlocked` = `status == "blocked"`; `status` is the `POST /live` value as is, #383, so the island colours by what the phone did, not by fixed bands).
+`content-state` is `{ domain, score, isAnalyzing, isBlocked, status }` (`isBlocked` = `status == "blocked"`; `status` is the `POST /live` value as is, #383, so the island colours by what the phone did, not by fixed bands), plus `label` and `secondWarning` copied as is when the body has them (#486, also on `end`; no cross-field check, the island only uses a label in place of "Aman"); without them the keys are left out, so an older app decodes as before.
 `start` also carries `"attributes-type": "ScoreActivityAttributes"` and `attributes: {}` (the domain lives in `content-state`).
 `start` and `update` carry `stale-date` +10 min. APNs `410` clears the token it was sent to; an `end`
 clears the update token whatever the result.

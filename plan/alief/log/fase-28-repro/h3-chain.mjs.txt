@@ -1,5 +1,6 @@
 // Fase 28 hunt, hunter 3: cross-component scenarios, each through the REAL modules (no network).
 // Run: node h3-chain.mjs <worktree>     Lines starting with "BUG" show the wrong result on main 9e5403ba.
+// X-04 / X-05 (#486) run the real live-island.js + live.js and the island rule of #535: they read "ok" once #535 is in the worktree.
 const W = process.argv[2];
 const R = `${W}/ios/ShooExtension/Resources`;
 await import(`${R}/pipeline.js`);
@@ -93,6 +94,49 @@ console.log("\n== X-03 block memory on hosts the backend treats as shared (publi
     }
 }
 
+// ---------- the island side, through the REAL files (#486) ----------
+// live-island.js is a plain content script: it reads `document`, `location`, `browser` and `addEventListener` when it
+// runs. They exist only inside withPage(), so X-08's block.js / blocked-page.js still see no DOM (they check for one).
+// The message it sends goes through live.js show() like background.js `case "liveScore"` (with #535 it forwards
+// `label` and `secondWarning`; live.js keeps only known values). Without #535, live-island.js sends neither.
+const island = await (async () => {
+    const sent = [];
+    const pageGlobals = () => {
+        class Document {}
+        Object.defineProperty(Document.prototype, "visibilityState", { get: () => "visible" });
+        return { Document, document: new Document(), location: { hostname: "bca-promo.example" }, browser: { runtime: { sendMessage: async (m) => void sent.push(m) } }, addEventListener: () => {} };
+    };
+    const page = pageGlobals();
+    const withPage = async (fn) => { Object.assign(globalThis, page); try { return await fn(); } finally { for (const k of Object.keys(page)) delete globalThis[k]; } };
+    let listener = null;
+    const subscribe = P.subscribe;
+    P.subscribe = (fn) => ((listener = fn), () => {});
+    try { await withPage(() => import(`${R}/live-island.js`)); } finally { P.subscribe = subscribe; }
+    return {
+        // pipeline state -> live-island.js message -> live.js show() -> the POST /live body
+        async body(state) {
+            sent.length = 0;
+            await withPage(() => listener(state));
+            const m = sent.at(-1);
+            if (!m) throw new Error("live-island.js sent nothing for this state");
+            let body = null;
+            const live = createLive({ getSession: async () => ({ aiBaseURL: "https://ai.test", apiBaseURL: "https://api.test", token: "t" }), post: async (_s, b) => (body = b) });
+            await live.show({ domain: "bca-promo.example", score: m.score, status: m.status, analyzing: m.analyzing, label: m.label, secondWarning: m.secondWarning });
+            return body;
+        },
+        // backend live.ts contentState() copies label / secondWarning as is (#486); ScoreActivityAttributes.swift `tone` +
+        // `headline`, ScoreLiveActivity.swift `statusText`: a label only replaces "Aman", danger starts at secondWarning ?? 50.
+        tone: (b) => (b.status === "blocked" ? "blocked" : b.status === "warning" ? (b.score >= (b.secondWarning ?? 50) ? "danger" : "warning") : "safe"),
+        text(b) {
+            const tone = this.tone(b);
+            if (b.analyzing) return "Menganalisis…";
+            if (tone === "safe" && b.label === "marked_safe") return "Ditandai aman oleh Guardian";
+            if (tone === "safe" && b.label === "offline_check") return "Cek online tidak tersedia";
+            return { safe: "Aman", warning: "Hati-hati", danger: "Risiko tinggi", blocked: "Diblokir" }[tone];
+        },
+    };
+})();
+
 // ---------- X-04: #379 "never low risk without the online check" on the Dynamic Island ----------
 console.log("\n== X-04 /analyze failed: in-page pill vs what goes to the Dynamic Island");
 {
@@ -104,14 +148,10 @@ console.log("\n== X-04 /analyze failed: in-page pill vs what goes to the Dynamic
             lookupVerdict: async () => verdict, isCurrent: () => true, publish: (s) => (last = s) });
         const v = pill.decide(null, { ...last, scanId: 1 }).view;
         const pillSays = v.safeBy !== undefined ? `Ditandai aman oleh ${v.safeBy}` : v.offline ? "Cek online tidak tersedia" : v.tone === "safe" ? "Risiko rendah" : v.tone;
-        // live-island.js show(): { open, hostname, score: state.score ?? 0, status: state.status, analyzing: !state.done } -> live.js -> POST /live
-        let body = null;
-        const live = createLive({ getSession: async () => ({ aiBaseURL: "https://ai.test", apiBaseURL: "https://api.test", token: "t" }), post: async (_s, b) => (body = b) });
-        await live.show({ domain: "bca-promo.example", score: last.score ?? 0, status: last.status, analyzing: !last.done });
-        // backend live.ts contentState(): { domain, score, isAnalyzing, isBlocked, status }; ScoreLiveActivity.swift statusText: tone .safe -> "Aman"
-        const island = body.analyzing ? "Menganalisis…" : body.status === "blocked" ? "Diblokir" : body.status === "warning" ? (body.score >= 50 ? "Risiko tinggi" : "Hati-hati") : "Aman";
-        const wrong = pillSays !== "Risiko rendah" && island === "Aman";
-        console.log(`${wrong ? "BUG X-04" : "ok      "} | ${name} | state score ${last.score} onlineChecked ${last.onlineChecked} | pill: "${pillSays}" | POST /live body ${JSON.stringify(body)} | island text (ScoreLiveActivity.swift:116-125): "${island}" ${body.score}%`);
+        const body = await island.body({ ...last, scanId: 1 });
+        const says = island.text(body);
+        const wrong = pillSays !== "Risiko rendah" && says === "Aman";
+        console.log(`${wrong ? "BUG X-04" : "ok      "} | ${name} | state score ${last.score} onlineChecked ${last.onlineChecked} | pill: "${pillSays}" | POST /live body ${JSON.stringify(body)} | island text: "${says}" ${body.score}%`);
     }
 }
 // ---------- X-08: which site does the block screen / the Guardian's card name for a scam on a shared platform? ----------
@@ -138,15 +178,26 @@ console.log("\n== X-08 scam page on a shared platform: the name shown where the 
     console.log(`cells ${cells}, named after the platform owner instead of the page: ${bad}`);
 }
 // ---------- X-05: second warning tier: extension vs island ----------
-console.log("\n== X-05 tier 2 of a warning: extension (thresholds.js secondWarning) vs Dynamic Island (score >= 50, ScoreActivityAttributes.swift:26)");
+console.log("\n== X-05 tier 2 of a warning: extension (thresholds.js secondWarning) vs Dynamic Island (secondWarning from POST /live, 50 without it)");
 {
     let cells = 0, bad = 0;
+    const builtIn = { ...P.THRESHOLD };
     for (const [warnAt, blockAt] of [[30, 80], [50, 80], [55, 85], [60, 95], [45, 60]]) {
         const t = toThresholds({ warnAt, blockAt, version: 3 });
+        Object.assign(P.THRESHOLD, { firstWarning: t.firstWarning, secondWarning: t.secondWarning, blocked: t.blocked });
         const diff = [];
-        for (let score = warnAt; score < blockAt; score++) { cells++; const ext = score >= t.secondWarning ? "danger" : "warning"; const island = score >= 50 ? "danger" : "warning"; if (ext !== island) { bad++; diff.push(score); } }
-        console.log(`${diff.length ? "BUG X-05" : "ok      "} | warnAt ${warnAt} blockAt ${blockAt} secondWarning ${t.secondWarning} | scores where pill/popup and island disagree: ${diff.length ? diff[0] + "–" + diff.at(-1) : "none"}`);
+        let sentSplit;
+        for (let score = warnAt; score < blockAt; score++) {
+            cells++;
+            const body = await island.body({ score, status: "warning", done: true, onlineChecked: true });
+            sentSplit = body.secondWarning;
+            const ext = score >= t.secondWarning ? "danger" : "warning";
+            const isl = island.tone(body);
+            if (ext !== isl) { bad++; diff.push(score); }
+        }
+        console.log(`${diff.length ? "BUG X-05" : "ok      "} | warnAt ${warnAt} blockAt ${blockAt} secondWarning ${t.secondWarning} (POST /live secondWarning ${sentSplit ?? "absent, island uses 50"}) | scores where pill/popup and island disagree: ${diff.length ? diff[0] + "–" + diff.at(-1) : "none"}`);
     }
+    Object.assign(P.THRESHOLD, builtIn);
     console.log(`cells ${cells}, disagreeing ${bad}`);
 }
 console.warn = quiet;
