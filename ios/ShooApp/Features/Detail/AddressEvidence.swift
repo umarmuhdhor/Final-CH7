@@ -7,13 +7,16 @@ import SwiftUI
 ///
 /// Only the registrable domain is shown, as in the link pill (BH-13): a deceiving subdomain
 /// (`klikbca.co.id.secure-login.<domain>`) never gets a second, bigger stage here.
-/// Which part to mark: `cheap_tld` marks the ending; every other reason marks the whole domain until the
-/// detector says which part it matched (#497).
+/// Which part to mark: the parts the detector names in `host.marks` (#497). Without them, `cheap_tld` marks the
+/// ending and every other reason the whole domain. When the detector names the brand's real address
+/// (`host.official`), a line under the note shows it.
 struct AddressEvidence: View {
     let domain: String
     let kind: SignalKind
     /// The reason in the viewer's words (`label` or `labelSimple`): the age of a new domain is read from it.
     let reasonText: String
+    /// The signal's `host` (#497): which parts to mark and the brand's real address. nil = today's marks.
+    var host: Signal.Host?
 
     static let height: CGFloat = 132
 
@@ -21,11 +24,18 @@ struct AddressEvidence: View {
         let panel = RoundedRectangle(cornerRadius: 12, style: .continuous)
         VStack(spacing: 14) {
             addressBar
-            note
+            VStack(spacing: 4) {
+                note
+                if let official = Self.official(in: host, kind: kind) {
+                    officialLine(official)
+                }
+            }
         }
         .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity)
-        .frame(height: Self.height)
+        // At least the photo card's height; larger text or the real-address line may need more.
+        .frame(minHeight: Self.height)
         .background(DetailStyle.photoFill)
         .clipShape(panel)
         .overlay(panel.stroke(DetailStyle.photoStroke))
@@ -39,7 +49,7 @@ struct AddressEvidence: View {
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(DetailStyle.secondary)
                 .accessibilityHidden(true)
-            Text(Self.marked(domain, ranges: Self.markedRanges(in: domain, kind: kind)))
+            Text(Self.marked(domain, ranges: Self.markedRanges(in: domain, kind: kind, marks: host?.marks)))
                 .activityFont(17)
                 .foregroundStyle(DetailStyle.title)
                 .lineLimit(1)
@@ -65,6 +75,23 @@ struct AddressEvidence: View {
         }
         .foregroundStyle(DetailStyle.secondary)
         .multilineTextAlignment(.center)
+    }
+
+    /// "Real: bca.co.id": the address the scam copies, from the detector's brand list (public data).
+    private func officialLine(_ official: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.seal")
+                .font(.system(size: 14, weight: .semibold))
+                .accessibilityHidden(true)
+            Text("Real: \(official)")
+                .activityFont(15, .semibold)
+                .lineLimit(2)
+                // Keep both ends of a long address readable; the middle goes first.
+                .truncationMode(.middle)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(DetailStyle.title)
+        .accessibilityIdentifier("detail.address.official")
     }
 
     @ViewBuilder
@@ -96,13 +123,51 @@ struct AddressEvidence: View {
         }
     }
 
-    /// Parts of `domain` to mark. `cheap_tld`: the last label with its dot (`.site`). Everything else: all of it.
-    static func markedRanges(in domain: String, kind: SignalKind) -> [Range<String.Index>] {
+    /// Parts of `domain` to mark: the detector's `marks` that are in it (#497). When none is, today's marks:
+    /// `cheap_tld` the last label with its dot (`.site`), everything else all of it.
+    static func markedRanges(in domain: String, kind: SignalKind, marks: [String]? = nil) -> [Range<String.Index>] {
         guard !domain.isEmpty else { return [] }
+        let found = ranges(of: marks ?? [], in: domain)
+        if !found.isEmpty { return found }
         if kind == .cheapEnding, let dot = domain.lastIndex(of: "."), domain.index(after: dot) < domain.endIndex {
             return [dot..<domain.endIndex]
         }
         return [domain.startIndex..<domain.endIndex]
+    }
+
+    /// Where each mark reads in `domain`, ignoring case, in domain order. Only the first 4 marks count (the
+    /// contract's limit). Marks come in reading order, so each one is looked for after the previous; one that is
+    /// not there is looked for from the start (without moving the search back), and one not found at all is left
+    /// out. Overlapping or touching parts join into one, so a duplicate mark marks its part once.
+    static func ranges(of marks: [String], in domain: String) -> [Range<String.Index>] {
+        let options: String.CompareOptions = [.caseInsensitive, .literal]
+        var found: [Range<String.Index>] = []
+        var cursor = domain.startIndex
+        for mark in marks.prefix(4) where !mark.isEmpty {
+            guard let range = domain.range(of: mark, options: options, range: cursor..<domain.endIndex)
+                ?? domain.range(of: mark, options: options)
+            else { continue }
+            found.append(range)
+            cursor = max(cursor, range.upperBound)
+        }
+        var joined: [Range<String.Index>] = []
+        for range in found.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            if let last = joined.last, range.lowerBound <= last.upperBound {
+                joined[joined.count - 1] = last.lowerBound..<max(last.upperBound, range.upperBound)
+            } else {
+                joined.append(range)
+            }
+        }
+        return joined
+    }
+
+    /// The brand's real address to show, or nil when the detector names none. Only brand reasons
+    /// (`lookalike_domain`, `brand_plus_keyword`) have one in the contract.
+    static func official(in host: Signal.Host?, kind: SignalKind) -> String? {
+        guard kind == .lookalikeDomain || kind == .brandInAddress,
+              let official = host?.official?.trimmingCharacters(in: .whitespacesAndNewlines), !official.isEmpty
+        else { return nil }
+        return official
     }
 
     /// The domain with `ranges` on the marker yellow, bold; the rest regular.
@@ -143,6 +208,8 @@ extension SignalKind {
             AddressEvidence(domain: "bca-verifikasi.site", kind: .cheapEnding, reasonText: "Cheap ending .site")
             AddressEvidence(domain: "p0stindonesia.com", kind: .knownScam, reasonText: "Verified scam")
             AddressEvidence(domain: "lphone-login.com", kind: .lookalikeDomain, reasonText: "Spelled like Apple")
+            AddressEvidence(domain: "bca-verifikasi.site", kind: .brandInAddress, reasonText: "BCA name with extra words",
+                            host: Signal.Host(marks: ["bca", "verifikasi"], official: "bca.co.id"))
         }
         .padding()
     }

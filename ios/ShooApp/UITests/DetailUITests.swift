@@ -175,6 +175,20 @@ final class DetailUITests: XCTestCase {
         app.buttons["detail.screenshotClose"].tap()
     }
 
+    /// DT-04 (#497): with the detector's `host`, the address card names the brand's real address.
+    @MainActor
+    func testAddressCardNamesTheRealAddress() {
+        let app = openDetail("address-marks", extra: ["-mock.scenario", "addressMarks"])
+        let address = app.descendants(matching: .any)["detail.address.0"]
+        XCTAssertTrue(address.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(address.label.contains("bca-verifikasi.site"), address.label)
+        XCTAssertTrue(address.label.contains("Real: bca.co.id"), address.label)
+        // new_domain has no `host`: no real-address line on its card.
+        let age = app.descendants(matching: .any)["detail.address.1"]
+        XCTAssertTrue(age.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertFalse(age.label.contains("Real:"), age.label)
+    }
+
     @MainActor
     func testScreenshotZoomHasNoShareOrSave() {
         let app = openDetail(Self.blocked92)

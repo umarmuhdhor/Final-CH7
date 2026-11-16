@@ -362,7 +362,7 @@ struct EvidenceCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if reason.kind.isAddress, let domain {
-                AddressEvidence(domain: domain, kind: reason.kind, reasonText: reason.text)
+                AddressEvidence(domain: domain, kind: reason.kind, reasonText: reason.text, host: reason.host)
                     .accessibilityIdentifier("detail.address.\(reason.index)")
             } else if image != nil || isLoadingImage {
                 Button(action: onOpenImage) {

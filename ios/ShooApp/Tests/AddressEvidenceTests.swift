@@ -27,6 +27,121 @@ struct AddressEvidenceTests {
         #expect(AddressEvidence.markedRanges(in: "", kind: .cheapEnding).isEmpty)
     }
 
+    // MARK: host.marks (#497)
+
+    private func marked(_ domain: String, _ kind: SignalKind, _ marks: [String]?) -> [String] {
+        AddressEvidence.markedRanges(in: domain, kind: kind, marks: marks).map { String(domain[$0]) }
+    }
+
+    @Test func marksFromTheDetectorAreMarked() {
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["bca", "verifikasi"]) == ["bca", "verifikasi"])
+        #expect(marked("kl1kbca.com", .lookalikeDomain, ["kl1kbca"]) == ["kl1kbca"])
+    }
+
+    @Test func cheapEndingMarkFromTheDetector() {
+        #expect(marked("bca-verifikasi.site", .cheapEnding, [".site"]) == [".site"])
+    }
+
+    @Test func aMarkNotInTheDomainIsIgnored() {
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["mandiri", "bca", ""]) == ["bca"])
+    }
+
+    @Test func noMarkFoundFallsBackToTodaysMarks() {
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["mandiri"]) == ["bca-verifikasi.site"])
+        #expect(marked("bca-verifikasi.site", .cheapEnding, [".xyz"]) == [".site"])
+        #expect(marked("bca-verifikasi.site", .brandInAddress, [""]) == ["bca-verifikasi.site"])
+    }
+
+    @Test func noMarksFallBackToTodaysMarks() {
+        for marks in [nil, [String]()] {
+            #expect(marked("bca-verifikasi.site", .brandInAddress, marks) == ["bca-verifikasi.site"])
+            #expect(marked("bca-verifikasi.site", .cheapEnding, marks) == [".site"])
+        }
+        #expect(marked("", .brandInAddress, ["bca"]).isEmpty)
+    }
+
+    @Test func duplicateMarksMarkThePartOnce() {
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["bca", "bca"]) == ["bca"])
+    }
+
+    @Test func aRepeatedPartIsMarkedWhereEachMarkReads() {
+        // Marks come in reading order: the second "bca" is the second one in the domain.
+        #expect(marked("bca-bca.com", .brandInAddress, ["bca", "bca"]) == ["bca", "bca"])
+        let ranges = AddressEvidence.markedRanges(in: "bca-bca.com", kind: .brandInAddress, marks: ["bca", "bca"])
+        #expect(ranges.map { "bca-bca.com".distance(from: "bca-bca.com".startIndex, to: $0.lowerBound) } == [0, 4])
+    }
+
+    @Test func overlappingMarksJoinIntoOne() {
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["bca-veri", "verifikasi"]) == ["bca-verifikasi"])
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["verifikasi", "bca"]) == ["bca", "verifikasi"])
+    }
+
+    @Test func marksMatchWhateverTheCase() {
+        #expect(marked("bca-verifikasi.site", .brandInAddress, ["BCA"]) == ["bca"])
+    }
+
+    @Test func markedTextKeepsEveryCharacterWithMarks() {
+        let domain = "bca-verifikasi.site"
+        let ranges = AddressEvidence.markedRanges(in: domain, kind: .brandInAddress, marks: ["bca", "verifikasi"])
+        let text = AddressEvidence.marked(domain, ranges: ranges)
+        #expect(String(text.characters) == domain)
+        let marked = text.runs.filter { $0.backgroundColor != nil }.map { String(text[$0.range].characters) }
+        #expect(marked == ["bca", "verifikasi"])
+    }
+
+    @Test func evidenceCarriesTheSignalsHost() {
+        let host = Signal.Host(marks: ["bca"], official: "bca.co.id")
+        let signals = [
+            Signal(id: "brand_plus_keyword", layer: 2, weight: 40, label: .init(en: "a", id: "a"),
+                   labelSimple: .init(en: "a", id: "a"), host: host),
+            Signal(id: "new_domain", layer: 3, weight: 30, label: .init(en: "b", id: "b"), labelSimple: .init(en: "b", id: "b")),
+        ]
+        let evidence = Evidence.top(signals, mode: .guardian, language: .english)
+        #expect(evidence.map(\.host) == [host, nil])
+    }
+
+    @Test func officialAddressLineInBothLanguages() {
+        #expect(L10n.string("Real: \("bca.co.id")", language: .english) == "Real: bca.co.id")
+        #expect(L10n.string("Real: \("bca.co.id")", language: .indonesian) == "Yang asli: bca.co.id")
+    }
+
+    @Test func officialLineOnlyWhenTheDetectorNamesIt() {
+        let host = Signal.Host(marks: ["bca"], official: "bca.co.id")
+        #expect(AddressEvidence.official(in: host, kind: .brandInAddress) == "bca.co.id")
+        #expect(AddressEvidence.official(in: host, kind: .lookalikeDomain) == "bca.co.id")
+        #expect(AddressEvidence.official(in: Signal.Host(marks: ["bca"]), kind: .brandInAddress) == nil)
+        #expect(AddressEvidence.official(in: Signal.Host(official: "  "), kind: .brandInAddress) == nil)
+        #expect(AddressEvidence.official(in: nil, kind: .brandInAddress) == nil)
+    }
+
+    /// The contract gives `official` only to `lookalike_domain` and `brand_plus_keyword`.
+    @Test func officialLineOnlyOnBrandReasons() {
+        let host = Signal.Host(marks: [".site"], official: "bca.co.id")
+        for kind in [SignalKind.cheapEnding, .newDomain, .knownScam, .suspiciousLink] {
+            #expect(AddressEvidence.official(in: host, kind: kind) == nil)
+        }
+    }
+
+    @Test func touchingMarksJoinIntoOne() {
+        #expect(marked("bcaverifikasi.site", .brandInAddress, ["bca", "verifikasi"]) == ["bcaverifikasi"])
+    }
+
+    @Test func punycodeLabelIsMarkedWhole() {
+        #expect(marked("xn--bc-xja.site", .suspiciousLink, ["xn--bc-xja"]) == ["xn--bc-xja"])
+    }
+
+    @Test func atMostFourMarksAreRead() {
+        let domain = "a-b-c-d-e.com"
+        #expect(marked(domain, .suspiciousLink, ["a", "b", "c", "d", "e"]) == ["a", "b", "c", "d"])
+    }
+
+    @Test func aMarkOutOfOrderDoesNotPullTheNextOneBack() {
+        // "a" is not after "c", so it is found from the start; "b" is still read after "c".
+        let domain = "a-b-c-b.com"
+        let ranges = AddressEvidence.markedRanges(in: domain, kind: .brandInAddress, marks: ["c", "a", "b"])
+        #expect(ranges.map { domain.distance(from: domain.startIndex, to: $0.lowerBound) } == [0, 4, 6])
+    }
+
     @Test func markedTextKeepsEveryCharacter() {
         let domain = "bca-verifikasi.site"
         let text = AddressEvidence.marked(domain, ranges: AddressEvidence.markedRanges(in: domain, kind: .cheapEnding))
