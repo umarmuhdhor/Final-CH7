@@ -178,11 +178,16 @@
         for (const kw of index.keywords) {
             if (token.length <= kw.length + 2) continue;
             let rest = null;
+            let restFrom = 0;
             if (token.endsWith(kw)) rest = token.slice(0, -kw.length);
-            else if (token.startsWith(kw)) rest = token.slice(kw.length);
+            else if (token.startsWith(kw)) {
+                rest = token.slice(kw.length);
+                restFrom = kw.length;
+            }
             if (!rest) continue;
             const hit = matchToken(rest, false);
-            if (hit) return { ...hit, keyword: kw };
+            // at: [from, length] of the brand and the keyword inside the token, for host.marks (#497)
+            if (hit) return { ...hit, keyword: kw, at: { brand: [restFrom, rest.length], keyword: [restFrom ? 0 : rest.length, kw.length] } };
         }
         return null;
     }
@@ -196,7 +201,10 @@
         for (const [name, entry] of index.names) {
             if (entry.common) continue;
             for (const c of CONNECTORS) {
-                if (token.endsWith(c + name)) return { brand: entry.brand, name, common: false, kind: "exact", how: "connector", keyword: c };
+                if (token.endsWith(c + name)) {
+                    const from = token.length - name.length;
+                    return { brand: entry.brand, name, common: false, kind: "exact", how: "connector", keyword: c, at: { brand: [from, name.length], keyword: [from - c.length, c.length] } };
+                }
             }
         }
         return null;
@@ -218,6 +226,72 @@
             if (index.official.has(labels.slice(i).join("."))) return true;
         }
         return false;
+    }
+
+    // ---------- host: which part of the address to mark (#497) ----------
+    // A layer 1–2 address signal may carry host: { marks, official }. marks = substrings of the scan's `domain` exactly
+    // as written there (lowercase, punycode for IDN), max 4; official = the brand's first domain in brands.json.
+    // Internally a mark is { at, text }, `at` = its position in the host, so a part of a subdomain is never marked in
+    // the registrable domain by accident.
+    const MAX_MARKS = 4;
+
+    /** Labels of a host with their position: { ascii (as written), text (letters people see), start }. */
+    function labelsAt(host) {
+        const out = [];
+        let start = 0;
+        for (const ascii of host.split(".")) {
+            out.push({ ascii, text: toUnicodeLabel(ascii), start });
+            start += ascii.length + 1;
+        }
+        return out;
+    }
+
+    /** Hyphen pieces of a label: { text, label, at } (at = offset in the label's letters). */
+    function piecesOf(label) {
+        const out = [];
+        let at = 0;
+        for (const text of label.text.split("-")) {
+            if (text) out.push({ text, label, at });
+            at += text.length + 1;
+        }
+        return out;
+    }
+
+    /**
+     * Mark for `len` letters at `from` inside a piece. A punycode label can't be cut (its letters are encoded
+     * together) and a piece that isn't written in the label (pieces joined, at = null): both mark the whole label.
+     */
+    function markIn(spot, from = 0, len = spot.text.length) {
+        const label = spot.label;
+        if (spot.at === null || label.ascii !== label.text) return { at: label.start, text: label.ascii };
+        const begin = spot.at + from;
+        return { at: label.start + begin, text: label.ascii.slice(begin, begin + len) };
+    }
+
+    /**
+     * The `host` field, or null when there is nothing to say. Keeps only marks inside the scan's domain (the end of
+     * the host), drops repeats and overlaps, keeps the first 4 given (most telling first), then sorts them as they read.
+     */
+    function hostField(snapshot, host, marks, official) {
+        const domain = typeof snapshot.domain === "string" ? snapshot.domain.toLowerCase().replace(/\.+$/, "") : "";
+        const tail = host.length - domain.length;
+        const from = domain && host.endsWith(domain) && (tail === 0 || host[tail - 1] === ".") ? tail : -1;
+        const kept = [];
+        for (const m of marks) {
+            if (!m || !m.text) continue;
+            const end = m.at + m.text.length;
+            if (from >= 0 ? m.at < from || host.slice(m.at, end) !== m.text : !domain.includes(m.text)) continue;
+            if (kept.some((k) => k.text === m.text)) continue;
+            // Marks never overlap: a mark that holds the ones it touches replaces them, otherwise it is left out.
+            const touched = kept.filter((k) => k.at < end && m.at < k.at + k.text.length);
+            if (touched.some((k) => k.at < m.at || k.at + k.text.length > end)) continue;
+            for (const k of touched) kept.splice(kept.indexOf(k), 1);
+            if (kept.length < MAX_MARKS) kept.push(m);
+        }
+        const out = {};
+        if (kept.length) out.marks = kept.sort((a, b) => a.at - b.at).map((m) => m.text);
+        if (typeof official === "string" && official) out.official = official;
+        return Object.keys(out).length ? out : null;
     }
 
     // ---------- signal texts (English + Bahasa Indonesia) ----------
@@ -279,8 +353,10 @@
         free_file_bait: { en: "bait word in the file name", id: "kata umpan di nama file" },
     };
 
-    function signal(id, weight, texts, evidence, layer = 2) {
-        return { id, layer, weight, label: texts.label, labelSimple: texts.labelSimple, evidence };
+    function signal(id, weight, texts, evidence, layer = 2, host = null) {
+        const out = { id, layer, weight, label: texts.label, labelSimple: texts.labelSimple, evidence };
+        if (host) out.host = host;
+        return out;
     }
 
 
@@ -312,17 +388,18 @@
      * @returns {{ score: number, reasons: string[] }} reasons are codes (see REASON_TEXT), never pieces of the URL: they are sent to the server as evidence.
      */
     function dissectLink(rawUrl) {
-        const parts = []; // { part, weight, reason }
+        const parts = []; // { part, weight, reason, marks }
         const free = []; // added outside the per-part cap
-        const add = (part, weight, reason) => parts.push({ part, weight, reason });
+        // marks: the parts of the host behind the reason, for host.marks (#497). Only host reasons have them.
+        const add = (part, weight, reason, marks = []) => parts.push({ part, weight, reason, marks });
         let u;
         try {
             u = new URL(rawUrl);
         } catch (error) {
-            return { score: 0, reasons: [] };
+            return { score: 0, reasons: [], marks: [] };
         }
-        if (u.protocol !== "http:" && u.protocol !== "https:") return { score: 0, reasons: [] };
-        if (isLocalAddress(u.hostname.toLowerCase())) return { score: 0, reasons: [] }; // router pages, dev servers
+        if (u.protocol !== "http:" && u.protocol !== "https:") return { score: 0, reasons: [], marks: [] };
+        if (isLocalAddress(u.hostname.toLowerCase())) return { score: 0, reasons: [], marks: [] }; // router pages, dev servers
 
         if (u.protocol === "http:") add("scheme", 5, "http_no_tls");
         if (u.username || u.password) add("userinfo", 25, "userinfo");
@@ -333,17 +410,25 @@
         else {
             const suffixLen = labels.length > 2 && index.suffixes.has(labels.slice(-2).join(".")) ? 2 : 1;
             const tld = labels[labels.length - 1];
-            const name = labels.slice(0, -suffixLen).map(toUnicodeLabel); // "xn--bcher-kva" has hyphens of its own: judge the letters people see
-            if (labels.some((l) => l.startsWith("xn--"))) add("host", 5, "punycode");
+            const at = labelsAt(host);
+            const nameAt = at.slice(0, -suffixLen);
+            const name = nameAt.map((l) => l.text); // "xn--bcher-kva" has hyphens of its own: judge the letters people see
+            const whole = (l) => ({ at: l.start, text: l.ascii });
+            const puny = at.filter((l) => l.ascii.startsWith("xn--"));
+            if (puny.length) add("host", 5, "punycode", puny.map(whole));
             if (name.length >= 4) add("host", 8, "many_labels");
-            if (name.some((l) => (l.match(/-/g) || []).length >= 3)) add("host", 8, "many_hyphens");
+            const hyphenated = nameAt.filter((l) => (l.text.match(/-/g) || []).length >= 3);
+            if (hyphenated.length) add("host", 8, "many_hyphens", hyphenated.map(whole));
             // Judged per hyphen piece, so "storee-dp9hsk1cxr2y" and "1238bll" count: 3+ digits mixed into a 6+ letter-and-digit piece.
             // CloudFront distribution ids (d111abcdef.cloudfront.net) look like that on every real site: skipped there.
-            if (!host.endsWith(".cloudfront.net") && name.some((l) => l.split("-").some((p) => p.length >= 6 && /[a-z]/.test(p) && (p.match(/\d/g) || []).length >= 3 && (p.match(/\d/g) || []).length / p.length >= 0.25))) add("host", 8, "digit_label");
+            const digitPiece = (p) => p.length >= 6 && /[a-z]/.test(p) && (p.match(/\d/g) || []).length >= 3 && (p.match(/\d/g) || []).length / p.length >= 0.25;
+            const digits = host.endsWith(".cloudfront.net") ? [] : nameAt.flatMap((l) => piecesOf(l).filter((p) => digitPiece(p.text)));
+            if (digits.length) add("host", 8, "digit_label", digits.map((p) => markIn(p)));
             // brands.json cheapTlds are already scored by the `cheap_tld` signal (part A); only the extra rare ones count here.
-            if (suffixLen === 1 && index.rareTlds.has(tld) && !index.cheap.has(tld)) add("tld", 6, "rare_tld");
+            if (suffixLen === 1 && index.rareTlds.has(tld) && !index.cheap.has(tld)) add("tld", 6, "rare_tld", [{ at: host.length - tld.length - 1, text: `.${tld}` }]);
             // "regs-apps14.regnows-dfg.com": a word-and-number subdomain over a hyphenated name. Each is weak alone (under the emit floor).
-            if (name.slice(0, -1).some((l) => /^[a-z]+(-[a-z]+)+\d{1,3}$/.test(l))) add("host", 6, "word_digit_subdomain");
+            const wordDigit = nameAt.slice(0, -1).filter((l) => /^[a-z]+(-[a-z]+)+\d{1,3}$/.test(l.text));
+            if (wordDigit.length) add("host", 6, "word_digit_subdomain", wordDigit.map(whole));
             // A hyphen next to a brand or bait word (bca-verifikasi) is already scored by brand_plus_keyword: not counted twice.
             const regLabel = name[name.length - 1];
             if (regLabel.includes("-") && !regLabel.split("-").some((p) => index.keywords.has(p) || index.names.has(p) || matchByBrand(p))) add("host", 4, "hyphen_registrable");
@@ -368,30 +453,35 @@
         const platform = index.freeHosts.find((h) => host === h || host.endsWith("." + h));
         if (platform) {
             const label = host.slice(0, host.length - platform.length - 1).split(".").pop() || "";
+            const labelStart = host.length - platform.length - 1 - label.length;
             const file = (segs[segs.length - 1] || "").toLowerCase();
             const inLabel = [...wordsIn(label, index.linkBait), ...wordsIn(label, index.carriers)];
             const inFile = [...wordsIn(file, index.linkBait), ...wordsIn(file, index.carriers)];
-            free.push({ weight: 3, reason: "free_host" });
-            if (inLabel.length) free.push({ weight: inLabel.length >= 2 ? 16 : 10, reason: "free_name_bait" });
-            if (/20\d\d|\d+(gb|mb|jt|rb)/.test(label)) free.push({ weight: 5, reason: "free_name_number" });
-            if (inFile.length) free.push({ weight: 10, reason: "free_file_bait" });
+            free.push({ weight: 3, reason: "free_host", marks: [] });
+            if (inLabel.length) free.push({ weight: inLabel.length >= 2 ? 16 : 10, reason: "free_name_bait", marks: inLabel.map((w) => ({ at: labelStart + label.indexOf(w), text: w })) });
+            const number = label.match(/20\d\d|\d+(gb|mb|jt|rb)/);
+            if (number) free.push({ weight: 5, reason: "free_name_number", marks: [{ at: labelStart + number.index, text: number[0] }] });
+            if (inFile.length) free.push({ weight: 10, reason: "free_file_bait", marks: [] });
         }
 
         const byPart = {};
         for (const p of parts) byPart[p.part] = (byPart[p.part] || 0) + p.weight; // no per-part cap (#231): a link alone may reach the block
         const score = Math.min(100, Object.values(byPart).reduce((a, b) => a + b, 0) + free.reduce((a, p) => a + p.weight, 0));
         const reasons = [...new Set([...parts, ...free].map((p) => p.reason))];
-        return { score, reasons };
+        // Heaviest reason first, so the 4 marks kept are the most telling ones.
+        const marks = [...free, ...parts].sort((a, b) => b.weight - a.weight).flatMap((p) => p.marks);
+        return { score, reasons, marks, host };
     }
 
     /** One `suspicious_link` signal, or null when the link says too little. Weight is the raw dissector score (max 100), no cap. */
     function linkSignal(snapshot) {
         if (!snapshot.url) return null;
-        const { score, reasons } = dissectLink(String(snapshot.url));
+        const { score, reasons, marks, host } = dissectLink(String(snapshot.url));
         if (score < LINK_MIN_EMIT) return null;
         const shown = reasons.filter((r) => r !== "free_host" && r !== "file_ext" && r !== "http_no_tls" && r !== "long_url");
         const top = (shown.length ? shown : reasons).slice(0, 3);
-        return signal("suspicious_link", score, T.suspiciousLink(top), reasons.join(","));
+        // host.marks only (no official): parts of the domain, which /analyze gets anyway. Path and query never go in.
+        return signal("suspicious_link", score, T.suspiciousLink(top), reasons.join(","), 2, hostField(snapshot, host, marks, null));
     }
 
     // ---------- layer 1: database (hostname only; the lists live in the extension) ----------
@@ -481,15 +571,16 @@
         const labels = host.split(".");
         const suffixLen = labels.length > 2 && index.suffixes.has(labels.slice(-2).join(".")) ? 2 : 1;
         const tld = labels[labels.length - 1];
-        const nameLabels = labels.slice(0, -suffixLen).filter((l) => l && l !== "www").map(toUnicodeLabel);
+        const nameLabels = labelsAt(host).slice(0, -suffixLen).filter((l) => l.ascii && l.ascii !== "www");
 
+        // A spot is a piece of a label with where it sits ({ text, label, at }), so the signal can mark it (#497).
         const parts = [];
         const candidates = [];
         for (const label of nameLabels) {
-            const pieces = label.split("-").filter(Boolean);
+            const pieces = piecesOf(label);
             parts.push(...pieces);
             candidates.push(...pieces);
-            if (pieces.length > 1) candidates.push(pieces.join(""));
+            if (pieces.length > 1) candidates.push({ text: pieces.map((p) => p.text).join(""), label, at: null });
         }
 
         const hits = [];
@@ -501,14 +592,20 @@
             seen.add(key);
             hits.push(hit);
         };
-        for (const c of candidates) add(matchToken(c, true));
-        let keyword = parts.find((p) => index.keywords.has(p)) || null;
+        for (const c of candidates) {
+            const hit = matchToken(c.text, true);
+            if (hit) add({ ...hit, mark: markIn(c) });
+        }
+        const kwPart = parts.find((p) => index.keywords.has(p.text));
+        let keyword = kwPart ? kwPart.text : null;
+        let keywordMark = kwPart ? markIn(kwPart) : null;
         if (!keyword) {
             for (const p of parts) {
-                const glued = matchByBrand(p) || matchGlued(p);
+                const glued = matchByBrand(p.text) || matchGlued(p.text);
                 if (glued) {
-                    add(glued);
+                    add({ ...glued, mark: markIn(p, ...glued.at.brand) });
                     keyword = glued.keyword;
+                    keywordMark = markIn(p, ...glued.at.keyword);
                     break;
                 }
             }
@@ -517,20 +614,22 @@
         const look = hits.find((h) => h.kind === "lookalike");
         const exact = hits.find((h) => h.kind === "exact");
         const signals = [];
+        const where = (marks, brand) => hostField(snapshot, host, marks, brand ? brand.domains[0] : null);
 
         if (look) {
             const weight = look.how === "homoglyph" ? WEIGHT.homoglyph : WEIGHT.lookalike;
-            signals.push(signal("lookalike_domain", weight, T.lookalike(look.brand.name), `${look.brand.id} · level 3 · ${look.how}`));
+            signals.push(signal("lookalike_domain", weight, T.lookalike(look.brand.name), `${look.brand.id} · level 3 · ${look.how}`, 2, where([look.mark], look.brand)));
         }
         const brandHit = look || exact;
         if (brandHit && keyword) {
-            signals.push(signal("brand_plus_keyword", WEIGHT.brandKeyword, T.brandKeyword(brandHit.brand.name, keyword), `${brandHit.brand.id} · level 2 · ${keyword}`));
+            signals.push(signal("brand_plus_keyword", WEIGHT.brandKeyword, T.brandKeyword(brandHit.brand.name, keyword), `${brandHit.brand.id} · level 2 · ${keyword}`, 2, where([brandHit.mark, keywordMark], brandHit.brand)));
         } else if (exact && !exact.common && !look) {
-            signals.push(signal("lookalike_domain", WEIGHT.nameOnly, T.nameOnly(exact.brand.name), `${exact.brand.id} · level 1 · name on unlisted domain`));
+            signals.push(signal("lookalike_domain", WEIGHT.nameOnly, T.nameOnly(exact.brand.name), `${exact.brand.id} · level 1 · name on unlisted domain`, 2, where([exact.mark], exact.brand)));
         }
         if (suffixLen === 1 && index.cheap.has(tld)) {
             const withBrand = signals.length > 0;
-            signals.push(signal("cheap_tld", withBrand ? WEIGHT.cheapTldWithBrand : WEIGHT.cheapTldAlone, T.cheapTld(tld), withBrand ? `.${tld} · level 2` : `.${tld} · level 1`));
+            const ending = { at: host.length - tld.length - 1, text: `.${tld}` };
+            signals.push(signal("cheap_tld", withBrand ? WEIGHT.cheapTldWithBrand : WEIGHT.cheapTldAlone, T.cheapTld(tld), withBrand ? `.${tld} · level 2` : `.${tld} · level 1`, 2, where([ending])));
         }
         return signals;
     }
@@ -540,7 +639,7 @@
 
         /**
          * @param {object} snapshot PageSnapshot
-         * @returns {Promise<Array<{id: string, layer: number, weight: number, label: {en: string, id: string}, labelSimple: {en: string, id: string}, evidence?: string}>>}
+         * @returns {Promise<Array<{id: string, layer: number, weight: number, label: {en: string, id: string}, labelSimple: {en: string, id: string}, evidence?: string, host?: {marks?: string[], official?: string}}>>}
          */
         analyzeLocal: async (snapshot) => {
             try {
