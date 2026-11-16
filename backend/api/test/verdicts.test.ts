@@ -47,6 +47,11 @@ const lookup = async (d: Created, domain: string) => {
   expect(res.status).toBe(200);
   return ((await res.json()) as VerdictBody).verdict;
 };
+const lookupLinkOf = async (d: Created, url: string, domain: string) => {
+  const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+  expect(res.status, await res.clone().text()).toBe(200);
+  return ((await res.json()) as VerdictBody).verdict;
+};
 const entry = async (domain: string) =>
   (await sql`select families, approved_at from blocklist_entries where domain = ${domain}`)[0] as
     | { families: number; approved_at: Date | null }
@@ -464,6 +469,23 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect(await entry(dom)).toBeUndefined();
   });
 
+  // #495, #487 (contracts/api.md Blocklist 1): a shared host_path host (on or under a host_path row of
+  // admin.domain_lists) or a name with no registrable domain never enters the queue. On the global list
+  // sway.cloud.microsoft would block every Sway page.
+  it.each(["sway.cloud.microsoft", "cloud.microsoft", "abc.1drv.ms", "docs.google.com", "sites.google.com", "192.168.1.1"])(
+    "shared host or no registrable domain %s never enters the queue (#495)",
+    async (dom) => {
+      const { g, p } = await family();
+      const id = await scan(p, blocked92 as Fixture, dom);
+      expect((await verdict(g, id, "not_safe")).status).toBe(200);
+      const [v] = await sql<{ e: boolean }[]>`select global_eligible as e from verdicts where domain = ${dom}`;
+      expect(v!.e).toBe(false);
+      expect(await entry(dom)).toBeUndefined();
+      // The family verdict itself still applies to that link.
+      expect(await lookupLinkOf(p, `https://${dom}/login`, dom)).toMatchObject({ value: "not_safe" });
+    },
+  );
+
   it.each(["klikbca.com", "bca.co.id", "pajak.go.id", "google.com"])("allowlisted %s never enters the queue", async (dom) => {
     const { g, p } = await family();
     const id = await scan(p, blocked92 as Fixture, dom);
@@ -618,6 +640,42 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect(await lookupLink(p, "https://other.github.io/b", "other.github.io")).toBeNull();
   });
 
+  // #495 (contracts/api.md Verdicts lookup step 2): the shared-host test also holds for the link the
+  // not_safe was made on. Older rows and older extension builds file a Google Form under google.com.
+  it("a not_safe made on a shared host covers only that link, never another host of the domain (#495)", async () => {
+    const { g, p } = await family();
+    const form = await scanAt(p, "https://docs.google.com/forms/d/scam", "google.com");
+    const office = await scanAt(p, "https://forms.office.com/r/scam", "office.com");
+    const signin = await scanAt(p, "https://accounts.google.com/signin", "google.com");
+    expect((await decide(g, form, "not_safe")).status).toBe(200);
+    expect((await decide(g, office, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://accounts.google.com/signin", "google.com")).toBeNull();
+    expect(await lookupLink(p, "https://www.office.com/", "office.com")).toBeNull();
+    expect(await lookupLink(p, "https://docs.google.com/forms/d/scam", "google.com")).toMatchObject({ value: "not_safe" });
+    // The same in Activity: the list and the detail of the sign-in page carry no verdict.
+    const body = (await (await call(`/scans?owner=${p.deviceId}`, { token: g.token })).json()) as {
+      items: { id: string; verdict: { value: string } | null }[];
+    };
+    expect(Object.fromEntries(body.items.map((i) => [i.id, i.verdict?.value ?? null]))).toEqual({
+      [form]: "not_safe", [office]: "not_safe", [signin]: null,
+    });
+    expect(((await (await call(`/scans/${signin}`, { token: g.token })).json()) as { verdict: unknown }).verdict).toBeNull();
+    // And in the review dashboard's scan list (admin.v_scans repeats the rule inline).
+    const dash = await admin<{ id: string; verdict: string | null }[]>`
+      select id, verdict from admin.v_scans where id in ${admin([form, office, signin])}`;
+    expect(Object.fromEntries(dash.map((r) => [r.id, r.verdict]))).toEqual({
+      [form]: "not_safe", [office]: "not_safe", [signin]: null,
+    });
+    // Since #541 the extension files the form under its full host; that row covers only its own link too.
+    const form2 = await scanAt(p, "https://docs.google.com/forms/d/scam2", "docs.google.com");
+    expect((await decide(g, form2, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://docs.google.com/forms/d/other", "docs.google.com")).toBeNull();
+    // A normal domain still falls back to its other pages.
+    const a = await scanAt(p, "https://evil-495.test/a", "evil-495.test");
+    expect((await decide(g, a, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://login.evil-495.test/b", "evil-495.test")).toMatchObject({ value: "not_safe" });
+  });
+
   it("?url= needs a domain it belongs to, and an http(s) URL", async () => {
     const { p } = await family();
     const status = async (q: string) => (await call(`/verdicts?${q}`, { token: p.token })).status;
@@ -649,6 +707,21 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     await pastWeeklyReview();
     expect((await decide(g, a, "safe")).status).toBe(200); // newer, but a not_safe wins
     expect(await lookup(p, "old.test")).toMatchObject({ value: "not_safe" });
+  });
+
+  it("deprecated ?domain= alone skips a not_safe made on a shared host (#495)", async () => {
+    const { g, p } = await family();
+    const form = await scanAt(p, "https://docs.google.com/forms/d/scam", "google.com");
+    expect((await decide(g, form, "not_safe")).status).toBe(200);
+    expect(await lookup(p, "google.com")).toBeNull();
+    // A safe on the domain is still found; the shared-host not_safe does not outrank it.
+    const mail = await scanAt(p, "https://mail.google.com/", "google.com");
+    expect((await decide(g, mail, "safe")).status).toBe(200);
+    expect(await lookup(p, "google.com")).toMatchObject({ value: "safe", url: "https://mail.google.com/" });
+    // Filed under its full host (#541) it does not count either: on docs.google.com it would cover every form.
+    const form2 = await scanAt(p, "https://docs.google.com/forms/d/scam2", "docs.google.com");
+    expect((await decide(g, form2, "not_safe")).status).toBe(200);
+    expect(await lookup(p, "docs.google.com")).toBeNull();
   });
 
   it("Activity shows each scan the verdict of the same rule", async () => {

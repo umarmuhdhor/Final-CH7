@@ -289,6 +289,21 @@ describe("POST /scans: one Activity row per link (#241)", () => {
     expect(row).toEqual({ status: "blocked", score: 72 });
   });
 
+  it("BUG B-02a: a not_safe made on a shared host is no verdict for another host of the domain (#495)", async () => {
+    const g = await createDevice("Gita", "guardian");
+    const p = await createDevice("Ibu");
+    await connect(g, p);
+    const form = await postOk(p, extensionBody(warning63, {
+      domain: "google.com", score: 75, status: "warning", url: "https://docs.google.com/forms/d/scam",
+    }));
+    expect((await call("/verdicts", { method: "POST", token: g.token, json: { scanId: form, value: "not_safe" } })).status).toBe(200);
+    const signin = { domain: "google.com", url: "https://accounts.google.com/signin" };
+    const id = await postOk(p, extensionBody(warning63, { ...signin, score: 75, status: "warning" }));
+    await postOk(p, extensionBody(warning63, { ...signin, score: 72, status: "blocked" }));
+    const [row] = await sql`select status, score from scans where id = ${id}`;
+    expect(row).toEqual({ status: "blocked", score: 72 });
+  });
+
   // Guard until Q4 of fase 27 (27b) is answered: a row with a verdict keeps main's behaviour.
   it("a block at a lower score leaves a warning row that has a verdict as it was (until fase 27 Q4)", async () => {
     const g = await createDevice("Gita", "guardian");
@@ -904,7 +919,8 @@ describe("GET /scans/{id}", () => {
 /**
  * Fase 28o (OPT-01, K17) guard: listScans pages must stay byte-identical to the statement it had
  * before the rewrite (one join of every owner's scans, verdict lateral on every row, then limit).
- * `legacyListScans` is that statement, copied verbatim; it is the oracle, not product code.
+ * `legacyListScans` is that statement, copied verbatim; it is the oracle, not product code. Since #495 its
+ * fallback also skips a not_safe made on a shared host (`verdict_shared(v.url, v.domain)`), as selectScans does.
  */
 function legacyListScans(q: ListQuery): Promise<ScanRow[]> {
   return sql<ScanRow[]>`
@@ -926,7 +942,8 @@ function legacyListScans(q: ListQuery): Promise<ScanRow[]> {
       select v.* from (select public.verdict_link(s.url) as link) k, verdicts v
       where v.owner_id = s.owner_id
         and (v.url = k.link
-             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
+             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
+                 and not public.verdict_shared(v.url, v.domain)))
       order by (v.url = k.link) desc, v.decided_at desc
       limit 1
     ) v on true
