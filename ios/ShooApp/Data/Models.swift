@@ -235,6 +235,14 @@ struct FamilyMembersResponse: Codable, Hashable, Sendable {
     var members: [FamilyMember]
 }
 
+extension FamilyMembersResponse {
+    /// Row by row (#493): a member the app can't read is left out, the rest of the family still shows.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        members = try container.decode(LossyList<FamilyMember>.self, forKey: .members).elements
+    }
+}
+
 /// One line of the Home card "Scam terbaru di pengguna Shoo" (Figma 955:10323). Not in contracts/ yet.
 struct ScamCase: Hashable, Identifiable, Sendable {
     let id: String
@@ -248,6 +256,16 @@ struct ScamCase: Hashable, Identifiable, Sendable {
 struct ScanPage: Codable, Hashable, Sendable {
     var items: [ScanResult]
     var nextCursor: String?
+}
+
+extension ScanPage {
+    /// Row by row (#493): a scan the app can't read is left out; the other rows and `nextCursor` stay, so the
+    /// next page still loads. A page whose rows were all left out is empty, not an error.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decode(LossyList<ScanResult>.self, forKey: .items).elements
+        nextCursor = try container.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
 }
 
 /// `POST /verdicts` response.
