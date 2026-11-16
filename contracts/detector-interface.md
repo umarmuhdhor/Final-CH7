@@ -39,7 +39,8 @@ globalThis.ShooLists.match(hostname);
 ```ts
 type PageSnapshot = {
   url: string;            // full URL on the device; /analyze gets https://host/path only (no query, fragment or credentials)
-  domain: string;         // registrable domain, lowercase, no www
+  domain: string;         // api.md Scans "`domain`": registrable domain, lowercase, no www; the full host on a shared
+                          // host_path platform (sites.google.com) or when there is none ([2001:db8::1], router, www.co.id)
   title: string;
   lang: string | null;    // <html lang>
   text: string;           // visible text minus editable areas (contenteditable = typed input), max 20,000 chars

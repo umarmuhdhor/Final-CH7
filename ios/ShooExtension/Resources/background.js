@@ -2,7 +2,7 @@
 // network call: content scripts run under the page's origin, so cross-origin fetches belong here.
 
 import { PSL_RULES } from "./psl.js";
-import { parseRules, registrableDomain, naiveDomain, shareableUrl } from "./domain.js";
+import { parseRules, registrableDomain, naiveDomain, pageDomain, shareableUrl } from "./domain.js";
 import { buildFragments, buildReplica, webIO } from "./replica-build.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
@@ -35,14 +35,21 @@ function domainFor(hostname) {
 }
 
 /**
- * #375: the registrable domain of a page URL, worked out here where the PSL rules live. content.js falls back
+ * The `domain` every request carries (#487, #495, domain.js `pageDomain`): the registrable domain, but the full
+ * host on a host_path platform (sites.google.com) and for a host without one (`router`, `www.co.id`).
+ * Layer-1 list matching keeps `domainFor`: a list entry for google.com must still cover sites.google.com.
+ */
+const pageDomainFor = (hostname) => pageDomain(hostname, domainFor);
+
+/**
+ * #375: the `domain` of a page URL, worked out here where the PSL rules live. content.js falls back
  * to the full host when this background page is asleep, and that would file one site under two names
  * (one scan row, block memory entry and verdict per name). `fallback` only when the URL can't be parsed.
  */
 function domainOfUrl(url, fallback) {
     try {
         const { hostname } = new URL(url);
-        if (hostname) return domainFor(hostname);
+        if (hostname) return pageDomainFor(hostname);
     } catch {
         // not a URL → keep what the page sent
     }
@@ -300,7 +307,7 @@ browser.runtime.onMessage.addListener((message) => {
         case "thresholds":
             return thresholds.current().then((t) => ({ ok: true, thresholds: t }));
         case "domain":
-            return Promise.resolve({ ok: true, domain: domainFor(message.hostname) });
+            return Promise.resolve({ ok: true, domain: pageDomainFor(message.hostname) });
         case "analyze":
             return analyze(message.snapshot, message.localSignals ?? []);
         case "report":
@@ -320,7 +327,7 @@ browser.runtime.onMessage.addListener((message) => {
             return message.open === false
                 ? live.hide()
                 : live.show({
-                      domain: domainFor(String(message.hostname ?? "")),
+                      domain: pageDomainFor(String(message.hostname ?? "")),
                       score: message.score,
                       status: message.status,
                       analyzing: message.analyzing,
