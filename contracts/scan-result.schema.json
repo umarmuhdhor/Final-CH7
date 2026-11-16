@@ -50,7 +50,7 @@
         "warning",
         "blocked"
       ],
-      "description": "30–79 = warning, >= 80 = blocked. 'normal' results are never stored."
+      "description": "30–79 = warning, >= 80 = blocked. 'normal' results are never stored. Clients must accept a value not listed here: show it as unknown, never drop the row (contracts/api.md, #493)."
     },
     "signals": {
       "type": "array",
@@ -182,7 +182,8 @@
           "enum": [
             "safe",
             "not_safe"
-          ]
+          ],
+          "description": "Clients must accept a value not listed here: show it as unknown, never drop the scan (contracts/api.md, #493)."
         },
         "byDeviceId": {
           "type": "string"

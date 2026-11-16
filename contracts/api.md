@@ -14,6 +14,8 @@ All bodies are JSON. Times are ISO 8601 UTC. Errors: `{ "error": { "code": strin
 Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `internal`, `unauthorized` (401: token missing or unknown), `forbidden` (403: not allowed for this device or mode), `not_found` (404). Endpoint-specific codes are listed per section.
 `rate_limited` = HTTP 429 with a `Retry-After` header (seconds). Clients retry after it; it is **not** an empty answer (e.g. not `verdict: null`).
 
+**New enum values (#493).** The server may add a value to a string enum it sends (e.g. ScanResult `status`, Verdict `value`). Clients must accept a value they don't know: show it as unknown (e.g. "unknown status"), never drop the row or fail the whole response. The iOS models decode it to `.unknown`. Clients never send `unknown` back. A new value is still added to this folder first.
+
 ## Backend (Team App)
 
 ### Devices
