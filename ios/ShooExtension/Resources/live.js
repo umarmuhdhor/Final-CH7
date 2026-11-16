@@ -16,6 +16,8 @@ export const LIVE_SCORE_INTERVAL_MS = 1000;
 const DOMAIN = /^(?!www\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const IPV4 = /^\d{1,3}(?:\.\d{1,3}){3}$/; // passes DOMAIN, but an IP is no site name
 const STATUSES = new Set(["normal", "warning", "blocked"]);
+const LABELS = new Set(["offline_check", "marked_safe"]); // #486
+const EXTRA_KEYS = ["label", "secondWarning"]; // #486, additive: a backend that doesn't know them answers 422
 
 /**
  * @param {object} deps
@@ -28,13 +30,25 @@ export function createLive({ getSession, post, now = () => Date.now(), setTimer 
     let pending = null; // newest score-only body waiting for the interval
     let scoreTimer = null;
     let closeTimer = null;
+    let legacy = false; // the backend refused label/secondWarning once: send today's fields only from then on
+
+    const withoutExtras = (body) => Object.fromEntries(Object.entries(body).filter(([key]) => !EXTRA_KEYS.includes(key)));
 
     async function send(body) {
         const session = await getSession();
         // Online check off (no aiBaseURL) or not onboarded: the in-page pill only.
         if (!session?.aiBaseURL || !session?.apiBaseURL || !session?.token) return { ok: true, skipped: "online_check_off" };
+        const hasExtras = EXTRA_KEYS.some((key) => key in body);
         try {
-            await post(session, body);
+            try {
+                await post(session, legacy ? withoutExtras(body) : body);
+            } catch (error) {
+                // Older backend (strict body, extra keys → 422): send again without the #486 fields, so the island
+                // keeps working, only without the pill's words, until the backend forwards them.
+                if (error?.status !== 422 || legacy || !hasExtras) throw error;
+                legacy = true;
+                await post(session, withoutExtras(body));
+            }
             return { ok: true };
         } catch (error) {
             // A dropped update is fine: the next change sends the newest state. Never logs the domain.
@@ -56,14 +70,18 @@ export function createLive({ getSession, post, now = () => Date.now(), setTimer 
     }
 
     /** A page is on screen with this state. */
-    function show({ domain, score, status, analyzing }) {
+    function show({ domain, score, status, analyzing, label, secondWarning }) {
         // No registrable domain (IP address, localhost): no island for this page.
         if (!DOMAIN.test(domain ?? "") || IPV4.test(domain) || !STATUSES.has(status)) return hide();
         if (closeTimer !== null) clearTimer(closeTimer);
         closeTimer = null;
 
         const body = { domain, score: Math.max(0, Math.min(100, Math.round(Number(score) || 0))), status, analyzing: Boolean(analyzing), open: true };
-        const urgent = !last || last.domain !== domain || last.status !== body.status || last.analyzing !== body.analyzing;
+        // #486: only known values go out; anything else is left off (contracts/api.md "Live score").
+        if (LABELS.has(label)) body.label = label;
+        if (Number.isInteger(secondWarning) && secondWarning >= 1 && secondWarning <= 100) body.secondWarning = secondWarning;
+        const urgent = !last || last.domain !== domain || last.status !== body.status || last.analyzing !== body.analyzing
+            || last.label !== body.label || last.secondWarning !== body.secondWarning;
         if (!urgent && last.score === body.score) return Promise.resolve({ ok: true, unchanged: true });
         if (urgent || now() - lastAt >= LIVE_SCORE_INTERVAL_MS) {
             cancelScore();

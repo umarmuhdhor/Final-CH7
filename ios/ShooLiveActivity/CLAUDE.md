@@ -8,3 +8,6 @@ instant signal. Why not the extension or the app directly: docs/spikes/dynamic-i
 - The push payload decodes into `ScoreActivityAttributes` (`ios/ShooShared/`): its keys are a contract.
 - Compact island follows Figma node 882:2533 (logo left, 20 pt mini ring right). Expanded, minimal and lock screen have no
   Figma frame yet.
+- The status line comes from `ContentState.headline` (ShooShared, tested in `ShooShared/Tests`): `label` (#486) gives the
+  pill's words ("Cek online tidak tersedia", "Ditandai aman oleh Guardian") instead of "Aman"; `secondWarning` splits
+  warning from danger like the pill.
