@@ -86,7 +86,7 @@ describe("verdicts read the domain lists (W16)", () => {
 // #487, #495 (contracts/api.md Scans "`domain`" case 4): a domain that is the full host because there is no
 // registrable domain never enters the review queue. Some of these pass the DOMAIN check only after #487.
 describe("lacksRegistrableDomain", () => {
-  it.each(["192.168.1.1", "[2001:db8::1]", "router", "www.co.id", "www.com", "WWW.CO.ID"])("%s has none", (d) => {
+  it.each(["192.168.1.1", "[2001:db8::1]", "[::1]", "router", "localhost", "www.co.id", "www.com", "WWW.CO.ID", "www.scam.com"])("%s has none", (d) => {
     expect(lacksRegistrableDomain(d)).toBe(true);
   });
   it.each(["bca.co.id", "sites.google.com", "evil.github.io", "1.example", "wwwbank.com", "example.123"])("%s has one", (d) => {

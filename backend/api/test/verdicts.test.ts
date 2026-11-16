@@ -712,6 +712,10 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     const mail = await scanAt(p, "https://mail.google.com/", "google.com");
     expect((await decide(g, mail, "safe")).status).toBe(200);
     expect(await lookup(p, "google.com")).toMatchObject({ value: "safe", url: "https://mail.google.com/" });
+    // Filed under its full host (#541) it does not count either: on docs.google.com it would cover every form.
+    const form2 = await scanAt(p, "https://docs.google.com/forms/d/scam2", "docs.google.com");
+    expect((await decide(g, form2, "not_safe")).status).toBe(200);
+    expect(await lookup(p, "docs.google.com")).toBeNull();
   });
 
   it("Activity shows each scan the verdict of the same rule", async () => {
