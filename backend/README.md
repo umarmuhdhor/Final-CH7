@@ -76,7 +76,7 @@ All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`
 
 ## Schema summary
 
-Migrations: every file in `db/supabase/migrations/` (40 as of 15 Nov 2026, oldest `20261021130000_init.sql`, newest `20261113030000_admin_guardian_decisions.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
+Migrations: every file in `db/supabase/migrations/` (41 as of 16 Nov 2026, oldest `20261021130000_init.sql`, newest `20261116100000_v_scans_shared_verdict.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
 
 | Table | Purpose |
 |---|---|

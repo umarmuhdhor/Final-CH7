@@ -660,6 +660,12 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
       [form]: "not_safe", [office]: "not_safe", [signin]: null,
     });
     expect(((await (await call(`/scans/${signin}`, { token: g.token })).json()) as { verdict: unknown }).verdict).toBeNull();
+    // And in the review dashboard's scan list (admin.v_scans repeats the rule inline).
+    const dash = await admin<{ id: string; verdict: string | null }[]>`
+      select id, verdict from admin.v_scans where id in ${admin([form, office, signin])}`;
+    expect(Object.fromEntries(dash.map((r) => [r.id, r.verdict]))).toEqual({
+      [form]: "not_safe", [office]: "not_safe", [signin]: null,
+    });
     // Since #541 the extension files the form under its full host; that row covers only its own link too.
     const form2 = await scanAt(p, "https://docs.google.com/forms/d/scam2", "docs.google.com");
     expect((await decide(g, form2, "not_safe")).status).toBe(200);
