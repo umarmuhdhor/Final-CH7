@@ -1306,6 +1306,28 @@
         }
       }
     },
+    "Checked by %@" : {
+      "comment" : "#493: a guardian's verdict whose value this build does not know (a newer server). Neutral, never \"safe\". %@ = name",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperiksa oleh %@"
+          }
+        }
+      }
+    },
+    "Checked by you" : {
+      "comment" : "#493: the viewer's own verdict whose value this build does not know (a newer server). Neutral, never \"safe\".",
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diperiksa oleh kamu"
+          }
+        }
+      }
+    },
     "Check your connection and try again." : {
       "localizations" : {
         "id" : {

@@ -319,7 +319,7 @@ struct DetailView: View {
         VStack(spacing: 22) {
             // Overlaid on the Figma export: title 1 pt low, the line under it 2 pt high with the 8 pt gap.
             VStack(spacing: 10) {
-                Text(verbatim: title(scan))
+                Text(verbatim: Self.title(scan, viewer: model.viewer, language: language))
                     .activityFont(28, .medium, tracking: -0.56)
                     // Figma 120 % (33.6 pt) is the font's own line; an exact height clipped a wrapped title
                     // at large Dynamic Type (accessibility audit).
@@ -406,7 +406,7 @@ struct DetailView: View {
         } else {
             VStack(spacing: 6) {
                 label("detail.siteStatus")
-                DetailStatusChip(kind: statusKind(scan))
+                DetailStatusChip(kind: Self.statusKind(scan))
                     .frame(maxWidth: .infinity)
                 Text(verbatim: decidedText(scan))
                     .activityFont(13, rounded: true, tracking: -0.08)
@@ -432,11 +432,12 @@ struct DetailView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func statusKind(_ scan: ScanResult) -> DetailStatusChip.Kind {
+    static func statusKind(_ scan: ScanResult) -> DetailStatusChip.Kind {
         switch scan.verdict?.value {
         case .notSafe: .blocked
         case .safe: scan.status == .blocked ? .unblocked : .markedSafe
-        case nil: scan.status == .blocked ? .blocked : .warning
+        // #493: an unknown verdict shows the detection status; an unknown status shows as a warning.
+        case nil, .unknown: scan.status == .blocked ? .blocked : .warning
         }
     }
 
@@ -452,18 +453,19 @@ struct DetailView: View {
 
     /// "Situs Berbahaya!", "Situs Mencurigakan!", "Situs Sudah Ditandai Blokir!", "Anda Menandai ini Aman",
     /// "Virellia Menandai ini Aman".
-    private func title(_ scan: ScanResult) -> String {
-        let byViewer = scan.verdict?.byDeviceId == model.viewer?.deviceId
+    static func title(_ scan: ScanResult, viewer: DeviceProfile?, language: AppLanguage) -> String {
+        let byViewer = scan.verdict?.byDeviceId == viewer?.deviceId
         switch scan.verdict?.value {
         case .safe:
             return byViewer
                 ? L10n.string("detail.title.youMarkedSafe", language: language)
                 : L10n.string("\(scan.verdict?.byName ?? "") marked this safe", language: language)
-        case .notSafe where model.viewer?.mode == .guardian:
+        case .notSafe where viewer?.mode == .guardian:
             return L10n.string("detail.title.markedBlocked", language: language)
         case .notSafe:
             return L10n.string("detail.title.dangerous", language: language)
-        case nil:
+        case nil, .unknown:
+            // #493: an unknown verdict or status never reads safer than "Situs Mencurigakan!".
             return scan.status == .blocked
                 ? L10n.string("detail.title.dangerous", language: language)
                 : L10n.string("detail.title.suspicious", language: language)

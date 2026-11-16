@@ -44,8 +44,11 @@ struct DetailFooter: View {
     /// ends 4 pt above the content (U-17).
     static let fadeHeight: CGFloat = 24
 
-    private var showsButtons: Bool { canValidate && (verdict == nil || isChanging) }
-    private var lockedUntil: Date? { verdict.flatMap { VerdictLock.lockedUntil($0, now: Date()) } }
+    /// #493: a verdict this build can't read counts as none: no "Verified safe" card, and a guardian gets the
+    /// buttons to decide again (an upsert).
+    private var shownVerdict: Verdict? { verdict?.known }
+    var showsButtons: Bool { canValidate && (shownVerdict == nil || isChanging) }
+    private var lockedUntil: Date? { shownVerdict.flatMap { VerdictLock.lockedUntil($0, now: Date()) } }
 
     /// The window's home indicator inset (34 on Face ID iPhones, 0 with a Home button). Read from the window,
     /// never from this footer's own geometry: that safe area moves while the tab bar hides, and feeding it
@@ -68,7 +71,7 @@ struct DetailFooter: View {
                     .multilineTextAlignment(.center)
                     .accessibilityIdentifier("detail.verdictQuestion")
                 buttons
-            } else if let verdict {
+            } else if let verdict = shownVerdict {
                 VerifiedCard(
                     verdict: verdict,
                     viewerDeviceId: viewerDeviceId,

@@ -10,6 +10,9 @@ enum VerdictNote {
         case (.safe, true): return L10n.string("Marked safe by you", language: language)
         case (.notSafe, false): return L10n.string("Verified scam by \(name)", language: language)
         case (.safe, false): return L10n.string("Marked safe by \(name)", language: language)
+        // #493: a verdict this build can't read says who looked, never that it is safe.
+        case (.unknown, true): return L10n.string("Checked by you", language: language)
+        case (.unknown, false): return L10n.string("Checked by \(name)", language: language)
         }
     }
 

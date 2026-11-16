@@ -364,3 +364,9 @@ enum LoadFailure: Equatable, Sendable {
         }
     }
 }
+
+extension Verdict {
+    /// `nil` when this build does not know the value (`.unknown`, a newer server, #493): screens then treat the scan as
+    /// not decided and show its detection status, so an unreadable verdict never looks safe.
+    var known: Verdict? { value == .unknown ? nil : self }
+}

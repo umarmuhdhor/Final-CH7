@@ -31,7 +31,8 @@ final class GuardianHomeModel {
     static let pendingWindow: TimeInterval = 24 * 60 * 60
     /// Statuses whose card shows Danger / Safe. Product decision: warning too.
     /// contracts/api.md still allows verdicts on `blocked` only (`verdict_not_allowed`) — raised with the lead.
-    static let verdictStatuses: Set<ScanStatus> = [.warning, .blocked]
+    /// `unknown` (#493): its card looks like a warning, so it gets the buttons too; the server decides.
+    static let verdictStatuses: Set<ScanStatus> = [.warning, .blocked, .unknown]
     /// Enough for 14 days of a family of 4; stops a runaway cursor.
     static let maxPages = 10
     static let recentCount = 3
@@ -102,7 +103,8 @@ final class GuardianHomeModel {
         let since = now().addingTimeInterval(-Self.pendingWindow)
         let dismissed = Set(settings.dismissedHomeScanIds)
         return scans.first { scan in
-            scan.verdict == nil
+            // #493: a verdict this build can't read counts as none, so the site keeps its card.
+            scan.verdict?.known == nil
                 && scan.ownerDeviceId != profile?.deviceId
                 && scan.detectedAt >= since
                 && !dismissed.contains(scan.id)
@@ -116,6 +118,8 @@ final class GuardianHomeModel {
             case nil: .normal
             case .warning: .warning
             case .blocked: .danger
+            // #493: a status this build does not know is shown as a warning, never as normal.
+            case .unknown: .warning
             }
         case .personal:
             personalLevel
@@ -124,7 +128,7 @@ final class GuardianHomeModel {
 
     private var personalLevel: Level {
         let since = now().addingTimeInterval(-Self.pendingWindow)
-        let open = scans.filter { $0.verdict == nil && $0.detectedAt >= since }
+        let open = scans.filter { $0.verdict?.known == nil && $0.detectedAt >= since }
         if open.contains(where: { $0.status == .blocked }) { return .danger }
         return open.isEmpty ? .normal : .warning
     }
