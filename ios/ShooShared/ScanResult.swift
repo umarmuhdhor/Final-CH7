@@ -55,7 +55,7 @@ struct Verdict: Codable, Hashable {
     var decidedAt: Date
 }
 
-/// Score thresholds from PRD §5. Owner: lead.
+/// Built-in score thresholds (PRD §5 defaults). The live values come from `GET /config/public`; see #383. Owner: lead.
 enum ScoreThreshold {
     static let firstWarning = 30
     static let secondWarning = 50
