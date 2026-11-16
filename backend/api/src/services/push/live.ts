@@ -2,6 +2,13 @@ import type { Sql } from "postgres";
 import type { Language } from "../../env";
 import type { LiveSender, SendResult } from "./sender";
 
+/**
+ * #486: why a low score must not read "Aman" on the island (the in-page pill's words). `offline_check`: the
+ * online check was skipped or failed (#379). `marked_safe`: a Guardian marked this link safe (#369).
+ */
+export const LIVE_LABELS = ["offline_check", "marked_safe"] as const;
+export type LiveLabel = (typeof LIVE_LABELS)[number];
+
 /** POST /live body (EX-03, #49). Registrable domain only, never the full URL. */
 export interface LiveUpdate {
   domain: string;
@@ -10,6 +17,10 @@ export interface LiveUpdate {
   analyzing: boolean;
   /** false: the page left the screen, end the island. */
   open: boolean;
+  /** #486, optional: left out of content-state when absent. */
+  label?: LiveLabel;
+  /** #486, optional, 1–100: the extension's second warning, where the island's "danger" tone starts. */
+  secondWarning?: number;
 }
 
 /**
@@ -58,7 +69,16 @@ export const LIVE_START_ALERT = {
  */
 function contentState(u: LiveUpdate) {
   // status (#383): copied as is, so the island's colour follows what the phone did, not a fixed band.
-  return { domain: u.domain, score: u.score, isAnalyzing: u.analyzing, isBlocked: u.status === "blocked", status: u.status };
+  // label / secondWarning (#486): copied as is when the body has them, no key otherwise.
+  return {
+    domain: u.domain,
+    score: u.score,
+    isAnalyzing: u.analyzing,
+    isBlocked: u.status === "blocked",
+    status: u.status,
+    ...(u.label !== undefined ? { label: u.label } : {}),
+    ...(u.secondWarning !== undefined ? { secondWarning: u.secondWarning } : {}),
+  };
 }
 
 const ok = (r: SendResult) => r.result === "sent" || r.result === "logged";
