@@ -47,6 +47,11 @@ const lookup = async (d: Created, domain: string) => {
   expect(res.status).toBe(200);
   return ((await res.json()) as VerdictBody).verdict;
 };
+const lookupLinkOf = async (d: Created, url: string, domain: string) => {
+  const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: d.token });
+  expect(res.status, await res.clone().text()).toBe(200);
+  return ((await res.json()) as VerdictBody).verdict;
+};
 const entry = async (domain: string) =>
   (await sql`select families, approved_at from blocklist_entries where domain = ${domain}`)[0] as
     | { families: number; approved_at: Date | null }
@@ -253,9 +258,18 @@ describe("GET /verdicts?domain=", () => {
     expect((await call("/verdicts", { token: p.token })).status).toBe(422);
   });
 
-  it.each(["", "not a domain", "localhost", "a".repeat(254) + ".com", "https://x.com/"])("422 for %j", async (q) => {
+  // A single label (`localhost`) is a valid domain since #487 (contracts/api.md Scans "`domain`" case 4).
+  it.each(["", "not a domain", "-localhost", "2001:db8::1", "[router]", "[2001:db8::1", "a".repeat(254) + ".com", "https://x.com/"])("422 for %j", async (q) => {
     const p = await createDevice("Mom");
     expect((await call(`/verdicts?domain=${encodeURIComponent(q)}`, { token: p.token })).status).toBe(422);
+  });
+
+  it("#487: takes a host with no registrable domain; still drops a leading www. (older builds strip it themselves)", async () => {
+    const { g, p } = await family();
+    for (const q of ["localhost", "[2001:db8::1]", "192.168.1.1"]) expect(await lookup(p, q), q).toBeNull();
+    const id = await scan(p, blocked92 as Fixture, "co.id");
+    await verdict(g, id, "not_safe");
+    expect((await lookup(p, "www.co.id"))?.value).toBe("not_safe");
   });
 
   it("401 without token", async () => {
@@ -464,6 +478,23 @@ describe("blocklist queue from verdicts (R2 §5, D-alief-25, SECURITY T5)", () =
     expect(await entry(dom)).toBeUndefined();
   });
 
+  // #495, #487 (contracts/api.md Blocklist 1): a shared host_path host (on or under a host_path row of
+  // admin.domain_lists) or a name with no registrable domain never enters the queue. On the global list
+  // sway.cloud.microsoft would block every Sway page.
+  it.each(["sway.cloud.microsoft", "cloud.microsoft", "abc.1drv.ms", "docs.google.com", "sites.google.com", "192.168.1.1"])(
+    "shared host or no registrable domain %s never enters the queue (#495)",
+    async (dom) => {
+      const { g, p } = await family();
+      const id = await scan(p, blocked92 as Fixture, dom);
+      expect((await verdict(g, id, "not_safe")).status).toBe(200);
+      const [v] = await sql<{ e: boolean }[]>`select global_eligible as e from verdicts where domain = ${dom}`;
+      expect(v!.e).toBe(false);
+      expect(await entry(dom)).toBeUndefined();
+      // The family verdict itself still applies to that link.
+      expect(await lookupLinkOf(p, `https://${dom}/login`, dom)).toMatchObject({ value: "not_safe" });
+    },
+  );
+
   it.each(["klikbca.com", "bca.co.id", "pajak.go.id", "google.com"])("allowlisted %s never enters the queue", async (dom) => {
     const { g, p } = await family();
     const id = await scan(p, blocked92 as Fixture, dom);
@@ -618,6 +649,42 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     expect(await lookupLink(p, "https://other.github.io/b", "other.github.io")).toBeNull();
   });
 
+  // #495 (contracts/api.md Verdicts lookup step 2): the shared-host test also holds for the link the
+  // not_safe was made on. Older rows and older extension builds file a Google Form under google.com.
+  it("a not_safe made on a shared host covers only that link, never another host of the domain (#495)", async () => {
+    const { g, p } = await family();
+    const form = await scanAt(p, "https://docs.google.com/forms/d/scam", "google.com");
+    const office = await scanAt(p, "https://forms.office.com/r/scam", "office.com");
+    const signin = await scanAt(p, "https://accounts.google.com/signin", "google.com");
+    expect((await decide(g, form, "not_safe")).status).toBe(200);
+    expect((await decide(g, office, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://accounts.google.com/signin", "google.com")).toBeNull();
+    expect(await lookupLink(p, "https://www.office.com/", "office.com")).toBeNull();
+    expect(await lookupLink(p, "https://docs.google.com/forms/d/scam", "google.com")).toMatchObject({ value: "not_safe" });
+    // The same in Activity: the list and the detail of the sign-in page carry no verdict.
+    const body = (await (await call(`/scans?owner=${p.deviceId}`, { token: g.token })).json()) as {
+      items: { id: string; verdict: { value: string } | null }[];
+    };
+    expect(Object.fromEntries(body.items.map((i) => [i.id, i.verdict?.value ?? null]))).toEqual({
+      [form]: "not_safe", [office]: "not_safe", [signin]: null,
+    });
+    expect(((await (await call(`/scans/${signin}`, { token: g.token })).json()) as { verdict: unknown }).verdict).toBeNull();
+    // And in the review dashboard's scan list (admin.v_scans repeats the rule inline).
+    const dash = await admin<{ id: string; verdict: string | null }[]>`
+      select id, verdict from admin.v_scans where id in ${admin([form, office, signin])}`;
+    expect(Object.fromEntries(dash.map((r) => [r.id, r.verdict]))).toEqual({
+      [form]: "not_safe", [office]: "not_safe", [signin]: null,
+    });
+    // Since #541 the extension files the form under its full host; that row covers only its own link too.
+    const form2 = await scanAt(p, "https://docs.google.com/forms/d/scam2", "docs.google.com");
+    expect((await decide(g, form2, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://docs.google.com/forms/d/other", "docs.google.com")).toBeNull();
+    // A normal domain still falls back to its other pages.
+    const a = await scanAt(p, "https://evil-495.test/a", "evil-495.test");
+    expect((await decide(g, a, "not_safe")).status).toBe(200);
+    expect(await lookupLink(p, "https://login.evil-495.test/b", "evil-495.test")).toMatchObject({ value: "not_safe" });
+  });
+
   it("?url= needs a domain it belongs to, and an http(s) URL", async () => {
     const { p } = await family();
     const status = async (q: string) => (await call(`/verdicts?${q}`, { token: p.token })).status;
@@ -649,6 +716,21 @@ describe("verdicts per link (#241, contracts/api.md Verdicts)", () => {
     await pastWeeklyReview();
     expect((await decide(g, a, "safe")).status).toBe(200); // newer, but a not_safe wins
     expect(await lookup(p, "old.test")).toMatchObject({ value: "not_safe" });
+  });
+
+  it("deprecated ?domain= alone skips a not_safe made on a shared host (#495)", async () => {
+    const { g, p } = await family();
+    const form = await scanAt(p, "https://docs.google.com/forms/d/scam", "google.com");
+    expect((await decide(g, form, "not_safe")).status).toBe(200);
+    expect(await lookup(p, "google.com")).toBeNull();
+    // A safe on the domain is still found; the shared-host not_safe does not outrank it.
+    const mail = await scanAt(p, "https://mail.google.com/", "google.com");
+    expect((await decide(g, mail, "safe")).status).toBe(200);
+    expect(await lookup(p, "google.com")).toMatchObject({ value: "safe", url: "https://mail.google.com/" });
+    // Filed under its full host (#541) it does not count either: on docs.google.com it would cover every form.
+    const form2 = await scanAt(p, "https://docs.google.com/forms/d/scam2", "docs.google.com");
+    expect((await decide(g, form2, "not_safe")).status).toBe(200);
+    expect(await lookup(p, "docs.google.com")).toBeNull();
   });
 
   it("Activity shows each scan the verdict of the same rule", async () => {
@@ -800,5 +882,76 @@ describe("safe verdict lock until the weekly review (#476)", () => {
       select ${lockedUntilSql(sql, "'safe'", "d")} as safe, ${lockedUntilSql(sql, "'not_safe'", "d")} as "notSafe"
       from (select ${decidedAt}::timestamptz as d) t`;
     expect(row).toEqual({ safe: unlocks, notSafe: null });
+  });
+});
+
+// #487 (contracts/api.md Scans "`domain`" case 4): a host with no registrable domain is sent as the full
+// host. POST /scans, POST /verdicts, GET /verdicts?url=&domain= and the Activity verdict agree on it.
+describe("a host with no registrable domain (#487)", () => {
+  const hosts = [
+    { url: "http://[2001:db8::1]/login", domain: "[2001:db8::1]", link: "http://[2001:db8::1]/login" },
+    { url: "http://[::1]:8080/a?x=1", domain: "[::1]", link: "http://[::1]:8080/a" },
+    { url: "http://router/login", domain: "router", link: "http://router/login" },
+    { url: "https://www.co.id/login", domain: "www.co.id", link: "https://www.co.id/login" },
+    { url: "https://www.com/login", domain: "www.com", link: "https://www.com/login" },
+    { url: "https://com/login", domain: "com", link: "https://com/login" },
+  ];
+  const post = (d: Created, url: string, domain: string) =>
+    call("/scans", {
+      method: "POST", token: d.token,
+      json: { url, domain, score: 92, status: "blocked", signals: [], detectedAt: new Date().toISOString() },
+    });
+
+  it.each(hosts)("$domain: POST /scans → 201, the verdict is on the scan's link and GET /verdicts finds it", async ({ url, domain, link }) => {
+    const { g, p } = await family();
+    const res = await post(p, url, domain);
+    expect(res.status, await res.clone().text()).toBe(201);
+    const { id } = (await res.json()) as { id: string };
+    expect((await sql`select domain from scans where id = ${id}`)[0]!.domain).toBe(domain);
+
+    // safe: only this link opens, so the stored link must be the scan's own (not the https front page).
+    const safe = await verdict(g, id, "safe");
+    expect(safe.status, await safe.clone().text()).toBe(200);
+    expect(((await safe.json()) as VerdictBody).verdict).toMatchObject({ value: "safe", url: link });
+    expect(await lookupLinkOf(p, url, domain)).toMatchObject({ value: "safe", url: link });
+    const item = (await (await call(`/scans/${id}`, { token: p.token })).json()) as { domain: string; verdict: { value: string } };
+    expect(item).toMatchObject({ domain, verdict: { value: "safe" } });
+
+    // not_safe on the same link replaces it (after the weekly review lock); the domain fallback finds it
+    // from another page of the same host.
+    await pastWeeklyReview();
+    expect((await verdict(g, id, "not_safe")).status).toBe(200);
+    const other = link.replace(/\/[^/]*$/, "/other");
+    expect(await lookupLinkOf(p, other, domain)).toMatchObject({ value: "not_safe", url: link });
+    // Never queued for the global list (contracts/api.md Blocklist 1).
+    expect(await entry(domain)).toBeUndefined();
+  });
+
+  it("GET /verdicts?url=&domain= keeps a leading www. (www.co.id is not co.id)", async () => {
+    const { g, p } = await family();
+    const res = await post(p, "https://www.co.id/login", "www.co.id");
+    expect(res.status, await res.clone().text()).toBe(201);
+    const { id } = (await res.json()) as { id: string };
+    expect((await verdict(g, id, "not_safe")).status).toBe(200);
+    expect(await lookupLinkOf(p, "https://www.co.id/login", "WWW.co.id")).toMatchObject({ value: "not_safe" });
+    // co.id is another domain, so the url host www.co.id still fits it, but no verdict is on co.id.
+    expect(await lookupLinkOf(p, "https://www.co.id/x", "co.id")).toBeNull();
+  });
+
+  it.each([
+    ["an unbracketed IPv6", "http://[2001:db8::1]/", "2001:db8::1"],
+    ["an IPv6 of another host", "http://[2001:db8::1]/", "[2001:db8::2]"],
+    ["a bracketed name", "http://[2001:db8::1]/", "[router]"],
+    ["IPv6 not in its normal form", "http://[2001:db8::1]/", "[2001:0db8::1]"],
+    ["uppercase", "http://router/", "ROUTER"],
+    ["a single label of another host", "http://router/", "modem"],
+    ["www. alone", "https://www.co.id/", "www."],
+    ["a label with a leading hyphen", "http://-router/", "-router"],
+  ])("%s → 422 on POST /scans and GET /verdicts", async (_name, url, domain) => {
+    const p = await createDevice("Mom");
+    expect((await post(p, url, domain)).status, domain).toBe(422);
+    const res = await call(`/verdicts?url=${encodeURIComponent(url)}&domain=${encodeURIComponent(domain)}`, { token: p.token });
+    // GET /verdicts lowercases and trims the domain first (older builds), so only ROUTER passes there.
+    expect(res.status, domain).toBe(domain === "ROUTER" ? 200 : 422);
   });
 });

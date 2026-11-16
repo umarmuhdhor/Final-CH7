@@ -31,6 +31,7 @@ enum MockScenarios {
         case .allSafe: allSafe(now: now)
         case .allBlocked: allBlocked(now: now)
         case .corpus: corpus(now: now, bundle: bundle)
+        case .addressMarks: addressMarks(now: now)
         case .homePribadi, .homePribadiAlone, .protectedQuiet, .protectedBlocked, .protectedBlockedScam, .protectedBlockedSafe,
              .protectedWarning, .protectedWarningScam, .protectedWarningSafe, .protectedAlone:
             home(scenario, now: now)
@@ -220,7 +221,8 @@ enum MockScenarios {
                 signals: Site.bcaBlocked.signals + Site.bansos.signals, screenshotUrl: nil, pageReplicaUrl: nil,
                 ownerDeviceId: "dev_syahnaz", ownerName: data.members[0].name, detectedAt: now.addingTimeInterval(-60), verdict: nil
             ),
-            // U-05: the backend stores only the registrable domain, so a long one is what a real row shows.
+            // U-05: the backend stores the `domain` the extension sends (the registrable domain here; the full
+            // host only on a shared platform such as sites.google.com, #495), so a long one is what a real row shows.
             ScanResult(
                 id: "edge-long-registrable",
                 url: URL(string: "https://login.\(longRegistrable)/login/verifikasi/pin?ref=wa")!,
@@ -268,6 +270,30 @@ enum MockScenarios {
             return data
         }
         data.scans = page.items
+        return data
+    }
+
+    /// DT-04 (#497): the address card with the detector's `host`. `brand_plus_keyword` marks "bca" and
+    /// "verifikasi" and names the real address, `cheap_tld` marks ".site", `new_domain` has no `host` (whole domain).
+    /// Open with `-debug.detail address-marks`.
+    static func addressMarks(now: Date) -> MockDataset {
+        var data = figma(now: now)
+        let syahnaz = owner("dev_syahnaz", "Syahnaz")
+        var brand = signal("brand_plus_keyword", 2, 40, "BCA name with extra words", "Nama BCA dengan kata tambahan",
+                           "The address uses the BCA name", "Alamatnya memakai nama BCA", evidence: "bca · level 2 · verifikasi")
+        brand.host = Signal.Host(marks: ["bca", "verifikasi"], official: "bca.co.id")
+        var ending = signal("cheap_tld", 1, 18, "Cheap .site ending", "Akhiran .site murah", "Scam sites often use .site",
+                            "Situs penipuan sering memakai .site")
+        ending.host = Signal.Host(marks: [".site"])
+        var result = scan("address-marks", .bcaBlocked, owner: syahnaz, at: today(10, 42, now))
+        result.signals = [
+            brand,
+            signal("new_domain", 3, 32, "Domain age 3 days", "Umur domain 3 hari", "This site was made 3 days ago",
+                   "Situs ini baru dibuat 3 hari lalu"),
+            ending,
+        ]
+        result.score = 90
+        data.scans = [result] + data.scans.filter { $0.ownerDeviceId == meId || $0.ownerDeviceId == mariaId }
         return data
     }
 

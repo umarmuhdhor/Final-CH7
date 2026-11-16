@@ -44,4 +44,36 @@ struct ScoreActivityAttributesTests {
         #expect(state.status == "blocked")
         #expect(state.tone == .blocked)
     }
+
+    /// #486: a failed online check or a link marked safe never reads "Aman" on the island.
+    @Test func labelledLowScoreNeverReadsSafe() throws {
+        func state(_ score: Int, _ status: String, label: String?, analyzing: Bool = false) -> ScoreActivityAttributes.ContentState {
+            .init(domain: "a.com", score: score, isAnalyzing: analyzing, isBlocked: false, status: status, label: label)
+        }
+        #expect(state(25, "normal", label: "offline_check").headline == .offlineCheck)
+        #expect(state(0, "normal", label: "marked_safe").headline == .markedSafe)
+        #expect(state(25, "normal", label: nil).headline == .tone(.safe))
+        #expect(state(25, "normal", label: "offline_check", analyzing: true).headline == .analyzing)
+        // A label never softens a warning.
+        #expect(state(40, "warning", label: "offline_check").headline == .tone(.warning))
+        #expect(state(25, "normal", label: "something_new").headline == .tone(.safe))
+
+        let json = #"{"domain":"a.com","score":25,"isAnalyzing":false,"isBlocked":false,"status":"normal","label":"offline_check"}"#
+        let decoded = try JSONDecoder().decode(ScoreActivityAttributes.ContentState.self, from: Data(json.utf8))
+        #expect(decoded.label == "offline_check")
+        #expect(decoded.headline != .tone(.safe))
+    }
+
+    /// #486: the warning split follows the extension's second warning, not a fixed 50.
+    @Test func dangerFollowsSecondWarning() throws {
+        func tone(_ score: Int, second: Int?) -> ScoreActivityAttributes.Tone {
+            ScoreActivityAttributes.ContentState(domain: "a.com", score: score, isAnalyzing: false, isBlocked: false, status: "warning", secondWarning: second).tone
+        }
+        #expect(tone(55, second: 65) == .warning) // warnAt 50, blockAt 80 → second warning 65
+        #expect(tone(65, second: 65) == .danger)
+        #expect(tone(55, second: nil) == .danger) // older push: built-in 50
+        let json = #"{"domain":"a.com","score":55,"isAnalyzing":false,"isBlocked":false,"status":"warning","secondWarning":65}"#
+        let decoded = try JSONDecoder().decode(ScoreActivityAttributes.ContentState.self, from: Data(json.utf8))
+        #expect(decoded.tone == .warning)
+    }
 }

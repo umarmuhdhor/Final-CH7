@@ -54,7 +54,11 @@ Authorization: Bearer shoo_<43 characters>
   A larger body returns `413 too_large`.
 - Times are ISO 8601 with an offset, e.g. `2026-10-22T03:05:00Z`, between 1970 and 2100.
 - Names are 1–20 characters after trimming, without control or bidi-override characters.
-- Domains are lowercase registrable domains without `www.`, e.g. `bca-verifikasi.site`.
+- A `domain` follows `contracts/api.md` Scans "`domain`" (#487): lowercase, no trailing dot, no port; the
+  registrable domain (`bca-verifikasi.site`), the full host on a shared `host_path` platform, or the full host
+  when there is no registrable domain (`192.168.1.1`, `[2001:db8::1]`, `router`, `www.co.id`). The backend
+  keeps no Public Suffix List, so it checks the shape only (`src/http/validate.ts` `DOMAIN`) and, where a url
+  comes with it, that the url host is the domain or a subdomain of it.
 
 ### Errors
 
@@ -532,6 +536,7 @@ Each signal:
 | `label` | `{ en, id }` | Technical text for the Guardian, 1–500 characters each |
 | `labelSimple` | `{ en, id }` | Plain text for the Protected user, 1–500 characters each |
 | `evidence` | string | Optional, ≤ 500 characters |
+| `host` | `{ marks?, official? }` | Optional (DT-04, #497). `marks`: 1–4 strings, 1–253 characters each; `official`: 1–253 characters. Other keys are dropped; a text that is empty after cleaning, or `host: null`, gives 422. Returned as stored in every scan response; absent on older scans |
 
 `ownerDeviceId` and `ownerName` are accepted but ignored. Control and bidi characters are removed from
 all text.
@@ -813,11 +818,13 @@ adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes
 - **Auth:** Bearer, either mode (a Guardian's own extension polls for pages it blocked itself)
 - **Rate limit:** 30 per 10 seconds per device. On 429, wait `Retry-After` and poll again; it does not
   mean "no verdict".
-- **Query:** `url`, the page (an http(s) URL; query and fragment are ignored), and `domain`, its
-  registrable domain. Case, surrounding spaces, a trailing dot and a leading `www.` are tolerated in
-  `domain`. The url's host must be the domain or a subdomain of it, else `422`.
-- **Deprecated:** `?domain=` alone, for builds from before #241: any `not_safe` on that domain, else the
-  newest `safe`. It goes once the last older build is gone.
+- **Query:** `url`, the page (an http(s) URL; query and fragment are ignored), and `domain`, the scan's
+  `domain` (`contracts/api.md` Scans "`domain`", #487). Case, surrounding spaces and a trailing dot are
+  tolerated in `domain`; a leading `www.` stays (`www.co.id` is not `co.id`). The url's host must be the
+  domain or a subdomain of it, else `422`.
+- **Deprecated:** `?domain=` alone, for builds from before #241 (a leading `www.` is still dropped there): any `not_safe` on that domain, else the
+  newest `safe`. A `not_safe` made on a shared host (step 2 below) covers only its own link, so it never
+  counts here (#495). It goes once the last older build is gone.
 
 **Response 200**
 
@@ -827,10 +834,12 @@ adaptive schedule (every 2 s for the first 2 minutes, every 5 s up to 10 minutes
 
 Lookup, first match wins:
 1. A verdict on exactly this link, `safe` or `not_safe`.
-2. A `not_safe` by this owner on another link of the same domain, unless the link is on a shared host:
-   its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
-   `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). A
-   tenant domain such as `evil.github.io` is one owner, so its pages share step 2.
+2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared
+   host: its host is on, or under, an `admin.domain_lists` row with `hosting = 'host_path'` (`docs.google.com`,
+   `sites.google.com`, `bit.ly`), or the domain itself has `hosting = 'subdomains'` (`vercel.app`). Either
+   link means the one asked about and the one the `not_safe` was made on (#495): a scam Google Form filed
+   under `google.com` by an older build never answers for `accounts.google.com`. A tenant domain such as
+   `evil.github.io` is one owner, so its pages share step 2.
 3. Otherwise `null`. A `safe` never reaches past its own link.
 
 Every `Verdict` (here, in `POST /verdicts` and on a scan) carries `url`: the link it was made on. A
@@ -995,7 +1004,7 @@ The in-page pill stays the offline, instant score; the island is extra.
 - **Privacy:** domain and score go into the APNs payload only. No table row, no `push_log` row, and
   the log line holds `kind` and `result` only.
 
-**Request body** (all fields required, unknown keys → `422`)
+**Request body** (all fields required except `label` and `secondWarning`, unknown keys → `422`)
 
 | Field | Type | Rules |
 |---|---|---|
@@ -1004,6 +1013,8 @@ The in-page pill stays the offline, instant score; the island is extra.
 | `status` | `"normal"` \| `"warning"` \| `"blocked"` | |
 | `analyzing` | boolean | Online check still running |
 | `open` | boolean | `false`: the page left the screen, end the island |
+| `label` | `"offline_check"` \| `"marked_safe"` | Optional (#486). The in-page pill's words for a low score: online check skipped or failed (#379), or a Guardian marked the link safe (#369). Left off otherwise; any other value (also `null`) → `422` |
+| `secondWarning` | integer | Optional (#486), 1–100: the extension's second warning, where the island's darker "danger" tone starts (50 without it). `null` → `422` |
 
 ```json
 { "domain": "bca-verifikasi.site", "score": 81, "status": "warning", "analyzing": false, "open": true }
@@ -1023,7 +1034,7 @@ for the app's update token). Answered after the push, so one device's calls stay
 | `open: false`, update token known | `end` with `dismissal-date` now | update | 10 |
 | `open: false`, no update token yet | nothing; logged as `kind: "none"`, `reason: "no_update_token"`. The app ends older islands itself when a new one starts | | |
 
-`content-state` is `{ domain, score, isAnalyzing, isBlocked, status }` (`isBlocked` = `status == "blocked"`; `status` is the `POST /live` value as is, #383, so the island colours by what the phone did, not by fixed bands).
+`content-state` is `{ domain, score, isAnalyzing, isBlocked, status }` (`isBlocked` = `status == "blocked"`; `status` is the `POST /live` value as is, #383, so the island colours by what the phone did, not by fixed bands), plus `label` and `secondWarning` copied as is when the body has them (#486, also on `end`; no cross-field check, the island only uses a label in place of "Aman"); without them the keys are left out, so an older app decodes as before.
 `start` also carries `"attributes-type": "ScoreActivityAttributes"` and `attributes: {}` (the domain lives in `content-state`).
 `start` and `update` carry `stale-date` +10 min. APNs `410` clears the token it was sent to; an `end`
 clears the update token whatever the result.

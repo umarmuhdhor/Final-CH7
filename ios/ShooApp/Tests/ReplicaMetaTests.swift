@@ -139,6 +139,31 @@ struct ReplicaMetaTests {
         #expect(long.hasSuffix("…"))
     }
 
+    /// #487: a host with no registrable domain is the scan's `domain` as is. Foundation's `host()` drops the
+    /// brackets of an IPv6 literal, while `domain` keeps them (`[2001:db8::1]`, contracts/api.md Scans "`domain`").
+    @Test func copiedFromOnAHostWithNoRegistrableDomain() throws {
+        func copied(_ link: String, scan: String, domain: String) throws -> String? {
+            ReplicaMeta(url: URL(string: link), capturedAt: Self.detectedAt, focusY: 0, truncated: false)
+                .copiedFrom(scanURL: try #require(URL(string: scan)), domain: domain)
+        }
+        #expect(try copied("http://[2001:db8::1]/otp", scan: "http://[2001:db8::1]/masuk", domain: "[2001:db8::1]")
+                == "[2001:db8::1]/otp")
+        #expect(try copied("http://[2001:DB8::1]:8080/otp", scan: "http://[2001:db8::1]/masuk", domain: "[2001:db8::1]")
+                == "[2001:db8::1]/otp")
+        // Another spelling of the same address (only a device could write one): the scan's form is shown.
+        #expect(try copied("http://[2001:0db8:0:0:0:0:0:1]/otp", scan: "http://[2001:db8::1]/masuk", domain: "[2001:db8::1]")
+                == "[2001:db8::1]/otp")
+        #expect(try copied("http://[::ffff:192.168.1.1]/otp", scan: "http://[::ffff:c0a8:101]/masuk", domain: "[::ffff:c0a8:101]")
+                == "[::ffff:c0a8:101]/otp")
+        #expect(try copied("http://[fe80::1%25en0]/otp", scan: "http://[fe80::1]/masuk", domain: "[fe80::1]") == nil)
+        #expect(try copied("http://[2001:db8::2]/otp", scan: "http://[2001:db8::1]/masuk", domain: "[2001:db8::1]") == nil)
+        #expect(try copied("http://[2001:db8::1]/otp", scan: "http://[2001:db8::1]/masuk", domain: "[router]") == nil)
+        #expect(try copied("http://[2001:db8::1]/otp", scan: "http://[2001:db8::1]/masuk", domain: "2001:db8::1") == nil)
+        #expect(try copied("http://router/otp", scan: "http://router/masuk", domain: "router") == "router/otp")
+        #expect(try copied("https://www.co.id/otp", scan: "https://www.co.id/masuk", domain: "www.co.id") == "www.co.id/otp")
+        #expect(try copied("https://co.id/otp", scan: "https://www.co.id/masuk", domain: "www.co.id") == nil)
+    }
+
     /// The decoded path is device text: no line breaks or bidi overrides (security review M3).
     @Test func copiedFromDropsControlAndBidiCharacters() throws {
         let scanURL = try #require(URL(string: "https://klikbca-login.site/masuk"))

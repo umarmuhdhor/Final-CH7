@@ -352,7 +352,7 @@ struct EvidenceCard: View {
     var highlights: [CGRect]?
     let isLoadingImage: Bool
     var pageCSSWidth: CGFloat?
-    /// The scan's registrable domain: a reason about the address shows it instead of the page (DT-04).
+    /// The scan's `domain` (registrable domain, or the full host on a shared platform, #495): a reason about the address shows it instead of the page (DT-04).
     var domain: String?
     var onOpenImage: () -> Void = {}
 
@@ -362,7 +362,7 @@ struct EvidenceCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if reason.kind.isAddress, let domain {
-                AddressEvidence(domain: domain, kind: reason.kind, reasonText: reason.text)
+                AddressEvidence(domain: domain, kind: reason.kind, reasonText: reason.text, host: reason.host)
                     .accessibilityIdentifier("detail.address.\(reason.index)")
             } else if image != nil || isLoadingImage {
                 Button(action: onOpenImage) {

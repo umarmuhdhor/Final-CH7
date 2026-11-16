@@ -3,6 +3,8 @@
 // POST /scans (so no second push to the guardian). Only a `safe` verdict for its domain clears it.
 // Kept in storage.local only; nothing here leaves the phone.
 
+import { isHostPathHost, normalHost } from "./domain.js";
+
 export const TTL_MS = 14 * 24 * 60 * 60 * 1000; // the backend keeps a scan 14 days; after that the page is scanned again
 export const MAX_ENTRIES = 500; // oldest dropped first
 export const STORAGE_KEY = "blockMemory.v1";
@@ -41,14 +43,17 @@ export function memoryKey(url, registrableDomain) {
         return null;
     }
     if (!/^https?:$/.test(parsed.protocol)) return null;
-    const host = parsed.hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
+    const full = normalHost(parsed.hostname);
+    const host = full.replace(/^www\./, "");
     if (!host) return null;
-    if (SHARED.includes(host)) {
+    // #495: every host_path platform of domain.js too (sway.cloud.microsoft), the same list `domain` follows.
+    if (SHARED.includes(host) || isHostPathHost(host)) {
         const path = parsed.pathname.replace(/\/+$/, "").slice(0, MAX_PATH);
         return `${host}${path || "/"}`;
     }
     if (SHARED.some((shared) => host.endsWith(`.${shared}`))) return host;
-    return registrableDomain(host) || host;
+    // #487: `www.co.id` keeps its www, as `domain` does (it has no registrable domain to fall back to).
+    return registrableDomain(full) || full;
 }
 
 /** Only what blocked.html shows, so a stored entry can't grow or carry page data beyond the reasons. */

@@ -3,18 +3,22 @@ import * as z from "zod";
 import type { AppEnv } from "../env";
 import { requireDevice } from "../http/auth";
 import { hitEdge, limits } from "../http/rateLimit";
-import { DOMAIN, readJson } from "../http/validate";
-import { relayLive } from "../services/push/live";
+import { DOMAIN, DOMAIN_MESSAGE, readJson } from "../http/validate";
+import { LIVE_LABELS, relayLive } from "../services/push/live";
 import { liveSender } from "../services/push/sender";
 
 const liveBody = z
   .object({
-    // Registrable domain only (same rule as verdicts/scans), never a URL.
-    domain: z.string().max(253).regex(DOMAIN, "must be a registrable domain"),
+    // The scan's `domain` (same rule as verdicts/scans, #487), never a URL.
+    domain: z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE),
     score: z.number().int().min(0).max(100),
     status: z.enum(["normal", "warning", "blocked"]),
     analyzing: z.boolean(),
     open: z.boolean(),
+    // #486 (additive, optional): the pill's words for a low score, and the pill's danger split. Left off
+    // when absent; an unknown label or an out-of-range split is a 422 like every other bad value.
+    label: z.enum(LIVE_LABELS).optional(),
+    secondWarning: z.number().int().min(1).max(100).optional(),
   })
   .strict();
 

@@ -6,7 +6,7 @@ import { decideVerdict, findDomainVerdict, findVerdict, type VerdictResult } fro
 import { requireDevice, requireMode } from "../http/auth";
 import { errors } from "../http/errors";
 import { hit, hitEdge, limits } from "../http/rateLimit";
-import { codePoints, DOMAIN, hasUnsafe, parse, readJson, stripUnsafe, UUID } from "../http/validate";
+import { codePoints, DOMAIN, DOMAIN_MESSAGE, hasUnsafe, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 
 /** 280 code points of notes can be up to 1120 bytes of UTF-8, plus JSON escapes. */
 const MAX_BODY = 4096;
@@ -24,12 +24,20 @@ const notes = z
   .refine((s) => s === null || codePoints(s) <= MAX_NOTES, `must be at most ${MAX_NOTES} characters`);
 
 const body = z.strictObject({ scanId: z.string().max(64), value: z.enum(["safe", "not_safe"]), notes });
-// The extension sends the registrable domain; tolerate case, spaces and a leading www.
+// The extension sends the scan's `domain` (contracts/api.md Scans "`domain`"); tolerate case, spaces and a
+// trailing dot. With url= a leading www. stays (#487: `www.co.id` is the full host, not `co.id`).
+const normDomain = (s: string) => s.trim().toLowerCase().replace(/\.$/, "");
 const domainParam = z
   .string()
   .max(260, { abort: true })
-  .transform((s) => s.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, ""))
-  .pipe(z.string().max(253).regex(DOMAIN, "must be a registrable domain"));
+  .transform(normDomain)
+  .pipe(z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE));
+// Deprecated ?domain= alone (builds from before #241): a leading www. still goes, and what is left is checked.
+const legacyDomainParam = z
+  .string()
+  .max(260, { abort: true })
+  .transform((s) => normDomain(s).replace(/^www\./, ""))
+  .pipe(z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE));
 // The link (origin + path) as the extension's shareableUrl gives it; a query or fragment is dropped.
 // B-06: the length check aborts, so a too-long url never reaches the transform or the object refine
 // below (which reads url.hostname and threw a TypeError → 500 instead of 422).
@@ -63,7 +71,7 @@ const lookupQuery = z.union([
     )
     .transform(({ url, domain }) => ({ link: url.origin + url.pathname, domain })),
   // Deprecated: builds from before #241 send the domain only.
-  z.object({ url: z.undefined(), domain: domainParam }).transform(({ domain }) => ({ link: null, domain })),
+  z.object({ url: z.undefined(), domain: legacyDomainParam }).transform(({ domain }) => ({ link: null, domain })),
 ]);
 
 export const verdicts = new Hono<AppEnv>();

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_END_EXPIRY_SECONDS, LIVE_EXPIRY_SECONDS, LIVE_START_ALERT, LIVE_STALE_SECONDS, relayLive, type LiveUpdate } from "../src/services/push/live";
-import type { LiveMessage, LiveSender, SendResult } from "../src/services/push/sender";
+import { LogSender, type LiveMessage, type LiveSender, type SendResult } from "../src/services/push/sender";
 import { atWindowStart } from "./helpers/rateWindow";
 import { resetDb, testSql } from "./helpers/resetDb";
 import { call, callWithEnv, createDevice, denyingLimiter, type Created } from "./helpers/seed";
@@ -28,6 +28,7 @@ class Recorder implements LiveSender {
   }
 }
 
+const errorCode = async (res: Response) => ((await res.json()) as { error: { code: string } }).error.code;
 const patch = (d: Created, json: unknown) => call("/devices/me", { method: "PATCH", token: d.token, json });
 const tokens = async (d: Created) => {
   const [row] = await sql<{ start: string | null; update: string | null; activity: string | null; startedAt: Date | null }[]>`
@@ -183,6 +184,41 @@ describe("relayLive: start / update / end (#49)", () => {
     expect(s.sent).toHaveLength(1);
   });
 
+  it("#486: label and secondWarning go into content-state as is on start, update and end; left out without them", async () => {
+    const d = await createDevice();
+    await patch(d, { liveActivityStartToken: START });
+    const s = new Recorder();
+    const cs = (i: number) => (s.sent[i]!.payload as { aps: { "content-state": unknown } }).aps["content-state"];
+
+    await relayLive(sql, s, d.deviceId, page({ score: 12, label: "offline_check", secondWarning: 55 }), NOW);
+    expect(cs(0)).toEqual({
+      domain: "very-private-domain.example", score: 12, isAnalyzing: false, isBlocked: false, status: "normal",
+      label: "offline_check", secondWarning: 55,
+    });
+
+    await patch(d, { liveActivityUpdateToken: { activityId: ACTIVITY, token: UPDATE } });
+    await relayLive(sql, s, d.deviceId, page({ score: 0, label: "marked_safe" }), NOW);
+    expect(cs(1)).toEqual({
+      domain: "very-private-domain.example", score: 0, isAnalyzing: false, isBlocked: false, status: "normal", label: "marked_safe",
+    });
+
+    await relayLive(sql, s, d.deviceId, page({ score: 64, status: "warning", secondWarning: 70 }), NOW);
+    expect(cs(2)).toEqual({
+      domain: "very-private-domain.example", score: 64, isAnalyzing: false, isBlocked: false, status: "warning", secondWarning: 70,
+    });
+
+    await relayLive(sql, s, d.deviceId, page({ open: false, label: "offline_check", secondWarning: 50 }), NOW);
+    expect(cs(3)).toEqual({
+      domain: "very-private-domain.example", score: 42, isAnalyzing: false, isBlocked: false, status: "normal",
+      label: "offline_check", secondWarning: 50,
+    });
+
+    // Without them: no key at all (not null, not undefined in the JSON), so older apps decode as before.
+    await patch(d, { liveActivityUpdateToken: { activityId: ACTIVITY, token: UPDATE } });
+    await relayLive(sql, s, d.deviceId, page(), NOW);
+    expect(Object.keys(cs(4) as object).sort()).toEqual(["domain", "isAnalyzing", "isBlocked", "score", "status"]);
+  });
+
   it("a token the app sent meanwhile is not cleared (compare-and-clear)", async () => {
     const d = await createDevice();
     await patch(d, { liveActivityUpdateToken: { activityId: ACTIVITY, token: UPDATE } });
@@ -221,6 +257,64 @@ describe("POST /live (#49)", () => {
       { domain: "a.example", score: 1 },
     ]) {
       expect((await live(d, json)).status).toBe(422);
+    }
+  });
+
+  it("#486: 202 with each label and secondWarning, and the APNs payload carries them; without them they are absent", async () => {
+    const sent = vi.spyOn(LogSender.prototype, "sendLive");
+    const d = await createDevice();
+    await patch(d, { liveActivityStartToken: START, liveActivityUpdateToken: { activityId: ACTIVITY, token: UPDATE } });
+    const cs = (i: number) => (sent.mock.calls[i]![0].payload as { aps: { "content-state": Record<string, unknown> } }).aps["content-state"];
+
+    expect((await live(d, { ...page({ score: 10 }), label: "offline_check", secondWarning: 50 })).status).toBe(202);
+    expect(cs(0)).toMatchObject({ label: "offline_check", secondWarning: 50 });
+    expect((await live(d, { ...page({ score: 0 }), label: "marked_safe" })).status).toBe(202);
+    expect(cs(1)).toMatchObject({ label: "marked_safe" });
+    expect(cs(1)).not.toHaveProperty("secondWarning");
+    expect((await live(d, { ...page({ score: 60, status: "warning" }), secondWarning: 1 })).status).toBe(202);
+    expect((await live(d, { ...page({ score: 60, status: "warning" }), secondWarning: 100 })).status).toBe(202);
+    expect(cs(3)).toMatchObject({ secondWarning: 100 });
+    expect(cs(3)).not.toHaveProperty("label");
+    expect((await live(d, page())).status).toBe(202);
+    expect(cs(4)).not.toHaveProperty("label");
+    expect(cs(4)).not.toHaveProperty("secondWarning");
+    expect(sent).toHaveBeenCalledTimes(5);
+  });
+
+  it("#486: 422 on an unknown label or a secondWarning outside 1–100 or not an integer", async () => {
+    const d = await createDevice();
+    for (const json of [
+      { ...page(), label: "safe" },
+      { ...page(), label: "Offline_Check" },
+      { ...page(), label: "" },
+      { ...page(), label: null },
+      { ...page(), label: 1 },
+      { ...page(), label: {} },
+      { ...page(), secondWarning: 0 },
+      { ...page(), secondWarning: -1 },
+      { ...page(), secondWarning: 101 },
+      { ...page(), secondWarning: 50.5 },
+      { ...page(), secondWarning: "50" },
+      { ...page(), secondWarning: true },
+      { ...page(), secondWarning: null },
+      // The new fields do not loosen the strict body.
+      { ...page(), label: "marked_safe", secondWarning: 50, extra: 1 },
+    ]) {
+      const res = await live(d, json);
+      expect(res.status, JSON.stringify(json)).toBe(422);
+      expect(await errorCode(res)).toBe("invalid_body");
+    }
+  });
+
+  // #487 (contracts/api.md Scans "`domain`"): the same values POST /scans takes. The extension sends no
+  // POST /live for a host without a registrable domain, but the rule is one rule on every route.
+  it("takes every domain form POST /scans takes; 422 on an unbracketed IPv6 or uppercase", async () => {
+    const d = await createDevice();
+    for (const domain of ["[2001:db8::1]", "router", "www.co.id", "192.168.1.1"]) {
+      expect((await live(d, page({ domain }))).status, domain).toBe(202);
+    }
+    for (const domain of ["2001:db8::1", "[Router]", "ROUTER", "www."]) {
+      expect((await live(d, page({ domain }))).status, domain).toBe(422);
     }
   });
 

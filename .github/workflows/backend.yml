@@ -52,6 +52,9 @@ jobs:
       - name: Worker build check
         working-directory: backend/api
         run: npx wrangler deploy --dry-run --outdir /tmp/shoo-worker
+      # Our own guard on the Worker bundle (fase 22 K11, #496): fails when it grows past backend/ci/bundle-size.mjs.
+      - name: Worker bundle size
+        run: node backend/ci/bundle-size.mjs
       # Secrets in the files of this commit (the CLI is free for any repo; the action needs a licence for orgs).
       - name: gitleaks
         run: |

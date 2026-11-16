@@ -8,7 +8,7 @@ import { base64url } from "../http/crypto";
 import { errors } from "../http/errors";
 import { clientIp, hit, hitLight, limits } from "../http/rateLimit";
 import { maxRequestBytes } from "../http/bodyLimit";
-import { DOMAIN, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
+import { DOMAIN, DOMAIN_MESSAGE, hasUnsafe, isoTime, parse, readJson, stripUnsafe, UUID } from "../http/validate";
 import { deliverPush } from "../services/push/deliver";
 import { guardianPush, ownPush } from "../services/push/notify";
 import { pushSender } from "../services/push/sender";
@@ -44,6 +44,14 @@ const signal = z.object({
   label: localized,
   labelSimple: localized,
   evidence: text(500).optional(),
+  // DT-04 (#497, $defs.SignalHost): which part of `domain` the address card marks, and the brand's real domain.
+  // Text is cleaned and unknown keys inside are dropped; then stored (jsonb) and returned as stored.
+  host: z
+    .object({
+      marks: z.array(text(253).pipe(z.string().min(1))).min(1).max(4).optional(),
+      official: text(253).pipe(z.string().min(1)).optional(),
+    })
+    .optional(),
 });
 
 // ScanResult without id/verdict/screenshotUrl/pageReplicaUrl (contracts/api.md). ownerDeviceId/ownerName are
@@ -66,7 +74,7 @@ const scanBody = z
         return u.href;
       })
       .pipe(z.string().max(2048, "must be at most 2048 characters once normalized")),
-    domain: z.string().max(253).regex(DOMAIN, "must be a lowercase registrable domain without www."),
+    domain: z.string().max(253).regex(DOMAIN, DOMAIN_MESSAGE),
     pageTitle: z.string().nullish(),
     faviconUrl: z.unknown().optional(),
     score: z.number().int().min(30).max(100),

@@ -26,6 +26,8 @@ actor MockRepository: ShooRepository {
         case allBlocked
         /// Imelda's eval corpus with the detector's real results (`Fixtures/corpus-scans.json`).
         case corpus
+        /// DT-04 (#497): one scan whose address reasons carry `host.marks` and `official`.
+        case addressMarks
         // Home parity QA (`MockScenarios.home`): one state per Figma HOME frame (Pribadi, protected/Home).
         case homePribadi
         case homePribadiAlone
@@ -42,7 +44,7 @@ actor MockRepository: ShooRepository {
         var hasScamCases: Bool {
             switch self {
             case .standard, .empty, .unpaired, .oneMember, .threeMembers, .mixedVerdicts, .heavy, .edge, .allSafe,
-                 .allBlocked, .corpus: false
+                 .allBlocked, .corpus, .addressMarks: false
             case .figma, .homePribadi, .homePribadiAlone, .protectedQuiet, .protectedBlocked, .protectedBlockedScam,
                  .protectedBlockedSafe, .protectedWarning, .protectedWarningScam, .protectedWarningSafe, .protectedAlone: true
             }
@@ -147,7 +149,7 @@ actor MockRepository: ShooRepository {
         case .empty, .unpaired:
             allScans = []
             members = []
-        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus, .homePribadi, .homePribadiAlone,
+        case .figma, .mixedVerdicts, .heavy, .edge, .allSafe, .allBlocked, .corpus, .addressMarks, .homePribadi, .homePribadiAlone,
              .protectedQuiet, .protectedBlocked, .protectedBlockedScam, .protectedBlockedSafe, .protectedWarning,
              .protectedWarningScam, .protectedWarningSafe, .protectedAlone:
             allScans = dataset?.scans ?? []

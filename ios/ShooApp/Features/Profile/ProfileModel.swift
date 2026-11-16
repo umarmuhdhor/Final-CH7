@@ -26,6 +26,9 @@ final class ProfileModel {
     private(set) var members: [FamilyMember] = []
     /// The family list could not be read; the rest of Profile still works.
     private(set) var membersFailed = false
+    /// The last family list read in this Profile session worked, so `members` is the family (PF-01, #494).
+    /// A failed profile refresh does not read the list, so it keeps the last answer (the view keeps the list too).
+    private var membersLoaded = false
     /// Why the profile (`state == .failed`) or the family list (`membersFailed`) could not be read (A-03).
     private(set) var loadFailure: LoadFailure = .connection
     private(set) var membersLoadFailure: LoadFailure = .connection
@@ -47,7 +50,11 @@ final class ProfileModel {
         var text = L10n.string("Everything in this app, including your profile, history and family links, is deleted for good and can't be recovered.", language: language)
         switch variant {
         case .guardian, .personal:
-            if !members.isEmpty {
+            if !membersLoaded {
+                // #494: the list did not load (offline, server error, or still loading), so the count is unknown.
+                // Say it without one; delete stays allowed (Apple 5.1.1(v)).
+                text += " " + L10n.string("Anyone you protect will be disconnected.", language: language)
+            } else if !members.isEmpty {
                 text += " " + L10n.string("\(members.count) people you protect will be disconnected.", language: language)
             }
         case .protected:
@@ -225,11 +232,13 @@ final class ProfileModel {
         do {
             members = try await repository.familyMembers()
             membersFailed = false
+            membersLoaded = true
         } catch {
             guard !error.isCancellation else { return }
             Log.ui.error("Profile members failed", error)
             membersLoadFailure = LoadFailure(error)
             membersFailed = true
+            membersLoaded = false
         }
     }
 

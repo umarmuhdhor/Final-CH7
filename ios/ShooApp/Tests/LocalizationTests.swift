@@ -40,6 +40,14 @@ struct LocalizationTests {
             == "1 orang yang kamu lindungi akan terputus.")
     }
 
+    /// PF-01 (#494): the delete-account sheet's sentence when the family list did not load (Umar's wording, *kamu*).
+    @Test func disconnectedFamilyWithoutACount() {
+        #expect(L10n.string("Anyone you protect will be disconnected.", language: .english)
+            == "Anyone you protect will be disconnected.")
+        #expect(L10n.string("Anyone you protect will be disconnected.", language: .indonesian)
+            == "Semua orang yang kamu lindungi akan terputus.")
+    }
+
     @Test func everyCatalogKeyHasAnIndonesianTranslation() throws {
         let url = RepoPaths.root.appending(path: "ios/ShooApp/Resources/Localizable.xcstrings")
         let catalog = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])

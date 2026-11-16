@@ -114,13 +114,17 @@ private struct LockScreenView: View {
 }
 
 private extension ScoreActivityAttributes.ContentState {
+    /// Same words as the in-page pill for the two states it never calls safe (#486, pill_status_offline /
+    /// pill_status_marked_safe_anon). No Guardian name: the push carries none.
     var statusText: String {
-        if isAnalyzing { return "Menganalisis…" }
-        switch tone {
-        case .safe: return "Aman"
-        case .warning: return "Hati-hati"
-        case .danger: return "Risiko tinggi"
-        case .blocked: return "Diblokir"
+        switch headline {
+        case .analyzing: return "Menganalisis…"
+        case .offlineCheck: return "Cek online tidak tersedia"
+        case .markedSafe: return "Ditandai aman oleh Guardian"
+        case .tone(.safe): return "Aman"
+        case .tone(.warning): return "Hati-hati"
+        case .tone(.danger): return "Risiko tinggi"
+        case .tone(.blocked): return "Diblokir"
         }
     }
 }
