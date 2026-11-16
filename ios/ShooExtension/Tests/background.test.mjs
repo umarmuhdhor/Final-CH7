@@ -128,6 +128,34 @@ test("#375: POST /scans and block memory use the PSL domain of the URL, not the 
     assert.equal(memory.domain, "bca-verifikasi.site");
 });
 
+test("#487, #495: `domain` is the full host for shared host_path platforms and hosts without a registrable domain", async () => {
+    const w = world();
+    const send = await w.boot();
+    const cases = [
+        ["http://[2001:db8::1]/login", "[2001:db8::1]"],
+        ["http://router/login", "router"],
+        ["http://www.co.id/x", "www.co.id"],
+        ["http://www.com/x", "www.com"],
+        ["https://bca-verifikasi.site./login", "bca-verifikasi.site"],
+        ["https://sites.google.com/view/x", "sites.google.com"],
+        ["https://docs.google.com/forms/d/x", "docs.google.com"],
+        ["https://forms.office.com/r/x", "forms.office.com"],
+        ["https://login.bca.co.id/", "bca.co.id"],
+    ];
+    for (const [i, [url, expected]] of cases.entries()) {
+        const { hostname } = new URL(url);
+        assert.equal((await send({ type: "domain", hostname })).domain, expected, `domain message ${url}`);
+        // what the page sent is ignored: background works it out from the URL (#375)
+        const key = `k${i}`;
+        await send({ type: "report", key, scan: { ...report(key).scan, url, domain: "google.com" }, replica: null, fragments: null });
+        await settled(send, key);
+        assert.equal(w.posts.at(-1).domain, expected, `POST /scans ${url}`);
+        await send({ type: "rememberBlock", url, domain: "google.com", score: 90, signals: [] });
+        const { memory } = await send({ type: "recallBlock", url });
+        assert.equal(memory?.domain, expected, `block memory ${url}`);
+    }
+});
+
 test("#377: the block page's Guardian name is read fresh, not from the 30 s session cache", async () => {
     const w = world();
     w.state.session = { ...SESSION, mode: "protected", guardianName: "Adhella" };

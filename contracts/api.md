@@ -54,7 +54,18 @@ Join errors: `code_invalid`, `code_expired`, `family_full`, `too_many_attempts` 
 
 Only score ≥ 30 is ever sent. Scans auto-delete after 14 days (PRD §10).
 
-The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. The backend keeps **one row per link** (owner + link, link = origin + path, #241; was one row per site, #248), so each page is its own Activity item and the Guardian can decide on `/b` after marking `/a` safe. The Guardian's **push stays per site** (owner + registrable domain): once on the first visit to the site, and once more when that site first reaches `blocked`. A scam site with many pages sends at most two pushes.
+The extension sends **one scan per page**: when the page is blocked, or when a warning page has finished all layers. The backend keeps **one row per link** (owner + link, link = origin + path, #241; was one row per site, #248), so each page is its own Activity item and the Guardian can decide on `/b` after marking `/a` safe. The Guardian's **push stays per site** (owner + `domain`, see below): once on the first visit to the site, and once more when that site first reaches `blocked`. A scam site with many pages sends at most two pushes.
+
+#### `domain` (#487, #495)
+
+The `domain` of a page, the same value in `POST /scans`, `GET /verdicts?url=&domain=`, `POST /live`, the extension's block memory and every screen that names the site (block chip, Home card, Activity, Detail, island). The extension works it out from the page URL's host:
+
+1. The host is normalised first: lowercase, a trailing dot dropped (`bca-verifikasi.site.` → `bca-verifikasi.site`, #450), an IPv6 literal in brackets.
+2. **Shared `host_path` platform** (anyone publishes a page under a path: `admin.domain_lists` rows with `hosting = 'host_path'`, e.g. `sites.google.com`, `docs.google.com` (Google Forms), `forms.office.com`, `cloud.microsoft`) → the **full host**, without a leading `www.`: `https://sites.google.com/view/x` → `sites.google.com`, `https://docs.google.com/forms/d/x` → `docs.google.com`, `https://sway.cloud.microsoft/AbC` → `sway.cloud.microsoft` (a host under a `host_path` row counts too). A page there is one person's page, not the platform's, so the real host is what the Guardian sees.
+3. Otherwise the **registrable domain** (Public Suffix List, private suffixes included): `https://login.bca.co.id/` → `bca.co.id`, `https://www.bca.co.id/` → `bca.co.id`, `https://scam.vercel.app/` → `scam.vercel.app`, `https://accounts.google.com/` → `google.com`.
+4. **No registrable domain** → the **full host**: IPv4 `192.168.1.1`, IPv6 `[2001:db8::1]`, a single label `router`, a public suffix `co.id`, a name that is literally `www.<public suffix>` (`www.co.id`, `www.com`; here the `www.` stays, since it is the only label left).
+
+So `domain` is always the url's host or a parent of it, lowercase, with no trailing dot and no port. The backend accepts exactly these values on every route that takes `domain` (the url host check of #375 stays) and stores them as sent. Layer-1 list matching is separate: `ShooLists.match` still checks the host down to its registrable domain (detector-interface.md). `POST /live` is still not sent for a host with no registrable domain (case 4).
 
 `faviconUrl`: in `POST /scans` it is the site's own icon URL (or `null`); the server downloads it once. In responses (lists and `GET /scans/{id}`) it is a 1-hour signed link to the server's stored copy (`GET /favicons/{scanId}`, see `backend/API.md`), or `null`; never the site's own URL, so the app never contacts the scam host (#166).
 
@@ -106,11 +117,11 @@ What the **app must do anyway** (a replica comes from a device, so the backend c
 | GET | `/verdicts?url=&domain=` | — | `{ verdict: Verdict \| null }` | EX-06 auto-open |
 | GET | `/verdicts?domain=` | — | `{ verdict: Verdict \| null }` — **deprecated**, for builds from before #241 | EX-06 auto-open |
 
-A **link** is origin + path, with no query or fragment (`shareableUrl` in the extension). `domain` is the registrable domain, as on a scan: the backend can't derive it from the link.
+A **link** is origin + path, with no query or fragment (`shareableUrl` in the extension); its host has no trailing dot (#450). `domain` follows the rule in Scans "`domain`", as on a scan: the backend can't derive it from the link.
 
 Lookup (#241), first match wins:
 1. A verdict on exactly this link, `safe` or `not_safe`.
-2. A `not_safe` by this owner on another link of the same domain, unless the domain is a shared host (`ai/data/shared-hosts.json`): one page there says nothing about the others.
+2. A `not_safe` by this owner on another link of the same domain, unless **either** link is on a shared host (`backend/API.md`: on or under a `hosting = 'host_path'` row, or a domain with `hosting = 'subdomains'`): one page there says nothing about the others. That holds for the link being asked about **and** for the link the `not_safe` was made on (#495): a `not_safe` made on a shared host covers **only that link** and never reaches another host or page of the same registrable domain (a scam Google Form on `docs.google.com` never answers for `accounts.google.com`).
 3. Otherwise `null`. A `safe` never reaches past its own link.
 
 A scan's `verdict` in Activity follows the same rule. `?domain=` alone answers with any `not_safe` on that domain, else the newest `safe`. It goes once the last older build is gone.
@@ -127,7 +138,7 @@ The extension only asks for a verdict once a page reaches score 30 — the point
 | GET | `/blocklist?since=` | — | `{ domains: [{ domain, addedAt }], removed?: [{ domain, removedAt }], nextSince }` — domains **approved** into the global list (see below) | §5 Layer 1 |
 
 A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`). It reaches the **global** list only after review, because anyone can register without login and could otherwise get a real bank's domain blocked for every user (blocklist poisoning):
-1. Eligible: the verdict is on a scan owned by a **connected Protected** member, and the domain is not on the official/popular allowlist → it goes into a review queue.
+1. Eligible: the verdict is on a scan owned by a **connected Protected** member, and the domain is not on the official/popular allowlist → it goes into a review queue. A `domain` that is a shared host (on or under a `host_path` row, e.g. `sites.google.com`, #495) or has no registrable domain (an IP, `router`, `www.co.id`, #487) is never eligible: on the global list it would block every page of the platform, or a name that is not a site.
 2. Published: only after manual approval by Alief/Umar. `addedAt` = approval time; `nextSince` follows it.
 3. Removed: optional `removed[]` lists domains taken off the list since `since`. Until clients handle it, do a full refresh (no `since`) once a day.
 
@@ -148,7 +159,7 @@ The extension's `background.js` downloads this list and refreshes it (incrementa
 The running score of the page on screen in Safari, forwarded to this device's Dynamic Island by Live Activity push. It works with Shoo closed, once the app has sent `liveActivityStartToken`.
 
 - **Who sends it:** the **extension** (`background.js`), and only when the online check is on (`getSession` has `aiBaseURL`, same rule as `/analyze`). Online check off → no call, the in-page pill only.
-- **`domain`:** registrable domain only, never a URL. Same rule as `/scans`. `score`: integer 0–100. Extra keys or a bad value → `422 invalid_body`, like every other bad body.
+- **`domain`:** never a URL. Same rule as `/scans` (Scans "`domain`": the full host on a shared `host_path` platform, e.g. `sites.google.com`); the extension sends no `/live` for a host with no registrable domain (IP, `router`, `www.co.id`). `score`: integer 0–100. Extra keys or a bad value → `422 invalid_body`, like every other bad body.
 - **`open: false`:** no page of Safari is on screen any more (tab hidden, Safari left, page closed), so the island ends. The other fields are still sent (last values).
 - **When:**
   - a page comes on screen;

@@ -161,8 +161,10 @@ export async function dropVerdicts(
 
 /**
  * GET /verdicts?url=&domain= (contracts/api.md, #241), first match wins: a verdict on exactly this
- * link; else a not_safe by this owner on another link of the domain, unless the link is on a shared
- * host (public.verdict_shared); else null. A safe never reaches past its own link.
+ * link; else a not_safe by this owner on another link of the domain, unless either link is on a shared
+ * host (public.verdict_shared): the one asked about, or the one the not_safe was made on (#495, a scam
+ * Google Form filed under google.com by an older build never answers for accounts.google.com); else
+ * null. A safe never reaches past its own link.
  */
 export async function findVerdict(sql: Sql, ownerId: string, url: string, domain: string): Promise<Verdict | null> {
   const [row] = await sql<Verdict[]>`
@@ -173,7 +175,8 @@ export async function findVerdict(sql: Sql, ownerId: string, url: string, domain
     from verdicts v, k
     where v.owner_id = ${ownerId}
       and (v.url = k.link
-           or (v.domain = ${domain} and v.value = 'not_safe' and not public.verdict_shared(k.link, ${domain})))
+           or (v.domain = ${domain} and v.value = 'not_safe' and not public.verdict_shared(k.link, ${domain})
+               and not public.verdict_shared(v.url, v.domain)))
     order by (v.url = k.link) desc, v.decided_at desc
     limit 1`;
   return row ? withLock(row) : null;
@@ -181,7 +184,8 @@ export async function findVerdict(sql: Sql, ownerId: string, url: string, domain
 
 /**
  * GET /verdicts?domain= (deprecated, builds from before #241): any not_safe on the domain, else the
- * newest safe. Goes once the last older build is gone.
+ * newest safe. A not_safe made on a shared host covers only its own link, so it never counts here (#495).
+ * Goes once the last older build is gone.
  */
 export async function findDomainVerdict(sql: Sql, ownerId: string, domain: string): Promise<Verdict | null> {
   const [row] = await sql<Verdict[]>`
@@ -189,6 +193,7 @@ export async function findDomainVerdict(sql: Sql, ownerId: string, domain: strin
            to_char(decided_at at time zone 'UTC', ${sql.unsafe(ISO_MS)}) as "decidedAt", url,
            ${lockedUntilSql(sql, "value", "decided_at")} as "lockedUntil"
     from verdicts where owner_id = ${ownerId} and domain = ${domain}
+      and not (value = 'not_safe' and public.verdict_shared(url, domain))
     order by (value = 'not_safe') desc, decided_at desc
     limit 1`;
   return row ? withLock(row) : null;

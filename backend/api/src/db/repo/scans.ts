@@ -27,7 +27,8 @@ export interface NewScan {
  * replaces a block (B-02). Its evidence stays. Every scan
  * still counts in the owner's lifetime totals (profile stats, PF-01).
  *
- * `push`: the push stays per site (owner + registrable domain), so a scam site with many pages sends
+ * `push`: the push stays per site (owner + `domain`: the registrable domain, the full host on a shared
+ * host_path platform, #495), so a scam site with many pages sends
  * at most two: on the first visit to the site (no other row of the domain), and once more when the
  * site first reaches `blocked` (no earlier row of the domain was blocked). Locked per owner + domain,
  * so two parallel scans of one site cannot both insert a link or both count as the first visit.
@@ -49,7 +50,7 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
       //   over a warning at any score, and a warning never takes over a block. So the row says what
       //   the member last saw, and the site pushes its block once (the push rule reads row status).
       // "Has a verdict" is the selectScans rule below: a verdict on this link, or a not_safe on the
-      // domain unless the link is on a shared host.
+      // domain unless this link or the not_safe's link is on a shared host (#495).
       await tx`
         with cur as (
           select r.id,
@@ -62,7 +63,8 @@ export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; cr
                      select 1 from verdicts v, (select public.verdict_link(s.url) as link) k
                      where v.owner_id = s.owner_id
                        and (v.url = k.link
-                            or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
+                            or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
+                                and not public.verdict_shared(v.url, v.domain)))
                    ) as decided
             from scans s where s.id = ${site!.linkId}
           ) r
@@ -528,7 +530,8 @@ export const ISO_MS = `'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'`;
 
 // Columns shared by list and detail. ownerName is the owner's current name; the verdict is joined
 // for warning and blocked scans alike (GD-07), by the GET /verdicts?url= rule (#241): this link,
-// else a not_safe on the domain unless the link is on a shared host. recordScan repeats this rule
+// else a not_safe on the domain unless this link or the not_safe's link is on a shared host (#495).
+// recordScan repeats this rule
 // ("has a verdict", B-02): change both together.
 // `from` yields the scan rows as `s`: the table for a detail, the already-cut page for a list
 // (fase 28o, OPT-01), so devices and the verdict lateral only run for rows that are returned.
@@ -561,7 +564,8 @@ function selectScans(sql: Sql, from: PendingQuery<Row[]>) {
       select v.* from verdicts v
       where v.owner_id = s.owner_id
         and (v.url = k.link
-             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)))
+             or (v.domain = s.domain and v.value = 'not_safe' and not public.verdict_shared(k.link, s.domain)
+                 and not public.verdict_shared(v.url, v.domain)))
       order by (v.url = k.link) desc, v.decided_at desc
       limit 1
     ) v on true`;

@@ -76,7 +76,7 @@ All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`
 
 ## Schema summary
 
-Migrations: every file in `db/supabase/migrations/` (40 as of 15 Nov 2026, oldest `20261021130000_init.sql`, newest `20261113030000_admin_guardian_decisions.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
+Migrations: every file in `db/supabase/migrations/` (41 as of 16 Nov 2026, oldest `20261021130000_init.sql`, newest `20261116100000_v_scans_shared_verdict.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
 
 | Table | Purpose |
 |---|---|
@@ -129,7 +129,7 @@ Cloud setup (once, SQL editor as `postgres`): `alter role shoo_admin password '<
 
 `admin.domain_lists` is the one list of domains that must never be blocked (official banks, e-wallets, popular sites, public suffixes, shared hosting platforms). Each row has `protect` (`subtree` = the domain and its subdomains, `apex` = the exact name), `trusted` (official site, layer 3 stays quiet), `hosting` (`subdomains`: anyone gets a subdomain, `host_path`: anyone publishes under a path) and `public_suffix`. The matching rule is `admin.domain_match(host)`.
 
-- **Backend:** `POST /verdicts` asks `src/db/repo/domainLists.ts` `isProtected` in its own transaction (`admin.v_domain_lists_public`, the only `admin` object `shoo_api` reads besides `public_config`). A protected domain never enters the global review queue; the family's own verdict still applies. The backend keeps no list in code.
+- **Backend:** `POST /verdicts` asks `src/db/repo/domainLists.ts` `isProtected` in its own transaction (`admin.v_domain_lists_public`, the only `admin` object `shoo_api` reads besides `public_config`). A protected domain never enters the global review queue, nor does a domain on or under a `hosting = 'host_path'` row (`sites.google.com`, `sway.cloud.microsoft`) or one with no registrable domain (IP, `router`, `www.co.id`; #495, #487); the family's own verdict still applies. The backend keeps no list in code.
 - **Change it:** in the dashboard (page *Daftar domain*, phase 10b), which calls `admin.domain_set` / `admin.domain_remove` (note ≥ 10 characters, audited). Seed rows are `locked`: changing or removing one needs the domain typed again. Brand rows and 18 bank/payment rows are `hard_locked`: change them with a migration only. `admin.vote` (approve) and `admin.add_domain` refuse a protected domain (`SA019 allowlisted`).
 - **Seed:** generated once from the old lists by `db/scripts/domain-lists-seed.mjs`; `db/scripts/domain-lists-golden.mjs` recorded the old answers (`api/test/fixtures/domain-lists-golden.json`), and `api/test/domain-lists-golden.test.ts` proves the seed answers the same except the listed, categorized differences (`domain-lists-expected-diff.json`, summary in `db/scripts/domain-lists-diff.md`). `ai/` and the extensions keep their own lists until dashboard phase 10c.
 - **Rollback:** see the header of the migration (one transaction), then `git revert` the backend change.
