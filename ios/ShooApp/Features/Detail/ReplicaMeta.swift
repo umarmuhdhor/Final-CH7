@@ -105,10 +105,23 @@ struct ReplicaMeta: Equatable, Sendable {
     /// Only for the scan's domain or a subdomain: the device could write any URL here. Plain text, shortened.
     func copiedFrom(scanURL: URL, domain: String) -> String? {
         guard let url, url != scanURL, ["http", "https"].contains(url.scheme?.lowercased()),
-              let host = url.host()?.lowercased()
+              let bare = url.host()?.lowercased()
         else { return nil }
         let domain = domain.lowercased()
-        guard host == domain || host.hasSuffix("." + domain) else { return nil }
+        let host: String
+        if bare.contains(":") {
+            // Only an IPv6 literal has a colon in its host. `host()` drops its brackets and keeps the device's
+            // spelling; the scan's `domain` is bracketed and compressed (#487, `[2001:db8::1]`). So the two
+            // addresses are compared, and the line shows the scan's own form. A zone id (`%25en0`) is refused:
+            // the extension's URL parser refuses one, so no `domain` has it (Darwin's inet_pton would read it).
+            guard !bare.contains("%"), domain.hasPrefix("["), domain.hasSuffix("]"),
+                  let a = Self.ipv6Bytes(bare), a == Self.ipv6Bytes(String(domain.dropFirst().dropLast()))
+            else { return nil }
+            host = domain
+        } else {
+            guard bare == domain || bare.hasSuffix("." + domain) else { return nil }
+            host = bare
+        }
         // The decoded path is device text: no line breaks or bidi controls that could reorder the line.
         let path = String(String.UnicodeScalarView(url.path(percentEncoded: false).unicodeScalars.filter { scalar in
             ![.control, .format, .lineSeparator, .paragraphSeparator].contains(scalar.properties.generalCategory)
@@ -116,6 +129,13 @@ struct ReplicaMeta: Equatable, Sendable {
         let text = host + path
         guard text.count > Self.maxCopiedFromLength else { return text }
         return String(text.prefix(Self.maxCopiedFromLength - 1)) + "…"
+    }
+
+    /// The 16 bytes of an IPv6 address in text form (no brackets), or nil when it is not one.
+    private static func ipv6Bytes(_ text: String) -> [UInt8]? {
+        var address = in6_addr()
+        guard text.withCString({ inet_pton(AF_INET6, $0, &address) }) == 1 else { return nil }
+        return withUnsafeBytes(of: &address) { Array($0) }
     }
 
     private static func headPrefix(of html: String) -> Substring {
