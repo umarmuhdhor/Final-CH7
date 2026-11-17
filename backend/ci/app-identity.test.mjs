@@ -62,3 +62,27 @@ test("a missing app ID comment or URL is an error, not a silent pass", () => {
   const noUrl = { ...texts, wrangler: texts.wrangler.replace(/"INVITE_BASE_URL"[^\n]*\n/, "") };
   assert.match(mismatches(readIdentity(noUrl)).join("\n"), /INVITE_BASE_URL is missing/);
 });
+
+test("the old workers.dev host may stay beside the invite host, never alone", () => {
+  const moved = {
+    projectYml: texts.projectYml.replace(
+      "          - applinks:shoo-api.example.workers.dev",
+      "          - applinks:join.shoo.example\n          - applinks:shoo-api.example.workers.dev",
+    ),
+    entitlements: "<string>applinks:join.shoo.example</string><string>applinks:shoo-api.example.workers.dev</string>",
+    appConfig: [
+      'static let publicBaseURL = URL(string: "https://join.shoo.example")!',
+      'static let cloudAPIURL = URL(string: "https://shoo-api.example.workers.dev")!',
+    ].join("\n"),
+    wrangler: texts.wrangler.replace("shoo-api.example.workers.dev", "join.shoo.example"),
+  };
+  assert.deepEqual(mismatches(readIdentity(moved)), []);
+
+  const legacyOnly = { ...moved, entitlements: "<string>applinks:shoo-api.example.workers.dev</string>" };
+  assert.deepEqual(mismatches(readIdentity(legacyOnly)), [
+    `${FILES.entitlements}: no applinks:join.shoo.example (INVITE_BASE_URL host)`,
+  ]);
+
+  const stranger = { ...moved, entitlements: moved.entitlements + "<string>applinks:evil.example</string>" };
+  assert.match(mismatches(readIdentity(stranger)).join("\n"), /applinks:evil\.example but INVITE_BASE_URL host/);
+});
