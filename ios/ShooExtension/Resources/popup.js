@@ -2,7 +2,7 @@
 // Rules (PRD §5, 8.5): each popup at most once per page · none if the page goes straight to ≥80%
 // (block screen instead, EX-06) · closable · the page stays usable underneath.
 // Look (Figma "UI Pop Up Safari"): from 30% → sheet over a dimmed page with the shield, the score bar and
-// Leave / Continue (frames 1928:3599 / 1928:3781). Continue, the Shoo button above it, tapping the page or
+// Leave / Continue (frames 1928:3599 / 1928:3781). Continue, tapping the page or
 // dragging the sheet down by its grabber shrinks it to the mini card at the bottom; tapping the mini card opens
 // the sheet again. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
 
@@ -112,11 +112,6 @@
         /* iOS sheet grabber: the sheet can be dragged down to shrink it to the mini card. */
         .grabber { position: absolute; left: 50%; top: 8px; width: 36px; height: 5px; margin-left: -18px;
                    border-radius: 3px; background: rgba(60,60,67,.3); pointer-events: none; }
-        .shoo { position: absolute; right: 6px; top: -56px; width: 44px; height: 44px; padding: 0; box-sizing: border-box;
-                border-radius: 50%; border: 1px solid #fff; overflow: hidden; background: rgba(255,255,255,.88);
-                -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-                box-shadow: 0 6px 18px rgba(31,42,55,.12); cursor: pointer; }
-        .shoo img { display: block; width: 42px; height: 42px; }
         .hero { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 0 22px;
                 border-bottom: 1px solid #e1e3e7; }
         .sent { display: flex; align-items: center; gap: 6px; max-width: calc(100% - 44px); box-sizing: border-box;
@@ -295,12 +290,6 @@
         const sheet = el("div", "sheet");
         sheet.setAttribute("role", "alertdialog");
         sheet.setAttribute("aria-modal", "true");
-        const shoo = button("shoo", null, minimize);
-        shoo.setAttribute("aria-label", t("popup_minimize"));
-        const logo = el("img");
-        logo.src = browser.runtime.getURL("images/shoo-button.png");
-        logo.alt = "";
-        shoo.append(logo);
 
         const grabber = el("div", "grabber");
         grabber.setAttribute("aria-hidden", "true");
@@ -333,7 +322,7 @@
         actions.append(button("primary", t("popup_leave"), leave), button("secondary", t("popup_continue"), minimize));
         body.append(copy, actions);
 
-        sheet.append(grabber, shoo, hero, body);
+        sheet.append(grabber, hero, body);
         ui.replaceChildren(dim, sheet);
         return { layout: "sheet", sheet, shield, shieldArt, title, bar, value, chip, description, sent };
     }
