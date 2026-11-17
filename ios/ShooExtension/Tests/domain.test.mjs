@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PSL_RULES } from "../Resources/psl.js";
-import { parseRules, registrableDomain, naiveDomain, pageDomain, isHostPathHost, shareableUrl } from "../Resources/domain.js";
+import { parseRules, registrableDomain, naiveDomain, pageDomain, isHostPathHost, shareableUrl, isPrivateHost } from "../Resources/domain.js";
 
 const rules = parseRules(PSL_RULES);
 const cases = {
@@ -106,4 +106,21 @@ test("shareableUrl keeps scheme, host and path only: no query, fragment or crede
     assert.equal(shareableUrl("https://user:pass@scam.example:8443/a/b"), "https://scam.example:8443/a/b");
     assert.equal(shareableUrl("http://scam.example"), "http://scam.example/");
     assert.equal(shareableUrl("not a url?x=1"), "not a url");
+});
+
+test("a page on this phone or its own network never goes to /analyze", () => {
+    const host = (url) => new URL(url).hostname;
+    for (const url of [
+        "http://192.168.1.1/", "http://10.0.0.138/admin", "http://172.20.1.1", "http://127.0.0.1:8080", "http://169.254.1.1",
+        "http://100.100.1.1", "http://localhost:3000", "http://app.localhost", "http://printer.local", "http://nas.home.arpa",
+        "http://router/", "http://ROUTER./", "http://[::1]/", "http://[fd12:3456::1]/", "http://[fe80::1]/",
+    ]) {
+        assert.equal(isPrivateHost(host(url)), true, url);
+    }
+    for (const url of [
+        "https://bca-login.com", "http://8.8.8.8", "http://172.32.0.1", "http://192.169.1.1", "http://11.0.0.1",
+        "https://127.0.0.1.nip.io", "http://[2001:db8::1]/", "https://sites.google.com/view/x", "https://bank-bca.co.id",
+    ]) {
+        assert.equal(isPrivateHost(host(url)), false, url);
+    }
 });

@@ -57,7 +57,8 @@
         const reportKey = report?.keyFor(state.scanId) ?? null;
         // #231: next time this site opens straight to the block screen, without asking the server's layers again.
         // Background keeps only the reasons, never their evidence (block-memory.js); never wait on it for long.
-        if (!state.remembered) {
+        // Remembered without a record (its first report failed): sent again, so this report's id is linked to it.
+        if (!state.remembered || !state.recordId) {
             const remember = browser.runtime
                 .sendMessage({ type: "rememberBlock", url: state.url, domain: state.domain, score: state.score, signals: state.signals, reportKey })
                 .catch(() => {});

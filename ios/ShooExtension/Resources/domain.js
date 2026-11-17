@@ -100,6 +100,29 @@ export function naiveDomain(hostname) {
 }
 
 /**
+ * A host on this device or its own network: loopback, private and link-local IPv4 / IPv6, `localhost`, `.local`,
+ * `.home.arpa`, or a single label (`router`). Never a scam site (the detector's `isLocalAddress` says the same), and
+ * its page must never leave the phone: a router's admin page holds the network and device names, sometimes the
+ * Wi-Fi key. `background.js` skips `/analyze` for it.
+ */
+export function isPrivateHost(hostname) {
+    const host = normalHost(hostname);
+    if (!host) return true;
+    if (host === "localhost" || /\.(localhost|local|home\.arpa)$/.test(host)) return true;
+    if (host.startsWith("[")) {
+        const v6 = host.slice(1, -1);
+        return v6 === "::1" || v6 === "::" || /^f[cd][0-9a-f]{0,2}:/.test(v6) || /^fe[89ab][0-9a-f]?:/.test(v6);
+    }
+    const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+    if (v4) {
+        const a = +v4[1], b = +v4[2];
+        return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+            (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+    }
+    return !host.includes(".");
+}
+
+/**
  * `https://host/path` only, for URLs that leave the phone (/analyze): a reset token, session id or OAuth
  * code in the query or fragment, or credentials before the host, must never be sent. The full URL stays
  * on the device (layer 2 reads it).
