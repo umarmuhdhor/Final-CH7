@@ -55,6 +55,28 @@ struct ApiRepositoryTests {
         #expect(server.requests.last?.query == ["owner": "dev_mom"])
     }
 
+    @Test func latestScamsDecodesItemsAndDropsABrokenOne() async throws {
+        let server = StubServer()
+        server.reply { _ in
+            .json(200, #"{"items":[{"category":"undian_palsu","title":{"en":"Fake prize","id":"Undian/hadiah palsu"},"lastSeenAt":"2026-11-17T02:00:00Z"},{"category":"x"}]}"#)
+        }
+        let cases = try await server.repository().latestScams()
+        let request = try #require(server.requests.last)
+        #expect(request.method == "GET" && request.path == "/scams/latest")
+        #expect(cases.map(\.id) == ["undian_palsu"])
+        #expect(cases.first?.title.text(for: "id") == "Undian/hadiah palsu")
+        #expect(cases.first?.lastSeenAt == ISO8601DateFormatter().date(from: "2026-11-17T02:00:00Z"))
+    }
+
+    @Test func latestScamsDecodesTheContractFixture() async throws {
+        let server = StubServer()
+        let page = Self.fixture("latest-scams")
+        server.reply { _ in HostStubProtocol.Reply(status: 200, body: page) }
+        let cases = try await server.repository().latestScams()
+        #expect(cases.map(\.id) == ["phishing_bank", "undian_palsu"])
+        #expect(cases.last?.title.text(for: "id") == "Undian/hadiah palsu")
+    }
+
     @Test func everyCallUsesItsContractRoute() async throws {
         let server = StubServer()
         let scan = Self.fixture("blocked-92")

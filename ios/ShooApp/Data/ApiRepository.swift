@@ -168,6 +168,11 @@ final class ApiRepository: ShooRepository {
         try await client.send(.init(method: .get, path: ["scans", id]))
     }
 
+    func latestScams() async throws -> [ScamCase] {
+        let page: LatestScamsPage = try await client.send(.init(method: .get, path: ["scams", "latest"]))
+        return page.items
+    }
+
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict {
         try await setVerdict(scanId: scanId, value: value, notes: nil)
     }

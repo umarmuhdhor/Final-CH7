@@ -179,7 +179,7 @@ actor MockRepository: ShooRepository {
     }
 
     func latestScams() async throws -> [ScamCase] {
-        scenario.hasScamCases ? MockScenarios.scamCases : []
+        scenario.hasScamCases ? MockScenarios.scamCases(now: now()) : []
     }
 
     func me() async throws -> DeviceProfile {

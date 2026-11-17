@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "category": "phishing_bank",
+      "title": { "en": "Bank phishing", "id": "Phishing bank" },
+      "lastSeenAt": "2026-11-17T02:00:00Z"
+    },
+    {
+      "category": "undian_palsu",
+      "title": { "en": "Fake prize", "id": "Undian/hadiah palsu" },
+      "lastSeenAt": "2026-11-16T09:00:00Z"
+    }
+  ]
+}

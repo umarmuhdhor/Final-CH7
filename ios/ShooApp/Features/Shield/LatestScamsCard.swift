@@ -52,19 +52,21 @@ struct LatestScamsCard: View {
 }
 
 /// Figma "Update card" (1115:17243): white, 12 pt corners, a 1 pt #E7E9ED ring, 12 pt padding (22 on the right); the case in
-/// SF Pro Rounded 17 (22 pt lines, #191D2F), then when and where in 13 (18 pt, #564C51), 8 under it.
+/// SF Pro Rounded 17 (22 pt lines, #191D2F), then when in 13 (18 pt, #564C51), 8 under it. Figma's "· Whatsapp" is left
+/// out: Shoo sees the address, not where the link came from.
 private struct ScamCaseCard: View {
     let scamCase: ScamCase
+    @Environment(\.locale) private var locale
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(verbatim: scamCase.title)
+            Text(verbatim: scamCase.title.text(for: AppLanguage(locale: locale).code))
                 .onboardingFont(17, design: .rounded, tracking: -0.17, relativeTo: .body)
                 .figmaLineHeight(22, relativeTo: .body)
                 .foregroundStyle(HomeTheme.navy)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
-            Text(verbatim: scamCase.detail)
+            ScamCaseAge(lastSeenAt: scamCase.lastSeenAt)
                 .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
                 .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
                 .foregroundStyle(HomeTheme.rowSubtitle)
@@ -81,7 +83,28 @@ private struct ScamCaseCard: View {
     }
 }
 
+/// "Hari ini" / "Kemarin" / "3 hari lalu": calendar days on this iPhone, so a case from last night is "Kemarin".
+/// A time a little ahead of the clock (server vs phone) is still today.
+struct ScamCaseAge: View {
+    let lastSeenAt: Date
+    var now: Date = .now
+    var calendar: Calendar = .current
+
+    static func days(from lastSeenAt: Date, to now: Date, calendar: Calendar = .current) -> Int {
+        let start = calendar.startOfDay(for: lastSeenAt), today = calendar.startOfDay(for: now)
+        return max(0, calendar.dateComponents([.day], from: start, to: today).day ?? 0)
+    }
+
+    var body: some View {
+        switch Self.days(from: lastSeenAt, to: now, calendar: calendar) {
+        case 0: Text("Today")
+        case 1: Text("Yesterday")
+        case let days: Text("\(days) days ago")
+        }
+    }
+}
+
 #Preview {
-    LatestScamsCard(cases: MockScenarios.scamCases)
+    LatestScamsCard(cases: MockScenarios.scamCases(now: .now))
         .padding(24)
 }

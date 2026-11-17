@@ -213,13 +213,45 @@ extension FamilyMembersResponse {
     }
 }
 
-/// One line of the Home card "Scam terbaru di pengguna Shoo" (Figma 955:10323). Not in contracts/ yet.
-struct ScamCase: Hashable, Identifiable, Sendable {
+/// One card of the Home row "Scam terbaru di pengguna Shoo" (Figma 955:10323): an item of `GET /scams/latest`
+/// (contracts/api.md, fixtures/latest-scams.json). The words are the admin's category label; the card adds
+/// "Hari ini" / "Kemarin" / "3 hari lalu" from `lastSeenAt`. No channel ("lewat WhatsApp"): Shoo only sees the
+/// address, not where the link came from.
+struct ScamCase: Decodable, Hashable, Identifiable, Sendable {
+    /// The category id (`undian_palsu`); one card per category.
     let id: String
-    /// "Situs palsu BCA minta PIN m-banking".
-    let title: String
-    /// "Hari ini · lewat link SMS".
-    let detail: String
+    let title: LocalizedText
+    /// The newest counted scan, server time rounded to the hour.
+    let lastSeenAt: Date
+
+    init(id: String, title: LocalizedText, lastSeenAt: Date) {
+        self.id = id
+        self.title = title
+        self.lastSeenAt = lastSeenAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case category, title, lastSeenAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .category)
+        title = try container.decode(LocalizedText.self, forKey: .title)
+        lastSeenAt = try container.decode(Date.self, forKey: .lastSeenAt)
+    }
+}
+
+/// `GET /scams/latest` response. A broken item is dropped, the rest still show.
+struct LatestScamsPage: Decodable, Sendable {
+    let items: [ScamCase]
+
+    private enum CodingKeys: String, CodingKey { case items }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decode(LossyList<ScamCase>.self, forKey: .items).elements
+    }
 }
 
 /// `GET /scans` response.

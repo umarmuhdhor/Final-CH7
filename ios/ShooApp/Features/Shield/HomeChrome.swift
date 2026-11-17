@@ -715,6 +715,96 @@ struct SupervisedModeCard: View {
 
 /// Figma "Aktivitas Terakhir": the title, then the cards. "Lihat Semua" sits beside the title on your own Home
 /// (Pribadi/Home 435:20058) and under the cards as a glass button on the family's (Guardian/Home/warning 1382:2644).
+/// Figma "Empty State · Aktivitas" (Pribadi/Home · Empty Aktivitas 1883:11955): the 128 pt shield, then "Belum ada
+/// aktivitas" (SF Pro Rounded Semibold 17, 22 pt lines, #191D2F) and the hint in 13 (18 pt lines, #6A717E) at most 197
+/// wide, 2 apart; 20 above, 24 below, 32 at the sides. Straight on the white sheet, no card of its own.
+///
+/// Motion: the shield springs in and the copy follows 0.12 s / 0.2 s later, 6 pt up; then the shield floats 4 pt
+/// (2.4 s each way) while a hairline ring ripples out of it every 2.6 s, as if Shoo keeps watching. Reduce Motion
+/// (system, Profile, or `-UITestStillLoops`) keeps only a plain fade.
+private struct RecentActivityEmptyState: View {
+    @Environment(\.shooReduceMotion) private var reduceMotion
+    @State private var shown = false
+    @State private var floating = false
+    @State private var rippling = false
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ZStack {
+                Circle()
+                    .strokeBorder(Color(hex: 0xC9D2DE), lineWidth: 1)
+                    .frame(width: 88, height: 88)
+                    .scaleEffect(rippling ? 1.45 : 1)
+                    .opacity(rippling ? 0 : 0.7)
+                Image("HomeEmptyShield")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 128, height: 128)
+                    .offset(y: floating ? -4 : 0)
+            }
+            .frame(width: 128, height: 128)
+            .scaleEffect(shown || reduceMotion ? 1 : 0.85)
+            .opacity(shown ? 1 : 0)
+            .accessibilityHidden(true)
+            VStack(spacing: 2) {
+                Text("No activity yet")
+                    .onboardingFont(17, weight: .semibold, design: .rounded, tracking: -0.43, relativeTo: .body)
+                    .figmaLineHeight(22, relativeTo: .body)
+                    .foregroundStyle(HomeTheme.navy)
+                    .accessibilityAddTraits(.isHeader)
+                    .modifier(RiseIn(shown: shown, still: reduceMotion, delay: 0.12))
+                Text("When a suspicious site shows up, you'll see it here.")
+                    .onboardingFont(13, design: .rounded, tracking: -0.08, relativeTo: .footnote)
+                    .figmaLineHeight(18, glyphOffset: 1, relativeTo: .footnote)
+                    .foregroundStyle(OnboardingTheme.bodyInk)
+                    .frame(maxWidth: 197)
+                    .modifier(RiseIn(shown: shown, still: reduceMotion, delay: 0.2))
+            }
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 20)
+        .padding(.bottom, 24)
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity)
+        // One VoiceOver stop, and the caller's identifier lands on one element.
+        .accessibilityElement(children: .combine)
+        .onAppear {
+            guard !shown else { return }
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.72)) {
+                shown = true
+            }
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true).delay(0.5)) { floating = true }
+            withAnimation(.easeOut(duration: 2.6).repeatForever(autoreverses: false).delay(0.5)) { rippling = true }
+        }
+        .onChange(of: reduceMotion) { _, still in
+            guard still else { return }
+            // Stop the loops where they rest.
+            var stop = Transaction(animation: nil)
+            stop.disablesAnimations = true
+            withTransaction(stop) {
+                floating = false
+                rippling = false
+            }
+        }
+    }
+}
+
+/// Fades a line in and lifts it 6 pt, `delay` after the shield; under Reduce Motion only the fade.
+private struct RiseIn: ViewModifier {
+    let shown: Bool
+    let still: Bool
+    let delay: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown || still ? 0 : 6)
+            .animation(still ? .easeOut(duration: 0.2) : .easeOut(duration: 0.35).delay(delay), value: shown)
+    }
+}
+
 /// Family Home adds whose site it was.
 struct RecentActivity: View {
     enum SeeAllPlacement {
@@ -740,14 +830,8 @@ struct RecentActivity: View {
             if scans.isEmpty, hasSitesAbove {
                 EmptyView()
             } else if scans.isEmpty {
-                EmptyStateView(
-                    systemImage: "checkmark.shield",
-                    title: "No risky sites yet",
-                    message: "When Shoo warns about or blocks a site, you'll see it here."
-                )
-                .frame(maxWidth: .infinity, minHeight: 180)
-                .homeCard()
-                .accessibilityIdentifier("shield.nothingBlocked")
+                RecentActivityEmptyState()
+                    .accessibilityIdentifier("shield.nothingBlocked")
             } else {
                 VStack(spacing: 12) {
                     ForEach(scans) { scan in
