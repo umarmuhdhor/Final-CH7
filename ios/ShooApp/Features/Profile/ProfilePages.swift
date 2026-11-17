@@ -1205,6 +1205,8 @@ private struct LanguagePage: View {
             .padding(.top, -20)
             PageNote(text: Text("Warnings in Safari and notifications use this language too."))
         }
+        // A save the server missed says so here, where it was chosen (Profile's own alert sits under this page).
+        .modifier(ActionErrorAlert(model: model))
     }
 
     /// The language's own name, read by VoiceOver in that language.
