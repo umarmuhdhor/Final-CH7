@@ -457,6 +457,8 @@ final class AppEnvironment {
     func restartOnboarding() {
         session?.clear()
         router.reset()
+        // The old account's banner goes; a code from a link that came while "Session expired" showed still waits.
+        router.inviteNotice = nil
         settings.reset()
         sessionExpired = false
         DeliveredPushes.clear()
@@ -468,6 +470,7 @@ final class AppEnvironment {
     func returnToOnboardingAfterDelete() {
         leaveDemo()
         router.reset()
+        router.forgetInvite()
         // A 401 for another request with the same token can land before the delete answers (fase 27h, F-N7):
         // the device is gone on purpose, so onboarding shows, not "Session expired".
         sessionExpired = false

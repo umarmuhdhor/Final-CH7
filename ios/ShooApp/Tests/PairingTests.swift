@@ -654,6 +654,17 @@ struct DeepLinkRoutingTests {
         #expect(env.router.inviteNotice == .alreadyProtected(guardian: MockRepository.protectedProfile.guardian?.name ?? ""))
     }
 
+    /// Delete = gone at once: the deleted account's "already protected by …" banner and code don't greet the next one.
+    @Test func deletingTheAccountDropsItsInviteBanner() async {
+        let env = environment(mode: .protected, onboarded: true)
+        await open("shoo://join?code=482193", in: env)
+        #expect(env.router.inviteNotice != nil)
+        env.router.pendingJoinCode = "482193"
+        env.returnToOnboardingAfterDelete()
+        #expect(env.router.inviteNotice == nil)
+        #expect(env.router.pendingJoinCode == nil)
+    }
+
     @Test func beforeRegistrationTheCodeWaitsForOnboarding() async {
         let env = environment(mode: nil, onboarded: false)
         await open("shoo://join?code=482193", in: env)

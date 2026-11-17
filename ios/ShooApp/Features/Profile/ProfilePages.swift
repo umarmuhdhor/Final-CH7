@@ -421,8 +421,10 @@ struct JoinAnotherFamilySheet: View {
             cameFromLink = true
             model?.prefill(pending)
         }
-        // Once joined the old device is gone: no swipe back to a screen that no longer exists.
-        .interactiveDismissDisabled(isJoined)
+        // Once joined the old device is gone: no swipe back to a screen that no longer exists. While joining
+        // too (as ConnectSheet): swiped away, the join went on unseen, its "Connected" and its error were lost,
+        // and `onFinish` never closed the Guardian screens of a device that had just become Protected.
+        .interactiveDismissDisabled(isJoined || model?.state == .joining)
     }
 
     private var isJoined: Bool {
