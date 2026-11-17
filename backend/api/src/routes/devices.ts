@@ -50,21 +50,12 @@ const notificationsBody = z
   .partial()
   .strict();
 
+// Not .strict(), on purpose: unknown keys are stripped. Older app builds still send the Dynamic Island
+// tokens `liveActivityStartToken` / `liveActivityUpdateToken` (EX-03 removed, #555); they get a 200 and
+// nothing is stored, so the rest of their PATCH still lands.
 const patchBody = z.object({
   name: name.optional(),
   apnsToken: apnsToken.nullable().optional(),
-  // EX-03 (#49): Live Activity tokens. The start token comes from pushToStartTokenUpdates, the
-  // update token from the running activity's pushTokenUpdates. Only the latest activity is kept.
-  liveActivityStartToken: apnsToken.nullable().optional(),
-  liveActivityUpdateToken: z
-    .object({
-      // Activity.id is a UUID string; kept loose (letters, digits, dashes) in case Apple changes it.
-      activityId: z.string().regex(/^[A-Za-z0-9-]{1,64}$/, "must be an activity id"),
-      token: apnsToken,
-    })
-    .strict()
-    .nullable()
-    .optional(),
   language: z.enum(["en", "id"]).optional(),
   extensionLastSeenAt: isoTime.optional(),
   // PF-01 member detail ("iPhone 15 · iOS 26"): marketing name and major iOS version only.
@@ -128,8 +119,6 @@ devices.patch("/devices/me", requireDevice, async (c) => {
   await updateDevice(c.get("sql"), c.get("principal").deviceId, {
     name: body.name,
     apnsToken: body.apnsToken,
-    liveActivityStartToken: body.liveActivityStartToken,
-    liveActivityUpdateToken: body.liveActivityUpdateToken,
     language: body.language,
     extensionLastSeenAt: seen,
     deviceModel: body.deviceModel,

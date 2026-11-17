@@ -62,7 +62,6 @@ The shared contract is [`contracts/api.md`](../contracts/api.md).
 | GET | [`/verdicts?url=&domain=`](API.md#get-verdictsurldomain) | extension | Poll for the Guardian's decision on a block screen (`?domain=` alone: deprecated) |
 | GET | [`/blocklist?since=`](API.md#get-blocklistsince) | extension | Global approved scam domains for on-device checks |
 | GET | [`/config/public`](API.md#get-configpublic) | extension | Score thresholds set in the admin dashboard (warning / blocked) |
-| POST | [`/live`](API.md#post-live) | extension | Live score in the Dynamic Island via push-to-start (EX-03, #49) |
 | GET | [`/j/{code}`](API.md#get-jcode) | browser (WhatsApp / AirDrop link) | Invite page when the app is not installed: open Shoo, or copy + install |
 | GET | [`/og/invite.jpg`](API.md#get-oginvitejpg) | WhatsApp / Messages crawler | Link preview image for `/j/{code}` |
 | GET | [`/.well-known/apple-app-site-association`](API.md#get-well-knownapple-app-site-association) | iOS | Universal Link for `/j/*` |
@@ -80,7 +79,7 @@ Migrations: every file in `db/supabase/migrations/` (42 as of 16 Nov 2026, oldes
 
 | Table | Purpose |
 |---|---|
-| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. `live_start_token`, `live_update_token` + `live_activity_id`, `live_started_at`: Live Activity APNs tokens for `POST /live` (EX-03, migration `20261110100000_live_activity_tokens.sql`); the page shown is never stored |
+| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. `live_start_token`, `live_update_token`, `live_activity_id`, `live_started_at`: the removed Dynamic Island's APNs tokens (EX-03, #555). Nothing reads or writes them any more; a follow-up migration drops them once this Worker is deployed |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase (`contracts/api.md` Scans "`domain`"; a leading `www.` only as in `www.co.id`, #487). `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
