@@ -60,6 +60,9 @@ targets:
         # `DWTZNGA7Y8.com.umarmuhdhor.shoo`, on our own domain join.shoo.ai.id (Custom Domain of shoo-api).
         com.apple.developer.associated-domains:
           - applinks:join.shoo.ai.id
+          # Invite links handed out before PR-03 point at the Worker's workers.dev host (AppConfig.cloudAPIURL),
+          # which serves the same AASA: they keep opening the app.
+          - applinks:shoo-api.afindo-mi01.workers.dev
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(SHOO_BUNDLE_ID)
