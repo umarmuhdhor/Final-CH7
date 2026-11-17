@@ -550,12 +550,12 @@ describe("POST /scans signals[].host (DT-04, #497)", () => {
     expect(body.items[0]!.signals).toEqual(item.signals);
   });
 
-  it("only marks and official are kept, text is cleaned; bad shapes → 422", async () => {
+  it("only marks and official are kept; bad shapes → 422", async () => {
     const p = await createDevice("Mom");
     const id = await postOk(
       p,
       extensionBody(blocked92, {
-        signals: [hostSig({ marks: ["bca\u202E", "verifikasi"], official: "bca.co.id\u0007", extra: "x" })],
+        signals: [hostSig({ marks: ["bca", "verifikasi"], official: "bca.co.id", extra: "x" })],
       }),
     );
     const [row] = await sql`select signals from scans where id = ${id}`;
@@ -583,15 +583,77 @@ describe("POST /scans signals[].host (DT-04, #497)", () => {
     }
   });
 
+  // #497 follow-up (security, from the #551 review): the app shows `official` as "Real: X" next to a checkmark
+  // seal, so a device holding a token must not be able to put any text there. official = a DOMAIN; marks = host
+  // characters only (they are substrings of the scan's domain). Checked as sent: no cleaning first.
+  it("official that is not a domain → 422 invalid_body at signals.N.host.official", async () => {
+    const p = await createDevice("Mom");
+    for (const official of [
+      "Bank resmi ✓ call 0800",
+      "bca.co.id ✓",
+      "BCA.co.id",
+      "https://bca.co.id",
+      "bca.co.id/login",
+      "bca.co.id:443",
+      "bca.co.id.",
+      "bca .co.id",
+      "-bca.co.id",
+      "bca.co.id\u0007",
+      "bca\u202Eid.oc",
+      "xn--bca-ñ.com",
+    ]) {
+      const ok = hostSig({ marks: ["bca"] });
+      const res = await post(p, extensionBody(blocked92, { signals: [ok, hostSig({ official })] }));
+      expect(res.status, official).toBe(422);
+      const { error } = (await res.json()) as { error: { code: string; message: string } };
+      expect(error.code).toBe("invalid_body");
+      expect(error.message, official).toMatch(/^signals\.1\.host\.official: /);
+    }
+  });
+
+  it("marks that are not host characters → 422 invalid_body at signals.N.host.marks.M", async () => {
+    const p = await createDevice("Mom");
+    for (const mark of ["BCA", "bca verifikasi", "✓", "resmi!", "<b>", "/login", "bca\u202E", "bca\u0000", "ñ"]) {
+      const res = await post(p, extensionBody(blocked92, { signals: [hostSig({ marks: ["bca", mark] })] }));
+      expect(res.status, JSON.stringify(mark)).toBe(422);
+      const { error } = (await res.json()) as { error: { code: string; message: string } };
+      expect(error.code).toBe("invalid_body");
+      expect(error.message, JSON.stringify(mark)).toMatch(/^signals\.0\.host\.marks\.1: /);
+    }
+  });
+
+  it("accepts every domain form the scan's domain allows: www., IPv4, IPv6 in brackets, a single label, punycode", async () => {
+    const p = await createDevice("Mom");
+    const hosts = [
+      { marks: ["bca", "-verifikasi", ".site"], official: "bca.co.id" },
+      { official: "www.bca.co.id" },
+      { marks: ["192.168"], official: "192.168.1.1" },
+      { marks: ["[2001", ":db8::1]"], official: "[2001:db8::1]" },
+      { official: "router" },
+      { marks: ["xn--bca-0la"], official: "xn--bca-0la.com" },
+    ];
+    const id = await postOk(p, extensionBody(blocked92, { signals: hosts.map(hostSig) }));
+    const [row] = await sql`select signals from scans where id = ${id}`;
+    expect(row!.signals.map((s: { host: unknown }) => s.host)).toEqual(hosts);
+  });
+
   it("accepts the limits: 4 marks, 253 characters, an empty host", async () => {
     const p = await createDevice("Mom");
     const long = "x".repeat(253);
+    // 63 + 1 + 63 + 1 + 63 + 1 + 61 = 253: the longest name DOMAIN and the 253 cap allow together.
+    const longDomain = ["a".repeat(63), "b".repeat(63), "c".repeat(63), "d".repeat(61)].join(".");
     const id = await postOk(
       p,
-      extensionBody(blocked92, { signals: [hostSig({ marks: ["a", "b", "c", long], official: long }), hostSig({})] }),
+      extensionBody(blocked92, { signals: [hostSig({ marks: ["a", "b", "c", long], official: longDomain }), hostSig({})] }),
     );
     const [row] = await sql`select signals from scans where id = ${id}`;
-    expect(row!.signals.map((s: { host: unknown }) => s.host)).toEqual([{ marks: ["a", "b", "c", long], official: long }, {}]);
+    expect(row!.signals.map((s: { host: unknown }) => s.host)).toEqual([
+      { marks: ["a", "b", "c", long], official: longDomain },
+      {},
+    ]);
+    const tooLong = `${longDomain}x`;
+    const res = await post(p, extensionBody(blocked92, { signals: [hostSig({ official: tooLong })] }));
+    expect(res.status).toBe(422);
   });
 });
 
