@@ -50,6 +50,9 @@ struct DetailView: View {
                 .ignoresSafeArea()
             }
             .toolbar(.hidden, for: .navigationBar)
+            // The page draws its own back button. A hidden bar can come back during the push (iOS 26), and its
+            // system chevron then sat on top of ours: never show it.
+            .navigationBarBackButtonHidden(true)
             // Detail is drawn on fixed light colours (DetailStyle.background, the hero); in dark mode the
             // "gone" and "couldn't load" text turned white on that light background (BH-12). Pinned light,
             // as Home, Invite and Onboarding.
