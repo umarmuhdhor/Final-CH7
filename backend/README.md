@@ -75,11 +75,11 @@ All errors are `{ "error": { "code", "message" } }`; `429` carries `Retry-After`
 
 ## Schema summary
 
-Migrations: every file in `db/supabase/migrations/` (42 as of 16 Nov 2026, oldest `20261021130000_init.sql`, newest `20261116120000_domain_odd_hosts.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
+Migrations: every file in `db/supabase/migrations/` (43 as of 17 Nov 2026, oldest `20261021130000_init.sql`, newest `20261117120000_drop_live_activity_tokens.sql`), applied in name order by CI (`supabase db push`, see [Deploy](#deploy)). A new migration must sort after the last one already on the cloud database, or the push refuses it (QA-D-H01, `fd8dc4ec`). Early table details: `plan/alief/ref/R2-skema-db.md`.
 
 | Table | Purpose |
 |---|---|
-| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. `live_start_token`, `live_update_token`, `live_activity_id`, `live_started_at`: the removed Dynamic Island's APNs tokens (EX-03, #555). Nothing reads or writes them any more; a follow-up migration drops them once this Worker is deployed |
+| `devices` | one row per installed app. `token_hash` = sha256(token), the token itself is never stored. `mode` immutable (trigger). `ext_last_seen_at` from `extensionLastSeenAt`. The removed Dynamic Island's APNs token columns were dropped by `20261117120000_drop_live_activity_tokens.sql` (EX-03, #555) |
 | `family_links` | protected → guardian (PK on protected = one guardian each; trigger: modes match, max 3 per guardian) |
 | `family_codes`, `join_attempts` | 6-digit codes (30 min) and join attempts for rate limiting; attempts keep `ip_hash` = sha256(`join:ip-or-/64`), never a raw IP |
 | `scans` | Activity items, score 30–100, status consistent with score, domain lowercase (`contracts/api.md` Scans "`domain`"; a leading `www.` only as in `www.co.id`, #487). `screenshot_path` = `<ownerId>/<scanId>.jpg\|png` in bucket `screenshots` (private, 150 KB, JPEG/PNG only); dedupe means several scans can share one path. `favicon_path` = `<ownerId>/<scanId>-favicon.<png\|ico\|jpg\|gif\|webp>` in the same bucket, downloaded by the Worker from `favicon_url` (PR-05); reused the same way; `favicon_url` is never returned |
