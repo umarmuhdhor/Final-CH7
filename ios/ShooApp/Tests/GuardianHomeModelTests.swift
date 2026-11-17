@@ -73,7 +73,7 @@ struct GuardianHomeModelTests {
         let repository = MockRepository(mode: .guardian, scenario: .figma, latency: .zero)
         let personal = model(repository: repository, settings: try settings(), scope: .personal)
         await personal.refresh()
-        #expect(personal.scamCases == MockScenarios.scamCases)
+        #expect(personal.scamCases.map(\.id) == MockScenarios.scamCases(now: Date()).map(\.id))
         let family = model(repository: repository, settings: try settings(), scope: .family)
         await family.refresh()
         #expect(family.scamCases.isEmpty)

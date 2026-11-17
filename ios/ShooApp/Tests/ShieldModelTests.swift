@@ -250,7 +250,7 @@ struct ShieldModelTests {
 
     @Test func failedScamCasesKeepTheCard() async throws {
         let repository = try await repository(scans: 4)
-        let cases = [ScamCase(id: "case", title: "Situs palsu", detail: "Hari ini")]
+        let cases = [ScamCase(id: "case", title: LocalizedText(en: "Fake site", id: "Situs palsu"), lastSeenAt: Date())]
         repository.latestScamsResult = .success(cases)
         let model = ShieldModel(repository: repository, extensionStatus: { .off(lastSeen: nil) })
         await model.refresh()

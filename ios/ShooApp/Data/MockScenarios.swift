@@ -39,12 +39,17 @@ enum MockScenarios {
     }
 
     /// Figma "Scam Terbaru Pengguna Shoo" cards (Pribadi/Home 1115:13601, protected/Home 1115:17238); the third
-    /// one scrolls in.
-    static let scamCases = [
-        ScamCase(id: "figma-case-1", title: "Minta PIN m-banking", detail: "Hari ini · Whatsapp"),
-        ScamCase(id: "figma-case-2", title: "Undian palsu Shopee", detail: "Hari ini · Whatsapp"),
-        ScamCase(id: "figma-case-3", title: "Bansos palsu minta foto KTP", detail: "2 hari lalu · Facebook"),
-    ]
+    /// one scrolls in. The titles stand in for admin category labels; the server's are shorter.
+    static func scamCases(now: Date) -> [ScamCase] {
+        [
+            ScamCase(id: "phishing_bank", title: LocalizedText(en: "Asks for m-banking PIN", id: "Minta PIN m-banking"),
+                     lastSeenAt: now),
+            ScamCase(id: "undian_palsu", title: LocalizedText(en: "Fake Shopee prize draw", id: "Undian palsu Shopee"),
+                     lastSeenAt: now),
+            ScamCase(id: "bansos_palsu", title: LocalizedText(en: "Fake aid asks for ID photo", id: "Bansos palsu minta foto KTP"),
+                     lastSeenAt: now.addingTimeInterval(-2 * 86_400)),
+        ]
+    }
 
     // MARK: Figma (416:8768, 416:8541, 416:9255, 416:10447, 455:10275)
 

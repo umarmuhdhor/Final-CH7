@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld days ago" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld hari lalu"
+          }
+        }
+      }
+    },
     "I agree to pages being checked online." : {
       "localizations" : {
         "id" : {
@@ -37,6 +47,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Data yang dikirim"
+          }
+        }
+      }
+    },
+    "When a suspicious site shows up, you'll see it here." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nanti kalau ada web mencurigakan, akan muncul di sini."
           }
         }
       }
@@ -703,6 +723,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tanpa ini, Shoo hanya memeriksa halaman di iPhone-mu dan perlindunganmu berkurang. Halaman berisiko tetap dilaporkan. Kamu bisa mengubahnya di Profil."
+          }
+        }
+      }
+    },
+    "Yesterday" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kemarin"
           }
         }
       }

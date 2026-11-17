@@ -19,6 +19,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts?url=&domain=`
 - [Blocklist](#blocklist): `GET /blocklist`
+- [Latest scams](#latest-scams): `GET /scams/latest` (*proposed*, Home card)
 - [Config](#config): `GET /config/public`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
 - [Live Activity](#live-activity): `POST /live` (EX-03, #49)
@@ -92,7 +93,7 @@ after the wait.
 
 ### Caching and privacy headers
 
-- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`) and `GET /config/public` (`private, max-age=3600`).
+- Every response is `Cache-Control: private, no-store`, except `GET /blocklist` (`private, max-age=300`), `GET /scams/latest` (`private, max-age=600`) and `GET /config/public` (`private, max-age=3600`).
 - Request bodies over 256 KB get `413 too_large` before anything else runs; only `POST /scans` (exactly
   that path) takes up to 512 KB, for the page replica.
   Deleted or disconnected data must disappear at once (Apple privacy rule, `plan/alief/SECURITY.md` §3 P13).
@@ -895,6 +896,41 @@ Incremental refresh every hour, full refresh daily (`docs/design/blocklist.md`).
 | `422 invalid_body` | `since` is not an ISO time |
 
 Entries can also be approved, rejected, removed or added from the internal admin dashboard through the `admin` schema (no new endpoint here; see `backend/README.md`, "Admin dashboard"). Its approval and removal times use `clock_timestamp()` like the SQL editor path, so `since` paging is unchanged.
+
+## Latest scams
+
+### `GET /scams/latest`
+
+*Proposed, not yet in `contracts/api.md`.* Home card "Scam terbaru di pengguna Shoo" (Protected and
+Pribadi Home). The kinds of scam several Shoo users were blocked from this week, newest first. Any device.
+
+```json
+{
+  "items": [
+    { "category": "undian_palsu", "title": { "en": "Fake prize", "id": "Undian/hadiah palsu" }, "lastSeenAt": "2026-11-17T02:00:00Z" }
+  ]
+}
+```
+
+- `category`: an `admin.categories` id. Clients must accept an unknown one (show `title`).
+- `title`: the admin's category label, never text from a page, URL or domain.
+- `lastSeenAt`: the newest counted scan, server time, rounded down to the hour (the card says "today",
+  "yesterday", "3 days ago").
+- `items` is empty when nothing passes the gates: the app hides the card.
+
+Gates, so nobody can use the card to spread spam or to point at one person
+(`db/repo/latestScams.ts`, migration `20261117100000_latest_scams_public.sql`):
+
+1. Only domains a named admin approved onto the blocklist, with the category chosen then
+   (`admin.v_scam_categories_public`). Pending, rejected or removed domains never count; nor do
+   domains on the trusted/protected lists (official brand sites) or the category `lainnya`.
+2. Only `blocked` scans, by server `created_at` (a client's `detectedAt` cannot keep an item "today"), last 7 days.
+3. Devices count once per category and only once they are 24 h old, so a batch of new devices adds nothing.
+4. A category shows only when 3+ different devices hit it (k-anonymity). No count, domain or URL is returned.
+5. One row per category, at most 4.
+
+Nothing is stored for this: it is counted from live `scans`, so a deleted device or a 14-day-old scan
+stops counting at once.
 
 ## Config
 

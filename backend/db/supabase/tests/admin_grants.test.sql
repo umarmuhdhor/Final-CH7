@@ -5,7 +5,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(112);
+select plan(114);
 
 -- I1: shoo_admin has no privilege on anything in public (tables, views, sequences, functions).
 select is(
@@ -38,25 +38,29 @@ from unnest(array['v_review_queue', 'v_blocklist', 'v_scans', 'v_ops_snapshot',
                   'v_domain_intel', 'v_labels', 'v_analysis_runs', 'v_stats_daily',
                   'v_eval_summary', 'v_eval_curve', 'v_eval_labels', 'v_eval_signals', 'v_eval_targets',
                   'v_cases', 'v_lessons', 'v_thresholds', 'v_api_keys',
-                  'v_domain_lists', 'v_domain_lists_public', 'v_shared_hosts']) as v;
+                  'v_domain_lists', 'v_domain_lists_public', 'v_shared_hosts',
+                  'v_scam_categories_public']) as v;
 
 -- public_config: SELECT for shoo_api only (phase 05, GET /config/public), I2's one exception.
 select table_privs_are('admin', 'public_config', 'shoo_admin', array[]::text[], 'shoo_admin has no privileges on admin.public_config');
 select table_privs_are('admin', 'public_config', 'shoo_api', array['SELECT'], 'shoo_api SELECT only on admin.public_config');
 -- v_domain_lists_public: SELECT for shoo_api too (phase 10a K8, backend isProtected), I2's second exception.
 select table_privs_are('admin', 'v_domain_lists_public', 'shoo_api', array['SELECT'], 'shoo_api SELECT only on admin.v_domain_lists_public');
+-- v_scam_categories_public: SELECT for shoo_api too (GET /scams/latest), I2's third exception.
+select table_privs_are('admin', 'v_scam_categories_public', 'shoo_api', array['SELECT'], 'shoo_api SELECT only on admin.v_scam_categories_public');
 
 -- No other role (PostgREST roles, shoo_api, PUBLIC) holds any privilege on an admin table, view or
--- sequence, apart from shoo_api on public_config and v_domain_lists_public.
+-- sequence, apart from shoo_api on public_config, v_domain_lists_public and v_scam_categories_public.
 select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
     cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
     where n.nspname = 'admin' and a.grantee not in ('postgres'::regrole, 'shoo_admin'::regrole)
       and not (c.relname = 'public_config' and a.grantee = 'shoo_api'::regrole)
       and not (c.relname = 'v_domain_lists_public' and a.grantee = 'shoo_api'::regrole and a.privilege_type = 'SELECT')
+      and not (c.relname = 'v_scam_categories_public' and a.grantee = 'shoo_api'::regrole and a.privilege_type = 'SELECT')
       -- Layer 5 (#241): Team AI's read-only role, SELECT on ai_dataset only (l5_review_data.test.sql).
       and not (c.relname = 'ai_dataset' and a.grantee = 'shoo_ai'::regrole and a.privilege_type = 'SELECT')),
-  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config + v_domain_lists_public, shoo_ai on ai_dataset)');
+  0, 'I2: only postgres and shoo_admin appear in admin relation ACLs (plus shoo_api on public_config + v_domain_lists_public + v_scam_categories_public, shoo_ai on ai_dataset)');
 
 -- Functions: EXECUTE for shoo_admin on the API functions, nobody else; internal helpers for nobody.
 select function_privs_are('admin', f, a, 'shoo_admin', array['EXECUTE'], 'shoo_admin EXECUTE on admin.' || f)
