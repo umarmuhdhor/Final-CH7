@@ -23,14 +23,14 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 |---|---|---|---|---|
 | POST | `/devices` | `{ name, mode: "guardian"\|"protected", avatarId?, apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
 | GET | `/devices/me` | — | `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } \| null }` — Protected learns its guardian, or that it was disconnected | PR-04, PF-01, EX-06 |
-| PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` (`liveActivityStartToken?`, `liveActivityUpdateToken?`: removed, see below) | `{ ok }` | ON-05, PF-01, GD-03 |
+| PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` | `{ ok }` | ON-05, PF-01, GD-03 |
 | DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots + page replicas, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
 
 `avatarId` (ON-02, #120): optional, one of `avatar_01`…`avatar_12`. The 4 memoji in the ON-02 picker are `avatar_01`…`avatar_04`; `avatar_05`…`avatar_12` stay for the random pick. Missing or unknown → the server picks at random, as before. The response `avatarId` is the source of truth. Chosen once at registration: `PATCH /devices/me` does not change it (not in the MVP).
 
 `extensionLastSeenAt` (ISO): sent by the **extension** at most once per hour with its heartbeat, and by the app when it comes to the foreground. The backend uses it for `extensionActive` in `GET /family/members` ("Not connected", GD-03). No data yet → `extensionActive: true` (never "Not connected" without evidence).
 
-`liveActivityStartToken` / `liveActivityUpdateToken`: **removed** (EX-03 Dynamic Island dropped 17 Nov 2026, #555). They were the Dynamic Island's APNs tokens. Not part of the contract any more: the app stops sending them and the backend stops accepting and storing them in #555. Until that lands, an older app may still send them; nothing uses them.
+`liveActivityStartToken` / `liveActivityUpdateToken`: **removed** (EX-03 Dynamic Island dropped 17 Nov 2026, #555). They were the Dynamic Island's APNs tokens. The app no longer sends them; builds from before #555 still do, and the backend answers `200` and stores them nowhere (their columns were dropped).
 
 ### Family (max 3 protected per guardian)
 | Method | Path | Body | Response | PRD |
@@ -178,8 +178,8 @@ Nothing is stored for the card: it is counted from live scans, so a deleted devi
 ### Live score (Dynamic Island) — removed
 **Removed** (17 Nov 2026, decision Umar + Alief, #555): EX-03's Dynamic Island / Live Activity (path C, #49) is dropped. The live score stays in the in-page pill only (`pill.js`), which never leaves the phone.
 
-- `POST /live` is no longer part of the contract. The extension does not call it any more; the backend removes the route and its Live Activity push sender in #555. No client may depend on it.
-- No `apns-push-type: liveactivity` pushes. `ScoreActivityAttributes` (`ios/ShooShared/`) stays only until the app stops using it (#555), then goes.
+- `POST /live` is no longer part of the contract and answers `404`. The extension does not call it; the backend removed the route and its Live Activity push sender (#563). No client may depend on it.
+- No `apns-push-type: liveactivity` pushes. `ScoreActivityAttributes` is gone from `ios/ShooShared/`.
 - The old spec (body, timing, APNs payload) is in git history and `docs/spikes/dynamic-island.md`.
 
 ### Push payloads (APNs)
