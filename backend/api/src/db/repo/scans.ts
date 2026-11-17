@@ -1,4 +1,5 @@
 import type { PendingQuery, Row, Sql, TransactionSql } from "postgres";
+import { RETENTION_DAYS } from "../../policy";
 import { LOCK } from "../locks";
 import { addTombstones } from "./tombstones";
 import { lockedUntilSql } from "./verdictLock";
@@ -36,12 +37,16 @@ export interface NewScan {
 export async function recordScan(sql: Sql, s: NewScan): Promise<{ id: string; created: boolean; push: boolean }> {
   return sql.begin(async (tx) => {
     await tx`select pg_advisory_xact_lock(${LOCK.scanSite}, hashtext(${`${s.ownerId}|${s.domain}`}))`;
-    // The site before this scan: any row of the domain, any blocked one, and this link's row.
+    // The site before this scan: any row of the domain, any blocked one, and this link's row. Only rows retention
+    // keeps at least another day: a visit merged into an older row (it keeps that row's `created_at`) vanished at
+    // the next daily run, the Guardian got no push for it (`seen`), and a verdict on it then answered 404. Such a
+    // visit gets a new row and its push; the old row goes with retention as planned.
     const [site] = await tx<{ seen: boolean; blocked: boolean; linkId: string | null }[]>`
       select count(*) > 0 as seen, coalesce(bool_or(status = 'blocked'), false) as blocked,
              (array_agg(id order by created_at desc, id desc)
                 filter (where public.verdict_link(url) = public.verdict_link(${s.url})))[1] as "linkId"
-      from scans where owner_id = ${s.ownerId} and domain = ${s.domain}`;
+      from scans where owner_id = ${s.ownerId} and domain = ${s.domain}
+        and created_at > now() - make_interval(days => ${RETENTION_DAYS - 1})`;
     const push = !site!.seen || (s.status === "blocked" && !site!.blocked);
     if (site!.linkId) {
       // `takes_over`: this visit takes over url, title, signals, score and status.
