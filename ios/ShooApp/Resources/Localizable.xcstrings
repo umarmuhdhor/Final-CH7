@@ -1,6 +1,22 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@, %lld of %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$lld of %3$lld"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$lld dari %3$lld"
+          }
+        }
+      }
+    },
     "%lld days ago" : {
       "localizations" : {
         "id" : {
@@ -27,6 +43,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lihat data yang dikirim"
+          }
+        }
+      }
+    },
+    "Shoo can't point to this on the page: it may be hidden" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shoo tidak bisa menunjukkan bagian ini di halaman: mungkin tersembunyi"
           }
         }
       }
@@ -3396,16 +3422,6 @@
         }
       }
     },
-    "Opens a larger view" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Membuka tampilan lebih besar"
-          }
-        }
-      }
-    },
     "Opens the details" : {
       "localizations" : {
         "id" : {
@@ -5801,26 +5817,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Layar Perisai segera hadir."
-          }
-        }
-      }
-    },
-    "Zoom in" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perbesar"
-          }
-        }
-      }
-    },
-    "Zoom out" : {
-      "localizations" : {
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Perkecil"
           }
         }
       }

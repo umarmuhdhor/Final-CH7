@@ -20,7 +20,6 @@ struct DetailView: View {
     /// "Try again" bumps it, so the whole first load (read-aloud, waiting for the copy) runs again.
     @State private var loadAttempt = 0
     /// The card picture open full screen, with that card's marks (DT-04).
-    @State private var zoomed: ZoomedPage?
     @State private var copied = false
     /// The material under the status bar shows once the hero has scrolled away.
     @State private var statusBarShade = 0.0
@@ -77,11 +76,6 @@ struct DetailView: View {
                 // fallback must still load.
                 guard model.scan?.pageReplicaUrl == nil || copyState == .unavailable else { return }
                 await loadScreenshot()
-            }
-            .fullScreenCover(item: $zoomed) { page in
-                ZoomedScreenshot(
-                    image: page.image, highlights: page.highlights, pageCSSWidth: page.cssWidth, tag: page.tag
-                )
             }
             .privacyCover()
     }
@@ -267,16 +261,7 @@ struct DetailView: View {
                         isLoadingImage: screenshotLoading || copyState == .loading || model.isSavingCopy,
                         pageCSSWidth: picture.cssWidth,
                         domain: scan.domain,
-                        onOpenImage: {
-                            guard let image = picture.image else { return }
-                            zoomed = ZoomedPage(
-                                id: reason.id,
-                                image: image,
-                                cssWidth: picture.cssWidth,
-                                highlights: picture.highlights,
-                                tag: L10n.string(reason.kind.title, language: language)
-                            )
-                        }
+                        marksKnown: copyState == .shown && !model.isSavingCopy
                     )
                 }
             }
@@ -658,15 +643,6 @@ private extension ScanBadge {
         case .markedSafe: "Marked safe"
         }
     }
-}
-
-/// One card's picture, open full screen (DT-04): the same part of the page and the same marks as the card.
-struct ZoomedPage: Identifiable {
-    let id: String
-    let image: UIImage
-    let cssWidth: CGFloat?
-    let highlights: [CGRect]
-    let tag: String?
 }
 
 #if DEBUG

@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 @testable import Shoo
 
@@ -184,5 +185,42 @@ struct AddressEvidenceTests {
         #expect(AddressEvidence.days(in: "Domain age 3 days") == 3)
         #expect(AddressEvidence.days(in: "Situs ini baru dibuat 12 hari lalu") == 12)
         #expect(AddressEvidence.days(in: "This site was made recently") == nil)
+    }
+}
+
+/// DT-04: an on-page reason with no mark on the shown page copy says so instead of an unmarked photo.
+struct UnmarkedEvidenceTests {
+    @Test func onPageReasonWithoutMarkOnShownCopyGetsTheNote() {
+        #expect(EvidenceCard.showsUnmarkedNote(kind: .sensitiveForm, highlights: [], hasImage: true, marksKnown: true))
+    }
+
+    @Test func markedReasonAddressReasonOrNoCopyKeepThePhoto() {
+        let mark = [CGRect(x: 0, y: 0, width: 10, height: 10)]
+        #expect(!EvidenceCard.showsUnmarkedNote(kind: .sensitiveForm, highlights: mark, hasImage: true, marksKnown: true))
+        #expect(!EvidenceCard.showsUnmarkedNote(kind: .suspiciousLink, highlights: [], hasImage: true, marksKnown: true))
+        // Screenshot fallback or still loading: no marks to judge by.
+        #expect(!EvidenceCard.showsUnmarkedNote(kind: .sensitiveForm, highlights: [], hasImage: true, marksKnown: false))
+        #expect(!EvidenceCard.showsUnmarkedNote(kind: .sensitiveForm, highlights: [], hasImage: false, marksKnown: true))
+    }
+}
+
+/// DT-04: a mark taller than the photo panel shrinks the page so it shows whole; a small mark keeps full size.
+struct EvidencePhotoLayoutTests {
+    @Test func tallMarkShrinksThePageToFit() {
+        let size = CGSize(width: 390, height: 3000)
+        let tall = CGRect(x: 0, y: 1000, width: 390, height: 600)
+        let layout = EvidencePhoto.layout(imageSize: size, cssWidth: 390, highlights: [tall], panelWidth: 330)
+        let shown = tall.height * layout.scale + 8
+        #expect(shown <= EvidencePhoto.height - 2 * EvidencePhoto.areaMargin + 0.5)
+        #expect(layout.pageWidth < 270)
+        // The mark sits just below the middle, under its tag.
+        #expect(abs(layout.origin.y + tall.midY * layout.scale - (EvidencePhoto.height / 2 + Spotlight.tagHeight / 2)) < 1)
+    }
+
+    @Test func smallMarkKeepsFullWidth() {
+        let size = CGSize(width: 390, height: 3000)
+        let field = CGRect(x: 24, y: 332, width: 342, height: 52)
+        let layout = EvidencePhoto.layout(imageSize: size, cssWidth: 390, highlights: [field], panelWidth: 330)
+        #expect(layout.pageWidth == 270)
     }
 }
