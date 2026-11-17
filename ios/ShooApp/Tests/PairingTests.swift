@@ -5,10 +5,11 @@ import UIKit
 
 /// Fase 14: invite links, Connect (PR-01/02/03) and Family code (GD-04).
 struct DeepLinkTests {
-    private static let hosts: Set<String> = ["shoo-api.afindo-mi01.workers.dev", "localhost"]
+    private static let hosts: Set<String> = ["join.shoo.ai.id", "shoo-api.afindo-mi01.workers.dev", "localhost"]
 
     @Test(arguments: [
         "shoo://join?code=482193",
+        "https://join.shoo.ai.id/j/482193",
         "https://shoo-api.afindo-mi01.workers.dev/j/482193",
         "https://SHOO-API.afindo-mi01.workers.dev/j/482193",
         "SHOO://JOIN?code=482193",
@@ -566,6 +567,8 @@ struct FamilyCodeModelTests {
         ("https://shoo-api.afindo-mi01.workers.dev/j/111111", false),
         ("https://shoo-api.afindo-mi01.workers.dev/join?code=482193", false),
         ("https://shoo-api.afindo-mi01.workers.dev/j/482193", true),
+        ("https://join.shoo.ai.id/j/482193", true),
+        ("https://join.shoo.ai.id/j/111111", false),
     ])
     func inviteURLMustBeOursForThisCode(link: String, accepted: Bool) {
         let code = FamilyCode(code: "482193", expiresAt: Date(), inviteUrl: URL(string: link)!)

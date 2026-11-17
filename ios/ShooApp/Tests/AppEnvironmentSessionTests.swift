@@ -306,7 +306,10 @@ struct AppEnvironmentSessionTests {
         #expect(AppConfig.apiBaseURL.absoluteString == "http://localhost:8787")
         #else
         #expect(AppConfig.apiBaseURL.absoluteString == "https://shoo-api.afindo-mi01.workers.dev")
+        // PR-03: invite links on the new public host and the old workers.dev one both open the app.
+        #expect(DeepLink.inviteHosts == ["join.shoo.ai.id", "shoo-api.afindo-mi01.workers.dev"])
         #endif
+        #expect(AppConfig.publicBaseURL.absoluteString == "https://join.shoo.ai.id")
         // Only Release builds hand the AI Worker to the extension (#82).
         #if DEBUG
         #expect(AppConfig.aiBaseURL == nil)

@@ -140,7 +140,7 @@ Non-secret vars live in `api/wrangler.jsonc` `vars`. Secrets: `npx wrangler secr
 | Name | Kind | Now |
 |---|---|---|
 | `DB` | Hyperdrive binding | `shoo-db` (id filled in at first deploy) |
-| `INVITE_BASE_URL` | var | Worker URL (used from fase 08) |
+| `INVITE_BASE_URL` | var | Public host of invite/share links and signed image URLs: `https://join.shoo.ai.id` (Custom Domain on this Worker, PR-03) |
 | `APP_STORE_URL` | var | "Install" link on the invite page: TestFlight public link now, App Store later. Only `https://testflight.apple.com` / `https://apps.apple.com`; `""` or anything else → `https://apps.apple.com/` |
 | `APPLINKS_APP_IDS` | var | Comma-separated `<Team ID>.<bundle ID>` listed in the AASA for the Universal Link (issue #129): `DWTZNGA7Y8.com.umarmuhdhor.shoo` (dev builds and TestFlight share that team and bundle ID); `""` → no app listed |
 | `SUPABASE_URL` | var | `https://nmekxihgjszgcibqytyj.supabase.co` (public project URL); tests read the local one from `supabase status` |
