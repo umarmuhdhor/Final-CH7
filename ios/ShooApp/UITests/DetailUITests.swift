@@ -43,7 +43,7 @@ final class DetailUITests: XCTestCase {
         XCTAssertTrue(line.waitForExistence(timeout: 30), app.debugDescription)
         XCTAssertTrue(line.label.contains("Copy of the page"), line.label)
         XCTAssertTrue(line.label.contains("Copied from bca-verifikasi.site/login/pin"), line.label)
-        XCTAssertTrue(app.buttons["detail.screenshot"].firstMatch.isEnabled)
+        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshot"].firstMatch.exists)
         XCTAssertFalse(app.webViews.firstMatch.exists, "no live web view on screen")
     }
 
@@ -156,23 +156,26 @@ final class DetailUITests: XCTestCase {
         wait(for: [expectation], timeout: 5)
     }
 
-    /// DT-04: an address reason shows the domain instead of the page, and the full screen view keeps the
-    /// card's marks.
+    /// DT-04: an address reason shows the domain instead of the page; the page photo is not tappable (no full
+    /// screen view).
     @MainActor
-    func testAddressReasonShowsTheDomainAndZoomKeepsTheMarks() {
+    func testAddressReasonShowsTheDomainAndThePhotoIsNotAButton() {
         let app = openDetail(Self.blocked92, pageCopy: true)
         // new_domain is the heaviest reason: its card is the address, not a photo.
         let address = app.descendants(matching: .any)["detail.address.0"]
         XCTAssertTrue(address.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(address.label.contains("bca-verifikasi.site"), address.label)
         app.swipeUp()
-        let photo = app.buttons["detail.screenshot"].firstMatch
+        let photo = app.descendants(matching: .any)["detail.screenshot"].firstMatch
         XCTAssertTrue(photo.waitForExistence(timeout: 15), app.debugDescription)
-        photo.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
-        // The asks_pin card's single mark carries its tag into the full screen view.
-        XCTAssertTrue(app.staticTexts["Sensitive form"].waitForExistence(timeout: 5), app.debugDescription)
-        app.buttons["detail.screenshotClose"].tap()
+        XCTAssertFalse(app.buttons["detail.screenshot"].exists)
+        // unreasonable_request has two marks on the fixture page: one photo per mark, swiped sideways.
+        app.swipeUp()
+        let carousel = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'detail.carousel.'")).firstMatch
+        XCTAssertTrue(carousel.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS ' of 2'")).firstMatch.exists, app.debugDescription)
     }
 
     /// DT-04 (#497): with the detector's `host`, the address card names the brand's real address.
@@ -190,43 +193,12 @@ final class DetailUITests: XCTestCase {
     }
 
     @MainActor
-    func testScreenshotZoomHasNoShareOrSave() {
-        let app = openDetail(Self.blocked92)
-        let screenshot = app.buttons["detail.screenshot"].firstMatch
-        // The first photo sits under the verdict footer until scrolled.
-        app.swipeUp()
-        XCTAssertTrue(screenshot.waitForExistence(timeout: 5), app.debugDescription)
-        screenshot.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Share"].exists)
-        XCTAssertFalse(app.buttons["Save Image"].exists)
-        app.buttons["detail.screenshotClose"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["detail.header"].waitForExistence(timeout: 5))
-    }
-
-    @MainActor
-    func testScreenshotZoomClosesWithASwipe() {
-        let app = openDetail(Self.blocked92)
-        app.swipeUp()
-        let screenshot = app.buttons["detail.screenshot"].firstMatch
-        XCTAssertTrue(screenshot.waitForExistence(timeout: 5), app.debugDescription)
-        for down in [true, false] {
-            screenshot.tap()
-            let zoomed = app.descendants(matching: .any)["detail.screenshotZoomed"]
-            XCTAssertTrue(zoomed.waitForExistence(timeout: 5), app.debugDescription)
-            if down { zoomed.swipeDown() } else { zoomed.swipeRight() }
-            XCTAssertTrue(screenshot.waitForExistence(timeout: 5), app.debugDescription)
-            XCTAssertFalse(zoomed.waitForExistence(timeout: 2), app.debugDescription)
-        }
-    }
-
-    @MainActor
     func testWarningTakesAVerdictAndHasNoPhotoWithoutAScreenshot() {
         let app = openDetail(Self.warning41)
         XCTAssertTrue((app.descendants(matching: .any)["detail.header"].value as? String ?? "").contains("Warning"))
         // GD-07: warnings take a verdict too (Figma 416:9469, #190).
         XCTAssertTrue(app.buttons["detail.verdict.safe"].exists)
-        XCTAssertFalse(app.buttons["detail.screenshot"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["detail.screenshot"].exists)
     }
 
     @MainActor
@@ -254,12 +226,8 @@ final class DetailUITests: XCTestCase {
         let app = openDetail(Self.blocked92)
         attach(app, "blocked-92-guardian-en-top")
         app.swipeUp()
-        XCTAssertTrue(app.buttons["detail.screenshot"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshot"].firstMatch.waitForExistence(timeout: 5))
         attach(app, "blocked-92-guardian-en-bottom")
-        app.buttons["detail.screenshot"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["detail.screenshotZoomed"].waitForExistence(timeout: 5))
-        attach(app, "blocked-92-guardian-en-zoom")
-        app.buttons["detail.screenshotClose"].tap()
         app.buttons["detail.verdict.notSafe"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["detail.verdictNote"].waitForExistence(timeout: 5))
         app.swipeDown()

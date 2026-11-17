@@ -246,16 +246,26 @@ struct EvidencePhoto: View {
         .overlay(panel.stroke(DetailStyle.photoStroke))
     }
 
-    /// Where the page sits and how far it scrolls so the first area is in view.
+    /// Room kept above and below an area: its outline, the glow and the tag over its top edge.
+    static let areaMargin: CGFloat = 30
+
+    /// Where the page sits, how big it is and how far it scrolls so the first area is in view. An area taller
+    /// than the panel shrinks the page until it fits whole, outline and tag included (never cut off).
     static func layout(imageSize: CGSize, cssWidth: CGFloat?, highlights: [CGRect], panelWidth: CGFloat)
-        -> (origin: CGPoint, scale: CGFloat, pageHeight: CGFloat)
+        -> (origin: CGPoint, scale: CGFloat, pageHeight: CGFloat, pageWidth: CGFloat)
     {
-        let imageScale = pageWidth / max(imageSize.width, 1)
-        let pageHeight = imageSize.height * imageScale
-        let scale = pageWidth / max(cssWidth ?? imageSize.width, 1)
+        let fullScale = pageWidth / max(cssWidth ?? imageSize.width, 1)
+        let room = height - 2 * areaMargin
+        // The outline sits 4 pt outside the area on each side, at every size.
+        let fit = highlights.first.map { min(1, max(room - 8, 1) / max($0.height * fullScale, 1)) } ?? 1
+        let width = pageWidth * fit
+        let pageHeight = imageSize.height * width / max(imageSize.width, 1)
+        let scale = fullScale * fit
         let maxShift = max(0, pageHeight + pageInset - height)
-        let shift = highlights.first.map { min(max(0, $0.midY * scale + pageInset - height / 2), maxShift) } ?? 0
-        return (CGPoint(x: (panelWidth - pageWidth) / 2, y: pageInset - shift), scale, pageHeight)
+        // The area sits a little below the middle, leaving the tag above it room.
+        let target = height / 2 + Spotlight.tagHeight / 2
+        let shift = highlights.first.map { min(max(0, $0.midY * scale + pageInset - target), maxShift) } ?? 0
+        return (CGPoint(x: (panelWidth - width) / 2, y: pageInset - shift), scale, pageHeight, width)
     }
 
     private func page(_ image: UIImage) -> some View {
@@ -272,7 +282,7 @@ struct EvidencePhoto: View {
             ZStack(alignment: .topLeading) {
                 Image(uiImage: image)
                     .resizable()
-                    .frame(width: Self.pageWidth, height: layout.pageHeight)
+                    .frame(width: layout.pageWidth, height: layout.pageHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 10.8, style: .continuous))
                     .shadow(color: DetailStyle.pageShadow.opacity(0.08), radius: 7.5, y: 4.3)
                     .offset(x: layout.origin.x, y: layout.origin.y)
@@ -287,6 +297,8 @@ struct EvidencePhoto: View {
 /// Dim everything but the holes (#0B1A2E at 50 %). One hole: white outline, soft white glow, white tag
 /// at its top right. Several: yellow outlines (#FFD60A) with a numbered dot at each top left.
 struct Spotlight: View {
+    /// The tag's capsule: 13 pt text with 3 pt above and below.
+    static let tagHeight: CGFloat = 22
     let holes: [CGRect]
     let size: CGSize
     let tag: String?
@@ -299,8 +311,7 @@ struct Spotlight: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Path { path in
-                // Past the edges: in the full screen view the zoomed page runs under the safe areas, where an
-                // undimmed strip would show. The card clips it to its panel.
+                // Past the edges, so no undimmed strip shows at a rounded edge; the card clips it to its panel.
                 path.addRect(CGRect(origin: .zero, size: size).insetBy(dx: -size.width, dy: -size.height))
                 for hole in holes { path.addRoundedRect(in: hole, cornerSize: CGSize(width: 8, height: 8)) }
             }
@@ -336,11 +347,91 @@ struct Spotlight: View {
                             .shadow(color: DetailStyle.pageShadow.opacity(0.15), radius: 1.5, y: 1)
                             .fixedSize()
                     }
-                    // Figma: right edge 7.7 pt past the outline, top 10.9 pt above it.
-                    .offset(x: hole.maxX + 7.7, y: hole.minY - 10.9)
+                    // Right edge 7.7 pt past the outline (Figma); the tag sits wholly above the outline so it never
+                    // covers what is marked (Figma let it overlap by half, which hid the first line of text).
+                    .offset(x: hole.maxX + 7.7, y: hole.minY - Self.tagHeight - 3)
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// DT-04: a reason with several marks (an unusual request in many places, say): one photo per mark, swiped
+/// sideways, each centred on its own mark with the single-area spotlight. Dots under the photo say how many.
+struct EvidenceCarousel: View {
+    let image: UIImage
+    let highlights: [CGRect]
+    var pageCSSWidth: CGFloat?
+    var tag: String?
+
+    @State private var page = 0
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        VStack(spacing: 8) {
+            TabView(selection: $page) {
+                ForEach(Array(highlights.enumerated()), id: \.offset) { index, rect in
+                    EvidencePhoto(image: image, highlights: [rect], pageCSSWidth: pageCSSWidth, tag: tag)
+                        .padding(.horizontal, 1) // keeps the panel's outline clear of the page edge
+                        .tag(index)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(verbatim: Self.spoken(index, of: highlights.count, locale: locale)))
+                        .accessibilityAddTraits(.isImage)
+                        .accessibilityIdentifier("detail.screenshot")
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: EvidencePhoto.height)
+            dots
+        }
+    }
+
+    /// Page dots: the current one wide and dark (Figma page-control look on a light card).
+    private var dots: some View {
+        HStack(spacing: 6) {
+            ForEach(highlights.indices, id: \.self) { index in
+                Capsule()
+                    .fill(index == page ? DetailStyle.title : DetailStyle.secondary.opacity(0.35))
+                    .frame(width: index == page ? 16 : 6, height: 6)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: page)
+        .accessibilityHidden(true)
+    }
+
+    /// "Screenshot of the page, 1 of 3".
+    static func spoken(_ index: Int, of count: Int, locale: Locale) -> String {
+        let language = AppLanguage(locale: locale)
+        let photo = L10n.string("Screenshot of the page", language: language)
+        return L10n.string("\(photo), \(index + 1) of \(count)", language: language)
+    }
+}
+
+/// DT-04: an on-page reason Shoo can't point at on the copy of the page (its field or text isn't shown, e.g. a
+/// form inside a hidden login box). Same panel as `AddressEvidence`, with one line instead of an unmarked photo.
+struct UnmarkedEvidence: View {
+    let kind: SignalKind
+
+    var body: some View {
+        let panel = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        HStack(spacing: 8) {
+            Image(systemName: "eye.slash")
+                .font(.system(size: 15, weight: .semibold))
+                .accessibilityHidden(true)
+            Text("Shoo can't point to this on the page: it may be hidden")
+                .activityFont(15)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(DetailStyle.secondary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: AddressEvidence.height)
+        .background(DetailStyle.photoFill)
+        .clipShape(panel)
+        .overlay(panel.stroke(DetailStyle.photoStroke))
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -354,7 +445,14 @@ struct EvidenceCard: View {
     var pageCSSWidth: CGFloat?
     /// The scan's `domain` (registrable domain, or the full host on a shared platform, #495): a reason about the address shows it instead of the page (DT-04).
     var domain: String?
-    var onOpenImage: () -> Void = {}
+    /// The page copy is on screen with its marks: an on-page reason with no mark there points at nothing visible
+    /// (a field inside a hidden login box, say), so the card says so instead of showing an unmarked page.
+    var marksKnown = false
+
+    /// On-page reason, page copy shown, and no mark for it: a photo would point at nothing.
+    static func showsUnmarkedNote(kind: SignalKind, highlights: [CGRect], hasImage: Bool, marksKnown: Bool) -> Bool {
+        kind.isOnPage && marksKnown && hasImage && highlights.isEmpty
+    }
 
     @Environment(\.locale) private var locale
     private var language: AppLanguage { AppLanguage(locale: locale) }
@@ -364,22 +462,31 @@ struct EvidenceCard: View {
             if reason.kind.isAddress, let domain {
                 AddressEvidence(domain: domain, kind: reason.kind, reasonText: reason.text, host: reason.host)
                     .accessibilityIdentifier("detail.address.\(reason.index)")
+            } else if Self.showsUnmarkedNote(kind: reason.kind, highlights: highlights ?? reason.highlights,
+                                             hasImage: image != nil, marksKnown: marksKnown) {
+                UnmarkedEvidence(kind: reason.kind)
+                    .accessibilityIdentifier("detail.unmarked.\(reason.index)")
             } else if image != nil || isLoadingImage {
-                Button(action: onOpenImage) {
+                // Not tappable: the card already shows the part that matters, with its marks (no full screen view).
+                // Several marks: one photo per mark in a carousel, each centred on its own mark, so none is cut.
+                let marks = reason.kind.isOnPage ? (highlights ?? reason.highlights) : []
+                let tag = L10n.string(reason.kind.title, language: language)
+                if marks.count > 1, let image {
+                    EvidenceCarousel(image: image, highlights: marks, pageCSSWidth: pageCSSWidth, tag: tag)
+                        .accessibilityIdentifier("detail.carousel.\(reason.index)")
+                } else {
                     EvidencePhoto(
                         image: image,
-                        highlights: reason.kind.isOnPage ? (highlights ?? reason.highlights) : [],
+                        highlights: marks,
                         pageCSSWidth: pageCSSWidth,
-                        tag: L10n.string(reason.kind.title, language: language),
+                        tag: tag,
                         isLoading: isLoadingImage
                     )
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("Screenshot of the page"))
+                    .accessibilityAddTraits(.isImage)
+                    .accessibilityIdentifier("detail.screenshot")
                 }
-                .buttonStyle(.plain)
-                .disabled(image == nil)
-                .accessibilityLabel(Text("Screenshot of the page"))
-                .accessibilityAddTraits(.isImage)
-                .accessibilityHint(Text("Opens a larger view"))
-                .accessibilityIdentifier("detail.screenshot")
             }
             // Figma "Keterangan": the reason, then "Sinyal: …", 4 pt apart and 4 pt in.
             VStack(alignment: .leading, spacing: 4) {
