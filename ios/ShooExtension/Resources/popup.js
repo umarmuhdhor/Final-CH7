@@ -1,9 +1,10 @@
 // Owner: lead. Warning popup at 30% and 50% (EX-04). Plain script, loaded after pipeline.js and gauge.js.
 // Rules (PRD §5, 8.5): each popup at most once per page · none if the page goes straight to ≥80%
 // (block screen instead, EX-06) · closable · the page stays usable underneath.
-// Look (Figma "UI Pop Up Safari"): 30–49% → mini card at the bottom · 50–79% → sheet over a dimmed
-// page with the score gauge and Leave / Continue; Continue (or the Shoo button above it) shrinks it to
-// the mini card. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
+// Look (Figma "UI Pop Up Safari"): from 30% → sheet over a dimmed page with the shield, the score bar and
+// Leave / Continue (frames 1928:3599 / 1928:3781). Continue, tapping the page or
+// dragging the sheet down by its grabber shrinks it to the mini card at the bottom; tapping the mini card opens
+// the sheet again. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
 
 (() => {
     const { THRESHOLD } = globalThis.ShooPipeline;
@@ -56,9 +57,17 @@
         return memo ? { ...memo, visibleTier: 0 } : memo;
     }
 
-    /** "sheet" blocks the page until the user picks Leave or Continue; "mini" sits above Safari's toolbar. */
+    /** "sheet" covers the page until the user picks Leave or Continue (or drags it down); "mini" sits above
+     *  Safari's toolbar. Every warning tier opens as the sheet. */
     function layoutFor(tier, minimized) {
-        return tier === 2 && !minimized ? "sheet" : "mini";
+        return tier && !minimized ? "sheet" : "mini";
+    }
+
+    /** Drag-to-dismiss: far enough or fast enough downwards closes the sheet (to the mini card). */
+    const DISMISS_DISTANCE = 110; // px
+    const DISMISS_SPEED = 0.6; // px per ms
+    function dragCloses(distance, speed) {
+        return distance > DISMISS_DISTANCE || (distance > 20 && speed > DISMISS_SPEED);
     }
 
     /** Card text: the heaviest reason, then the tier's advice. Protected gets the plain wording (DT-04). */
@@ -71,7 +80,7 @@
         return `${/[.!?]$/.test(top) ? top : `${top}.`} ${advice}`;
     }
 
-    globalThis.ShooPopup = { tierFor, decide, dismissed, layoutFor, describe };
+    globalThis.ShooPopup = { tierFor, decide, dismissed, layoutFor, dragCloses, describe };
 
     // ---- View (browser only) -------------------------------------------------------------
 
@@ -81,7 +90,7 @@
     const lang = (browser.i18n.getUILanguage?.() || "en").toLowerCase().startsWith("id") ? "id" : "en";
 
     // Sizes and colours from Figma "UI Pop Up Safari" (frames "Pertama kali buka langsung ke detect",
-    // "Safari / Warning Sedang / Minimized"). Gauge and ring drawings: gauge.js.
+    // "Safari / Warning Sedang / Minimized"). Ring and score bar: gauge.js.
     const LEAVE_CHECK_MS = 1000;
     const CSS = `
         :host { all: initial; }
@@ -98,15 +107,16 @@
                  border-radius: 40px; border: 1px solid rgba(255,255,255,.9);
                  background: linear-gradient(180deg, #fff 18.19%, #f1f2f4 99.96%);
                  box-shadow: 0 24px 48px rgba(31,42,55,.18), 0 2px 6px rgba(31,42,55,.06);
-                 animation: rise .3s ease-out; }
-        .shoo { position: absolute; right: 6px; top: -56px; width: 44px; height: 44px; padding: 0; border: 0;
-                border-radius: 50%; overflow: hidden; background: none; cursor: pointer; }
-        .shoo img { display: block; width: 44px; height: 44px; }
-        .hero { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px 0 22px;
+                 animation: rise .3s ease-out; touch-action: none; }
+        .sheet.settle { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+        /* iOS sheet grabber: the sheet can be dragged down to shrink it to the mini card. */
+        .grabber { position: absolute; left: 50%; top: 8px; width: 36px; height: 5px; margin-left: -18px;
+                   border-radius: 3px; background: rgba(60,60,67,.3); pointer-events: none; }
+        .hero { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 0 22px;
                 border-bottom: 1px solid #e1e3e7; }
         .sent { display: flex; align-items: center; gap: 6px; max-width: calc(100% - 44px); box-sizing: border-box;
                 padding: 6px 13px 6px 9px; border-radius: 999px; border: 1px solid rgba(171,171,171,.9);
-                background: rgba(255,255,255,.7); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
+                background: rgba(255,255,255,.7); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
                 box-shadow: 0 6px 18px rgba(31,42,55,.12); font-size: 15px; white-space: nowrap; }
         .sent[hidden] { display: none; }
         .sent span { overflow: hidden; text-overflow: ellipsis; }
@@ -114,26 +124,61 @@
         .avatar { flex: none; width: 28.97px; height: 28.97px; border-radius: 50%;
                   background: linear-gradient(135deg, #7de49c 0%, #54cae8 71.43%); color: #fff;
                   display: flex; align-items: center; justify-content: center; font-size: 11.85px; font-weight: 600; }
-        .gauge { position: relative; flex: none; width: 277.5px; height: 177.75px; overflow: hidden; border-radius: 24px; }
-        .gauge svg { position: absolute; left: 0; top: 0; }
-        .gauge .value, .gauge .label { position: absolute; left: 0; right: 0; margin: 0; text-align: center; line-height: normal; }
-        .gauge .value { top: 87px; font-size: 22.5px; letter-spacing: -.01em; }
-        .gauge .label { top: 135px; font-size: 11.25px; font-weight: 500; letter-spacing: -.005em; }
+        /* Figma "Shield G" (orange, 50–79) / "Shield Kaca Halftone" (red, ≥80): the export includes the glow, so it
+           overflows the shield's box and is centred on it. */
+        .shield { position: relative; flex: none; width: 153px; height: 160px; }
+        .shield img, .shield .light { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+                                      pointer-events: none; }
+        .shield.orange img, .shield.orange .light { width: 162.67px; height: 172.33px; }
+        .shield.red { width: 146px; }
+        .shield.red img, .shield.red .light { width: 178.2px; height: 171.7px; }
+        /* Like the app's HalftoneShield and the block screen: the glow breathes, a light wave runs up the shield and a
+           shine sweeps the glass. The light layers take the shield picture as mask (set in update()). */
+        .shield::before { content: ""; position: absolute; left: 50%; top: 52%; width: 130px; height: 130px;
+                          border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
+                          animation: breathe 4.8s ease-in-out infinite; }
+        .shield.orange::before { background: radial-gradient(closest-side, rgba(255,149,0,.6), rgba(255,149,0,0)); }
+        .shield.red::before { background: radial-gradient(closest-side, rgba(253,70,80,.7), rgba(253,70,80,0)); }
+        .shield .light { -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat;
+                         mask-repeat: no-repeat; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+        .shield .wave { background: linear-gradient(0deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%)
+                        no-repeat 0 0 / 100% 40%; animation: wave 4s ease-in-out infinite; }
+        .shield .shine { background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.75) 50%, transparent 58%)
+                         no-repeat 0 0 / 300% 100%; animation: shine 5s ease-in-out infinite; }
+        @keyframes breathe { 0%, 100% { opacity: .35; transform: translate(-50%, -50%) scale(.9); }
+                             50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+        @keyframes wave { 0% { background-position: 0 160%; } 65%, 100% { background-position: 0 -60%; } }
+        @keyframes shine { 0% { background-position: 100% 0; } 18%, 100% { background-position: -50% 0; } }
+        h2 { margin: 0; font-size: 28px; font-weight: 600; line-height: 34px; letter-spacing: .02em; color: #191d2f;
+             text-align: center; }
+        .score { display: flex; align-items: center; gap: 8px; height: 35px; }
+        .score .value { font-size: 15px; font-weight: 600; line-height: 34px; letter-spacing: .02em; color: #191d2f; }
+        .bar { display: flex; align-items: center; gap: 1.5px; width: 153px; height: 18px; }
+        .bar span { display: block; flex: 0 0 0; min-width: 0; }
+        .bar .fill, .bar .track { height: 10px; border-radius: 100px;
+             background-image: repeating-linear-gradient(-60deg, rgba(255,255,255,.3) 0 .6px, transparent .6px 3.4px); }
+        .bar .fill { box-shadow: 0 1.5px 4px rgba(229,72,59,.35); }
+        .bar .track { background-color: #e9ecf1;
+             background-image: repeating-linear-gradient(-60deg, #cfd5dd 0 .6px, transparent .6px 3.4px); }
+        /* The pieces fill in from the left, one after another, the first time the sheet shows. */
+        .bar.intro .fill { transform-origin: left center; animation: fill-in .35s ease-out both; }
+        .bar.intro .fill:nth-child(2) { animation-delay: .12s; }
+        .bar.intro .fill:nth-child(3) { animation-delay: .24s; }
+        @keyframes fill-in { from { transform: scaleX(0); } }
+        .bar .tick { flex: none; width: 2px; height: 16px; margin: 0 1.5px; border-radius: .625px; background: #e5483b; }
         .body { display: flex; flex-direction: column; gap: 32px; padding: 24px 22px; }
         .copy { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
         .chip { max-width: 100%; box-sizing: border-box; padding: 7px 13px; border-radius: 999px; background: #e8eaed;
-                box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 13px; font-weight: 500; line-height: normal;
+                box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 13px; line-height: 18px; letter-spacing: -.08px;
                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .text { display: flex; flex-direction: column; gap: 4px; width: 100%; }
-        h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; }
-        .sheet p.rounded { margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); }
+        .sheet p.rounded { margin: 0; font-size: 17px; line-height: 1.4; color: var(--muted); }
         .actions { display: flex; flex-direction: column; gap: 10px; }
         .primary, .secondary { display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;
-                border-radius: 999px; font: 500 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
+                border-radius: 999px; font: 600 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
         .primary { height: 52px; border: 1px solid rgba(28,29,32,.6); color: #fff;
-                   background: linear-gradient(0deg, #191c25 25%, #3c435a 105.21%);
+                   background: linear-gradient(0deg, #214889 0%, #446eb4 100%);
                    box-shadow: inset 0 1.5px 1px rgba(255,255,255,.22), inset 0 -2px 4px rgba(0,0,0,.25); }
-        .secondary { height: 54px; border: 0; color: #191c25; background: #fff; letter-spacing: -.0125em;
+        .secondary { height: 54px; border: 0; color: #191c25; background: #fff;
                      box-shadow: 0 0 0 1px #e3e3e3, 0 3px 5px -3px rgba(0,0,0,.2); }
 
         .mini { position: fixed; z-index: 2147483647; left: 16px; right: 16px; max-width: 360px; margin: 0 auto;
@@ -141,7 +186,9 @@
         .banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 24px;
                   border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.92);
                   -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
-                  box-shadow: 0 12px 28px rgba(31,42,55,.14), 0 1px 3px rgba(31,42,55,.05); }
+                  box-shadow: 0 12px 28px rgba(31,42,55,.14), 0 1px 3px rgba(31,42,55,.05);
+                  cursor: pointer; transition: transform .12s ease-out; }
+        .banner:active { transform: scale(.98); }
         .ring { position: relative; flex: none; width: 72px; height: 72px; }
         .ring svg { position: absolute; left: -6.97px; top: -4.65px; }
         .lines { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 8px; }
@@ -157,7 +204,10 @@
 
         @keyframes rise { from { transform: translateY(24px); opacity: 0; } }
         @keyframes fade { from { opacity: 0; } }
-        @media (prefers-reduced-motion: reduce) { .dim, .sheet, .mini { animation: none; } }
+        @media (prefers-reduced-motion: reduce) {
+            .dim, .sheet, .mini, .shield::before, .bar.intro .fill { animation: none; }
+            .shield .light { display: none; }
+        }
     `;
 
     // Figma "icon/close" (12 × 12).
@@ -165,7 +215,8 @@
     const LEVEL = { 1: "sedang", 2: "tinggi" }; // gauge.js colour set per tier
 
     const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
-    const { gauge: drawGauge, ring: drawRing } = globalThis.ShooGauge;
+    const { ring: drawRing, fillBar } = globalThis.ShooGauge;
+    const DANGER = 80; // red shield from here (Figma "Situs Berbahaya!"), like gauge.js Level=Bahaya
     let host = null;
     let release = () => {}; // stops guarding host
     let ui = null; // the shadow root's wrapper
@@ -239,36 +290,41 @@
         const sheet = el("div", "sheet");
         sheet.setAttribute("role", "alertdialog");
         sheet.setAttribute("aria-modal", "true");
-        const shoo = button("shoo", null, minimize);
-        shoo.setAttribute("aria-label", t("popup_minimize"));
-        const logo = el("img");
-        logo.src = browser.runtime.getURL("images/icon-96.png");
-        logo.alt = "";
-        shoo.append(logo);
+
+        const grabber = el("div", "grabber");
+        grabber.setAttribute("aria-hidden", "true");
+        dragToDismiss(sheet, dim);
 
         const hero = el("div", "hero");
         const sent = sentPill();
-        const meter = el("div", "gauge");
-        const value = el("p", "value");
-        meter.append(el("div"), value, el("p", "label", t(`popup_status_${tier}`)));
-        hero.append(sent.pill, meter);
+        const shield = el("div", "shield");
+        shield.setAttribute("aria-hidden", "true");
+        const shieldArt = el("img");
+        shieldArt.alt = "";
+        // The light layers sit on top of the picture, masked to it (mask url set with the picture in update()).
+        const lights = ["wave", "shine"].map((name) => el("span", `light ${name}`));
+        shield.append(shieldArt, ...lights);
+        const title = el("h2");
+        const score = el("div", "score");
+        const bar = el("div", "bar intro");
+        setTimeout(() => bar.classList.remove("intro"), 1000); // later score updates must not replay the fill-in
+        bar.setAttribute("aria-hidden", "true");
+        const value = el("span", "value");
+        score.append(bar, value);
+        hero.append(sent.pill, shield, title, score);
 
         const body = el("div", "body");
         const copy = el("div", "copy");
         const chip = el("span", "chip");
-        const text = el("div", "text");
-        const title = el("h2", null, t("popup_title_2"));
         const description = el("p", "rounded");
-        text.append(title, description);
-        copy.append(chip, text);
+        copy.append(chip, description);
         const actions = el("div", "actions");
         actions.append(button("primary", t("popup_leave"), leave), button("secondary", t("popup_continue"), minimize));
         body.append(copy, actions);
 
-        sheet.append(shoo, hero, body);
-        sheet.setAttribute("aria-label", title.textContent);
+        sheet.append(grabber, hero, body);
         ui.replaceChildren(dim, sheet);
-        return { layout: "sheet", art: meter.firstChild, draw: drawGauge, value, chip, description, sent };
+        return { layout: "sheet", sheet, shield, shieldArt, title, bar, value, chip, description, sent };
     }
 
     function buildMini(tier) {
@@ -284,6 +340,19 @@
         const description = el("p", "rounded");
         lines.append(title, description);
         banner.append(meter, lines);
+        // Tapping the card opens the full sheet again (the close button only closes).
+        banner.setAttribute("role", "button");
+        banner.tabIndex = 0;
+        banner.setAttribute("aria-label", t("popup_see_detail"));
+        banner.addEventListener("click", (event) => {
+            if (event.isTrusted) expand();
+        });
+        banner.addEventListener("keydown", (event) => {
+            if (event.isTrusted && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                expand();
+            }
+        });
         const close = button("close", null, () => {
             memo = dismissed(memo);
             hide();
@@ -292,7 +361,7 @@
         close.setAttribute("aria-label", t("popup_close"));
         mini.append(banner, close);
         ui.replaceChildren(mini);
-        return { layout: "mini", art: meter, draw: drawRing, value: score, description };
+        return { layout: "mini", art: meter, value: score, description };
     }
 
     function render(state, tier, minimized = false) {
@@ -306,15 +375,73 @@
     function update(state) {
         if (!refs || !last) return;
         last.state = state;
-        refs.art.innerHTML = refs.draw(state.score, LEVEL[last.tier]); // our own markup from numbers only
-        refs.value.textContent = `${state.score}%`;
+        if (refs.layout === "sheet") {
+            // Figma: orange shield + "Situs Mencurigakan!" below 80, red + "Situs Berbahaya!" from 80 (only
+            // reachable here when the dashboard puts the block threshold above 80).
+            const danger = state.score >= DANGER;
+            if (refs.shield.dataset.level !== (danger ? "red" : "orange")) {
+                refs.shield.dataset.level = danger ? "red" : "orange";
+                refs.shield.className = `shield ${refs.shield.dataset.level}`;
+                refs.shieldArt.src = browser.runtime.getURL(`images/shield-${refs.shield.dataset.level}.png`);
+                for (const light of refs.shield.querySelectorAll(".light")) {
+                    light.style.webkitMaskImage = light.style.maskImage = `url("${refs.shieldArt.src}")`;
+                }
+            }
+            refs.title.textContent = t(danger ? "popup_title_danger" : "popup_title_2");
+            refs.sheet.setAttribute("aria-label", refs.title.textContent);
+            fillBar(refs.bar, state.score, danger ? 3 : last.tier, (tag) => dom.create(document, tag));
+            refs.value.textContent = `${state.score}/100`;
+        } else {
+            refs.art.innerHTML = drawRing(state.score, LEVEL[last.tier]); // our own markup from numbers only
+            refs.value.textContent = `${state.score}%`;
+        }
         refs.description.textContent = describe(state.signals, { simple, lang, advice: t(`popup_body_${last.tier}`) });
         if (refs.chip) refs.chip.textContent = state.domain || state.url;
         if (refs.sent) fillSent(refs.sent, state);
     }
 
+    /** The sheet follows a downward drag; let go past dragCloses() and it slides away to the mini card, else back. */
+    function dragToDismiss(sheet, dim) {
+        let start = null; // { y, time, id }
+        let distance = 0;
+        sheet.addEventListener("pointerdown", (event) => {
+            if (!event.isTrusted || event.button > 0 || event.target.closest?.("button")) return;
+            start = { y: event.clientY, time: event.timeStamp, id: event.pointerId };
+            distance = 0;
+            sheet.classList.remove("settle");
+            sheet.style.animation = "none"; // the rise animation would override the transform
+            sheet.setPointerCapture?.(event.pointerId);
+        });
+        sheet.addEventListener("pointermove", (event) => {
+            if (!start || event.pointerId !== start.id) return;
+            distance = Math.max(0, event.clientY - start.y);
+            sheet.style.transform = `translateY(${distance}px)`;
+            dim.style.opacity = String(Math.max(0.2, 1 - distance / 400));
+        });
+        const end = (event) => {
+            if (!start || event.pointerId !== start.id) return;
+            const speed = distance / Math.max(1, event.timeStamp - start.time);
+            start = null;
+            sheet.classList.add("settle");
+            if (event.type === "pointerup" && dragCloses(distance, speed)) {
+                sheet.style.transform = "translateY(110%)";
+                dim.style.opacity = "0";
+                setTimeout(minimize, 200);
+            } else {
+                sheet.style.transform = "";
+                dim.style.opacity = "";
+            }
+        };
+        sheet.addEventListener("pointerup", end);
+        sheet.addEventListener("pointercancel", end);
+    }
+
     function minimize() {
         if (last && refs?.layout === "sheet") render(last.state, last.tier, true);
+    }
+
+    function expand() {
+        if (last && refs?.layout === "mini") render(last.state, last.tier, false);
     }
 
     /** Back to where the user came from; a page opened on its own has nothing behind it. */

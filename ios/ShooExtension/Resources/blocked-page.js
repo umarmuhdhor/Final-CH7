@@ -1,7 +1,7 @@
 // Owner: lead. Block screen behaviour (EX-06), runs inside blocked.html.
-// Protected: "Link sent to [guardian]" once the scan is reported (EX-07); reopens by itself once the domain
-// is marked safe. Guardian and Protected: "Review in Shoo" → Detail (reviewing, not deciding: PRD 8.2);
-// a Guardian's page also reopens after marking it safe for themselves (PRD §5 Validasi).
+// Protected (Figma "Safari / Blocked / Protected"): no button, no "Link sent to" pill; reopens by itself once the
+// domain is marked safe. Guardian: "Review in Shoo" → Detail (reviewing, not deciding: PRD 8.2); its page also
+// reopens after marking it safe for themselves (PRD §5 Validasi).
 
 (() => {
     // #350 (contracts/api.md): fast while a Guardian is most likely deciding, slower once it's been a while.
@@ -33,11 +33,14 @@
                       .filter(Boolean),
             chip: middleEllipsis(payload.domain || payload.url),
             lookalike,
-            sentTo: mode === "protected" ? profile.guardianName || null : null,
+            autoNote: simple, // Figma "Safari / Blocked / Protected": "We blocked this page automatically."
+            // Figma: Protected only goes back to a safe page; the Guardian decides in the app.
             button:
                 mode === null
                     ? { textKey: "block_open_app", href: "shoo://activity" }
-                    : { textKey: "block_review", href: detailUrl(payload) },
+                    : mode === "protected"
+                      ? null
+                      : { textKey: "block_review", href: detailUrl(payload) },
             poll: mode !== null,
         };
     }
@@ -77,7 +80,16 @@
         return payload.recordId ? `shoo://scan/${encodeURIComponent(payload.recordId)}` : "shoo://activity";
     }
 
-    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs, middleEllipsis };
+    /** One paragraph from the reason lines (Figma): each line ends with a full stop, joined by spaces. */
+    function sentence(lines) {
+        return lines
+            .map((line) => String(line).trim())
+            .filter(Boolean)
+            .map((line) => (/[.!?]$/.test(line) ? line : `${line}.`))
+            .join(" ");
+    }
+
+    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs, middleEllipsis, sentence };
 
     // ---- Page ---------------------------------------------------------------------------
 
@@ -89,7 +101,7 @@
     const send = (message) => browser.runtime.sendMessage(message);
 
     document.documentElement.lang = lang;
-    const keys = { title: "block_title", level: "popup_status_2", back: "block_back" };
+    const keys = { title: "block_title", back: "block_back" };
     for (const node of document.querySelectorAll("[data-text]")) node.textContent = t(keys[node.dataset.text]);
     document.title = t("block_title");
 
@@ -103,12 +115,12 @@
     $(".screen").hidden = false;
     if (!payload) {
         // Fragment missing or edited: still blocked, just without details. Never reopen anything.
-        for (const selector of [".gauge", ".link", ".reasons"]) $(selector).hidden = true;
+        for (const selector of [".score", ".link", ".reasons"]) $(selector).hidden = true;
         return;
     }
 
-    $(".gauge-art").innerHTML = globalThis.ShooGauge.gauge(payload.score, "bahaya"); // our markup from a number
-    $(".score-value").textContent = `${payload.score}%`;
+    globalThis.ShooGauge.fillBar($(".bar"), payload.score, 3, (tag) => document.createElement(tag));
+    $(".score-value").textContent = `${payload.score}/100`;
     $(".link").textContent = globalThis.ShooBlockedPage.middleEllipsis(payload.domain || payload.url);
     $(".link").title = payload.domain || payload.url;
 
@@ -125,9 +137,10 @@
         view = viewFor(profile, payload, lang);
         mode = profile?.onboarded ? profile.mode : null;
 
-        const lines = view.remembered ? [t("block_remembered")] : view.reasons;
+        const lines = view.remembered ? [t("block_remembered")] : [...view.reasons];
+        if (view.autoNote) lines.push(t("block_auto"));
         const reasons = $(".reasons");
-        reasons.replaceChildren(...lines.map((text) => Object.assign(document.createElement("span"), { textContent: text })));
+        reasons.textContent = sentence(lines);
         reasons.hidden = lines.length === 0;
         if (view.lookalike) {
             $(".lookalike").textContent = view.lookalike;
@@ -155,30 +168,20 @@
     }
 
     // EX-07: the POST may still be running when this page opens. Asked again on every poll until it exists.
-    let recordAnswered = false; // asked background at least once with an answer (it also carries `notified`, #377)
+    let recordAnswered = false; // asked background at least once with an answer
     async function findRecord() {
-        if ((recordId && recordAnswered) || !payload.reportKey || mode === null) return;
+        if ((recordId && recordAnswered) || !payload.reportKey || !view?.button || mode === null) return;
         const reply = await send({ type: "recordId", key: payload.reportKey }).catch(() => null);
         if (!reply?.recordId) return;
         recordAnswered = true;
         recordId = reply.recordId;
-        // #377: the backend says who it really pushed (null = nobody). Older backends say nothing: keep the name.
-        if (view && "notified" in reply) view.sentTo = mode === "protected" ? reply.notified || null : null;
         showRecord();
     }
 
-    /** Once the scan is stored: "Review in Shoo" opens it, and Protected sees who it went to. */
+    /** Once the scan is stored: "Review in Shoo" opens it. */
     function showRecord() {
-        if (!recordId || !view) return;
-        if (view.button && mode !== null) $(".button").href = detailUrl({ recordId });
-        if (!view.sentTo) {
-            $(".sent").hidden = true; // #377: the backend said nobody got it
-            return;
-        }
-        $(".avatar").textContent = Array.from(view.sentTo)[0].toUpperCase();
-        const [before = "", after = ""] = t("popup_sent_to", ["\u0000"]).split("\u0000");
-        $(".sent-text").replaceChildren(before, Object.assign(document.createElement("b"), { textContent: view.sentTo }), after);
-        $(".sent").hidden = false;
+        if (!recordId || !view?.button || mode === null) return;
+        $(".button").href = detailUrl({ recordId });
     }
 
     let timer = null;

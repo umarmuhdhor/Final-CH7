@@ -27,7 +27,8 @@
     }],
 
     "web_accessible_resources": [{
-        "resources": [ "blocked.html", "blocked.css", "block.js", "blocked-page.js", "gauge.js", "images/icon-96.png", "images/shoo-shield-red.svg",
+        "resources": [ "blocked.html", "blocked.css", "block.js", "blocked-page.js", "gauge.js", "images/icon-96.png", 
+                       "images/shield-orange.png", "images/shield-red.png", "images/shoo-logo.png", "images/shoo-shield-red.svg",
                        "images/shoo-shield-yellow.svg", "images/lock.svg" ],
         "matches": [ "<all_urls>" ]
     }],

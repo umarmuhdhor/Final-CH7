@@ -160,5 +160,45 @@
             `</svg>`;
     }
 
-    globalThis.ShooGauge = { gauge, ring, LEVELS };
+    // Figma "Bar" (warning sheet + block screen): the score as 1–3 hatched pieces (one per level reached), a red
+    // tick at the score, then a grey hatched track for the rest. Orange → coral → red, in that order.
+    const BAR_COLORS = ["#FF9500", "#F87541", "#E5483B"];
+
+    /**
+     * Pure: the bar's pieces as flex weights (they add up to 100).
+     * @param {number} score
+     * @param {1|2|3} pieces  levels reached: 1 = first warning, 2 = second warning, 3 = blocked
+     */
+    function barParts(score, pieces) {
+        const value = clamp(score);
+        const count = Math.min(3, Math.max(1, Math.round(Number(pieces) || 1)));
+        const each = n(value / count);
+        return {
+            fills: BAR_COLORS.slice(0, count).map((color) => ({ color, weight: each })),
+            track: n(100 - value),
+        };
+    }
+
+    /**
+     * Builds the bar inside `container` (a flex row). Sizes go through element.style, never markup, so a
+     * page's CSP can't drop them. `create(tag)` makes an element (ShooDom.create in content scripts).
+     * Classes: .fill (each piece), .tick, .track — the caller's CSS draws them.
+     */
+    function fillBar(container, score, pieces, create) {
+        const { fills, track } = barParts(score, pieces);
+        const part = (className, weight, color) => {
+            const node = create("span");
+            node.className = className;
+            if (weight != null) node.style.flexGrow = String(weight);
+            if (color) node.style.backgroundColor = color;
+            return node;
+        };
+        container.replaceChildren(
+            ...fills.map((fill) => part("fill", fill.weight, fill.color)),
+            part("tick"),
+            part("track", track),
+        );
+    }
+
+    globalThis.ShooGauge = { gauge, ring, barParts, fillBar, LEVELS };
 })();

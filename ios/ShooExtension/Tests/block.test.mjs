@@ -34,23 +34,18 @@ test("tampered or missing fragment → null (stays blocked, never reopens)", () 
 
 const payload = payloadFor(state);
 
-test("Protected: plain wording, link sent to the guardian, Review in Shoo, reopens once marked safe", () => {
+test("Protected: plain wording, no button and no Link sent pill (Figma), reopens once marked safe", () => {
     const v = viewFor({ onboarded: true, mode: "protected", guardianName: "Adhella" }, payload, "id");
     assert.equal(v.reasons[0], "Situs ini baru dibuat 3 hari lalu");
-    assert.equal(v.sentTo, "Adhella");
-    assert.deepEqual(v.button, { textKey: "block_review", href: "shoo://activity" });
+    assert.equal("sentTo" in v, false);
+    assert.equal(v.button, null);
     assert.equal(v.poll, true);
 });
 
-test("Protected without a connected guardian → no Link sent pill", () => {
-    const v = viewFor({ onboarded: true, mode: "protected", guardianName: null }, payload, "en");
-    assert.equal(v.sentTo, null);
-});
 
 test("Guardian: full wording, Review in Shoo, reopens after own Safe", () => {
     const v = viewFor({ onboarded: true, mode: "guardian" }, payload, "en");
     assert.equal(v.reasons[0], "Domain age 3 days");
-    assert.equal(v.sentTo, null);
     assert.deepEqual(v.button, { textKey: "block_review", href: "shoo://activity" });
     assert.equal(v.poll, true);
 });
@@ -64,7 +59,6 @@ test("App not set up → Open Shoo, nothing to poll", () => {
     const v = viewFor({ onboarded: false }, payload, "en");
     assert.deepEqual(v.button, { textKey: "block_open_app", href: "shoo://activity" });
     assert.equal(v.poll, false);
-    assert.equal(v.sentTo, null);
 });
 
 test("#350: block screen polls every 2 s for 2 min, 5 s up to 10 min, then 15 s", () => {
@@ -111,4 +105,11 @@ test("#382: an IDN look-alike keeps its punycode, with the detector's look-alike
     assert.equal(v.lookalike, "Nama domain meniru BCA");
     assert.ok(!v.reasons.includes("Nama domain meniru BCA"));
     assert.equal(viewFor({ onboarded: true, mode: "guardian" }, { ...p, domain: "bca-verify.xyz" }, "id").lookalike, null);
+});
+
+test("block screen: reasons read as one paragraph; Protected adds the automatic-block line", () => {
+    const { sentence } = globalThis.ShooBlockedPage;
+    assert.equal(sentence(["Domain age 3 days", "Asks for your PIN.", " "]), "Domain age 3 days. Asks for your PIN.");
+    assert.equal(viewFor({ onboarded: true, mode: "protected" }, payload, "id").autoNote, true);
+    assert.equal(viewFor({ onboarded: true, mode: "guardian" }, payload, "en").autoNote, false);
 });
