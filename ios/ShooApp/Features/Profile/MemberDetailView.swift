@@ -222,7 +222,8 @@ struct MemberDetailView: View {
             if !sent {
                 Button {
                     Task {
-                        if let message = await model.remind() {
+                        // A problem shows as an alert, which VoiceOver reads; only "sent" is announced.
+                        if let message = await model.remind(), model.actionError == nil {
                             AccessibilityNotification.Announcement(L10n.string(message, language: language)).post()
                         }
                     }
