@@ -1,9 +1,9 @@
 // Owner: lead. Warning popup at 30% and 50% (EX-04). Plain script, loaded after pipeline.js and gauge.js.
 // Rules (PRD §5, 8.5): each popup at most once per page · none if the page goes straight to ≥80%
 // (block screen instead, EX-06) · closable · the page stays usable underneath.
-// Look (Figma "UI Pop Up Safari"): 30–49% → mini card at the bottom · 50–79% → sheet over a dimmed
-// page with the shield, the score bar and Leave / Continue (frames 1928:3599 / 1928:3781); Continue (or the Shoo button above it) shrinks it to
-// the mini card. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
+// Look (Figma "UI Pop Up Safari"): from 30% → sheet over a dimmed page with the shield, the score bar and
+// Leave / Continue (frames 1928:3599 / 1928:3781). Continue, the Shoo button above it, tapping the page or
+// dragging the sheet down by its grabber shrinks it to the mini card at the bottom. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
 
 (() => {
     const { THRESHOLD } = globalThis.ShooPipeline;
@@ -56,9 +56,17 @@
         return memo ? { ...memo, visibleTier: 0 } : memo;
     }
 
-    /** "sheet" blocks the page until the user picks Leave or Continue; "mini" sits above Safari's toolbar. */
+    /** "sheet" covers the page until the user picks Leave or Continue (or drags it down); "mini" sits above
+     *  Safari's toolbar. Every warning tier opens as the sheet. */
     function layoutFor(tier, minimized) {
-        return tier === 2 && !minimized ? "sheet" : "mini";
+        return tier && !minimized ? "sheet" : "mini";
+    }
+
+    /** Drag-to-dismiss: far enough or fast enough downwards closes the sheet (to the mini card). */
+    const DISMISS_DISTANCE = 110; // px
+    const DISMISS_SPEED = 0.6; // px per ms
+    function dragCloses(distance, speed) {
+        return distance > DISMISS_DISTANCE || (distance > 20 && speed > DISMISS_SPEED);
     }
 
     /** Card text: the heaviest reason, then the tier's advice. Protected gets the plain wording (DT-04). */
@@ -71,7 +79,7 @@
         return `${/[.!?]$/.test(top) ? top : `${top}.`} ${advice}`;
     }
 
-    globalThis.ShooPopup = { tierFor, decide, dismissed, layoutFor, describe };
+    globalThis.ShooPopup = { tierFor, decide, dismissed, layoutFor, dragCloses, describe };
 
     // ---- View (browser only) -------------------------------------------------------------
 
@@ -98,7 +106,11 @@
                  border-radius: 40px; border: 1px solid rgba(255,255,255,.9);
                  background: linear-gradient(180deg, #fff 18.19%, #f1f2f4 99.96%);
                  box-shadow: 0 24px 48px rgba(31,42,55,.18), 0 2px 6px rgba(31,42,55,.06);
-                 animation: rise .3s ease-out; }
+                 animation: rise .3s ease-out; touch-action: none; }
+        .sheet.settle { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+        /* iOS sheet grabber: the sheet can be dragged down to shrink it to the mini card. */
+        .grabber { position: absolute; left: 50%; top: 8px; width: 36px; height: 5px; margin-left: -18px;
+                   border-radius: 3px; background: rgba(60,60,67,.3); pointer-events: none; }
         .shoo { position: absolute; right: 6px; top: -56px; width: 44px; height: 44px; padding: 0; box-sizing: border-box;
                 border-radius: 50%; border: 1px solid #fff; overflow: hidden; background: rgba(255,255,255,.88);
                 -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
@@ -287,6 +299,10 @@
         logo.alt = "";
         shoo.append(logo);
 
+        const grabber = el("div", "grabber");
+        grabber.setAttribute("aria-hidden", "true");
+        dragToDismiss(sheet, dim);
+
         const hero = el("div", "hero");
         const sent = sentPill();
         const shield = el("div", "shield");
@@ -314,7 +330,7 @@
         actions.append(button("primary", t("popup_leave"), leave), button("secondary", t("popup_continue"), minimize));
         body.append(copy, actions);
 
-        sheet.append(shoo, hero, body);
+        sheet.append(grabber, shoo, hero, body);
         ui.replaceChildren(dim, sheet);
         return { layout: "sheet", sheet, shield, shieldArt, title, bar, value, chip, description, sent };
     }
@@ -368,7 +384,7 @@
             }
             refs.title.textContent = t(danger ? "popup_title_danger" : "popup_title_2");
             refs.sheet.setAttribute("aria-label", refs.title.textContent);
-            fillBar(refs.bar, state.score, danger ? 3 : 2, (tag) => dom.create(document, tag));
+            fillBar(refs.bar, state.score, danger ? 3 : last.tier, (tag) => dom.create(document, tag));
             refs.value.textContent = `${state.score}/100`;
         } else {
             refs.art.innerHTML = drawRing(state.score, LEVEL[last.tier]); // our own markup from numbers only
@@ -377,6 +393,42 @@
         refs.description.textContent = describe(state.signals, { simple, lang, advice: t(`popup_body_${last.tier}`) });
         if (refs.chip) refs.chip.textContent = state.domain || state.url;
         if (refs.sent) fillSent(refs.sent, state);
+    }
+
+    /** The sheet follows a downward drag; let go past dragCloses() and it slides away to the mini card, else back. */
+    function dragToDismiss(sheet, dim) {
+        let start = null; // { y, time, id }
+        let distance = 0;
+        sheet.addEventListener("pointerdown", (event) => {
+            if (!event.isTrusted || event.button > 0 || event.target.closest?.("button")) return;
+            start = { y: event.clientY, time: event.timeStamp, id: event.pointerId };
+            distance = 0;
+            sheet.classList.remove("settle");
+            sheet.style.animation = "none"; // the rise animation would override the transform
+            sheet.setPointerCapture?.(event.pointerId);
+        });
+        sheet.addEventListener("pointermove", (event) => {
+            if (!start || event.pointerId !== start.id) return;
+            distance = Math.max(0, event.clientY - start.y);
+            sheet.style.transform = `translateY(${distance}px)`;
+            dim.style.opacity = String(Math.max(0.2, 1 - distance / 400));
+        });
+        const end = (event) => {
+            if (!start || event.pointerId !== start.id) return;
+            const speed = distance / Math.max(1, event.timeStamp - start.time);
+            start = null;
+            sheet.classList.add("settle");
+            if (event.type === "pointerup" && dragCloses(distance, speed)) {
+                sheet.style.transform = "translateY(110%)";
+                dim.style.opacity = "0";
+                setTimeout(minimize, 200);
+            } else {
+                sheet.style.transform = "";
+                dim.style.opacity = "";
+            }
+        };
+        sheet.addEventListener("pointerup", end);
+        sheet.addEventListener("pointercancel", end);
     }
 
     function minimize() {

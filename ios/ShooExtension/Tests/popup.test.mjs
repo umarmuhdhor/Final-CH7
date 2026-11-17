@@ -53,11 +53,21 @@ test("new page resets: old popup hides, warnings can show again", () => {
     assert.deepEqual(play([0, 35], { scanId: 2, memo }).actions, ["hide", "show1"]);
 });
 
-test("50–79 opens as the sheet until minimized; 30–49 is always the mini card", () => {
+test("every warning opens as the sheet until minimized, then the mini card", () => {
     const { layoutFor } = globalThis.ShooPopup;
     assert.equal(layoutFor(2, false), "sheet");
     assert.equal(layoutFor(2, true), "mini");
-    assert.equal(layoutFor(1, false), "mini");
+    assert.equal(layoutFor(1, false), "sheet");
+    assert.equal(layoutFor(1, true), "mini");
+});
+
+test("dragging the sheet down closes it when far or fast enough", () => {
+    const { dragCloses } = globalThis.ShooPopup;
+    assert.equal(dragCloses(0, 0), false);
+    assert.equal(dragCloses(60, 0.2), false); // slow, short: springs back
+    assert.equal(dragCloses(120, 0.1), true); // far
+    assert.equal(dragCloses(40, 1.2), true); // flick
+    assert.equal(dragCloses(10, 2), false); // a tap-sized wobble never closes
 });
 
 test("card text: heaviest reason first, plain wording for Protected, advice last", () => {
