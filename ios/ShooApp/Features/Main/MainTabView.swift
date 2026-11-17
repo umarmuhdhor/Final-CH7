@@ -99,9 +99,10 @@ struct MainTabView: View {
         "\(ObjectIdentifier(repository).hashValue)-\(familyMode)-\(deviceId ?? "-")"
     }
 
-    /// Activity reads the app-wide verdict counter (K8).
+    /// Activity reloads on its next appearance when this changes (K8): a saved verdict, or a member disconnected
+    /// (their rows and name must not stay in Family Activity).
     private var verdictSaves: @MainActor () -> Int {
-        { [env] in env.verdictSaves }
+        { [env] in env.verdictSaves + env.familyChanges }
     }
 
     @ViewBuilder
