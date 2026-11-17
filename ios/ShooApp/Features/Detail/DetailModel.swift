@@ -138,10 +138,22 @@ final class DetailModel {
 
     // MARK: Actions
 
-    func load() async {
+    /// A push or the return to the foreground while Detail shows: reads the scan again (a verdict, a deleted
+    /// scan) but keeps the links of the page copy and screenshot on screen, so the copy is not loaded again
+    /// (each read hands out new short-lived links, contracts/api.md).
+    func refresh() async {
+        guard state == .loaded else { return }
+        await load(keepingMedia: true)
+    }
+
+    func load() async { await load(keepingMedia: false) }
+
+    private func load(keepingMedia: Bool) async {
         if scan == nil { state = .loading }
-        screenshotLinkRefreshed = false
-        replicaLinkRefreshed = false
+        if !keepingMedia {
+            screenshotLinkRefreshed = false
+            replicaLinkRefreshed = false
+        }
         let epoch = verdictEpoch
         do {
             async let fetchedScan = repository.scan(id: scanId)
@@ -151,6 +163,10 @@ final class DetailModel {
             // A verdict tapped while this load was in flight is newer than the snapshot.
             if isSubmittingVerdict || epoch != verdictEpoch, let current = scan, current.id == loadedScan.id {
                 loadedScan.verdict = current.verdict
+            }
+            if keepingMedia, let current = scan, current.id == loadedScan.id {
+                if let link = current.pageReplicaUrl { loadedScan.pageReplicaUrl = link }
+                if let link = current.screenshotUrl { loadedScan.screenshotUrl = link }
             }
             scan = loadedScan
             viewer = loadedViewer
