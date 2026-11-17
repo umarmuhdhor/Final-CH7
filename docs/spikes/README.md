@@ -5,7 +5,7 @@ Fill the template in each file. ON-04 starts on the PRD §10 fallback; #2 and #3
 
 | # | Spike | PRD | Owner |
 |---|---|---|---|
-| 1 | [Dynamic Island from the extension](dynamic-island.md) | EX-03 | Umar (lead) |
+| 1 | [Dynamic Island from the extension](dynamic-island.md) — obsolete: Dynamic Island dropped 17 Nov 2026 (#555), kept as history | EX-03 | Umar (lead) |
 | 2 | [Detect extension On/Off](extension-status.md) | ON-04, PR-04, GD-01 | Alief (own iPhone) |
 | 3 | [Open Safari extension settings](open-extension-settings.md) | ON-04 | Alief (own iPhone) |
 | 4 | [Read the Chrome URL on Android](android-url-reader.md) | none yet | Umar (lead) |

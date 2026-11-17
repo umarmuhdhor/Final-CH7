@@ -47,7 +47,7 @@ test("naive fallback keeps a www that leaves a single label (www.com)", () => {
     assert.equal(naiveDomain("www.com."), "www.com");
 });
 
-// #487, #495: the `domain` the extension sends (POST /scans, GET /verdicts, POST /live) and files block memory under.
+// #487, #495: the `domain` the extension sends (POST /scans, GET /verdicts) and files block memory under.
 const domainOfUrl = (url) => pageDomain(new URL(url).hostname, (host) => registrableDomain(host, rules));
 const sent = {
     // #487: no registrable domain → the full host, lowercase

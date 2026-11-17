@@ -2,6 +2,8 @@ import Foundation
 import Testing
 @testable import Shoo
 
+// TODO(#555): delete with ScoreActivityAttributes.swift once the app PR for #555 is merged (EX-03 dropped).
+
 /// The backend's Live Activity push (contracts/api.md "Live score (Dynamic Island)") must decode into
 /// `ScoreActivityAttributes` on the phone, or the island never shows. Keys are a contract.
 struct ScoreActivityAttributesTests {

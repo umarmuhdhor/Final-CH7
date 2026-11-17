@@ -8,9 +8,9 @@ Kamu memegang **semua yang terjadi di Safari**: mengambil isi halaman, memanggil
 
 | Boleh diedit | Jangan disentuh (milik tim lain) |
 |---|---|
-| `contracts/`, `ios/project.yml`, `ios/ShooShared/`, `ios/ShooExtension/` (kecuali `Resources/detector.js`), `ios/ShooLiveActivity/`, `docs/` · sejak 23 Okt 2026 (diambil alih dari Imelda): `detector/`, `ai/`, `plan/imelda/`, `Resources/detector.js` (hanya lewat `detector/scripts/sync-to-extension.sh`) | `ios/ShooApp/`, `backend/` (Alief) |
+| `contracts/`, `ios/project.yml`, `ios/ShooShared/`, `ios/ShooExtension/` (kecuali `Resources/detector.js`), `docs/` · sejak 23 Okt 2026 (diambil alih dari Imelda): `detector/`, `ai/`, `plan/imelda/`, `Resources/detector.js` (hanya lewat `detector/scripts/sync-to-extension.sh`) | `ios/ShooApp/`, `backend/` (Alief) |
 
-Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CLAUDE.md` · `ios/ShooLiveActivity/CLAUDE.md` · `docs/spikes/`.
+Wajib dibaca: PRD bagian 5, 8.5, 9, 10 · `contracts/*` · `ios/ShooExtension/CLAUDE.md` · `docs/spikes/`.
 
 ## Definisi sukses MVP
 1. Semua **P0 EX-01 … EX-07** lolos kriteria "Selesai kalau" di PRD 8.5.
@@ -70,7 +70,7 @@ S1 (deteksi On/Off) dan S2 (buka pengaturan extension) dikerjakan Alief di iPhon
   - [x] Ganti screenshot dengan replika DOM (29 Okt 2026): screenshot sering tidak sempat diambil sebelum halaman diblokir / situsnya mati. `replica.js` + `replica-build.js` → `pageReplicaBase64`. Backend + Detail app: Alief (#176, live 30–31 Okt).
   - [x] `marks` di meta replika (#176, permintaan Alief untuk spotlight di Detail): posisi tiap sinyal (teks bukti, logo, field `asks_*`) dalam px dokumen. Branch: `feat/EX-07-replica-marks`.
 - [x] **U6 · EX-03** Indikator live sesuai hasil S3. Branch: `feat/EX-03-live-score`. Pill in-page, merged sebagai #43.
-- [ ] **EX-03 · Dynamic Island lewat push (jalur C, #49)**, diputuskan 10 Nov. Bagian Umar selesai: kontrak #357 + #359, extension + island #358, warna island ikut `status` #420 (#383). Spike jalur E dicatat di `docs/spikes/dynamic-island.md`. Token dari app (Alief) sudah merge (#356, #386). Sisa: tes di iPhone bersama Alief (checklist di komentar #49 / `docs/spikes/dynamic-island.md`).
+- [x] ~~**EX-03 · Dynamic Island lewat push (jalur C, #49)**, diputuskan 10 Nov.~~ **Dibatalkan 17 Nov 2026** (Umar + Alief, #555): Dynamic Island dibuang, skor live cukup di pill. Sisi lead dihapus di `feat/EX-03-remove-dynamic-island`; sisi app + backend oleh Alief di #555. Sisa: hapus `ios/ShooShared/ScoreActivityAttributes.swift` + tesnya setelah PR app #555 merge. Catatan lama: Bagian Umar selesai: kontrak #357 + #359, extension + island #358, warna island ikut `status` #420 (#383). Spike jalur E dicatat di `docs/spikes/dynamic-island.md`. Token dari app (Alief) sudah merge (#356, #386). Sisa: tes di iPhone bersama Alief (checklist di komentar #49 / `docs/spikes/dynamic-island.md`).
 - [ ] **U7 · EX-01** Verifikasi "Allow on every website" + pencabutan izin → app Off (dari hasil S1). Branch: `feat/EX-01-all-sites-permission`
   - [x] Heartbeat membawa `allSites` (`browser.permissions.contains(<all_urls>)`) → App Group `extension.allSites`. Dikirim juga saat izin berubah dan tiap alarm 1 jam.
   - [x] Alief: `ExtensionStatus` baca `extension.allSites == false` → Off (`ExtensionStatus.swift`, alasan `.someSitesOnly`).
@@ -104,7 +104,7 @@ Semua pertanyaan untuk lead dijawab di issue masing-masing. Yang tanpa sisa kerj
 - [ ] **#298** Q2: Xcode Cloud workflow Default → Archive + post-action TestFlight (Internal), build number > 6. Saat dicek 11 Nov, `main` baru menjalankan "Build - iOS".
 - [ ] **#351** link TestFlight publik (grup tester eksternal + Beta App Review) → Alief isi `APP_STORE_URL`.
 - [ ] **#321** jawaban Richard (Q1 "AI belajar dari keputusan keluarga" MVP / Fase 2, Q2 salinan halaman untuk admin). Cek juga `AI_CALIBRATION_ENABLED=true` di #337 sesuai jawaban Q1.
-- [ ] **#49** tes Dynamic Island di iPhone bersama Alief.
+- [x] ~~**#49** tes Dynamic Island di iPhone bersama Alief.~~ Batal: Dynamic Island dibuang (#555).
 
 ### Dari review plan Alief (PR #2, 21 Okt) — semua usulan disetujui
 - [x] Review PR #2 (approve) · `plan/<nama>/` masuk tabel kepemilikan `CLAUDE.md`.

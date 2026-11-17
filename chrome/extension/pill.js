@@ -1,7 +1,6 @@
 // Owner: lead. Live score bubble (EX-03). Plain content script, loaded after pipeline.js.
 // Chrome copy of the Safari pill.js without the card's "See detail" (no Shoo app on Chrome to open).
-// The extension can't drive the Dynamic Island (docs/spikes/dynamic-island.md), so the running
-// score floats on the page instead: a round button the user can drag to either edge (like a chat
+// The running score floats on the page: a round button the user can drag to either edge (like a chat
 // head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
 // Rules: always on screen while a page is open, whatever the score · the number follows every
 // (re)scan live (content.js re-checks the page when it changes) · hidden when blocked (block screen
