@@ -22,7 +22,6 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Latest scams](#latest-scams): `GET /scams/latest` (*proposed*, Home card)
 - [Config](#config): `GET /config/public`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
-- [Live Activity](#live-activity): `POST /live` (EX-03, #49)
 - [Push notification](#push-notification) sent by `POST /scans`
 - [Scheduled pushes](#scheduled-pushes): protection off, weekly summary (hourly cron)
 
@@ -260,14 +259,17 @@ push language, and the extension's hourly heartbeat that drives "Not connected" 
 | `avatarId` | string | *PF-01 proposed* ("Ubah foto"). `avatar_01` … `avatar_12` |
 | `timeZone` | string | *PF-01 proposed.* IANA zone of the phone, e.g. `"Asia/Makassar"`: at most 40 characters, `^[A-Za-z_]+(/[A-Za-z0-9_+-]+){0,2}$`, and known to the runtime. Sent by the app once per launch with the device info |
 | `notifications` | object | *PF-01 proposed.* Any of the keys in [`GET /devices/me`](#get-devicesme) `notifications`; only sent keys change. Booleans, and `quietStart` / `quietEnd` as `HH:MM` (00:00–23:59). Unknown keys → `422` |
-| `liveActivityStartToken` | string \| `null` | *EX-03 (#49).* Hex push-to-start token from `Activity<ScoreActivityAttributes>.pushToStartTokenUpdates`. Send it again when it changes; `null` clears it |
-| `liveActivityUpdateToken` | object \| `null` | *EX-03 (#49).* `{ "activityId": "<Activity.id>", "token": "<hex>" }` from the running activity's `pushTokenUpdates`. Only the latest activity is kept; `null` clears it. Unknown keys → `422` |
 
 ```json
 { "language": "id" }
 ```
 
 **Response 200:** `{ "ok": true }`
+
+Other top-level keys are dropped without an error. Builds from before #555 still send
+`liveActivityStartToken` / `liveActivityUpdateToken` (the Dynamic Island, EX-03, removed): they get
+the `200` above, the rest of their body is saved and those two are stored nowhere. `POST /live` is gone
+(`404`).
 
 ### `POST /devices/me/protected`
 
@@ -537,10 +539,10 @@ Each signal:
 | `label` | `{ en, id }` | Technical text for the Guardian, 1–500 characters each |
 | `labelSimple` | `{ en, id }` | Plain text for the Protected user, 1–500 characters each |
 | `evidence` | string | Optional, ≤ 500 characters |
-| `host` | `{ marks?, official? }` | Optional (DT-04, #497). `marks`: 1–4 strings, 1–253 characters each; `official`: 1–253 characters. Other keys are dropped; a text that is empty after cleaning, or `host: null`, gives 422. Returned as stored in every scan response; absent on older scans |
+| `host` | `{ marks?, official? }` | Optional (DT-04, #497). `marks`: 1–4 strings, 1–253 characters each, host characters only (`a-z`, `0-9`, `.`, `-`, `:`, `[`, `]`; they are parts of `domain`); `official`: 1–253 characters and a domain by the same rule as the scan's `domain` (lowercase, no scheme, path, port, space or trailing dot; IPv4, `[IPv6]`, a single label and `www.` forms pass), because the app shows it as "Real: X" next to a checkmark. Both are checked as sent, not cleaned: any other value, an empty one, or `host: null` gives 422 `invalid_body` at `signals.N.host.official` / `signals.N.host.marks.M`. Other keys inside are dropped. Returned as stored in every scan response; absent on older scans |
 
 `ownerDeviceId` and `ownerName` are accepted but ignored. Control and bidi characters are removed from
-all text.
+all other text.
 
 **Thresholds** (*dashboard phase 05, proposed X1*). The extension decides `status` from the score:
 
@@ -1024,56 +1026,6 @@ before public release.
 link the invite page uses).
 
 - **Auth:** none. No database, nothing logged about the visitor.
-
-## Live Activity
-
-> *EX-03 (#49).* Contract: `contracts/api.md` "Live score (Dynamic Island)" (#357).
-
-### `POST /live`
-
-**For:** the running score in the Dynamic Island (EX-03 path C), also while Shoo is closed. The
-extension calls it on page open, score change and page hidden, only while the online check is on.
-The in-page pill stays the offline, instant score; the island is extra.
-
-- **Auth:** Bearer, either mode
-- **Rate limit:** 10 per 10 s per device for `open: true` (`429` + `Retry-After`). `open: false` is never limited.
-- **Privacy:** domain and score go into the APNs payload only. No table row, no `push_log` row, and
-  the log line holds `kind` and `result` only.
-
-**Request body** (all fields required except `label` and `secondWarning`, unknown keys → `422`)
-
-| Field | Type | Rules |
-|---|---|---|
-| `domain` | string | Registrable domain (see [Request format](#request-format)), never a URL |
-| `score` | integer | 0–100 |
-| `status` | `"normal"` \| `"warning"` \| `"blocked"` | |
-| `analyzing` | boolean | Online check still running |
-| `open` | boolean | `false`: the page left the screen, end the island |
-| `label` | `"offline_check"` \| `"marked_safe"` | Optional (#486). The in-page pill's words for a low score: online check skipped or failed (#379), or a Guardian marked the link safe (#369). Left off otherwise; any other value (also `null`) → `422` |
-| `secondWarning` | integer | Optional (#486), 1–100: the extension's second warning, where the island's darker "danger" tone starts (50 without it). `null` → `422` |
-
-```json
-{ "domain": "bca-verifikasi.site", "score": 81, "status": "warning", "analyzing": false, "open": true }
-```
-
-**Response 202:** `{ "ok": true }`, also when nothing was sent (no tokens yet, or a start is waiting
-for the app's update token). Answered after the push, so one device's calls stay in order.
-
-**What the backend sends** (`apns-push-type: liveactivity`, topic `<bundle id>.push-type.liveactivity`,
-`apns-expiration` +60 s, +1 h for `end` so it still arrives after a short offline spell):
-
-| Situation | Event | Token | Priority |
-|---|---|---|---|
-| `open: true`, no running activity, start token known | `start` | push-to-start | 10 |
-| same, but a start went out < 30 s ago and no update token arrived yet | nothing | | |
-| `open: true`, update token known | `update` | update | 5 only for a settled `normal` page; 10 while `analyzing` (a new page, so a domain change shows at once) or for `warning` / `blocked` |
-| `open: false`, update token known | `end` with `dismissal-date` now | update | 10 |
-| `open: false`, no update token yet | nothing; logged as `kind: "none"`, `reason: "no_update_token"`. The app ends older islands itself when a new one starts | | |
-
-`content-state` is `{ domain, score, isAnalyzing, isBlocked, status }` (`isBlocked` = `status == "blocked"`; `status` is the `POST /live` value as is, #383, so the island colours by what the phone did, not by fixed bands), plus `label` and `secondWarning` copied as is when the body has them (#486, also on `end`; no cross-field check, the island only uses a label in place of "Aman"); without them the keys are left out, so an older app decodes as before.
-`start` also carries `"attributes-type": "ScoreActivityAttributes"` and `attributes: {}` (the domain lives in `content-state`).
-`start` and `update` carry `stale-date` +10 min. APNs `410` clears the token it was sent to; an `end`
-clears the update token whatever the result.
 
 ## Push notification
 
