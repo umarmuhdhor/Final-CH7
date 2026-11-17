@@ -3,7 +3,8 @@
 // (block screen instead, EX-06) · closable · the page stays usable underneath.
 // Look (Figma "UI Pop Up Safari"): from 30% → sheet over a dimmed page with the shield, the score bar and
 // Leave / Continue (frames 1928:3599 / 1928:3781). Continue, the Shoo button above it, tapping the page or
-// dragging the sheet down by its grabber shrinks it to the mini card at the bottom. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
+// dragging the sheet down by its grabber shrinks it to the mini card at the bottom; tapping the mini card opens
+// the sheet again. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
 
 (() => {
     const { THRESHOLD } = globalThis.ShooPipeline;
@@ -190,7 +191,9 @@
         .banner { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 24px;
                   border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.92);
                   -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
-                  box-shadow: 0 12px 28px rgba(31,42,55,.14), 0 1px 3px rgba(31,42,55,.05); }
+                  box-shadow: 0 12px 28px rgba(31,42,55,.14), 0 1px 3px rgba(31,42,55,.05);
+                  cursor: pointer; transition: transform .12s ease-out; }
+        .banner:active { transform: scale(.98); }
         .ring { position: relative; flex: none; width: 72px; height: 72px; }
         .ring svg { position: absolute; left: -6.97px; top: -4.65px; }
         .lines { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 8px; }
@@ -348,6 +351,19 @@
         const description = el("p", "rounded");
         lines.append(title, description);
         banner.append(meter, lines);
+        // Tapping the card opens the full sheet again (the close button only closes).
+        banner.setAttribute("role", "button");
+        banner.tabIndex = 0;
+        banner.setAttribute("aria-label", t("popup_see_detail"));
+        banner.addEventListener("click", (event) => {
+            if (event.isTrusted) expand();
+        });
+        banner.addEventListener("keydown", (event) => {
+            if (event.isTrusted && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                expand();
+            }
+        });
         const close = button("close", null, () => {
             memo = dismissed(memo);
             hide();
@@ -433,6 +449,10 @@
 
     function minimize() {
         if (last && refs?.layout === "sheet") render(last.state, last.tier, true);
+    }
+
+    function expand() {
+        if (last && refs?.layout === "mini") render(last.state, last.tier, false);
     }
 
     /** Back to where the user came from; a page opened on its own has nothing behind it. */
