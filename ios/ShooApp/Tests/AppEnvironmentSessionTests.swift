@@ -178,8 +178,7 @@ struct AppEnvironmentSessionTests {
         #expect(body["deviceModel"] is String)
         #expect(body["timeZone"] is String)
         #expect(body["extensionLastSeenAt"] == nil)
-        // A later activation (device info already sent) still reports no heartbeat. Checked per body, not by
-        // counting PATCHes: the Live Activity token sync may PATCH `/devices/me` on its own timing.
+        // A later activation (device info already sent) still reports no heartbeat.
         await env.sceneBecameActive(now: now)
         #expect(server.requests.allSatisfy { $0.json?["extensionLastSeenAt"] == nil })
         #expect(server.requests.filter { $0.json?["deviceModel"] != nil }.count == 1)

@@ -39,8 +39,6 @@ final class AppEnvironment {
     /// is the old session's, not this one's (fase 27h, F-A3). A count, so overlapping calls each hold it;
     /// back to 0 when the requests end either way.
     @ObservationIgnored private var switchingSessions = 0
-    /// EX-03 (#49): the Dynamic Island's push tokens for the backend. Started at the first activation.
-    @ObservationIgnored private var liveActivityTokens: LiveActivityTokens?
     /// OPT-06: the last `GET /devices/me` asked by the foreground sync or by Home, for the other side to share.
     @ObservationIgnored private var profileCall: ProfileCall?
     /// How long a profile call is shared: covers the heartbeat `PATCH` that runs before the sync's own ask.
@@ -275,7 +273,6 @@ final class AppEnvironment {
         sentPushToken = nil
         sentDeviceInfo = false
         pushTokenEpoch += 1
-        liveActivityTokens?.deviceChanged()
         // `POST /devices` has no language; the server defaults to English (pushes are localized, D-alief-05).
         if settings.language != .english {
             do {
@@ -351,8 +348,6 @@ final class AppEnvironment {
             Log.app.error("Profile refresh failed", error)
         }
         await registerForPushIfAllowed()
-        startLiveActivityTokens()
-        await liveActivityTokens?.sync()
     }
 
     /// `GET /devices/me` for Home (OPT-06, fase 28i K11). Coming to the foreground, `sceneBecameActive` and Home both
@@ -391,26 +386,6 @@ final class AppEnvironment {
         // The shared call is not cancelled with one asker; this asker still stops like a cancelled request.
         try Task.checkCancellation()
         return profile
-    }
-
-    /// EX-03 (#49, QA 2026-11-10 #5): without the start token the backend answered `no_start_token` to every
-    /// `POST /live` and the island never started. Both modes: the island shows the viewer's own Safari page.
-    /// Called at launch too (`AppDelegate`): a `start` push wakes Shoo in the background only to hand over the
-    /// new activity's update token, and no scene becomes active then. Without it the backend never got the
-    /// token, so the island kept its first score and could not be ended (device test 2026-11-12).
-    @MainActor
-    func startLiveActivityTokens() {
-        guard liveActivityTokens == nil else { return }
-        let tokens = LiveActivityTokens(
-            canSend: { [weak self] in
-                // Never from the demo or the UI-test mock: they have no server record to update.
-                guard let self, self.settings.mode != nil, !self.sessionExpired else { return false }
-                return !(self.repository is MockRepository)
-            },
-            send: { [weak self] update in try await self?.repository.updateMe(update) }
-        )
-        liveActivityTokens = tokens
-        tokens.start()
     }
 
     /// A registered device whose token is gone (backup restored onto another iPhone: the Keychain item
@@ -549,7 +524,6 @@ final class AppEnvironment {
         sentPushToken = nil
         sentDeviceInfo = false
         pushTokenEpoch += 1
-        liveActivityTokens?.deviceChanged()
         DeliveredPushes.clear()
         await registerForPushIfAllowed()
         return result.guardian
