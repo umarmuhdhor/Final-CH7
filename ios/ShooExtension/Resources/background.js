@@ -2,7 +2,7 @@
 // network call: content scripts run under the page's origin, so cross-origin fetches belong here.
 
 import { PSL_RULES } from "./psl.js";
-import { parseRules, registrableDomain, naiveDomain, pageDomain, shareableUrl } from "./domain.js";
+import { parseRules, registrableDomain, naiveDomain, pageDomain, shareableUrl, isPrivateHost } from "./domain.js";
 import { buildFragments, buildReplica, webIO } from "./replica-build.js";
 import { createLists } from "./lists.js";
 import { createVerdicts } from "./verdicts.js";
@@ -115,8 +115,19 @@ function endpoint(base, path) {
 
 const isPlainObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
 
+const hostOf = (url) => {
+    try {
+        return new URL(url).hostname;
+    } catch {
+        return "";
+    }
+};
+
 /** Layer 3–4. Never rejects: server down or slow → no signals (PRD §5). */
 async function analyze(snapshot, localSignals) {
+    // A page on this phone or its own network (a router at 192.168.1.1) is never sent: its text can hold the
+    // network and device names, sometimes the Wi-Fi key.
+    if (isPrivateHost(hostOf(snapshot?.url))) return { ok: true, signals: [], skipped: "private_host" };
     const session = await getSession();
     if (!session?.aiBaseURL) return { ok: true, signals: [], skipped: "no_ai_url" };
     try {
@@ -303,8 +314,12 @@ browser.runtime.onMessage.addListener((message) => {
                 recordId: record?.id ?? null,
                 ...(record && "notified" in record ? { notified: record.notified } : {}),
             }));
-        case "verdict":
-            return lookupVerdict(message.domain, Boolean(message.fresh), typeof message.url === "string" ? message.url : null);
+        case "verdict": {
+            // From the URL, as report and rememberBlock do: a content script whose background didn't answer in time
+            // sends the full host (`login.scam.co.id`), and the lookup then asked about the wrong domain.
+            const url = typeof message.url === "string" ? message.url : null;
+            return lookupVerdict(url ? domainOfUrl(url, message.domain) : message.domain, Boolean(message.fresh), url);
+        }
         case "pageChecked":
             // A count for the app, no address (PF-01). Nothing depends on it, so a failure stays here.
             return browser.runtime.sendNativeMessage(NATIVE_APP_ID, { type: "pageChecked" }).catch(() => ({ ok: false }));
