@@ -34,6 +34,9 @@ const httpUrl = (s: string) => {
 
 // Text from the detector is stored and shown as plain text; control and bidi characters are removed.
 const text = (max: number) => z.string().max(max).transform(stripUnsafe);
+/** The characters a scan's `domain` (DOMAIN) is made of, lowercase: what a `signals[].host.marks` entry may hold. */
+const HOST_CHARS = /^[a-z0-9.:[\]-]+$/;
+const HOST_CHARS_MESSAGE = "must be part of the domain: lowercase letters, digits, '.', '-', ':', '[' or ']'";
 const localized = z.strictObject({ en: text(500).pipe(z.string().min(1)), id: text(500).pipe(z.string().min(1)) });
 // contracts/scan-result.schema.json $defs.Signal. Unknown keys are dropped.
 const signal = z.object({
@@ -45,11 +48,13 @@ const signal = z.object({
   labelSimple: localized,
   evidence: text(500).optional(),
   // DT-04 (#497, $defs.SignalHost): which part of `domain` the address card marks, and the brand's real domain.
-  // Text is cleaned and unknown keys inside are dropped; then stored (jsonb) and returned as stored.
+  // The app shows `official` as "Real: X" next to a checkmark seal, so it must be a domain (DOMAIN, as the scan's
+  // `domain`), not any text a device holding a token sends. `marks` are substrings of that domain: host characters
+  // only. Both are checked as sent (no cleaning first); unknown keys inside are dropped; stored (jsonb) as sent.
   host: z
     .object({
-      marks: z.array(text(253).pipe(z.string().min(1))).min(1).max(4).optional(),
-      official: text(253).pipe(z.string().min(1)).optional(),
+      marks: z.array(z.string().min(1).max(253).regex(HOST_CHARS, HOST_CHARS_MESSAGE)).min(1).max(4).optional(),
+      official: z.string().min(1).max(253).regex(DOMAIN, DOMAIN_MESSAGE).optional(),
     })
     .optional(),
 });
