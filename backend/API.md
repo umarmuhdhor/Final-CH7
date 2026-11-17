@@ -343,7 +343,7 @@ device scans or types, and the same code in the invite link shared on WhatsApp /
 **Response 200**
 
 ```json
-{ "code": "482193", "expiresAt": "2026-10-22T03:35:00.000Z", "inviteUrl": "https://shoo-api.afindo-mi01.workers.dev/j/482193" }
+{ "code": "482193", "expiresAt": "2026-10-22T03:35:00.000Z", "inviteUrl": "https://join.shoo.ai.id/j/482193" }
 ```
 
 - The code is valid for 30 minutes and can be used by several Protected devices until the family is full.

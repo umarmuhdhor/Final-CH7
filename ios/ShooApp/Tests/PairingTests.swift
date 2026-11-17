@@ -5,10 +5,11 @@ import UIKit
 
 /// Fase 14: invite links, Connect (PR-01/02/03) and Family code (GD-04).
 struct DeepLinkTests {
-    private static let hosts: Set<String> = ["shoo-api.afindo-mi01.workers.dev", "localhost"]
+    private static let hosts: Set<String> = ["join.shoo.ai.id", "shoo-api.afindo-mi01.workers.dev", "localhost"]
 
     @Test(arguments: [
         "shoo://join?code=482193",
+        "https://join.shoo.ai.id/j/482193",
         "https://shoo-api.afindo-mi01.workers.dev/j/482193",
         "https://SHOO-API.afindo-mi01.workers.dev/j/482193",
         "SHOO://JOIN?code=482193",

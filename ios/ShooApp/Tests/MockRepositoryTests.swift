@@ -172,7 +172,7 @@ struct MockRepositoryTests {
         let code = try await repo.createFamilyCode(refresh: false)
         #expect(DeepLink.isCode(code.code))
         #expect(code.expiresAt == now.addingTimeInterval(30 * 60))
-        #expect(code.inviteUrl.absoluteString == "https://shoo-api.afindo-mi01.workers.dev/j/\(code.code)")
+        #expect(code.inviteUrl.absoluteString == "https://join.shoo.ai.id/j/\(code.code)")
     }
 
     /// Like the server: the same code while more than 5 min is left, a new one on refresh.
