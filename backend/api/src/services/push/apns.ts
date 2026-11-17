@@ -1,7 +1,7 @@
 import type { Env } from "../../env";
 import { errorInfo } from "../../http/logError";
 import { apnsJwt, importApnsKey } from "./jwt";
-import type { LiveMessage, LiveSender, PushMessage, PushSender, SendResult } from "./sender";
+import type { PushMessage, PushSender, SendResult } from "./sender";
 
 export interface ApnsConfig {
   /** The .p8 key file (PEM) as one line of base64. */
@@ -61,7 +61,7 @@ function entry(config: ApnsConfig): CacheEntry {
  * token; 400 BadDeviceToken (also a sandbox token sent to production) keeps it. No retries:
  * one push per scan. Logs carry no token, JWT, key or text (SECURITY §3 P6).
  */
-export class ApnsSender implements PushSender, LiveSender {
+export class ApnsSender implements PushSender {
   private readonly fetch: typeof fetch;
   private readonly now: () => number;
 
@@ -99,24 +99,9 @@ export class ApnsSender implements PushSender, LiveSender {
     });
   }
 
-  /**
-   * EX-03 (#49): a Live Activity start/update/end. Own topic suffix and push type (Apple, "Starting
-   * and updating Live Activities with ActivityKit push notifications"). The caller picks the expiry:
-   * a live score is useless after a minute, an end must still arrive (services/push/live.ts).
-   */
-  async sendLive(message: LiveMessage): Promise<SendResult> {
-    return this.post(message.token, {
-      pushType: "liveactivity",
-      topic: `${this.config.topic}.push-type.liveactivity`,
-      priority: message.priority,
-      expiresInSeconds: message.expiresInSeconds,
-      body: message.payload,
-    });
-  }
-
   private async post(
     token: string,
-    p: { pushType: "alert" | "liveactivity"; topic: string; priority: 5 | 10; expiresInSeconds: number; body: unknown },
+    p: { pushType: "alert"; topic: string; priority: 10; expiresInSeconds: number; body: unknown },
   ): Promise<SendResult> {
     if (!HEX.test(token)) return { result: "failed:400 BadDeviceToken" };
     const e = entry(this.config);

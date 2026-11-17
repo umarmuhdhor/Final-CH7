@@ -1,6 +1,8 @@
 // Fase 28 hunt, hunter 3: cross-component scenarios, each through the REAL modules (no network).
 // Run: node h3-chain.mjs <worktree>     Lines starting with "BUG" show the wrong result on main 9e5403ba.
 // X-04 / X-05 (#486) run the real live-island.js + live.js and the island rule of #535: they read "ok" once #535 is in the worktree.
+// Since #555 (Dynamic Island removed, 17 Nov 2026) live.js / live-island.js and POST /live are gone: on such a worktree
+// X-04 and X-05 print "skip", the other scenarios still run.
 const W = process.argv[2];
 const R = `${W}/ios/ShooExtension/Resources`;
 await import(`${R}/pipeline.js`);
@@ -10,7 +12,7 @@ const pill = globalThis.ShooPill;
 const { PSL_RULES } = await import(`${R}/psl.js`);
 const { parseRules, registrableDomain } = await import(`${R}/domain.js`);
 const { createBlockMemory } = await import(`${R}/block-memory.js`);
-const { createLive } = await import(`${R}/live.js`);
+const { createLive } = await import(`${R}/live.js`).catch(() => ({}));
 const { createHeartbeat } = await import(`${R}/heartbeat.js`);
 const { createLastSeen } = await import(`${R}/last-seen.js`);
 const { toThresholds } = await import(`${R}/thresholds.js`);
@@ -99,7 +101,7 @@ console.log("\n== X-03 block memory on hosts the backend treats as shared (publi
 // runs. They exist only inside withPage(), so X-08's block.js / blocked-page.js still see no DOM (they check for one).
 // The message it sends goes through live.js show() like background.js `case "liveScore"` (with #535 it forwards
 // `label` and `secondWarning`; live.js keeps only known values). Without #535, live-island.js sends neither.
-const island = await (async () => {
+const island = !createLive ? null : await (async () => {
     const sent = [];
     const pageGlobals = () => {
         class Document {}
@@ -139,7 +141,8 @@ const island = await (async () => {
 
 // ---------- X-04: #379 "never low risk without the online check" on the Dynamic Island ----------
 console.log("\n== X-04 /analyze failed: in-page pill vs what goes to the Dynamic Island");
-{
+if (!island) console.log("skip     | X-04 needs live.js + live-island.js, removed with the Dynamic Island (#555)");
+else {
     const SIG = (id, layer, weight) => ({ id, layer, weight, label: { en: id, id }, labelSimple: { en: id, id } });
     for (const [name, remote, verdict] of [["/analyze failed", async () => ({ ok: true, signals: [], skipped: "error" }), null], ["/analyze ok", async () => ({ ok: true, signals: [] }), null],
         ["Guardian marked a 60% link safe (#369)", async () => ({ ok: true, signals: [SIG("asks_pin", 3, 60)] }), { value: "safe", byName: "Gita" }]]) {
@@ -179,7 +182,8 @@ console.log("\n== X-08 scam page on a shared platform: the name shown where the 
 }
 // ---------- X-05: second warning tier: extension vs island ----------
 console.log("\n== X-05 tier 2 of a warning: extension (thresholds.js secondWarning) vs Dynamic Island (secondWarning from POST /live, 50 without it)");
-{
+if (!island) console.log("skip     | X-05 needs live.js + live-island.js, removed with the Dynamic Island (#555)");
+else {
     let cells = 0, bad = 0;
     const builtIn = { ...P.THRESHOLD };
     for (const [warnAt, blockAt] of [[30, 80], [50, 80], [55, 85], [60, 95], [45, 60]]) {

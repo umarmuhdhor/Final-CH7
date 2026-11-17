@@ -42,7 +42,6 @@ export interface Env {
   SCREENSHOTS_VIEW_LIMITER?: RateLimit;
   FAVICONS_VIEW_LIMITER?: RateLimit;
   REPLICAS_VIEW_LIMITER?: RateLimit;
-  LIVE_PUSH_LIMITER?: RateLimit;
 }
 
 export type DeviceMode = "guardian" | "protected";
