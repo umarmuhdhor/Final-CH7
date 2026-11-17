@@ -119,10 +119,28 @@
         /* Figma "Shield G" (orange, 50–79) / "Shield Kaca Halftone" (red, ≥80): the export includes the glow, so it
            overflows the shield's box and is centred on it. */
         .shield { position: relative; flex: none; width: 153px; height: 160px; }
-        .shield img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
-        .shield.orange img { width: 162.67px; height: 172.33px; }
+        .shield img, .shield .light { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+                                      pointer-events: none; }
+        .shield.orange img, .shield.orange .light { width: 162.67px; height: 172.33px; }
         .shield.red { width: 146px; }
-        .shield.red img { width: 178.2px; height: 171.7px; }
+        .shield.red img, .shield.red .light { width: 178.2px; height: 171.7px; }
+        /* Like the app's HalftoneShield and the block screen: the glow breathes, a light wave runs up the shield and a
+           shine sweeps the glass. The light layers take the shield picture as mask (set in update()). */
+        .shield::before { content: ""; position: absolute; left: 50%; top: 52%; width: 130px; height: 130px;
+                          border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none;
+                          animation: breathe 4.8s ease-in-out infinite; }
+        .shield.orange::before { background: radial-gradient(closest-side, rgba(255,149,0,.6), rgba(255,149,0,0)); }
+        .shield.red::before { background: radial-gradient(closest-side, rgba(253,70,80,.7), rgba(253,70,80,0)); }
+        .shield .light { -webkit-mask-position: center; mask-position: center; -webkit-mask-repeat: no-repeat;
+                         mask-repeat: no-repeat; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
+        .shield .wave { background: linear-gradient(0deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%)
+                        no-repeat 0 0 / 100% 40%; animation: wave 4s ease-in-out infinite; }
+        .shield .shine { background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.75) 50%, transparent 58%)
+                         no-repeat 0 0 / 300% 100%; animation: shine 5s ease-in-out infinite; }
+        @keyframes breathe { 0%, 100% { opacity: .35; transform: translate(-50%, -50%) scale(.9); }
+                             50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+        @keyframes wave { 0% { background-position: 0 160%; } 65%, 100% { background-position: 0 -60%; } }
+        @keyframes shine { 0% { background-position: 100% 0; } 18%, 100% { background-position: -50% 0; } }
         h2 { margin: 0; font-size: 28px; font-weight: 600; line-height: 34px; letter-spacing: .02em; color: #191d2f;
              text-align: center; }
         .score { display: flex; align-items: center; gap: 8px; height: 35px; }
@@ -134,6 +152,11 @@
         .bar .fill { box-shadow: 0 1.5px 4px rgba(229,72,59,.35); }
         .bar .track { background-color: #e9ecf1;
              background-image: repeating-linear-gradient(-60deg, #cfd5dd 0 .6px, transparent .6px 3.4px); }
+        /* The pieces fill in from the left, one after another, the first time the sheet shows. */
+        .bar.intro .fill { transform-origin: left center; animation: fill-in .35s ease-out both; }
+        .bar.intro .fill:nth-child(2) { animation-delay: .12s; }
+        .bar.intro .fill:nth-child(3) { animation-delay: .24s; }
+        @keyframes fill-in { from { transform: scaleX(0); } }
         .bar .tick { flex: none; width: 2px; height: 16px; margin: 0 1.5px; border-radius: .625px; background: #e5483b; }
         .body { display: flex; flex-direction: column; gap: 32px; padding: 24px 22px; }
         .copy { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
@@ -171,7 +194,10 @@
 
         @keyframes rise { from { transform: translateY(24px); opacity: 0; } }
         @keyframes fade { from { opacity: 0; } }
-        @media (prefers-reduced-motion: reduce) { .dim, .sheet, .mini { animation: none; } }
+        @media (prefers-reduced-motion: reduce) {
+            .dim, .sheet, .mini, .shield::before, .bar.intro .fill { animation: none; }
+            .shield .light { display: none; }
+        }
     `;
 
     // Figma "icon/close" (12 × 12).
@@ -267,10 +293,13 @@
         shield.setAttribute("aria-hidden", "true");
         const shieldArt = el("img");
         shieldArt.alt = "";
-        shield.append(shieldArt);
+        // The light layers sit on top of the picture, masked to it (mask url set with the picture in update()).
+        const lights = ["wave", "shine"].map((name) => el("span", `light ${name}`));
+        shield.append(shieldArt, ...lights);
         const title = el("h2");
         const score = el("div", "score");
-        const bar = el("div", "bar");
+        const bar = el("div", "bar intro");
+        setTimeout(() => bar.classList.remove("intro"), 1000); // later score updates must not replay the fill-in
         bar.setAttribute("aria-hidden", "true");
         const value = el("span", "value");
         score.append(bar, value);
@@ -333,6 +362,9 @@
                 refs.shield.dataset.level = danger ? "red" : "orange";
                 refs.shield.className = `shield ${refs.shield.dataset.level}`;
                 refs.shieldArt.src = browser.runtime.getURL(`images/shield-${refs.shield.dataset.level}.png`);
+                for (const light of refs.shield.querySelectorAll(".light")) {
+                    light.style.webkitMaskImage = light.style.maskImage = `url("${refs.shieldArt.src}")`;
+                }
             }
             refs.title.textContent = t(danger ? "popup_title_danger" : "popup_title_2");
             refs.sheet.setAttribute("aria-label", refs.title.textContent);
