@@ -133,6 +133,17 @@ struct AddressEvidenceTests {
         }
     }
 
+    @Test func domainRuleEdgesMatchTheBackend() {
+        for value in ["a", "a.b", String(repeating: "a", count: 63), "[::]", "[1:2:3:4:5:6:7:8]", "[ffff::0]"] {
+            #expect(AddressEvidence.looksLikeDomain(value), "\(value)")
+        }
+        for value in ["", "[]", "[:]", "[1:2:3:4:5:6:7:8:9]", "[12345::1]", "[FFFF::1]", "[::1", "::1",
+                      "bca\n.co.id", "bca\u{0}.co.id", "bca.\u{663}", "ｂｃａ.co.id", "bca.co.id\u{200B}"] {
+            #expect(!AddressEvidence.looksLikeDomain(value), "\(value)")
+        }
+        #expect(AddressEvidence.official(in: Signal.Host(official: " bca.co.id\n"), kind: .brandInAddress) == "bca.co.id")
+    }
+
     /// The contract gives `official` only to `lookalike_domain` and `brand_plus_keyword`.
     @Test func officialLineOnlyOnBrandReasons() {
         let host = Signal.Host(marks: [".site"], official: "bca.co.id")
