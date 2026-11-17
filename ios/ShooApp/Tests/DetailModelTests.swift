@@ -417,6 +417,48 @@ struct DetailModelTests {
         #expect(model.badge == .verifiedScam)
     }
 
+    /// A push or the foreground while Detail shows: the guardian's verdict comes in, the copy's links stay
+    /// (every read hands out new short-lived links; a new one would load the copy again).
+    @Test func refreshTakesTheVerdictButKeepsTheCopyLinks() async {
+        let stub = StubRepository()
+        await stub.setEditScan { scan, call in
+            scan.pageReplicaUrl = URL(string: "https://replica.example/\(call)")
+            scan.screenshotUrl = URL(string: "https://shot.example/\(call)")
+            guard call >= 2 else { return }
+            scan.verdict = Verdict(
+                value: .notSafe, byDeviceId: "dev_g", byName: "Adhella", decidedAt: Date(timeIntervalSince1970: 1_792_584_000)
+            )
+        }
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        #expect(model.scan?.verdict == nil)
+        await model.refresh()
+        #expect(model.scan?.verdict?.value == .notSafe)
+        #expect(model.scan?.pageReplicaUrl == URL(string: "https://replica.example/1"))
+        #expect(model.scan?.screenshotUrl == URL(string: "https://shot.example/1"))
+    }
+
+    /// The scan was deleted (or the family link is gone) while Detail showed it: the refresh says it is gone.
+    @Test func refreshShowsAScanThatIsGone() async {
+        let stub = StubRepository()
+        await stub.setGone(fromCall: 2)
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        await model.refresh()
+        #expect(model.state == .notFound)
+    }
+
+    /// Before the first load ends, a refresh does nothing (the first load owns the spinner).
+    @Test func refreshWaitsForTheFirstLoad() async {
+        let stub = StubRepository(failLoads: 1)
+        let model = DetailModel(scanId: FixtureScan.blocked92, repository: stub)
+        await model.load()
+        #expect(model.state == .failed)
+        await model.refresh()
+        #expect(model.state == .failed)
+        #expect(await stub.scanCalls == 0)
+    }
+
     /// A-02 (fase 28c, K5): `409 verdict_locked` means the server already holds a safe verdict on this link
     /// (an "Aman" whose answer was lost, or another device). Detail reloads the scan and shows that verdict,
     /// whichever button was tapped, instead of rolling back to "Blocked" with the buttons still there.

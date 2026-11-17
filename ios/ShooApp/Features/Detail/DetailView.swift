@@ -7,6 +7,7 @@ import UIKit
 struct DetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.screenshotLoader) private var screenshotLoader
     @Environment(\.replicaLoader) private var replicaLoader
@@ -72,6 +73,13 @@ struct DetailView: View {
                 guard !Task.isCancelled else { return }
                 readAloud()
                 await model.waitForCopy()
+            }
+            // A push while Detail is open (the guardian's verdict, the scan deleted) or the return to the
+            // foreground: the page follows without leaving it, like Home and Activity (A-12).
+            .onChange(of: env.pushesWhileOpen) { Task { await model.refresh() } }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await model.refresh() }
             }
             .task(id: model.scan?.pageReplicaUrl) { await loadPageCopy() }
             .task(id: model.scan?.screenshotUrl) {
