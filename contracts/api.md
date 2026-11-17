@@ -155,6 +155,26 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 
 The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
 
+### Latest scams (Home card)
+| Method | Path | Body | Response | PRD |
+|---|---|---|---|---|
+| GET | `/scams/latest` | — (either mode) | `{ items: [{ category, title: { en, id }, lastSeenAt }] }` — kinds of scam several Shoo users were blocked from in the last 7 days, newest first, at most 4 (`fixtures/latest-scams.json`) | PR-04, GD-01 |
+
+The Home card "Scam terbaru di pengguna Shoo" (#558). `Cache-Control: private, max-age=600`: no user data, a client may keep it 10 minutes.
+
+- `category`: an admin category id (`undian_palsu`), one item per category. Open-ended: the admin can add one at any time, so a client shows `title` and never needs to know the id (like the enum rule above).
+- `title`: the admin's label for that category in English and Indonesian. The client picks its language. It never holds text from a page, URL or domain.
+- `lastSeenAt` (ISO): the newest counted scan, server time, rounded down to the hour. The client turns it into "Hari ini" / "Kemarin" / "N hari lalu" by calendar day on the phone; a time slightly ahead of the phone's clock is still today.
+- `items: []` when nothing passes the gates below: the client hides the card. A failed request also hides it; Home never waits on it.
+
+Anyone can make devices and send scans, so nothing a client sends decides what the card says. An item appears only when all of these hold (`backend/API.md` "Latest scams"):
+1. The domain is on the global blocklist, approved by an admin, not removed, and not on the trusted/protected lists. The category is the one the admin chose when approving; `lainnya` (Other) never shows.
+2. The scan is `blocked`, timed by server `created_at` (not the client's `detectedAt`), within the last 7 days.
+3. A device counts once per category, and only once it is 24 h old.
+4. At least 3 different devices hit the category. No domain, URL, count or device is ever returned.
+
+Nothing is stored for the card: it is counted from live scans, so a deleted device or a scan past 14 days stops counting at once.
+
 ### Live score (Dynamic Island) — removed
 **Removed** (17 Nov 2026, decision Umar + Alief, #555): EX-03's Dynamic Island / Live Activity (path C, #49) is dropped. The live score stays in the in-page pill only (`pill.js`), which never leaves the phone.
 
