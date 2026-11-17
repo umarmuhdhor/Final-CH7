@@ -185,7 +185,9 @@
         const previous = lastUrl;
         lastUrl = location.href;
         if (!isNewPage(previous, lastUrl)) return;
-        if (churning(Date.now())) {
+        // Cut: the last page's scan has not finished (still waiting to start, or no answer yet).
+        const cut = !page || page.scanId !== currentScan || !page.state;
+        if (churning(Date.now(), cut)) {
             // Faster than a page can be checked: the running scan finishes, the score stays, the next one waits.
             settleTimer ??= setTimeout(scanWhenIdle, RECHECK_GAP_MS);
             return;
