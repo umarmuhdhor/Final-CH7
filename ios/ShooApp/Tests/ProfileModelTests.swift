@@ -535,6 +535,24 @@ struct ProfileModelTests {
         #expect(model.actionError != nil)
     }
 
+    /// PF-01: a reload (foreground, push) that read the profile before a switch was saved does not flip it back.
+    @Test func aReloadOlderThanASwitchKeepsTheSwitch() async {
+        let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
+        let model = ProfileModel(repository: repository, settings: settings(mode: .guardian), linked: linked())
+        await model.load()
+        #expect(model.notificationSettings.blocked)
+        let gate = AsyncGate()
+        repository.beforeMe = { await gate.hold() }
+        defer { gate.open() }
+        let reload = Task { await model.load() }
+        await gate.arrival()
+        await model.updateNotifications(NotificationSettingsUpdate(blocked: false))
+        gate.open()
+        await reload.value
+        #expect(!model.notificationSettings.blocked)
+        #expect(model.actionError == nil)
+    }
+
     /// K11: the failed update's key was changed again and saved meanwhile: the newer value stays.
     @Test func failedUpdateKeepsANewerValueOfTheSameKey() async {
         let repository = DelayedScansRepository(base: MockRepository(mode: .guardian, latency: .zero))
