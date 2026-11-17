@@ -1,7 +1,7 @@
 // Owner: lead. Block screen behaviour (EX-06), runs inside blocked.html.
-// Protected: "Link sent to [guardian]" once the scan is reported (EX-07); reopens by itself once the domain
-// is marked safe. Guardian and Protected: "Review in Shoo" → Detail (reviewing, not deciding: PRD 8.2);
-// a Guardian's page also reopens after marking it safe for themselves (PRD §5 Validasi).
+// Protected (Figma "Safari / Blocked / Protected"): no button, no "Link sent to" pill; reopens by itself once the
+// domain is marked safe. Guardian: "Review in Shoo" → Detail (reviewing, not deciding: PRD 8.2); its page also
+// reopens after marking it safe for themselves (PRD §5 Validasi).
 
 (() => {
     // #350 (contracts/api.md): fast while a Guardian is most likely deciding, slower once it's been a while.
@@ -33,12 +33,14 @@
                       .filter(Boolean),
             chip: middleEllipsis(payload.domain || payload.url),
             lookalike,
-            sentTo: mode === "protected" ? profile.guardianName || null : null,
             autoNote: simple, // Figma "Safari / Blocked / Protected": "We blocked this page automatically."
+            // Figma: Protected only goes back to a safe page; the Guardian decides in the app.
             button:
                 mode === null
                     ? { textKey: "block_open_app", href: "shoo://activity" }
-                    : { textKey: "block_review", href: detailUrl(payload) },
+                    : mode === "protected"
+                      ? null
+                      : { textKey: "block_review", href: detailUrl(payload) },
             poll: mode !== null,
         };
     }
@@ -166,30 +168,20 @@
     }
 
     // EX-07: the POST may still be running when this page opens. Asked again on every poll until it exists.
-    let recordAnswered = false; // asked background at least once with an answer (it also carries `notified`, #377)
+    let recordAnswered = false; // asked background at least once with an answer
     async function findRecord() {
-        if ((recordId && recordAnswered) || !payload.reportKey || mode === null) return;
+        if ((recordId && recordAnswered) || !payload.reportKey || !view?.button || mode === null) return;
         const reply = await send({ type: "recordId", key: payload.reportKey }).catch(() => null);
         if (!reply?.recordId) return;
         recordAnswered = true;
         recordId = reply.recordId;
-        // #377: the backend says who it really pushed (null = nobody). Older backends say nothing: keep the name.
-        if (view && "notified" in reply) view.sentTo = mode === "protected" ? reply.notified || null : null;
         showRecord();
     }
 
-    /** Once the scan is stored: "Review in Shoo" opens it, and Protected sees who it went to. */
+    /** Once the scan is stored: "Review in Shoo" opens it. */
     function showRecord() {
-        if (!recordId || !view) return;
-        if (view.button && mode !== null) $(".button").href = detailUrl({ recordId });
-        if (!view.sentTo) {
-            $(".sent").hidden = true; // #377: the backend said nobody got it
-            return;
-        }
-        $(".avatar").textContent = Array.from(view.sentTo)[0].toUpperCase();
-        const [before = "", after = ""] = t("popup_sent_to", ["\u0000"]).split("\u0000");
-        $(".sent-text").replaceChildren(before, Object.assign(document.createElement("b"), { textContent: view.sentTo }), after);
-        $(".sent").hidden = false;
+        if (!recordId || !view?.button || mode === null) return;
+        $(".button").href = detailUrl({ recordId });
     }
 
     let timer = null;
