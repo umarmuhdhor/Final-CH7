@@ -62,6 +62,15 @@ struct ProfileView: View {
             extensionStatus = await env.extensionStatus()
             await model.refreshNotifications()
             model.linked.refresh()
+            // Back from the background: a member may have left or been disconnected meanwhile. Only once loaded,
+            // so this never races the first load above.
+            if model.state == .loaded { await model.load() }
+        }
+        // A push while Profile is open (a member joined, left or was disconnected): the list follows without
+        // leaving the page, like Home and Activity (A-12).
+        .onChange(of: env.pushesWhileOpen) {
+            guard model.state == .loaded else { return }
+            Task { await model.load() }
         }
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { extensionStatus = await env.extensionStatus() } }) {
             TurnOnExtensionSheet()
