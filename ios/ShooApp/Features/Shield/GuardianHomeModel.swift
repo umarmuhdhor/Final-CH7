@@ -55,9 +55,15 @@ final class GuardianHomeModel {
     /// Personal: the family list answered (it only decides the "Mode Terawasi" card).
     private(set) var personalMembersKnown = false
     private(set) var isSubmittingVerdict = false
-    private(set) var verdictFailed = false
-    /// The server refused this verdict (`verdict_not_allowed`), e.g. a warning site while the contract allows blocked only.
-    private(set) var verdictNotAllowed = false
+    /// The site whose verdict could not be saved ("Couldn't save"), and the one the server refused
+    /// (`verdict_not_allowed`, e.g. a warning site while the contract allows blocked only). Per site: after a refresh
+    /// another site's card takes the place, and it must not show the old card's error or retry its verdict.
+    private var verdictFailedScanId: String?
+    private var verdictNotAllowedScanId: String?
+    /// "Couldn't save" on the card shown now.
+    var verdictFailed: Bool { verdictFailedScanId != nil && verdictFailedScanId == pendingScan?.id }
+    /// "Can't be marked yet" on the card shown now.
+    var verdictNotAllowed: Bool { verdictNotAllowedScanId != nil && verdictNotAllowedScanId == pendingScan?.id }
     /// Counts Home verdicts the server confirmed: drives the success haptic and the card's hand-over animation.
     private(set) var verdictSaves = 0
 
@@ -246,8 +252,8 @@ final class GuardianHomeModel {
     /// X on the card: hidden on this iPhone, the next pending site (if any) takes its place.
     func dismissPending() {
         guard let scan = pendingScan else { return }
-        verdictFailed = false
-        verdictNotAllowed = false
+        verdictFailedScanId = nil
+        verdictNotAllowedScanId = nil
         settings.dismissHomeScan(scan.id)
     }
 
@@ -264,8 +270,8 @@ final class GuardianHomeModel {
         lastDecision = value
         lastNotes = notes
         lastScanId = scan.id
-        verdictFailed = false
-        verdictNotAllowed = false
+        verdictFailedScanId = nil
+        verdictNotAllowedScanId = nil
         defer { isSubmittingVerdict = false }
         do {
             let verdict = try await repository.setVerdict(scanId: scan.id, value: value, notes: notes)
@@ -280,7 +286,7 @@ final class GuardianHomeModel {
             onVerdictSaved()
             return true
         } catch RepositoryError.api(.verdictNotAllowed, _) {
-            verdictNotAllowed = true
+            verdictNotAllowedScanId = scan.id
             return true
         } catch RepositoryError.api(.verdictLocked, _) {
             // #476: the link already has a safe verdict (another device, or Detail) that stays until the weekly
@@ -295,7 +301,7 @@ final class GuardianHomeModel {
         } catch {
             guard !error.isCancellation else { return false }
             Log.ui.error("Home verdict failed", error)
-            verdictFailed = true
+            verdictFailedScanId = scan.id
             return false
         }
     }
