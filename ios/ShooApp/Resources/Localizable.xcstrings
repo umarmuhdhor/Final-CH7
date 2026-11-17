@@ -7229,6 +7229,96 @@
           }
         }
       }
+    },
+    "This account isn't linked to a guardian yet." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akun ini belum terhubung ke Guardian."
+          }
+        }
+      }
+    },
+    "How to connect" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cara menghubungkan"
+          }
+        }
+      }
+    },
+    "Ask your guardian to open Shoo" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minta Guardian buka Shoo"
+          }
+        }
+      }
+    },
+    "On your guardian's iPhone" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di iPhone milik Guardian-mu"
+          }
+        }
+      }
+    },
+    "Your guardian taps Invite family" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardian ketuk Undang Keluarga"
+          }
+        }
+      }
+    },
+    "A QR code and an invite code appear" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muncul kode QR dan kode undangan"
+          }
+        }
+      }
+    },
+    "Scan the QR or enter the code" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan QR atau masukkan kode"
+          }
+        }
+      }
+    },
+    "Tap the button below" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ketuk tombol di bawah"
+          }
+        }
+      }
+    },
+    "Shoo keeps protecting you in the meantime. Scam sites stay blocked on this iPhone." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sementara itu Shoo tetap melindungimu. Situs penipuan tetap diblokir di iPhone ini."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

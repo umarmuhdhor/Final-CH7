@@ -724,37 +724,70 @@ private struct ConnectionPage: View {
                 ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
+        // Figma 2023:11179: the way back sits at the foot of the screen, like "Kembali" on member detail.
+        .safeAreaInset(edge: .bottom) {
+            if model.profile?.guardian == nil && model.state == .loaded {
+                Button("Enter the invite code") { env.router.showConnect() }
+                    .buttonStyle(OnboardingCapsuleButtonStyle())
+                    .padding(.horizontal, ProfileStyle.margin)
+                    .padding(.bottom, 8)
+                    .accessibilityIdentifier("profile.guardian.connect")
+            }
+        }
         .task { model.linked.refresh() }
     }
 
-    /// QA 2026-11-10 #6: the guardian disconnected this iPhone or deleted their account. Say what that means and
-    /// offer the way back, the same Connect as on Home.
-    private var notLinked: some View {
-        VStack(spacing: 12) {
-            Text("Not connected to a guardian yet")
-                .profileFont(17, .semibold)
-                .foregroundStyle(ProfileStyle.ink)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("profile.guardian.none")
-            Text("If your guardian disconnected you or deleted their account, ask them for a new invite code. Shoo keeps protecting you in the meantime.")
-                .profileFont(15)
-                .foregroundStyle(ProfileStyle.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-            Button { env.router.showConnect() } label: {
-                Text("Connect")
-                    .profileFont(17, .semibold, tracking: -0.17)
-                    .foregroundStyle(ProfileStyle.primaryText)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(ProfileStyle.primaryFill, in: Capsule())
+    /// QA 2026-11-10 #6: the guardian disconnected this iPhone or deleted their account. Figma
+    /// "Akun Tertaut · Belum terhubung ke Guardian" (2023:11179): the linked layout with the guardian's seat
+    /// empty, how to connect again, and that Shoo keeps protecting in the meantime.
+    @ViewBuilder private var notLinked: some View {
+        Text("This account isn't linked to a guardian yet.")
+            .profileValue()
+            .foregroundStyle(ProfileStyle.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
+            .padding(.top, 24)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier("profile.guardian.none")
+
+        HStack(alignment: .top, spacing: 17) {
+            person(name: Text("You")) {
+                AvatarView(id: model.profile?.avatarId ?? "", size: 84)
+                    .padding(3.66)
+                    .background(ProfileStyle.card, in: Circle())
+                    .shadow(color: Color(hex: 0x1F78BF, opacity: 0.18), radius: 11, y: 7)
             }
-            .padding(.top, 12)
-            .accessibilityIdentifier("profile.guardian.connect")
+            LinkDots(muted: true).padding(.top, 54)
+            person(name: Text(verbatim: "Guardian"), nameColor: ProfileStyle.secondary) {
+                Image(systemName: "person.crop.circle")
+                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ProfileStyle.secondary.opacity(0.7))
+                    .frame(width: 92, height: 92)
+                    .background(ProfileStyle.iconFill, in: Circle())
+                    .overlay(Circle().strokeBorder(ProfileStyle.chevron, style: StrokeStyle(lineWidth: 2, dash: [6, 6])))
+            }
         }
-        .padding(.horizontal, ProfileStyle.margin + 16)
-        .padding(.top, 48)
-        .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
+        .padding(.top, 38)
+
+        ProfileSection(title: "How to connect", top: 24) {
+            ConnectStep(number: 1, title: Text("Ask your guardian to open Shoo"), subtitle: Text("On your guardian's iPhone"))
+            ProfileDivider()
+            ConnectStep(number: 2, title: Text("Your guardian taps Invite family"), subtitle: Text("A QR code and an invite code appear"))
+            ProfileDivider()
+            ConnectStep(number: 3, title: Text("Scan the QR or enter the code"), subtitle: Text("Tap the button below"))
+        }
+        .accessibilityIdentifier("profile.guardian.steps")
+
+        Text("Shoo keeps protecting you in the meantime. Scam sites stay blocked on this iPhone.")
+            .profileFont(15)
+            .foregroundStyle(ProfileStyle.secondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 40)
+            .padding(.top, 20)
     }
 
     @ViewBuilder private func linked(_ guardian: GuardianInfo) -> some View {
@@ -837,14 +870,16 @@ private struct ConnectionPage: View {
         .padding(.top, 226)
     }
 
-    private func person<Avatar: View>(name: Text, @ViewBuilder avatar: () -> Avatar) -> some View {
+    private func person<Avatar: View>(
+        name: Text, nameColor: Color = ProfileStyle.ink, @ViewBuilder avatar: () -> Avatar
+    ) -> some View {
         VStack(spacing: 8) {
             avatar()
             // Figma "You" / "Adhella": SF Pro Display Semibold 17, line height 22.
             name
                 .profileFont(17, .semibold)
                 .figmaLineHeight(22, relativeTo: .body)
-                .foregroundStyle(ProfileStyle.ink)
+                .foregroundStyle(nameColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -860,16 +895,21 @@ private struct LinkDots: View {
     /// One pass takes 1.4 s, then the dots rest for 0.6 s.
     private static let pass = 1.4, rest = 0.6
 
+    /// Grey and still: no guardian on the other end yet (Figma 2023:11179).
+    var muted = false
+
     @Environment(\.shooReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
-            let phase = reduceMotion ? nil : Self.phase(at: context.date)
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion || muted)) { context in
+            let phase = reduceMotion || muted ? nil : Self.phase(at: context.date)
             HStack(spacing: 9.5) {
                 ForEach(Array(Self.dots.enumerated()), id: \.offset) { index, dot in
                     let lift = phase.map { Self.lift(index: index, phase: $0) } ?? 0
                     Circle()
-                        .fill(Color(hex: 0x0088FF, opacity: dot.opacity + (1 - dot.opacity) * lift))
+                        .fill(muted
+                            ? ProfileStyle.chevron.opacity(dot.opacity)
+                            : Color(hex: 0x0088FF, opacity: dot.opacity + (1 - dot.opacity) * lift))
                         .frame(width: dot.size, height: dot.size)
                         .scaleEffect(1 + 0.3 * lift)
                 }
@@ -891,6 +931,37 @@ private struct LinkDots: View {
         let distance = abs(Double(index) - centre)
         guard distance < 1.5 else { return 0 }
         return 0.5 * (1 + cos(.pi * distance / 1.5))
+    }
+}
+
+/// One numbered step of "Cara menghubungkan" (Figma 2023:11179): a blue number in a round tile, title and hint.
+private struct ConnectStep: View {
+    let number: Int
+    let title: Text
+    let subtitle: Text
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(verbatim: "\(number)")
+                .profileFont(17, .semibold)
+                .foregroundStyle(ProfileStyle.link)
+                .frame(width: 36, height: 36)
+                .background(Color.dynamic(0xDEECFB, dark: 0x1E3A55), in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                title
+                    .profileBody()
+                    .foregroundStyle(ProfileStyle.ink)
+                subtitle
+                    .profileFont(15)
+                    .foregroundStyle(ProfileStyle.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 17)
+        .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
     }
 }
 
