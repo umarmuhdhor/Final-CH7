@@ -83,6 +83,7 @@ struct MemberDetailView: View {
                 } onConfirm: {
                     Task {
                         guard await model.disconnect() else { return }
+                        env.familyChanges += 1
                         isDisconnectConfirming = false
                         env.router.pop()
                     }

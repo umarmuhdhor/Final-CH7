@@ -269,10 +269,12 @@ struct ActivityView: View {
     }
 
     private var emptyState: some View {
-        let kind = ActivityEmptyKind.of(filter: model.filter, family: model.isFamily, extensionStatus: extensionStatus)
+        // Only this iPhone's own list is about this iPhone's extension: Family Activity and a member's Activity
+        // (from Member detail) list other people's scans, so no "Protection is off" and no "sites checked" pill.
+        let kind = ActivityEmptyKind.of(filter: model.filter, family: !model.isOwnList, extensionStatus: extensionStatus)
         return ActivityEmptyState(
             kind: kind,
-            pill: model.isFamily ? nil : ActivityEmptyText.pill(kind: kind, stats: checkStats, language: language),
+            pill: model.isOwnList ? ActivityEmptyText.pill(kind: kind, stats: checkStats, language: language) : nil,
             offSince: ActivityEmptyText.offSince(extensionStatus?.lastSeen, language: language)
         ) {
             isTurnOnPresented = true
