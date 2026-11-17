@@ -34,6 +34,7 @@
             chip: middleEllipsis(payload.domain || payload.url),
             lookalike,
             sentTo: mode === "protected" ? profile.guardianName || null : null,
+            autoNote: simple, // Figma "Safari / Blocked / Protected": "We blocked this page automatically."
             button:
                 mode === null
                     ? { textKey: "block_open_app", href: "shoo://activity" }
@@ -77,7 +78,16 @@
         return payload.recordId ? `shoo://scan/${encodeURIComponent(payload.recordId)}` : "shoo://activity";
     }
 
-    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs, middleEllipsis };
+    /** One paragraph from the reason lines (Figma): each line ends with a full stop, joined by spaces. */
+    function sentence(lines) {
+        return lines
+            .map((line) => String(line).trim())
+            .filter(Boolean)
+            .map((line) => (/[.!?]$/.test(line) ? line : `${line}.`))
+            .join(" ");
+    }
+
+    globalThis.ShooBlockedPage = { viewFor, detailUrl, nextPollMs, middleEllipsis, sentence };
 
     // ---- Page ---------------------------------------------------------------------------
 
@@ -89,7 +99,7 @@
     const send = (message) => browser.runtime.sendMessage(message);
 
     document.documentElement.lang = lang;
-    const keys = { title: "block_title", level: "popup_status_2", back: "block_back" };
+    const keys = { title: "block_title", back: "block_back" };
     for (const node of document.querySelectorAll("[data-text]")) node.textContent = t(keys[node.dataset.text]);
     document.title = t("block_title");
 
@@ -103,12 +113,12 @@
     $(".screen").hidden = false;
     if (!payload) {
         // Fragment missing or edited: still blocked, just without details. Never reopen anything.
-        for (const selector of [".gauge", ".link", ".reasons"]) $(selector).hidden = true;
+        for (const selector of [".score", ".link", ".reasons"]) $(selector).hidden = true;
         return;
     }
 
-    $(".gauge-art").innerHTML = globalThis.ShooGauge.gauge(payload.score, "bahaya"); // our markup from a number
-    $(".score-value").textContent = `${payload.score}%`;
+    globalThis.ShooGauge.fillBar($(".bar"), payload.score, 3, (tag) => document.createElement(tag));
+    $(".score-value").textContent = `${payload.score}/100`;
     $(".link").textContent = globalThis.ShooBlockedPage.middleEllipsis(payload.domain || payload.url);
     $(".link").title = payload.domain || payload.url;
 
@@ -125,9 +135,10 @@
         view = viewFor(profile, payload, lang);
         mode = profile?.onboarded ? profile.mode : null;
 
-        const lines = view.remembered ? [t("block_remembered")] : view.reasons;
+        const lines = view.remembered ? [t("block_remembered")] : [...view.reasons];
+        if (view.autoNote) lines.push(t("block_auto"));
         const reasons = $(".reasons");
-        reasons.replaceChildren(...lines.map((text) => Object.assign(document.createElement("span"), { textContent: text })));
+        reasons.textContent = sentence(lines);
         reasons.hidden = lines.length === 0;
         if (view.lookalike) {
             $(".lookalike").textContent = view.lookalike;

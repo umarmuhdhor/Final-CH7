@@ -26,3 +26,11 @@ test("ring: a full score still draws a closed tube", () => {
     assert.match(ring(100, "tinggi"), /url\(#sr-tube-fill\)/);
     assert.doesNotMatch(ring(0, "tinggi"), /url\(#sr-tube-fill\)/);
 });
+
+test("bar: one piece per level reached, the rest is track (Figma Bar)", () => {
+    const { barParts } = globalThis.ShooGauge;
+    assert.deepEqual(barParts(70, 2), { fills: [{ color: "#FF9500", weight: 35 }, { color: "#F87541", weight: 35 }], track: 30 });
+    assert.deepEqual(barParts(90, 3).fills.map((f) => f.color), ["#FF9500", "#F87541", "#E5483B"]);
+    assert.equal(barParts(90, 3).track, 10);
+    assert.deepEqual(barParts(140, 9), barParts(100, 3)); // clamped
+});

@@ -2,7 +2,7 @@
 // Rules (PRD §5, 8.5): each popup at most once per page · none if the page goes straight to ≥80%
 // (block screen instead, EX-06) · closable · the page stays usable underneath.
 // Look (Figma "UI Pop Up Safari"): 30–49% → mini card at the bottom · 50–79% → sheet over a dimmed
-// page with the score gauge and Leave / Continue; Continue (or the Shoo button above it) shrinks it to
+// page with the shield, the score bar and Leave / Continue (frames 1928:3599 / 1928:3781); Continue (or the Shoo button above it) shrinks it to
 // the mini card. Protected: "Link sent to <guardian>" once the scan is reported (EX-07).
 
 (() => {
@@ -81,7 +81,7 @@
     const lang = (browser.i18n.getUILanguage?.() || "en").toLowerCase().startsWith("id") ? "id" : "en";
 
     // Sizes and colours from Figma "UI Pop Up Safari" (frames "Pertama kali buka langsung ke detect",
-    // "Safari / Warning Sedang / Minimized"). Gauge and ring drawings: gauge.js.
+    // "Safari / Warning Sedang / Minimized"). Ring and score bar: gauge.js.
     const LEAVE_CHECK_MS = 1000;
     const CSS = `
         :host { all: initial; }
@@ -99,14 +99,16 @@
                  background: linear-gradient(180deg, #fff 18.19%, #f1f2f4 99.96%);
                  box-shadow: 0 24px 48px rgba(31,42,55,.18), 0 2px 6px rgba(31,42,55,.06);
                  animation: rise .3s ease-out; }
-        .shoo { position: absolute; right: 6px; top: -56px; width: 44px; height: 44px; padding: 0; border: 0;
-                border-radius: 50%; overflow: hidden; background: none; cursor: pointer; }
-        .shoo img { display: block; width: 44px; height: 44px; }
-        .hero { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 30px 0 22px;
+        .shoo { position: absolute; right: 6px; top: -56px; width: 44px; height: 44px; padding: 0; box-sizing: border-box;
+                border-radius: 50%; border: 1px solid #fff; overflow: hidden; background: rgba(255,255,255,.88);
+                -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+                box-shadow: 0 6px 18px rgba(31,42,55,.12); cursor: pointer; }
+        .shoo img { display: block; width: 42px; height: 42px; }
+        .hero { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 0 22px;
                 border-bottom: 1px solid #e1e3e7; }
         .sent { display: flex; align-items: center; gap: 6px; max-width: calc(100% - 44px); box-sizing: border-box;
                 padding: 6px 13px 6px 9px; border-radius: 999px; border: 1px solid rgba(171,171,171,.9);
-                background: rgba(255,255,255,.7); -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
+                background: rgba(255,255,255,.7); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
                 box-shadow: 0 6px 18px rgba(31,42,55,.12); font-size: 15px; white-space: nowrap; }
         .sent[hidden] { display: none; }
         .sent span { overflow: hidden; text-overflow: ellipsis; }
@@ -114,26 +116,38 @@
         .avatar { flex: none; width: 28.97px; height: 28.97px; border-radius: 50%;
                   background: linear-gradient(135deg, #7de49c 0%, #54cae8 71.43%); color: #fff;
                   display: flex; align-items: center; justify-content: center; font-size: 11.85px; font-weight: 600; }
-        .gauge { position: relative; flex: none; width: 277.5px; height: 177.75px; overflow: hidden; border-radius: 24px; }
-        .gauge svg { position: absolute; left: 0; top: 0; }
-        .gauge .value, .gauge .label { position: absolute; left: 0; right: 0; margin: 0; text-align: center; line-height: normal; }
-        .gauge .value { top: 87px; font-size: 22.5px; letter-spacing: -.01em; }
-        .gauge .label { top: 135px; font-size: 11.25px; font-weight: 500; letter-spacing: -.005em; }
+        /* Figma "Shield G" (orange, 50–79) / "Shield Kaca Halftone" (red, ≥80): the export includes the glow, so it
+           overflows the shield's box and is centred on it. */
+        .shield { position: relative; flex: none; width: 153px; height: 160px; }
+        .shield img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+        .shield.orange img { width: 162.67px; height: 172.33px; }
+        .shield.red { width: 146px; }
+        .shield.red img { width: 178.2px; height: 171.7px; }
+        h2 { margin: 0; font-size: 28px; font-weight: 600; line-height: 34px; letter-spacing: .02em; color: #191d2f;
+             text-align: center; }
+        .score { display: flex; align-items: center; gap: 8px; height: 35px; }
+        .score .value { font-size: 15px; font-weight: 600; line-height: 34px; letter-spacing: .02em; color: #191d2f; }
+        .bar { display: flex; align-items: center; gap: 1.5px; width: 153px; height: 18px; }
+        .bar span { display: block; flex: 0 0 0; min-width: 0; }
+        .bar .fill, .bar .track { height: 10px; border-radius: 100px;
+             background-image: repeating-linear-gradient(-60deg, rgba(255,255,255,.3) 0 .6px, transparent .6px 3.4px); }
+        .bar .fill { box-shadow: 0 1.5px 4px rgba(229,72,59,.35); }
+        .bar .track { background-color: #e9ecf1;
+             background-image: repeating-linear-gradient(-60deg, #cfd5dd 0 .6px, transparent .6px 3.4px); }
+        .bar .tick { flex: none; width: 2px; height: 16px; margin: 0 1.5px; border-radius: .625px; background: #e5483b; }
         .body { display: flex; flex-direction: column; gap: 32px; padding: 24px 22px; }
         .copy { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
         .chip { max-width: 100%; box-sizing: border-box; padding: 7px 13px; border-radius: 999px; background: #e8eaed;
-                box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 13px; font-weight: 500; line-height: normal;
+                box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 13px; line-height: 18px; letter-spacing: -.08px;
                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .text { display: flex; flex-direction: column; gap: 4px; width: 100%; }
-        h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; }
-        .sheet p.rounded { margin: 0; font-size: 15px; line-height: 1.5; color: var(--muted); }
+        .sheet p.rounded { margin: 0; font-size: 17px; line-height: 1.4; color: var(--muted); }
         .actions { display: flex; flex-direction: column; gap: 10px; }
         .primary, .secondary { display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;
-                border-radius: 999px; font: 500 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
+                border-radius: 999px; font: 600 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; cursor: pointer; }
         .primary { height: 52px; border: 1px solid rgba(28,29,32,.6); color: #fff;
-                   background: linear-gradient(0deg, #191c25 25%, #3c435a 105.21%);
+                   background: linear-gradient(0deg, #214889 0%, #446eb4 100%);
                    box-shadow: inset 0 1.5px 1px rgba(255,255,255,.22), inset 0 -2px 4px rgba(0,0,0,.25); }
-        .secondary { height: 54px; border: 0; color: #191c25; background: #fff; letter-spacing: -.0125em;
+        .secondary { height: 54px; border: 0; color: #191c25; background: #fff;
                      box-shadow: 0 0 0 1px #e3e3e3, 0 3px 5px -3px rgba(0,0,0,.2); }
 
         .mini { position: fixed; z-index: 2147483647; left: 16px; right: 16px; max-width: 360px; margin: 0 auto;
@@ -165,7 +179,8 @@
     const LEVEL = { 1: "sedang", 2: "tinggi" }; // gauge.js colour set per tier
 
     const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
-    const { gauge: drawGauge, ring: drawRing } = globalThis.ShooGauge;
+    const { ring: drawRing, fillBar } = globalThis.ShooGauge;
+    const DANGER = 80; // red shield from here (Figma "Situs Berbahaya!"), like gauge.js Level=Bahaya
     let host = null;
     let release = () => {}; // stops guarding host
     let ui = null; // the shadow root's wrapper
@@ -242,33 +257,37 @@
         const shoo = button("shoo", null, minimize);
         shoo.setAttribute("aria-label", t("popup_minimize"));
         const logo = el("img");
-        logo.src = browser.runtime.getURL("images/icon-96.png");
+        logo.src = browser.runtime.getURL("images/shoo-button.png");
         logo.alt = "";
         shoo.append(logo);
 
         const hero = el("div", "hero");
         const sent = sentPill();
-        const meter = el("div", "gauge");
-        const value = el("p", "value");
-        meter.append(el("div"), value, el("p", "label", t(`popup_status_${tier}`)));
-        hero.append(sent.pill, meter);
+        const shield = el("div", "shield");
+        shield.setAttribute("aria-hidden", "true");
+        const shieldArt = el("img");
+        shieldArt.alt = "";
+        shield.append(shieldArt);
+        const title = el("h2");
+        const score = el("div", "score");
+        const bar = el("div", "bar");
+        bar.setAttribute("aria-hidden", "true");
+        const value = el("span", "value");
+        score.append(bar, value);
+        hero.append(sent.pill, shield, title, score);
 
         const body = el("div", "body");
         const copy = el("div", "copy");
         const chip = el("span", "chip");
-        const text = el("div", "text");
-        const title = el("h2", null, t("popup_title_2"));
         const description = el("p", "rounded");
-        text.append(title, description);
-        copy.append(chip, text);
+        copy.append(chip, description);
         const actions = el("div", "actions");
         actions.append(button("primary", t("popup_leave"), leave), button("secondary", t("popup_continue"), minimize));
         body.append(copy, actions);
 
         sheet.append(shoo, hero, body);
-        sheet.setAttribute("aria-label", title.textContent);
         ui.replaceChildren(dim, sheet);
-        return { layout: "sheet", art: meter.firstChild, draw: drawGauge, value, chip, description, sent };
+        return { layout: "sheet", sheet, shield, shieldArt, title, bar, value, chip, description, sent };
     }
 
     function buildMini(tier) {
@@ -292,7 +311,7 @@
         close.setAttribute("aria-label", t("popup_close"));
         mini.append(banner, close);
         ui.replaceChildren(mini);
-        return { layout: "mini", art: meter, draw: drawRing, value: score, description };
+        return { layout: "mini", art: meter, value: score, description };
     }
 
     function render(state, tier, minimized = false) {
@@ -306,8 +325,23 @@
     function update(state) {
         if (!refs || !last) return;
         last.state = state;
-        refs.art.innerHTML = refs.draw(state.score, LEVEL[last.tier]); // our own markup from numbers only
-        refs.value.textContent = `${state.score}%`;
+        if (refs.layout === "sheet") {
+            // Figma: orange shield + "Situs Mencurigakan!" below 80, red + "Situs Berbahaya!" from 80 (only
+            // reachable here when the dashboard puts the block threshold above 80).
+            const danger = state.score >= DANGER;
+            if (refs.shield.dataset.level !== (danger ? "red" : "orange")) {
+                refs.shield.dataset.level = danger ? "red" : "orange";
+                refs.shield.className = `shield ${refs.shield.dataset.level}`;
+                refs.shieldArt.src = browser.runtime.getURL(`images/shield-${refs.shield.dataset.level}.png`);
+            }
+            refs.title.textContent = t(danger ? "popup_title_danger" : "popup_title_2");
+            refs.sheet.setAttribute("aria-label", refs.title.textContent);
+            fillBar(refs.bar, state.score, danger ? 3 : 2, (tag) => dom.create(document, tag));
+            refs.value.textContent = `${state.score}/100`;
+        } else {
+            refs.art.innerHTML = drawRing(state.score, LEVEL[last.tier]); // our own markup from numbers only
+            refs.value.textContent = `${state.score}%`;
+        }
         refs.description.textContent = describe(state.signals, { simple, lang, advice: t(`popup_body_${last.tier}`) });
         if (refs.chip) refs.chip.textContent = state.domain || state.url;
         if (refs.sent) fillSent(refs.sent, state);

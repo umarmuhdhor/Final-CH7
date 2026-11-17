@@ -112,3 +112,10 @@ test("#382: an IDN look-alike keeps its punycode, with the detector's look-alike
     assert.ok(!v.reasons.includes("Nama domain meniru BCA"));
     assert.equal(viewFor({ onboarded: true, mode: "guardian" }, { ...p, domain: "bca-verify.xyz" }, "id").lookalike, null);
 });
+
+test("block screen: reasons read as one paragraph; Protected adds the automatic-block line", () => {
+    const { sentence } = globalThis.ShooBlockedPage;
+    assert.equal(sentence(["Domain age 3 days", "Asks for your PIN.", " "]), "Domain age 3 days. Asks for your PIN.");
+    assert.equal(viewFor({ onboarded: true, mode: "protected" }, payload, "id").autoNote, true);
+    assert.equal(viewFor({ onboarded: true, mode: "guardian" }, payload, "en").autoNote, false);
+});

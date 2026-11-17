@@ -1,7 +1,8 @@
-/* Owner: lead. Block screen (EX-06). Sizes and colours from Figma "Safari / Blocked / Protected". */
+/* Owner: lead. Block screen (EX-06). Sizes and colours from Figma "Safari / Blocked / Protected" (1928:3927)
+   and "Safari / Blocked / Guardian or pribadi" (1928:4204). */
 :root {
     color-scheme: light;
-    --ink: #151617; --muted: #6a717e; --danger: #e5483b;
+    --ink: #151617; --title: #191d2f; --muted: #6a717e; --danger: #e5483b;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -10,37 +11,44 @@ body { margin: 0; min-height: 100vh; color: var(--ink);
        background: linear-gradient(#fce9e7 0%, #f5f6f8 42%, #f5f6f8 100%) no-repeat;
        font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
        -webkit-font-smoothing: antialiased; }
-.screen { display: flex; flex-direction: column; align-items: center; gap: 33px;
+/* Content on top, buttons at the bottom (Figma: SPACE_BETWEEN). */
+.screen { display: flex; flex-direction: column; justify-content: space-between; gap: 40px; min-height: 100vh;
           max-width: 440px; margin: 0 auto; text-align: center;
-          padding: calc(47px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); }
-.top { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
+          padding: calc(18px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom)); }
+.top { display: flex; flex-direction: column; align-items: center; gap: 40px; width: 100%; }
+.head { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
+.logo { display: block; width: 107.67px; height: 36px; }
 
-.brand, .sent { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 13px 6px 9px;
-                border-radius: 999px; border: 1px solid rgba(255,255,255,.9); background: rgba(255,255,255,.7);
-                -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
-                box-shadow: 0 6px 18px rgba(31,42,55,.12); font-size: 15px; line-height: normal; white-space: nowrap; }
-.brand { font-weight: 700; }
-.brand img { display: block; width: 16px; height: 16px; }
+.meter { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+/* The export includes the glow, so it overflows the shield's box and is centred on it. */
+.shield { position: relative; width: 191px; height: 209px; }
+.shield img { position: absolute; left: 50%; top: 50%; width: 233px; height: 224.5px; transform: translate(-50%, -50%); }
 
-/* Half gauge: drawing from gauge.js, value and label laid over it (277.5 × 177.75, Figma). */
-.gauge { position: relative; flex: none; width: 277.5px; height: 177.75px; overflow: hidden; border-radius: 24px; }
-.gauge-art svg { position: absolute; left: 0; top: 0; }
-.score-value, .score-label { position: absolute; left: 0; right: 0; margin: 0; line-height: normal; }
-.score-value { top: 87px; font-size: 30px; letter-spacing: -.01em; }
-.score-label { top: 135px; font-size: 15px; font-weight: 500; letter-spacing: -.005em; }
+.score { display: flex; align-items: center; gap: 9.6px; height: 34px; }
+.score-value { font-size: 18px; font-weight: 600; line-height: 40px; letter-spacing: .02em; color: var(--title); }
+.bar { display: flex; align-items: center; gap: 1.75px; width: 183.6px; height: 21.6px; }
+.bar span { display: block; flex: 0 0 0; min-width: 0; }
+.bar .fill, .bar .track { height: 11.5px; border-radius: 120px;
+     background-image: repeating-linear-gradient(-60deg, rgba(255,255,255,.3) 0 .7px, transparent .7px 4px); }
+.bar .fill { box-shadow: 0 1.8px 4.8px rgba(229,72,59,.35); }
+.bar .track { background-color: #e9ecf1;
+     background-image: repeating-linear-gradient(-60deg, #cfd5dd 0 .7px, transparent .7px 4px); }
+.bar .tick { flex: none; width: 2.33px; height: 18.64px; margin: 0 1.75px; border-radius: .73px; background: var(--danger); }
 
 .copy { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
 .chip { max-width: 100%; padding: 7px 13px; border-radius: 999px; background: #e8eaed;
-        box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 13px; font-weight: 500; line-height: normal;
+        box-shadow: inset 0 1px 1px rgba(255,255,255,.9); font-size: 17px; line-height: 1.4;
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lookalike { margin: -2px 0 0; font-size: 13px; font-weight: 600; color: var(--danger); }
-h1 { margin: 0; font-size: 26px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; }
-.reasons { max-width: 322px; margin: -4px 0 0; font-size: 15px; line-height: 1.5; color: var(--muted);
-           font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, sans-serif; }
-.reasons span { display: block; }
+h1 { margin: 0; font-size: 28px; font-weight: 700; line-height: 34px; letter-spacing: -.02em; }
+.reasons { max-width: 322px; margin: -4px 0 0; font-size: 17px; line-height: 1.4; color: var(--muted); }
 .verified { margin: 0; font-weight: 600; color: var(--danger); }
 
-.sent { border-color: rgba(171,171,171,.9); }
+.bottom { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+.sent { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 13px 6px 9px;
+        border-radius: 999px; border: 1px solid rgba(171,171,171,.9); background: rgba(255,255,255,.7);
+        -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+        box-shadow: 0 6px 18px rgba(31,42,55,.12); font-size: 15px; line-height: normal; white-space: nowrap; }
 .sent-text { overflow: hidden; text-overflow: ellipsis; }
 .sent b { font-weight: 700; }
 .avatar { flex: none; width: 28.97px; height: 28.97px; border-radius: 50%;
@@ -50,10 +58,10 @@ h1 { margin: 0; font-size: 26px; font-weight: 600; line-height: 1.4; letter-spac
 
 .actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
 .button, .back { display: flex; align-items: center; justify-content: center; width: 100%; border-radius: 999px;
-                 font: 500 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; text-decoration: none;
+                 font: 600 17px/22px -apple-system, BlinkMacSystemFont, sans-serif; text-decoration: none;
                  cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .button { height: 52px; border: 1px solid rgba(28,29,32,.6); color: #fff;
-          background: linear-gradient(0deg, #191c25 25%, #3c435a 105.21%);
+          background: linear-gradient(0deg, #214889 0%, #446eb4 100%);
           box-shadow: inset 0 1.5px 1px rgba(255,255,255,.22), inset 0 -2px 4px rgba(0,0,0,.25); }
-.back { height: 54px; border: 0; color: #191c25; background: #fff; letter-spacing: -.0125em;
+.back { height: 54px; border: 0; color: #191c25; background: #fff;
         box-shadow: 0 0 0 1px #e3e3e3, 0 3px 5px -3px rgba(0,0,0,.2); }
