@@ -66,7 +66,14 @@ final class OnboardingModel {
     /// ON-02 avatar picker. Sent as `avatarId` in `POST /devices` (#120); the response is the source of truth.
     var selectedAvatarId = OnboardingAvatar.ids[0]
     /// ON-04 "Saya setuju halaman dicek secara online." Its Turn on stays off until it is ticked (Figma).
-    var consentChecked = false
+    var consentChecked = false {
+        // Once this screen saved the yes (`keepsConsentCheckbox`), the box is the saved answer: unticking it
+        // takes the consent back (online checks off), ticking it again gives it again.
+        didSet {
+            guard keepsConsentCheckbox, consentChecked != oldValue else { return }
+            environment.setDataConsent(consentChecked ? .granted : .declined)
+        }
+    }
     /// The ON-04 checkbox answered the question on this screen: it stays visible after the answer is saved.
     private(set) var keepsConsentCheckbox = false
     /// The last step change was a Back tap, so the screens slide the other way.
