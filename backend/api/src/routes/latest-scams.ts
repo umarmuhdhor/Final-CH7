@@ -11,7 +11,7 @@ export const latestScamsRoute = new Hono<AppEnv>();
  * 20261117100000_latest_scams_public.sql. No domain, URL, count or device in the answer.
  *
  * Not user data (a category reaches the answer only once 3+ devices hit it), so a client may keep it
- * for 10 minutes. Not in contracts/api.md yet: backend/API.md "GET /scams/latest".
+ * for 10 minutes. Contract: contracts/api.md "GET /scams/latest", fixtures/latest-scams.json.
  */
 latestScamsRoute.get("/scams/latest", requireDevice, async (c) => {
   const rows = await latestScams(c.get("sql"));

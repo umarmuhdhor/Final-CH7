@@ -214,7 +214,7 @@ extension FamilyMembersResponse {
 }
 
 /// One card of the Home row "Scam terbaru di pengguna Shoo" (Figma 955:10323): an item of `GET /scams/latest`
-/// (backend/API.md, proposed, not in contracts/ yet). The words are the admin's category label; the card adds
+/// (contracts/api.md, fixtures/latest-scams.json). The words are the admin's category label; the card adds
 /// "Hari ini" / "Kemarin" / "3 hari lalu" from `lastSeenAt`. No channel ("lewat WhatsApp"): Shoo only sees the
 /// address, not where the link came from.
 struct ScamCase: Decodable, Hashable, Identifiable, Sendable {

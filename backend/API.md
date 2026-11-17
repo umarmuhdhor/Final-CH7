@@ -19,7 +19,7 @@ Worker in `backend/api` implements it. If the two ever disagree, `contracts/` wi
 - [Favicons](#favicons): `GET /favicons/{scanId}`
 - [Verdicts](#verdicts): `POST /verdicts`, `GET /verdicts?url=&domain=`
 - [Blocklist](#blocklist): `GET /blocklist`
-- [Latest scams](#latest-scams): `GET /scams/latest` (*proposed*, Home card)
+- [Latest scams](#latest-scams): `GET /scams/latest` (Home card)
 - [Config](#config): `GET /config/public`
 - [Web pages](#web-pages): `GET /j/{code}`, `GET /og/invite.jpg`, `GET /.well-known/apple-app-site-association`, `GET /privacy`, `GET /support`, `GET /terms`, `GET /get`
 - [Push notification](#push-notification) sent by `POST /scans`
@@ -903,7 +903,7 @@ Entries can also be approved, rejected, removed or added from the internal admin
 
 ### `GET /scams/latest`
 
-*Proposed, not yet in `contracts/api.md`.* Home card "Scam terbaru di pengguna Shoo" (Protected and
+Contract: `contracts/api.md` "GET /scams/latest", `contracts/fixtures/latest-scams.json`. Home card "Scam terbaru di pengguna Shoo" (Protected and
 Pribadi Home). The kinds of scam several Shoo users were blocked from this week, newest first. Any device.
 
 ```json

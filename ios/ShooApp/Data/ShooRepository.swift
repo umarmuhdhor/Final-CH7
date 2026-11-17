@@ -42,7 +42,7 @@ protocol ShooRepository: AnyObject, Sendable {
     func setVerdict(scanId: String, value: Verdict.Value) async throws -> Verdict
     /// `POST /verdicts` with `notes` (≤ 280 characters): why the Guardian decided. Team AI learns from it (#241).
     func setVerdict(scanId: String, value: Verdict.Value, notes: String?) async throws -> Verdict
-    /// `GET /scams/latest`: the Home card "Scam terbaru di pengguna Shoo" (backend/API.md, proposed). Empty = no card.
+    /// `GET /scams/latest`: the Home card "Scam terbaru di pengguna Shoo" (contracts/api.md, PR-04, GD-01). Empty = no card.
     func latestScams() async throws -> [ScamCase]
 }
 
