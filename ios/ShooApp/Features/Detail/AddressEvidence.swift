@@ -163,12 +163,38 @@ struct AddressEvidence: View {
     }
 
     /// The brand's real address to show, or nil when the detector names none. Only brand reasons
-    /// (`lookalike_domain`, `brand_plus_keyword`) have one in the contract.
+    /// (`lookalike_domain`, `brand_plus_keyword`) have one in the contract. "Real: X" sits next to a checkmark
+    /// seal, so a value that does not look like a domain is never shown (#497 follow-up): scans stored before the
+    /// backend checked `official` may hold any text a device sent.
     static func official(in host: Signal.Host?, kind: SignalKind) -> String? {
         guard kind == .lookalikeDomain || kind == .brandInAddress,
-              let official = host?.official?.trimmingCharacters(in: .whitespacesAndNewlines), !official.isEmpty
+              let official = host?.official?.trimmingCharacters(in: .whitespacesAndNewlines),
+              looksLikeDomain(official)
         else { return nil }
         return official
+    }
+
+    /// The backend's `DOMAIN` rule (backend/api/src/http/validate.ts), at most 253 characters: lowercase ASCII
+    /// labels of 1–63 letters, digits and inner hyphens joined by dots (an IPv4 address and a single label pass),
+    /// or an IPv6 literal in brackets. No scheme, path, port, space or trailing dot.
+    static func looksLikeDomain(_ value: String) -> Bool {
+        // Bytes, not Characters: a combining mark must not ride along with an allowed letter.
+        let bytes = Array(value.utf8)
+        guard !bytes.isEmpty, bytes.count <= 253 else { return false }
+        let digit = UInt8(ascii: "0")...UInt8(ascii: "9")
+        let hyphen = UInt8(ascii: "-")
+        if bytes.first == UInt8(ascii: "[") {
+            guard bytes.count >= 2, bytes.last == UInt8(ascii: "]") else { return false }
+            let groups = bytes.dropFirst().dropLast().split(separator: UInt8(ascii: ":"), omittingEmptySubsequences: false)
+            let hex = UInt8(ascii: "a")...UInt8(ascii: "f")
+            return (3...8).contains(groups.count)
+                && groups.allSatisfy { $0.count <= 4 && $0.allSatisfy { digit.contains($0) || hex.contains($0) } }
+        }
+        let letter = UInt8(ascii: "a")...UInt8(ascii: "z")
+        return bytes.split(separator: UInt8(ascii: "."), omittingEmptySubsequences: false).allSatisfy { label in
+            (1...63).contains(label.count) && label.first != hyphen && label.last != hyphen
+                && label.allSatisfy { letter.contains($0) || digit.contains($0) || $0 == hyphen }
+        }
     }
 
     /// The domain with `ranges` on the marker yellow, bold; the rest regular.

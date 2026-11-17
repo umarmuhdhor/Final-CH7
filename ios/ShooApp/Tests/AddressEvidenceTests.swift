@@ -114,6 +114,25 @@ struct AddressEvidenceTests {
         #expect(AddressEvidence.official(in: nil, kind: .brandInAddress) == nil)
     }
 
+    /// #497 follow-up (security, #551 review): "Real: X" sits next to a checkmark seal, so it shows only a value that
+    /// looks like a domain (the backend's DOMAIN rule). Scans stored before the backend checked it may hold any text.
+    @Test func officialLineOnlyWhenItLooksLikeADomain() {
+        for official in ["bca.co.id", "www.bca.co.id", "xn--bca-0la.com", "192.168.1.1", "[2001:db8::1]", "router", " bca.co.id "] {
+            #expect(AddressEvidence.official(in: Signal.Host(official: official), kind: .brandInAddress) != nil, "\(official)")
+        }
+        let longest = [String(repeating: "a", count: 63), String(repeating: "b", count: 63),
+                       String(repeating: "c", count: 63), String(repeating: "d", count: 61)].joined(separator: ".")
+        #expect(AddressEvidence.official(in: Signal.Host(official: longest), kind: .lookalikeDomain) == longest)
+        for official in [
+            "Bank resmi ✓ call 0800", "bca.co.id ✓", "BCA.co.id", "https://bca.co.id", "bca.co.id/login",
+            "bca.co.id:443", "bca.co.id.", "bca .co.id", "-bca.co.id", "bca-.co.id", "bca..co.id", ".bca.co.id",
+            "bca.co.id\u{7}", "bca\u{202E}di.oc", "bçä.co.id", "bca\u{301}.co.id", "[a\u{301}::1]", "[2001:db8::1", "[bca.co.id]", "[1:2]",
+            String(repeating: "a", count: 64) + ".com", longest + "x",
+        ] {
+            #expect(AddressEvidence.official(in: Signal.Host(official: official), kind: .brandInAddress) == nil, "\(official)")
+        }
+    }
+
     /// The contract gives `official` only to `lookalike_domain` and `brand_plus_keyword`.
     @Test func officialLineOnlyOnBrandReasons() {
         let host = Signal.Host(marks: [".site"], official: "bca.co.id")
