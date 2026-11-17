@@ -2,7 +2,7 @@
 
 Detail lengkap + checkbox progres: [umar.md](umar.md) · [imelda.md](imelda.md) · [alief.md](alief.md). Kalau ada perbedaan, yang berlaku file detail.
 
-## Umar — Lead (`contracts/`, `ios/ShooExtension/`, `ios/ShooLiveActivity/`, `ios/ShooShared/`, `ios/project.yml`)
+## Umar — Lead (`contracts/`, `ios/ShooExtension/`, `ios/ShooShared/`, `ios/project.yml`)
 
 | # | PRD ID | Tugas | Selesai kalau |
 |---|---|---|---|
@@ -73,5 +73,5 @@ Bukan tugas Imelda: hoaks (Fase 2), AI belajar dari keputusan keluarga (menunggu
 | C4 | GD-06 | Tap push → buka Detail |
 | C5 | GD-07 | Tombol It's safe / Not safe |
 
-**Live Activity lewat push:** selesai lewat path C (issue #49): `POST /live` + token Live Activity (#356, #386, #442).
+**Live Activity lewat push:** dibatalkan 17 Nov 2026 (#555). Path C (#49: `POST /live` + token Live Activity, #356, #386, #442) dihapus; skor live cukup di pill.
 Bukan tugas Alief: popup & layar blokir di Safari (Umar), skor & teks alasan (Imelda), hoaks (Fase 2).

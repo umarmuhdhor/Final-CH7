@@ -23,16 +23,14 @@ Common error codes: `invalid_body`, `bad_json`, `too_large`, `rate_limited`, `in
 |---|---|---|---|---|
 | POST | `/devices` | `{ name, mode: "guardian"\|"protected", avatarId?, apnsToken? }` | `{ deviceId, token, avatarId }` | ON-02, ON-03 |
 | GET | `/devices/me` | — | `{ deviceId, name, avatarId, mode, language, guardian: { deviceId, name, avatarId } \| null }` — Protected learns its guardian, or that it was disconnected | PR-04, PF-01, EX-06 |
-| PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt?, liveActivityStartToken?, liveActivityUpdateToken? }` | `{ ok }` | ON-05, PF-01, GD-03, EX-03 |
+| PATCH | `/devices/me` | `{ name?, apnsToken?, language?, extensionLastSeenAt? }` (`liveActivityStartToken?`, `liveActivityUpdateToken?`: removed, see below) | `{ ok }` | ON-05, PF-01, GD-03 |
 | DELETE | `/devices/me` | — | `{ ok }` — deletes the device and everything about it: family links (either side), codes, join attempts, scans + screenshots + page replicas, verdicts on its scans or made by it, push log. The token stops working. App Store Guideline 5.1.1(v) | PF-01 |
 
 `avatarId` (ON-02, #120): optional, one of `avatar_01`…`avatar_12`. The 4 memoji in the ON-02 picker are `avatar_01`…`avatar_04`; `avatar_05`…`avatar_12` stay for the random pick. Missing or unknown → the server picks at random, as before. The response `avatarId` is the source of truth. Chosen once at registration: `PATCH /devices/me` does not change it (not in the MVP).
 
 `extensionLastSeenAt` (ISO): sent by the **extension** at most once per hour with its heartbeat, and by the app when it comes to the foreground. The backend uses it for `extensionActive` in `GET /family/members` ("Not connected", GD-03). No data yet → `extensionActive: true` (never "Not connected" without evidence).
 
-`liveActivityStartToken` / `liveActivityUpdateToken` (EX-03, #49): the two APNs tokens of the Dynamic Island. Sent by the **app** only. See "Live score (Dynamic Island)" below.
-- `liveActivityStartToken`: hex string from `Activity<ScoreActivityAttributes>.pushToStartTokenUpdates`, or `null` to clear. The app sends it while it is on screen (onboarding and every launch), and again when it changes.
-- `liveActivityUpdateToken`: `{ activityId, token }` from the running activity's `id` and `pushTokenUpdates`, or `null` when that activity ended. `activityId`: letters, digits and `-`, max 64. `token`: hex. The backend keeps only the latest one (a device has at most one island).
+`liveActivityStartToken` / `liveActivityUpdateToken`: **removed** (EX-03 Dynamic Island dropped 17 Nov 2026, #555). They were the Dynamic Island's APNs tokens. Not part of the contract any more: the app stops sending them and the backend stops accepting and storing them in #555. Until that lands, an older app may still send them; nothing uses them.
 
 ### Family (max 3 protected per guardian)
 | Method | Path | Body | Response | PRD |
@@ -60,14 +58,14 @@ The extension sends **one scan per page**: when the page is blocked, or when a w
 
 #### `domain` (#487, #495)
 
-The `domain` of a page, the same value in `POST /scans`, `GET /verdicts?url=&domain=`, `POST /live`, the extension's block memory and every screen that names the site (block chip, Home card, Activity, Detail, island). The extension works it out from the page URL's host:
+The `domain` of a page, the same value in `POST /scans`, `GET /verdicts?url=&domain=`, the extension's block memory and every screen that names the site (block chip, Home card, Activity, Detail). The extension works it out from the page URL's host:
 
 1. The host is normalised first: lowercase, a trailing dot dropped (`bca-verifikasi.site.` → `bca-verifikasi.site`, #450), an IPv6 literal in brackets.
 2. **Shared `host_path` platform** (anyone publishes a page under a path: `admin.domain_lists` rows with `hosting = 'host_path'`, e.g. `sites.google.com`, `docs.google.com` (Google Forms), `forms.office.com`, `cloud.microsoft`) → the **full host**, without a leading `www.`: `https://sites.google.com/view/x` → `sites.google.com`, `https://docs.google.com/forms/d/x` → `docs.google.com`, `https://sway.cloud.microsoft/AbC` → `sway.cloud.microsoft` (a host under a `host_path` row counts too). A page there is one person's page, not the platform's, so the real host is what the Guardian sees.
 3. Otherwise the **registrable domain** (Public Suffix List, private suffixes included): `https://login.bca.co.id/` → `bca.co.id`, `https://www.bca.co.id/` → `bca.co.id`, `https://scam.vercel.app/` → `scam.vercel.app`, `https://accounts.google.com/` → `google.com`.
 4. **No registrable domain** → the **full host**: IPv4 `192.168.1.1`, IPv6 `[2001:db8::1]`, a single label `router`, a public suffix `co.id`, a name that is literally `www.<public suffix>` (`www.co.id`, `www.com`; here the `www.` stays, since it is the only label left).
 
-So `domain` is always the url's host or a parent of it, lowercase, with no trailing dot and no port. The backend accepts exactly these values on every route that takes `domain` (the url host check of #375 stays) and stores them as sent. Layer-1 list matching is separate: `ShooLists.match` still checks the host down to its registrable domain (detector-interface.md). `POST /live` is still not sent for a host with no registrable domain (case 4).
+So `domain` is always the url's host or a parent of it, lowercase, with no trailing dot and no port. The backend accepts exactly these values on every route that takes `domain` (the url host check of #375 stays) and stores them as sent. Layer-1 list matching is separate: `ShooLists.match` still checks the host down to its registrable domain (detector-interface.md).
 
 `faviconUrl`: in `POST /scans` it is the site's own icon URL (or `null`); the server downloads it once. In responses (lists and `GET /scans/{id}`) it is a 1-hour signed link to the server's stored copy (`GET /favicons/{scanId}`, see `backend/API.md`), or `null`; never the site's own URL, so the app never contacts the scam host (#166).
 
@@ -157,53 +155,12 @@ A `not_safe` verdict always applies at once **for that family** (`GET /verdicts`
 
 The extension's `background.js` downloads this list and refreshes it (incremental `since` hourly, full daily); the visited URL is never sent to check one domain. Design: `docs/design/blocklist.md`.
 
-### Live score (Dynamic Island, EX-03, #49)
-| Method | Path | Body | Response | PRD |
-|---|---|---|---|---|
-| POST | `/live` | `{ domain, score, status: "normal"\|"warning"\|"blocked", analyzing: boolean, open: boolean, label?: "offline_check"\|"marked_safe", secondWarning?: integer }` | `202 { ok }` | EX-03 |
+### Live score (Dynamic Island) — removed
+**Removed** (17 Nov 2026, decision Umar + Alief, #555): EX-03's Dynamic Island / Live Activity (path C, #49) is dropped. The live score stays in the in-page pill only (`pill.js`), which never leaves the phone.
 
-The running score of the page on screen in Safari, forwarded to this device's Dynamic Island by Live Activity push. It works with Shoo closed, once the app has sent `liveActivityStartToken`.
-
-- **Who sends it:** the **extension** (`background.js`), and only when the online check is on (`getSession` has `aiBaseURL`, same rule as `/analyze`). Online check off → no call, the in-page pill only.
-- **`domain`:** never a URL. Same rule as `/scans` (Scans "`domain`": the full host on a shared `host_path` platform, e.g. `sites.google.com`); the extension sends no `/live` for a host with no registrable domain (IP, `router`, `www.co.id`). `score`: integer 0–100. Extra keys or a bad value → `422 invalid_body`, like every other bad body.
-- **`label` (optional, #486):** why a low score must not read "Aman" on the island, so it says what the in-page pill says. `"offline_check"`: score under the first warning and the online check was skipped or failed (pill "Cek online tidak tersedia", #379). `"marked_safe"`: a Guardian marked this link safe (pill "Ditandai aman oleh …", #369). Left off otherwise.
-- **`secondWarning` (optional, #486):** integer 1–100, the extension's second warning (50, or the middle of the warning band when `warnAt` ≥ 50). The island's darker "danger" tone starts there, like the pill's.
-- **Older backend:** a backend that answers `422` to `label` / `secondWarning` gets the same call again without them, and only today's fields after that (until the background restarts). The island keeps working, without the pill's words.
-- **`open: false`:** no page of Safari is on screen any more (tab hidden, Safari left, page closed), so the island ends. The other fields are still sent (last values).
-- **When:**
-  - a page comes on screen;
-  - its `status` or `analyzing` changes → right away;
-  - a score-only change → coalesced, at most 1 call per second;
-  - `open: false` → after 1.5 s without another page coming on screen, so a tab switch doesn't end and restart the island.
-- **Privacy (#49 decision 3): forward, never store.** `domain` and `score` go into the APNs payload only. No table row, no `push_log` row, and log lines carry the event kind and result only.
-- **Rate limit:** 10 calls per 10 s per device → `429 rate_limited`. `open: false` is never limited.
-
-**Backend → APNs.** Header `apns-push-type: liveactivity`, topic `<bundle id>.push-type.liveactivity`.
-| Case | Token | `event` | Priority | `apns-expiration` |
-|---|---|---|---|---|
-| No update token stored | start token | `start` | 10 | +60 s |
-| Update token stored, `open: true` | update token | `update` | 10 if `analyzing` or `status` ≠ `normal`, else 5 | +60 s |
-| Update token stored, `open: false` | update token | `end` | 10 | +1 h |
-
-While a `start` waits for the app's update token, there is no second `start` for 30 s, so islands don't stack. APNs `410` clears the token it was sent to.
-
-```json
-{ "aps": {
-    "timestamp": 1731200000,
-    "event": "start",
-    "alert": { "title": "Shoo", "body": "Checking this page" },
-    "content-state": { "domain": "hadiah-gratis.xyz", "score": 60, "isAnalyzing": false, "isBlocked": false, "status": "warning", "secondWarning": 50 },
-    "attributes-type": "ScoreActivityAttributes",
-    "attributes": {},
-    "stale-date": 1731200600
-} }
-```
-- `content-state` = `ScoreActivityAttributes.ContentState` in `ios/ShooShared/`. Keys are fixed: renaming one breaks decoding on the phone. `isBlocked` = `status == "blocked"`. `status` (#383, additive) = the `status` from `POST /live`, copied as is: the island takes its colour from it, so a threshold moved in `/config/public` can't colour a block as a warning. A push without it still decodes (built-in 30 / 50 / 80 bands). `label` and `secondWarning` (#486, additive): copied as is from `POST /live` when the body has them, left out otherwise. The island shows "Cek online tidak tersedia" / "Ditandai aman oleh Guardian" instead of "Aman" for a label, and splits warning from danger at `secondWarning` (50 without it). A push without them still decodes.
-- `alert` (start only, required): iOS drops a push-to-start without it ("Received start without an alert configuration"). Text in the device's `language` (`id`: "Memeriksa halaman ini"), no `sound`, no domain.
-- `attributes` (start only) = `ScoreActivityAttributes`: empty. The island follows the page, so the domain lives in `content-state`.
-- `update` has `timestamp`, `event`, `content-state`, `stale-date` (+10 min). `end` has `timestamp`, `event`, `content-state` and `dismissal-date` (= `timestamp`, gone at once).
-
-**App side.** When `Activity<ScoreActivityAttributes>.activityUpdates` delivers a new activity (also in the background after a `start` push), the app ends every other `ScoreActivityAttributes` activity with `.immediate`, then sends the new update token. When an activity ends, it sends `liveActivityUpdateToken: null`.
+- `POST /live` is no longer part of the contract. The extension does not call it any more; the backend removes the route and its Live Activity push sender in #555. No client may depend on it.
+- No `apns-push-type: liveactivity` pushes. `ScoreActivityAttributes` (`ios/ShooShared/`) stays only until the app stops using it (#555), then goes.
+- The old spec (body, timing, APNs payload) is in git history and `docs/spikes/dynamic-island.md`.
 
 ### Push payloads (APNs)
 ```json

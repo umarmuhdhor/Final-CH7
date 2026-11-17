@@ -44,7 +44,7 @@ export function isHostPathHost(host) {
 }
 
 /**
- * The `domain` the extension sends (POST /scans, GET /verdicts, POST /live, contracts/api.md "`domain`") and
+ * The `domain` the extension sends (POST /scans, GET /verdicts, contracts/api.md "`domain`") and
  * files block memory under (#487, #495):
  * - a host_path platform (sites.google.com, docs.google.com, sway.cloud.microsoft) → the full host, no `www.`;
  * - otherwise the registrable domain, which is the full host when there is none: an IP (`[2001:db8::1]`),

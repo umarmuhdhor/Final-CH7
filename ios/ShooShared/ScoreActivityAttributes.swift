@@ -1,6 +1,10 @@
 import ActivityKit
 import Foundation
 
+// TODO(#555): EX-03 Dynamic Island dropped (17 Nov 2026). The ShooLiveActivity target and the extension's
+// POST /live are gone; this type stays only because ShooApp/App/LiveActivityTokens.swift still uses it.
+// Delete this file and Tests/ScoreActivityAttributesTests.swift once Alief's app PR for #555 is merged.
+
 /// Live Activity shown in the Dynamic Island while a page is on screen in Safari (EX-03).
 /// Only the running score — warnings and blocks stay in-page (EX-04, EX-06).
 ///

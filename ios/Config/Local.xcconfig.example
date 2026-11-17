@@ -4,7 +4,7 @@
 // Team ID: Xcode > Settings > Accounts > your team, or developer.apple.com > Membership.
 DEVELOPMENT_TEAM = ABCDE12345
 
-// App bundle ID. Extensions become $(SHOO_BUNDLE_ID).extension and .liveactivity.
+// App bundle ID. The Safari extension becomes $(SHOO_BUNDLE_ID).extension.
 SHOO_BUNDLE_ID = com.yourname.shoo
 
 // Must start with "group.". Xcode registers it on first build (Automatic signing).

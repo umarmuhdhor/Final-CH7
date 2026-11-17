@@ -1,7 +1,6 @@
 // Owner: lead. Live score bubble (EX-03). Plain content script, loaded after pipeline.js.
-// The extension can't drive the Dynamic Island (docs/spikes/dynamic-island.md), so the running
-// score floats on the page instead: the Shoo logo as a round button the user can drag to either edge
-// (like a chat head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
+// The running score floats on the page (the only live score: the Dynamic Island was dropped, #555): the
+// Shoo logo as a round button the user can drag to either edge (like a chat head). It lives in the page: it exists only while a page is open in Safari and goes away with it.
 // Rules: always on screen while a page is open, whatever the score · the score lives in the card and the
 // aria label, updated on every (re)scan (content.js re-checks the page when it changes) · hidden when blocked (block screen
 // owns the page, EX-06) · tap opens a small card (status, score, top reasons, See detail, Hide) ·
