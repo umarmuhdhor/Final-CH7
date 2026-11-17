@@ -5683,6 +5683,16 @@
         }
       }
     },
+    "You won't hear when Shoo blocks a dangerous site." : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamu tidak akan tahu saat Shoo memblokir situs berbahaya."
+          }
+        }
+      }
+    },
     "You won't hear when your family is at risk." : {
       "localizations" : {
         "id" : {
