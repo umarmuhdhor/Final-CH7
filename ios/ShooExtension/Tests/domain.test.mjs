@@ -114,12 +114,13 @@ test("a page on this phone or its own network never goes to /analyze", () => {
         "http://192.168.1.1/", "http://10.0.0.138/admin", "http://172.20.1.1", "http://127.0.0.1:8080", "http://169.254.1.1",
         "http://100.100.1.1", "http://localhost:3000", "http://app.localhost", "http://printer.local", "http://nas.home.arpa",
         "http://router/", "http://ROUTER./", "http://[::1]/", "http://[fd12:3456::1]/", "http://[fe80::1]/",
+        "http://[::ffff:192.168.1.1]/", "http://[::ffff:7f00:1]/", "http://[::10.0.0.1]/", "http://[fec0::1]/",
     ]) {
         assert.equal(isPrivateHost(host(url)), true, url);
     }
     for (const url of [
         "https://bca-login.com", "http://8.8.8.8", "http://172.32.0.1", "http://192.169.1.1", "http://11.0.0.1",
-        "https://127.0.0.1.nip.io", "http://[2001:db8::1]/", "https://sites.google.com/view/x", "https://bank-bca.co.id",
+        "https://127.0.0.1.nip.io", "http://[2001:db8::1]/", "http://[::ffff:8.8.8.8]/", "https://sites.google.com/view/x", "https://bank-bca.co.id",
     ]) {
         assert.equal(isPrivateHost(host(url)), false, url);
     }

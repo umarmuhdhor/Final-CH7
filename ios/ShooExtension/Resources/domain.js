@@ -111,7 +111,15 @@ export function isPrivateHost(hostname) {
     if (host === "localhost" || /\.(localhost|local|home\.arpa)$/.test(host)) return true;
     if (host.startsWith("[")) {
         const v6 = host.slice(1, -1);
-        return v6 === "::1" || v6 === "::" || /^f[cd][0-9a-f]{0,2}:/.test(v6) || /^fe[89ab][0-9a-f]?:/.test(v6);
+        // An IPv4 address inside IPv6 (`[::ffff:192.168.1.1]`, which URL writes as `[::ffff:c0a8:101]`): its IPv4 decides.
+        const mapped = v6.match(/^::(?:ffff:)?(?:(\d{1,3}(?:\.\d{1,3}){3})|([0-9a-f]{1,4}):([0-9a-f]{1,4}))$/);
+        if (mapped) {
+            const v4 = mapped[1] ?? [mapped[2], mapped[3]]
+                .flatMap((part) => { const n = parseInt(part, 16); return [n >> 8, n & 255]; }).join(".");
+            return isPrivateHost(v4);
+        }
+        // Loopback, unspecified, unique local (fc00::/7), link-local (fe80::/10) and old site-local (fec0::/10).
+        return v6 === "::1" || v6 === "::" || /^f[cd][0-9a-f]{0,2}:/.test(v6) || /^fe[89a-f][0-9a-f]?:/.test(v6);
     }
     const v4 = host.match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
     if (v4) {
