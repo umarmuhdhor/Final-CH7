@@ -13,11 +13,15 @@ struct ActivityView: View {
     @State private var extensionStatus: ExtensionStatus?
     @State private var checkStats = CheckStats()
     @State private var isTurnOnPresented = false
+    /// Set when pushed (a member's activity from Member detail): the page draws its own back button, as the
+    /// navigation bar is hidden. Nil on the Activity tab's root.
+    private let onBack: (() -> Void)?
 
     init(
         repository: any ShooRepository, owner: ScanOwnerFilter, ownDeviceId: String? = nil,
-        verdictSaves: @escaping @MainActor () -> Int = { 0 }
+        verdictSaves: @escaping @MainActor () -> Int = { 0 }, onBack: (() -> Void)? = nil
     ) {
+        self.onBack = onBack
         _model = State(initialValue: ActivityModel(
             repository: repository, owner: owner, ownDeviceId: ownDeviceId,
             filter: Self.initialFilter, person: Self.initialPerson, verdictSaves: verdictSaves
@@ -71,6 +75,11 @@ struct ActivityView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
+        // Pushed: the tab bar stays hidden as on Member detail, and the edge swipe still goes back.
+        .toolbar(onBack == nil ? .automatic : .hidden, for: .tabBar)
+        .background { if onBack != nil { SwipeBackEnabler() } }
+        .accessibilityAction(.escape) { onBack?() }
         // Detail's back button.
         .navigationTitle(localized: "Activity")
         // App switcher snapshot on disk must not hold scam URLs or names (D-alief-A36).
@@ -111,6 +120,9 @@ struct ActivityView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
+            if let onBack {
+                OnboardingBackButton(identifier: "activity.back", action: onBack)
+            }
             Text("Activity")
                 .activityFont(27, .medium, tracking: -0.27)
                 .foregroundStyle(ActivityStyle.title)

@@ -25,6 +25,11 @@ struct ProfilePageView: View {
                 ProfileStyle.background.ignoresSafeArea()
             }
         }
+        // Also before the model exists (the first frame of the push): without these the system bar and its
+        // back chevron showed over the page's own back button while it slid in.
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .navigationBarBackButtonHidden(true)
         // A new name or avatar saved (the Kelola profil sheets close on success).
         .sensoryFeedback(.success, trigger: model?.profileSaves ?? 0)
         // Member and Guardian names: covered in the app-switcher snapshot, as on Profile (BH-33, SECURITY §3 P13).

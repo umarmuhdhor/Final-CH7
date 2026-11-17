@@ -152,6 +152,9 @@ struct ProfileScreen<Content: View>: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
+        // The page draws its own back button. A hidden bar can come back during the push (iOS 26), and its
+        // system chevron then sat on top of ours: never show it.
+        .navigationBarBackButtonHidden(true)
         .background(SwipeBackEnabler())
         .accessibilityAction(.escape) { env.router.pop() }
     }

@@ -118,7 +118,9 @@ struct MainTabView: View {
             MemberDetailView(deviceId: deviceId, repository: env.repository)
                 .id(deviceId)
         case .memberActivity(let deviceId):
-            ActivityView(repository: env.repository, owner: .device(deviceId), verdictSaves: verdictSaves)
+            ActivityView(repository: env.repository, owner: .device(deviceId), verdictSaves: verdictSaves) { [env] in
+                env.router.pop()
+            }
                 .id(deviceId)
         }
     }
