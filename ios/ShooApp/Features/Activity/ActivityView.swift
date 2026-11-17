@@ -6,6 +6,7 @@ import SwiftUI
 struct ActivityView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.locale) private var locale
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var model: ActivityModel
     @State private var isPickerOpen = false
@@ -114,6 +115,12 @@ struct ActivityView: View {
             }
         }
         .task { await readExtension() }
+        // Back from the background (a push tapped while Shoo was closed, the app icon, `shoo://activity`): new scans
+        // arrived meanwhile, and only pushes that land while Shoo is open reload this list (A-12). As Home does.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, model.state == .loaded else { return }
+            Task { await model.refresh() }
+        }
     }
 
     // MARK: Header
