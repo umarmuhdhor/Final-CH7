@@ -96,7 +96,7 @@
     if (typeof document === "undefined" || typeof browser === "undefined") return;
 
     const t = (key, subs) => browser.i18n.getMessage(key, subs) || key;
-    const lang = (browser.i18n.getUILanguage?.() || "en").toLowerCase().startsWith("id") ? "id" : "en";
+    const lang = "id"; // always Bahasa Indonesia, whatever the device language (contracts/app-group-keys.md "Language")
     const $ = (selector) => document.querySelector(selector);
     const send = (message) => browser.runtime.sendMessage(message);
 
