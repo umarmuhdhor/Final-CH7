@@ -22,8 +22,8 @@ struct DetailView: View {
     @State private var loadAttempt = 0
     /// The card picture open full screen, with that card's marks (DT-04).
     @State private var copied = false
-    /// The material under the status bar shows once the hero has scrolled away.
-    @State private var statusBarShade = 0.0
+    /// How far the page has scrolled (negative when pulled down); the pinned hero shrinks with it.
+    @State private var scrollOffset: CGFloat = 0
     /// The link pill grows with Dynamic Type; the title keeps clear of it.
     @State private var pillHeight: CGFloat = 34
     /// "Aman" on a site Shoo flagged asks why first (SafeReasonSheet); "Bahaya" still applies at once.
@@ -164,34 +164,34 @@ struct DetailView: View {
     private func loaded(_ scan: ScanResult) -> some View {
         let reasons = model.evidence(language: language)
         let look = DetailLook(scan: scan)
-        return ScrollView {
-            VStack(spacing: 0) {
-                DetailHero(look: look, guardianAvatarId: model.deciderAvatarId) { env.router.pop() }
-                sheet(scan, reasons: reasons, look: look)
-            }
-            .coordinateSpace(.named(FooterRoom.page))
-            .background(alignment: .top) {
-                // Figma "Hero BG" (402 × 360, rings in it). Pulled down, the picture grows from its bottom edge to
-                // fill the gap, so no flat band shows above it.
-                GeometryReader { proxy in
-                    let pull = max(0, proxy.frame(in: .scrollView).minY)
-                    DetailHeroBackground(look: look, stretch: pull)
-                        .offset(y: -pull)
+        return ZStack(alignment: .top) {
+            // Only the white sheet scrolls; the hero stays on top, shrinking to the back button's row. Declared
+            // first so VoiceOver reads the back button first, drawn above the page by `zIndex`. (No
+            // `.accessibilityElement(children: .contain)` here: with it the back button's frame became the ring
+            // picture's 402 × 360 and UI tests tapped the shield instead.)
+            DetailHero(look: look, guardianAvatarId: model.deciderAvatarId, offset: scrollOffset) { env.router.pop() }
+                .ignoresSafeArea(edges: .top)
+                .zIndex(1)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Room for the hero, which is pinned above the page (`DetailHero`).
+                    Color.clear.frame(height: DetailHeroLayout.sheetTop)
+                    sheet(scan, reasons: reasons, look: look)
                 }
-                .frame(height: DetailHeroLayout.imageHeight)
-                .accessibilityHidden(true)
+                .coordinateSpace(.named(FooterRoom.page))
+                .onGeometryChange(for: CGFloat.self) { -$0.frame(in: .scrollView).minY } action: { scrollOffset = $0 }
             }
+            .scrollIndicators(.hidden)
+            // Figma lays the hero out from the top of the screen, under the status bar.
+            .ignoresSafeArea(edges: .top)
+            .background(alignment: .top) {
+                // Figma "Hero BG" (402 × 360, rings in it), behind the sheet's round corners. Pulled down, the
+                // picture grows from its bottom edge, as in the pinned hero.
+                DetailHeroBackdrop(look: look, offset: scrollOffset)
+                    .ignoresSafeArea(edges: .top)
+            }
+            .background(Color.white)
         }
-        .scrollIndicators(.hidden)
-        // Figma lays the hero out from the top of the screen, under the status bar.
-        .ignoresSafeArea(edges: .top)
-        .background(Color.white)
-        // Cards scrolling under the status bar stay readable once the hero has gone up.
-        .overlay(alignment: .top) {
-            Color.clear.frame(height: 0)
-                .background(.ultraThinMaterial.opacity(statusBarShade), ignoresSafeAreaEdges: .top)
-        }
-        .onScrollOffset { statusBarShade = $0 > DetailHeroLayout.sheetTop - 60 ? 0.9 : 0 }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             // Only the guardian answers here; the protected person reads the decision in "Status situs"
             // (the Ortu frames of 1211:19924 have no footer).
