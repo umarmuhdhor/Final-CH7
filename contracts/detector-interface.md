@@ -95,7 +95,7 @@ Optional, only on the layer 1–2 address signals the detector makes: `lookalike
 ```json
 { "id": "brand_plus_keyword", "layer": 2, "weight": 14, "label": { … }, "labelSimple": { … },
   "evidence": "bca · level 2 · verifikasi",
-  "host": { "marks": ["bca", "verifikasi"], "official": "bca.co.id" } }
+  "host": { "marks": ["bca", "verifikasi"], "official": "bca.co.id", "brand": "BCA" } }
 ```
 - `marks` (optional): 1–4 substrings of the scan's `domain` to highlight, exactly as written there (lowercase, punycode
   for an IDN: a `xn--` label is marked whole), in the order they read, never overlapping. Only parts the detector found
@@ -104,6 +104,9 @@ Optional, only on the layer 1–2 address signals the detector makes: `lookalike
   digit-mixed piece, punycode label, hyphen-heavy label), never path, query or fragment.
 - `official` (optional): the brand's real domain = the **first** entry of its `domains` in `detector/data/brands.json`.
   Only on `lookalike_domain` and `brand_plus_keyword`. Public data.
+- `brand` (optional): the brand's display name = its `name` in `detector/data/brands.json` (`"BCA"`, `"Bank Mandiri"`),
+  1–64 characters. Sent with `official`, on the same two signals. Detail's "Ringkasan" names it ("Halaman BCA palsu yang
+  meminta PIN kamu."); without it the app names `official`. Public data.
 - No precise part → no `marks`; nothing at all → no `host`. `db_match` and `new_domain` never have one; `asks_*` neither.
 - Missing `host` = the app marks the whole domain (behaviour before #497); old scans keep decoding. The app ignores a
   mark it does not find in `domain`.

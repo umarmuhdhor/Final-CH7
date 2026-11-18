@@ -567,52 +567,52 @@ const hostIn = async (url, id, domain = new URL(url).hostname.replace(/^www\./, 
 
 test("#497: brand + bait word marks both parts and names the real domain; cheap TLD marks the ending", async () => {
     const s = await scan("https://bca-verifikasi.site/login?ref=wa");
-    assert.deepEqual(find(s, "brand_plus_keyword").host, { marks: ["bca", "verifikasi"], official: "bca.co.id" });
+    assert.deepEqual(find(s, "brand_plus_keyword").host, { marks: ["bca", "verifikasi"], official: "bca.co.id", brand: "BCA" });
     assert.deepEqual(find(s, "cheap_tld").host, { marks: [".site"] });
-    assert.deepEqual(await hostIn("https://promo-undian-shopee.click/hadiah", "brand_plus_keyword"), { marks: ["promo", "shopee"], official: "shopee.co.id" });
+    assert.deepEqual(await hostIn("https://promo-undian-shopee.click/hadiah", "brand_plus_keyword"), { marks: ["promo", "shopee"], official: "shopee.co.id", brand: "Shopee" });
     assert.deepEqual(await hostIn("https://random-shop.xyz/", "cheap_tld"), { marks: [".xyz"] });
 });
 
 test("#497: a look-alike marks the word as written (leet, typo) and names the real domain", async () => {
-    assert.deepEqual(await hostIn("https://p0stindonesia.com/", "lookalike_domain"), { marks: ["p0stindonesia"], official: "posindonesia.co.id" });
-    assert.deepEqual(await hostIn("https://tokopedla.com/", "lookalike_domain"), { marks: ["tokopedla"], official: "tokopedia.com" });
-    assert.deepEqual(await hostIn("https://lphone-login.com/", "lookalike_domain"), { marks: ["lphone"], official: "apple.com" });
-    assert.deepEqual(await hostIn("https://lphone-login.com/", "brand_plus_keyword"), { marks: ["lphone", "login"], official: "apple.com" });
+    assert.deepEqual(await hostIn("https://p0stindonesia.com/", "lookalike_domain"), { marks: ["p0stindonesia"], official: "posindonesia.co.id", brand: "Pos Indonesia" });
+    assert.deepEqual(await hostIn("https://tokopedla.com/", "lookalike_domain"), { marks: ["tokopedla"], official: "tokopedia.com", brand: "Tokopedia" });
+    assert.deepEqual(await hostIn("https://lphone-login.com/", "lookalike_domain"), { marks: ["lphone"], official: "apple.com", brand: "Apple" });
+    assert.deepEqual(await hostIn("https://lphone-login.com/", "brand_plus_keyword"), { marks: ["lphone", "login"], official: "apple.com", brand: "Apple" });
     // level 1 (official name on an unlisted domain) is a lookalike_domain too
-    assert.deepEqual(await hostIn("https://bri.com/", "lookalike_domain"), { marks: ["bri"], official: "bri.co.id" });
+    assert.deepEqual(await hostIn("https://bri.com/", "lookalike_domain"), { marks: ["bri"], official: "bri.co.id", brand: "BRI" });
 });
 
 test("#497: glued and connector names mark the brand and the word separately", async () => {
-    assert.deepEqual(await hostIn("https://bcalogin.com/", "brand_plus_keyword"), { marks: ["bca", "login"], official: "bca.co.id" });
-    assert.deepEqual(await hostIn("https://loginbca.com/", "brand_plus_keyword"), { marks: ["login", "bca"], official: "bca.co.id" });
-    assert.deepEqual(await hostIn("https://qlolla-bybri.com/", "brand_plus_keyword"), { marks: ["by", "bri"], official: "bri.co.id" });
-    assert.deepEqual(await hostIn("https://kodepembatalanbybni.pages.dev/", "brand_plus_keyword"), { marks: ["by", "bni"], official: "bni.co.id" });
+    assert.deepEqual(await hostIn("https://bcalogin.com/", "brand_plus_keyword"), { marks: ["bca", "login"], official: "bca.co.id", brand: "BCA" });
+    assert.deepEqual(await hostIn("https://loginbca.com/", "brand_plus_keyword"), { marks: ["login", "bca"], official: "bca.co.id", brand: "BCA" });
+    assert.deepEqual(await hostIn("https://qlolla-bybri.com/", "brand_plus_keyword"), { marks: ["by", "bri"], official: "bri.co.id", brand: "BRI" });
+    assert.deepEqual(await hostIn("https://kodepembatalanbybni.pages.dev/", "brand_plus_keyword"), { marks: ["by", "bni"], official: "bni.co.id", brand: "BNI" });
 });
 
 test("#497: a punycode label is marked whole, as written in the domain (xn--)", async () => {
     const url = "https://bcа.co.id/"; // Cyrillic а
     const domain = new URL(url).hostname;
     assert.ok(domain.startsWith("xn--"));
-    assert.deepEqual(await hostIn(url, "lookalike_domain", domain), { marks: [domain.split(".")[0]], official: "bca.co.id" });
+    assert.deepEqual(await hostIn(url, "lookalike_domain", domain), { marks: [domain.split(".")[0]], official: "bca.co.id", brand: "BCA" });
 });
 
 test("#497: hyphen pieces joined into a brand mark the whole label (toko-pedia)", async () => {
-    assert.deepEqual(await hostIn("https://toko-pedia.com/", "lookalike_domain"), { marks: ["toko-pedia"], official: "tokopedia.com" });
+    assert.deepEqual(await hostIn("https://toko-pedia.com/", "lookalike_domain"), { marks: ["toko-pedia"], official: "tokopedia.com", brand: "Tokopedia" });
 });
 
 test("#497: a brand in a subdomain is not marked in the registrable domain; official stays", async () => {
     const s = await at("https://bca-login.evil-hosting.xyz/", "evil-hosting.xyz");
-    assert.deepEqual(find(s, "brand_plus_keyword").host, { official: "bca.co.id" });
+    assert.deepEqual(find(s, "brand_plus_keyword").host, { official: "bca.co.id", brand: "BCA" });
     assert.deepEqual(find(s, "cheap_tld").host, { marks: [".xyz"] });
     // "bca" also appears in the domain, but not where the detector found it: still not marked
-    assert.deepEqual(await hostIn("https://bca-login.bcafans.xyz/", "brand_plus_keyword", "bcafans.xyz"), { official: "bca.co.id" });
+    assert.deepEqual(await hostIn("https://bca-login.bcafans.xyz/", "brand_plus_keyword", "bcafans.xyz"), { official: "bca.co.id", brand: "BCA" });
 });
 
-test("#497: official is always the first domain of the brand in brands.json", async () => {
+test("#497: official is always the first domain of the brand in brands.json, brand its name (DT-04 Ringkasan)", async () => {
     for (const brand of brands.brands) {
         const name = brand.names[0];
         const h = await hostIn(`https://${name}-verifikasi.com/`, "brand_plus_keyword");
-        assert.deepEqual(h, { marks: [name, "verifikasi"], official: brand.domains[0] }, name);
+        assert.deepEqual(h, { marks: [name, "verifikasi"], official: brand.domains[0], brand: brand.name }, name);
     }
 });
 
@@ -638,7 +638,7 @@ test("#497: db_match and asks_* carry no host", async () => {
 
 test("#497: without snapshot.domain nothing is marked (marks must be in the scan's domain)", async () => {
     const s = await run({ url: "https://bca-verifikasi.site/" });
-    assert.deepEqual(find(s, "brand_plus_keyword").host, { official: "bca.co.id" });
+    assert.deepEqual(find(s, "brand_plus_keyword").host, { official: "bca.co.id", brand: "BCA" });
     assert.equal(find(s, "cheap_tld").host, undefined);
 });
 
@@ -654,10 +654,11 @@ test("#497: host follows the contract on every sample (marks in the domain, max 
         for (const s of await at(url, domain)) {
             if (!s.host) continue;
             assert.ok(ADDRESS_IDS.includes(s.id), `${url} ${s.id}`);
-            assert.deepEqual(Object.keys(s.host).filter((k) => k !== "marks" && k !== "official"), [], url);
+            assert.deepEqual(Object.keys(s.host).filter((k) => k !== "marks" && k !== "official" && k !== "brand"), [], url);
+            assert.equal("brand" in s.host, "official" in s.host, `${url} ${s.id}: brand goes with official`);
             if ("official" in s.host) {
                 assert.ok(s.id === "lookalike_domain" || s.id === "brand_plus_keyword", `${url} ${s.id}`);
-                assert.ok(brands.brands.some((b) => b.domains[0] === s.host.official), s.host.official);
+                assert.ok(brands.brands.some((b) => b.domains[0] === s.host.official && b.name === s.host.brand), s.host.official);
             }
             if ("marks" in s.host) {
                 const marks = s.host.marks;

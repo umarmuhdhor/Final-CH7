@@ -490,7 +490,7 @@ describe("faviconUrl in GET /scans and GET /scans/{id} (PR-05)", () => {
     const one = await detail(p, withIcon);
     expectScanResult(one);
     const link = new URL(one.faviconUrl!);
-    expect(`${link.origin}${link.pathname}`).toBe(`${env.INVITE_BASE_URL}/favicons/${withIcon}`);
+    expect(`${link.origin}${link.pathname}`).toBe(`${env.API_BASE_URL}/favicons/${withIcon}`);
     expect([...link.searchParams.keys()].sort()).toEqual(["exp", "sig", "v"]);
     expect(link.searchParams.get("v")).toBe(p.deviceId);
     expect(Number(link.searchParams.get("exp")) - Date.now() / 1000).toBeGreaterThan(3500);
@@ -557,7 +557,7 @@ describe("favicon link only after the upload (fase 27k F-B8)", () => {
     expect((await list(p)).find((i) => i.id === id)?.faviconUrl).toBeNull();
     expect((await list(g, "?owner=family")).find((i) => i.id === id)?.faviconUrl).toBeNull();
     // A link signed by hand opens nothing yet.
-    const early = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    const early = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000));
     expect((await call(`/favicons/${id}${early.search}`)).status).toBe(404);
 
     release();
@@ -654,13 +654,13 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
   it("a stranger → 404, even with a link correctly signed for them", async () => {
     const { id } = await setup();
     const stranger = await createDevice("X");
-    const forged = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, stranger.deviceId, Date.now() / 1000));
+    const forged = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, stranger.deviceId, Date.now() / 1000));
     expect((await call(`${forged.pathname}${forged.search}`)).status).toBe(404);
   });
 
   it("a screenshot link for the same scan does not open the favicon", async () => {
     const { p, id } = await setup();
-    const shot = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    const shot = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000));
     expect((await call(`/favicons/${id}${shot.search}`)).status).toBe(404);
   });
 
@@ -668,7 +668,7 @@ describe("GET /favicons/{scanId} (PR-05, like D-alief-B08)", () => {
     const { p, id } = await setup();
     const link = new URL(`http://x${await linkFor(p, id)}`);
     const sig = link.searchParams.get("sig")!;
-    const old = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601));
+    const old = new URL(await faviconLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601));
     expect((await call(`${old.pathname}${old.search}`)).status).toBe(404);
     for (const change of [
       (u: URL) => u.searchParams.set("sig", `${sig.slice(0, -1)}${sig.endsWith("A") ? "B" : "A"}`),

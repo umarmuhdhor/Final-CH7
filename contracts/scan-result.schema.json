@@ -222,6 +222,12 @@
           "type": "string",
           "minLength": 1,
           "description": "The brand's real domain: the first of its domains in detector/data/brands.json. Only on lookalike_domain and brand_plus_keyword."
+        },
+        "brand": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "The brand's display name: its name in detector/data/brands.json (\"BCA\", \"Bank Mandiri\"). Only on lookalike_domain and brand_plus_keyword, with official. Detail's Ringkasan says \"Halaman BCA palsu …\" (DT-04)."
         }
       }
     },

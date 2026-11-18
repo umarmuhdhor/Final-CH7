@@ -69,7 +69,7 @@ So `domain` is always the url's host or a parent of it, lowercase, with no trail
 
 `faviconUrl`: in `POST /scans` it is the site's own icon URL (or `null`); the server downloads it once. In responses (lists and `GET /scans/{id}`) it is a 1-hour signed link to the server's stored copy (`GET /favicons/{scanId}`, see `backend/API.md`), or `null`; never the site's own URL, so the app never contacts the scam host (#166).
 
-`signals[].host` (optional, #497): `{ marks?: string[], official?: string }` on layer 1–2 address signals, for the DT-04
+`signals[].host` (optional, #497): `{ marks?: string[], official?: string, brand?: string }` on layer 1–2 address signals, for the DT-04
 address card (rules: detector-interface.md "host"). `POST /scans` accepts it and every scan response returns it unchanged;
 absent on older scans. `localSignals` on `POST /analyze` may carry it too; the AI service ignores it.
 

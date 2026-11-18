@@ -8,34 +8,42 @@ struct AppSettingsTests {
     }
 
     @Test func defaultsOnFreshInstall() throws {
-        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["id-ID"])
+        let settings = AppSettings(defaults: try freshDefaults())
         #expect(settings.language == .indonesian)
         #expect(settings.mode == nil)
         #expect(!settings.onboardingCompleted)
         #expect(!settings.familyModeOn)
     }
 
+    /// "Delete my data" is a fresh install again: back to Bahasa Indonesia, not the iPhone language.
+    @Test func resetGoesBackToIndonesian() throws {
+        let settings = AppSettings(defaults: try freshDefaults())
+        settings.language = .english
+        settings.reset()
+        #expect(settings.language == .indonesian)
+    }
+
     @Test func demoIsAGuardianThatSurvivesARelaunchUntilReset() throws {
         let defaults = try freshDefaults()
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: defaults)
         settings.enterDemo()
-        let second = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let second = AppSettings(defaults: defaults)
         #expect(second.demoMode)
         #expect(second.mode == .guardian)
         #expect(second.onboardingCompleted)
         #expect(second.dataConsent == .granted)
         second.reset()
-        #expect(!AppSettings(defaults: defaults, preferredLanguages: ["en"]).demoMode)
+        #expect(!AppSettings(defaults: defaults).demoMode)
     }
 
     @Test func valuesPersistAcrossLaunches() throws {
         let defaults = try freshDefaults()
-        let first = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let first = AppSettings(defaults: defaults)
         first.language = .indonesian
         #expect(first.chooseMode(.protected))
         first.onboardingCompleted = true
         first.familyModeOn = true
-        let second = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let second = AppSettings(defaults: defaults)
         #expect(second.language == .indonesian)
         #expect(second.mode == .protected)
         #expect(second.onboardingCompleted)
@@ -46,14 +54,14 @@ struct AppSettingsTests {
     /// onboarding can register again; the language and the consent answer were the person's, so they stay.
     @Test func forgetInviteRegistrationKeepsLanguageAndConsent() throws {
         let defaults = try freshDefaults()
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: defaults)
         settings.language = .indonesian
         settings.dataConsent = .declined
         #expect(settings.chooseMode(.protected))
         settings.onboardingConnectPassed = true
         settings.inviteRegistrationPending = true
         settings.forgetInviteRegistration()
-        for read in [settings, AppSettings(defaults: defaults, preferredLanguages: ["en"])] {
+        for read in [settings, AppSettings(defaults: defaults)] {
             #expect(read.mode == nil)
             #expect(!read.onboardingConnectPassed)
             #expect(!read.inviteRegistrationPending)
@@ -66,13 +74,13 @@ struct AppSettingsTests {
 
     @Test func inviteRegistrationFlagPersistsAndResetClearsIt() throws {
         let defaults = try freshDefaults()
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: defaults)
         settings.inviteRegistrationPending = true
-        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).inviteRegistrationPending)
+        #expect(AppSettings(defaults: defaults).inviteRegistrationPending)
         #expect(AppSettings.Keys.all.contains(AppSettings.Keys.inviteRegistrationPending))
         settings.reset()
         #expect(!settings.inviteRegistrationPending)
-        #expect(!AppSettings(defaults: defaults, preferredLanguages: ["en"]).inviteRegistrationPending)
+        #expect(!AppSettings(defaults: defaults).inviteRegistrationPending)
     }
 
     @Test func routerPushesDetailOnSelectedTab() {
@@ -86,7 +94,7 @@ struct AppSettingsTests {
     }
 
     @Test func registerKeepsMockScenarioAndAnswersAsTheChosenMode() async throws {
-        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: try freshDefaults())
         let env = AppEnvironment(
             repository: MockRepository(mode: .guardian, scenario: .empty, latency: .zero), settings: settings
         )
@@ -103,7 +111,7 @@ struct AppSettingsTests {
     }
 
     @Test func modeCanBeChosenOnlyOnce() throws {
-        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: try freshDefaults())
         #expect(settings.chooseMode(.guardian))
         #expect(!settings.chooseMode(.protected))
         #expect(settings.mode == .guardian)
@@ -112,7 +120,7 @@ struct AppSettingsTests {
     // MARK: PF-01 Tema and Aksesibilitas
 
     @Test func appearanceDefaultsFollowTheIPhone() throws {
-        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: try freshDefaults())
         #expect(settings.theme == .system)
         #expect(settings.textSize == .standard)
         #expect(settings.textSize.category == nil)
@@ -123,12 +131,12 @@ struct AppSettingsTests {
 
     @Test func appearanceChoicesPersist() throws {
         let defaults = try freshDefaults()
-        let first = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let first = AppSettings(defaults: defaults)
         first.theme = .dark
         first.textSize = .largest
         first.highContrast = true
         first.haptics = false
-        let second = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let second = AppSettings(defaults: defaults)
         #expect(second.theme == .dark)
         #expect(second.textSize == .largest)
         #expect(second.highContrast)
@@ -139,11 +147,11 @@ struct AppSettingsTests {
     @Test func oldLargeTextSwitchBecomesLarge() throws {
         let defaults = try freshDefaults()
         defaults.set(true, forKey: "settings.largeText")
-        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).textSize == .large)
+        #expect(AppSettings(defaults: defaults).textSize == .large)
     }
 
     @Test func becomingProtectedLeavesFamilyModeAndSkipsConnect() throws {
-        let settings = AppSettings(defaults: try freshDefaults(), preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: try freshDefaults())
         settings.chooseMode(.guardian)
         settings.familyModeOn = true
         settings.becameProtected()
@@ -154,24 +162,24 @@ struct AppSettingsTests {
 
     @Test func dataConsentPersistsAndClearAsksAgain() throws {
         let defaults = try freshDefaults()
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: defaults)
         #expect(settings.dataConsent == nil)
         settings.dataConsent = .declined
-        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).dataConsent == .declined)
+        #expect(AppSettings(defaults: defaults).dataConsent == .declined)
         settings.dataConsent = .granted
-        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).dataConsent == .granted)
+        #expect(AppSettings(defaults: defaults).dataConsent == .granted)
         settings.reset()
         #expect(settings.dataConsent == nil)
-        #expect(AppSettings(defaults: defaults, preferredLanguages: ["en"]).dataConsent == nil)
+        #expect(AppSettings(defaults: defaults).dataConsent == nil)
     }
 
     @Test func clearRemovesAppearanceToo() throws {
         let defaults = try freshDefaults()
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: defaults)
         settings.theme = .dark
         settings.readAloud = true
         AppSettings.clear(defaults: defaults)
-        let fresh = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let fresh = AppSettings(defaults: defaults)
         #expect(fresh.theme == .system)
         #expect(!fresh.readAloud)
     }

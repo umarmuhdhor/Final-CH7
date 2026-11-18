@@ -26,7 +26,7 @@ actor MockRepository: ShooRepository {
         case allBlocked
         /// Imelda's eval corpus with the detector's real results (`Fixtures/corpus-scans.json`).
         case corpus
-        /// DT-04 (#497): one scan whose address reasons carry `host.marks` and `official`.
+        /// DT-04 (#497): one scan whose address reasons carry `host.marks`, `official` and `brand`.
         case addressMarks
         // Home parity QA (`MockScenarios.home`): one state per Figma HOME frame (Pribadi, protected/Home).
         case homePribadi

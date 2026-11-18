@@ -31,6 +31,10 @@
       "labelSimple": {
         "en": "Uses the Shopee name but isn't Shopee",
         "id": "Memakai nama Shopee, tapi bukan Shopee"
+      },
+      "host": {
+        "official": "shopee.co.id",
+        "brand": "Shopee"
       }
     },
     {

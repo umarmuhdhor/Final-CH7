@@ -532,7 +532,7 @@ describe("POST /scans screenshotBase64 (ignored since fase 20a, K3 a)", () => {
   });
 });
 
-// DT-04 (#497): optional signals[].host { marks, official } for the address card.
+// DT-04 (#497): optional signals[].host { marks, official, brand } for the address card and the Ringkasan.
 describe("POST /scans signals[].host (DT-04, #497)", () => {
   const hostSig = (host: unknown) => ({
     id: "brand_plus_keyword",
@@ -562,16 +562,17 @@ describe("POST /scans signals[].host (DT-04, #497)", () => {
     expect(body.items[0]!.signals).toEqual(item.signals);
   });
 
-  it("only marks and official are kept; bad shapes → 422", async () => {
+  it("only marks, official and brand are kept; bad shapes → 422", async () => {
     const p = await createDevice("Mom");
     const id = await postOk(
       p,
       extensionBody(blocked92, {
-        signals: [hostSig({ marks: ["bca", "verifikasi"], official: "bca.co.id", extra: "x" })],
+        // brand is plain text like a label: the bidi override is removed, not refused.
+        signals: [hostSig({ marks: ["bca", "verifikasi"], official: "bca.co.id", brand: "B\u202ECA", extra: "x" })],
       }),
     );
     const [row] = await sql`select signals from scans where id = ${id}`;
-    expect(row!.signals[0].host).toEqual({ marks: ["bca", "verifikasi"], official: "bca.co.id" });
+    expect(row!.signals[0].host).toEqual({ marks: ["bca", "verifikasi"], official: "bca.co.id", brand: "BCA" });
 
     for (const host of [
       { marks: [] },
@@ -581,6 +582,10 @@ describe("POST /scans signals[].host (DT-04, #497)", () => {
       { marks: ["x".repeat(254)] },
       { official: "" },
       { official: "x".repeat(254) },
+      { brand: "" },
+      { brand: "\u202E" },
+      { brand: "x".repeat(65) },
+      { brand: 1 },
       { marks: "bca" },
       { marks: [1] },
       "bca.co.id",
@@ -958,7 +963,7 @@ describe("GET /scans/{id}", () => {
     expect(item.id).toBe(id);
     const url = new URL(item.screenshotUrl!);
     // Pinned base URL, never the request Host (D-alief-B08).
-    expect(`${url.origin}${url.pathname}`).toBe(`${env.INVITE_BASE_URL}/screenshots/${id}`);
+    expect(`${url.origin}${url.pathname}`).toBe(`${env.API_BASE_URL}/screenshots/${id}`);
     expect(url.searchParams.get("v")).toBe(p.deviceId);
     const ttl = Number(url.searchParams.get("exp")) - Date.now() / 1000;
     expect(ttl).toBeGreaterThan(3590);

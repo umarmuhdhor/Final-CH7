@@ -2,7 +2,7 @@ import type { Sql } from "postgres";
 import type { Env } from "../env";
 import { clearScreenshotPath, reserveScreenshot, scanExists, type ScanRow } from "../db/repo/scans";
 import { decodeBase64, sniffImage } from "./images";
-import { screenshotLink } from "./screenshotLinks";
+import { linkOrigin, screenshotLink } from "./screenshotLinks";
 import { abandonUpload, screenshotStore } from "./screenshots";
 import { usableSecret } from "../http/crypto";
 import { errorInfo } from "../http/logError";
@@ -105,7 +105,6 @@ export async function screenshotUrl(
     console.error(JSON.stringify({ event: "screenshot_link_unavailable", reason: "no_secret" }));
     return null;
   }
-  // Pinned Worker URL, not the request Host (a custom domain without HTTPS would leak the link).
-  const origin = env.INVITE_BASE_URL.replace(/\/+$/, "");
+  const origin = linkOrigin(env);
   return screenshotLink(secret, origin, scan.id, viewerId, Date.now() / 1000);
 }

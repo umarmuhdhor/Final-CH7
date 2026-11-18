@@ -60,15 +60,9 @@ struct LocalizationTests {
         #expect(missing.isEmpty, "Missing ID: \(missing.keys.sorted())")
     }
 
-    @Test(arguments: [
-        (["id-ID", "en-US"], AppLanguage.indonesian),
-        (["id"], .indonesian),
-        (["en-GB"], .english),
-        (["ja-JP", "id-ID"], .english),
-        ([], .english),
-    ])
-    func defaultLanguageFollowsIPhone(preferred: [String], expected: AppLanguage) {
-        #expect(AppLanguage.fromSystem(preferredLanguages: preferred) == expected)
+    /// A fresh install starts in Bahasa Indonesia, not in the iPhone language.
+    @Test func defaultLanguageIsIndonesian() {
+        #expect(AppLanguage.defaultLanguage == .indonesian)
     }
 
     @Test func signalTextUsesLanguageCode() throws {

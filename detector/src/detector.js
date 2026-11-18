@@ -228,8 +228,9 @@
     }
 
     // ---------- host: which part of the address to mark (#497) ----------
-    // A layer 1–2 address signal may carry host: { marks, official }. marks = substrings of the scan's `domain` exactly
-    // as written there (lowercase, punycode for IDN), max 4; official = the brand's first domain in brands.json.
+    // A layer 1–2 address signal may carry host: { marks, official, brand }. marks = substrings of the scan's `domain`
+    // exactly as written there (lowercase, punycode for IDN), max 4; official = the brand's first domain in brands.json;
+    // brand = that brand's name there (DT-04 Ringkasan).
     // Internally a mark is { at, text }, `at` = its position in the host, so a part of a subdomain is never marked in
     // the registrable domain by accident.
     const MAX_MARKS = 4;
@@ -271,7 +272,7 @@
      * The `host` field, or null when there is nothing to say. Keeps only marks inside the scan's domain (the end of
      * the host), drops repeats and overlaps, keeps the first 4 given (most telling first), then sorts them as they read.
      */
-    function hostField(snapshot, host, marks, official) {
+    function hostField(snapshot, host, marks, official, brandName = null) {
         const domain = typeof snapshot.domain === "string" ? snapshot.domain.toLowerCase().replace(/\.+$/, "") : "";
         const tail = host.length - domain.length;
         const from = domain && host.endsWith(domain) && (tail === 0 || host[tail - 1] === ".") ? tail : -1;
@@ -289,7 +290,11 @@
         }
         const out = {};
         if (kept.length) out.marks = kept.sort((a, b) => a.at - b.at).map((m) => m.text);
-        if (typeof official === "string" && official) out.official = official;
+        if (typeof official === "string" && official) {
+            out.official = official;
+            // The display name goes with the domain (contracts/detector-interface.md "host"): Detail's Ringkasan names it.
+            if (typeof brandName === "string" && brandName) out.brand = brandName.slice(0, 64);
+        }
         return Object.keys(out).length ? out : null;
     }
 
@@ -613,7 +618,7 @@
         const look = hits.find((h) => h.kind === "lookalike");
         const exact = hits.find((h) => h.kind === "exact");
         const signals = [];
-        const where = (marks, brand) => hostField(snapshot, host, marks, brand ? brand.domains[0] : null);
+        const where = (marks, brand) => hostField(snapshot, host, marks, brand ? brand.domains[0] : null, brand ? brand.name : null);
 
         if (look) {
             const weight = look.how === "homoglyph" ? WEIGHT.homoglyph : WEIGHT.lookalike;
@@ -638,7 +643,7 @@
 
         /**
          * @param {object} snapshot PageSnapshot
-         * @returns {Promise<Array<{id: string, layer: number, weight: number, label: {en: string, id: string}, labelSimple: {en: string, id: string}, evidence?: string, host?: {marks?: string[], official?: string}}>>}
+         * @returns {Promise<Array<{id: string, layer: number, weight: number, label: {en: string, id: string}, labelSimple: {en: string, id: string}, evidence?: string, host?: {marks?: string[], official?: string, brand?: string}}>>}
          */
         analyzeLocal: async (snapshot) => {
             try {

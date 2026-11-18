@@ -188,6 +188,13 @@ final class Router {
         closeSheets()
     }
 
+    /// The account was deleted: its invite banner ("You're already protected by Budi") and waiting code must not
+    /// greet the next account (delete = gone at once). `reset()` alone keeps them: a join closes its screens with it.
+    func forgetInvite() {
+        inviteNotice = nil
+        pendingJoinCode = nil
+    }
+
     /// Hands the pending invite code to Connect once, unless it is older than a code lives.
     func takePendingJoinCode() -> String? {
         dropExpiredInvite()
