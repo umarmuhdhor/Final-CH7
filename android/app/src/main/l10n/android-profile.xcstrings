@@ -1,0 +1,96 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Automatic follows light or dark mode on your phone." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Automatic follows light or dark mode on your phone." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Otomatis mengikuti pengaturan terang/gelap di ponsel." } }
+      }
+    },
+    "Firefox add-on off" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Firefox add-on off" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Add-on Firefox mati" } }
+      }
+    },
+    "Notifications use this language too. Warnings in Firefox follow your phone's language." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications use this language too. Warnings in Firefox follow your phone's language." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Notifikasi ikut memakai bahasa ini. Peringatan di Firefox mengikuti bahasa ponsel." } }
+      }
+    },
+    "On your guardian's phone" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "On your guardian's phone" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Di ponsel milik Guardian-mu" } }
+      }
+    },
+    "Rate on Google Play" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Rate on Google Play" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Beri nilai di Google Play" } }
+      }
+    },
+    "Read the Apache License 2.0" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read the Apache License 2.0" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Baca Apache License 2.0" } }
+      }
+    },
+    "Sends a notification to turn on Shoo in Firefox" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sends a notification to turn on Shoo in Firefox" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mengirim notifikasi untuk menyalakan Shoo di Firefox" } }
+      }
+    },
+    "Shoo add-on in Firefox" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shoo add-on in Firefox" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Add-on Shoo di Firefox" } }
+      }
+    },
+    "Shoo blocks scam sites on your phone. Try it:" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shoo blocks scam sites on your phone. Try it:" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Shoo memblokir situs penipuan di ponselmu. Coba di sini:" } }
+      }
+    },
+    "Shoo for Android is built with these open-source libraries and the Inter typeface. Each is used under the license shown." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shoo for Android is built with these open-source libraries and the Inter typeface. Each is used under the license shown." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Shoo untuk Android dibuat dengan pustaka open source berikut dan huruf Inter. Masing-masing dipakai sesuai lisensi yang tertera." } }
+      }
+    },
+    "Shoo keeps protecting you in the meantime. Scam sites stay blocked on this phone." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shoo keeps protecting you in the meantime. Scam sites stay blocked on this phone." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Sementara itu Shoo tetap melindungimu. Situs penipuan tetap diblokir di ponsel ini." } }
+      }
+    },
+    "Shows how to switch Shoo off in Firefox" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shows how to switch Shoo off in Firefox" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Menampilkan cara mematikan Shoo di Firefox" } }
+      }
+    },
+    "Shows how to switch Shoo on in Firefox" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shows how to switch Shoo on in Firefox" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Menunjukkan cara menyalakan Shoo di Firefox" } }
+      }
+    },
+    "The score and reasons are read with TalkBack" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The score and reasons are read with TalkBack" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Skor dan alasan dibacakan lewat TalkBack" } }
+      }
+    },
+    "Turn them on in Android Settings" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn them on in Android Settings" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Nyalakan di Pengaturan Android" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
