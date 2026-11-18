@@ -766,6 +766,16 @@ struct DeepLinkRoutingTests {
         #expect(!env.router.isJoinFamilyPresented)
     }
 
+    /// Sheets a screen owns itself (Home's "Why is it safe?", Activity's "Turn on") hear it too.
+    @Test func scanLinkTellsScreensToCloseTheirOwnSheets() {
+        let env = environment(mode: .guardian, onboarded: true)
+        let before = env.router.screenSheetsClosed
+        env.open(URL(string: "shoo://scan/6f1c2a4e-3b8d-4c1a-9e2f-0a1b2c3d4e03")!)
+        #expect(env.router.screenSheetsClosed == before + 1)
+        env.open(URL(string: "shoo://activity")!)
+        #expect(env.router.screenSheetsClosed == before + 2)
+    }
+
     @Test func brokenLinkLandsOnShield() {
         let env = environment(mode: .protected, onboarded: true)
         env.router.selectedTab = .activity

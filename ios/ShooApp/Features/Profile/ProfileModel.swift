@@ -83,6 +83,8 @@ final class ProfileModel {
     /// update has changed since (fase 27i, K11). Counted, not compared by value: off → on → off is three writers.
     @ObservationIgnored private var notificationWriters: [NotificationSettingsUpdate.Key: Int] = [:]
     @ObservationIgnored private var notificationUpdates = 0
+    /// Switch saves still waiting for the server; a profile read that answers meanwhile can be older than the screen.
+    @ObservationIgnored private var notificationSavesInFlight = 0
 
     init(
         repository: any ShooRepository,
@@ -211,8 +213,14 @@ final class ProfileModel {
     }
 
     func load() async {
+        let savesBefore = notificationUpdates
         do {
-            let me = try await repository.me()
+            var me = try await repository.me()
+            // A switch flipped while this read was out (a reload from the foreground or a push): the read may be
+            // from before its save. Keep the switches on screen; the next read catches up.
+            if notificationUpdates != savesBefore || notificationSavesInFlight > 0, let shown = profile?.notifications {
+                me.notifications = shown
+            }
             // Keep a name the user is still editing.
             if nameDraft.isEmpty || nameDraft == profile?.name { nameDraft = me.name }
             profile = me
@@ -321,6 +329,8 @@ final class ProfileModel {
         let token = notificationUpdates
         for key in update.keys { notificationWriters[key] = token }
         profile?.notifications = after
+        notificationSavesInFlight += 1
+        defer { notificationSavesInFlight -= 1 }
         do {
             try await repository.updateMe(DeviceUpdate(notifications: update))
         } catch {

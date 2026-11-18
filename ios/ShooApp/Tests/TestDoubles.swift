@@ -35,6 +35,8 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     var updateFailure: (any Error)?
     /// `updateMe` runs this first: a test can hold one update while another finishes (fase 27i).
     var beforeUpdate: (@Sendable (DeviceUpdate) async throws -> Void)?
+    /// `me` reads the profile, then runs this before answering: a test can make a read answer after a newer save.
+    var beforeMe: (@Sendable () async -> Void)?
     /// `familyMembers` throws this.
     var membersFailure: (any Error)?
     /// `remindMember` throws this.
@@ -64,7 +66,9 @@ final class DelayedScansRepository: ShooRepository, @unchecked Sendable {
     }
     func me() async throws -> DeviceProfile {
         if let failure { throw failure }
-        return try await base.me()
+        let profile = try await base.me()
+        await beforeMe?()
+        return profile
     }
     func updateMe(_ update: DeviceUpdate) async throws {
         try await beforeUpdate?(update)

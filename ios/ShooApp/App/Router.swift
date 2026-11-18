@@ -96,9 +96,14 @@ final class Router {
         selectedTab = .activity
     }
 
+    /// Bumped by `closeSheets()`: a screen closes the sheets it owns itself (Home's "Why is it safe?", Activity's
+    /// "Turn on"), which stay on screen over a tab switch and would hide Detail like BH-28.
+    private(set) var screenSheetsClosed = 0
+
     /// Every sheet and cover the tabs can show (BH-28: a push used to push Detail underneath the
     /// "Become supervised" sheet or the Guardian intro cover).
     private func closeSheets() {
+        screenSheetsClosed += 1
         isTurnOnPresented = false
         isConnectPresented = false
         isJoinFamilyPresented = false
