@@ -93,8 +93,10 @@ export const BLOCKLIST_RATE = Object.freeze({ limit: 30, windowMs: 10 * 60 * 100
  *   devStats: serve GET /_dev/layer4 (layer 4 outcome counters, no page data). Local dev server only, never the Worker.
  *   cases: a fixed layer 4 case set (layer4/cases.js parseCases) for the dev server (CASES_FILE) and tests. Otherwise the
  *     set comes from the CASES_KV binding, only when the CASES_ENABLED secret is "true" (off by default).
+ *   l3Model: run the layer 3 impersonation model (layer3/model/impersonation.js). null (default) = follow the request's env:
+ *     on only when SHOO_L3_MODEL is "impersonation" (a Worker var; the dev server passes process.env). Off = old behaviour.
  */
-export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false, cases: fixedCases = null } = {}) {
+export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdapTimeoutMs, blocklistSource = emptySource, rateLimit = BLOCKLIST_RATE, analyzeRateLimit = ANALYZE_RATE, llm = null, llmFetch = null, llmClientCallsPerHour = CLIENT_CALLS_PER_HOUR, devStats = false, cases: fixedCases = null, l3Model = null } = {}) {
     let envLlm = { key: "", checker: null }; // built once per distinct configuration, so the daily counter survives requests
     const memoryCache = cache ?? createMemoryCache({ now });
     const rdap = rdapFetch ? createRdapClient({ fetch: rdapFetch, cache: memoryCache, now, timeoutMs: rdapTimeoutMs }) : null;
@@ -175,6 +177,7 @@ export function createApp({ fetch: rdapFetch = null, cache, now = Date.now, rdap
             localSignals: checked.localSignals,
             deadline: startedAt + SERVER_DEADLINE_MS,
             now,
+            model: l3Model ?? c.env?.SHOO_L3_MODEL === "impersonation",
         });
         writeUsage(c.env?.AI_USAGE, report); // counts only (src/usage.js); no binding in tests and the dev server
         return c.json({ signals, rdapRegisteredAt }); // #270: public RDAP date, the extension copies it into POST /scans

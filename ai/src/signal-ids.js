@@ -19,6 +19,7 @@ export const KNOWN_SIGNAL_IDS = Object.freeze(
         "urgent_language",
         "brand_logo_offsite",
         "new_domain",
+        "impersonation_model", // layer 3 model, only with SHOO_L3_MODEL=impersonation (src/layer3/model/impersonation.js)
         "unreasonable_request",
     ]),
 );

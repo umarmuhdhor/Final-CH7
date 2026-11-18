@@ -67,23 +67,45 @@ const app = createApp({
     devStats: true,
     cases,
     ...(process.env.SHOO_RDAP === "1" ? { fetch: (...args) => fetch(...args) } : {}),
+    // Layer 3 impersonation model (layer3/model/impersonation.js): on only with SHOO_L3_MODEL=impersonation.
+    l3Model: process.env.SHOO_L3_MODEL === "impersonation",
 });
 const port = Number(process.env.PORT) || 8787;
 
 createServer(async (req, res) => {
     try {
+        // Device debugging only: who reached us, never what (no body, no query, no headers).
+        if (process.env.SHOO_DEV_LOG_HITS === "1") process.stdout.write(`${new Date().toISOString()} ${req.method} ${req.url.split("?")[0]} from ${req.socket.remoteAddress}\n`);
         const hasBody = req.method !== "GET" && req.method !== "HEAD";
-        const request = new Request(`http://localhost${req.url}`, {
-            method: req.method,
-            headers: req.headers,
-            body: hasBody ? Readable.toWeb(req) : undefined,
-            duplex: "half",
-        });
+        const logAnalyze = process.env.SHOO_DEV_LOG_HITS === "1" && req.method === "POST" && req.url.startsWith("/analyze");
+        let body = hasBody ? Readable.toWeb(req) : undefined;
+        if (logAnalyze) {
+            // Shape only (counts and lengths), never page text or the URL.
+            const chunks = [];
+            for await (const c of req) chunks.push(c);
+            body = Buffer.concat(chunks);
+            try {
+                const s = JSON.parse(body.toString("utf8")).snapshot ?? {};
+                const fields = (s.forms ?? []).flatMap((f) => f.fields ?? []);
+                let where = "?";
+                try { const u = new URL(s.url); where = u.hostname + u.pathname; } catch {} // host + path only, no query (local log, never committed)
+                process.stdout.write(`  page: ${where}\n`);
+                process.stdout.write(`  snapshot: textLen ${(s.text ?? "").length} titleLen ${(s.title ?? "").length} forms ${(s.forms ?? []).length} fields ${fields.length} password ${fields.some((f) => f.type === "password")}\n`);
+            } catch {
+                process.stdout.write("  snapshot: unreadable body\n");
+            }
+        }
+        const request = new Request(`http://localhost${req.url}`, { method: req.method, headers: req.headers, body, duplex: "half" });
         const response = await app.fetch(request, llmEnv);
+        if (logAnalyze) {
+            const reply = await response.clone().json().catch(() => null);
+            process.stdout.write(`  reply ${response.status}: ${(reply?.signals ?? []).map((s) => `${s.id}:${s.weight}`).join(" ") || "(no signals)"}\n`);
+        }
         res.writeHead(response.status, Object.fromEntries(response.headers));
         res.end(Buffer.from(await response.arrayBuffer()));
     } catch {
         res.writeHead(500, { "content-type": "application/json" });
         res.end('{"error":{"code":"internal","message":"Something went wrong."}}');
     }
-}).listen(port, "127.0.0.1", () => process.stdout.write(`shoo-ai listening on http://127.0.0.1:${port}\n`));
+}).listen(port, process.env.SHOO_DEV_HOST || "127.0.0.1", () => process.stdout.write(`shoo-ai listening on http://${process.env.SHOO_DEV_HOST || "127.0.0.1"}:${port}\n`));
+// SHOO_DEV_HOST=<Mac's Wi-Fi IP>: lets a Debug build on a real iPhone on the same Wi-Fi reach this server (testing only).
