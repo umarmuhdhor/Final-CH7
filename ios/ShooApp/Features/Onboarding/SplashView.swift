@@ -70,6 +70,10 @@ struct SplashView: View {
 
             Spacer()
 
+            SplashPageDots(count: slides.count, current: page)
+
+            Spacer()
+
             Button {
                 if isLast {
                     model.skipSplash()
@@ -92,6 +96,28 @@ struct SplashView: View {
         .padding(.horizontal, 24)
         // Figma "Horizontal Slider": the 62 pt button ends 66 pt above the screen bottom.
         .padding(.bottom, 32)
+    }
+}
+
+/// Which slide is showing and how many there are, between Skip and Next. The current one stretches into a
+/// capsule; the TabView's own indicator stays hidden (`indexDisplayMode: .never`).
+private struct SplashPageDots: View {
+    let count: Int
+    let current: Int
+    @Environment(\.shooReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<count, id: \.self) { index in
+                Capsule()
+                    .fill(index == current ? OnboardingTheme.selectedStroke : OnboardingTheme.secondaryInk.opacity(0.3))
+                    .frame(width: index == current ? 24 : 8, height: 8)
+            }
+        }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: current)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Page \(current + 1) of \(count)"))
+        .accessibilityIdentifier("splash.pageDots")
     }
 }
 

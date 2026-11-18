@@ -3442,6 +3442,16 @@
         }
       }
     },
+    "Page %lld of %lld" : {
+      "localizations" : {
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$lld dari %2$lld"
+          }
+        }
+      }
+    },
     "Page cut short" : {
       "extractionState" : "stale",
       "localizations" : {
