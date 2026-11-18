@@ -25,7 +25,7 @@ Swift constants live in `ios/ShooShared/AppGroup.swift` — always use those, ne
 | `notify.linkVerified` | Bool | App | — (server later) | "Link terblokir": push when the Guardian verifies a link. Missing → `true` |
 
 ## Language
-There is **no language key**. Extension UI (popup, marks, block screen) and the signal wording it shows follow the **iPhone's language** (`en`, or `id` when iOS is set to Bahasa Indonesia). The in-app language setting (PF-01) only changes the app.
+There is **no language key**. Extension UI (popup, marks, block screen) and the signal wording it shows are always **Bahasa Indonesia** (`id`), whatever the iPhone's language (PM, 18 Nov 2026). The extension ships only `_locales/id` with `default_locale: "id"`, so `browser.i18n` falls back to it on every device. The in-app language setting (PF-01) only changes the app. Team AI still writes `label` / `labelSimple` in both languages (the app uses `en`).
 
 ## Native messages (extension JS → Swift)
 All messages: `{ "type": string, ... }`. Response always `{ "ok": boolean, ... }`.

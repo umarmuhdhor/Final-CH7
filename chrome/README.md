@@ -50,7 +50,7 @@ Commit the result.
 2. **Load unpacked** → pick `chrome/extension/`.
 3. Visit any http(s) page. The bubble shows the score.
 
-UI language follows Chrome's language (Settings → Languages): Indonesian → ID text, anything else → EN.
+UI language is always Bahasa Indonesia (`_locales/id` only, `default_locale: "id"`), whatever Chrome's language is.
 
 ## Test
 

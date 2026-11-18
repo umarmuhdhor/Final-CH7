@@ -1,7 +1,7 @@
 // node --test ios/ShooExtension/Tests/*.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 await import("../Resources/pipeline.js");
 await import("../Resources/marks.js"); // view part skips itself outside the browser
@@ -148,12 +148,11 @@ test("bubble taller than both sides → still on screen", () => {
     assert.equal(placeReason(finger(195, 400), { width: 200, height: 790 }, screen, "above").top, 10);
 });
 
-test("_locales: en and id have the same keys, every struck kind has a mark_why_ fallback", () => {
-    const read = (lang) => JSON.parse(readFileSync(new URL(`../Resources/_locales/${lang}/messages.json`, import.meta.url), "utf8"));
-    const en = read("en");
-    const id = read("id");
-    assert.deepEqual(Object.keys(en).sort(), Object.keys(id).sort());
-    for (const kind of ["pin", "otp", "card", "ktp", "password"]) {
-        assert.ok(en[`mark_why_${kind}`]?.message && id[`mark_why_${kind}`]?.message, kind);
-    }
+test("_locales: only id (Bahasa Indonesia is the default), every struck kind has a mark_why_ fallback", () => {
+    const dir = new URL("../Resources/_locales/", import.meta.url);
+    assert.deepEqual(readdirSync(dir), ["id"]);
+    const manifest = JSON.parse(readFileSync(new URL("../Resources/manifest.json", import.meta.url), "utf8"));
+    assert.equal(manifest.default_locale, "id");
+    const id = JSON.parse(readFileSync(new URL("id/messages.json", dir), "utf8"));
+    for (const kind of ["pin", "otp", "card", "ktp", "password"]) assert.ok(id[`mark_why_${kind}`]?.message, kind);
 });

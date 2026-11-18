@@ -6,7 +6,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 const ext = (path) => new URL(`../extension/${path}`, import.meta.url);
 const read = (path) => readFileSync(ext(path), "utf8");
 const manifest = JSON.parse(read("manifest.json"));
-const locales = Object.fromEntries(["en", "id"].map((l) => [l, JSON.parse(read(`_locales/${l}/messages.json`))]));
+const locales = { id: JSON.parse(read("_locales/id/messages.json")) };
 const scripts = manifest.content_scripts[0].js;
 
 test("Manifest V3 with a module service worker, no Safari-only keys", () => {
@@ -44,10 +44,11 @@ test("blocked.html's scripts and stylesheet are web-accessible and exist", () =>
     for (const ref of [...refs, "blocked.html"]) assert.ok(war.includes(ref), ref);
 });
 
-test("EN and ID have the same keys, and every __MSG_x__ exists", () => {
-    assert.deepEqual(Object.keys(locales.id).sort(), Object.keys(locales.en).sort());
-    for (const [, key] of JSON.stringify(manifest).matchAll(/__MSG_(\w+)__/g)) assert.ok(locales.en[key], key);
-    for (const l of ["en", "id"]) for (const [key, value] of Object.entries(locales[l])) assert.ok(value.message, `${l}.${key}`);
+test("only ID (the default locale), and every __MSG_x__ exists", () => {
+    assert.equal(manifest.default_locale, "id");
+    assert.deepEqual(readdirSync(ext("_locales")), ["id"]);
+    for (const [, key] of JSON.stringify(manifest).matchAll(/__MSG_(\w+)__/g)) assert.ok(locales.id[key], key);
+    for (const [key, value] of Object.entries(locales.id)) assert.ok(value.message, `id.${key}`);
 });
 
 test("every message key the scripts ask for exists (template keys checked per tier/kind)", () => {
@@ -61,7 +62,7 @@ test("every message key the scripts ask for exists (template keys checked per ti
         "block_back",
         "block_title",
     ];
-    for (const key of new Set([...plain, ...expanded])) assert.ok(locales.en[key], key);
+    for (const key of new Set([...plain, ...expanded])) assert.ok(locales.id[key], key);
 });
 
 test("no Shoo-app deep links in the Chrome UI (no app to open)", () => {
