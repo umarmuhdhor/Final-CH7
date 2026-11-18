@@ -24,9 +24,6 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         self = locale.language.languageCode?.identifier == "id" ? .indonesian : .english
     }
 
-    /// Default: Bahasa Indonesia when the iPhone's first language is Indonesian, else English.
-    static func fromSystem(preferredLanguages: [String] = Locale.preferredLanguages) -> AppLanguage {
-        guard let first = preferredLanguages.first else { return .english }
-        return AppLanguage(locale: Locale(identifier: first))
-    }
+    /// Fresh install: Bahasa Indonesia, whatever the iPhone language is. Profile changes it (`settings.language`).
+    static let defaultLanguage: AppLanguage = .indonesian
 }
