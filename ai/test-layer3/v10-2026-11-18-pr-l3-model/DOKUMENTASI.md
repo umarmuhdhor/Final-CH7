@@ -112,7 +112,7 @@ Riset paper (`shoo-impersonation-lab/RISET-PAPER.md`): 29 paper, 39 kandidat, sh
 | 4 | `brands.json` dipakai layer 2 dan model layer 3. Usulan layer 2 (Telkomsel, Indosat, TikTok) menggeser fitur model | Umar | issue (`v9…/ISSUE-layer2.md`), ukur ulang `eval_v3.py` kalau brand ditambah |
 | 5 | `contracts/detector-interface.md` + `signal-ids.js`: id baru | Umar, Alief | disebut di PR |
 | 6 | Alief membangun layer 3 pengganti sendiri (bge-m3) | Alief | issue: sepakati arsitektur mana yang lanjut |
-| 7 | `ai/test/fixtures.test.mjs` "warning-63" **sudah gagal di `main`** (bukan dari PR ini) | pemilik #590 / DT-04 | issue terpisah |
+| 7 | `ai/test/fixtures.test.mjs` "warning-63" gagal di `main` sejak #379: tes menjumlah `asks_ktp` layer 2 + layer 3, ekstensi hanya ambil yang lebih berat | Umar (#379) | diperbaiki di PR ini, hanya tes (#604) |
 
 ## 5. Masalah yang diketahui
 
@@ -130,6 +130,6 @@ Riset paper (`shoo-impersonation-lab/RISET-PAPER.md`): 29 paper, 39 kandidat, sh
 
 ## 7. Tes (setelah merge `origin/main` 2b9bf6c1)
 
-- `cd ai && node --test`: 433 tes, 432 lulus. 1 gagal = "warning-63", juga gagal di `main` bersih.
-- `node --test ios/ShooExtension/Tests/*.test.mjs`: 366 lulus.
+- `cd ai && node --test`: 433 lulus (setelah perbaikan "warning-63").
+- `node --test ios/ShooExtension/Tests/*.test.mjs`: 366 lulus. `node --test chrome/test/*.test.mjs`: 49 lulus.
 - `xcodebuild` Debug simulator: BUILD SUCCEEDED.
