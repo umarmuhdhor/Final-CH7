@@ -384,6 +384,14 @@ struct EvidenceCarousel: View {
             .frame(height: EvidencePhoto.height)
             dots
         }
+        // The marks can change under the open card (the copy replaces the screenshot, "Try again", a saved copy):
+        // a page past the new last one would leave the carousel blank with no dot lit.
+        .onChange(of: highlights.count) { _, count in page = Self.clampedPage(page, count: count) }
+    }
+
+    /// `page` kept inside `0..<count` (0 when there are no marks).
+    static func clampedPage(_ page: Int, count: Int) -> Int {
+        min(max(page, 0), max(count - 1, 0))
     }
 
     /// Page dots: the current one wide and dark (Figma page-control look on a light card).

@@ -136,8 +136,16 @@ test("marks stop at 24 and at 3 per signal", () => {
 
 test("a page blocked again from memory (#231) is not reported again: one push per site", () => {
     const seen = new Map();
-    assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true }, seen), false);
+    assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true, remembered: true, recordId: "scn_1" }, seen), false);
     assert.equal(shouldReport({ scanId: 9, status: "blocked", done: true }, seen), true);
+});
+
+test("a page remembered after a report that never arrived (no record id) is reported this time", () => {
+    const seen = new Map();
+    assert.equal(shouldReport({ scanId: 10, status: "blocked", done: true, remembered: true, recordId: null }, seen), true);
+    assert.equal(shouldReport({ scanId: 11, status: "blocked", done: true, remembered: true }, seen), true);
+    seen.set(10, "blocked");
+    assert.equal(shouldReport({ scanId: 10, status: "blocked", done: true, remembered: true, recordId: null }, seen), false);
 });
 
 test("the record id joins what the page shows now, never an older state or another page", () => {

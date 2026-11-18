@@ -285,6 +285,16 @@ test("urlChurn: a few route changes are normal, a page that keeps changing its a
     assert.equal(churn(30_000), false, "quiet again after the window");
 });
 
+test("urlChurn: an address every 3.4 s that cuts each scan is churning too", () => {
+    const churn = globalThis.ShooPipeline.urlChurn();
+    // Under CHURN_CHANGES in any 10 s window, but each one cuts a scan before /analyze answers.
+    assert.deepEqual([0, 3400, 6800].map((at) => churn(at, true)), [false, false, false]);
+    assert.equal(churn(10_200, true), true);
+    // Someone browsing: pages whose scans finished never count, however many in 30 s.
+    const browsing = globalThis.ShooPipeline.urlChurn();
+    assert.deepEqual([0, 3400, 6800, 10_200, 13_600].map((at) => browsing(at, false)), [false, false, false, false, false]);
+});
+
 test("#379: onlineChecked says whether /analyze really ran", async () => {
     assert.equal((await run({ local: [sig("cheap_tld", 2, 14)] })).last.onlineChecked, true);
     assert.equal((await run({ local: [sig("cheap_tld", 2, 14)], skipped: "error" })).last.onlineChecked, false);

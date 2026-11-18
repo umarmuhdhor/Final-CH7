@@ -106,9 +106,16 @@
     document.title = t("block_title");
 
     // Back to the page before this one (block.js replaced the scam page, so Back skips it).
+    // `history.length > 1` doesn't mean a page is behind this one: a scam that pushState-d before it was blocked
+    // leaves this screen first with an entry *after* it, and Back then did nothing. Still here after Back → leave
+    // to a blank page, as the warning popup's leave() does.
     $(".back").addEventListener("click", () => {
-        if (history.length > 1) history.back();
-        else location.replace("about:blank");
+        if (history.length <= 1) return location.replace("about:blank");
+        const from = location.href;
+        history.back();
+        setTimeout(() => {
+            if (location.href === from) location.replace("about:blank");
+        }, 1000);
     });
 
     const payload = globalThis.ShooBlock.decode(location.hash);
@@ -159,8 +166,12 @@
         // with some other domain that happens to be marked safe.
         let domainMatches = false;
         try {
-            const reply = await send({ type: "domain", hostname: new URL(payload.url).hostname });
-            domainMatches = reply?.domain === payload.domain;
+            const hostname = new URL(payload.url).hostname;
+            const reply = await send({ type: "domain", hostname });
+            // Or the page's own host: content.js sends that when its background didn't answer in time. Still this
+            // page, never another site, and background works the real domain out of the URL for every lookup.
+            domainMatches = reply?.domain === payload.domain ||
+                payload.domain === hostname.toLowerCase().replace(/\.+$/, "").replace(/^www\./, "");
         } catch {
             domainMatches = false;
         }

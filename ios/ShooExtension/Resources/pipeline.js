@@ -5,6 +5,10 @@
 (() => {
     const CHURN_WINDOW_MS = 10_000;
     const CHURN_CHANGES = 3; // more new addresses than this in the window
+    // A page can change its address just slower than the window above (every 3.4 s) and still cut every scan
+    // before /analyze answers (up to 8 s): new addresses that cut an unfinished scan count over a longer window.
+    const CUT_WINDOW_MS = 30_000;
+    const CHURN_CUTS = 3; // more cut scans than this in CUT_WINDOW_MS, like CHURN_CHANGES
     const THRESHOLD = { firstWarning: 30, secondWarning: 50, blocked: 80 };
     const DB_MATCH = "db_match";
 
@@ -244,14 +248,18 @@
     /**
      * Tells a page that keeps changing its address from one being browsed. Without it a page could
      * call replaceState faster than a scan takes and restart the scan for ever, staying at score 0.
-     * @returns {(now: number) => boolean} call on every new page address; true while it is churning
+     * `cut`: the new address arrives before the last scan finished (its server layers never answer).
+     * @returns {(now: number, cut?: boolean) => boolean} call on every new page address; true while it is churning
      */
     function urlChurn() {
         let changes = [];
-        return (now) => {
+        let cuts = [];
+        return (now, cut = false) => {
             changes = changes.filter((at) => now - at < CHURN_WINDOW_MS);
             changes.push(now);
-            return changes.length > CHURN_CHANGES;
+            cuts = cuts.filter((at) => now - at < CUT_WINDOW_MS);
+            if (cut) cuts.push(now);
+            return changes.length > CHURN_CHANGES || cuts.length > CHURN_CUTS;
         };
     }
 

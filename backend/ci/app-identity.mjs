@@ -3,7 +3,9 @@
 //
 // iOS side (read-only, lead's files): `ios/project.yml` (applinks host, and the `<Team ID>.<bundle ID>` the
 // Worker must serve, written in the comment above it) and `ios/ShooApp/Shoo.entitlements`.
-// App side: `ios/ShooApp/App/AppConfig.swift` `publicBaseURL`.
+// App side: `ios/ShooApp/App/AppConfig.swift` `publicBaseURL`, and `cloudAPIURL`: the Worker's workers.dev host, where
+// invite links handed out before PR-03 moved them to `publicBaseURL` still point. It may stay in applinks beside the
+// invite host, so those links keep opening the app; no other host may.
 // Backend side: `backend/api/wrangler.jsonc` `INVITE_BASE_URL`, `APPLINKS_APP_IDS`, `APNS_TOPIC`.
 //
 //   node backend/ci/app-identity.mjs   (from the repo root; exit 1 with one line per mismatch)
@@ -37,6 +39,7 @@ const hostOf = (url) => {
 export function readIdentity(texts) {
   const appIdInComment = texts.projectYml.match(/`([A-Z0-9]{10})\.([A-Za-z0-9.-]+)`/);
   const appConfigBase = texts.appConfig.match(/publicBaseURL\s*=\s*URL\(string:\s*"([^"]+)"/);
+  const appConfigCloud = texts.appConfig.match(/cloudAPIURL\s*=\s*URL\(string:\s*"([^"]+)"/);
   return {
     ios: {
       teamId: appIdInComment?.[1],
@@ -44,6 +47,7 @@ export function readIdentity(texts) {
       applinksHosts: [...texts.projectYml.matchAll(/applinks:([A-Za-z0-9.-]+)/g)].map((m) => m[1]),
       entitlementHosts: [...texts.entitlements.matchAll(/applinks:([A-Za-z0-9.-]+)/g)].map((m) => m[1]),
       appBaseHost: appConfigBase ? hostOf(appConfigBase[1]) : undefined,
+      legacyInviteHost: appConfigCloud ? hostOf(appConfigCloud[1]) : undefined,
     },
     backend: {
       inviteHost: hostOf(wranglerVar(texts.wrangler, "INVITE_BASE_URL") ?? ""),
@@ -61,14 +65,16 @@ export function mismatches({ ios, backend }) {
   }
   if (!backend.inviteHost) out.push(`${FILES.wrangler}: INVITE_BASE_URL is missing or not a URL`);
   if (ios.applinksHosts.length === 0) out.push(`${FILES.projectYml}: no applinks: host`);
-  for (const host of ios.applinksHosts) {
-    if (backend.inviteHost && host !== backend.inviteHost) {
-      out.push(`${FILES.projectYml}: applinks:${host} but INVITE_BASE_URL host is ${backend.inviteHost}`);
-    }
-  }
-  for (const host of ios.entitlementHosts) {
-    if (backend.inviteHost && host !== backend.inviteHost) {
-      out.push(`${FILES.entitlements}: applinks:${host} but INVITE_BASE_URL host is ${backend.inviteHost}`);
+  if (backend.inviteHost) {
+    // The invite host, plus the old workers.dev host of links handed out before PR-03.
+    const allowed = [backend.inviteHost, ios.legacyInviteHost].filter(Boolean);
+    for (const [file, hosts] of [[FILES.projectYml, ios.applinksHosts], [FILES.entitlements, ios.entitlementHosts]]) {
+      const stray = hosts.filter((host) => !allowed.includes(host));
+      for (const host of stray) out.push(`${file}: applinks:${host} but INVITE_BASE_URL host is ${backend.inviteHost}`);
+      // Only the old host left: new invite links would open Safari instead of the app.
+      if (!stray.length && hosts.length && !hosts.includes(backend.inviteHost)) {
+        out.push(`${file}: no applinks:${backend.inviteHost} (INVITE_BASE_URL host)`);
+      }
     }
   }
   if (backend.inviteHost && ios.appBaseHost !== backend.inviteHost) {

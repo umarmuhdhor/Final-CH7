@@ -103,6 +103,17 @@ struct OnboardingModelTests {
         return model
     }
 
+    /// ON-04: once the yes is saved the box stays; unticking it takes the consent back, ticking gives it again.
+    @Test func untickingTheSavedConsentTakesItBack() async {
+        settings.dataConsent = nil
+        let model = await registeredPersonal()
+        #expect(settings.dataConsent == .granted)
+        model.consentChecked = false
+        #expect(settings.dataConsent == .declined)
+        model.consentChecked = true
+        #expect(settings.dataConsent == .granted)
+    }
+
     @Test func freshInstallStartsAtSplash() {
         #expect(model().step == .splash)
     }

@@ -21,6 +21,9 @@ final class AppEnvironment {
     /// Verdicts the server confirmed in this launch, from Detail and Home (fase 27 K8). Activity reloads
     /// when it shows again and this changed since its last load: its rows are a separate list.
     var verdictSaves = 0
+    /// Members the guardian disconnected in this launch (Member detail). Family Activity reloads when it shows
+    /// again and this changed: its rows and person picker must not keep a removed member's sites and name.
+    var familyChanges = 0
     @ObservationIgnored private var isSyncingForeground = false
     /// PR-03: the server check behind the latest invite link (`routeInvite`). A newer link cancels it.
     @ObservationIgnored private(set) var inviteTask: Task<Void, Never>?

@@ -239,6 +239,18 @@ describe("POST /scans: one Activity row per link (#241)", () => {
     expect((await list(p)).body.items).toHaveLength(4);
   });
 
+  it("a visit to a link whose row retention deletes within a day gets a new row and its push", async () => {
+    const p = await createDevice("Mom");
+    const old = await postOk(p, extensionBody(blocked92));
+    await sql`update scans set created_at = now() - interval '13 days 2 hours' where id = ${old}`;
+    const res = await post(p, extensionBody(blocked92));
+    expect(res.status, await res.clone().text()).toBe(201);
+    const fresh = ((await res.json()) as { id: string }).id;
+    expect(fresh).not.toBe(old);
+    // A row still well inside the 14 days is kept, as before.
+    expect(await postOk(p, extensionBody(blocked92))).toBe(fresh);
+  });
+
   it("each device keeps its own row for a site", async () => {
     const a = await createDevice("Mom");
     const b = await createDevice("Dad");

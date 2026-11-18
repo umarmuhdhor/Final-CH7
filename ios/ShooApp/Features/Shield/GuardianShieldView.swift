@@ -34,7 +34,12 @@ struct GuardianShieldView: View {
             Button("Not now", role: .cancel) {}
                 .accessibilityIdentifier("reminder.notNow")
         } message: {
-            Text("You won't hear when your family is at risk.")
+            // Pribadi (Family mode off) protects nobody: its pushes are about its own blocked sites.
+            if env.settings.familyModeOn {
+                Text("You won't hear when your family is at risk.")
+            } else {
+                Text("You won't hear when Shoo blocks a dangerous site.")
+            }
         }
         .onChange(of: isReminderPresented) { _, isPresented in
             if isPresented { env.router.notificationReminderShown = true }

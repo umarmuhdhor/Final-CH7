@@ -186,6 +186,27 @@ struct GuardianHomeModelTests {
         #expect(!model.verdictFailed)
     }
 
+    /// An error belongs to the card it happened on: when another site's card takes the place (a refresh dropped
+    /// the first), it shows no "Couldn't save" or "Can't be marked yet", and its "Try again" can't resend the old answer.
+    @Test(arguments: [RepositoryError.network, RepositoryError.api(.verdictNotAllowed, message: "no")])
+    func anErrorStaysWithItsCard(error: RepositoryError) async throws {
+        let settings = try settings()
+        let model = GuardianHomeModel(
+            repository: StubRepository(verdictFailures: 1, verdictError: error),
+            settings: settings, scope: .family, extensionStatus: { .active(lastSeen: nil) }, now: { Self.fixtureNow }
+        )
+        await model.refresh()
+        let first = try #require(model.pendingScan)
+        await model.decide(.notSafe)
+        #expect(model.verdictFailed || model.verdictNotAllowed)
+        // The card moves on without the X (as a refresh that no longer lists it does).
+        settings.dismissHomeScan(first.id)
+        #expect(model.pendingScan != nil)
+        #expect(model.pendingScan?.id != first.id)
+        #expect(!model.verdictFailed)
+        #expect(!model.verdictNotAllowed)
+    }
+
     /// #476: `verdict_locked` means the link is already marked safe elsewhere: the sheet closes, no "Couldn't save".
     @Test func lockedClosesTheSheet() async throws {
         let model = GuardianHomeModel(

@@ -223,4 +223,12 @@ struct EvidencePhotoLayoutTests {
         let layout = EvidencePhoto.layout(imageSize: size, cssWidth: 390, highlights: [field], panelWidth: 330)
         #expect(layout.pageWidth == 270)
     }
+
+    /// The carousel's page stays on a real mark when the marks change under it (copy replaces the screenshot).
+    @Test func carouselPageStaysOnAMarkWhenTheMarksChange() {
+        #expect(EvidenceCarousel.clampedPage(2, count: 3) == 2)
+        #expect(EvidenceCarousel.clampedPage(2, count: 2) == 1)
+        #expect(EvidenceCarousel.clampedPage(1, count: 0) == 0)
+        #expect(EvidenceCarousel.clampedPage(-1, count: 2) == 0)
+    }
 }
