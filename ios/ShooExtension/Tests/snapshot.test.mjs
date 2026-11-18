@@ -8,15 +8,26 @@ await import("../Resources/snapshot.js");
 const { formsOf, frameDocuments, pageForms, formTarget } = globalThis.ShooSnapshot;
 
 // Minimal DOM stand-ins: only what snapshot.js reads.
-function makeDoc({ forms = [], labels = {}, frames = [] } = {}) {
+function makeDoc({ forms = [], labels = {}, frames = [], loose = [] } = {}) {
     const doc = {
         forms: [],
         querySelector: (sel) => {
             const id = /label\[for="(.*)"\]/.exec(sel)?.[1];
             return id in labels ? { innerText: ` ${labels[id]} ` } : null;
         },
-        querySelectorAll: (sel) => (sel === "iframe, frame" ? frames : []),
+        querySelectorAll: (sel) => (sel === "iframe, frame" ? frames : sel === "input, select, textarea" ? loose.map(looseEl) : []),
     };
+    // A field outside every <form>: matches("form *") is false.
+    const looseEl = (attrs) => ({
+        type: attrs.type,
+        tagName: "INPUT",
+        id: attrs.id ?? "",
+        value: "typed-secret",
+        ownerDocument: doc,
+        matches: () => false,
+        getAttribute: (k) => attrs[k] ?? null,
+        closest: () => null,
+    });
     doc.forms = forms.map((fields) => ({
         getAttribute: (k) => (k === "action" ? "/submit" : null),
         querySelectorAll: () =>
@@ -74,6 +85,35 @@ test("at most 5 iframe documents are read; iframes without forms don't count", (
     const top = makeDoc({ frames: [...empty, ...withForms] });
     assert.equal(frameDocuments(top).length, 5);
     assert.deepEqual(pageForms(top).map((f) => f.fields[0].name), ["f0", "f1", "f2", "f3", "f4"]);
+});
+
+test("fields outside any <form> become one virtual form with action null; hidden and button inputs are left out (blogspot SIM kit)", () => {
+    const doc = makeDoc({
+        loose: [
+            { type: "tel", id: "nomor", placeholder: "812345678" },
+            { type: "tel", id: "otp", placeholder: "00000" },
+            { type: "password", id: "pw" },
+            { type: "hidden", id: "csrf" },
+            { type: "submit", id: "go" },
+        ],
+    });
+    const forms = pageForms(doc);
+    assert.equal(forms.length, 1);
+    assert.equal(forms[0].action, null);
+    assert.deepEqual(forms[0].fields.map((f) => f.id), ["nomor", "otp", "pw"]);
+    assert.ok(!JSON.stringify(forms).includes("typed-secret"));
+});
+
+test("loose fields come after the real forms; no loose fields → no virtual form", () => {
+    const doc = makeDoc({ forms: [[{ type: "email", name: "email" }]], loose: [{ type: "text", id: "otp" }] });
+    assert.deepEqual(pageForms(doc).map((f) => f.action), ["/submit", null]);
+    assert.equal(pageForms(makeDoc({ forms: [[{ type: "email", name: "email" }]] })).length, 1);
+});
+
+test("a same-origin iframe with only loose fields is read too", () => {
+    const inner = makeDoc({ loose: [{ type: "tel", id: "otp" }] });
+    const top = makeDoc({ frames: [frame(inner)] });
+    assert.deepEqual(pageForms(top).map((f) => f.fields[0].id), ["otp"]);
 });
 
 test("page without iframes → only its own forms", () => {

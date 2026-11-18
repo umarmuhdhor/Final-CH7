@@ -175,6 +175,9 @@ schemes:
         Shoo: all
     run:
       config: Debug
+      # feat/l3-impersonation-model: layer 3-4 from the AI dev server on the Mac (same Wi-Fi). Debug has no AI URL otherwise.
+      commandLineArguments:
+        "-debug.aiBaseURL http://10.64.59.176:8787": true
     test:
       targets:
         - ShooAppTests

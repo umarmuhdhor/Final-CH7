@@ -147,11 +147,23 @@ final class SessionStore: @unchecked Sendable {
     static func isAllowed(_ url: URL) -> Bool {
         if url.scheme == "https" { return true }
         #if DEBUG
-        return url.scheme == "http" && ["localhost", "127.0.0.1"].contains(url.host() ?? "")
+        // Debug on a real iPhone (feat/l3-impersonation-model): also a private Wi-Fi address, so the phone can reach the
+        // local AI dev server on the Mac (`SHOO_DEV_HOST=<Mac IP> npm run dev`). Release builds never accept http.
+        guard url.scheme == "http", let host = url.host() else { return false }
+        return ["localhost", "127.0.0.1"].contains(host) || isPrivateIPv4(host)
         #else
         return false
         #endif
     }
+
+    #if DEBUG
+    /// 10.x, 172.16-31.x, 192.168.x (dotted IPv4 only, no names). Debug builds only.
+    static func isPrivateIPv4(_ host: String) -> Bool {
+        let parts = host.split(separator: ".", omittingEmptySubsequences: false).compactMap { UInt8($0) }
+        guard parts.count == 4 else { return false }
+        return parts[0] == 10 || (parts[0] == 172 && (16...31).contains(parts[1])) || (parts[0] == 192 && parts[1] == 168)
+    }
+    #endif
 }
 
 extension KeychainItem {
