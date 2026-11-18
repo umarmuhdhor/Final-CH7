@@ -320,8 +320,12 @@ struct ProfileView: View {
                 ProfileDivider()
                 navRow(symbol: "person.fill", title: Text("Manage profile"), page: .editProfile, id: "profile.manage")
             }
-            ProfileDivider()
-            navRow(symbol: "bell.fill", title: Text("Notifications"), page: .notifications, id: "profile.notifications")
+            // A Protected device gets no push of its own (its Guardian does), so it has no Notifications page
+            // until its guardian's-check switch is live (#183).
+            if model.variant != .protected || LinkedAccountSettings.switchesAreLive {
+                ProfileDivider()
+                navRow(symbol: "bell.fill", title: Text("Notifications"), page: .notifications, id: "profile.notifications")
+            }
             ProfileDivider()
             navRow(symbol: "globe", title: Text("Language"), value: language.shortName, page: .language, id: "profile.language")
         }
