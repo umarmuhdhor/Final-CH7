@@ -214,6 +214,8 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(app.buttons["safariDefault.open"].waitForExistence(timeout: 5))
     }
 
+    /// On a device the link opens PiP. iPhone simulators report no PiP support, so the link falls back to
+    /// the full-screen player, which this test closes.
     @MainActor
     func testVideoLinkOpensPlayer() {
         let app = launch(extensionActive: false)
