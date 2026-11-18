@@ -1,0 +1,8 @@
+# live scam URLs and page text; this repo is public
+links.*
+links-*
+.probe/
+dataset/
+snapshots/
+.hasil/
+HASIL.md
