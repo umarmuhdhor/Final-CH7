@@ -222,23 +222,14 @@ private struct AnchoredHeroBackground: View {
     static let overscroll: CGFloat = 400
     let style: HomeHeroStyle
     let backdrop: HeroBackdrop
+    @Environment(\.heroPull) private var pull
 
     var body: some View {
         let boxTop = backdrop.boxTop - backdrop.imageTop
         let below = max(0, boxTop + backdrop.boxHeight - 450)
         VStack(spacing: 0) {
             style.topColor.frame(height: Self.overscroll)
-            Image(style.gradientImage)
-                .resizable()
-                .frame(height: 450)
-                .overlay {
-                    if style.needsGrain {
-                        Image("HeroTexture")
-                            .resizable(resizingMode: .tile)
-                            .blendMode(.multiply)
-                            .opacity(0.35)
-                    }
-                }
+            HeroGradient(style: style, stretch: pull)
             HomeTheme.background.frame(height: below)
         }
         .overlay(alignment: .top) {
@@ -287,21 +278,12 @@ struct HeroPulse: View {
 /// (the last 120 pt) into the page. Above the frame the top colour carries on.
 struct HeroBackground: View {
     let style: HomeHeroStyle
+    @Environment(\.heroPull) private var pull
 
     var body: some View {
         VStack(spacing: 0) {
             style.topColor
-            Image(style.gradientImage)
-                .resizable()
-                .frame(height: 450)
-                .overlay {
-                    if style.needsGrain {
-                        Image("HeroTexture")
-                            .resizable(resizingMode: .tile)
-                            .blendMode(.multiply)
-                            .opacity(0.35)
-                    }
-                }
+            HeroGradient(style: style, stretch: pull)
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [HomeTheme.fade.opacity(0), HomeTheme.fade], startPoint: .top, endPoint: .bottom)
                         .frame(height: 120)
@@ -1011,5 +993,55 @@ struct HomeStatusChip: View {
         // Its own width at the usual sizes. At accessibility sizes "Penipuan terverifikasi" is wider than the row,
         // and a chip that cannot shrink pushed the whole Home past the screen (U-03): there it wraps instead.
         .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+    }
+}
+
+// MARK: - Pull-down stretch
+
+/// Figma "Gradient-classic-2 lighter", 450 pt high, with its film grain. Pulled down (`stretch`), it grows from its
+/// bottom edge by that much, so the overscroll shows more gradient instead of a flat band of `topColor`.
+private struct HeroGradient: View {
+    let style: HomeHeroStyle
+    var stretch: CGFloat = 0
+
+    var body: some View {
+        Image(style.gradientImage)
+            .resizable()
+            .frame(height: 450)
+            .overlay {
+                if style.needsGrain {
+                    Image("HeroTexture")
+                        .resizable(resizingMode: .tile)
+                        .blendMode(.multiply)
+                        .opacity(0.35)
+                }
+            }
+            .scaleEffect((450 + stretch) / 450, anchor: .bottom)
+    }
+}
+
+extension EnvironmentValues {
+    /// How far the page is pulled down past its top (0 at rest or scrolled up); the hero gradient grows by it.
+    @Entry var heroPull: CGFloat = 0
+}
+
+extension View {
+    /// On Home's scroll view: hands the pull-down distance to the hero (`heroPull`). iOS 18+; before that the
+    /// overscroll keeps the flat `topColor`.
+    func readsHeroPull() -> some View {
+        modifier(HeroPullReader())
+    }
+}
+
+private struct HeroPullReader: ViewModifier {
+    @State private var pull: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .onScrollOffset { offset in
+                let next = max(0, -offset)
+                if next != pull { pull = next }
+            }
+            .environment(\.heroPull, pull)
     }
 }

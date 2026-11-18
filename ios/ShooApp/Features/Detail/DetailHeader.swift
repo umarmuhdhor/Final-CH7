@@ -24,14 +24,6 @@ enum DetailLook: Equatable {
         }
     }
 
-    /// The top row of the picture, carried on above it when the page is pulled down.
-    var topColor: Color {
-        switch self {
-        case .danger: DetailStyle.hex(0xFF8A80)
-        case .caution: DetailStyle.hex(0xFFBD6B)
-        }
-    }
-
     var shieldTint: HalftoneShield.Tint {
         switch self {
         case .danger: .red
@@ -245,6 +237,9 @@ extension View {
 /// Reduce Motion keeps the still picture.
 struct DetailHeroBackground: View {
     let look: DetailLook
+    /// How far the page is pulled down past its top: the picture grows by that much from its bottom edge, rings
+    /// kept round, so the pull shows more hero instead of a flat band.
+    var stretch: CGFloat = 0
 
     @Environment(\.shooReduceMotion) private var reduceMotion
 
@@ -272,6 +267,8 @@ struct DetailHeroBackground: View {
             }
         }
         .frame(height: height)
+        .scaleEffect((height + stretch) / height, anchor: .bottom)
+        .frame(height: height + stretch, alignment: .bottom)
         .clipped()
         .accessibilityHidden(true)
     }

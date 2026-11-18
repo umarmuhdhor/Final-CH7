@@ -78,6 +78,8 @@ struct GuardianHomeView: View {
         // No navigation bar (see HomeTopBar): the page starts where the bar's bottom edge would be.
         .safeAreaPadding(.top, HomeTopBar.barHeight)
         .scrollIndicators(.hidden)
+        // Pulled down, the hero gradient grows to fill the overscroll (no flat band above it).
+        .readsHeroPull()
         .background(HomeTheme.background)
         // Once the hero is gone, a scrim keeps the status bar readable over the page: light behind dark text,
         // navy behind white text (dark appearance).
