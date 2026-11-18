@@ -263,15 +263,13 @@ final class ProfileUITests: XCTestCase {
     }
 
     @MainActor
-    func testProtectedNotificationsHaveWarningsOnly() {
+    func testProtectedHasNoNotificationsPage() {
+        // A Protected device gets no push of its own (its Guardian does); "Link terblokir" waits for #183.
         let app = openProfile(mode: "protected")
-        reveal(app.buttons["profile.notifications"], in: app)
-        app.buttons["profile.notifications"].tap()
-        XCTAssertTrue(app.switches["notifications.warning"].waitForExistence(timeout: 5), app.debugDescription)
-        // "Link terblokir" waits for the server push (#183).
-        XCTAssertFalse(app.switches["notifications.linkVerified"].exists)
-        XCTAssertFalse(app.switches["notifications.summary"].exists)
-        XCTAssertFalse(app.buttons["notifications.quietTime"].exists)
+        let language = app.buttons["profile.language"]
+        reveal(language, in: app)
+        XCTAssertTrue(language.exists, app.debugDescription)
+        XCTAssertFalse(app.buttons["profile.notifications"].exists)
     }
 
     @MainActor

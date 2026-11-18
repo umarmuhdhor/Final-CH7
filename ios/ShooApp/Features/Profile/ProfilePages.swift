@@ -1008,21 +1008,24 @@ private struct NotificationsPage: View {
                 .padding(.top, 4)
             }
 
-            ProfileSection(title: "Warnings") {
-                ProfileToggleRow(
-                    symbol: "bell.fill", title: Text("Dangerous sites"), subtitle: Text("When you open a high-risk site"),
-                    style: .settings, isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
-                )
-                .accessibilityIdentifier("notifications.warning")
-                ProfileDivider()
-                ProfileToggleRow(
-                    symbol: "network.badge.shield.half.filled", title: Text("Blocked sites"), subtitle: Text("Every time Shoo blocks a site"),
-                    style: .settings, isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
-                )
-                .accessibilityIdentifier("notifications.blocked")
+            // Own-scan pushes go to Guardian and Personal devices only: a Protected device's scan pushes its Guardian.
+            if model.variant != .protected {
+                ProfileSection(title: "Warnings") {
+                    ProfileToggleRow(
+                        symbol: "bell.fill", title: Text("Dangerous sites"), subtitle: Text("When you open a high-risk site"),
+                        style: .settings, isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
+                    )
+                    .accessibilityIdentifier("notifications.warning")
+                    ProfileDivider()
+                    ProfileToggleRow(
+                        symbol: "network.badge.shield.half.filled", title: Text("Blocked sites"), subtitle: Text("Every time Shoo blocks a site"),
+                        style: .settings, isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
+                    )
+                    .accessibilityIdentifier("notifications.blocked")
+                }
+                // Figma: the first title sits 24 pt under the back button; the header leaves 16.
+                .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20)
             }
-            // Figma: the first title sits 24 pt under the back button; the header leaves 16.
-            .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20)
 
             if model.variant == .guardian {
                 ProfileSection(title: "Family · Guardian mode") {

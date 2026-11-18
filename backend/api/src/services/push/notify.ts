@@ -67,9 +67,11 @@ export async function guardianPush(sql: Sql, owner: Principal, scan: Scan, now =
 
 /**
  * PF-01 "Situs berbahaya" / "Situs diblokir": a push to the device about its own scan, when that
- * switch is on. Same quiet hours and cap as the guardian push.
+ * switch is on. Same quiet hours and cap as the guardian push. Guardian devices only: a protected
+ * device already sees the block page, and its guardian gets the push (guardianPush).
  */
 export async function ownPush(sql: Sql, owner: Principal, scan: Scan, now = new Date()): Promise<PushMessage | undefined> {
+  if (owner.mode !== "guardian") return undefined;
   const [d] = await sql<Target[]>`
     select ${targetColumns(sql)}
     from devices d

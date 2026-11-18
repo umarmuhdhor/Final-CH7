@@ -232,8 +232,8 @@ uses to decide which pushes go out (see [Push notification](#push-notification) 
 
 | Key | Figma row | Effect |
 |---|---|---|
-| `warning` | Situs berbahaya | Push to this device for its own `warning` scans |
-| `blocked` | Situs diblokir | Push to this device for its own `blocked` scans |
+| `warning` | Situs berbahaya | Guardian: push to this device for its own `warning` scans |
+| `blocked` | Situs diblokir | Guardian: push to this device for its own `blocked` scans |
 | `family` | Aktivitas orang dilindungi | Guardian: push for members' scans (together with the per-member "Kabari saya") |
 | `protectionOff` | Perlindungan mati | Guardian: one push when a member's extension has not reported for 24 h |
 | `weeklySummary` | Ringkasan mingguan | Monday from 08:00 local: counts of the last 7 days |
@@ -1045,8 +1045,9 @@ from the Worker over HTTP/2 (GD-06):
 
 - No push for a Guardian's own scans, when the Guardian has no APNs token, or (*PF-01 proposed*) when
   the Guardian turned "Kabari saya" off for that member or `notifications.family` off.
-- *PF-01 proposed:* the scanning device itself also gets a push for its own scan when its
-  `notifications.blocked` / `notifications.warning` is on (default on). It carries the `scanId`;
+- *PF-01 proposed:* a Guardian device also gets a push for its own scan when its
+  `notifications.blocked` / `notifications.warning` is on (default on). A Protected device never
+  gets a push for its own scan: it already sees the block page, and its Guardian gets the push. It carries the `scanId`;
   the body never names the site.
 
   | Status | `en` | `id` |
