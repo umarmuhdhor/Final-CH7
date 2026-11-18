@@ -8,13 +8,10 @@ struct ProtectedShieldView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: ShieldModel
     /// Bumped when Shoo turns on while the page is up (back from Settings): one success tap.
     @State private var turnedOn = 0
-    /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
-    @State private var isHeroHidden = false
     /// Bumped when a failed page loads after "Try again": one success tap.
     @State private var recovered = 0
 
@@ -23,7 +20,6 @@ struct ProtectedShieldView: View {
     }
 
     private var language: AppLanguage { AppLanguage(locale: locale) }
-    private var scrim: Color { colorScheme == .dark ? HomeTheme.navy : HomeTheme.background }
     private var isLoaded: Bool { model.state == .loaded }
     /// Loaded and nobody looks after this phone: no pill, the "Mode Terawasi" card (1382:2393).
     private var hasNoGuardian: Bool { isLoaded && model.guardian == nil }
@@ -42,7 +38,6 @@ struct ProtectedShieldView: View {
                     // "Checking Shoo…" → protected / not protected, and "Status not available yet" ↔ loaded:
                     // the headline and the pill cross-fade.
                     .animation(reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.35), value: heroPhase)
-                    .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
                 // Figma "Status": the page itself rounds up over the hero; one 354 pt column, 24 from the edges.
                 VStack(spacing: 0) {
                     content
@@ -60,16 +55,9 @@ struct ProtectedShieldView: View {
         .scrollIndicators(.hidden)
         // Pulled down, the hero gradient grows to fill the overscroll (no flat band above it).
         .readsHeroPull()
+        // Scrolled up, the shield shrinks into the top bar and a strip of the hero stays there, as on Detail.
+        .collapsesHomeHero()
         .background(HomeTheme.background)
-        .overlay(alignment: .top) {
-            LinearGradient(colors: [scrim, scrim.opacity(0.85), scrim.opacity(0)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 110)
-                .ignoresSafeArea(edges: .top)
-                .opacity(isHeroHidden ? 1 : 0)
-                .animation(.easeOut(duration: 0.2), value: isHeroHidden)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
         // Figma "Top Bar" 1115:17282: the profile circle only, right under the status bar.
         .overlay(alignment: .top) {
             HomeTopBar(avatarId: model.profileAvatarId ?? env.session?.avatarId, onSwitch: nil) { env.router.openProfile() }

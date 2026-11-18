@@ -96,7 +96,7 @@ enum HomeHeroStyle {
 }
 
 /// Where each Figma HOME frame puts the hero parts, in points from the top of the 402 × 874 frame.
-struct HomeHeroLayout {
+struct HomeHeroLayout: Equatable {
     /// Top of the glass shield ("Kaca").
     var shieldTop: CGFloat = 124
     /// "Shield Kaca Halftone" is 210 wide (1.25 × the onboarding shield); "Shield G" 213.
@@ -138,7 +138,7 @@ struct HomeHeroLayout {
 }
 
 /// Figma "Gradient-classic-2 lighter" and "box" in points from the top of the 402 × 874 frame.
-struct HeroBackdrop {
+struct HeroBackdrop: Equatable {
     /// Top of the 450 pt gradient.
     var imageTop: CGFloat = -7.08
     /// Top and height of the "box" fade into the page (#F3F6F8, clear to solid).
@@ -160,15 +160,21 @@ struct HomeHero<Accessory: View>: View {
     /// nil: `layout.bottomGap`.
     var bottomPadding: CGFloat?
     @ViewBuilder var accessory: () -> Accessory
+    @Environment(\.homeHeroCollapse) private var collapse
+
+    private var textOpacity: Double { max(0, 1 - collapse.progress * 2.5) }
 
     var body: some View {
         let ringCenter = HomeHeroLayout.ringCenter
         VStack(spacing: 0) {
             ZStack {
-                if layout.showsRings { HeroPulse() }
+                // Scrolled up, the rings fade before they reach the top bar.
+                if layout.showsRings { HeroPulse().opacity(max(0, 1 - collapse.progress * 2)) }
                 HalftoneShield(isOn: shieldOn, tint: shieldTint)
                     .scaleEffect(layout.shieldScale)
                     .offset(y: layout.shieldTop - (ringCenter - HomeHeroLayout.kacaRise * layout.shieldScale))
+                    // `collapsesHomeHero()` draws it on top of the page instead; its room stays here.
+                    .opacity(collapse.pinsShield ? 0 : 1)
             }
             .frame(height: 236)
             .padding(.top, ringCenter - 118 - HomeHeroLayout.heroTop)
@@ -196,13 +202,36 @@ struct HomeHero<Accessory: View>: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, layout.titleTop - HomeHeroLayout.titleBoxShift - (ringCenter + 118))
+            // Scrolled up, the headline fades early: the shrinking shield passes over it on its way to the top bar.
+            .opacity(textOpacity)
             accessory()
+                .opacity(textOpacity)
         }
         .padding(.bottom, bottomPadding ?? layout.bottomGap - 0.6)
         .frame(maxWidth: .infinity)
-        // Reaches up under the navigation bar, the status bar and the pull-to-refresh overscroll, and down
-        // under the strip.
-        .background(alignment: layout.backdrop == nil ? .bottom : .top) {
+        // Where the hero is and what its shield looks like, for `collapsesHomeHero()`.
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: HomeHeroSnapshotKey.self,
+                    value: HomeHeroSnapshot(frame: proxy.frame(in: .global), style: style, layout: layout,
+                                            shieldOn: shieldOn, shieldTint: shieldTint)
+                )
+            }
+        }
+        .modifier(HomeHeroBackdropLayer(style: style, layout: layout))
+    }
+}
+
+/// The hero background around a frame of the hero's size. Reaches up under the navigation bar, the status bar and
+/// the pull-to-refresh overscroll, and down under the strip. Shared by the hero and the strip that stays under the
+/// top bar once the hero has collapsed.
+struct HomeHeroBackdropLayer: ViewModifier {
+    let style: HomeHeroStyle
+    let layout: HomeHeroLayout
+
+    func body(content: Content) -> some View {
+        content.background(alignment: layout.backdrop == nil ? .bottom : .top) {
             if let backdrop = layout.backdrop {
                 AnchoredHeroBackground(style: style, backdrop: backdrop)
                     .padding(.top, backdrop.imageTop - HomeHeroLayout.heroTop - AnchoredHeroBackground.overscroll)
@@ -1044,5 +1073,165 @@ private struct HeroPullReader: ViewModifier {
                 if next != pull { pull = next }
             }
             .environment(\.heroPull, pull)
+    }
+}
+
+// MARK: - Collapsing hero
+
+/// What `collapsesHomeHero()` tells the hero while the page scrolls.
+struct HomeHeroCollapse: Equatable {
+    /// The pinned layer draws the shield; the hero keeps its room empty.
+    var pinsShield = false
+    /// 0 at rest (or pulled down), 1 once the hero's bottom edge is down to the top bar.
+    var progress: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    @Entry var homeHeroCollapse = HomeHeroCollapse()
+}
+
+/// The hero's frame on screen and the look of its shield, handed up to `collapsesHomeHero()`.
+struct HomeHeroSnapshot: Equatable {
+    var frame: CGRect
+    var style: HomeHeroStyle
+    var layout: HomeHeroLayout
+    var shieldOn: Bool
+    var shieldTint: HalftoneShield.Tint
+}
+
+struct HomeHeroSnapshotKey: PreferenceKey {
+    static var defaultValue: HomeHeroSnapshot? { nil }
+
+    static func reduce(value: inout HomeHeroSnapshot?, nextValue: () -> HomeHeroSnapshot?) {
+        value = nextValue() ?? value
+    }
+}
+
+extension View {
+    /// On Home's scroll view, as on Detail: scrolled up, the hero's shield stays on top of the page and shrinks into
+    /// the top bar's row, between ⇆ and the profile circle. Once the hero's bottom edge is down to the top bar, a
+    /// strip of the hero stays there with the page's round top edge under it, and the page runs on underneath.
+    /// Put it before the `HomeTopBar` overlay, so the buttons stay on top.
+    func collapsesHomeHero() -> some View {
+        modifier(HomeHeroCollapser())
+    }
+}
+
+private struct HomeHeroCollapser: ViewModifier {
+    @State private var hero: HomeHeroSnapshot?
+    /// The scroll view's top edge on screen and its safe area (the status bar).
+    @State private var frame = ScreenFrame()
+
+    struct ScreenFrame: Equatable {
+        var minY: CGFloat = 0
+        var safeTop: CGFloat = 0
+    }
+
+    func body(content: Content) -> some View {
+        let geometry = hero.map { HomeHeroCollapseGeometry(hero: $0, frame: frame) }
+        content
+            .environment(\.homeHeroCollapse, HomeHeroCollapse(pinsShield: geometry != nil, progress: geometry?.progress ?? 0))
+            .onPreferenceChange(HomeHeroSnapshotKey.self) { hero = $0 }
+            .onGeometryChange(for: ScreenFrame.self) {
+                ScreenFrame(minY: $0.frame(in: .global).minY, safeTop: $0.safeAreaInsets.top)
+            } action: { frame = $0 }
+            .overlay(alignment: .top) {
+                if let hero, let geometry {
+                    PinnedHomeHero(hero: hero, geometry: geometry)
+                }
+            }
+    }
+}
+
+/// Where the pinned parts go, in points from the top of the screen.
+private struct HomeHeroCollapseGeometry {
+    /// Rest height of the strip that stays under the top bar: the status bar, the 50 pt buttons and 12 under them.
+    let compactHeight: CGFloat
+    /// The hero's bottom edge (the top of the page under it).
+    let sheetTop: CGFloat
+    let progress: CGFloat
+    let isPinned: Bool
+    let shieldCenterY: CGFloat
+    let shieldScale: CGFloat
+
+    /// On Detail the compact shield is 0.3 of its 1.25 scale.
+    static let compactShieldScale: CGFloat = 1.25 * 0.3
+
+    init(hero: HomeHeroSnapshot, frame: HomeHeroCollapser.ScreenFrame) {
+        // The scroll view starts under the status bar; the screen's top edge is `safeTop` above it.
+        let screenTop = frame.minY - frame.safeTop
+        let heroTop = hero.frame.minY - screenTop
+        // At rest the page starts where the hidden navigation bar would end.
+        let restTop = frame.safeTop + HomeTopBar.barHeight
+        let offset = restTop - heroTop
+        compactHeight = frame.safeTop + 50 + 12
+        sheetTop = heroTop + hero.frame.height
+        let distance = max(restTop + hero.frame.height - compactHeight, 1)
+        progress = min(max(offset / distance, 0), 1)
+        isPinned = offset >= distance
+
+        let layout = hero.layout
+        // The shield's centre in the hero (`HomeHero`): its Kaca top at `shieldTop` on the Figma frame.
+        let restCenterY = restTop - HomeHeroLayout.heroTop + layout.shieldTop + HomeHeroLayout.kacaRise * layout.shieldScale
+        let compactCenterY = frame.safeTop + 25
+        // Pulled down, the shield moves down with the page as it used to.
+        shieldCenterY = offset < 0 ? restCenterY - offset : restCenterY + (compactCenterY - restCenterY) * progress
+        shieldScale = layout.shieldScale + (Self.compactShieldScale - layout.shieldScale) * progress
+    }
+}
+
+/// The shield over the page, cut off at the hero's bottom edge (the page slides over it as before); once pinned, the
+/// strip of hero behind it and the page's round top edge under it.
+private struct PinnedHomeHero: View {
+    let hero: HomeHeroSnapshot
+    let geometry: HomeHeroCollapseGeometry
+
+    /// The page's (and the family card's) corner radius.
+    private let lip: CGFloat = 22
+
+    var body: some View {
+        let shieldHeight = HalftoneShield.size.height
+        ZStack(alignment: .top) {
+            if geometry.isPinned {
+                // The hero as it stood when its bottom edge reached the top bar.
+                Color.clear
+                    .frame(width: hero.frame.width, height: hero.frame.height)
+                    .modifier(HomeHeroBackdropLayer(style: hero.style, layout: hero.layout))
+                    .environment(\.heroPull, 0)
+                    .offset(y: geometry.compactHeight - hero.frame.height)
+            }
+            HalftoneShield(isOn: hero.shieldOn, tint: hero.shieldTint)
+                .scaleEffect(geometry.shieldScale)
+                .offset(y: geometry.shieldCenterY - shieldHeight / 2)
+        }
+        .frame(maxWidth: .infinity)
+        // Pinned, the strip is one corner taller: the hero shows behind the page's round corners, as at rest.
+        .frame(height: max(geometry.sheetTop, geometry.compactHeight) + (geometry.isPinned ? lip : 0), alignment: .top)
+        .clipped()
+        .overlay(alignment: .bottom) {
+            if geometry.isPinned {
+                UnevenRoundedRectangle(topLeadingRadius: lip, topTrailingRadius: lip, style: .continuous)
+                    .fill(HomeTheme.background)
+                    .frame(height: lip)
+                    // The cards come out of the page colour instead of meeting a hard line.
+                    .overlay(alignment: .bottom) {
+                        LinearGradient(colors: [HomeTheme.background, HomeTheme.background.opacity(0)],
+                                       startPoint: .top, endPoint: .bottom)
+                            .frame(height: 16)
+                            .offset(y: 16)
+                    }
+            }
+        }
+        .allowsHitTesting(false)
+        // Pinned, the strip takes the taps meant for the page under it (as a navigation bar would).
+        .overlay(alignment: .top) {
+            if geometry.isPinned {
+                Color.clear
+                    .frame(height: geometry.compactHeight)
+                    .contentShape(Rectangle())
+            }
+        }
+        .accessibilityHidden(true)
+        .ignoresSafeArea(edges: .top)
     }
 }
