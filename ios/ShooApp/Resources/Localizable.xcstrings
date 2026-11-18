@@ -7329,6 +7329,312 @@
           }
         }
       }
+    },
+    "detail.summary.title" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: title",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ringkasan"
+          }
+        }
+      }
+    },
+    "detail.summary.fakeBrandAsks %@ %@" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: %1$@ = brand the address copies (BCA), %2$@ = data the page asks for (PIN dan kode OTP)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A fake %1$@ page that asks for your %2$@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman %1$@ palsu yang meminta %2$@ kamu."
+          }
+        }
+      }
+    },
+    "detail.summary.fakeBrand %@" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: brand the address copies (BCA), no form asking for data",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This page imitates %@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini meniru %@."
+          }
+        }
+      }
+    },
+    "detail.summary.asks %@" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data the page asks for (PIN dan kode OTP), no brand known",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This page asks for your %@."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini meminta %@ kamu."
+          }
+        }
+      }
+    },
+    "detail.summary.knownScam" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: db_match, no brand or asked data",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This page is on a list of known scams."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini sudah tercatat sebagai penipuan."
+          }
+        }
+      }
+    },
+    "detail.summary.oneSign" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: one signal, nothing more specific",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We found 1 warning sign on this page."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami menemukan 1 tanda mencurigakan di halaman ini."
+          }
+        }
+      }
+    },
+    "detail.summary.signs %lld" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: number of signals (2 or more), nothing more specific",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We found %lld warning signs on this page."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami menemukan %lld tanda mencurigakan di halaman ini."
+          }
+        }
+      }
+    },
+    "detail.summary.autoBlocked" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: blocked by Shoo, no guardian decision",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We blocked this page automatically."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami memblokir otomatis halaman ini."
+          }
+        }
+      }
+    },
+    "detail.summary.confirmedBlocked" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: guardian marked it not safe",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It was confirmed as dangerous, so it is blocked."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini sudah dipastikan berbahaya, jadi diblokir."
+          }
+        }
+      }
+    },
+    "detail.summary.warned" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: warning, no guardian decision",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We warned you before it opened."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami memberi peringatan sebelum halaman ini dibuka."
+          }
+        }
+      }
+    },
+    "detail.summary.markedSafe" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: guardian marked it safe",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It was marked safe, so it can be opened."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halaman ini sudah ditandai aman, jadi bisa dibuka."
+          }
+        }
+      }
+    },
+    "detail.summary.data.pin" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_pin), goes into 'asks for your …'",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PIN"
+          }
+        }
+      }
+    },
+    "detail.summary.data.otp" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_otp)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OTP code"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kode OTP"
+          }
+        }
+      }
+    },
+    "detail.summary.data.password" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_password)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "password"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kata sandi"
+          }
+        }
+      }
+    },
+    "detail.summary.data.card" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_card)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "card number"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nomor kartu"
+          }
+        }
+      }
+    },
+    "detail.summary.data.cvv" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_cvv)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CVV"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CVV"
+          }
+        }
+      }
+    },
+    "detail.summary.data.ktp" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_ktp)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID card (KTP) details"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "data KTP"
+          }
+        }
+      }
+    },
+    "detail.summary.data.selfieKtp" : {
+      "comment" : "DT-04 Figma 1668:10650 \"Ringkasan\" card under the score row: data asked (asks_selfie_ktp)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID card selfie"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "selfie dengan KTP"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

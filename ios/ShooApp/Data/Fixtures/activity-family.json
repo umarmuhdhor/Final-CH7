@@ -60,6 +60,10 @@
           "labelSimple": {
             "en": "Uses the BCA name but isn't BCA",
             "id": "Memakai nama BCA, tapi bukan BCA"
+          },
+          "host": {
+            "official": "bca.co.id",
+            "brand": "BCA"
           }
         }
       ],
@@ -116,6 +120,10 @@
           "labelSimple": {
             "en": "Uses a government name but isn't a government site",
             "id": "Memakai nama pemerintah, tapi bukan situs pemerintah"
+          },
+          "host": {
+            "official": "kemensos.go.id",
+            "brand": "Kemensos"
           }
         },
         {
@@ -171,6 +179,10 @@
           "labelSimple": {
             "en": "Uses the Shopee name but isn't Shopee",
             "id": "Memakai nama Shopee, tapi bukan Shopee"
+          },
+          "host": {
+            "official": "shopee.co.id",
+            "brand": "Shopee"
           }
         },
         {

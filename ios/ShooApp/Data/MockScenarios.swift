@@ -286,7 +286,7 @@ enum MockScenarios {
         let syahnaz = owner("dev_syahnaz", "Syahnaz")
         var brand = signal("brand_plus_keyword", 2, 40, "BCA name with extra words", "Nama BCA dengan kata tambahan",
                            "The address uses the BCA name", "Alamatnya memakai nama BCA", evidence: "bca · level 2 · verifikasi")
-        brand.host = Signal.Host(marks: ["bca", "verifikasi"], official: "bca.co.id")
+        brand.host = Signal.Host(marks: ["bca", "verifikasi"], official: "bca.co.id", brand: "BCA")
         var ending = signal("cheap_tld", 1, 18, "Cheap .site ending", "Akhiran .site murah", "Scam sites often use .site",
                             "Situs penipuan sering memakai .site")
         ending.host = Signal.Host(marks: [".site"])

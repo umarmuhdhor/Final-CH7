@@ -48,6 +48,8 @@ struct Signal: Codable, Hashable {
         var marks: [String]?
         /// The brand's real domain (e.g. "bca.co.id"), only on `lookalike_domain` and `brand_plus_keyword`.
         var official: String?
+        /// The brand's display name (e.g. "BCA"), sent with `official`. Detail's "Ringkasan" names it (DT-04).
+        var brand: String?
     }
 }
 

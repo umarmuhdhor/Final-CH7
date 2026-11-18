@@ -58,6 +58,10 @@
       "labelSimple": {
         "en": "Uses the BCA name but isn't BCA",
         "id": "Memakai nama BCA, tapi bukan BCA"
+      },
+      "host": {
+        "official": "bca.co.id",
+        "brand": "BCA"
       }
     }
   ],
