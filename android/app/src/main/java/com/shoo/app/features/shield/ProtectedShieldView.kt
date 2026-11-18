@@ -2,13 +2,14 @@ package com.shoo.app.features.shield
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +43,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -264,6 +266,15 @@ private fun ProtectedHero(
         HeroPhase.STATUS -> if (isActive) "shield.status.active" else "shield.status.off"
     }
     val accessory = HeroAccessory(phase, showsNextStep, showsPill, isActive, model.guardian?.name)
+    // Off ↔ on once loaded (back from Settings) and every phase change: the headline and the pill cross-fade and the
+    // shield eases over. Anything else (the first load, a refresh) jumps, as on iOS.
+    val phaseChanged = changedNow(phase)
+    val activeChanged = changedNow(isActive)
+    val animation: FiniteAnimationSpec<Float>? = if (phaseChanged || (activeChanged && isLoaded)) {
+        if (reduceMotion) shooEaseInOut<Float>(0.2) else shooSmooth<Float>(0.35)
+    } else {
+        null
+    }
 
     HomeHero(
         style = HomeHeroStyle.BLUE,
@@ -272,12 +283,13 @@ private fun ProtectedHero(
         shieldOn = isActive || phase == HeroPhase.CHECKING,
         layout = layout,
         bottomPadding = if (showsNextStep) 20.dp else bottom,
+        animation = animation,
         modifier = modifier,
     ) {
         // "Checking Shoo…" → protected / not protected, and "Status not available yet" ↔ loaded: the pill cross-fades.
         Crossfade(
             targetState = accessory,
-            animationSpec = if (reduceMotion) shooEaseInOut<Float>(0.2) else shooSmooth<Float>(0.35),
+            animationSpec = animation ?: snap(),
             label = "protectedHeroAccessory",
         ) { shown ->
             Column(
@@ -362,8 +374,13 @@ private fun ProtectedLoaded(
         cta -> Triple(31, 37, 37)
         else -> Triple(32, 0, 58)
     }
+    // Closing the card animates the whole page (the gaps too); other changes of these gaps jump.
+    var dismissing by remember { mutableStateOf(false) }
+    val ctaChanged = changedNow(cta)
+    val dismissal: FiniteAnimationSpec<Float>? = if (dismissing && ctaChanged) shooEaseOut<Float>(0.2) else null
+    LaunchedEffect(cta) { dismissing = false }
     Column(modifier.fillMaxWidth()) {
-        Spacer(Modifier.height(top.dp))
+        Spacer(Modifier.height(animatedOrSnapped(top.toFloat(), dismissal).dp))
         // A-01 (fase 28b K4, D-alief-A12): what is shown stays, the pill included, and this says it may be old.
         // The same notice as Activity's and Guardian Home's. Only the notice animates.
         AnimatedVisibility(
@@ -385,13 +402,16 @@ private fun ProtectedLoaded(
                 guardian = model.guardian,
                 language = language,
                 onOpen = { env.router.showDetail(card.id) },
-                modifier = Modifier.padding(bottom = (if (cta) 29 else list).dp),
+                modifier = Modifier.padding(bottom = animatedOrSnapped((if (cta) 29 else list).toFloat(), dismissal).dp),
             )
         }
-        AnimatedVisibility(visible = cta, enter = fadeIn(shooEaseOut<Float>(0.2)), exit = fadeOut(shooEaseOut<Float>(0.2))) {
+        AnimatedVisibility(visible = cta, enter = fadeIn(shooEaseOut<Float>(0.2)), exit = dismissExit) {
             SupervisedModeCard(
                 onConnect = { env.router.isConnectPresented = true },
-                onDismiss = { env.settings.supervisedCardDismissed = true },
+                onDismiss = {
+                    dismissing = true
+                    env.settings.supervisedCardDismissed = true
+                },
                 modifier = Modifier.padding(bottom = (if (card == null) list else 16).dp),
             )
         }
@@ -403,7 +423,7 @@ private fun ProtectedLoaded(
             onSeeAll = { env.router.selectedTab = AppTab.ACTIVITY },
         )
         if (model.scamCases.isNotEmpty()) {
-            LatestScamsCard(cases = model.scamCases, modifier = Modifier.padding(top = scams.dp))
+            LatestScamsCard(cases = model.scamCases, modifier = Modifier.padding(top = animatedOrSnapped(scams.toFloat(), dismissal).dp))
         }
     }
 }
@@ -515,6 +535,10 @@ private fun ProtectedSiteCard(
     }
     val hint = t("Opens the details")
     val shape = RoundedCornerShape(20.dp)
+    val decisionSpec: FiniteAnimationSpec<Float> = if (reduceMotion) shooEaseInOut<Float>(0.2) else shooSmooth<Float>(0.3)
+    val decisionAnimation = if (changedNow(decision)) decisionSpec else null
+    val blush = animatedOrSnapped(if (decision == Verdict.Value.NOT_SAFE) 1f else 0f, decisionAnimation)
+    val redGlow = animatedOrSnapped(if (isDanger) 1f else 0f, decisionAnimation)
 
     Column(
         modifier
@@ -524,15 +548,17 @@ private fun ProtectedSiteCard(
                 // #EDEDED 50 % with Figma "Rectangle 9652": a red or warm glow from 63.5 pt above the foot (clear) to
                 // 14.5 under it (full), at 20 %; marked dangerous, the whole card blushes instead.
                 drawRect(hex(0xEDEDED, 0.5f))
-                if (decision == Verdict.Value.NOT_SAFE) {
-                    drawRect(blushBrush(offsetY = 0f, density = density), alpha = 0.2f)
-                } else {
-                    val colors = if (isDanger) listOf(hex(0xF28D83, 0f), hex(0xF26153)) else listOf(hex(0xFB9E20, 0f), hex(0xFB9E20))
+                if (blush < 1f) {
+                    val colors = listOf(
+                        lerp(hex(0xFB9E20, 0f), hex(0xF28D83, 0f), redGlow),
+                        lerp(hex(0xFB9E20), hex(0xF26153), redGlow),
+                    )
                     drawRect(
                         Brush.verticalGradient(colors, startY = size.height - 63.5.dp.toPx(), endY = size.height + 14.5.dp.toPx()),
-                        alpha = 0.2f,
+                        alpha = 0.2f * (1f - blush),
                     )
                 }
+                if (blush > 0f) drawRect(blushBrush(offsetY = 0f, density = density), alpha = 0.2f * blush)
             }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -545,8 +571,14 @@ private fun ProtectedSiteCard(
             .testTag("shield.lastBlocked")
             .padding(bottom = 13.79.dp),
     ) {
-        ProtectedSiteHeader(scan = scan, language = language, blushed = decision == Verdict.Value.NOT_SAFE)
-        HomeRiskPanel(scan = scan, isDanger = isDanger, modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 12.dp))
+        ProtectedSiteHeader(scan = scan, language = language, blush = blush)
+        OverflowCrossfade(
+            targetState = isDanger,
+            spec = decisionAnimation,
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 12.dp),
+        ) { danger ->
+            HomeRiskPanel(scan = scan, isDanger = danger)
+        }
         if (checker != null) {
             // The guardian's answer arrives while the card is up: badge and line ease over instead of jumping.
             Crossfade(
@@ -577,7 +609,7 @@ private fun blushBrush(offsetY: Float, density: Float): Brush = Brush.verticalGr
  * the right.
  */
 @Composable
-private fun ProtectedSiteHeader(scan: ScanResult, language: AppLanguage, blushed: Boolean) {
+private fun ProtectedSiteHeader(scan: ScanResult, language: AppLanguage, blush: Float) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -617,11 +649,11 @@ private fun ProtectedSiteHeader(scan: ScanResult, language: AppLanguage, blushed
             contentAlignment = Alignment.Center,
         ) {
             SfSymbol("arrow.up.right", pointSize = 14.58f, tint = HomeTheme.glassInk)
-            if (blushed) {
+            if (blush > 0f) {
                 Box(
                     Modifier
                         .matchParentSize()
-                        .drawBehind { drawRect(blushBrush(offsetY = 20.dp.toPx(), density = density), alpha = 0.2f) },
+                        .drawBehind { drawRect(blushBrush(offsetY = 20.dp.toPx(), density = density), alpha = 0.2f * blush) },
                 )
             }
         }

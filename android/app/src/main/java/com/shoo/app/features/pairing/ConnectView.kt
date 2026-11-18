@@ -5,16 +5,22 @@ import android.view.HapticFeedbackConstants
 import android.view.View
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -52,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +80,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -84,12 +92,15 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.shoo.app.R
 import com.shoo.app.app.LocalAppEnvironment
@@ -183,6 +194,9 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var tab by remember { mutableStateOf(ConnectTab.CODE) }
+    // iOS: a tap on the tabs or "Just enter the code" animates (`withAnimation(.snappy(0.3))`); a scanned code
+    // switches to Code at once.
+    var tabAnimates by remember { mutableStateOf(true) }
     var scanRefused by remember { mutableStateOf(false) }
     var codeFocused by remember { mutableStateOf(false) }
     // Bumped each time a problem shows: shakes the code boxes once and taps an error haptic.
@@ -214,24 +228,42 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
         footerEndsWithLink = onSkip != null,
         content = {
             // Figma: tabs at y 242, label at y 332.
-            ConnectTabs(tab = tab, onTabChange = { tab = it }, modifier = Modifier.padding(top = 37.dp))
+            ConnectTabs(
+                tab = tab,
+                animates = tabAnimates,
+                onTabChange = {
+                    tabAnimates = true
+                    tab = it
+                },
+                modifier = Modifier.padding(top = 37.dp),
+            )
 
             AnimatedContent(
                 targetState = tab,
-                transitionSpec = { fadeIn(shooSnappy(0.3)) togetherWith fadeOut(shooSnappy(0.3)) },
+                transitionSpec = {
+                    if (tabAnimates) {
+                        fadeIn(shooSnappy(0.3)) togetherWith fadeOut(shooSnappy(0.3)) using
+                            SizeTransform(clip = false) { _, _ -> shooSnappy<IntSize>(0.3) }
+                    } else {
+                        EnterTransition.None togetherWith ExitTransition.None using null
+                    }
+                },
                 label = "connectTab",
             ) { shownTab ->
                 when (shownTab) {
                     ConnectTab.SCAN -> Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(top = 24.dp),
+                            .padding(top = 24.dp)
+                            // What sits below moves with the banner's spring instead of jumping.
+                            .animateContentSize(stateEnterSize(reduceMotion)),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         ScannerFrame {
                             QRScannerView(Modifier.fillMaxSize()) { payload ->
                                 if (model.scanned(payload)) {
                                     scanRefused = false
+                                    tabAnimates = false
                                     tab = ConnectTab.CODE
                                 } else {
                                     scanRefused = true
@@ -250,6 +282,7 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
                                     modifier = Modifier.semantics { testTag = "connect.scanRefused" },
                                 )
                                 ConnectInlineLink("Just enter the code", identifier = "connect.enterCodeInstead") {
+                                    tabAnimates = true
                                     tab = ConnectTab.CODE
                                     focusRequests += 1
                                 }
@@ -269,7 +302,9 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
                         Column(
                             Modifier
                                 .fillMaxWidth()
-                                .bringIntoViewRequester(codeField),
+                                .bringIntoViewRequester(codeField)
+                                // `.animation(problem == nil ? nil : StateMotion.enter)`: grows with the spring, shrinks at once.
+                                .animateContentSize(if (problem == null) snap<IntSize>() else stateEnterSize(reduceMotion)),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             CodeField(
@@ -286,7 +321,8 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
                             AnimatedVisibility(
                                 visible = problem == ConnectModel.Problem.INVALID,
                                 enter = StateMotion.enterTransition(reduceMotion, fromBottom = false),
-                                exit = ExitTransition.None,
+                                // Cleared by editing: gone at once. Replaced by another problem: the usual removal.
+                                exit = if (problem == null) ExitTransition.None else StateMotion.exitTransition(reduceMotion, toBottom = false),
                             ) {
                                 ConnectInlineLink(
                                     "Retype code",
@@ -312,10 +348,19 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
             )
         },
         footer = {
+            // The footer's height follows with the same spring, so "Not now" moves instead of jumping.
             AnimatedVisibility(
                 visible = tab == ConnectTab.CODE,
-                enter = fadeIn(shooSnappy(0.3)),
-                exit = fadeOut(shooSnappy(0.3)),
+                enter = if (tabAnimates) {
+                    fadeIn(shooSnappy(0.3)) + expandVertically(shooSnappy(0.3), Alignment.Top, clip = false)
+                } else {
+                    EnterTransition.None
+                },
+                exit = if (tabAnimates) {
+                    fadeOut(shooSnappy(0.3)) + shrinkVertically(shooSnappy(0.3), Alignment.Top, clip = false)
+                } else {
+                    ExitTransition.None
+                },
             ) {
                 val kind = when {
                     problem == ConnectModel.Problem.FULL && onBack != null -> 1
@@ -324,7 +369,10 @@ private fun ConnectForm(model: ConnectModel, onBack: (() -> Unit)?, onSkip: (() 
                 }
                 AnimatedContent(
                     targetState = kind,
-                    transitionSpec = { fadeIn(shooEaseInOut(0.2)) togetherWith fadeOut(shooEaseInOut(0.2)) },
+                    transitionSpec = {
+                        fadeIn(shooEaseInOut(0.2)) togetherWith fadeOut(shooEaseInOut(0.2)) using
+                            SizeTransform(clip = false) { _, _ -> shooEaseInOut<IntSize>(0.2) }
+                    },
                     label = "connectFooter",
                 ) { shownKind ->
                     when (shownKind) {
@@ -516,21 +564,14 @@ private fun WaitButton(model: ConnectModel) {
     val seconds = model.secondsToWait(now) ?: 0
     OnboardingCapsuleButton(onClick = {}, enabled = false, identifier = "connect.wait") {
         val style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum")
-        AnimatedContent(
-            targetState = seconds,
-            transitionSpec = {
-                if (reduceMotion) {
-                    fadeIn(shooEaseOut(0.2)) togetherWith fadeOut(shooEaseOut(0.2))
-                } else {
-                    // `.numericText(countsDown: true)`: the new value comes down from above.
-                    (slideInVertically(shooSnappy(0.3)) { -it / 2 } + fadeIn(shooSnappy(0.3))) togetherWith
-                        (slideOutVertically(shooSnappy(0.3)) { it / 2 } + fadeOut(shooSnappy(0.3)))
-                }
-            },
-            label = "wait",
-        ) { value ->
-            Text(ConnectModel.waitLabel(value, language), style = style)
-        }
+        // `.contentTransition(reduceMotion ? .opacity : .numericText(countsDown: true))` under `.snappy(0.3)` in both cases.
+        NumericText(
+            ConnectModel.waitLabel(seconds, language),
+            style = style,
+            countsDown = true,
+            reduceMotion = reduceMotion,
+            reduceMotionSpec = shooSnappy(0.3),
+        )
     }
 }
 
@@ -549,9 +590,64 @@ private fun Modifier.shakeOnProblem(trigger: Int, isEnabled: Boolean): Modifier 
     graphicsLayer { translationX = offset.value * density }
 }
 
+/** `StateMotion.enter` for a layout size. */
+private fun stateEnterSize(reduceMotion: Boolean): FiniteAnimationSpec<IntSize> =
+    if (reduceMotion) shooEaseOut(0.2) else shooSpring(0.32, 0.18)
+
+/**
+ * `.contentTransition(.numericText(countsDown:))`: only the parts that change roll (each digit on its own, runs of
+ * other characters as a whole), the new one up from below, or down from above when counting down, with a fade.
+ * Reduce Motion: the whole text cross-fades with `reduceMotionSpec`.
+ * iOS: the system effect also blurs the rolling glyphs; here they only slide and fade.
+ */
+@Composable
+internal fun NumericText(
+    text: String,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    countsDown: Boolean = false,
+    reduceMotion: Boolean,
+    rollDuration: Double = 0.3,
+    rollBounce: Double = 0.15,
+    reduceMotionSpec: FiniteAnimationSpec<Float> = shooSnappy(0.3),
+) {
+    val semanticsModifier = modifier.clearAndSetSemantics { this.text = AnnotatedString(text) }
+    if (reduceMotion) {
+        AnimatedContent(
+            targetState = text,
+            transitionSpec = { fadeIn(reduceMotionSpec) togetherWith fadeOut(reduceMotionSpec) using SizeTransform(clip = false) },
+            modifier = semanticsModifier,
+            label = "numericFade",
+        ) { shown -> Text(shown, style = style, color = color, maxLines = 1, softWrap = false) }
+        return
+    }
+    val parts = remember(text) { NUMERIC_PARTS.findAll(text).map { it.value }.toList() }
+    Row(semanticsModifier) {
+        parts.forEachIndexed { index, part ->
+            key(index) {
+                AnimatedContent(
+                    targetState = part,
+                    transitionSpec = {
+                        val sign = if (countsDown) -1 else 1
+                        (slideInVertically(shooSpring(rollDuration, rollBounce)) { sign * it / 2 } +
+                            fadeIn(shooSpring(rollDuration, rollBounce))) togetherWith
+                            (slideOutVertically(shooSpring(rollDuration, rollBounce)) { -sign * it / 2 } +
+                                fadeOut(shooSpring(rollDuration, rollBounce))) using
+                            SizeTransform(clip = false) { _, _ -> shooSpring<IntSize>(rollDuration, rollBounce) }
+                    },
+                    label = "numericPart",
+                ) { shown -> Text(shown, style = style, color = color, maxLines = 1, softWrap = false) }
+            }
+        }
+    }
+}
+
+private val NUMERIC_PARTS = Regex("\\d|\\D+")
+
 /** "Kode | Pindai QR": capsule track with a white thumb that slides (Figma "Segmented Control"). */
 @Composable
-private fun ConnectTabs(tab: ConnectTab, onTabChange: (ConnectTab) -> Unit, modifier: Modifier = Modifier) {
+private fun ConnectTabs(tab: ConnectTab, animates: Boolean, onTabChange: (ConnectTab) -> Unit, modifier: Modifier = Modifier) {
     val tabs = listOf(ConnectTab.CODE to "Code", ConnectTab.SCAN to "Scan QR")
     val ids = mapOf(ConnectTab.CODE to "connect.tab.code", ConnectTab.SCAN to "connect.tab.scan")
     BoxWithConstraints(
@@ -564,7 +660,12 @@ private fun ConnectTabs(tab: ConnectTab, onTabChange: (ConnectTab) -> Unit, modi
         val gap = 4.dp
         val segment = (maxWidth - gap) / 2
         val index = tabs.indexOfFirst { it.first == tab }
-        val thumbX by animateDpAsState(if (index == 0) 0.dp else segment + gap, shooSnappy(0.3), label = "connectThumb")
+        // `matchedGeometryEffect` under `.snappy(0.3)`; a scanned code moves it at once.
+        val thumbX by animateDpAsState(
+            if (index == 0) 0.dp else segment + gap,
+            if (animates) shooSnappy<Dp>(0.3) else snap<Dp>(),
+            label = "connectThumb",
+        )
         val card = OnboardingTheme.card
         Box(Modifier.matchParentSize()) {
             Box(
@@ -740,13 +841,11 @@ private fun CodeField(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             val digits = code.toList()
+            // `.animation(.easeOut(0.2), value: isWrong)`: only the red ring fades; the focus ring moves at once.
+            val wrong by animateFloatAsState(if (isWrong) 1f else 0f, shooEaseOut(0.2), label = "codeWrong")
             for (index in 0 until ConnectModel.codeLength) {
                 val isActive = focused && index == min(digits.size, ConnectModel.codeLength - 1)
-                val stroke by animateColorAsState(
-                    if (isWrong) ConnectProblemColors.errorInk else ink.copy(alpha = if (isActive) 1f else 0.1f),
-                    shooEaseOut(0.2),
-                    label = "codeBox",
-                )
+                val stroke = lerp(ink.copy(alpha = if (isActive) 1f else 0.1f), ConnectProblemColors.errorInk, wrong)
                 Box(
                     Modifier
                         .weight(1f)

@@ -4,7 +4,13 @@ import android.app.Activity
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import android.view.View
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -31,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,14 +56,17 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.shoo.app.app.LocalAppEnvironment
 import com.shoo.app.components.LocalIsDarkTheme
 import com.shoo.app.components.SfSymbol
+import com.shoo.app.components.StateMotion
 import com.shoo.app.components.hex
 import com.shoo.app.components.shooEaseOut
+import com.shoo.app.components.shooSpring
 import kotlinx.coroutines.launch
 
 // Android stand-ins for the SwiftUI pieces the Shield screens share: scenePhase, `.onChange`, `.privacyCover()`,
@@ -89,6 +99,56 @@ internal fun <T> ShieldOnChange(value: T, action: (old: T, new: T) -> Unit) {
         if (old != value) current(old, value)
     }
 }
+
+/**
+ * True only in the composition where `key` changed. SwiftUI's `.animation(_, value: key)` animates just the update
+ * that changed `key`; specs picked with this are read by Compose when their target changes, in that same pass.
+ */
+@Composable
+internal fun <T> changedNow(key: T): Boolean {
+    val last = remember { arrayOf<Any?>(key) }
+    val changed = last[0] != key
+    SideEffect { last[0] = key }
+    return changed
+}
+
+/**
+ * A number that follows `target`: eased with `spec` when one is given (the change is part of an animated SwiftUI
+ * update), at once otherwise.
+ */
+@Composable
+internal fun animatedOrSnapped(target: Float, spec: FiniteAnimationSpec<Float>?): Float {
+    val value = remember { Animatable(target) }
+    LaunchedEffect(target) {
+        if (spec != null) value.animateTo(target, spec) else value.snapTo(target)
+    }
+    return if (spec == null && !value.isRunning) target else value.value
+}
+
+/**
+ * A state notice (refresh failed) inserted with an animation that also covers the page around it (Guardian Home's
+ * `.animation(StateMotion.enter, value: refreshFailed)` on the whole page): the rows under it glide down instead of
+ * jumping, so the slot's height follows, unclipped, while the notice itself rises and fades (`StateMotion`).
+ */
+internal fun stateNoticeEnter(reduceMotion: Boolean): EnterTransition =
+    StateMotion.enterTransition(reduceMotion, fromBottom = false) +
+        expandVertically(stateSizeSpec(reduceMotion), expandFrom = Alignment.Top, clip = false)
+
+internal fun stateNoticeExit(reduceMotion: Boolean): ExitTransition =
+    StateMotion.exitTransition(reduceMotion, toBottom = false) +
+        shrinkVertically(stateSizeSpec(reduceMotion), shrinkTowards = Alignment.Top, clip = false)
+
+/** `StateMotion.enter` for sizes. */
+internal fun stateSizeSpec(reduceMotion: Boolean): FiniteAnimationSpec<IntSize> =
+    if (reduceMotion) shooEaseOut<IntSize>(0.2) else shooSpring<IntSize>(0.32, 0.18)
+
+/**
+ * A card closed inside `withAnimation(.easeOut(duration: 0.2))` with `.transition(.opacity)`: it fades where it is
+ * while what follows moves up.
+ */
+internal val dismissExit: ExitTransition =
+    androidx.compose.animation.fadeOut(shooEaseOut(0.2)) +
+        shrinkVertically(shooEaseOut(0.2), shrinkTowards = Alignment.Top, clip = false)
 
 /** `.sensoryFeedback(.success / .error / .warning)`. */
 internal enum class ShieldHaptic { SUCCESS, ERROR, WARNING }

@@ -3,21 +3,22 @@ package com.shoo.app.app
 import android.app.Activity
 import android.provider.Settings
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.EaseOut
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.shoo.app.components.LocalIsDarkTheme
 import com.shoo.app.components.ShooAppearance
+import com.shoo.app.components.shooEaseOut
 import com.shoo.app.features.main.MainTabView
 import com.shoo.app.features.main.SessionExpiredView
 import com.shoo.app.features.onboarding.DataConsentView
@@ -66,6 +67,12 @@ fun RootView(env: AppEnvironment) {
             language = settings.language,
         ) {
             SystemBarsFollowTheme()
+            // Fades in under the splash's own `.easeOut` fade-out (`LaunchSplash.play()`), so the two cross-fade.
+            val contentAlpha by animateFloatAsState(
+                if (env.launchSplash == LaunchSplashPhase.SHOWING) 0f else 1f,
+                shooEaseOut(if (reducesMotion) 0.2 else 0.3),
+                label = "launchContent",
+            )
             Box(Modifier.fillMaxSize()) {
                 // A cross-fade instead of a hard cut between top-level screens. At launch the phase doesn't change, so
                 // the splash's own fade below is the only one. ON-01: the screen is built and routed under the launch
@@ -74,8 +81,8 @@ fun RootView(env: AppEnvironment) {
                     targetState = phase,
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(if (env.launchSplash == LaunchSplashPhase.SHOWING) 0f else 1f),
-                    animationSpec = tween(durationMillis = if (reducesMotion) 200 else 300, easing = EaseOut),
+                        .graphicsLayer { alpha = contentAlpha },
+                    animationSpec = shooEaseOut(if (reducesMotion) 0.2 else 0.3),
                     label = "RootPhase",
                 ) { shown ->
                     when (shown) {

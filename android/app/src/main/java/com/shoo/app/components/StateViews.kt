@@ -285,8 +285,8 @@ fun StateNoticeCard(
                     color = StateNoticeColors.actionInk,
                     modifier = Modifier.graphicsLayer { alpha = textAlpha },
                 )
-                if (isRunning) {
-                    // `ProgressView().controlSize(.small)`.
+                // `ProgressView().controlSize(.small)`, faded in and out under the same `.easeOut(0.15)`.
+                androidx.compose.animation.AnimatedVisibility(isRunning, enter = fadeIn(shooEaseOut(0.15)), exit = fadeOut(shooEaseOut(0.15))) {
                     CircularProgressIndicator(
                         color = StateNoticeColors.actionInk,
                         strokeWidth = 2.dp,

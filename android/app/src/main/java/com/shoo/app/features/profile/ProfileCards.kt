@@ -1,6 +1,9 @@
 package com.shoo.app.features.profile
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -577,7 +580,8 @@ fun ProfileLoadFailed(
                 color = ProfileStyle.link,
                 modifier = Modifier.graphicsLayer { alpha = labelAlpha },
             )
-            if (isRetrying) {
+            // The spinner fades in and out under the same `.easeOut(0.15)`.
+            androidx.compose.animation.AnimatedVisibility(isRetrying, enter = fadeIn(shooEaseOut(0.15)), exit = fadeOut(shooEaseOut(0.15))) {
                 CircularProgressIndicator(Modifier.size(16.dp), color = ProfileStyle.link, strokeWidth = 2.dp)
             }
         }

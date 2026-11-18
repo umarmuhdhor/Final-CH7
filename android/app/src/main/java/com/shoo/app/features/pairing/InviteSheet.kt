@@ -7,12 +7,11 @@ import android.net.Uri
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -67,6 +66,7 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.shoo.app.components.CapsuleShape
 import com.shoo.app.components.FigmaFont
@@ -193,7 +193,10 @@ private fun InviteSheetContent(repository: ShooRepository, modifier: Modifier, d
         // Figma "App Icon Row": 18 above the icons; the names end 80 pt above the screen bottom.
         AnimatedContent(
             targetState = model.codeState.kind,
-            transitionSpec = { fadeIn(shooEaseInOut(0.25)) togetherWith fadeOut(shooEaseInOut(0.25)) },
+            transitionSpec = {
+                fadeIn(shooEaseInOut(0.25)) togetherWith fadeOut(shooEaseInOut(0.25)) using
+                    SizeTransform(clip = false) { _, _ -> shooEaseInOut<IntSize>(0.25) }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .background(background)
@@ -371,37 +374,30 @@ private fun CodeContent(model: FamilyCodeModel, showsCopiedNote: Boolean, reduce
             ) {
                 // "Refresh code": the digits roll to the new code (a cross-fade with Reduce Motion). Only the code; the
                 // "Valid for" countdown under it ticks every second and stays still.
-                AnimatedContent(
-                    targetState = code.code,
-                    transitionSpec = {
-                        if (reduceMotion) {
-                            fadeIn(shooEaseInOut(0.2)) togetherWith fadeOut(shooEaseInOut(0.2))
-                        } else {
-                            (slideInVertically(shooSnappy(0.3)) { it / 2 } + fadeIn(shooSnappy(0.3))) togetherWith
-                                (slideOutVertically(shooSnappy(0.3)) { -it / 2 } + fadeOut(shooSnappy(0.3)))
-                        }
-                    },
-                    label = "inviteCode",
-                ) { shown ->
+                // `.numericText()` under `.snappy(0.3)`; Reduce Motion: a cross-fade under `.easeInOut(0.2)`.
+                NumericText(
+                    FamilyCodeModel.display(code.code),
                     // Figma "SF Pro Text Bold 20", -2 %.
-                    Text(
-                        FamilyCodeModel.display(shown),
-                        style = onboardingFont(20f, FontWeight.Bold, tracking = -0.4f, family = FigmaFont.Family.TEXT)
-                            .copy(fontFeatureSettings = "tnum"),
-                        color = OnboardingTheme.ink,
-                    )
-                }
+                    style = onboardingFont(20f, FontWeight.Bold, tracking = -0.4f, family = FigmaFont.Family.TEXT)
+                        .copy(fontFeatureSettings = "tnum"),
+                    color = OnboardingTheme.ink,
+                    reduceMotion = reduceMotion,
+                    reduceMotionSpec = shooEaseInOut(0.2),
+                )
             }
             AnimatedContent(
                 targetState = showsCopiedNote,
                 transitionSpec = {
+                    // In: `withAnimation(StateMotion.enter)`, out: `withAnimation(.easeOut(0.25))`, for both views and the size.
                     if (targetState) {
                         val spec = if (reduceMotion) shooEaseOut<Float>(0.2) else shooSpring<Float>(0.32, 0.18)
                         (if (reduceMotion) fadeIn(spec) else fadeIn(spec) + scaleIn(spec, initialScale = 0.92f)) togetherWith
-                            fadeOut(shooEaseOut(0.25))
+                            fadeOut(spec) using
+                            SizeTransform(clip = false) { _, _ -> if (reduceMotion) shooEaseOut<IntSize>(0.2) else shooSpring<IntSize>(0.32, 0.18) }
                     } else {
                         fadeIn(shooEaseOut(0.25)) togetherWith
-                            (if (reduceMotion) fadeOut(shooEaseOut(0.25)) else fadeOut(shooEaseOut(0.25)) + scaleOut(shooEaseOut(0.25), targetScale = 0.92f))
+                            (if (reduceMotion) fadeOut(shooEaseOut(0.25)) else fadeOut(shooEaseOut(0.25)) + scaleOut(shooEaseOut(0.25), targetScale = 0.92f)) using
+                            SizeTransform(clip = false) { _, _ -> shooEaseOut<IntSize>(0.25) }
                     }
                 },
                 contentAlignment = Alignment.Center,

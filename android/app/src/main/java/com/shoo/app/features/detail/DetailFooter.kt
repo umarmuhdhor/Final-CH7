@@ -3,13 +3,22 @@ package com.shoo.app.features.detail
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import android.view.View
+import android.os.SystemClock
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -163,9 +172,23 @@ fun DetailFooter(
 
     // The navigation bar's inset, read from the window, never from this footer's own place (iOS QA 2026-11-10 #1).
     val navigationInset = with(density) { WindowInsets.navigationBars.getBottom(density).toDp() }
-    // Safe / Danger saved: the buttons hand over to the verified card and its note with a short ease.
-    val sizeSpec: FiniteAnimationSpec<androidx.compose.ui.unit.IntSize> =
-        if (reduceMotion) shooEaseInOut(0.2) else shooSnappy(0.25)
+    // Safe / Danger saved: the buttons hand over to the verified card and its note with a short ease. Keyed on the
+    // verdict only, like iOS `.animation(_, value: verdict?.value)`: "Ubah" swaps at once. The window covers the
+    // frame after, where the LaunchedEffect above closes "Ubah" (iOS: the same transaction).
+    val verdictValue = verdict?.value
+    val lastValue = remember { arrayOf(verdictValue) }
+    val animateUntil = remember { longArrayOf(0L) }
+    if (lastValue[0] != verdictValue) {
+        lastValue[0] = verdictValue
+        animateUntil[0] = SystemClock.uptimeMillis() + 400
+    }
+    val animates = SystemClock.uptimeMillis() < animateUntil[0]
+    // What the outgoing face still draws while it fades.
+    val lastShown = remember { arrayOf(shownVerdict) }
+    if (shownVerdict != null) lastShown[0] = shownVerdict
+    val lastFailure = remember { arrayOf(failure) }
+    if (failure != null) lastFailure[0] = failure
+    val face: Any? = if (showsButtons) "buttons" else shownVerdict?.value
 
     Column(
         modifier
@@ -180,69 +203,101 @@ fun DetailFooter(
                 )
                 drawRect(DetailStyle.footer, topLeft = Offset(0f, fade), size = Size(size.width, size.height - fade))
             }
-            .animateContentSize(sizeSpec)
             .padding(horizontal = 24.dp)
             .padding(top = DetailFooter.topPadding.dp, bottom = max(0.dp, 34.dp - navigationInset)),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (showsButtons) {
-            Text(
-                t(if (isBlocked) "Is this site dangerous?" else "Is this site really a scam?"),
-                // Figma "Pertanyaan": SF Pro Rounded 17, 140 %.
-                style = figmaTextStyle(17f, rounded = true, lineHeight = 23.8f),
-                color = DetailStyle.secondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .tagged("detail.verdictQuestion"),
-            )
-            VerdictButtons(verdict, onDecide)
-        } else if (shownVerdict != null) {
-            VerifiedCard(
-                verdict = shownVerdict,
-                viewerDeviceId = viewerDeviceId,
-                // Either verdict can be changed (R4: Safe ⇄ NotSafe, an upsert), so a mis-tapped Danger can be undone.
-                // An "Aman" waits for the weekly AI review (VerdictLock); "Bahaya" can always change.
-                canChange = canValidate && lockedUntil == null,
-                onChange = { setChanging(true) },
-            )
-            // #369: "Aman" vouches for this link on both phones: no block, card or sheet while it stands.
-            AnimatedVisibility(
-                visible = shownVerdict.value == Verdict.Value.SAFE && ownerName != null,
-                enter = if (reduceMotion) fadeIn() else fadeIn() + slideInVertically { with(density) { 4.dp.roundToPx() } },
-                exit = fadeOut(),
-            ) {
-                Text(
-                    t("Shoo no longer blocks or warns %@ on this link.", ownerName ?: ""),
-                    // Figma: centred, 140 % line height.
-                    style = figmaTextStyle(13f, rounded = true, lineHeight = 18.2f),
-                    color = DetailStyle.secondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            if (canValidate && lockedUntil != null) {
-                val day = Formatters.dateFormatter("EEEEdMMMM", language, ZoneId.systemDefault()).format(Date.from(lockedUntil))
-                FooterLabel(
-                    text = t("You can change this after Shoo's weekly review, %@.", day),
-                    symbol = "lock.fill",
-                    style = figmaTextStyle(13f, rounded = true),
-                    color = DetailStyle.secondary,
-                    modifier = Modifier.tagged("detail.verdictLocked"),
-                )
+        AnimatedContent(
+            targetState = face,
+            transitionSpec = {
+                if (animates) {
+                    fadeIn(verdictSpec(reduceMotion)) togetherWith fadeOut(verdictSpec(reduceMotion)) using
+                        SizeTransform(clip = false) { _, _ -> verdictSpec(reduceMotion) }
+                } else {
+                    EnterTransition.None togetherWith ExitTransition.None using SizeTransform(clip = false) { _, _ -> snap() }
+                }
+            },
+            label = "verdictFace",
+        ) { target ->
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (target == "buttons") {
+                    Text(
+                        t(if (isBlocked) "Is this site dangerous?" else "Is this site really a scam?"),
+                        // Figma "Pertanyaan": SF Pro Rounded 17, 140 %.
+                        style = figmaTextStyle(17f, rounded = true, lineHeight = 23.8f),
+                        color = DetailStyle.secondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .tagged("detail.verdictQuestion"),
+                    )
+                    VerdictButtons(verdict, onDecide)
+                } else if (target != null) {
+                    val card = shownVerdict ?: lastShown[0]
+                    if (card != null) {
+                        VerifiedCard(
+                            verdict = card,
+                            viewerDeviceId = viewerDeviceId,
+                            // Either verdict can be changed (R4: Safe ⇄ NotSafe, an upsert), so a mis-tapped Danger can be
+                            // undone. An "Aman" waits for the weekly AI review (VerdictLock); "Bahaya" can always change.
+                            canChange = canValidate && lockedUntil == null,
+                            onChange = { setChanging(true) },
+                        )
+                        // #369: "Aman" vouches for this link on both phones: no block, card or sheet while it stands.
+                        if (card.value == Verdict.Value.SAFE && ownerName != null) {
+                            Text(
+                                t("Shoo no longer blocks or warns %@ on this link.", ownerName),
+                                // Figma: centred, 140 % line height.
+                                style = figmaTextStyle(13f, rounded = true, lineHeight = 18.2f),
+                                color = DetailStyle.secondary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    // iOS `.opacity.combined(with: .offset(y: 4))`: the face's fade plus a 4 pt rise.
+                                    .animateEnterExit(
+                                        enter = if (reduceMotion || !animates) EnterTransition.None
+                                        else slideInVertically(verdictSpec(false)) { with(density) { 4.dp.roundToPx() } },
+                                        exit = if (reduceMotion || !animates) ExitTransition.None
+                                        else slideOutVertically(verdictSpec(false)) { with(density) { 4.dp.roundToPx() } },
+                                    ),
+                            )
+                        }
+                        if (canValidate && lockedUntil != null) {
+                            val day = Formatters.dateFormatter("EEEEdMMMM", language, ZoneId.systemDefault()).format(Date.from(lockedUntil))
+                            FooterLabel(
+                                text = t("You can change this after Shoo's weekly review, %@.", day),
+                                symbol = "lock.fill",
+                                style = figmaTextStyle(13f, rounded = true),
+                                color = DetailStyle.secondary,
+                                modifier = Modifier.tagged("detail.verdictLocked"),
+                            )
+                        }
+                    }
+                }
             }
         }
-        if (failure != null) {
-            FooterLabel(
-                text = t(DetailFooter.message(failure)),
-                symbol = "exclamationmark.triangle.fill",
-                style = activityFont(13f),
-                color = DetailStyle.title,
-                modifier = Modifier.tagged("detail.verdictError"),
-            )
+        AnimatedVisibility(
+            visible = failure != null,
+            enter = if (animates) fadeIn(verdictSpec(reduceMotion)) + expandVertically(verdictSpec(reduceMotion)) else EnterTransition.None,
+            exit = if (animates) fadeOut(verdictSpec(reduceMotion)) + shrinkVertically(verdictSpec(reduceMotion)) else ExitTransition.None,
+        ) {
+            val shown = failure ?: lastFailure[0]
+            if (shown != null) {
+                FooterLabel(
+                    text = t(DetailFooter.message(shown)),
+                    symbol = "exclamationmark.triangle.fill",
+                    style = activityFont(13f),
+                    color = DetailStyle.title,
+                    modifier = Modifier.tagged("detail.verdictError"),
+                )
+            }
         }
     }
 }
+
+/** The verdict hand-over: iOS `reduceMotion ? .easeInOut(duration: 0.2) : .snappy(duration: 0.25)`. */
+private fun <T> verdictSpec(reduceMotion: Boolean): FiniteAnimationSpec<T> =
+    if (reduceMotion) shooEaseInOut(0.2) else shooSnappy(0.25)
 
 /** SwiftUI `Label` centred under the card: the symbol, then the text. */
 @Composable

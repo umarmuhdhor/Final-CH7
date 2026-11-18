@@ -2,6 +2,7 @@ package com.shoo.app.features.shield
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.StartOffsetType
@@ -9,8 +10,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,6 +48,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,6 +65,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.Path
@@ -110,6 +115,7 @@ import com.shoo.app.components.dynamicColor
 import com.shoo.app.components.figmaCardShadow
 import com.shoo.app.components.hex
 import com.shoo.app.components.shooEaseOut
+import com.shoo.app.components.shooSpringResponse
 import com.shoo.app.components.shooShadow
 import com.shoo.app.components.textScale
 import com.shoo.app.data.ScanResult
@@ -121,7 +127,6 @@ import com.shoo.app.features.onboarding.onboardingFont
 import com.shoo.app.support.AppLanguage
 import com.shoo.app.support.Formatters
 import com.shoo.app.support.t
-import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
 
@@ -293,9 +298,20 @@ fun HomeHero(
     layout: HomeHeroLayout = HomeHeroLayout.personal,
     /** null: `layout.bottomGap`. */
     bottomPadding: Dp? = null,
+    /**
+     * The spec of an animated update (iOS: the caller's `.animation(_, value:)` fired): the headline cross-fades,
+     * the shield fades between on and off and eases to its new place. null: the change jumps, as on iOS outside an
+     * animated update.
+     */
+    animation: FiniteAnimationSpec<Float>? = null,
     accessory: @Composable ColumnScope.() -> Unit = {},
 ) {
     val ringCenter = HomeHeroLayout.ringCenter
+    val shieldScale = animatedOrSnapped(layout.shieldScale, animation)
+    val shieldTop = animatedOrSnapped(layout.shieldTop, animation)
+    val titleTop = animatedOrSnapped(layout.titleTop, animation)
+    val bottom = animatedOrSnapped((bottomPadding ?: (layout.bottomGap - 0.6f).dp).value, animation)
+    val rings = animatedOrSnapped(if (layout.showsRings) 1f else 0f, animation)
     Box(modifier.fillMaxWidth()) {
         // Reaches up under the status bar and the overscroll, and down under the strip.
         val backdrop = layout.backdrop
@@ -316,7 +332,7 @@ fun HomeHero(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .swiftPadding(bottom = bottomPadding ?: (layout.bottomGap - 0.6f).dp),
+                .swiftPadding(bottom = bottom.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
@@ -326,31 +342,47 @@ fun HomeHero(
                     .height(236.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                if (layout.showsRings) HeroPulse()
-                HalftoneShield(
-                    modifier = Modifier
-                        .offset(y = (layout.shieldTop - (ringCenter - HomeHeroLayout.kacaRise * layout.shieldScale)).dp)
-                        .graphicsLayer {
-                            scaleX = layout.shieldScale
-                            scaleY = layout.shieldScale
+                if (rings > 0f) {
+                    HeroPulse(
+                        Modifier.graphicsLayer {
+                            alpha = rings
+                            compositingStrategy = CompositingStrategy.ModulateAlpha
                         },
-                    isOn = shieldOn,
-                    tint = shieldTint,
-                )
+                    )
+                }
+                OverflowCrossfade(
+                    targetState = shieldOn to shieldTint,
+                    spec = animation,
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .offset(y = (shieldTop - (ringCenter - HomeHeroLayout.kacaRise * shieldScale)).dp)
+                        .graphicsLayer {
+                            scaleX = shieldScale
+                            scaleY = shieldScale
+                        },
+                ) { (on, tint) ->
+                    HalftoneShield(isOn = on, tint = tint)
+                }
             }
 
-            Column(
+            // A new headline in an animated update cross-fades (e.g. "You're protected!"); no effect otherwise.
+            Crossfade(
+                targetState = title to subtitle,
+                animationSpec = animation ?: snap(),
+                label = "homeHeroTitle",
                 modifier = Modifier
-                    .swiftPadding(top = (layout.titleTop - HomeHeroLayout.titleBoxShift - (ringCenter + 118f)).dp)
-                    .padding(horizontal = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // A new headline in an animated update cross-fades (e.g. "You're protected!").
-                Crossfade(targetState = title, label = "homeHeroTitle") { key ->
+                    .swiftPadding(top = (titleTop - HomeHeroLayout.titleBoxShift - (ringCenter + 118f)).dp)
+                    .padding(horizontal = 24.dp)
+                    .fillMaxWidth(),
+            ) { (headline, line) ->
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     // Figma "Title 1/Emphasized".
                     Text(
-                        text = t(key),
+                        text = t(headline),
                         style = onboardingFont(28f, weight = FontWeight.Bold, tracking = -0.56f),
                         color = titleColor,
                         textAlign = TextAlign.Center,
@@ -358,19 +390,60 @@ fun HomeHero(
                             .semantics { heading() }
                             .testTag(titleIdentifier),
                     )
-                }
-                if (subtitle != null) {
-                    // Figma "Sub" (1382:10498): SF Pro Rounded 17, 140 % lines, 4 under the headline.
-                    Text(
-                        text = t(subtitle),
-                        style = onboardingFont(17f, rounded = true, lineHeight = 23.8f),
-                        color = titleColor,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.swiftPadding(top = (-3).dp),
-                    )
+                    if (line != null) {
+                        // Figma "Sub" (1382:10498): SF Pro Rounded 17, 140 % lines, 4 under the headline.
+                        Text(
+                            text = t(line),
+                            style = onboardingFont(17f, rounded = true, lineHeight = 23.8f),
+                            color = titleColor,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.swiftPadding(top = (-3).dp),
+                        )
+                    }
                 }
             }
             accessory()
+        }
+    }
+}
+
+/**
+ * `Crossfade` that fades by scaling each draw call's alpha instead of through an offscreen layer, so what is drawn
+ * outside the bounds (the shield's glow, the rings) is not cut off mid-fade. `spec` null: the swap is instant.
+ */
+@Composable
+internal fun <T> OverflowCrossfade(
+    targetState: T,
+    spec: FiniteAnimationSpec<Float>?,
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.TopStart,
+    content: @Composable (T) -> Unit,
+) {
+    val transition = updateTransition(targetState, label = "overflowCrossfade")
+    val fade: FiniteAnimationSpec<Float> = spec ?: snap()
+    val visible = remember { mutableStateListOf(targetState) }
+    if (transition.currentState == transition.targetState &&
+        (visible.size != 1 || visible[0] != transition.targetState)
+    ) {
+        visible.removeAll { it != transition.targetState }
+    }
+    if (transition.targetState !in visible) visible.add(transition.targetState)
+    Box(modifier, contentAlignment = contentAlignment) {
+        visible.forEach { state ->
+            key(state) {
+                val alpha by transition.animateFloat(transitionSpec = { fade }, label = "overflowAlpha") {
+                    if (it == state) 1f else 0f
+                }
+                Box(
+                    Modifier.graphicsLayer {
+                        this.alpha = alpha
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
+                    },
+                    contentAlignment = contentAlignment,
+                ) {
+                    content(state)
+                }
+            }
         }
     }
 }
@@ -1015,12 +1088,7 @@ private fun RecentActivityEmptyState(modifier: Modifier = Modifier) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
 
-    // SwiftUI `.spring(response: 0.5, dampingFraction: 0.72)`.
-    val appear = if (reduceMotion) {
-        shooEaseOut<Float>(0.2)
-    } else {
-        spring<Float>(dampingRatio = 0.72f, stiffness = ((2 * PI / 0.5) * (2 * PI / 0.5)).toFloat())
-    }
+    val appear = if (reduceMotion) shooEaseOut<Float>(0.2) else shooSpringResponse<Float>(0.5, 0.72)
     val shieldScale by animateFloatAsState(if (shown || reduceMotion) 1f else 0.85f, appear, label = "emptyScale")
     val shieldAlpha by animateFloatAsState(if (shown) 1f else 0f, appear, label = "emptyAlpha")
 

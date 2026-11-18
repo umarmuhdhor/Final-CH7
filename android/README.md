@@ -34,6 +34,7 @@ Shoo app (Android)                         Firefox for Android
 - **System UI**: alerts, share sheet, permission prompts and time pickers are Android's own.
 - **Status bar**: iPhone's safe area is ~62 pt, Android's ~24 dp, so screens sit higher on the screen.
 - **"Pages checked" count** stays "—": the add-on can't write the app's storage.
+- **Motion**: every SwiftUI animation was checked against its Compose port; see [MOTION-PARITY.md](MOTION-PARITY.md) for what matches and what is approximated (sheets, navigation push, symbol effects).
 
 ## Build and run
 

@@ -1,9 +1,18 @@
 package com.shoo.app.features.detail
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +42,7 @@ import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +83,7 @@ import com.shoo.app.components.LightOnly
 import com.shoo.app.components.LocalReduceMotion
 import com.shoo.app.components.SfSymbol
 import com.shoo.app.components.hex
+import com.shoo.app.components.shooSnappy
 import com.shoo.app.features.activity.activityFont
 import com.shoo.app.support.t
 import kotlinx.coroutines.MainScope
@@ -166,6 +177,7 @@ fun SafeReasonSheet(
     modifier: Modifier = Modifier,
 ) {
     val reduceMotion = LocalReduceMotion.current
+    val density = LocalDensity.current
     val view = LocalView.current
     val haptics = LocalHapticFeedback.current
     val focusManager = LocalFocusManager.current
@@ -207,7 +219,15 @@ fun SafeReasonSheet(
         submitRequester.bringIntoView()
     }
 
+    // The scroll to "Mark Safe" uses iOS's `.snappy(duration: 0.25)`; none with Reduce Motion (`withAnimation(nil)`).
+    val bringIntoViewSpec = remember(reduceMotion) {
+        object : BringIntoViewSpec {
+            override val scrollAnimationSpec: AnimationSpec<Float> = if (reduceMotion) snap() else shooSnappy(0.25)
+        }
+    }
+
     LightOnly {
+      CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
         Box(modifier.fillMaxWidth()) {
             Column(
                 Modifier
@@ -265,10 +285,24 @@ fun SafeReasonSheet(
                         )
                     }
                 }
+                // iOS `.animation(reduceMotion ? nil : .snappy(duration: 0.25), value: failed)` with
+                // `.opacity.combined(with: .offset(y: 4))`; the sheet's height follows with the same spring.
                 AnimatedVisibility(
                     visible = failed,
-                    enter = if (reduceMotion) fadeIn() else fadeIn() + slideInVertically { 12 },
-                    exit = fadeOut(),
+                    enter = if (reduceMotion) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(shooSnappy(0.25)) +
+                            slideInVertically(shooSnappy(0.25)) { with(density) { 4.dp.roundToPx() } } +
+                            expandVertically(shooSnappy(0.25), expandFrom = Alignment.Top)
+                    },
+                    exit = if (reduceMotion) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(shooSnappy(0.25)) +
+                            slideOutVertically(shooSnappy(0.25)) { with(density) { 4.dp.roundToPx() } } +
+                            shrinkVertically(shooSnappy(0.25), shrinkTowards = Alignment.Top)
+                    },
                 ) {
                     ErrorBanner()
                 }
@@ -293,6 +327,7 @@ fun SafeReasonSheet(
                     .clearAndSetSemantics { },
             )
         }
+      }
     }
 }
 

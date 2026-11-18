@@ -7,9 +7,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -54,6 +56,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,6 +78,8 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -141,6 +146,7 @@ import com.shoo.app.support.AppLanguage
 import com.shoo.app.support.Formatters
 import com.shoo.app.support.L10n
 import com.shoo.app.support.t
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.net.URI
 import java.time.Instant
@@ -218,17 +224,19 @@ fun ActivityView(
     }
     BackHandler(enabled = isPickerOpen) { setPicker(false) }
 
-    // Loader → list: a 0.2 s cross-fade, gentle enough for Reduce Motion (`LoaderReplacementFade`).
-    val rowsAlpha = remember { Animatable(1f) }
-    val previousState = remember { arrayOf(model.state) }
-    LaunchedEffect(model.state) {
-        val was = previousState[0]
-        previousState[0] = model.state
-        if (model.state == ActivityModel.State.LOADED && was != ActivityModel.State.LOADED) {
-            rowsAlpha.snapTo(0f)
-            rowsAlpha.animateTo(1f, shooEaseOut(0.2))
-        }
+    // Loader → list: a 0.2 s cross-fade, gentle enough for Reduce Motion (`LoaderReplacementFade`). iOS runs it each
+    // time the rows appear (after the loader, the message or the empty state); a new Animatable per appearance starts
+    // at 0 in that same frame, so the rows never flash in first.
+    val rowsShown = model.state == ActivityModel.State.LOADED && model.items.isNotEmpty()
+    val rowsAppearances = remember { intArrayOf(0) }
+    val lastRowsShown = remember { booleanArrayOf(false) }
+    if (rowsShown != lastRowsShown[0]) {
+        lastRowsShown[0] = rowsShown
+        if (rowsShown) rowsAppearances[0] += 1
     }
+    val rowsAppearance = rowsAppearances[0]
+    val rowsAlpha = remember(rowsAppearance) { Animatable(0f) }
+    LaunchedEffect(rowsAppearance) { rowsAlpha.animateTo(1f, shooEaseOut(0.2)) }
 
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -320,10 +328,14 @@ fun ActivityView(
                     else -> {
                         val rowsLayer = Modifier.graphicsLayer { alpha = rowsAlpha.value }
                         item(key = "refreshFailed") {
+                            // The rows below move down / up with the banner (iOS `.animation(StateMotion.enter, value:)`
+                            // on the whole list), so the item's height follows the same curve.
                             AnimatedVisibility(
                                 visible = model.refreshFailed,
-                                enter = StateMotion.enterTransition(reduceMotion, fromBottom = false),
-                                exit = StateMotion.exitTransition(reduceMotion, toBottom = false),
+                                enter = StateMotion.enterTransition(reduceMotion, fromBottom = false) +
+                                    expandVertically(stateSizeSpec(reduceMotion), expandFrom = Alignment.Top, clip = false),
+                                exit = StateMotion.exitTransition(reduceMotion, toBottom = false) +
+                                    shrinkVertically(stateSizeSpec(reduceMotion), shrinkTowards = Alignment.Top, clip = false),
                             ) {
                                 RefreshFailedNotice(
                                     modifier = Modifier
@@ -570,6 +582,12 @@ fun ActivitySegments(
     val titles = filters.map { t(it.title(family)) }
     val filterLabel = t("Filter")
     val density = LocalDensity.current
+    // Set by a tap on another segment; the thumb's next move uses the spring.
+    val tapped = remember { booleanArrayOf(false) }
+    val tap: (ActivityFilter) -> Unit = { filter ->
+        if (filter != selection) tapped[0] = true
+        select(filter)
+    }
 
     BoxWithConstraints(
         modifier
@@ -595,9 +613,7 @@ fun ActivitySegments(
             val selectedIndex = filters.indexOf(selection)
             var x = 0.dp
             val xs = widths.map { w -> x.also { x += w + gap } }
-            val spec = if (reduceMotion) snap<Dp>() else shooSpring<Dp>(0.3, 0.1)
-            val thumbX by animateDpAsState(xs[selectedIndex], spec, label = "thumbX")
-            val thumbWidth by animateDpAsState(widths[selectedIndex], spec, label = "thumbWidth")
+            val thumb = rememberSegmentThumb(xs[selectedIndex], widths[selectedIndex], tapped, reduceMotion)
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -607,8 +623,8 @@ fun ActivitySegments(
                 Box(Modifier.matchParentSize()) {
                     Box(
                         Modifier
-                            .offset(x = thumbX)
-                            .width(thumbWidth)
+                            .offset { IntOffset(thumb.offset.value.roundToPx(), 0) }
+                            .width(thumb.length.value)
                             .fillMaxHeight()
                             .shooShadow(Color.Black.copy(alpha = 0.06f), radius = 10.dp, y = 2.dp, shape = CapsuleShape)
                             .background(Color.White, CapsuleShape),
@@ -622,37 +638,103 @@ fun ActivitySegments(
                             isSelected = filter == selection,
                             identifier = "filter.${filter.rawValue}",
                             modifier = Modifier.width(widths[index]),
-                        ) { select(filter) }
+                        ) { tap(filter) }
                     }
                 }
             }
         } else {
             // One segment per line, each on its own track (one capsule around three lines would round off the ends).
-            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                filters.forEachIndexed { index, filter ->
-                    val isSelected = filter == selection
-                    Box(Modifier.fillMaxWidth().background(ActivityStyle.segmentTrack, CapsuleShape)) {
-                        if (isSelected) {
-                            Box(
-                                Modifier
-                                    .matchParentSize()
-                                    .shooShadow(Color.Black.copy(alpha = 0.06f), radius = 10.dp, y = 2.dp, shape = CapsuleShape)
-                                    .background(Color.White, CapsuleShape),
-                            )
+            // The tracks, the thumb and the words are three layers so the thumb slides between lines like iOS's
+            // matchedGeometryEffect.
+            val tops = remember { mutableStateListOf(*Array(filters.size) { 0.dp }) }
+            val heights = remember { mutableStateListOf(*Array(filters.size) { 0.dp }) }
+            val selectedIndex = filters.indexOf(selection)
+            val thumb = rememberSegmentThumb(tops[selectedIndex], heights[selectedIndex], tapped, reduceMotion)
+            // Until the lines are measured (the first frame) each line draws its own track and thumb.
+            val measured = heights.all { it > 0.dp }
+            Box(Modifier.fillMaxWidth()) {
+                if (measured) {
+                    Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
+                        filters.indices.forEach { index ->
+                            Box(Modifier.fillMaxWidth().height(heights[index]).background(ActivityStyle.segmentTrack, CapsuleShape))
+                        }
+                    }
+                    Box(
+                        Modifier
+                            .offset { IntOffset(0, thumb.offset.value.roundToPx()) }
+                            .fillMaxWidth()
+                            .height(thumb.length.value)
+                            .shooShadow(Color.Black.copy(alpha = 0.06f), radius = 10.dp, y = 2.dp, shape = CapsuleShape)
+                            .background(Color.White, CapsuleShape),
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                    filters.forEachIndexed { index, filter ->
+                        val isSelected = filter == selection
+                        val ownBackground = when {
+                            measured -> Modifier
+                            isSelected -> Modifier
+                                .background(ActivityStyle.segmentTrack, CapsuleShape)
+                                .shooShadow(Color.Black.copy(alpha = 0.06f), radius = 10.dp, y = 2.dp, shape = CapsuleShape)
+                                .background(Color.White, CapsuleShape)
+                            else -> Modifier.background(ActivityStyle.segmentTrack, CapsuleShape)
                         }
                         Segment(
                             title = titles[index],
                             style = if (isSelected) semibold else medium,
                             isSelected = isSelected,
                             identifier = "filter.${filter.rawValue}",
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { select(filter) }
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onPlaced {
+                                    with(density) {
+                                        val top = it.positionInParent().y.toDp()
+                                        val height = it.size.height.toDp()
+                                        if (tops[index] != top) tops[index] = top
+                                        if (heights[index] != height) heights[index] = height
+                                    }
+                                }
+                                .then(ownBackground),
+                        ) { tap(filter) }
                     }
                 }
             }
         }
     }
 }
+
+/** The selected segment's capsule: where it starts along the row (or down the stack) and how long it is. */
+private class SegmentThumb(offset: Dp, length: Dp) {
+    val offset = Animatable(offset, Dp.VectorConverter)
+    val length = Animatable(length, Dp.VectorConverter)
+}
+
+/**
+ * iOS: `withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.1)) { select(filter) }`. Only a tap
+ * moves the thumb with the spring; a new layout or a filter set by the model puts it in place at once.
+ */
+@Composable
+private fun rememberSegmentThumb(offset: Dp, length: Dp, tapped: BooleanArray, reduceMotion: Boolean): SegmentThumb {
+    val thumb = remember { SegmentThumb(offset, length) }
+    LaunchedEffect(offset, length) {
+        val animate = tapped[0] && !reduceMotion
+        tapped[0] = false
+        if (animate) {
+            coroutineScope {
+                launch { thumb.offset.animateTo(offset, shooSpring(0.3, 0.1)) }
+                launch { thumb.length.animateTo(length, shooSpring(0.3, 0.1)) }
+            }
+        } else {
+            thumb.offset.snapTo(offset)
+            thumb.length.snapTo(length)
+        }
+    }
+    return thumb
+}
+
+/** `StateMotion.enter` for a height: the rows under a state banner move on the banner's curve. */
+private fun <T> stateSizeSpec(reduceMotion: Boolean): FiniteAnimationSpec<T> =
+    if (reduceMotion) shooEaseOut(0.2) else shooSpring(0.32, 0.18)
 
 @Composable
 private fun Segment(

@@ -2,6 +2,7 @@ package com.shoo.app.features.onboarding
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -209,6 +210,8 @@ private fun AvatarChoice(
     val interaction = remember { MutableInteractionSource() }
     val label = t("Avatar %lld", number)
     val shows = isSelected && isMarked
+    // iOS: the pick runs in `withAnimation(.snappy(duration: 0.25))`, so the two rings cross-fade and the shadow fades.
+    val mark by animateFloatAsState(if (shows) 1f else 0f, shooSnappy(0.25), label = "avatarMark")
     Image(
         painter = painterResource(image),
         contentDescription = null,
@@ -218,12 +221,9 @@ private fun AvatarChoice(
             .sizeIn(maxWidth = 80.dp, maxHeight = 80.dp)
             .aspectRatio(1f)
             // Figma: #000 3 %, y 12, blur 6.
-            .shooShadow(Color.Black.copy(alpha = if (shows) 0.03f else 0f), radius = 3.dp, y = 12.dp, shape = CircleShape)
-            .border(
-                if (shows) 4.dp else 2.dp,
-                if (shows) OnboardingTheme.avatarSelectedStroke else OnboardingTheme.card,
-                CircleShape,
-            )
+            .shooShadow(Color.Black.copy(alpha = 0.03f * mark.coerceIn(0f, 1f)), radius = 3.dp, y = 12.dp, shape = CircleShape)
+            .border(2.dp, OnboardingTheme.card.copy(alpha = OnboardingTheme.card.alpha * (1f - mark).coerceIn(0f, 1f)), CircleShape)
+            .border(4.dp, OnboardingTheme.avatarSelectedStroke.copy(alpha = OnboardingTheme.avatarSelectedStroke.alpha * mark.coerceIn(0f, 1f)), CircleShape)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = action)
             .semantics {
                 contentDescription = label

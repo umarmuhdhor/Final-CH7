@@ -14,8 +14,10 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -79,6 +81,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -129,6 +132,7 @@ import com.shoo.app.components.figmaTextStyle
 import com.shoo.app.components.hex
 import com.shoo.app.components.readableRed
 import com.shoo.app.components.shooEaseInOut
+import com.shoo.app.components.shooEaseOut
 import com.shoo.app.components.shooShadow
 import com.shoo.app.components.shooSnappy
 import com.shoo.app.data.FamilyMember
@@ -440,7 +444,8 @@ private fun ModePage(model: ProfileModel) {
                     .semantics { testTag = "mode.joinFamily" },
             )
         }
-        AnimatedVisibility(visible = isLocked, enter = fadeIn(), exit = fadeOut()) {
+        // iOS: `.transition(.opacity)`, but only the card above carries the animation: the note appears at once.
+        if (isLocked) {
             PageNote(
                 if (isProtected) {
                     t("Only your guardian can disconnect you. Ask them first, then join another family.")
@@ -530,11 +535,12 @@ private fun ModeCard(
     val stroke by animateColorAsState(if (isSelected) ProfileStyle.link else ProfileStyle.card, selectionSpec(reduceMotion), label = "modeStroke")
     val divider by animateColorAsState(if (isSelected) ModeCardColor.selectedDivider else ProfileStyle.divider, selectionSpec(reduceMotion), label = "modeDivider")
     val check by animateColorAsState(if (isSelected) ProfileStyle.link else ProfileStyle.chevron, selectionSpec(reduceMotion), label = "modeCheck")
+    val strokeWidth by animateDpAsState(if (isSelected) 1.5.dp else 1.dp, selectionSpec(reduceMotion), label = "modeStrokeWidth")
     Column(
         modifier
             .fillMaxWidth()
             .background(fill, shape)
-            .border(if (isSelected) 1.5.dp else 1.dp, stroke, shape)
+            .border(strokeWidth, stroke, shape)
             .plainClickable(enabled = enabled, onClick = action)
             .semantics(mergeDescendants = true) { selected = isSelected }
             .padding(19.dp),
@@ -1659,7 +1665,14 @@ private fun QuietTimeRow(
                     .padding(horizontal = 11.dp, vertical = 6.dp),
             )
         }
-        AnimatedVisibility(visible = isEditing) {
+        // iOS: the compact DatePicker opens the system's wheel popover; here the picker unfolds in place.
+        // Reduce Motion: a plain fade.
+        val reduceMotion = LocalReduceMotion.current
+        AnimatedVisibility(
+            visible = isEditing,
+            enter = if (reduceMotion) fadeIn(shooEaseOut(0.2)) else fadeIn() + expandVertically(),
+            exit = if (reduceMotion) fadeOut(shooEaseOut(0.2)) else fadeOut() + shrinkVertically(),
+        ) {
             key(isEditing) {
                 val state = rememberTimePickerState(initialHour = minutes / 60, initialMinute = minutes % 60, is24Hour = true)
                 LaunchedEffect(state.hour, state.minute) { onChange(state.hour * 60 + state.minute) }
@@ -1898,6 +1911,14 @@ private fun TextSizeSlider(level: TextSizeLevel, onLevelChange: (TextSizeLevel) 
         if (reduceMotion) snap() else shooSnappy(0.2),
         label = "textSize",
     )
+    // The stop dots turn blue or grey under the same glide.
+    val dotFill = levels.map { stop ->
+        animateFloatAsState(
+            if (stop.rawValue <= level.rawValue) 1f else 0f,
+            if (reduceMotion) snap() else shooSnappy(0.2),
+            label = "textSizeDot",
+        )
+    }
     val sizeLabel = t("Text size")
     val valueLabel = t(level.title)
     val rail = ProfileStyle.sliderRail
@@ -1971,7 +1992,7 @@ private fun TextSizeSlider(level: TextSizeLevel, onLevelChange: (TextSizeLevel) 
                 )
                 levels.forEach { stop ->
                     drawCircle(
-                        if (stop.rawValue <= level.rawValue) link else chevron,
+                        lerp(chevron, link, dotFill[stop.rawValue].value),
                         radius = 4.dp.toPx(),
                         center = Offset(step * stop.rawValue, y),
                     )

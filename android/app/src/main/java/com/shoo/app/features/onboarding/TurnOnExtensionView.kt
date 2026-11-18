@@ -4,6 +4,10 @@ import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -90,6 +94,8 @@ import com.shoo.app.components.hex
 import com.shoo.app.components.scaled
 import com.shoo.app.components.sfSymbol
 import com.shoo.app.components.shooShadow
+import com.shoo.app.components.shooEaseInOut
+import com.shoo.app.components.shooSmooth
 import com.shoo.app.components.shooSnappy
 import com.shoo.app.data.ExtensionStatus
 import com.shoo.app.support.L10n
@@ -243,8 +249,8 @@ fun TurnOnExtensionView(
                 val problem = link.problem
                 AnimatedVisibility(
                     visible = code != null || problem != null,
-                    enter = if (reduceMotion) fadeIn() else fadeIn() + expandVertically(),
-                    exit = if (reduceMotion) fadeOut() else fadeOut() + shrinkVertically(),
+                    enter = noteEnter(reduceMotion),
+                    exit = noteExit(reduceMotion),
                 ) {
                     if (code != null) {
                         AddonCodeCard(code)
@@ -255,8 +261,8 @@ fun TurnOnExtensionView(
                 // The reason first, above the steps, so it is seen without scrolling (#135).
                 AnimatedVisibility(
                     visible = nextStep != null && showsStatusNote && code == null,
-                    enter = if (reduceMotion) fadeIn() else fadeIn() + expandVertically(),
-                    exit = if (reduceMotion) fadeOut() else fadeOut() + shrinkVertically(),
+                    enter = noteEnter(reduceMotion),
+                    exit = noteExit(reduceMotion),
                 ) {
                     nextStep?.let { StatusNote(t(it.message), identifier = "extension.offHint") }
                 }
@@ -309,8 +315,8 @@ fun TurnOnExtensionView(
                 // With the code on screen the main button already opens Firefox.
                 AnimatedVisibility(
                     visible = showsStatusNote && step.hasSecondAction && link.code == null,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                    enter = linkEnter(reduceMotion),
+                    exit = linkExit(reduceMotion),
                 ) {
                     OnboardingLinkButton(
                         title = if (step.opensSafariFirst) "Turn on the extension" else "Open Firefox",
@@ -330,8 +336,8 @@ fun TurnOnExtensionView(
                 }
                 AnimatedVisibility(
                     visible = onSkipCheck != null && showsStatusNote && currentStatus?.isActive == true,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                    enter = linkEnter(reduceMotion),
+                    exit = linkExit(reduceMotion),
                 ) {
                     OnboardingLinkButton(
                         title = "Continue without checking",
@@ -353,6 +359,32 @@ fun TurnOnExtensionView(
     if (isVideoPresented) TutorialVideoPlayer(onDismiss = { isVideoPresented = false })
     if (isDataSheetPresented) DataSentSheet(onDismiss = { isDataSheetPresented = false })
 }
+
+// iOS: the page animates its changes with `.smooth(duration: 0.3)` (`.easeInOut(duration: 0.2)` with Reduce Motion).
+// The note drops in from the top edge; the footer links fade. The expand stands in for SwiftUI moving the siblings.
+private fun noteEnter(reduceMotion: Boolean): EnterTransition =
+    if (reduceMotion) {
+        fadeIn(shooEaseInOut(0.2)) + expandVertically(shooEaseInOut(0.2), expandFrom = Alignment.Top)
+    } else {
+        fadeIn(shooSmooth(0.3)) + slideInVertically(shooSmooth(0.3)) { -it } +
+            expandVertically(shooSmooth(0.3), expandFrom = Alignment.Top)
+    }
+
+private fun noteExit(reduceMotion: Boolean): ExitTransition =
+    if (reduceMotion) {
+        fadeOut(shooEaseInOut(0.2)) + shrinkVertically(shooEaseInOut(0.2), shrinkTowards = Alignment.Top)
+    } else {
+        fadeOut(shooSmooth(0.3)) + slideOutVertically(shooSmooth(0.3)) { -it } +
+            shrinkVertically(shooSmooth(0.3), shrinkTowards = Alignment.Top)
+    }
+
+private fun linkEnter(reduceMotion: Boolean): EnterTransition =
+    if (reduceMotion) fadeIn(shooEaseInOut(0.2)) + expandVertically(shooEaseInOut(0.2))
+    else fadeIn(shooSmooth(0.3)) + expandVertically(shooSmooth(0.3))
+
+private fun linkExit(reduceMotion: Boolean): ExitTransition =
+    if (reduceMotion) fadeOut(shooEaseInOut(0.2)) + shrinkVertically(shooEaseInOut(0.2))
+    else fadeOut(shooSmooth(0.3)) + shrinkVertically(shooSmooth(0.3))
 
 /** The capsule's title, or a spinner in its place while the device registers. `title`: catalog key. */
 @Composable
@@ -514,8 +546,8 @@ private fun ConsentCheckbox(
                 // Pops in under the toggle's snappy spring; a plain fade with Reduce Motion.
                 androidx.compose.animation.AnimatedVisibility(
                     visible = isChecked,
-                    enter = if (reduceMotion) fadeIn() else scaleIn(shooSnappy(0.2), initialScale = 0.6f) + fadeIn(),
-                    exit = if (reduceMotion) fadeOut() else scaleOut(shooSnappy(0.2), targetScale = 0.6f) + fadeOut(),
+                    enter = if (reduceMotion) fadeIn(shooSnappy(0.2)) else scaleIn(shooSnappy(0.2), initialScale = 0.6f) + fadeIn(shooSnappy(0.2)),
+                    exit = if (reduceMotion) fadeOut(shooSnappy(0.2)) else scaleOut(shooSnappy(0.2), targetScale = 0.6f) + fadeOut(shooSnappy(0.2)),
                 ) {
                     // `.font(.system(size: box × 0.55, weight: .bold))`.
                     Icon(sfSymbol("checkmark"), contentDescription = null, tint = Color.White, modifier = Modifier.size(boxSize * 0.75f))

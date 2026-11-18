@@ -1,7 +1,6 @@
 package com.shoo.app.features.onboarding
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,8 +29,8 @@ import com.shoo.app.components.LightOnly
 import com.shoo.app.components.LocalReduceMotion
 import com.shoo.app.components.hex
 import com.shoo.app.components.shooEaseOut
+import com.shoo.app.components.shooSpringResponse
 import com.shoo.app.components.swiftDelay
-import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -109,9 +108,7 @@ private fun BrandSplash(modifier: Modifier = Modifier) {
             progress = 1f
             return@LaunchedEffect
         }
-        // `.spring(response: 0.6, dampingFraction: 0.65)`.
-        val stiffness = (2 * PI / 0.6).pow(2).toFloat()
-        launch { logoIn.animateTo(1f, spring(dampingRatio = 0.65f, stiffness = stiffness)) }
+        launch { logoIn.animateTo(1f, shooSpringResponse(0.6, 0.65)) }
         val start = withFrameNanos { it }
         while (progress < 1f) {
             val now = withFrameNanos { it }

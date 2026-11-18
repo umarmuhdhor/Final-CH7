@@ -8,11 +8,14 @@ import android.icu.util.MeasureUnit
 import android.icu.util.ULocale
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -389,8 +393,11 @@ private fun FamilySection(
     val reduceMotion = LocalReduceMotion.current
     // Members on screen when the list first showed don't fade in; later arrivals do.
     val initialIds = remember { model.members.map { it.deviceId }.toSet() }
+    val rows = remember { LeavingRows(model.members) }
+    var finished by remember { mutableIntStateOf(0) }
     // Figma: 32 pt under the profile card (416:10447, 480:5353).
-    // Someone joins or is disconnected: rows fade, the card eases to its new height. Reduce Motion: the list snaps.
+    // Someone joins or is disconnected: rows fade in and out (`.snappy(0.25)`), the card eases to its new height.
+    // Reduce Motion: the list snaps.
     ProfileSection(
         title = "People you protect",
         top = 32.dp,
@@ -408,20 +415,56 @@ private fun FamilySection(
                     .heightIn(min = 120.dp),
             )
             model.members.isEmpty() -> FamilyEmptyCard(onInvite = onInvite)
-            else -> model.members.forEachIndexed { index, member ->
-                key(member.deviceId) {
-                    val visible = remember {
-                        MutableTransitionState(member.deviceId in initialIds || reduceMotion).apply { targetState = true }
-                    }
-                    AnimatedVisibility(visibleState = visible, enter = fadeIn(shooSnappy(0.25)), exit = fadeOut()) {
-                        Column {
-                            if (index > 0) ProfileDivider(leading = 73.dp)
-                            MemberRow(member, isWorking = remindingId == member.deviceId, onRemind = onRemind)
+            else -> {
+                val display = rows.display(model.members, reduceMotion, finished)
+                display.forEachIndexed { index, (member, present) ->
+                    key(member.deviceId) {
+                        val visible = remember {
+                            MutableTransitionState(member.deviceId in initialIds || reduceMotion).apply { targetState = true }
+                        }
+                        visible.targetState = present
+                        if (!present && visible.isIdle && !visible.currentState) {
+                            LaunchedEffect(Unit) {
+                                rows.leaving.remove(member.deviceId)
+                                finished += 1
+                            }
+                        }
+                        AnimatedVisibility(
+                            visibleState = visible,
+                            enter = fadeIn(shooSnappy(0.25)),
+                            exit = fadeOut(shooSnappy(0.25)),
+                        ) {
+                            Column {
+                                if (index > 0) ProfileDivider(leading = 73.dp)
+                                MemberRow(member, isWorking = remindingId == member.deviceId, onRemind = onRemind)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * Keeps a member who left on screen until the row's fade-out ends, the way SwiftUI plays a removal transition
+ * (a plain `forEach` would drop the row at once). Plain fields: only read and written during composition.
+ */
+private class LeavingRows(var previous: List<FamilyMember>) {
+    /** deviceId → (index it had, member). */
+    val leaving = LinkedHashMap<String, Pair<Int, FamilyMember>>()
+
+    /** The members to draw, with `false` for those fading out. `finished` is read so a finished fade recomposes. */
+    fun display(members: List<FamilyMember>, reduceMotion: Boolean, @Suppress("UNUSED_PARAMETER") finished: Int): List<Pair<FamilyMember, Boolean>> {
+        val ids = members.mapTo(HashSet()) { it.deviceId }
+        if (previous != members) {
+            if (!reduceMotion) previous.forEachIndexed { i, m -> if (m.deviceId !in ids) leaving[m.deviceId] = i to m }
+            previous = members
+        }
+        ids.forEach { leaving.remove(it) }
+        val list = members.mapTo(ArrayList()) { it to true }
+        leaving.values.sortedBy { it.first }.forEach { (i, m) -> list.add(i.coerceAtMost(list.size), m to false) }
+        return list
     }
 }
 
@@ -551,7 +594,19 @@ fun RemindButton(member: FamilyMember, isWorking: Boolean, action: suspend () ->
         modifier = modifier.semantics { contentDescription = label + (hint?.let { ". $it" } ?: "") },
     ) {
         // Remind → (spinner) → Sent: a 0.2 s cross-fade, already gentle enough for Reduce Motion.
-        Crossfade(targetState = isWorking to sent, animationSpec = shooEaseInOut(0.2), label = "remind") { (working, isSent) ->
+        // iOS animates on `sent` only: the spinner swaps in and out at once.
+        AnimatedContent(
+            targetState = isWorking to sent,
+            transitionSpec = {
+                if (initialState.second != targetState.second) {
+                    fadeIn(shooEaseInOut(0.2)) togetherWith fadeOut(shooEaseInOut(0.2))
+                } else {
+                    EnterTransition.None togetherWith ExitTransition.None
+                }
+            },
+            contentAlignment = Alignment.Center,
+            label = "remind",
+        ) { (working, isSent) ->
             if (working) {
                 Box(Modifier.width(62.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = ProfileStyle.link, strokeWidth = 2.dp)

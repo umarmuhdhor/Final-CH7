@@ -1,9 +1,12 @@
 package com.shoo.app.features.pairing
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +40,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.layout.ContentScale
@@ -64,6 +69,7 @@ import com.shoo.app.components.dynamicColor
 import com.shoo.app.components.labelColor
 import com.shoo.app.components.readableRed
 import com.shoo.app.components.readableSecondary
+import com.shoo.app.components.shooEaseOut
 import com.shoo.app.components.systemTextStyle
 import com.shoo.app.components.textScale
 import com.shoo.app.data.FamilyMember
@@ -122,7 +128,7 @@ fun FamilyCodeView(repository: ShooRepository, modifier: Modifier = Modifier, on
                 Modifier
                     .align(Alignment.CenterEnd)
                     .heightIn(min = 44.dp)
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onDismiss)
+                    .systemButton(onClick = onDismiss)
                     .semantics { testTag = "familyCode.done" },
                 contentAlignment = Alignment.Center,
             ) {
@@ -196,11 +202,7 @@ fun FamilyCodeView(repository: ShooRepository, modifier: Modifier = Modifier, on
                                 Box(
                                     Modifier
                                         .heightIn(min = 44.dp)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            role = Role.Button,
-                                        ) { memberToRemove = member }
+                                        .systemButton { memberToRemove = member }
                                         .clearAndSetSemantics {
                                             contentDescription = removeLabel
                                             testTag = "familyCode.remove.${member.deviceId}"
@@ -216,11 +218,7 @@ fun FamilyCodeView(repository: ShooRepository, modifier: Modifier = Modifier, on
                 if (model.membersFailed) {
                     if (divider()) CellDivider(start = 16.dp)
                     ListCell(
-                        Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            role = Role.Button,
-                        ) { scope.launch { model.loadMembers() } },
+                        Modifier.systemButton { scope.launch { model.loadMembers() } },
                     ) {
                         Text(t("Couldn't load your family. Try again"), style = systemTextStyle(SystemTextStyle.BODY), color = SystemColors.blue)
                     }
@@ -329,7 +327,7 @@ private fun CodeSection(model: FamilyCodeModel, onCopy: () -> Unit, onRetry: () 
                         .fillMaxWidth()
                         .heightIn(min = 44.dp)
                         .background(SystemColors.blue, RoundedCornerShape(12.dp))
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onCopy)
+                        .systemButton(onClick = onCopy)
                         .semantics { testTag = "familyCode.copy" }
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
@@ -353,7 +351,7 @@ private fun CodeSection(model: FamilyCodeModel, onCopy: () -> Unit, onRetry: () 
             Box(
                 Modifier
                     .heightIn(min = 44.dp)
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onRetry)
+                    .systemButton(onClick = onRetry)
                     .semantics { testTag = "familyCode.retry" },
                 contentAlignment = Alignment.Center,
             ) {
@@ -388,4 +386,16 @@ private fun CellDivider(start: androidx.compose.ui.unit.Dp) {
         thickness = 0.5.dp,
         color = dynamicColor(0xC6C6C8, 0x38383A),
     )
+}
+
+/**
+ * A UIKit system button's highlight (`.borderless`, `.borderedProminent`, toolbar "Done"): dims at once while held, fades
+ * back on release. iOS: UIKit's exact highlight alpha and fade are not public; 0.3 and a 0.2 s ease-out are close.
+ */
+private fun Modifier.systemButton(onClick: () -> Unit): Modifier = composed {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val alpha by animateFloatAsState(if (pressed) 0.3f else 1f, if (pressed) snap<Float>() else shooEaseOut<Float>(0.2), label = "systemHighlight")
+    graphicsLayer { this.alpha = alpha }
+        .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick)
 }

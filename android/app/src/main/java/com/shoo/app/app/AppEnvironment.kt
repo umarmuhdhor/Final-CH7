@@ -638,6 +638,20 @@ class AppEnvironment(
 
             val settingsPrefs = app.getSharedPreferences(AppSettings.PREFS, Context.MODE_PRIVATE)
             if (value("-UITestReset") == "YES") AppSettings.clear(settingsPrefs)
+            // iOS UserDefaults argument domain: `-settings.mode protected`, `-settings.onboardingCompleted YES`… set a
+            // stored setting for this launch (QA screenshots, UI tests). Debug builds only (`value` is null in Release).
+            settingsPrefs.edit().apply {
+                for (key in AppSettings.Keys.all) {
+                    val raw = value("-$key") ?: continue
+                    when (raw) {
+                        "YES", "true" -> putBoolean(key, true)
+                        "NO", "false" -> putBoolean(key, false)
+                        "NIL" -> remove(key)
+                        else -> raw.toIntOrNull()?.takeIf { key == AppSettings.Keys.textSize }
+                            ?.let { putInt(key, it) } ?: putString(key, raw)
+                    }
+                }
+            }.commit()
             val backend = value("-debug.backend")
             if (backend == "local") AppConfig.usesLocalAPI = true
             val usesMockFixtures = BuildConfig.DEBUG &&
@@ -744,6 +758,7 @@ class AppEnvironment(
                     "connection" to ProfilePage.CONNECTION, "notifications" to ProfilePage.NOTIFICATIONS,
                     "language" to ProfilePage.LANGUAGE, "theme" to ProfilePage.THEME,
                     "accessibility" to ProfilePage.ACCESSIBILITY, "about" to ProfilePage.ABOUT,
+                    "licenses" to ProfilePage.LICENSES,
                 )
                 value("-debug.profilePage")?.let { pages[it] }?.let { page ->
                     environment.router.openProfile()

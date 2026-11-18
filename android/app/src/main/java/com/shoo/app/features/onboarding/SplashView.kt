@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.shoo.app.R
 import com.shoo.app.components.LightOnly
 import com.shoo.app.components.SfSymbol
+import com.shoo.app.components.shooDefault
 import com.shoo.app.support.t
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -142,7 +143,8 @@ fun SplashView(model: OnboardingModel, modifier: Modifier = Modifier) {
                             if (isLast) {
                                 model.skipSplash()
                             } else {
-                                scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
+                                // `withAnimation { page += 1 }`: SwiftUI's default animation.
+                                scope.launch { pager.animateScrollToPage(pager.currentPage + 1, animationSpec = shooDefault()) }
                             }
                         }
                         .semantics {

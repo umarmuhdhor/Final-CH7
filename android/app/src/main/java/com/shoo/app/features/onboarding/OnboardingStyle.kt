@@ -5,6 +5,8 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -217,9 +219,11 @@ fun OnboardingCapsuleButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, shooEaseOut(0.15), label = "capsuleScale")
+    // iOS animates the press only (`.animation(_, value: isPressed)`): scale and the 85 % dim together.
+    val press by animateFloatAsState(if (pressed) 1f else 0f, shooEaseOut(0.15), label = "capsulePress")
+    val scale = 1f - 0.02f * press
     // Figma disabled "Button": #DBE2E7 with #000 25 % text, the whole button at 75 %.
-    val alpha = if (enabled) (if (pressed) 0.85f else 1f) else 0.75f
+    val alpha = if (enabled) 1f - 0.15f * press else 0.75f
     val textColor = if (enabled) OnboardingTheme.onButton else OnboardingTheme.ink.copy(alpha = 0.25f)
     val disabledFill = OnboardingTheme.disabledFill
     Row(
@@ -483,72 +487,75 @@ fun OnboardingFormPage(
                 // Figma "box": 252 pt, 345 where an illustration sits on it.
                 OnboardingHeaderBackground(height = if (hero == null) 252.dp else 345.dp, image = headerImage)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            // A scrolled headline fades out under the back button instead of running through it
-                            // and the status bar. A hero sits beside the button by design, so it stays whole.
-                            if (hero == null) {
-                                Modifier
-                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent {
-                                        drawContent()
-                                        val clearEnd = statusTop + 50.dp.toPx() + if (inSheet) 16.dp.toPx() else 0f
-                                        drawRect(
-                                            Brush.verticalGradient(
-                                                0f to Color.Transparent,
-                                                (clearEnd / size.height).coerceIn(0f, 1f) to Color.Transparent,
-                                                ((clearEnd + 8.dp.toPx()) / size.height).coerceIn(0f, 1f) to Color.Black,
-                                                1f to Color.Black,
-                                            ),
-                                            blendMode = BlendMode.DstIn,
-                                        )
-                                    }
-                            } else {
-                                Modifier
-                            },
-                        )
-                        .verticalScroll(scroll)
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .sheetTopClearance(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(contentAlignment = Alignment.TopCenter) {
-                        // The hero sets its own Figma offsets (`OnboardingHeroImage(top:bottom:)`).
-                        hero?.invoke()
-                        // Room for the back button, pinned over the page.
-                        Spacer(Modifier.height(50.dp))
-                    }
-
+                // iOS: `withAnimation(.smooth) { proxy.scrollTo(target) }`.
+                CompositionLocalProvider(LocalBringIntoViewSpec provides SmoothBringIntoView) {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = inset)
-                            // Figma puts the headline at y 120 with the back button at y 40; the button stays under
-                            // the status bar here, so only 8 pt are left to keep y 120.
-                            .padding(top = if (hero == null) 8.dp else 0.dp),
-                        verticalArrangement = Arrangement.spacedBy(messageSpacing ?: if (largeHeadline) 8.dp else 4.dp),
+                            .fillMaxSize()
+                            .then(
+                                // A scrolled headline fades out under the back button instead of running through it
+                                // and the status bar. A hero sits beside the button by design, so it stays whole.
+                                if (hero == null) {
+                                    Modifier
+                                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                        .drawWithContent {
+                                            drawContent()
+                                            val clearEnd = statusTop + 50.dp.toPx() + if (inSheet) 16.dp.toPx() else 0f
+                                            drawRect(
+                                                Brush.verticalGradient(
+                                                    0f to Color.Transparent,
+                                                    (clearEnd / size.height).coerceIn(0f, 1f) to Color.Transparent,
+                                                    ((clearEnd + 8.dp.toPx()) / size.height).coerceIn(0f, 1f) to Color.Black,
+                                                    1f to Color.Black,
+                                                ),
+                                                blendMode = BlendMode.DstIn,
+                                            )
+                                        }
+                                } else {
+                                    Modifier
+                                },
+                            )
+                            .verticalScroll(scroll)
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                            .sheetTopClearance(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        if (largeHeadline) {
-                            Text(t(title), style = onboardingLargeTitleStyle(), modifier = Modifier.fillMaxWidth().semantics { heading() })
-                            if (message != null) Text(t(message), style = onboardingLargeBodyStyle(), modifier = Modifier.fillMaxWidth())
-                        } else {
-                            Text(t(title), style = onboardingTitleStyle(), modifier = Modifier.fillMaxWidth().semantics { heading() })
-                            if (message != null) {
-                                Text(t(message), style = onboardingBodyStyle(messageLineHeight), modifier = Modifier.fillMaxWidth())
+                        Box(contentAlignment = Alignment.TopCenter) {
+                            // The hero sets its own Figma offsets (`OnboardingHeroImage(top:bottom:)`).
+                            hero?.invoke()
+                            // Room for the back button, pinned over the page.
+                            Spacer(Modifier.height(50.dp))
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = inset)
+                                // Figma puts the headline at y 120 with the back button at y 40; the button stays under
+                                // the status bar here, so only 8 pt are left to keep y 120.
+                                .padding(top = if (hero == null) 8.dp else 0.dp),
+                            verticalArrangement = Arrangement.spacedBy(messageSpacing ?: if (largeHeadline) 8.dp else 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (largeHeadline) {
+                                Text(t(title), style = onboardingLargeTitleStyle(), modifier = Modifier.fillMaxWidth().semantics { heading() })
+                                if (message != null) Text(t(message), style = onboardingLargeBodyStyle(), modifier = Modifier.fillMaxWidth())
+                            } else {
+                                Text(t(title), style = onboardingTitleStyle(), modifier = Modifier.fillMaxWidth().semantics { heading() })
+                                if (message != null) {
+                                    Text(t(message), style = onboardingBodyStyle(messageLineHeight), modifier = Modifier.fillMaxWidth())
+                                }
                             }
                         }
-                    }
 
-                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), content = content)
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp), content = content)
 
-                    if (footerScrolls) {
-                        footerStack(Modifier)
-                    } else {
-                        // The footer is an overlay; this keeps the last content above it.
-                        Spacer(Modifier.height(16.dp + with(density) { footerHeightPx.toDp() }))
+                        if (footerScrolls) {
+                            footerStack(Modifier)
+                        } else {
+                            // The footer is an overlay; this keeps the last content above it.
+                            Spacer(Modifier.height(16.dp + with(density) { footerHeightPx.toDp() }))
+                        }
                     }
                 }
 
@@ -624,6 +631,11 @@ fun OnboardingErrorLabel(text: String, modifier: Modifier = Modifier, systemImag
         SfSymbol(systemImage, pointSize = 15f, tint = color)
         Text(text, style = onboardingFont(15f, rounded = true).copy(color = color, textAlign = TextAlign.Center))
     }
+}
+
+/** Scrolls a requested view into place on SwiftUI's `.smooth` spring instead of Compose's default. */
+private val SmoothBringIntoView = object : BringIntoViewSpec {
+    override val scrollAnimationSpec: AnimationSpec<Float> = shooSmooth()
 }
 
 // MARK: Success text motion

@@ -5,9 +5,11 @@ import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -177,6 +179,13 @@ fun GuardianHomeView(
     /** "Aman" on the pending card opens SafeReasonSheet for that site (its id, kept while the sheet is open). */
     var safeReasonScanId by remember { mutableStateOf<String?>(null) }
     val isFamily = model.scope == GuardianHomeModel.Scope.FAMILY
+    // Card to card, card to members, invite to family: a soft ease; a short cross-fade with Reduce Motion. Only the
+    // update that saved a verdict (`.animation(handOver, value: verdictSaves)`) or brought the family in after a
+    // join (`.animation(joinAnimates ? handOver : nil, value: hasNoFamily)`); loads and refreshes stay instant.
+    val handOver: FiniteAnimationSpec<Float> = if (reduceMotion) shooEaseInOut<Float>(0.2) else shooSmooth<Float>(0.3)
+    val savesChanged = changedNow(model.verdictSaves)
+    val familyChanged = changedNow(model.hasNoFamily)
+    val pageAnimation = if (savesChanged || (joinAnimates && familyChanged)) handOver else null
 
     fun switchSide() {
         if (isFamily) env.settings.familyModeOn = false else env.requestFamilyMode()
@@ -195,6 +204,7 @@ fun GuardianHomeView(
         model.pendingScan != null -> 7.dp
         else -> 32.dp
     }
+    val belowGapShown = animatedOrSnapped(belowGap.value, pageAnimation).dp
 
     Box(modifier) {
         ShieldHomeFrame(
@@ -213,6 +223,7 @@ fun GuardianHomeView(
         ) {
             GuardianHero(
                 model = model,
+                animation = pageAnimation,
                 onTurnOn = { env.router.isTurnOnPresented = true },
                 modifier = Modifier.onShieldHeroHidden { isHeroHidden = it },
             )
@@ -233,7 +244,7 @@ fun GuardianHomeView(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .padding(top = belowGap, bottom = 32.dp),
+                        .padding(top = belowGapShown, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     GuardianBelow(model = model, language = language)
@@ -313,7 +324,12 @@ fun GuardianHomeView(
 // MARK: Hero and status
 
 @Composable
-private fun GuardianHero(model: GuardianHomeModel, onTurnOn: () -> Unit, modifier: Modifier = Modifier) {
+private fun GuardianHero(
+    model: GuardianHomeModel,
+    animation: FiniteAnimationSpec<Float>?,
+    onTurnOn: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val isFamily = model.scope == GuardianHomeModel.Scope.FAMILY
     if (!isFamily) {
         // A-06 (fase 28a K3): until the browser has answered, neither "protected" nor "not protected yet".
@@ -344,48 +360,48 @@ private fun GuardianHero(model: GuardianHomeModel, onTurnOn: () -> Unit, modifie
             shieldOn = !isOff,
             shieldTint = level.shieldTint,
             bottomPadding = if (isOff) 20.dp else null,
+            animation = animation,
             modifier = modifier,
         ) {
             if (isOff) HeroTurnOnLink(title = "Turn on now", identifier = "home.turnOn", onClick = onTurnOn)
         }
-    } else if (model.state == GuardianHomeModel.State.FAILED) {
-        // Figma "Guardian/Home · Gagal memuat" (1665:3038): nothing loaded, so no "Family protected!".
-        HomeHero(
-            style = HomeHeroStyle.TEAL, title = "Status not available yet", titleIdentifier = "home.family.unavailable",
-            shieldTint = HalftoneShieldTint.TEAL, layout = HomeHeroLayout.family, modifier = modifier,
-        )
-    } else if (model.state == GuardianHomeModel.State.LOADING) {
-        // U-01 (fase 28a K2): no "Family protected!" before the family's sites are in. Pribadi's pattern and
-        // strings while it loads: "Shoo is on" once the browser said so, "Checking Shoo…" before that or when it's off.
-        val title = if (model.extensionChecked && model.extensionStatus.isActive) "Shoo is on" else "Checking Shoo…"
-        HomeHero(
-            style = HomeHeroStyle.TEAL, title = title, titleIdentifier = "home.family.checking",
-            shieldTint = HalftoneShieldTint.TEAL, layout = HomeHeroLayout.family, modifier = modifier,
-        )
-    } else if (model.hasNoFamily) {
-        // Figma 1382:10466: the teal hero, white headline and line.
-        HomeHero(
-            style = HomeHeroStyle.TEAL, title = "Protect your loved ones", titleIdentifier = "home.family.empty",
-            subtitle = "No one to protect yet", shieldTint = HalftoneShieldTint.TEAL, layout = HomeHeroLayout.familyEmpty,
-            modifier = modifier,
-        )
-    } else if (model.pendingScan != null) {
-        // Figma 1382:2599 / 1382:10314: the hero stays teal; the card below carries the colour.
+    } else {
+        // One hero for every family state (iOS: one branch each), so the hand-over can cross-fade the headline and
+        // ease the shield; iOS cross-fades the whole hero, the teal backdrop being the same.
+        val hero = when {
+            // Figma "Guardian/Home · Gagal memuat" (1665:3038): nothing loaded, so no "Family protected!".
+            model.state == GuardianHomeModel.State.FAILED ->
+                FamilyHero("Status not available yet", "home.family.unavailable", null, HomeHeroLayout.family)
+            // U-01 (fase 28a K2): no "Family protected!" before the family's sites are in. Pribadi's pattern and
+            // strings while it loads: "Shoo is on" once the browser said so, "Checking Shoo…" before that or when it's off.
+            model.state == GuardianHomeModel.State.LOADING -> FamilyHero(
+                if (model.extensionChecked && model.extensionStatus.isActive) "Shoo is on" else "Checking Shoo…",
+                "home.family.checking", null, HomeHeroLayout.family,
+            )
+            // Figma 1382:10466: the teal hero, white headline and line.
+            model.hasNoFamily ->
+                FamilyHero("Protect your loved ones", "home.family.empty", "No one to protect yet", HomeHeroLayout.familyEmpty)
+            // Figma 1382:2599 / 1382:10314: the hero stays teal; the card below carries the colour.
+            model.pendingScan != null -> FamilyHero(
+                if (model.level == GuardianHomeModel.Level.DANGER) "Family under threat" else "Family needs confirmation",
+                "home.family.pending", null, HomeHeroLayout.familyPending,
+            )
+            else -> FamilyHero("Family protected!", "home.family.protected", null, HomeHeroLayout.family)
+        }
         HomeHero(
             style = HomeHeroStyle.TEAL,
-            title = if (model.level == GuardianHomeModel.Level.DANGER) "Family under threat" else "Family needs confirmation",
-            titleIdentifier = "home.family.pending",
+            title = hero.title,
+            titleIdentifier = hero.identifier,
+            subtitle = hero.subtitle,
             shieldTint = HalftoneShieldTint.TEAL,
-            layout = HomeHeroLayout.familyPending,
+            layout = hero.layout,
+            animation = animation,
             modifier = modifier,
-        )
-    } else {
-        HomeHero(
-            style = HomeHeroStyle.TEAL, title = "Family protected!", titleIdentifier = "home.family.protected",
-            shieldTint = HalftoneShieldTint.TEAL, layout = HomeHeroLayout.family, modifier = modifier,
         )
     }
 }
+
+private class FamilyHero(val title: String, val identifier: String, val subtitle: String?, val layout: HomeHeroLayout)
 
 // MARK: Sheet
 
@@ -460,10 +476,14 @@ private fun GuardianSheet(
                     if (!handsOver) {
                         (EnterTransition.None togetherWith ExitTransition.None).using(null)
                     } else if (reduceMotion) {
-                        fadeIn(shooEaseInOut<Float>(0.2)) togetherWith fadeOut(shooEaseInOut<Float>(0.2))
+                        (fadeIn(shooEaseInOut<Float>(0.2)) togetherWith fadeOut(shooEaseInOut<Float>(0.2)))
+                            .using(SizeTransform(clip = false) { _, _ -> shooEaseInOut<IntSize>(0.2) })
                     } else {
-                        (fadeIn(shooSmooth<Float>(0.3)) + scaleIn(shooSmooth<Float>(0.3), initialScale = 0.97f)) togetherWith
-                            (fadeOut(shooSmooth<Float>(0.3)) + scaleOut(shooSmooth<Float>(0.3), targetScale = 0.97f))
+                        var enter = fadeIn(shooSmooth<Float>(0.3))
+                        if (targetState is FamilySheetContent.Pending) enter += scaleIn(shooSmooth<Float>(0.3), initialScale = 0.97f)
+                        var exit = fadeOut(shooSmooth<Float>(0.3))
+                        if (initialState is FamilySheetContent.Pending) exit += scaleOut(shooSmooth<Float>(0.3), targetScale = 0.97f)
+                        (enter togetherWith exit).using(SizeTransform(clip = false) { _, _ -> shooSmooth<IntSize>(0.3) })
                     }
                 },
                 label = "familySheet",
@@ -528,20 +548,27 @@ private fun PersonalSheet(model: GuardianHomeModel, language: AppLanguage) {
     val env = LocalAppEnvironment.current
     val reduceMotion = LocalReduceMotion.current
     val showsCard = model.showsSupervisedCard
+    var dismissing by remember { mutableStateOf(false) }
+    val cardChanged = changedNow(showsCard)
+    val dismissal: FiniteAnimationSpec<Float>? = if (dismissing && cardChanged) shooEaseOut<Float>(0.2) else null
+    LaunchedEffect(showsCard) { dismissing = false }
     Column(Modifier.fillMaxWidth()) {
         AnimatedVisibility(
             visible = model.refreshFailed,
-            enter = StateMotion.enterTransition(reduceMotion, fromBottom = false),
-            exit = StateMotion.exitTransition(reduceMotion, toBottom = false),
+            enter = stateNoticeEnter(reduceMotion),
+            exit = stateNoticeExit(reduceMotion),
         ) {
             GuardianRefreshFailedNotice(model, Modifier.padding(bottom = 24.dp))
         }
-        AnimatedVisibility(visible = showsCard, enter = fadeIn(shooEaseOut<Float>(0.2)), exit = fadeOut(shooEaseOut<Float>(0.2))) {
+        AnimatedVisibility(visible = showsCard, enter = fadeIn(shooEaseOut<Float>(0.2)), exit = dismissExit) {
             // "Hubungkan": joining a family as protected lives in Profile › Account mode ("Have an invite code?"),
             // which checks that nobody is looked after first.
             SupervisedModeCard(
                 onConnect = { env.router.show(Route.ProfilePage(ProfilePage.MODE)) },
-                onDismiss = { model.dismissSupervisedCard() },
+                onDismiss = {
+                    dismissing = true
+                    model.dismissSupervisedCard()
+                },
                 modifier = Modifier.padding(top = 1.dp, bottom = 37.dp),
             )
         }
@@ -551,10 +578,13 @@ private fun PersonalSheet(model: GuardianHomeModel, language: AppLanguage) {
             onOpen = { env.router.showDetail(it.id) },
             onSeeAll = { env.router.selectedTab = AppTab.ACTIVITY },
             // Figma: the title 32 under the sheet's top (the card sits 31 under it).
-            modifier = Modifier.padding(top = if (showsCard) 0.dp else 3.dp),
+            modifier = Modifier.padding(top = animatedOrSnapped(if (showsCard) 0f else 3f, dismissal).dp),
         )
         if (model.scamCases.isNotEmpty()) {
-            LatestScamsCard(cases = model.scamCases, modifier = Modifier.padding(top = if (showsCard) 37.dp else 35.dp))
+            LatestScamsCard(
+                cases = model.scamCases,
+                modifier = Modifier.padding(top = animatedOrSnapped(if (showsCard) 37f else 35f, dismissal).dp),
+            )
         }
     }
 }
@@ -566,8 +596,8 @@ private fun GuardianBelow(model: GuardianHomeModel, language: AppLanguage) {
     if (model.state != GuardianHomeModel.State.LOADED) return
     AnimatedVisibility(
         visible = model.refreshFailed,
-        enter = StateMotion.enterTransition(reduceMotion, fromBottom = false),
-        exit = StateMotion.exitTransition(reduceMotion, toBottom = false),
+        enter = stateNoticeEnter(reduceMotion),
+        exit = stateNoticeExit(reduceMotion),
     ) {
         GuardianRefreshFailedNotice(model)
     }
@@ -751,8 +781,10 @@ private fun PendingSiteCard(
     onRetry: suspend () -> Unit = {},
 ) {
     val view = LocalView.current
+    val reduceMotion = LocalReduceMotion.current
     val accessibilitySize = isAccessibilityTextSize()
     val isBlocked = scan.status == ScanStatus.BLOCKED
+    val dim by animateFloatAsState(if (notAllowed) 1f else 0f, StateMotion.enter(reduceMotion), label = "pendingDim")
     val reason = Evidence.top(scan.signals, mode = UserMode.GUARDIAN, language = language, limit = 1).firstOrNull()?.text
     val hint = t("Opens the details")
     val shape = RoundedCornerShape(20.7.dp)
@@ -785,7 +817,7 @@ private fun PendingSiteCard(
                     alpha = 0.2f,
                 )
             }
-            .animateContentSize()
+            .animateContentSize(stateSizeSpec(reduceMotion))
             .padding(bottom = if (failed || notAllowed) 0.dp else if (canDecide) 14.7.dp else 20.dp),
     ) {
         Column(
@@ -830,8 +862,8 @@ private fun PendingSiteCard(
             // grey and stop taking taps.
             val buttons = Modifier
                 .padding(start = 28.3.dp, end = 24.1.dp, top = 20.dp)
-                .grayscale(notAllowed)
-                .graphicsLayer { alpha = if (notAllowed) 0.5f else 1f }
+                .grayscale(dim)
+                .graphicsLayer { alpha = 1f - 0.5f * dim }
             if (accessibilitySize) {
                 Column(buttons, verticalArrangement = Arrangement.spacedBy(9.7.dp)) {
                     DecisionButton(DecisionKind.SAFE, enabled = !notAllowed, onClick = { onDecide(Verdict.Value.SAFE) }, modifier = Modifier.testTag("home.verdict.safe"))
@@ -861,8 +893,8 @@ private fun PendingSiteCard(
         // Figma "Pesan verdict" (1665:3183 / 1665:3387): the card's own foot, full width, 26 under the buttons.
         AnimatedVisibility(
             visible = failed,
-            enter = StateMotion.enterTransition(LocalReduceMotion.current),
-            exit = StateMotion.exitTransition(LocalReduceMotion.current),
+            enter = StateMotion.enterTransition(reduceMotion),
+            exit = StateMotion.exitTransition(reduceMotion),
             modifier = Modifier.bringIntoViewRequester(errorRequester),
         ) {
             StateNoticeCard(
@@ -878,8 +910,8 @@ private fun PendingSiteCard(
         }
         AnimatedVisibility(
             visible = notAllowed && !failed,
-            enter = StateMotion.enterTransition(LocalReduceMotion.current),
-            exit = StateMotion.exitTransition(LocalReduceMotion.current),
+            enter = StateMotion.enterTransition(reduceMotion),
+            exit = StateMotion.exitTransition(reduceMotion),
         ) {
             StateNoticeCard(
                 title = "Can't be marked yet",
@@ -959,12 +991,13 @@ private fun PendingOwner(scan: ScanResult, ownerAvatarId: String?, language: App
     }
 }
 
-/** SwiftUI `.grayscale(1)`: the content drawn without colour. */
-private fun Modifier.grayscale(on: Boolean): Modifier = if (!on) {
+/** SwiftUI `.grayscale(amount)`: 1 draws the content without colour. */
+private fun Modifier.grayscale(amount: Float): Modifier = if (amount <= 0f) {
     this
 } else {
     drawWithContent {
-        val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) }
+        val saturation = 1f - amount.coerceIn(0f, 1f)
+        val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(saturation) }) }
         // Room for the buttons' shadow outside their bounds.
         val margin = 12.dp.toPx()
         drawIntoCanvas { canvas ->
@@ -1211,9 +1244,9 @@ private fun InviteActions(model: FamilyCodeModel, code: FamilyCode) {
     val language = LocalAppLanguage.current
     val reduceMotion = LocalReduceMotion.current
     ShieldOnChange(model.copied) { _, copied -> if (copied) view.shieldHaptic(ShieldHaptic.SUCCESS) }
-    // On the row, so "Share" glides aside as the pill widens instead of jumping.
+    // iOS: on the row, so "Share" glides aside as the pill widens instead of jumping. Here the pill's own width
+    // eases (its capsule must not jump), which moves the row with it.
     Row(
-        Modifier.animateContentSize(if (reduceMotion) shooEaseInOut<IntSize>(0.2) else shooSnappy<IntSize>(0.3)),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1235,6 +1268,7 @@ private fun InviteActions(model: FamilyCodeModel, code: FamilyCode) {
         }
         Box(
             Modifier
+                .animateContentSize(if (reduceMotion) shooEaseInOut<IntSize>(0.2) else shooSnappy<IntSize>(0.3))
                 .heightIn(min = 34.dp)
                 .background(HomeTheme.quietFill, CapsuleShape)
                 .clip(CapsuleShape)
@@ -1250,7 +1284,11 @@ private fun InviteActions(model: FamilyCodeModel, code: FamilyCode) {
             contentAlignment = Alignment.Center,
         ) {
             // Copy → Copied cross-fades while the pill eases to its new width (pattern: InviteSheet).
-            Crossfade(targetState = model.copied, label = "inviteCopied") { copied ->
+            Crossfade(
+                targetState = model.copied,
+                animationSpec = if (reduceMotion) shooEaseInOut<Float>(0.2) else shooSnappy<Float>(0.3),
+                label = "inviteCopied",
+            ) { copied ->
                 Text(
                     text = t(if (copied) "Copied" else "Copy"),
                     style = onboardingFont(17f, rounded = true, lineHeight = 23.8f),

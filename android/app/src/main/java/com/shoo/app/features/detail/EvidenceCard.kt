@@ -1,6 +1,7 @@
 package com.shoo.app.features.detail
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -590,13 +591,15 @@ fun EvidenceCarousel(
                     tween(200, easing = ShooEasing.easeOut),
                     label = "carouselDot",
                 )
+                val fill by animateColorAsState(
+                    if (index == current) DetailStyle.title else DetailStyle.secondary.copy(alpha = 0.35f),
+                    tween(200, easing = ShooEasing.easeOut),
+                    label = "carouselDotFill",
+                )
                 Box(
                     Modifier
                         .size(width, 6.dp)
-                        .background(
-                            if (index == current) DetailStyle.title else DetailStyle.secondary.copy(alpha = 0.35f),
-                            CapsuleShape,
-                        ),
+                        .background(fill, CapsuleShape),
                 )
             }
         }

@@ -3,11 +3,14 @@ package com.shoo.app.features.profile
 import android.icu.util.TimeZone
 import android.icu.util.ULocale
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -66,7 +69,6 @@ import com.shoo.app.components.StateMessage
 import com.shoo.app.components.hex
 import com.shoo.app.components.pressScale
 import com.shoo.app.components.shooEaseInOut
-import com.shoo.app.components.shooEaseOut
 import com.shoo.app.data.FamilyMember
 import com.shoo.app.data.ScanResult
 import com.shoo.app.data.ShooRepository
@@ -138,17 +140,14 @@ fun MemberDetailView(deviceId: String, repository: ShooRepository, modifier: Mod
             }
         }
         // iOS `.safeAreaInset(edge: .bottom)`: Figma: 306 wide (48 in from each side), its foot 84 above the frame's.
-        AnimatedVisibility(
-            visible = model.state == MemberDetailModel.State.FAILED || model.state == MemberDetailModel.State.GONE,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
+        // iOS: `.transition(.opacity)` but the state change carries no animation, so it appears at once.
+        if (model.state == MemberDetailModel.State.FAILED || model.state == MemberDetailModel.State.GONE) {
             OnboardingCapsuleButton(
                 title = "Back",
                 onClick = { env.router.pop() },
                 identifier = "member.back",
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
                     .padding(horizontal = 48.dp)
                     .padding(bottom = 48.dp),
@@ -336,8 +335,6 @@ private fun OffBanner(model: MemberDetailModel, member: FamilyMember) {
     val feedback = rememberSensoryFeedback()
     val sent = MemberText.recentlyReminded(member)
     OnChange(sent) { was, now -> if (!was && now) feedback(ProfileHaptic.SUCCESS) }
-    var checkBounce by remember { mutableStateOf(0) }
-    OnChange(sent) { was, now -> if (!was && now) checkBounce += 1 }
 
     val ease = shooEaseInOut<Color>(0.25)
     val fill by animateColorAsState(if (sent) hex(0xEBF8ED, 0.9f) else hex(0xF8F2EB, 0.9f), ease, label = "offFill")
@@ -373,13 +370,25 @@ private fun OffBanner(model: MemberDetailModel, member: FamilyMember) {
                     .clearAndSetSemantics { },
                 contentAlignment = Alignment.Center,
             ) {
-                // iOS: `.contentTransition(.symbolEffect(.replace))`; Reduce Motion: a fade.
-                Crossfade(targetState = sent, animationSpec = shooEaseInOut(0.25), label = "offSymbol") { isSent ->
+                // iOS: `.contentTransition(.symbolEffect(.replace))` (the old symbol shrinks out, the new one grows
+                // in) under `.easeInOut(0.25)`; Reduce Motion: a fade.
+                AnimatedContent(
+                    targetState = sent,
+                    transitionSpec = {
+                        if (reduceMotion) {
+                            fadeIn(shooEaseInOut(0.25)) togetherWith fadeOut(shooEaseInOut(0.25))
+                        } else {
+                            (fadeIn(shooEaseInOut(0.25)) + scaleIn(shooEaseInOut(0.25), initialScale = 0.5f)) togetherWith
+                                (fadeOut(shooEaseInOut(0.25)) + scaleOut(shooEaseInOut(0.25), targetScale = 0.5f))
+                        }
+                    },
+                    contentAlignment = Alignment.Center,
+                    label = "offSymbol",
+                ) { isSent ->
                     SfSymbol(
                         if (isSent) "checkmark" else "exclamationmark.triangle.fill",
                         21.67f,
                         if (isSent) hex(0x269E4A) else hex(0xEF871C),
-                        modifier = if (isSent) Modifier.profileBounce(checkBounce, enabled = !reduceMotion) else Modifier,
                     )
                 }
             }
@@ -388,14 +397,18 @@ private fun OffBanner(model: MemberDetailModel, member: FamilyMember) {
                     .weight(1f)
                     .clearAndSetSemantics { contentDescription = "$title. $message" },
             ) {
-                Text(title, style = profileFont(16f, FontWeight.SemiBold, tracking = -0.31f), color = hex(0x151617))
-                Text(message, style = profileFont(13f, rounded = true), color = hex(0x6A717E))
+                // The copy cross-fades under the banner's `.easeInOut(0.25)`.
+                Crossfade(title, animationSpec = shooEaseInOut(0.25), label = "offTitle") {
+                    Text(it, style = profileFont(16f, FontWeight.SemiBold, tracking = -0.31f), color = hex(0x151617))
+                }
+                Crossfade(message, animationSpec = shooEaseInOut(0.25), label = "offMessage") {
+                    Text(it, style = profileFont(13f, rounded = true), color = hex(0x6A717E))
+                }
             }
             AnimatedVisibility(visible = !sent, enter = fadeIn(shooEaseInOut(0.25)), exit = fadeOut(shooEaseInOut(0.25))) {
                 val interaction = remember { MutableInteractionSource() }
                 val label = t("Remind %@", member.name)
                 val hint = t(remindHintKey(member))
-                val labelAlpha by animateFloatAsState(if (model.isReminding) 0f else 1f, shooEaseOut(0.15), label = "remindLabel")
                 Box(
                     Modifier
                         .heightIn(min = 44.dp)
@@ -421,7 +434,8 @@ private fun OffBanner(model: MemberDetailModel, member: FamilyMember) {
                         t("Remind"),
                         style = profileFont(15f, FontWeight.SemiBold, tracking = -0.23f),
                         color = hex(0x136CB7),
-                        modifier = Modifier.graphicsLayer { alpha = labelAlpha },
+                        // iOS: no animation on `isReminding`, the label and spinner swap at once.
+                        modifier = Modifier.graphicsLayer { alpha = if (model.isReminding) 0f else 1f },
                     )
                     if (model.isReminding) {
                         CircularProgressIndicator(Modifier.size(16.dp), color = ProfileStyle.link, strokeWidth = 2.dp)
