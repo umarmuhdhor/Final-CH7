@@ -51,6 +51,7 @@ enum DetailHeroLayout {
     static let imageHeight: CGFloat = 360
     /// "Sheet": white, 32 pt corners, from y 284.
     static let sheetTop: CGFloat = 284
+    static let sheetCorner: CGFloat = 32
     /// Link pill: 34 pt high at y 266, half on the hero, half on the sheet.
     static let pillTop: CGFloat = 266
     /// Back: 50 × 50 at (20, 48).
@@ -66,24 +67,117 @@ enum DetailHeroLayout {
     static let badgeKacaCenter = CGPoint(x: 223.35 + 53.13 / 2, y: 179 + 61.3 / 2)
     /// `HalftoneShield`'s Kaca centre sits 0.33 pt above the middle of its 220 × 176 frame.
     static let kacaRise: CGFloat = 0.33
+    /// Middle of the shield (or the avatar) in the full hero.
+    static let illustrationCenterY: CGFloat = 161
+    /// The pinned hero once the page has scrolled: the back button's row plus 12 pt.
+    static let compactHeight: CGFloat = backTop + 50 + 12
+    /// In the compact hero the shield shrinks to this and sits in the middle of the back button's row.
+    static let compactScale: CGFloat = 0.3
+    static let compactCenterY: CGFloat = backTop + 25
+    /// The hero ends where the link pill starts, so the pill is never drawn under it at rest.
+    static let restHeight: CGFloat = pillTop
+    /// Scrolled this far, the hero is compact.
+    static let collapseDistance: CGFloat = restHeight - compactHeight
+
+    /// Height of the pinned hero for a scroll offset (negative when the page is pulled down).
+    static func height(offset: CGFloat) -> CGFloat {
+        max(compactHeight, restHeight - offset)
+    }
+
+    /// 0 at rest, 1 once compact.
+    static func progress(offset: CGFloat) -> CGFloat {
+        min(max(offset / collapseDistance, 0), 1)
+    }
+
+    /// Parallax: the rings rise slower than the page and ease out, ending with their centre on the compact shield.
+    /// The rows the compact hero shows then stay in the picture's pink part (it turns white below ~220 pt).
+    static let parallaxShift: CGFloat = DetailHeroBackground.ringCenterY - compactCenterY
+    /// Scrolled this far, the rings have done ~70 % of their rise, about when the hero turns compact.
+    static let parallaxLength: CGFloat = 130
+
+    /// Top of the ring picture for a scroll offset; pulled down, it follows the page.
+    static func imageTop(offset: CGFloat) -> CGFloat {
+        offset < 0 ? -offset : -parallaxShift * (1 - exp(-offset / parallaxLength))
+    }
 }
 
-/// Rings, the shield (or the deciding guardian's avatar with a small shield) and the link pill.
+/// The rings and the colour above them, placed for a scroll offset. Drawn behind the page (under the sheet's
+/// round corners) and again inside the pinned hero, at the same place, so the two never show a seam.
+struct DetailHeroBackdrop: View {
+    let look: DetailLook
+    let offset: CGFloat
+
+    var body: some View {
+        // Parallax (`DetailHeroLayout.imageTop`); pulled down, the top colour fills above the picture.
+        let imageTop = DetailHeroLayout.imageTop(offset: offset)
+        ZStack(alignment: .top) {
+            look.topColor.frame(height: max(imageTop, 0) + 1)
+            DetailHeroBackground(look: look)
+                .offset(y: imageTop)
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The pinned hero: rings, the shield (or the deciding guardian's avatar with a small shield) and the back button.
+/// Full at rest; as the page scrolls it shrinks to the back button's row and the shield with it, while the white
+/// sheet scrolls under it.
 struct DetailHero: View {
     let look: DetailLook
     /// The guardian who decided, on the protected person's own Detail (Figma "Guardian Virellia").
     var guardianAvatarId: String?
+    /// How far the page has scrolled; negative when pulled down.
+    var offset: CGFloat = 0
     let onBack: () -> Void
 
     var body: some View {
+        let progress = DetailHeroLayout.progress(offset: offset)
+        let scale = 1 - (1 - DetailHeroLayout.compactScale) * progress
+        let rise = (DetailHeroLayout.compactCenterY - DetailHeroLayout.illustrationCenterY) * progress
+        // Pulled down, the shield moves down with the page as it used to.
+        let pull = max(-offset, 0)
+        // Once the sheet's top reaches the compact hero, its round top edge stays there and the page scrolls under
+        // it: a straight cut across the cards looked like the page was chopped off.
+        let lipStart = DetailHeroLayout.sheetTop - DetailHeroLayout.compactHeight
+        let lipPinned = offset >= lipStart
+        let lipFade = min(max((offset - lipStart) / 24, 0), 1)
+        let lip = DetailHeroLayout.sheetCorner
         ZStack(alignment: .topLeading) {
-            Color.clear
-            illustration
+            Group {
+                DetailHeroBackdrop(look: look, offset: offset)
+                illustration
+                    .scaleEffect(
+                        scale,
+                        anchor: UnitPoint(x: 0.5, y: DetailHeroLayout.illustrationCenterY / DetailHeroLayout.sheetTop)
+                    )
+                    .offset(y: rise + pull)
+            }
+            .allowsHitTesting(false)
             OnboardingBackButton(identifier: "detail.back", action: onBack)
                 .padding(.leading, 20)
                 .padding(.top, DetailHeroLayout.backTop)
         }
-        .frame(height: DetailHeroLayout.sheetTop)
+        // Pinned, the hero is one corner taller: the rings show behind the sheet's round corners, as at rest.
+        .frame(height: DetailHeroLayout.height(offset: offset) + (lipPinned ? lip : 0), alignment: .top)
+        .frame(maxWidth: .infinity)
+        .clipped()
+        .overlay(alignment: .bottom) {
+            if lipPinned {
+                UnevenRoundedRectangle(topLeadingRadius: lip, topTrailingRadius: lip, style: .continuous)
+                    .fill(.white)
+                    .frame(height: lip)
+                    // The cards come out of the white instead of meeting a hard line.
+                    .overlay(alignment: .bottom) {
+                        LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .bottom)
+                            .frame(height: 16)
+                            .offset(y: 16)
+                            .opacity(lipFade)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 
     /// Laid out on the 402 pt Figma frame and kept in the middle of wider or narrower screens.
@@ -223,20 +317,6 @@ struct DetailOwnerChip: View {
         .background(DetailStyle.hex(0xE7EFF8), in: Capsule())
         .overlay(Capsule().strokeBorder(DetailStyle.hex(0xAAD2FF)))
         .figmaCardShadow()
-    }
-}
-
-extension View {
-    /// How far the enclosing scroll view has scrolled (iOS 18+). Before iOS 18 nothing is reported.
-    @ViewBuilder
-    func onScrollOffset(_ action: @escaping (CGFloat) -> Void) -> some View {
-        if #available(iOS 18.0, *) {
-            onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
-                action(offset)
-            }
-        } else {
-            self
-        }
     }
 }
 
