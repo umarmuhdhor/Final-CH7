@@ -346,8 +346,8 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
     const id = await postScan(p, { pageReplicaBase64: await gzipBase64(SAMPLE_HTML) });
     await stored(id);
     const order = logs.filter((l) => l === "INFLATE" || l.includes(`"push_logged"`)).map((l) => (l === "INFLATE" ? "inflate" : "push"));
-    // Guardian push + the device's own push, both before the inflate.
-    expect(order).toEqual(["push", "push", "inflate"]);
+    // The Guardian's push before the inflate. A Protected device gets no push of its own (PF-01).
+    expect(order).toEqual(["push", "inflate"]);
   });
 
   it("a replica that throws never touches the scan or the push", async () => {
