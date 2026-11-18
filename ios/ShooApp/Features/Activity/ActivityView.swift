@@ -14,6 +14,9 @@ struct ActivityView: View {
     @State private var extensionStatus: ExtensionStatus?
     @State private var checkStats = CheckStats()
     @State private var isTurnOnPresented = false
+    /// Global y of the title's bottom and of the filter bar's top: they move apart once the bar pins.
+    @State private var titleBottom: CGFloat = 0
+    @State private var barTop: CGFloat = 0
     /// Set when pushed (a member's activity from Member detail): the page draws its own back button, as the
     /// navigation bar is hidden. Nil on the Activity tab's root.
     private let onBack: (() -> Void)?
@@ -53,19 +56,26 @@ struct ActivityView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            // The title scrolls away; the filter bar pins under the status bar so it stays one tap away.
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                 header
                     .zIndex(1)
-                ActivitySegments(selection: model.filter, family: model.isFamily) { filter in
-                    Task { await model.select(filter) }
+                    .padding(.horizontal, ActivityStyle.margin)
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.frame(in: .global).maxY
+                    } action: { titleBottom = $0 }
+                    // With the bar's own top padding: 24 pt from title to segments, as in Figma.
+                    .padding(.bottom, 24 - Self.barPadding)
+                Section {
+                    content
+                        // Loader → list (or message): a 0.2 s cross-fade, gentle enough for Reduce Motion.
+                        .animation(.easeOut(duration: 0.2), value: model.state)
+                        .padding(.top, 32 - Self.barPadding)
+                        .padding(.horizontal, ActivityStyle.margin)
+                } header: {
+                    filterBar
                 }
-                .padding(.top, 24)
-                content
-                    // Loader → list (or message): a 0.2 s cross-fade, gentle enough for Reduce Motion.
-                    .animation(.easeOut(duration: 0.2), value: model.state)
-                    .padding(.top, 32)
             }
-            .padding(.horizontal, ActivityStyle.margin)
             .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
@@ -148,6 +158,39 @@ struct ActivityView: View {
         // Figma: the title's top is 2 pt under the status bar, the 50 pt picker button 7 pt above it.
         .padding(.top, -7)
     }
+
+    /// Space above and below the segments inside the pinned bar: 24 pt under the title at rest, as in Figma.
+    private static let barPadding: CGFloat = 12
+
+    /// The segments, pinned under the status bar once the title has scrolled away. Pinned, a material backs
+    /// them up to the top of the screen so rows never pass behind the clock or under the segments unreadably.
+    private var filterBar: some View {
+        ActivitySegments(selection: model.filter, family: model.isFamily) { filter in
+            Task { await model.select(filter) }
+        }
+        .padding(.horizontal, ActivityStyle.margin)
+        .padding(.vertical, Self.barPadding)
+        .background {
+            Rectangle()
+                .fill(.regularMaterial)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(.black.opacity(0.06)).frame(height: 1 / 3)
+                }
+                // Up to the top of the screen, whatever the status bar height.
+                .padding(.top, -max(barTop, 0))
+                .opacity(isBarPinned ? 1 : 0)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isBarPinned)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.frame(in: .global).minY
+        } action: { barTop = $0 }
+    }
+
+    /// The bar has pinned: it no longer moves with the title, so the gap between them has grown past the
+    /// rest spacing (the title's bottom padding).
+    private var isBarPinned: Bool { barTop - titleBottom > 24 - Self.barPadding + 0.5 }
 
     private func setPicker(open: Bool) {
         withAnimation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.15)) { isPickerOpen = open }
