@@ -45,6 +45,10 @@
       "labelSimple": {
         "en": "Uses a government name but isn't a government site",
         "id": "Memakai nama pemerintah, tapi bukan situs pemerintah"
+      },
+      "host": {
+        "official": "kemensos.go.id",
+        "brand": "Kemensos"
       }
     },
     {

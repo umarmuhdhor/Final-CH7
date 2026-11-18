@@ -106,50 +106,16 @@ struct DetailSummaryCard: View {
 
 /// The brand an address signal says the page copies, by its display name ("BCA", "Bank Mandiri").
 enum SummaryBrand {
-    /// `name` and first `domains` entry of every brand in detector/data/brands.json (`DetailSummaryTests` keeps
-    /// them in step). The detector sends the domain (`host.official`) and the id (start of `evidence`), not the name.
-    static let names: [(id: String, official: String, name: String)] = [
-        ("bca", "bca.co.id", "BCA"),
-        ("bri", "bri.co.id", "BRI"),
-        ("mandiri", "bankmandiri.co.id", "Bank Mandiri"),
-        ("bni", "bni.co.id", "BNI"),
-        ("bsi", "bankbsi.co.id", "BSI"),
-        ("dana", "dana.id", "DANA"),
-        ("ovo", "ovo.id", "OVO"),
-        ("gopay", "gopay.co.id", "GoPay"),
-        ("shopee", "shopee.co.id", "Shopee"),
-        ("tokopedia", "tokopedia.com", "Tokopedia"),
-        ("lazada", "lazada.co.id", "Lazada"),
-        ("bukalapak", "bukalapak.com", "Bukalapak"),
-        ("posindonesia", "posindonesia.co.id", "Pos Indonesia"),
-        ("jne", "jne.co.id", "JNE"),
-        ("jnt", "jet.co.id", "J&T Express"),
-        ("agoda", "agoda.com", "Agoda"),
-        ("dhl", "dhl.com", "DHL"),
-        ("kemensos", "kemensos.go.id", "Kemensos"),
-        ("djp", "pajak.go.id", "DJP (Pajak)"),
-        ("bpjs", "bpjs-kesehatan.go.id", "BPJS"),
-        ("apple", "apple.com", "Apple"),
-        ("google", "google.com", "Google"),
-        ("microsoft", "microsoft.com", "Microsoft"),
-        ("meta", "facebook.com", "Meta"),
-        ("netflix", "netflix.com", "Netflix"),
-        ("paypal", "paypal.com", "PayPal"),
-        ("amazon", "amazon.com", "Amazon"),
-    ]
-    private static let byOfficial = Dictionary(names.map { ($0.official, $0.name) }, uniquingKeysWith: { first, _ in first })
-    private static let byId = Dictionary(names.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-
-    /// Only `lookalike_domain` and `brand_plus_keyword` name a brand. A brand this build does not know shows as
-    /// its official domain; nothing usable gives nil.
+    /// Only `lookalike_domain` and `brand_plus_keyword` name a brand (contracts/detector-interface.md "host"): its
+    /// `brand`, else its real domain (`official`, scans from a detector before `brand`). Nothing usable gives nil.
     static func name(of signal: Signal) -> String? {
-        guard signal.id == "lookalike_domain" || signal.id == "brand_plus_keyword" else { return nil }
-        if let official = signal.host?.official?.lowercased(), !official.isEmpty {
-            return byOfficial[official] ?? official
+        guard signal.id == "lookalike_domain" || signal.id == "brand_plus_keyword", let host = signal.host else {
+            return nil
         }
-        // Older scans have no `host`: the evidence starts with the brand id ("bca · level 2 · verifikasi").
-        let id = signal.evidence?.components(separatedBy: " · ").first?.trimmingCharacters(in: .whitespaces).lowercased()
-        return id.flatMap { byId[$0] }
+        for value in [host.brand, host.official] {
+            if let text = value?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty { return text }
+        }
+        return nil
     }
 }
 

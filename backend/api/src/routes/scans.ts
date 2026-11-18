@@ -51,10 +51,13 @@ const signal = z.object({
   // The app shows `official` as "Real: X" next to a checkmark seal, so it must be a domain (DOMAIN, as the scan's
   // `domain`), not any text a device holding a token sends. `marks` are substrings of that domain: host characters
   // only. Both are checked as sent (no cleaning first); unknown keys inside are dropped; stored (jsonb) as sent.
+  // `brand` is the brand's display name for Detail's "Ringkasan" ("Halaman BCA palsu …"): plain text like a label,
+  // control and bidi characters removed.
   host: z
     .object({
       marks: z.array(z.string().min(1).max(253).regex(HOST_CHARS, HOST_CHARS_MESSAGE)).min(1).max(4).optional(),
       official: z.string().min(1).max(253).regex(DOMAIN, DOMAIN_MESSAGE).optional(),
+      brand: text(64).pipe(z.string().min(1)).optional(),
     })
     .optional(),
 });

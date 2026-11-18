@@ -11,47 +11,58 @@ struct DetailSummaryTests {
         return DetailSummaryCard.text(scan, language: language)
     }
 
-    /// blocked-92: brand_plus_keyword (bca) + asks_pin, like the Figma example.
-    private func withBCA(_ scan: inout ScanResult) {
+    private func editBrandSignal(_ scan: inout ScanResult, _ change: (inout Signal) -> Void) {
         let index = scan.signals.firstIndex { $0.id == "brand_plus_keyword" }!
-        scan.signals[index].host = Signal.Host(marks: ["bca"], official: "bca.co.id")
+        change(&scan.signals[index])
     }
 
+    /// blocked-92: brand_plus_keyword with host.brand "BCA" + asks_pin, like the Figma example.
     @Test func fakeBrandAskingForDataReadsLikeFigma() {
-        #expect(text("blocked-92", edit: withBCA)
-            == "Halaman BCA palsu yang meminta PIN kamu. Kami memblokir otomatis halaman ini.")
-        #expect(text("blocked-92", .english, edit: withBCA)
+        #expect(text("blocked-92") == "Halaman BCA palsu yang meminta PIN kamu. Kami memblokir otomatis halaman ini.")
+        #expect(text("blocked-92", .english)
             == "A fake BCA page that asks for your PIN. We blocked this page automatically.")
+        #expect(text("warning-63")
+            == "Halaman Kemensos palsu yang meminta data KTP kamu. Kami memberi peringatan sebelum halaman ini dibuka.")
     }
 
     @Test func twoAskedDataAreJoinedLikeTheLanguage() {
         let summary = text("blocked-92") { scan in
-            withBCA(&scan)
             scan.signals.append(Signal(id: "asks_otp", layer: 3, weight: 20, label: .init(en: "", id: ""),
                                        labelSimple: .init(en: "", id: "")))
         }
         #expect(summary == "Halaman BCA palsu yang meminta PIN dan kode OTP kamu. Kami memblokir otomatis halaman ini.")
     }
 
-    @Test func olderScansNameTheBrandFromTheEvidence() {
+    @Test func brandWithoutAskedData() {
+        #expect(text("warning-41") == "Halaman ini meniru Shopee. Kami memberi peringatan sebelum halaman ini dibuka.")
+    }
+
+    /// A detector from before `brand` sends only the real domain.
+    @Test func olderDetectorNamesTheOfficialDomain() {
+        let summary = text("warning-41") { editBrandSignal(&$0) { $0.host?.brand = nil } }
+        #expect(summary == "Halaman ini meniru shopee.co.id. Kami memberi peringatan sebelum halaman ini dibuka.")
+    }
+
+    /// Before #497 there was no host: the evidence is never parsed (contracts/detector-interface.md "host").
+    @Test func noHostNamesNoBrand() {
         let summary = text("blocked-92", .english) { scan in
-            let index = scan.signals.firstIndex { $0.id == "brand_plus_keyword" }!
-            scan.signals[index].evidence = "mandiri · level 2 · verifikasi"
+            editBrandSignal(&scan) {
+                $0.host = nil
+                $0.evidence = "bca · level 2 · verifikasi"
+            }
         }
-        #expect(summary == "A fake Bank Mandiri page that asks for your PIN. We blocked this page automatically.")
+        #expect(summary == "This page asks for your PIN. We blocked this page automatically.")
     }
 
-    @Test func unknownBrandShowsItsOfficialDomain() {
-        let summary = text("warning-41") { scan in
-            let index = scan.signals.firstIndex { $0.id == "brand_plus_keyword" }!
-            scan.signals[index].host = Signal.Host(marks: nil, official: "newbank.co.id")
-        }
-        #expect(summary == "Halaman ini meniru newbank.co.id. Kami memberi peringatan sebelum halaman ini dibuka.")
-    }
-
-    @Test func dataWithoutABrand() {
-        #expect(text("warning-63")
-            == "Halaman ini meminta data KTP kamu. Kami memberi peringatan sebelum halaman ini dibuka.")
+    @Test func onlyAddressSignalsNameABrand() {
+        var signal = Signal(id: "cheap_tld", layer: 2, weight: 15, label: .init(en: "", id: ""),
+                            labelSimple: .init(en: "", id: ""))
+        signal.host = Signal.Host(marks: [".site"], official: "bca.co.id", brand: "BCA")
+        #expect(SummaryBrand.name(of: signal) == nil)
+        signal.id = "lookalike_domain"
+        #expect(SummaryBrand.name(of: signal) == "BCA")
+        signal.host?.brand = "  "
+        #expect(SummaryBrand.name(of: signal) == "bca.co.id")
     }
 
     @Test func knownScamWithAGuardianDecision() {
@@ -60,7 +71,7 @@ struct DetailSummaryTests {
     }
 
     @Test func otherwiseCountsTheSigns() {
-        #expect(text("warning-41")
+        #expect(text("warning-41") { editBrandSignal(&$0) { $0.host = nil } }
             == "Kami menemukan 3 tanda mencurigakan di halaman ini. Kami memberi peringatan sebelum halaman ini dibuka.")
         #expect(text("blocked-marked-safe", .english) { $0.signals.removeAll { $0.id == "asks_card" } }
             == "We found 2 warning signs on this page. It was marked safe, so it can be opened.")
@@ -73,18 +84,5 @@ struct DetailSummaryTests {
     @Test func everyAskedSignalHasANoun() {
         let asks = ["asks_pin", "asks_otp", "asks_password", "asks_card", "asks_cvv", "asks_ktp", "asks_selfie_ktp"]
         #expect(Set(DetailSummaryCard.askedDataKey.keys) == Set(asks))
-    }
-
-    /// The brand names must follow detector/data/brands.json.
-    @Test func brandNamesMatchTheDetectorList() throws {
-        struct Brands: Decodable {
-            struct Brand: Decodable { let id: String; let name: String; let domains: [String] }
-            let brands: [Brand]
-        }
-        let url = RepoPaths.root.appending(path: "detector/data/brands.json")
-        let brands = try JSONDecoder().decode(Brands.self, from: Data(contentsOf: url)).brands
-        #expect(SummaryBrand.names.map(\.id) == brands.map(\.id))
-        #expect(SummaryBrand.names.map(\.name) == brands.map(\.name))
-        #expect(SummaryBrand.names.map(\.official) == brands.map { $0.domains.first ?? "" })
     }
 }

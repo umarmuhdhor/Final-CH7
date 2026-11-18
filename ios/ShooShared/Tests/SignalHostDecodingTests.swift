@@ -16,6 +16,12 @@ struct SignalHostDecodingTests {
         #expect(s.host == Signal.Host(marks: ["bca", "verifikasi"], official: "bca.co.id"))
     }
 
+    @Test func decodesBrand() throws {
+        let s = try signal(#","host":{"marks":["bca"],"official":"bca.co.id","brand":"BCA"}"#)
+        #expect(s.host == Signal.Host(marks: ["bca"], official: "bca.co.id", brand: "BCA"))
+        #expect(try signal(#","host":{"official":"bca.co.id"}"#).host?.brand == nil)
+    }
+
     @Test func decodesMarksOnly() throws {
         let s = try signal(#","host":{"marks":[".site"]}"#)
         #expect(s.host?.marks == [".site"])
