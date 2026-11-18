@@ -178,7 +178,8 @@ struct DetailView: View {
             // Figma lays the hero out from the top of the screen, under the status bar.
             .ignoresSafeArea(edges: .top)
             .background(alignment: .top) {
-                // Figma "Hero BG" (402 × 360, rings in it), behind the sheet's round corners.
+                // Figma "Hero BG" (402 × 360, rings in it), behind the sheet's round corners. Pulled down, the
+                // picture grows from its bottom edge, as in the pinned hero.
                 DetailHeroBackdrop(look: look, offset: scrollOffset)
                     .ignoresSafeArea(edges: .top)
             }

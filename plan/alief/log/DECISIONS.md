@@ -807,3 +807,12 @@ Format:
 - Alasan: fase 24 K12 (R8 §c, D-alief-C29): label yang kurang = alasan penolakan review; lebih aman mendeklarasikan lebih. Zona waktu tidak dari Location Services, jadi Coarse Location = pilihan hati-hati.
 - File: `ios/ShooApp/PrivacyInfo.xcprivacy`, `Tests/PrivacyManifestTests.swift`.
 - Status: diterapkan di PR 24c-2 (`fix/E6-app-privacy`).
+
+## D-alief-A47 · 18 Nov 2026 · app (ON-04) · Video tutorial asli, "Tonton Tutorial" langsung PiP
+
+- Keputusan: ganti placeholder dengan `Resources/onboarding-tutorial.mp4`: rekaman simulator alur aktivasi asli (Shoo → Pengaturan → App → Safari → Ekstensi → Shoo → Izinkan → Semua Situs Web → kembali), 64 s, 1080 × 1080, tanpa suara, 8 langkah bernomor dengan teks besar dan penanda ketukan oranye. "Tonton Tutorial" (ON-04 dan Safari default) membuka video langsung di PiP (`TutorialPiP`: `AVPictureInPictureController` + `AVPlayerLayer` kecil di jendela, disembunyikan dari VoiceOver), jadi langkah di layar dan di Pengaturan tetap terlihat. Video diulang. Kalau PiP tidak didukung atau tidak mulai dalam ±1,5 s, layar penuh `TutorialVideoPlayer` dipakai. "Kembali ke app" di PiP membuka layar penuh di detik yang sama.
+- Alasan: permintaan Alief 18 Nov 2026: pengguna lansia harus bisa melihat langkah sambil mengerjakannya. Format persegi supaya teks terbaca di jendela PiP.
+- Alternatif yang ditolak: layar penuh lalu pengguna menekan tombol PiP sendiri (satu langkah lagi untuk lansia); video vertikal (teks terlalu kecil di PiP).
+- Catatan: simulator iPhone melaporkan `isPictureInPictureSupported NO`, jadi di sana (dan di UI test) yang muncul layar penuh. PiP diuji di simulator iPad (iOS 26.5). Sumber video (HyperFrames) tidak di git.
+- File: `Features/Onboarding/{TutorialPiP,TutorialVideoPlayer,TurnOnExtensionView,SafariDefaultView}.swift`, `Resources/onboarding-tutorial.mp4`, `UITests/OnboardingUITests.swift`.
+- Status: diterapkan di PR `feat/ON-04-tutorial-video`.

@@ -97,7 +97,7 @@
     const POS_KEY = "shoo.bubble.pos";
     const DRAG_SLOP = 6; // px a finger may move before a tap becomes a drag
     const t = (key, sub) => browser.i18n.getMessage(key, sub) || key;
-    const lang = (browser.i18n.getUILanguage?.() || "en").toLowerCase().startsWith("id") ? "id" : "en";
+    const lang = "id"; // always Bahasa Indonesia, whatever the device language (contracts/app-group-keys.md "Language")
     const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const CSS = `

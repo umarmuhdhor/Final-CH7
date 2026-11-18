@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 /// ON-04 inside onboarding: the online check question as a checkbox (Figma "Persetujuan · Checkbox", 1328:13421).
@@ -29,6 +30,7 @@ struct TurnOnExtensionView: View {
     @Environment(\.locale) private var locale
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var isVideoPresented = false
+    @State private var videoStartTime: CMTime = .zero
     @State private var isDataSheetPresented = false
     @State private var status: ExtensionStatus?
     /// Settings or Safari was opened from here. Figma has no status note; it shows only once the user is
@@ -123,7 +125,7 @@ struct TurnOnExtensionView: View {
                         .accessibilityIdentifier("extension.skipCheck")
                 }
             }
-            OnboardingTutorialLink { isVideoPresented = true }
+            OnboardingTutorialLink { watchTutorial() }
                 .accessibilityIdentifier("extension.video")
         }
         .footerEndsWithLink()
@@ -156,7 +158,7 @@ struct TurnOnExtensionView: View {
             ).post()
         }
         .fullScreenCover(isPresented: $isVideoPresented) {
-            TutorialVideoPlayer()
+            TutorialVideoPlayer(startTime: videoStartTime)
         }
         .sheet(isPresented: $isDataSheetPresented) {
             DataSentSheet()
@@ -183,6 +185,20 @@ struct TurnOnExtensionView: View {
             Text(title).opacity(isWorking ? 0 : 1)
             if isWorking { ProgressView().tint(OnboardingTheme.onButton) }
         }
+    }
+
+    /// "Watch the tutorial": straight into PiP so the steps stay on screen; full screen where PiP can't run.
+    private func watchTutorial() {
+        TutorialPiP.shared.start(
+            fallback: {
+                videoStartTime = .zero
+                isVideoPresented = true
+            },
+            restore: { time in
+                videoStartTime = time
+                isVideoPresented = true
+            }
+        )
     }
 }
 

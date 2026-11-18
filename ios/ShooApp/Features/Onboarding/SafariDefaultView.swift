@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 /// Figma "Jadikan Safari Default". Shoo only runs in Safari, but no API says which browser is the default,
@@ -59,6 +60,7 @@ struct SafariDefaultView: View {
     @State private var openedSettings = false
     @State private var cameBack = false
     @State private var isVideoPresented = false
+    @State private var videoStartTime: CMTime = .zero
 
     private let steps = SafariDefaultSetup.steps(for: ProcessInfo.processInfo.operatingSystemVersion)
 
@@ -90,7 +92,7 @@ struct SafariDefaultView: View {
                 .transition(.opacity)
                 .accessibilityIdentifier("safariDefault.open")
             }
-            OnboardingTutorialLink { isVideoPresented = true }
+            OnboardingTutorialLink { watchTutorial() }
                 .accessibilityIdentifier("safariDefault.video")
         }
         .footerEndsWithLink()
@@ -103,8 +105,22 @@ struct SafariDefaultView: View {
             if phase == .active, openedSettings { cameBack = true }
         }
         .fullScreenCover(isPresented: $isVideoPresented) {
-            TutorialVideoPlayer()
+            TutorialVideoPlayer(startTime: videoStartTime)
         }
+    }
+
+    /// "Watch the tutorial": straight into PiP so the steps stay on screen; full screen where PiP can't run.
+    private func watchTutorial() {
+        TutorialPiP.shared.start(
+            fallback: {
+                videoStartTime = .zero
+                isVideoPresented = true
+            },
+            restore: { time in
+                videoStartTime = time
+                isVideoPresented = true
+            }
+        )
     }
 }
 

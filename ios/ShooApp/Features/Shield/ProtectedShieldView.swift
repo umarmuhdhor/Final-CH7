@@ -58,6 +58,8 @@ struct ProtectedShieldView: View {
         // No navigation bar (see HomeTopBar): the page starts where the bar's bottom edge would be.
         .safeAreaPadding(.top, HomeTopBar.barHeight)
         .scrollIndicators(.hidden)
+        // Pulled down, the hero gradient grows to fill the overscroll (no flat band above it).
+        .readsHeroPull()
         .background(HomeTheme.background)
         .overlay(alignment: .top) {
             LinearGradient(colors: [scrim, scrim.opacity(0.85), scrim.opacity(0)], startPoint: .top, endPoint: .bottom)

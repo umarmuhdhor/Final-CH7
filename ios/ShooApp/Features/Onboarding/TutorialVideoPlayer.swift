@@ -1,20 +1,22 @@
 import AVKit
 import SwiftUI
 
-/// ON-04 "Still can't? Watch the video": full-screen player with Picture in Picture, so the video can
-/// keep playing over Settings. PiP outside the app also needs `UIBackgroundModes: [audio]` (TODO C3 item 4);
-/// without it the video plays inside the app only.
+/// ON-04 "Still can't? Watch the video": full-screen player. The link opens the video in PiP first
+/// (`TutorialPiP`); this player is the fallback where PiP can't run, and where "back to app" in the PiP
+/// window lands (`startTime` = the moment PiP was at).
 struct TutorialVideoPlayer: View {
     @Environment(\.dismiss) private var dismiss
+    var startTime: CMTime = .zero
 
-    // TODO(sync:umar): ON-04 tutorial video from PM — replace after C15
-    static let videoURL = Bundle.main.url(forResource: "onboarding-tutorial-placeholder", withExtension: "mp4")
+    /// Silent 64 s screen recording of the real enable flow, 1080 x 1080 so the text stays readable in PiP.
+    /// Source: `.video/` HyperFrames project (not in git).
+    static let videoURL = Bundle.main.url(forResource: "onboarding-tutorial", withExtension: "mp4")
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             if let url = Self.videoURL {
-                PlayerController(url: url)
+                PlayerController(url: url, startTime: startTime)
                     .ignoresSafeArea()
             } else {
                 Text("The video isn't available right now.")
@@ -39,6 +41,7 @@ struct TutorialVideoPlayer: View {
 
 private struct PlayerController: UIViewControllerRepresentable {
     let url: URL
+    let startTime: CMTime
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         do {
@@ -48,10 +51,12 @@ private struct PlayerController: UIViewControllerRepresentable {
             Log.app.error("Audio session for tutorial video failed", error)
         }
         let controller = AVPlayerViewController()
-        controller.player = AVPlayer(url: url)
+        let player = AVPlayer(url: url)
+        player.seek(to: startTime)
+        controller.player = player
         controller.allowsPictureInPicturePlayback = true
         controller.delegate = context.coordinator
-        controller.player?.play()
+        player.play()
         return controller
     }
 

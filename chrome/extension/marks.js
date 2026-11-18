@@ -111,7 +111,7 @@
     if (typeof document === "undefined" || typeof browser === "undefined") return;
 
     const t = (key) => browser.i18n.getMessage(key) || key;
-    const lang = (browser.i18n.getUILanguage?.() || "en").toLowerCase().startsWith("id") ? "id" : "en";
+    const lang = "id"; // always Bahasa Indonesia, whatever the device language (contracts/app-group-keys.md "Language")
     const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
     const make = (tag, props = {}) => Object.assign(dom.create(document, tag), props);
     const HIGHLIGHT = "shoo-suspicious";

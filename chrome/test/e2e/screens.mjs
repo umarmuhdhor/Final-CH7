@@ -114,7 +114,7 @@ async function devToolsPort(profile) {
 }
 
 try {
-    for (const lang of ["en", "id"]) await run(lang);
+    await run("id"); // the extension ships only _locales/id
 } finally {
     proxy.close();
 }

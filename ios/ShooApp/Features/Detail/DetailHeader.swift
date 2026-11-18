@@ -24,14 +24,6 @@ enum DetailLook: Equatable {
         }
     }
 
-    /// The top row of the picture, carried on above it when the page is pulled down.
-    var topColor: Color {
-        switch self {
-        case .danger: DetailStyle.hex(0xFF8A80)
-        case .caution: DetailStyle.hex(0xFFBD6B)
-        }
-    }
-
     var shieldTint: HalftoneShield.Tint {
         switch self {
         case .danger: .red
@@ -95,27 +87,25 @@ enum DetailHeroLayout {
     /// Scrolled this far, the rings have done ~70 % of their rise, about when the hero turns compact.
     static let parallaxLength: CGFloat = 130
 
-    /// Top of the ring picture for a scroll offset; pulled down, it follows the page.
+    /// Top of the ring picture for a scroll offset. Pulled down it stays at the top and stretches instead
+    /// (`DetailHeroBackground.stretch`).
     static func imageTop(offset: CGFloat) -> CGFloat {
-        offset < 0 ? -offset : -parallaxShift * (1 - exp(-offset / parallaxLength))
+        offset < 0 ? 0 : -parallaxShift * (1 - exp(-offset / parallaxLength))
     }
 }
 
-/// The rings and the colour above them, placed for a scroll offset. Drawn behind the page (under the sheet's
-/// round corners) and again inside the pinned hero, at the same place, so the two never show a seam.
+/// The rings, placed for a scroll offset. Drawn behind the page (under the sheet's round corners) and again inside
+/// the pinned hero, at the same place, so the two never show a seam.
 struct DetailHeroBackdrop: View {
     let look: DetailLook
     let offset: CGFloat
 
     var body: some View {
-        // Parallax (`DetailHeroLayout.imageTop`); pulled down, the top colour fills above the picture.
-        let imageTop = DetailHeroLayout.imageTop(offset: offset)
-        ZStack(alignment: .top) {
-            look.topColor.frame(height: max(imageTop, 0) + 1)
-            DetailHeroBackground(look: look)
-                .offset(y: imageTop)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
+        // Parallax (`DetailHeroLayout.imageTop`). Pulled down, the picture grows from its bottom edge by the pull,
+        // so its bottom follows the sheet and no flat band shows above it.
+        DetailHeroBackground(look: look, stretch: max(-offset, 0))
+            .offset(y: DetailHeroLayout.imageTop(offset: offset))
+            .frame(maxWidth: .infinity, alignment: .top)
         .accessibilityHidden(true)
     }
 }
@@ -320,11 +310,28 @@ struct DetailOwnerChip: View {
     }
 }
 
+extension View {
+    /// How far the enclosing scroll view has scrolled (iOS 18+). Before iOS 18 nothing is reported.
+    @ViewBuilder
+    func onScrollOffset(_ action: @escaping (CGFloat) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
+                action(offset)
+            }
+        } else {
+            self
+        }
+    }
+}
+
 /// Figma "Hero BG" brought to life: the rings in the picture breathe around their centre and soft white
 /// discs grow out of the shield and fade (the Home hero's `SoftPulse`), both on a 4 s beat.
 /// Reduce Motion keeps the still picture.
 struct DetailHeroBackground: View {
     let look: DetailLook
+    /// How far the page is pulled down past its top: the picture grows by that much from its bottom edge, rings
+    /// kept round, so the pull shows more hero instead of a flat band.
+    var stretch: CGFloat = 0
 
     @Environment(\.shooReduceMotion) private var reduceMotion
 
@@ -352,6 +359,8 @@ struct DetailHeroBackground: View {
             }
         }
         .frame(height: height)
+        .scaleEffect((height + stretch) / height, anchor: .bottom)
+        .frame(height: height + stretch, alignment: .bottom)
         .clipped()
         .accessibilityHidden(true)
     }
