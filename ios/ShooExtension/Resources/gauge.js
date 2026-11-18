@@ -160,21 +160,41 @@
             `</svg>`;
     }
 
-    // Figma "Bar" (warning sheet + block screen): the score as 1–3 hatched pieces (one per level reached), a red
-    // tick at the score, then a grey hatched track for the rest. Orange → coral → red, in that order.
+    // Figma "Bar" (warning sheet + block screen): one hatched piece per detection layer that found something,
+    // as long as that layer's share of the score, a red tick at the score, then a grey hatched track for the
+    // rest. Orange → coral → red, lowest layer first; a fourth layer reuses red. The app's Detail and Home bars
+    // use the same rule (RiskScoreBar.layerWeights).
     const BAR_COLORS = ["#FF9500", "#F87541", "#E5483B"];
 
     /**
-     * Pure: the bar's pieces as flex weights (they add up to 100).
-     * @param {number} score
-     * @param {1|2|3} pieces  levels reached: 1 = first warning, 2 = second warning, 3 = blocked
+     * Pure: summed weight per layer, lowest layer first; layers with nothing found are left out.
+     * Layer 2 alone → [w]; layer 2 + 3 → [w2, w3]; layer 2–4 → [w2, w3, w4].
+     * @param {{layer: number, weight: number}[]} signals
+     * @returns {number[]}
      */
-    function barParts(score, pieces) {
+    function layerWeights(signals) {
+        const sums = new Map();
+        for (const signal of Array.isArray(signals) ? signals : []) {
+            const weight = Number(signal?.weight);
+            const layer = Number(signal?.layer);
+            if (!(weight > 0) || !Number.isFinite(layer)) continue;
+            sums.set(layer, (sums.get(layer) ?? 0) + weight);
+        }
+        return [...sums.keys()].sort((a, b) => a - b).map((layer) => sums.get(layer));
+    }
+
+    /**
+     * Pure: the bar's pieces as flex weights (fills + track add up to 100).
+     * @param {number} score
+     * @param {number[]} weights  per-layer weights (layerWeights); empty → one piece for the whole score
+     */
+    function barParts(score, weights) {
         const value = clamp(score);
-        const count = Math.min(3, Math.max(1, Math.round(Number(pieces) || 1)));
-        const each = n(value / count);
+        const parts = (Array.isArray(weights) ? weights : []).map((w) => Math.max(0, Number(w) || 0)).filter((w) => w > 0);
+        const list = parts.length ? parts : [1];
+        const total = list.reduce((sum, w) => sum + w, 0);
         return {
-            fills: BAR_COLORS.slice(0, count).map((color) => ({ color, weight: each })),
+            fills: list.map((w, i) => ({ color: BAR_COLORS[Math.min(i, BAR_COLORS.length - 1)], weight: n((value * w) / total) })),
             track: n(100 - value),
         };
     }
@@ -184,8 +204,8 @@
      * page's CSP can't drop them. `create(tag)` makes an element (ShooDom.create in content scripts).
      * Classes: .fill (each piece), .tick, .track — the caller's CSS draws them.
      */
-    function fillBar(container, score, pieces, create) {
-        const { fills, track } = barParts(score, pieces);
+    function fillBar(container, score, weights, create) {
+        const { fills, track } = barParts(score, weights);
         const part = (className, weight, color) => {
             const node = create("span");
             node.className = className;
@@ -200,5 +220,5 @@
         );
     }
 
-    globalThis.ShooGauge = { gauge, ring, barParts, fillBar, LEVELS };
+    globalThis.ShooGauge = { gauge, ring, layerWeights, barParts, fillBar, LEVELS };
 })();

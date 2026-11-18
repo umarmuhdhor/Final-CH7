@@ -27,10 +27,22 @@ test("ring: a full score still draws a closed tube", () => {
     assert.doesNotMatch(ring(0, "tinggi"), /url\(#sr-tube-fill\)/);
 });
 
-test("bar: one piece per level reached, the rest is track (Figma Bar)", () => {
-    const { barParts } = globalThis.ShooGauge;
-    assert.deepEqual(barParts(70, 2), { fills: [{ color: "#FF9500", weight: 35 }, { color: "#F87541", weight: 35 }], track: 30 });
-    assert.deepEqual(barParts(90, 3).fills.map((f) => f.color), ["#FF9500", "#F87541", "#E5483B"]);
-    assert.equal(barParts(90, 3).track, 10);
-    assert.deepEqual(barParts(140, 9), barParts(100, 3)); // clamped
+test("bar: one piece per detection layer, as long as its share; the rest is track (Figma Bar)", () => {
+    const { barParts, layerWeights } = globalThis.ShooGauge;
+    const sig = (layer, weight) => ({ layer, weight });
+    // Layer 2 only: one piece, however many reasons.
+    assert.deepEqual(layerWeights([sig(2, 40), sig(2, 14)]), [54]);
+    assert.deepEqual(barParts(54, [54]), { fills: [{ color: "#FF9500", weight: 54 }], track: 46 });
+    // Layer 2 + 3: two pieces, lowest layer first, scaled to the score.
+    assert.deepEqual(layerWeights([sig(3, 30), sig(2, 14), sig(3, 25)]), [14, 55]);
+    assert.deepEqual(barParts(69, [14, 55]).fills, [{ color: "#FF9500", weight: 14 }, { color: "#F87541", weight: 55 }]);
+    // Layer 2–4: three pieces; zero weights and junk are left out.
+    assert.deepEqual(layerWeights([sig(4, 22), sig(2, 15), sig(3, 55), sig(5, 0), null]), [15, 55, 22]);
+    assert.deepEqual(barParts(92, [15, 55, 22]).fills.map((f) => f.color), ["#FF9500", "#F87541", "#E5483B"]);
+    assert.equal(barParts(92, [15, 55, 22]).track, 8);
+    // Sum over 100 (score capped): pieces shrink to the score, keeping their shares.
+    assert.deepEqual(barParts(100, [70, 50]).fills.map((f) => f.weight), [58.333, 41.667]);
+    // No layer known: one piece for the whole score; out of range clamped.
+    assert.deepEqual(barParts(80, []), { fills: [{ color: "#FF9500", weight: 80 }], track: 20 });
+    assert.deepEqual(barParts(140, [1]), barParts(100, [1]));
 });

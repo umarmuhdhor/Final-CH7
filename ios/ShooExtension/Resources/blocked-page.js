@@ -126,7 +126,9 @@
         return;
     }
 
-    globalThis.ShooGauge.fillBar($(".bar"), payload.score, 3, (tag) => document.createElement(tag));
+    // One piece per layer (block.js `layers`); an older fragment without it falls back to the top reasons.
+    const layers = payload.layers ?? globalThis.ShooGauge.layerWeights(payload.reasons);
+    globalThis.ShooGauge.fillBar($(".bar"), payload.score, layers, (tag) => document.createElement(tag));
     $(".score-value").textContent = `${payload.score}/100`;
     $(".link").textContent = globalThis.ShooBlockedPage.middleEllipsis(payload.domain || payload.url);
     $(".link").title = payload.domain || payload.url;

@@ -383,7 +383,7 @@ struct DetailView: View {
                 .foregroundStyle(DetailStyle.title)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            RiskScoreBar(score: scan.score, weights: scan.signals.map(\.weight))
+            RiskScoreBar(score: scan.score, signals: scan.signals)
         }
         .padding(.top, 12)
         .accessibilityElement(children: .ignore)
