@@ -47,13 +47,16 @@ class Element extends Node {
     closest() {
         return null;
     }
+    matches(selector) {
+        return selector === "form *" ? Boolean(this._inForm) : matches(this, selector);
+    }
 }
 class Document extends Node {
     constructor(elements) {
         super(9);
         this._elements = elements;
         for (const el of elements) el.ownerDocument = this;
-        for (const form of elements.filter((el) => el.tagName === "FORM")) for (const field of form._children) field.ownerDocument = this;
+        for (const form of elements.filter((el) => el.tagName === "FORM")) for (const field of form._children) Object.assign(field, { ownerDocument: this, _inForm: true });
     }
     get forms() {
         return this._elements.filter((el) => el.tagName === "FORM");

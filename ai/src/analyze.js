@@ -5,6 +5,7 @@ import { formSignals } from "./layer3/forms.js";
 import { contentSignals } from "./layer3/content.js";
 import { buildNewDomainSignal } from "./layer3/signals.js";
 import { hostOf, isOfficialHost } from "./layer3/official.js";
+import { buildModelSignal, scoreImpersonation } from "./layer3/model/impersonation.js";
 
 /**
  * D-imelda-39: answer within 6.5 s of the request arriving. The extension gives up after 8 s, so 1.5 s is left for the
@@ -48,12 +49,15 @@ export function analyzeSnapshot(rawSnapshot) {
  * Rules + domain age. The RDAP lookup starts first and runs while the rules run; it has its own
  * deadline and returns null on any failure, so the rules' answer never depends on it.
  * @param {object} rawSnapshot
- * @param {{ rdap?: { lookup(host: string): Promise<{ registeredAt: string|null, ageDays: number|null }> } | null, llm?: { check: Function } | null, client?: string, localSignals?: unknown, deadline?: number, now?: () => number }} [deps]
+ * @param {{ rdap?: { lookup(host: string): Promise<{ registeredAt: string|null, ageDays: number|null }> } | null, llm?: { check: Function } | null, client?: string, localSignals?: unknown, deadline?: number, now?: () => number, model?: boolean }} [deps]
  *   deadline: time (ms, same clock as `now`) by which the answer must be ready; layer 4 is cut there. Default: none.
+ *   model: run the layer 3 impersonation model (flag SHOO_L3_MODEL=impersonation, layer3/model/impersonation.js). Off: the
+ *   answer is exactly what it was before the model existed. On: a warn/block answer adds `impersonation_model` (40 / 80)
+ *   before the layer 4 gate is computed; `gate` adds nothing. A model error never breaks the rules' answer.
  * @returns {Promise<{ signals: object[], rdapRegisteredAt: string|null }>} rdapRegisteredAt (#270): `YYYY-MM-DD`, whether or
  *   not new_domain fires; null when RDAP failed, timed out, or was not asked (official host, IP, no RDAP client).
  */
-export async function analyzeWithDomain(rawSnapshot, { rdap = null, llm = null, client = "unknown", localSignals = [], deadline = Infinity, now = Date.now } = {}) {
+export async function analyzeWithDomain(rawSnapshot, { rdap = null, llm = null, client = "unknown", localSignals = [], deadline = Infinity, now = Date.now, model = false } = {}) {
     const snapshot = sanitizeSnapshot(rawSnapshot);
     const host = hostOf(snapshot.url);
     const official = isOfficialHost(host);
@@ -68,6 +72,15 @@ export async function analyzeWithDomain(rawSnapshot, { rdap = null, llm = null, 
     const domainSignal = ageDays === null || ageDays === undefined ? null : buildNewDomainSignal(ageDays);
     const ruleIds = signals.map((s) => s.id); // before new_domain: the model is not told the domain age, prompt v4 has no wording for it (D-imelda-50)
     if (domainSignal) signals.push(domainSignal);
+    if (model) {
+        let modelSignal = null;
+        try {
+            modelSignal = buildModelSignal(scoreImpersonation(snapshot, { ruleIds, ageDays: ageDays ?? null }));
+        } catch {
+            modelSignal = null; // the model must never break layer 3: the rules' answer stands
+        }
+        if (modelSignal) signals.push(modelSignal);
+    }
     const score = localScore(localSignals) + signals.reduce((sum, s) => sum + s.weight, 0);
     const layer4 = llm ? await llm.check(snapshot, { official, score, ruleIds, localSignals, client, deadlineMs: deadline - now() }).catch(() => null) : null;
     if (layer4) signals.push(layer4);

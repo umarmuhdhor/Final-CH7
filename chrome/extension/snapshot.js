@@ -32,21 +32,35 @@
         }
     }
 
-    /** The forms of one document. */
+    const FIELDS = "input, select, textarea";
+    const IGNORED_TYPES = new Set(["hidden", "submit", "button", "reset", "image"]);
+
+    function fieldOf(el) {
+        return {
+            type: el.type || el.tagName.toLowerCase(),
+            name: el.getAttribute("name"),
+            id: el.id || null,
+            label: labelFor(el),
+            placeholder: el.getAttribute("placeholder"),
+            autocomplete: el.getAttribute("autocomplete"),
+            accept: el.getAttribute("accept"),
+            capture: el.getAttribute("capture"), // "user" = front camera (selfie hint, C8)
+        };
+    }
+
+    /** Fields outside any <form>: pages built with plain divs + JS (e.g. blogspot "SIM gratis" kits) have no form at all. */
+    function looseFields(doc) {
+        return all(doc, FIELDS).filter((el) => !matches(el, "form *") && !IGNORED_TYPES.has(String(el.type).toLowerCase()));
+    }
+
+    /** The forms of one document, plus one virtual form (action null) for the fields that sit outside any <form>. */
     function formsOf(doc) {
-        return [...forms(doc)].map((form) => ({
+        const real = [...forms(doc)].map((form) => ({
             action: formTarget(attr(form, "action")),
-            fields: all(form, "input, select, textarea").map((el) => ({
-                type: el.type || el.tagName.toLowerCase(),
-                name: el.getAttribute("name"),
-                id: el.id || null,
-                label: labelFor(el),
-                placeholder: el.getAttribute("placeholder"),
-                autocomplete: el.getAttribute("autocomplete"),
-                accept: el.getAttribute("accept"),
-                capture: el.getAttribute("capture"), // "user" = front camera (selfie hint, C8)
-            })),
+            fields: all(form, FIELDS).map(fieldOf),
         }));
+        const loose = looseFields(doc);
+        return loose.length ? [...real, { action: null, fields: loose.map(fieldOf) }] : real;
     }
 
     /** Documents of same-origin iframes that hold a form, max MAX_FRAMES. Cross-origin ones give null or throw. */
@@ -60,7 +74,7 @@
             } catch {
                 // cross-origin → skip
             }
-            if (inner && forms(inner).length) docs.push(inner);
+            if (inner && (forms(inner).length || looseFields(inner).length)) docs.push(inner);
         }
         return docs;
     }

@@ -124,6 +124,7 @@ Optional, only on the layer 1–2 address signals the detector makes: `lookalike
 | `asks_pin` / `asks_otp` / `asks_password` / `asks_card` / `asks_cvv` / `asks_ktp` / `asks_selfie_ktp` | 3 (2) | Form requests sensitive data. Layer 3 on the server. Since #379 the detector also emits `asks_pin` / `asks_otp` / `asks_card` / `asks_cvv` / `asks_ktp` as **layer 2**, with lower weights, only when the address already raised a layer 1–2 signal, so a page offline still shows its credential form. Same id on both layers: the extension keeps the heavier one (`mergeSignals`), never both |
 | `brand_logo_offsite` | 3 | Brand logo on non-official domain |
 | `urgent_language` | 3 | "blocked in 24 hours", etc. |
+| `impersonation_model` | 3 | Impersonation model (text + address + page facts) says the page copies another site: weight 40 (warn) or 80 (block). No `evidence`. Only when the server runs with `SHOO_L3_MODEL=impersonation` |
 | `unreasonable_request` | 4 | LLM: requested data doesn't fit the page type |
 | `hoax_claim` | 6 | Phase 2 — not used in MVP |
 

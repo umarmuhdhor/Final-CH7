@@ -14,12 +14,20 @@ const fetchAge = (days) => async (url) =>
         ? new Response(JSON.stringify(bootstrap))
         : new Response(JSON.stringify({ events: [{ eventAction: "registration", eventDate: new Date(NOW - days * 86_400_000).toISOString() }] }));
 
+// Same id on layer 2 and layer 3 (asks_* since #379): the extension keeps the heavier one, never both
+// (ios/ShooExtension/Resources/pipeline.js mergeSignals), so the score here does the same.
+function mergeById(signals) {
+    const byId = new Map();
+    for (const s of signals) if (!byId.has(s.id) || s.weight > byId.get(s.id).weight) byId.set(s.id, s);
+    return [...byId.values()];
+}
+
 async function reproduce(snapshot, days) {
     const detector = loadDetector();
     const local = await detector.analyzeLocal(snapshot);
     const app = createApp({ fetch: fetchAge(days), now: () => NOW });
     const remote = (await (await post(app, { snapshot, localSignals: local })).json()).signals;
-    return { local, remote, score: scoreOf([...local, ...remote]) };
+    return { local, remote, score: scoreOf(mergeById([...local, ...remote])) };
 }
 
 test("blocked-92: bca-verifikasi.site with a PIN form on a 3-day-old domain", async () => {
@@ -46,9 +54,9 @@ test("warning-63: bansos-kemensos.site asks for NIK, deadline wording, domain ol
     for (const id of fx.signals.filter((s) => s.layer === 3).map((s) => s.id)) assert.ok(ids(remote).includes(id), `fixture signal ${id}`);
     assert.equal(ids(remote).includes("new_domain"), false, "old domain: no new_domain, like the fixture");
     assert.equal(remote.find((s) => s.id === "urgent_language").evidence, "terakhir hari ini");
-    // Honest gap: score is 74 vs 63 (+11, one point past the +-10 goal). The fixture was written with asks_ktp 25 and
-    // urgent_language 10; R1/D-imelda-12 set 30 and 15 (+10), and the real layer 2 adds 1 more than the fixture. Same signals,
-    // same status (warning). Weights are not bent to fit a fixture; phase 07 calibrates them.
+    // Honest gap: score is 70 vs 63 (+7). urgent_language is 15, not the fixture's 10 (R1/D-imelda-12), and the real layer 2
+    // (brand_plus_keyword 14, cheap_tld 16) adds 2 more than the fixture. asks_ktp comes on layer 2 (15) and layer 3 (25):
+    // counted once, the heavier. Same signals, same status (warning). Weights are not bent to fit a fixture.
     assert.ok(statusOf(score).startsWith(fx.status), statusOf(score));
     assert.ok(Math.abs(score - fx.score) <= 12, `score ${score} vs fixture ${fx.score}`);
 });

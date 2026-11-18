@@ -99,8 +99,14 @@ final class AppEnvironment {
             #if DEBUG
             // Live QA on a local stack: `-debug.aiBaseURL http://localhost:8788` gives the extension layers 3–4
             // (AppConfig has no AI URL in Debug). `SessionStore.isAllowed` still rejects anything but HTTPS or localhost.
+            // feat/l3-impersonation-model: the URL from the argument is kept, so opening the app from the home screen
+            // (no arguments) on a real iPhone does not wipe it. Debug only.
+            let savedKey = "debug.savedAIBaseURL"
+            let fromArgument = Self.value(after: "-debug.aiBaseURL", in: arguments)
+            if let fromArgument { UserDefaults.standard.set(fromArgument, forKey: savedKey) }
+            let debugAI = (fromArgument ?? UserDefaults.standard.string(forKey: savedKey)).flatMap(URL.init(string:))
             let store = SessionStore(
-                aiBaseURL: Self.value(after: "-debug.aiBaseURL", in: arguments).flatMap(URL.init(string:)) ?? AppConfig.aiBaseURL,
+                aiBaseURL: debugAI ?? AppConfig.aiBaseURL,
                 onlineCheckAllowed: settings.dataConsent == .granted
             )
             #else
