@@ -268,10 +268,14 @@ private struct ModePage: View {
 
             if choice != current {
                 Button {
-                    if choice == .guardian { env.requestFamilyMode() } else { model.setFamilyMode(false) }
+                    let target = choice
+                    if target == .guardian { env.requestFamilyMode() } else { model.setFamilyMode(false) }
                     selected = nil
+                    // The first Guardian switch only opens "To be guardian": nothing switched yet, so nothing to say.
+                    // (Read after `selected = nil`, `choice` is the old mode: it announced "Switched to Personal".)
+                    guard current == target else { return }
                     AccessibilityNotification.Announcement(L10n.string(
-                        choice == .guardian ? "Switched to Guardian" : "Switched to Personal", language: AppLanguage(locale: locale)
+                        target == .guardian ? "Switched to Guardian" : "Switched to Personal", language: AppLanguage(locale: locale)
                     )).post()
                 } label: {
                     Text(choice == .guardian ? "Switch to Guardian" : "Switch to Personal")
@@ -417,8 +421,10 @@ struct JoinAnotherFamilySheet: View {
             cameFromLink = true
             model?.prefill(pending)
         }
-        // Once joined the old device is gone: no swipe back to a screen that no longer exists.
-        .interactiveDismissDisabled(isJoined)
+        // Once joined the old device is gone: no swipe back to a screen that no longer exists. While joining
+        // too (as ConnectSheet): swiped away, the join went on unseen, its "Connected" and its error were lost,
+        // and `onFinish` never closed the Guardian screens of a device that had just become Protected.
+        .interactiveDismissDisabled(isJoined || model?.state == .joining)
     }
 
     private var isJoined: Bool {
@@ -688,6 +694,8 @@ private struct ProtectedManageProfilePage: View {
     }
 
     private var nameMessage: Text? {
+        // Before the profile arrives the field is empty on purpose: no "Enter a name." for a name not read yet.
+        guard model.state == .loaded else { return nil }
         switch model.nameProblem {
         case .empty: return Text("Enter a name.")
         case .tooLong: return Text("Use 20 characters or fewer.")
@@ -725,6 +733,10 @@ private struct ConnectionPage: View {
                 linked(guardian)
             } else if model.state == .loaded {
                 notLinked
+            } else if model.state == .failed {
+                // Offline or a server error: say so and offer a retry instead of a spinner that never ends.
+                ProfileLoadFailed(failure: model.loadFailure) { await model.retry() }
+                    .padding(.top, 24)
             } else {
                 ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 200)
             }
@@ -1008,53 +1020,62 @@ private struct NotificationsPage: View {
                 .padding(.top, 4)
             }
 
-            ProfileSection(title: "Warnings") {
-                ProfileToggleRow(
-                    symbol: "bell.fill", title: Text("Dangerous sites"), subtitle: Text("When you open a high-risk site"),
-                    style: .settings, isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
-                )
-                .accessibilityIdentifier("notifications.warning")
-                ProfileDivider()
-                ProfileToggleRow(
-                    symbol: "network.badge.shield.half.filled", title: Text("Blocked sites"), subtitle: Text("Every time Shoo blocks a site"),
-                    style: .settings, isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
-                )
-                .accessibilityIdentifier("notifications.blocked")
-            }
-            // Figma: the first title sits 24 pt under the back button; the header leaves 16.
-            .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20)
-
-            if model.variant == .guardian {
-                ProfileSection(title: "Family · Guardian mode") {
+            // The switches show the server's settings: until they are read (or when the read failed) they would
+            // show the defaults, and a tap would be dropped without a word (`updateNotifications` needs the profile).
+            if model.profile != nil {
+                ProfileSection(title: "Warnings") {
                     ProfileToggleRow(
-                        symbol: "person.fill", title: Text("Activity of people you protect"), subtitle: Text("When they open a dangerous site"),
-                        style: .settings, isOn: binding(\.family) { NotificationSettingsUpdate(family: $0) }
+                        symbol: "bell.fill", title: Text("Dangerous sites"), subtitle: Text("When you open a high-risk site"),
+                        style: .settings, isOn: binding(\.warning) { NotificationSettingsUpdate(warning: $0) }
                     )
-                    .accessibilityIdentifier("notifications.family")
+                    .accessibilityIdentifier("notifications.warning")
                     ProfileDivider()
                     ProfileToggleRow(
-                        symbol: ProfileStyle.extensionSymbol, title: Text("Protection off"), subtitle: Text("When their extension is off"),
-                        style: .settings, isOn: binding(\.protectionOff) { NotificationSettingsUpdate(protectionOff: $0) }
+                        symbol: "network.badge.shield.half.filled", title: Text("Blocked sites"), subtitle: Text("Every time Shoo blocks a site"),
+                        style: .settings, isOn: binding(\.blocked) { NotificationSettingsUpdate(blocked: $0) }
                     )
-                    .accessibilityIdentifier("notifications.protectionOff")
+                    .accessibilityIdentifier("notifications.blocked")
                 }
-            }
+                // Figma: the first title sits 24 pt under the back button; the header leaves 16.
+                .padding(.top, model.notificationStatus.map { $0 != .authorized } ?? false ? 0 : -20)
 
-            if model.variant == .protected {
-                // Figma: Protected has no summary or quiet hours, and a switch for its guardian's checks.
-                // Hidden until the server sends that push (#183).
-                if LinkedAccountSettings.switchesAreLive {
-                    @Bindable var linked = model.linked
-                    ProfileSection(title: "Connected account") {
+                if model.variant == .guardian {
+                    ProfileSection(title: "Family · Guardian mode") {
                         ProfileToggleRow(
-                            symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
-                            style: .settings, isOn: $linked.notifyLinkVerified
+                            symbol: "person.fill", title: Text("Activity of people you protect"), subtitle: Text("When they open a dangerous site"),
+                            style: .settings, isOn: binding(\.family) { NotificationSettingsUpdate(family: $0) }
                         )
-                        .accessibilityIdentifier("notifications.linkVerified")
+                        .accessibilityIdentifier("notifications.family")
+                        ProfileDivider()
+                        ProfileToggleRow(
+                            symbol: ProfileStyle.extensionSymbol, title: Text("Protection off"), subtitle: Text("When their extension is off"),
+                            style: .settings, isOn: binding(\.protectionOff) { NotificationSettingsUpdate(protectionOff: $0) }
+                        )
+                        .accessibilityIdentifier("notifications.protectionOff")
                     }
                 }
+
+                if model.variant == .protected {
+                    // Figma: Protected has no summary or quiet hours, and a switch for its guardian's checks.
+                    // Hidden until the server sends that push (#183).
+                    if LinkedAccountSettings.switchesAreLive {
+                        @Bindable var linked = model.linked
+                        ProfileSection(title: "Connected account") {
+                            ProfileToggleRow(
+                                symbol: "lock.fill", title: Text("Blocked link"), subtitle: Text("When the linked account verifies a link"),
+                                style: .settings, isOn: $linked.notifyLinkVerified
+                            )
+                            .accessibilityIdentifier("notifications.linkVerified")
+                        }
+                    }
+                } else {
+                    summaryAndQuietHours
+                }
+            } else if model.state == .failed {
+                ProfileLoadFailed(failure: model.loadFailure) { await model.retry() }
+                    .padding(.top, 24)
             } else {
-                summaryAndQuietHours
+                ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 200)
             }
         }
         .task(id: scenePhase) {

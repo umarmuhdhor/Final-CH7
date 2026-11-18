@@ -28,7 +28,7 @@ final class ProfileModel {
     private(set) var membersFailed = false
     /// The last family list read in this Profile session worked, so `members` is the family (PF-01, #494).
     /// A failed profile refresh does not read the list, so it keeps the last answer (the view keeps the list too).
-    private var membersLoaded = false
+    private(set) var membersLoaded = false
     /// Why the profile (`state == .failed`) or the family list (`membersFailed`) could not be read (A-03).
     private(set) var loadFailure: LoadFailure = .connection
     private(set) var membersLoadFailure: LoadFailure = .connection
@@ -301,6 +301,8 @@ final class ProfileModel {
         if result == nil, let index = members.firstIndex(where: { $0.deviceId == member.deviceId }) {
             members[index].remindedAt = now()
         }
+        // Shown as an alert too: the announcement alone reaches only VoiceOver.
+        if let result { actionError = result }
         return result ?? "Reminder sent to \(member.name)"
     }
 

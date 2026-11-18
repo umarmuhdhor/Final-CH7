@@ -243,6 +243,9 @@ struct ProfileView: View {
                 // Figma "Profile/Guardian · Gagal memuat" (1681:7088): the same card inside the section.
                 ProfileLoadFailed(identifier: "profile.members.retry", failure: model.membersLoadFailure) { await model.load() }
                     .transition(.opacity)
+            } else if !model.membersLoaded {
+                // The list is still on its way: the invite card would flash before the members replace it.
+                ShieldPulseLoader().frame(maxWidth: .infinity, minHeight: 120)
             } else if model.members.isEmpty {
                 FamilyEmptyCard { isInvitePresented = true }
             } else {
@@ -291,7 +294,8 @@ struct ProfileView: View {
             if !member.extensionActive {
                 RemindButton(member: member, isWorking: remindingId == member.deviceId) {
                     remindingId = member.deviceId
-                    if let message = await model.remind(member) { announce(message) }
+                    // A problem shows as an alert, which VoiceOver reads; only "sent" is announced.
+                    if let message = await model.remind(member), model.actionError == nil { announce(message) }
                     remindingId = nil
                 }
             }

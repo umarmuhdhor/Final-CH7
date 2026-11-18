@@ -485,6 +485,16 @@ struct ProfileModelTests {
         let dad = try #require(model.members.first { $0.deviceId == "dev_dad" })
         #expect(await model.remind(dad).map { L10n.string($0, language: .english) } == "Dad hasn't turned on notifications")
         #expect(model.members.first { $0.deviceId == "dev_dad" }?.remindedAt == nil)
+        // Shown on screen too, not only to VoiceOver.
+        #expect(model.actionError.map { L10n.string($0, language: .english) } == "Dad hasn't turned on notifications")
+    }
+
+    /// The family list arrives after the profile: until then the section must not read as "no members".
+    @Test func membersAreNotLoadedUntilTheListArrives() async {
+        let model = redesignModel(mode: .guardian, familyMode: true)
+        #expect(model.membersLoaded == false)
+        await model.load()
+        #expect(model.membersLoaded)
     }
 
     // MARK: PF-01 Notifikasi, Ubah foto, Punya kode undangan
