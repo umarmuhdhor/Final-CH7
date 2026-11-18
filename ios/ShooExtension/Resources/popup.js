@@ -215,7 +215,7 @@
     const LEVEL = { 1: "sedang", 2: "tinggi" }; // gauge.js colour set per tier
 
     const dom = globalThis.ShooDom; // the page can shadow document properties and hide our host (dom.js)
-    const { ring: drawRing, fillBar } = globalThis.ShooGauge;
+    const { ring: drawRing, fillBar, layerWeights } = globalThis.ShooGauge;
     const DANGER = 80; // red shield from here (Figma "Situs Berbahaya!"), like gauge.js Level=Bahaya
     let host = null;
     let release = () => {}; // stops guarding host
@@ -389,7 +389,7 @@
             }
             refs.title.textContent = t(danger ? "popup_title_danger" : "popup_title_2");
             refs.sheet.setAttribute("aria-label", refs.title.textContent);
-            fillBar(refs.bar, state.score, danger ? 3 : last.tier, (tag) => dom.create(document, tag));
+            fillBar(refs.bar, state.score, layerWeights(state.signals), (tag) => dom.create(document, tag));
             refs.value.textContent = `${state.score}/100`;
         } else {
             refs.art.innerHTML = drawRing(state.score, LEVEL[last.tier]); // our own markup from numbers only

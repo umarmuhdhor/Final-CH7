@@ -305,6 +305,24 @@ struct DetailModelTests {
         #expect(scaled.count == weights.count)
     }
 
+    @Test func scoreBarHasOneSegmentPerLayer() {
+        func signal(_ id: String, layer: Int, weight: Int) -> Signal {
+            Signal(id: id, layer: layer, weight: weight, label: .init(en: id, id: id), labelSimple: .init(en: id, id: id))
+        }
+        // Layer 2 only: one segment, however many reasons.
+        #expect(RiskScoreBar.layerWeights([signal("a", layer: 2, weight: 40), signal("b", layer: 2, weight: 14)]) == [54])
+        // Layer 2 + 3: two segments, lowest layer first, each its layer's sum.
+        #expect(RiskScoreBar.layerWeights([
+            signal("c", layer: 3, weight: 30), signal("a", layer: 2, weight: 14), signal("d", layer: 3, weight: 25),
+        ]) == [14, 55])
+        // Layer 2–4: three segments; a layer with only zero weights is left out.
+        #expect(RiskScoreBar.layerWeights([
+            signal("e", layer: 4, weight: 20), signal("a", layer: 2, weight: 14), signal("c", layer: 3, weight: 30),
+            signal("z", layer: 5, weight: 0),
+        ]) == [14, 30, 20])
+        #expect(RiskScoreBar.layerWeights([]).isEmpty)
+    }
+
     @Test func detailLookFollowsTheVerdict() async {
         #expect(DetailLook(scan: FixtureLoader.scan("blocked-verified-scam")) == .danger)
         var scan = FixtureLoader.scan("blocked-verified-scam")

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
+await import("../Resources/gauge.js"); // block.js reads ShooGauge.layerWeights for the score bar
 await import("../Resources/block.js"); // no ShooPipeline/browser here → helpers only
 await import("../Resources/blocked-page.js");
 const { payloadFor, encode, decode } = globalThis.ShooBlock;
@@ -14,8 +15,17 @@ const state = { ...blocked92, scanId: 3, status: "blocked" };
 test("payload keeps the top 3 reasons by weight, both languages, nothing else", () => {
     const p = payloadFor(state);
     assert.deepEqual(p.reasons.map((r) => r.weight), [30, 25, 22]);
-    assert.deepEqual(Object.keys(p).sort(), ["domain", "reasons", "recordId", "remembered", "reportKey", "score", "url"]);
-    assert.deepEqual(Object.keys(p.reasons[0]).sort(), ["id", "label", "labelSimple", "weight"]);
+    assert.deepEqual(Object.keys(p).sort(), ["domain", "layers", "reasons", "recordId", "remembered", "reportKey", "score", "url"]);
+    assert.deepEqual(Object.keys(p.reasons[0]).sort(), ["id", "label", "labelSimple", "layer", "weight"]);
+});
+
+test("payload carries the score bar's weight per layer, over every signal", () => {
+    assert.deepEqual(payloadFor(state).layers, [15, 55, 22]);
+    const bad = (layers) => decode("#" + encode({ ...payloadFor(state), layers }));
+    assert.equal("layers" in bad(["x"]), false);
+    assert.equal("layers" in bad([1, 2, 3, 4, 5, 6, 7]), false);
+    assert.equal("layers" in bad(null), false);
+    assert.notEqual(bad("x"), null); // a bad bar never unblocks: the page stays blocked, the bar falls back
 });
 
 test("payload round-trips through the URL fragment", () => {

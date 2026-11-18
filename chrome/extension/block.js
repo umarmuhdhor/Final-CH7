@@ -18,7 +18,10 @@
             reasons: [...state.signals]
                 .sort((a, b) => b.weight - a.weight)
                 .slice(0, MAX_REASONS)
-                .map(({ id, weight, label, labelSimple }) => ({ id, weight, label, labelSimple })),
+                .map(({ id, layer, weight, label, labelSimple }) => ({ id, layer, weight, label, labelSimple })),
+            // Score bar: summed weight per layer over every signal, not only the top reasons (gauge.js layerWeights).
+            // Left out where gauge.js isn't loaded (Chrome); blocked-page.js then falls back to the reasons.
+            ...(globalThis.ShooGauge ? { layers: globalThis.ShooGauge.layerWeights(state.signals) } : {}),
         };
     }
 
@@ -33,7 +36,10 @@
             const url = new URL(payload.url);
             if (!/^https?:$/.test(url.protocol)) return null; // only ever reopen web pages
             if (typeof payload.domain !== "string" || !Number.isInteger(payload.score)) return null;
-            return { ...payload, reasons: Array.isArray(payload.reasons) ? payload.reasons : [] };
+            const { layers, ...rest } = payload;
+            const goodLayers = Array.isArray(layers) && layers.length <= 6 &&
+                layers.every((w) => Number.isFinite(w) && w > 0 && w <= 1000);
+            return { ...rest, reasons: Array.isArray(payload.reasons) ? payload.reasons : [], ...(goodLayers ? { layers } : {}) };
         } catch {
             return null;
         }

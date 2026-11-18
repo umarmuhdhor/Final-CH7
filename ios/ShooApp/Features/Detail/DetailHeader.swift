@@ -127,11 +127,24 @@ struct DetailLinkPill: View {
     }
 }
 
-/// Figma "Bar" under "92/100": one hatched segment per reason (by weight), a tick at the score, then the
-/// grey track. 153 pt wide, 1.5 pt apart.
+/// Figma "Bar" under "92/100": one hatched segment per detection layer that found something (its share of
+/// the weight), a tick at the score, then the grey track. 153 pt wide, 1.5 pt apart. The extension's bar
+/// (block screen, warning sheet) uses the same rule.
 struct RiskScoreBar: View {
     let score: Int
     let weights: [Int]
+
+    init(score: Int, signals: [Signal]) {
+        self.score = score
+        self.weights = Self.layerWeights(signals)
+    }
+
+    /// Summed weight per layer, lowest layer first; layers with nothing found are left out. Layer 2 alone →
+    /// one segment; layer 2 + 3 → two, each as long as its share; layer 2–4 → three.
+    static func layerWeights(_ signals: [Signal]) -> [Int] {
+        let byLayer = Dictionary(grouping: signals.filter { $0.weight > 0 }, by: \.layer)
+        return byLayer.keys.sorted().map { layer in byLayer[layer, default: []].reduce(0) { $0 + $1.weight } }
+    }
 
     /// The weights scaled so they add up to the score: the tick sits at the score, the track shows the rest.
     static func scaled(score: Int, weights: [Int]) -> [Int] {

@@ -520,8 +520,9 @@ struct HomeRiskPanel: View {
     }
 }
 
-/// Figma "Bar" (1382:10996): one capsule per reason, by weight and scaled to the score, 1.5 pt apart; a 2 pt
-/// tick at the score; the hatched grey track for the rest. 153 pt, the score 8 pt beside it.
+/// Figma "Bar" (1382:10996): one capsule per detection layer that found something (`RiskScoreBar.layerWeights`),
+/// by weight and scaled to the score, 1.5 pt apart; a 2 pt tick at the score; the hatched grey track for the
+/// rest. 153 pt, the score 8 pt beside it.
 struct HomeRiskBar: View {
     let scan: ScanResult
 
@@ -531,10 +532,10 @@ struct HomeRiskBar: View {
     private static let colors = [Color(hex: 0xFF9500), Color(hex: 0xF87541), Color(hex: 0xE5483B)]
     private static let tick = Color(hex: 0xE5483B)
 
-    /// Segment widths: the weights, heaviest first, sharing the score's part of the bar.
+    /// Segment widths: the weight per layer, lowest layer first, sharing the score's part of the bar.
     private var segments: [CGFloat] {
         let score = CGFloat(min(max(scan.score, 0), 100)) / 100
-        let weights = scan.signals.map { CGFloat(max($0.weight, 0)) }.filter { $0 > 0 }.sorted(by: >)
+        let weights = RiskScoreBar.layerWeights(scan.signals).map(CGFloat.init)
         let parts = weights.isEmpty ? [1] : weights
         let total = parts.reduce(0, +)
         let usable = Self.width - CGFloat(parts.count + 1) * Self.gap - Self.tickWidth
