@@ -7,7 +7,7 @@ import { errorInfo } from "../http/logError";
 import { hit, hitLight, limits } from "../http/rateLimit";
 import { downloadFavicon, type DownloadOptions, FAVICON_CONTENT_TYPE, FAVICON_EXT, type FetchFail } from "./faviconFetch";
 import { archiveFavicon } from "./fragments";
-import { faviconLink } from "./screenshotLinks";
+import { faviconLink, linkOrigin } from "./screenshotLinks";
 import { abandonUpload, r2Store } from "./screenshots";
 
 type Drop = FetchFail | "quota" | "no_storage" | "scan_gone" | "upload_failed" | "ready_failed";
@@ -89,7 +89,7 @@ export async function faviconUrl(env: Env, scan: { id: string; faviconPath: stri
   if (!scan.faviconPath) return null;
   const secret = usableSecret(env.SCREENSHOT_URL_SECRET);
   if (!secret) return null;
-  const origin = env.INVITE_BASE_URL.replace(/\/+$/, "");
+  const origin = linkOrigin(env);
   return faviconLink(secret, origin, scan.id, viewerId, Date.now() / 1000);
 }
 

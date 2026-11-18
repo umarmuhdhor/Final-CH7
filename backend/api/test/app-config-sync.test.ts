@@ -29,6 +29,13 @@ describe("app and backend agree", () => {
     expect(swiftConstant("publicBaseURL")).toBe(wranglerVar("INVITE_BASE_URL"));
   });
 
+  it("API host: AppConfig.cloudAPIURL = API_BASE_URL (signed image links the app loads)", () => {
+    // The app loads screenshots, favicons and replicas only from the host it calls the API on.
+    // A link on another host (join.shoo.ai.id) shows a grey circle instead of the favicon.
+    expect(swiftConstant("cloudAPIURL")).toBe(wranglerVar("API_BASE_URL"));
+    expect(wranglerVar("API_BASE_URL")).not.toBe(wranglerVar("INVITE_BASE_URL"));
+  });
+
   it("Universal Link: the app's applinks entitlement names the same host", () => {
     const host = new URL(wranglerVar("INVITE_BASE_URL")).host;
     expect(entitlements).toContain(`<string>applinks:${host}</string>`);

@@ -8,7 +8,14 @@ export interface Env {
   REPLICA_ARCHIVE?: R2Bucket;
   /** Kill-switch (D-alief-C25 d): only "true" stores and serves replicas. Deletes ignore it. */
   REPLICAS_ENABLED?: string;
+  /** Public host of invite and share links (`/j/<code>`, `/get`): the Custom Domain join.shoo.ai.id (PR-03). */
   INVITE_BASE_URL: string;
+  /**
+   * Origin of the signed screenshot, favicon and replica links: the host the app calls the API on
+   * (`AppConfig.cloudAPIURL`). The app loads these only from that host (SECURITY §3 P9), so they must
+   * not move to INVITE_BASE_URL. Unset → INVITE_BASE_URL.
+   */
+  API_BASE_URL?: string;
   /** TestFlight or App Store link on the invite page (PR-03). Unset → apps.apple.com. */
   APP_STORE_URL?: string;
   /** Comma-separated `<Team ID>.<bundle ID>` for the Universal Link (issue #129). Unset → no app. */

@@ -8,7 +8,7 @@ import { ApiError } from "../http/errors";
 import { errorInfo } from "../http/logError";
 import { hit, limits } from "../http/rateLimit";
 import { decodeBase64 } from "./images";
-import { replicaLink } from "./screenshotLinks";
+import { linkOrigin, replicaLink } from "./screenshotLinks";
 import { abandonUpload, r2Store, type ScreenshotStore } from "./screenshots";
 
 /** contracts/api.md "Page replica" = replica-build.js MAX_BASE64 (400 KB of base64). */
@@ -170,7 +170,7 @@ export async function replicaUrl(env: Env, scan: { id: string; replicaPath: stri
   if (!scan.replicaPath || !replicasEnabled(env)) return null;
   const secret = usableSecret(env.SCREENSHOT_URL_SECRET);
   if (!secret) return null;
-  const origin = env.INVITE_BASE_URL.replace(/\/+$/, "");
+  const origin = linkOrigin(env);
   return replicaLink(secret, origin, scan.id, viewerId, Date.now() / 1000);
 }
 
