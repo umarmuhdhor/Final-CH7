@@ -171,12 +171,15 @@ struct DetailView: View {
             }
             .coordinateSpace(.named(FooterRoom.page))
             .background(alignment: .top) {
-                // Figma "Hero BG" (402 × 360, rings in it); its top colour carries on when pulled down.
-                DetailHeroBackground(look: look)
-                    .background(alignment: .bottom) {
-                        look.topColor.frame(height: 400).offset(y: -DetailHeroLayout.imageHeight)
-                    }
-                    .accessibilityHidden(true)
+                // Figma "Hero BG" (402 × 360, rings in it). Pulled down, the picture grows from its bottom edge to
+                // fill the gap, so no flat band shows above it.
+                GeometryReader { proxy in
+                    let pull = max(0, proxy.frame(in: .scrollView).minY)
+                    DetailHeroBackground(look: look, stretch: pull)
+                        .offset(y: -pull)
+                }
+                .frame(height: DetailHeroLayout.imageHeight)
+                .accessibilityHidden(true)
             }
         }
         .scrollIndicators(.hidden)
