@@ -145,7 +145,7 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
   it("expired link → 404", async () => {
     const p = await createDevice("Mom");
     const id = await postShot(p);
-    const old = await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601);
+    const old = await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601);
     const u = new URL(old);
     expect((await get(`${u.pathname}${u.search}`)).status).toBe(404);
   });
@@ -162,7 +162,7 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     const p = await createDevice("Mom");
     const stranger = await createDevice("X", "guardian");
     const id = await postShot(p);
-    const forged = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, stranger.deviceId, Date.now() / 1000));
+    const forged = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, stranger.deviceId, Date.now() / 1000));
     expect((await get(`${forged.pathname}${forged.search}`)).status).toBe(404);
   });
 
@@ -170,7 +170,7 @@ describe("GET /screenshots/{scanId} (D-alief-B08)", () => {
     const p = await createDevice("Mom");
     const res = await call("/scans", { method: "POST", token: p.token, json: body() });
     const { id } = (await res.json()) as { id: string };
-    const signed = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    const signed = new URL(await screenshotLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000));
     expect((await get(`${signed.pathname}${signed.search}`)).status).toBe(404);
     expect((await get("/screenshots/00000000-0000-4000-8000-000000000000?v=a&exp=1&sig=x")).status).toBe(404);
     expect((await get("/screenshots/not-a-uuid")).status).toBe(404);

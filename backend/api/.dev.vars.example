@@ -1,6 +1,8 @@
 # Copy to backend/api/.dev.vars (gitignored) for `pnpm -C backend/api dev`.
 # Local values only. Cloud values are set with `npx wrangler secret put <NAME>`.
 INVITE_BASE_URL=http://localhost:8787
+# Signed screenshot/favicon/replica links: the host the app calls (Debug simulator = localhost:8787).
+API_BASE_URL=http://localhost:8787
 # PR-03 invite page store link (TestFlight / App Store) and Universal Link app ids. Empty is fine locally.
 APP_STORE_URL=
 APPLINKS_APP_IDS=

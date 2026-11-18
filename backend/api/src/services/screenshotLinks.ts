@@ -8,6 +8,15 @@ import { base64url, fromBase64url } from "../http/crypto";
  * that the scan still exists and the viewer may still see it, so delete and disconnect apply at once.
  */
 export const LINK_TTL_SECONDS = 3600;
+
+/**
+ * Origin of every signed link: API_BASE_URL, the host the app calls the API on. Never the invite host
+ * (join.shoo.ai.id): the app loads screenshots, favicons and replicas only from its API host, so a link
+ * there showed nothing (PR-03 regression). Pinned, not the request Host (a custom domain without HTTPS
+ * would leak the link).
+ */
+export const linkOrigin = (env: { API_BASE_URL?: string; INVITE_BASE_URL: string }) =>
+  (env.API_BASE_URL || env.INVITE_BASE_URL).replace(/\/+$/, "");
 const SKEW_SECONDS = 60;
 const encoder = new TextEncoder();
 
