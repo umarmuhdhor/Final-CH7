@@ -207,8 +207,9 @@
             reply = null; // offline → keep waiting
         }
         const verdict = reply?.verdict ?? null;
-        if (verdict?.value === "safe") {
-            location.replace(payload.url); // reopens; the rescan sees the safe verdict and stays quiet
+        // `reopen`: this page was blocked from memory and the Guardian marked the reported page of the site safe.
+        if (verdict?.value === "safe" || reply?.reopen === true) {
+            location.replace(payload.url); // reopens; the rescan sees the safe verdict (or scans the page afresh)
             return;
         }
         if (verdict?.value === "not_safe") {

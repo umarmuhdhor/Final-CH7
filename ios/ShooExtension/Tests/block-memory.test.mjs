@@ -154,3 +154,23 @@ test("junk in storage is ignored", async () => {
     await memory.remember("https://bca-aman.co.id/", BLOCK);
     assert.ok(await memory.recall("https://bca-aman.co.id/"));
 });
+
+test("the reported page's link is kept (origin + path, no query), so a safe on it can release the site", async () => {
+    const { memory } = world();
+    await memory.remember("https://login.bca-aman.co.id/verify?token=secret#x", BLOCK);
+    assert.equal((await memory.recall("https://bca-aman.co.id/other")).link, "https://login.bca-aman.co.id/verify");
+});
+
+test("an entry stored before the link was kept recalls with link null", async () => {
+    const { memory } = world({ initial: { [STORAGE_KEY]: { "bca-aman.co.id": { domain: "bca-aman.co.id", score: 92, signals: [], recordId: "scan-1", at: Date.UTC(2026, 10, 3) } } } });
+    assert.equal((await memory.recall("https://bca-aman.co.id/")).link, null);
+});
+
+test("forget drops the entry under the page's key only", async () => {
+    const { memory } = world();
+    await memory.remember("https://bca-aman.co.id/login", BLOCK);
+    await memory.remember("https://other-scam.site/", { ...BLOCK, domain: "other-scam.site" });
+    await memory.forget("https://www.bca-aman.co.id/");
+    assert.equal(await memory.recall("https://bca-aman.co.id/login"), null);
+    assert.ok(await memory.recall("https://other-scam.site/"));
+});
