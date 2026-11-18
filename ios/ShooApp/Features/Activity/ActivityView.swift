@@ -162,30 +162,54 @@ struct ActivityView: View {
     /// Space above and below the segments inside the pinned bar: 24 pt under the title at rest, as in Figma.
     private static let barPadding: CGFloat = 12
 
-    /// The segments, pinned under the status bar once the title has scrolled away. Pinned, a material backs
-    /// them up to the top of the screen so rows never pass behind the clock or under the segments unreadably.
+    /// The segments, pinned under the status bar once the title has scrolled away. Pinned on iOS 26 the track
+    /// turns to Liquid Glass and floats over the rows, with a soft blur that fades out from the top of the
+    /// screen so rows never pass behind the clock; before iOS 26 a material backs the whole bar.
     private var filterBar: some View {
-        ActivitySegments(selection: model.filter, family: model.isFamily) { filter in
+        ActivitySegments(selection: model.filter, family: model.isFamily, glass: isBarPinned) { filter in
             Task { await model.select(filter) }
         }
         .padding(.horizontal, ActivityStyle.margin)
         .padding(.vertical, Self.barPadding)
         .background {
-            Rectangle()
-                .fill(.regularMaterial)
-                .overlay(alignment: .bottom) {
-                    Rectangle().fill(.black.opacity(0.06)).frame(height: 1 / 3)
-                }
-                // Up to the top of the screen, whatever the status bar height.
-                .padding(.top, -max(barTop, 0))
-                .opacity(isBarPinned ? 1 : 0)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isBarPinned)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
+            if #available(iOS 26.0, *) { softEdge } else { materialBacking }
         }
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.frame(in: .global).minY
         } action: { barTop = $0 }
+    }
+
+    /// iOS 26: blur from the top of the screen, solid past the status bar, gone by the bar's bottom, as the
+    /// system's soft scroll edge effect looks (it does not draw here: this screen has no navigation bar).
+    private var softEdge: some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .mask {
+                LinearGradient(
+                    stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.5), .init(color: .clear, location: 1)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            }
+            .padding(.top, -max(barTop, 0))
+            .opacity(isBarPinned ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isBarPinned)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// Before iOS 26: a material from the pinned bar's bottom up to the top of the screen.
+    private var materialBacking: some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(.black.opacity(0.06)).frame(height: 1 / 3)
+            }
+            // Up to the top of the screen, whatever the status bar height.
+            .padding(.top, -max(barTop, 0))
+            .opacity(isBarPinned ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: isBarPinned)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     /// The bar has pinned: it no longer moves with the title, so the gap between them has grown past the
@@ -358,6 +382,8 @@ private struct PickerAnchorKey: PreferenceKey {
 struct ActivitySegments: View {
     let selection: ActivityFilter
     let family: Bool
+    /// Pinned over the rows: the track is Liquid Glass (a material before iOS 26) instead of the Figma grey.
+    var glass = false
     let select: (ActivityFilter) -> Void
     @Namespace private var thumb
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -366,7 +392,7 @@ struct ActivitySegments: View {
         ViewThatFits(in: .horizontal) {
             ActivitySegmentRow(spacing: 4) { segments(stacked: false) }
                 .padding(2)
-                .background(ActivityStyle.segmentTrack, in: Capsule())
+                .modifier(SegmentTrack(glass: glass))
             VStack(spacing: 4) { segments(stacked: true) }
         }
         .accessibilityElement(children: .contain)
@@ -408,6 +434,19 @@ struct ActivitySegments: View {
             .buttonStyle(.plain)
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
             .accessibilityIdentifier("filter.\(filter.rawValue)")
+        }
+    }
+}
+
+/// The capsule behind the segments: Figma grey at rest, the system glass when pinned over the rows.
+private struct SegmentTrack: ViewModifier {
+    let glass: Bool
+
+    func body(content: Content) -> some View {
+        if glass {
+            content.activityGlass(in: Capsule())
+        } else {
+            content.background(ActivityStyle.segmentTrack, in: Capsule())
         }
     }
 }
