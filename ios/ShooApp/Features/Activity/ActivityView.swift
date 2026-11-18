@@ -102,6 +102,8 @@ struct ActivityView: View {
         #if DEBUG
         .onAppear { if UserDefaults.standard.bool(forKey: "debug.activityPicker") { isPickerOpen = true } }
         #endif
+        // A tapped push opens Detail here: the "Turn on" sheet must not stay over it.
+        .onChange(of: env.router.screenSheetsClosed) { isTurnOnPresented = false }
         .sheet(isPresented: $isTurnOnPresented, onDismiss: { Task { await readExtension() } }) {
             TurnOnExtensionSheet()
         }

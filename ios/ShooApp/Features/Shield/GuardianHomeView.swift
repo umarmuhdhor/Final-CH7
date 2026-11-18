@@ -140,6 +140,8 @@ struct GuardianHomeView: View {
         ) {
             TurnOnExtensionSheet()
         }
+        // A tapped push opens Detail on Activity: "Why is it safe?" must not stay over it.
+        .onChange(of: env.router.screenSheetsClosed) { safeReasonScanId = nil }
     }
 
     private func switchSide() {
