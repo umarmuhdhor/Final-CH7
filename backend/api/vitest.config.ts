@@ -30,6 +30,8 @@ export default defineConfig({
         hyperdrives: { DB: LOCAL_DB, DB_ADMIN: ADMIN_DB },
         bindings: {
           INVITE_BASE_URL: "http://localhost:8787",
+          // Not the invite host: the link tests prove signed links use API_BASE_URL (PR-03 regression).
+          API_BASE_URL: "https://api.shoo.test",
           SUPABASE_URL: storage.url,
           SUPABASE_SERVICE_ROLE_KEY: storage.key,
           SCREENSHOT_URL_SECRET: "test-screenshot-url-secret-".padEnd(40, "x"),

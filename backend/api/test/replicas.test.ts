@@ -290,7 +290,7 @@ describe("POST /scans stores the page replica (EX-07, K2–K5)", () => {
       const one = await detail(viewer, id);
       expectScanResult(one);
       const link = new URL(one.pageReplicaUrl!);
-      expect(`${link.origin}${link.pathname}`).toBe(`${env.INVITE_BASE_URL}/replicas/${id}`);
+      expect(`${link.origin}${link.pathname}`).toBe(`${env.API_BASE_URL}/replicas/${id}`);
       expect([...link.searchParams.keys()].sort()).toEqual(["exp", "sig", "v"]);
       expect(link.searchParams.get("v")).toBe(viewer.deviceId);
       expect(Number(link.searchParams.get("exp")) - Date.now() / 1000).toBeGreaterThan(3500);
@@ -656,7 +656,7 @@ describe("replica link only after the upload (fase 22, 8 Nov 2026)", () => {
     await until(async () => (await row(id))?.path === path);
     for (const viewer of [p, g]) expect((await detail(viewer, id)).pageReplicaUrl).toBeNull();
     // A link signed by hand (the way an old Detail response would hold one) opens nothing yet.
-    const early = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000));
+    const early = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000));
     expect((await call(`/replicas/${id}${early.search}`)).status).toBe(404);
 
     release();
@@ -826,7 +826,7 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
     const pB = await createDevice("PB");
     await connect(gB, pB);
     expect((await call(`/scans/${id}`, { token: gB.token })).status).toBe(404);
-    const forged = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, gB.deviceId, Date.now() / 1000));
+    const forged = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, gB.deviceId, Date.now() / 1000));
     expect((await call(`${forged.pathname}${forged.search}`)).status).toBe(404);
     // A's own link with B's id swapped in fails the signature.
     const a = new URL(`http://x${await linkFor(p, id)}`);
@@ -838,17 +838,17 @@ describe("GET /replicas/{scanId} (EX-07, K7, K8, K20)", () => {
     const { p, id } = await setup();
     const now = Date.now() / 1000;
     for (const make of [screenshotLink, faviconLink]) {
-      const u = new URL(await make(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, now));
+      const u = new URL(await make(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, now));
       expect((await call(`/replicas/${id}${u.search}`)).status).toBe(404);
     }
-    const r = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, now));
+    const r = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, now));
     expect((await call(`/screenshots/${id}${r.search}`)).status).toBe(404);
     expect((await call(`/favicons/${id}${r.search}`)).status).toBe(404);
   });
 
   it("expired, tampered or missing signature → 404", async () => {
     const { p, id } = await setup();
-    const old = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.INVITE_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601));
+    const old = new URL(await replicaLink(env.SCREENSHOT_URL_SECRET!, env.API_BASE_URL, id, p.deviceId, Date.now() / 1000 - 3601));
     expect((await call(`${old.pathname}${old.search}`)).status).toBe(404);
     const link = new URL(`http://x${await linkFor(p, id)}`);
     const sig = link.searchParams.get("sig")!;

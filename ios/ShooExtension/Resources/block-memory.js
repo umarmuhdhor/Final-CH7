@@ -1,9 +1,10 @@
 // Owner: lead. Block memory on the phone (EX-06, #231). ES module, used by background.js.
 // A site blocked once opens straight to the block screen next time: no /analyze (so no LLM call), no
-// POST /scans (so no second push to the guardian). Only a `safe` verdict for its domain clears it.
+// POST /scans (so no second push to the guardian). A `safe` verdict for its domain clears it, and so does a
+// `safe` on the page that was reported (`link`): that scan is the only one the Guardian could decide on.
 // Kept in storage.local only; nothing here leaves the phone.
 
-import { isHostPathHost, normalHost } from "./domain.js";
+import { isHostPathHost, normalHost, shareableUrl } from "./domain.js";
 
 export const TTL_MS = 14 * 24 * 60 * 60 * 1000; // the backend keeps a scan 14 days; after that the page is scanned again
 export const MAX_ENTRIES = 500; // oldest dropped first
@@ -101,7 +102,7 @@ export function createBlockMemory({ storage, registrableDomain, now = () => Date
 
     const expired = (entry) => !entry || !Number.isFinite(entry.at) || now() - entry.at >= TTL_MS;
 
-    /** @returns {Promise<{domain, score, signals, recordId}|null>} the remembered block, or null */
+    /** @returns {Promise<{domain, score, signals, recordId, link}|null>} the remembered block, or null */
     async function recall(url) {
         const key = memoryKey(url, registrableDomain);
         if (!key) return null;
@@ -112,15 +113,25 @@ export function createBlockMemory({ storage, registrableDomain, now = () => Date
             await update((entries) => delete entries[key]);
             return null;
         }
-        return { domain: entry.domain, score: entry.score, signals: entry.signals ?? [], recordId: entry.recordId ?? null };
+        return {
+            domain: entry.domain,
+            score: entry.score,
+            signals: entry.signals ?? [],
+            recordId: entry.recordId ?? null,
+            link: typeof entry.link === "string" ? entry.link : null,
+        };
     }
 
-    /** Remembers a page the moment it is blocked. */
+    /**
+     * Remembers a page the moment it is blocked. `link` (origin + path, as the scan's verdict link) is the page
+     * that gets reported, so a `safe` on it can release the other pages remembered under the same key.
+     */
     function remember(url, { domain, score, signals }) {
         const key = memoryKey(url, registrableDomain);
         if (!key || typeof domain !== "string" || !Number.isInteger(score)) return Promise.resolve();
+        const link = shareableUrl(url).slice(0, 2048);
         return update((entries) => {
-            entries[key] = { domain, score: Math.min(100, Math.max(0, score)), signals: cleanSignals(signals), recordId: null, at: now() };
+            entries[key] = { domain, score: Math.min(100, Math.max(0, score)), signals: cleanSignals(signals), recordId: null, link, at: now() };
             return true;
         });
     }
@@ -151,5 +162,12 @@ export function createBlockMemory({ storage, registrableDomain, now = () => Date
         });
     }
 
-    return { recall, remember, setRecord, forgetDomain };
+    /** The Guardian marked the remembered page safe: pages under its key are scanned again from now on. */
+    function forget(url) {
+        const key = memoryKey(url, registrableDomain);
+        if (!key) return Promise.resolve();
+        return update((entries) => key in entries && delete entries[key]);
+    }
+
+    return { recall, remember, setRecord, forgetDomain, forget };
 }

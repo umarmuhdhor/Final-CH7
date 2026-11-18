@@ -115,7 +115,10 @@ struct MemberDetailModelTests {
         await model.load()
         #expect(text(await model.remind()) == "Reminder sent to Dad")
         #expect(model.member?.remindedAt != nil)
+        #expect(model.actionError == nil)
         #expect(text(await model.remind()) == "You already reminded Dad recently")
+        // Shown on screen too, not only to VoiceOver.
+        #expect(text(model.actionError) == "You already reminded Dad recently")
     }
 
     @Test func remindFailureIsGeneric() async {
@@ -125,6 +128,7 @@ struct MemberDetailModelTests {
         await model.load()
         #expect(text(await model.remind()) == "Couldn't send. Check your connection and try again.")
         #expect(model.member?.remindedAt == nil)
+        #expect(text(model.actionError) == "Couldn't send. Check your connection and try again.")
     }
 
     @Test func disconnectRemovesTheMember() async throws {

@@ -139,12 +139,16 @@ final class MemberDetailModel {
 
     @ObservationIgnored private var isSavingNotify = false
 
-    /// The message to announce after "Ingatkan".
+    /// The message to announce after "Ingatkan". A problem also goes to `actionError`: the announcement alone
+    /// reaches only VoiceOver, so a sighted guardian saw the button come back with no word why.
     func remind() async -> String.LocalizationValue? {
         guard let member, !isReminding else { return nil }
         isReminding = true
         defer { isReminding = false }
-        if let problem = await MemberActions.remind(member, repository: repository) { return problem }
+        if let problem = await MemberActions.remind(member, repository: repository) {
+            actionError = problem
+            return problem
+        }
         self.member?.remindedAt = now()
         return "Reminder sent to \(member.name)"
     }

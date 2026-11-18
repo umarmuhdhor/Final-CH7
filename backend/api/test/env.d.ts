@@ -5,6 +5,7 @@ declare namespace Cloudflare {
     /** Tests only: role postgres, for what a person does in the SQL editor (approve blocklist domains). */
     DB_ADMIN: Hyperdrive;
     INVITE_BASE_URL: string;
+    API_BASE_URL: string;
     APP_STORE_URL?: string;
     APPLINKS_APP_IDS?: string;
     APNS_KEY_P8_B64?: string;

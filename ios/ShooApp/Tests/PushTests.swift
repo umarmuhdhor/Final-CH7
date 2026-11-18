@@ -106,6 +106,9 @@ struct PushRoutingTests {
     ) -> AppEnvironment {
         let calls = calls ?? Calls()
         let settings = AppSettings(defaults: UserDefaults(suiteName: "test.push.\(UUID().uuidString)")!)
+        // English: no language PATCH after `register`, so these tests see only token sends (a held repository
+        // would otherwise block `register`). The language sync has its own tests in AppEnvironmentSessionTests.
+        settings.language = .english
         if let mode { _ = settings.chooseMode(mode) }
         settings.onboardingCompleted = onboarded
         return AppEnvironment(

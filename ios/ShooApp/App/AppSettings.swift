@@ -149,10 +149,10 @@ final class AppSettings {
         didSet { defaults.set(demoMode, forKey: Keys.demoMode) }
     }
 
-    init(defaults: UserDefaults = .standard, preferredLanguages: [String] = Locale.preferredLanguages) {
+    init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         language = defaults.string(forKey: Keys.language).flatMap(AppLanguage.init(rawValue:))
-            ?? AppLanguage.fromSystem(preferredLanguages: preferredLanguages)
+            ?? AppLanguage.defaultLanguage
         mode = defaults.string(forKey: Keys.mode).flatMap(UserMode.init(rawValue:))
         onboardingCompleted = defaults.bool(forKey: Keys.onboardingCompleted)
         familyModeOn = defaults.bool(forKey: Keys.familyModeOn)
@@ -230,7 +230,7 @@ final class AppSettings {
     /// Back to a fresh install (used by "Delete my data" later and by tests).
     func reset() {
         Self.clear(defaults: defaults)
-        language = AppLanguage.fromSystem()
+        language = AppLanguage.defaultLanguage
         mode = nil
         onboardingCompleted = false
         familyModeOn = false

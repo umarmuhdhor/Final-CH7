@@ -78,7 +78,7 @@ struct OnboardingModelTests {
 
     init() throws {
         let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-        settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        settings = AppSettings(defaults: defaults)
         settings.dataConsent = .granted
         notifications = FakeNotificationPermission()
         let box = box
@@ -190,7 +190,7 @@ struct OnboardingModelTests {
 
     @Test func registrationErrorStaysOnTurnOn() async throws {
         let defaults = try #require(UserDefaults(suiteName: "test.\(UUID().uuidString)"))
-        let settings = AppSettings(defaults: defaults, preferredLanguages: ["en"])
+        let settings = AppSettings(defaults: defaults)
         let env = AppEnvironment(
             repository: FailingRepository(), settings: settings, notifications: notifications, extensionStatus: { .off(lastSeen: nil) }
         )
