@@ -165,6 +165,13 @@ struct DetailView: View {
         let reasons = model.evidence(language: language)
         let look = DetailLook(scan: scan)
         return ZStack(alignment: .top) {
+            // Only the white sheet scrolls; the hero stays on top, shrinking to the back button's row. Declared
+            // first so VoiceOver reads the back button first, drawn above the page by `zIndex`. (No
+            // `.accessibilityElement(children: .contain)` here: with it the back button's frame became the ring
+            // picture's 402 × 360 and UI tests tapped the shield instead.)
+            DetailHero(look: look, guardianAvatarId: model.deciderAvatarId, offset: scrollOffset) { env.router.pop() }
+                .ignoresSafeArea(edges: .top)
+                .zIndex(1)
             ScrollView {
                 VStack(spacing: 0) {
                     // Room for the hero, which is pinned above the page (`DetailHero`).
@@ -184,13 +191,7 @@ struct DetailView: View {
                     .ignoresSafeArea(edges: .top)
             }
             .background(Color.white)
-            // Only the white sheet scrolls; the hero stays on top, shrinking to the back button's row.
-            DetailHero(look: look, guardianAvatarId: model.deciderAvatarId, offset: scrollOffset) { env.router.pop() }
-                .ignoresSafeArea(edges: .top)
-                // The back button is read first, as when the hero was the top of the page.
-                .accessibilitySortPriority(1)
         }
-        .accessibilityElement(children: .contain)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             // Only the guardian answers here; the protected person reads the decision in "Status situs"
             // (the Ortu frames of 1211:19924 have no footer).

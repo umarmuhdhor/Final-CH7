@@ -134,19 +134,13 @@ struct DetailHero: View {
         let lipFade = min(max((offset - lipStart) / 24, 0), 1)
         let lip = DetailHeroLayout.sheetCorner
         ZStack(alignment: .topLeading) {
-            Group {
-                DetailHeroBackdrop(look: look, offset: offset)
-                illustration
-                    .scaleEffect(
-                        scale,
-                        anchor: UnitPoint(x: 0.5, y: DetailHeroLayout.illustrationCenterY / DetailHeroLayout.sheetTop)
-                    )
-                    .offset(y: rise + pull)
-            }
-            .allowsHitTesting(false)
-            OnboardingBackButton(identifier: "detail.back", action: onBack)
-                .padding(.leading, 20)
-                .padding(.top, DetailHeroLayout.backTop)
+            DetailHeroBackdrop(look: look, offset: offset)
+            illustration
+                .scaleEffect(
+                    scale,
+                    anchor: UnitPoint(x: 0.5, y: DetailHeroLayout.illustrationCenterY / DetailHeroLayout.sheetTop)
+                )
+                .offset(y: rise + pull)
         }
         // Pinned, the hero is one corner taller: the rings show behind the sheet's round corners, as at rest.
         .frame(height: DetailHeroLayout.height(offset: offset) + (lipPinned ? lip : 0), alignment: .top)
@@ -164,9 +158,16 @@ struct DetailHero: View {
                             .offset(y: 16)
                             .opacity(lipFade)
                     }
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
             }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        // The back button sits outside the clipped picture: inside it, its accessibility frame took the picture's
+        // 402 × 360, and a UI test's tap on its middle landed on the shield instead.
+        .overlay(alignment: .topLeading) {
+            OnboardingBackButton(identifier: "detail.back", action: onBack)
+                .padding(.leading, 20)
+                .padding(.top, DetailHeroLayout.backTop)
         }
     }
 
