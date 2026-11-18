@@ -11,15 +11,12 @@ struct GuardianHomeView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.locale) private var locale
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.shooReduceMotion) private var reduceMotion
     @State private var model: GuardianHomeModel
     /// Someone joined from the invite card: the refresh that follows hands the sheet over with an animation.
     @State private var joinAnimates = false
     /// Bumped when that refresh shows the family: one success tap, the guardian's "connected" moment.
     @State private var joined = 0
-    /// The hero is scrolled out from under the status bar: the top scrim takes over as its backdrop.
-    @State private var isHeroHidden = false
     /// "Aman" on the pending card opens SafeReasonSheet for that site (its id, kept while the sheet is open).
     @State private var safeReasonScanId: String?
 
@@ -41,13 +38,11 @@ struct GuardianHomeView: View {
     private var isFamily: Bool { model.scope == .family }
     /// Card to card, card to members, invite to family: a soft ease; a short cross-fade with Reduce Motion.
     private var handOver: Animation { reduceMotion ? .easeInOut(duration: 0.2) : .smooth(duration: 0.3) }
-    private var scrim: Color { colorScheme == .dark ? HomeTheme.navy : HomeTheme.background }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 hero
-                    .onGeometryChange(for: Bool.self) { $0.frame(in: .global).maxY < 140 } action: { isHeroHidden = $0 }
                 if isFamily {
                     sheet.homeSheet()
                     VStack(spacing: 24) {
@@ -80,19 +75,9 @@ struct GuardianHomeView: View {
         .scrollIndicators(.hidden)
         // Pulled down, the hero gradient grows to fill the overscroll (no flat band above it).
         .readsHeroPull()
+        // Scrolled up, the shield shrinks into the top bar and a strip of the hero stays there, as on Detail.
+        .collapsesHomeHero()
         .background(HomeTheme.background)
-        // Once the hero is gone, a scrim keeps the status bar readable over the page: light behind dark text,
-        // navy behind white text (dark appearance).
-        .overlay(alignment: .top) {
-            LinearGradient(colors: [scrim, scrim.opacity(0.85), scrim.opacity(0)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 110)
-                .ignoresSafeArea(edges: .top)
-                .opacity(isHeroHidden ? 1 : 0)
-                .animation(.easeOut(duration: 0.2), value: isHeroHidden)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
         // Switch and profile right under the status bar, where the (hidden) navigation bar would be.
         .overlay(alignment: .top) {
             // The cached avatar until `GET /devices/me` answers, so the circle never waits for the network.
